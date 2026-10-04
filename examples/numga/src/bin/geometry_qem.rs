@@ -160,7 +160,7 @@ fn camera(c: &Canvas, azimuth: f32) -> Camera {
     Camera::orbit(
         c.width,
         c.height,
-        [0.0, 0.0, 0.0],
+        Point::xyz(0.0, 0.0, 0.0),
         2.9,
         azimuth,
         0.42,

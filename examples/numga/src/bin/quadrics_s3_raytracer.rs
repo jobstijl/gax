@@ -25,10 +25,12 @@ mod walk {
         let upward = [-0.3, -0.3, 0.3, 0.3];
         let surfaces = (0..4)
             .map(|k| {
-                let placed = motion(along([distances[k], 0.0, 0.0]))
-                    * motion(along([0.0, sideways[k], 0.0]))
-                    * motion(along([0.0, 0.0, upward[k]]))
-                    * motion(turning([0.0, 0.0, 0.8]));
+                // Out along x, then sideways along y and up along z, then turned in the xy
+                // plane.
+                let placed = motion(along(Tangent::new(distances[k], 0.0, 0.0)))
+                    * motion(along(Tangent::new(0.0, sideways[k], 0.0)))
+                    * motion(along(Tangent::new(0.0, 0.0, upward[k])))
+                    * motion(turning(TangentPlane::new(0.0, 0.0, 0.8)));
                 // The dual quadric in the world; its inverse maps a point to its polar plane.
                 moved_dual(placed, shape).inverse()
             })
@@ -42,14 +44,14 @@ mod walk {
                 [0.3, 0.5, 0.95],
                 [0.95, 0.8, 0.3],
             ],
-            light: direction([-0.4, 0.6, 0.7]),
+            light: direction(Tangent::new(-0.4, 0.6, 0.7)),
             fov: 80f64.to_radians(),
         }
     }
 
     /// The eye a distance `s` along the x geodesic; the scene stays fixed in the world.
     pub fn eye(s: f64) -> Motor {
-        motion(along([s, 0.0, 0.0]))
+        motion(along(Tangent::new(s, 0.0, 0.0)))
     }
 }
 

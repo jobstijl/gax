@@ -314,7 +314,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let cam = Camera::orbit(
             pw,
             ph,
-            [0.0; 3],
+            Point::xyz(0.0, 0.0, 0.0),
             10.0 * extent,
             (-60f32).to_radians() + turn,
             elevation.to_radians(),

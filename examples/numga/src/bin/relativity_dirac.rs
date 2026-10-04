@@ -16,7 +16,7 @@ use std::sync::OnceLock;
 
 use gax_numga_examples::canvas::srgb;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Marker, Point3, Rgb, Scene3, backdrop, caption, palette, run,
 };
 
 mod dirac {
@@ -248,7 +248,7 @@ const SAMPLES: usize = 600;
 /// What the frames share: the mass shell's grid and sheets (momentum across, energy up), and
 /// the trembling paths with the spins along them, in the observer's space.
 struct Scene {
-    shell: (usize, Vec<[f32; 3]>, Vec<[f32; 3]>),
+    shell: (usize, Vec<Space>, Vec<Space>),
     paths: Vec<Vec<Space>>,
     spins: Vec<Vec<Space>>,
 }
@@ -258,13 +258,11 @@ fn scene() -> &'static Scene {
     SCENE.get_or_init(|| {
         let n = 21;
         let shell = mass_shell(2.0, n);
-        let sheet = |k: usize| -> Vec<[f32; 3]> {
+        // Each momentum (in the xy plane) raised by its `k`-th energy along z.
+        let sheet = |k: usize| -> Vec<Space> {
             shell
                 .iter()
-                .map(|(p, e, _)| {
-                    let [px, py, _] = spatial(*p).xyz();
-                    [px, py, e[k] as f32]
-                })
+                .map(|(p, e, _)| spatial(*p) + Space::new(0.0, 0.0, e[k]))
                 .collect()
         };
         let (_, spinors, paths) = trembling(momentum(0.0, 0.0, 0.3), DURATION, SAMPLES);
@@ -284,7 +282,7 @@ fn colours() -> [Rgb; 3] {
 }
 
 /// A camera whose image centre sits at pixel `(cx, h / 2)` of the canvas.
-fn camera(cx: f32, h: f32, target: [f32; 3], azimuth: f32, elevation: f32, half: f32) -> Camera {
+fn camera(cx: f32, h: f32, target: Point3, azimuth: f32, elevation: f32, half: f32) -> Camera {
     Camera::orbit(
         (2.0 * cx) as usize,
         h as usize,
@@ -307,16 +305,26 @@ fn draw(c: &mut Canvas, t: f32) {
     // The trembling paths, traced as time goes on, with each electron's spin where it is.
     let upto = ((phase * SAMPLES as f32) as usize).clamp(2, SAMPLES);
     let azimuth = -1.05 + 0.5 * (phase * core::f32::consts::TAU).sin();
-    let cam = camera(w * 0.3, h * 1.08, [0.0, 0.0, 1.7], azimuth, 0.2, 2.0);
+    let cam = camera(
+        w * 0.3,
+        h * 1.08,
+        Point3::xyz(0.0, 0.0, 1.7),
+        azimuth,
+        0.2,
+        2.0,
+    );
     let mut scene3 = Scene3::new(cam);
     // A floor grid and the z axis.
     for k in 0..=6 {
         let a = -0.6 + 0.2 * k as f32;
         let g = palette::grid();
-        scene3.seg([a, -0.6, 0.0], [a, 0.6, 0.0], 1.0, g, 0.7);
-        scene3.seg([-0.6, a, 0.0], [0.6, a, 0.0], 1.0, g, 0.7);
+        let (x0, x1) = (Point3::xyz(a, -0.6, 0.0), Point3::xyz(a, 0.6, 0.0));
+        let (y0, y1) = (Point3::xyz(-0.6, a, 0.0), Point3::xyz(0.6, a, 0.0));
+        scene3.seg(x0, x1, 1.0, g, 0.7);
+        scene3.seg(y0, y1, 1.0, g, 0.7);
     }
-    scene3.seg([0.0, 0.0, 0.0], [0.0, 0.0, 3.4], 1.0, palette::grid(), 0.9);
+    let (origin, up) = (Point3::xyz(0.0, 0.0, 0.0), Point3::direction(0.0, 0.0, 1.0));
+    scene3.seg(origin, origin + up.gp(3.4), 1.0, palette::grid(), 0.9);
     for (k, (path, spins)) in s.paths.iter().zip(&s.spins).enumerate() {
         scene3.polyline(&path[..upto], 1.6, colours[k], 1.0);
         let here = path[upto - 1];
@@ -350,7 +358,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The mass shell: the two sheets of energies over the momentum plane, turning.
     let (n, top, bottom) = &s.shell;
     let azimuth = -0.9 + phase * core::f32::consts::TAU;
-    let cam = camera(w * 0.8, h * 1.12, [0.0, 0.0, 0.0], azimuth, 0.3, 4.6);
+    let cam = camera(w * 0.8, h * 1.12, origin, azimuth, 0.3, 4.6);
     let mut scene3 = Scene3::new(cam);
     for (sheet, colour) in [(top, palette::red()), (bottom, palette::sky())] {
         let m = *n - 1;
@@ -363,7 +371,13 @@ fn draw(c: &mut Canvas, t: f32) {
         };
         scene3.surface(at, m, m, |_, _| colour, 0.6, Some((colour, 0.6)));
     }
-    scene3.seg([0.0, 0.0, -3.2], [0.0, 0.0, 3.2], 1.0, palette::ink(), 0.6);
+    scene3.seg(
+        origin - up.gp(3.2),
+        origin + up.gp(3.2),
+        1.0,
+        palette::ink(),
+        0.6,
+    );
     c.clip([w * 0.6, 0.0, w, h]);
     scene3.draw(c);
     c.unclip();

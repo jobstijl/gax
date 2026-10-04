@@ -13,8 +13,8 @@ use gax::Unit;
 use gax::motions::{Motions, Pga3d};
 use gax::{pga2d, pga3d, vga3d};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, canvas, caption,
-    palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, canvas,
+    caption, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -330,7 +330,7 @@ fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Rgb, alpha: f32) 
                 core::f64::consts::TAU * f64::from(u),
                 core::f64::consts::PI * (f64::from(v) - 0.5),
             );
-            f(d).xyz()
+            f(d)
         },
         28,
         14,
@@ -363,21 +363,22 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
     for (i, (k, (title, sub))) in sc_data.conduction.iter().zip(labels).enumerate() {
         let rect = [i * w / 4, top, (i + 1) * w / 4, bottom];
         let mut p = panel(c, rect);
+        let origin = P3::xyz(0.0, 0.0, 0.0);
         let cam = Camera::orbit(
             p.width,
             p.height,
-            [0.0, 0.0, 0.0],
+            origin,
             20.0,
             -2.1 + 0.6 * s,
             0.42,
             Lens::Parallel(7.4),
         );
         let mut sc = Scene3::new(cam);
-        sc.axes([0.0; 3], 1.2);
+        sc.axes(origin, 1.2);
         sphere_surface(&mut sc, |d| k.of(d), palette::sky(), 0.3);
         let flux = k.of(driving);
-        sc.arrow([0.0; 3], driving.gp(4.0), 2.0, 9.0, palette::ink());
-        sc.arrow([0.0; 3], flux, 3.0, 11.0, palette::orange());
+        sc.arrow(origin, driving.gp(4.0), 2.0, 9.0, palette::ink());
+        sc.arrow(origin, flux, 3.0, 11.0, palette::orange());
         sc.draw(&mut p);
         c.blit(&p, rect[0], rect[1]);
         let cx = (rect[0] + rect[2]) as f32 * 0.5;
@@ -425,24 +426,25 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         w * 0.02,
         h * 0.06,
     );
-    let ax = Axes::equal(left, [0.0, 0.0], 2.4);
     let hub = pga2d::Point::xy(0.0, 0.0);
+    let ax = Axes::equal(left, hub, 2.4);
     let probe_dir = polar(1.0, angle) - hub;
     ax.axline(c, hub, probe_dir, 1.0, palette::grid(), 1.0);
-    ax.axline(c, hub, [1.0, 0.0], 0.8, palette::grid(), 0.5);
+    ax.axline(
+        c,
+        hub,
+        pga2d::Point::direction(1.0, 0.0),
+        0.8,
+        palette::grid(),
+        0.5,
+    );
     for (k, arm) in sd.arms.iter().enumerate() {
         let colour = if k == 0 {
             palette::orange()
         } else {
             palette::sky()
         };
-        let pts: Vec<[f64; 2]> = arm
-            .iter()
-            .map(|p| {
-                let [x, y, _] = p.to_euclidean();
-                [x, y]
-            })
-            .collect();
+        let pts: Vec<pga2d::Point<(), f64>> = arm.iter().map(|p| from_above(*p)).collect();
         ax.scatter(c, &pts, Marker::Dot, 4.0, colour, 0.9);
     }
     ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink(), 1.0);
@@ -456,7 +458,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     );
     ax.text(
         c,
-        [ax.x[0] + 0.1, ax.y[1] - 0.3],
+        Point2::xy(ax.x[0] + 0.1, ax.y[1] - 0.3),
         "THREE UNIT-MASS ARMS, 120 DEG APART",
         11.0,
         palette::ink(),
@@ -480,7 +482,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         .chain(&wheel_curve)
         .map(|(_, r)| r.abs())
         .fold(0.0, f64::max);
-    let pax = Axes::equal(right, [0.0, 0.0], rmax as f32 * 1.15);
+    let pax = Axes::equal(right, hub, rmax as f32 * 1.15);
     polar_grid(&pax, c, rmax);
     for (pts, colour) in [
         (&arm_curve, palette::orange()),
@@ -503,7 +505,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     let transverse = moment(&sd.inertia, probe(angle));
     pax.text(
         c,
-        [pax.x[0], pax.y[0] + rmax as f32 * 0.05],
+        Point2::xy(pax.x[0], pax.y[0] + rmax as f32 * 0.05),
         &format!("ABOUT Z: {axial:.3} = 2 X {transverse:.3}"),
         11.0,
         palette::ink(),
@@ -516,6 +518,11 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     );
 }
 
+/// A point of space seen from above: the point of the plane under it (its `z` dropped).
+fn from_above(p: P3) -> pga2d::Point<(), f64> {
+    pga2d::Point::new(p.e032(), p.e013(), p.e123())
+}
+
 /// The point at radius `r` and angle `a` in the plane: `(r, 0)` turned about the origin.
 fn polar(r: f64, a: f64) -> pga2d::Point<(), f64> {
     let origin = pga2d::Point::xy(0.0, 0.0);
@@ -525,6 +532,7 @@ fn polar(r: f64, a: f64) -> pga2d::Point<(), f64> {
 /// Rings and spokes of a polar plot of radius up to `rmax`.
 fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
     let turn = |j: usize, n: usize| core::f64::consts::TAU * j as f64 / n as f64;
+    let origin = pga2d::Point::xy(0.0, 0.0);
     for k in 1..=4 {
         let r = rmax * k as f64 / 4.0;
         let ring: Vec<_> = (0..=96).map(|j| polar(r, turn(j, 96))).collect();
@@ -532,7 +540,7 @@ fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
     }
     for j in 0..12 {
         let spoke = polar(rmax, turn(j, 12));
-        ax.line(c, [0.0, 0.0], spoke, 0.8, palette::grid(), 0.5);
+        ax.line(c, origin, spoke, 0.8, palette::grid(), 0.5);
     }
 }
 
@@ -552,10 +560,11 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
         let rect = [i * w / 3, top, (i + 1) * w / 3, bottom];
         let mut p = panel(c, rect);
         let half = if i == 0 { 1.9 } else { 0.85 };
+        let origin = P3::xyz(0.0, 0.0, 0.0);
         let cam = Camera::orbit(
             p.width,
             p.height,
-            [0.0; 3],
+            origin,
             20.0,
             azimuth,
             0.4,
@@ -569,11 +578,11 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
                 }
                 for (shell, colour) in [(&axial, palette::orange()), (&diagonal, palette::sky())] {
                     for q in shell {
-                        sc.seg([0.0; 3], *q, 2.0, colour, 1.0);
+                        sc.seg(origin, *q, 2.0, colour, 1.0);
                         sc.dot(*q, Marker::Dot, 8.0, colour);
                     }
                 }
-                sc.dot([0.0; 3], Marker::Dot, 11.0, palette::ink());
+                sc.dot(origin, Marker::Dot, 11.0, palette::ink());
             }
             1 => {
                 let k = sd.conductivity;

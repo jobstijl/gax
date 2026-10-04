@@ -22,8 +22,8 @@ use gax::vga3d::Vector;
 use gax_numga_examples::canvas::{mix, scale};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, caption,
-    colormap, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, Scene3, backdrop,
+    caption, colormap, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -254,9 +254,14 @@ fn data() -> &'static Data {
     })
 }
 
-/// A momentum's coordinates in the momentum plane, for the plots.
-fn in_plane(k: V) -> [f64; 2] {
-    [k.e1(), k.e2()]
+/// A momentum as a vector of the momentum plane, for the plots.
+fn in_plane(k: V) -> gax::vga2d::Vector<(), f64> {
+    gax::vga2d::Vector::new(k.e1(), k.e2())
+}
+
+/// A point of the Berry phase plot: the loop's radius across, the phase up.
+fn on_plot(radius: f64, phase: f64) -> gax::pga2d::Point<(), f64> {
+    gax::pga2d::Point::xy(radius, phase)
 }
 
 /// The two bands over the momentum plane, energies scaled down to sit beside the momenta.
@@ -280,7 +285,7 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
                 let (i, j) = node(u, v);
                 // The momentum, raised by the band's energy.
                 let e = b.values[j * n + i][band];
-                (b.momenta[j * n + i] + z() * (e * squash)).xyz()
+                b.momenta[j * n + i] + z() * (e * squash)
             },
             n - 1,
             n - 1,
@@ -311,7 +316,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         left as usize,
         (hf - top) as usize,
-        [0.0, 0.0, 0.0],
+        ORIGIN3,
         23.0,
         (tau * phase_t) as f32 - 1.05,
         0.42,
@@ -330,14 +335,14 @@ fn draw(c: &mut Canvas, t: f32) {
     // The field over the momentum plane, with the loop about K.
     let [valley_k, _] = valleys();
     let map_rect = [wf * 0.46, hf * 0.16, wf * 0.72, hf * 0.56];
-    let ax = Axes::equal(map_rect, [0.0, 0.0], 3.2);
-    ax.image(c, 1, |x, y| {
-        let f = pseudospin(momentum(x, y), 0.0);
+    let ax = Axes::equal(map_rect, Point2::xy(0.0, 0.0), 3.2);
+    ax.image(c, 1, |p| {
+        let f = pseudospin(momentum(p), 0.0);
         let len = f.norm() as f32;
         Some(scale(colormap::viridis(len / (3.0 * HOPPING as f32)), 0.75))
     });
     // The Brillouin zone: the hexagon through the six valleys, K turned by sixths of a turn.
-    let hexagon: Vec<[f64; 2]> = (0..=6)
+    let hexagon: Vec<_> = (0..=6)
         .map(|k| in_plane(turn(tau * k as f64 / 6.0) >> valley_k))
         .collect();
     ax.polyline(c, &hexagon, 1.0, palette::ink(), 0.6);
@@ -346,7 +351,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let step = 0.8f32;
     for i in -4..=4 {
         for j in -4..=4 {
-            let k = momentum(i as f32 * step, j as f32 * step);
+            let k = momentum(Point2::xy(i as f32 * step, j as f32 * step));
             let d = upper_pseudospin(k, GAPS[SHOWN]);
             let half = d * 0.3;
             ax.arrow(
@@ -359,7 +364,7 @@ fn draw(c: &mut Canvas, t: f32) {
             );
         }
     }
-    let ring: Vec<[f64; 2]> = circle(64)
+    let ring: Vec<_> = circle(64)
         .iter()
         .map(|u| in_plane(valley_k + *u * radius))
         .collect();
@@ -410,16 +415,16 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         (sphere_rect[2] - sphere_rect[0]) as usize,
         (sphere_rect[3] - sphere_rect[1]) as usize,
-        [0.0; 3],
+        ORIGIN3,
         4.6,
         0.6 + 0.3 * (tau * phase_t).sin() as f32,
         0.35,
         Lens::Perspective(0.6),
     );
     panel3(c, sphere_rect, cam, |s| {
-        s.sphere_wire([0.0; 3], 1.0, 16, palette::grid(), 0.5);
+        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid(), 0.5);
         s.polyline(&dirs, 2.0, palette::orange(), 1.0);
-        s.arrow([0.0; 3], current, 2.5, 9.0, palette::orange());
+        s.arrow(ORIGIN3, current, 2.5, 9.0, palette::orange());
         s.arrow(start, first_frame * 0.45, 1.5, 6.0, palette::grid());
         s.arrow(current, carried * 0.45, 2.0, 7.0, palette::green());
     });
@@ -455,16 +460,23 @@ fn draw(c: &mut Canvas, t: f32) {
         [-1.15, 1.15],
     );
     ax.frame(c, "", "LOOP RADIUS (1/A)", "BERRY PHASE (PI)");
-    ax.line(c, [0.0, 0.0], [0.6, 0.0], 1.0, palette::grid(), 1.0);
+    ax.line(
+        c,
+        on_plot(0.0, 0.0),
+        on_plot(0.6, 0.0),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
     let mut legend: Vec<(String, Rgb)> = Vec::new();
     for (g, pair) in d.phases.iter().enumerate() {
         let colour = palette::series(g + 1);
         for (valley, row) in pair.iter().enumerate() {
-            let pts: Vec<[f64; 2]> = d
+            let pts: Vec<_> = d
                 .radii
                 .iter()
                 .zip(row)
-                .map(|(r, p)| [*r, *p / core::f64::consts::PI])
+                .map(|(r, p)| on_plot(*r, *p / core::f64::consts::PI))
                 .collect();
             let width = if g == SHOWN { 2.2 } else { 1.3 };
             if valley == 0 {
@@ -477,15 +489,15 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     ax.line(
         c,
-        [radius, -1.15],
-        [radius, 1.15],
+        on_plot(radius, -1.15),
+        on_plot(radius, 1.15),
         1.0,
         palette::orange(),
         0.8,
     );
     ax.scatter(
         c,
-        &[[radius, gamma]],
+        &[on_plot(radius, gamma)],
         Marker::Dot,
         7.0,
         palette::series(SHOWN + 1),
@@ -500,9 +512,10 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 }
 
-/// A momentum in the plane, from drawing coordinates.
-fn momentum(x: f32, y: f32) -> V {
-    Vector::new(f64::from(x), f64::from(y), 0.0)
+/// The momentum at a point of the drawn momentum plane.
+fn momentum(p: Point2) -> V {
+    let [x, y] = p.map_coefs(f64::from).to_euclidean();
+    Vector::new(x, y, 0.0)
 }
 
 fn main() {

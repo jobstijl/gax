@@ -65,18 +65,27 @@ pub fn origin() -> Point {
     unit(Trivector::new(0.0, 0.0, 0.0, 1.0))
 }
 
-/// The point a quarter turn from the origin in the direction `(x, y, z)`.
-pub fn direction([x, y, z]: [f64; 3]) -> Point {
+/// A direction at the origin: a vector of the tangent space there, Euclidean 3-space.
+pub type Tangent = gax::vga3d::Vector<(), f64>;
+/// A plane of turning at the origin: a bivector of the tangent space.
+pub type TangentPlane = gax::vga3d::Bivector<(), f64>;
+
+/// The point a quarter turn from the origin in the direction `d`.
+pub fn direction(d: Tangent) -> Point {
+    let [x, y, z] = d.c;
     Trivector::new(x, y, z, 0.0).normalized().into_inner()
 }
 
-/// The rate `a xw + b yw + c zw`: a motion of the origin along `(a, b, c)`.
-pub fn along([a, b, c]: [f64; 3]) -> Rate {
+/// The rate `a xw + b yw + c zw` of `v = a e1 + b e2 + c e3`: a motion of the origin along `v`.
+pub fn along(v: Tangent) -> Rate {
+    let [a, b, c] = v.c;
     Bivector::new(0.0, 0.0, 0.0, a, b, c)
 }
 
-/// The rate `a yz + b zx + c xy`: a turn about the origin.
-pub fn turning([a, b, c]: [f64; 3]) -> Rate {
+/// The rate `a yz + b zx + c xy` of `b = a e23 + b e31 + c e12`: a turn about the origin in
+/// that plane.
+pub fn turning(b: TangentPlane) -> Rate {
+    let [a, b, c] = b.c;
     Bivector::new(a, b, c, 0.0, 0.0, 0.0)
 }
 
@@ -101,9 +110,12 @@ pub fn moved_dual(m: Motor, q: DualQuadric) -> DualQuadric {
 pub fn ellipsoid(half_widths: [f64; 3]) -> DualQuadric {
     let plane = Vector::slot();
     let mut q = (origin() & plane) * origin().gp(-1.0);
-    for (k, h) in half_widths.iter().enumerate() {
-        let mut d = [0.0; 3];
-        d[k] = 1.0;
+    let axes = [
+        Tangent::new(1.0, 0.0, 0.0),
+        Tangent::new(0.0, 1.0, 0.0),
+        Tangent::new(0.0, 0.0, 1.0),
+    ];
+    for (d, h) in axes.into_iter().zip(half_widths) {
         let axis = direction(d);
         q += (axis & plane) * axis.gp(h * h);
     }
@@ -292,8 +304,8 @@ mod tests {
     #[test]
     fn reprojected_hits_lie_on_the_ellipsoid() {
         let q = ellipsoid([0.2, 0.2, 0.2]);
-        let surface = moved_dual(motion(along([0.8, 0.0, 0.0])), q).inverse();
-        let identity = motion(along([0.0; 3]));
+        let surface = moved_dual(motion(along(Tangent::new(0.8, 0.0, 0.0))), q).inverse();
+        let identity = motion(along(Tangent::zero()));
         let (conic, polar) = project(identity, surface);
         let (mut hits, mut total) = (0, 0);
         for r in 0..30 {

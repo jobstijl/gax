@@ -11,8 +11,8 @@ use gax::Unit;
 use gax::motions::{Motions, Pga3d};
 use gax::pga3d::{Line, Motor, Point};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, plot,
-    run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, caption,
+    palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -241,7 +241,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         scene_w,
         c.height,
-        [0.6, 0.2, 1.2],
+        Point::xyz(0.6, 0.2, 1.2),
         6.2,
         -0.87 + 0.35 * phase.sin(),
         0.38,
@@ -249,22 +249,12 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let mut sc = Scene3::new(cam);
     // The floor: a grid on z = 0.
+    let floor = |x: f64, y: f64| Point::xyz(x, y, 0.0);
     for k in 0..=8 {
-        let v = k as f32 * 0.375;
-        sc.seg(
-            [v - 1.0, -1.5, 0.0],
-            [v - 1.0, 1.5, 0.0],
-            1.0,
-            palette::grid(),
-            0.6,
-        );
-        sc.seg(
-            [-1.0, v - 1.5, 0.0],
-            [2.0, v - 1.5, 0.0],
-            1.0,
-            palette::grid(),
-            0.6,
-        );
+        let v = f64::from(k) * 0.375;
+        let (x, y) = (v - 1.0, v - 1.5);
+        sc.seg(floor(x, -1.5), floor(x, 1.5), 1.0, palette::grid(), 0.6);
+        sc.seg(floor(-1.0, y), floor(2.0, y), 1.0, palette::grid(), 0.6);
     }
     // The loop of targets, faint.
     let lp: Vec<P> = (0..=n).map(|k| loop_target(k % n)).collect();
@@ -328,16 +318,16 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.frame(c, "JOINT ANGLES", "FRACTION OF THE LOOP", "RAD");
     let names = ["YAW", "PITCH 1", "PITCH 2"];
     for (k, colour) in colours.iter().enumerate() {
-        let pts: Vec<[f32; 2]> = all
+        let pts: Vec<Point2> = all
             .iter()
             .enumerate()
-            .map(|(j, a)| [j as f32 / n as f32, a[k] as f32])
+            .map(|(j, a)| Point2::xy(j as f32 / n as f32, a[k] as f32))
             .collect();
         ax.polyline(c, &pts, 1.8, *colour, 0.9);
         let now = all[i][k] + (all[(i + 1) % n][k] - all[i][k]) * frac;
         ax.scatter(
             c,
-            &[[s / n as f32, now as f32]],
+            &[Point2::xy(s / n as f32, now as f32)],
             Marker::Dot,
             8.0,
             *colour,

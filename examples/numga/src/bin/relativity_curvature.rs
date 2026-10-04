@@ -17,11 +17,12 @@
 
 use std::sync::OnceLock;
 
-use gax::{sta, vga3d};
+use gax::pga2d::Point;
+use gax::{sta, vga2d, vga3d};
 use gax_numga_examples::canvas::srgb;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, plot,
-    run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rgb, Scene3, backdrop,
+    caption, palette, plot, run,
 };
 
 mod curvature {
@@ -328,9 +329,10 @@ struct Rings {
     doppler: (Vec<f64>, Vec<f64>),
 }
 
-/// A separation's coordinates in the plane transverse to the wave (the ring panels' axes).
-fn transverse(v: V) -> [f64; 2] {
-    [v.e1(), v.e2()]
+/// A separation's part in the plane transverse to the wave (the ring panels' axes), drawn
+/// from the ring's centre.
+fn transverse(v: V) -> vga2d::Vector<(), f64> {
+    vga2d::Vector::new(v.e1(), v.e2())
 }
 
 /// `[polarization][time][bead]` values, each mapped by `f`.
@@ -379,7 +381,7 @@ fn rings() -> &'static Rings {
             .iter()
             .flatten()
             .flatten()
-            .map(|p| transverse(*p).map(f64::abs).into_iter().fold(0.0, f64::max))
+            .map(|p| p.e1().abs().max(p.e2().abs()))
             .fold(1.35 - 0.31, f64::max)
             + 0.31;
         Rings {
@@ -408,14 +410,17 @@ fn rings() -> &'static Rings {
 /// acceleration arrows.
 fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     let blue = palette::sky();
-    let closed = |mut pts: Vec<[f64; 2]>| {
+    let closed = |mut pts: Vec<vga2d::Vector<(), f64>>| {
         pts.push(pts[0]);
         pts
     };
     let circle = closed(detector_ring(120).into_iter().map(transverse).collect());
     ax.dashed(c, &circle, 1.0, 4.0, palette::grid(), 1.0);
-    ax.line(c, [-1.08, 0.0], [1.08, 0.0], 0.8, palette::grid(), 0.5);
-    ax.line(c, [0.0, -1.08], [0.0, 1.08], 0.8, palette::grid(), 0.5);
+    // The panel's axes: the transverse directions x and y, through the centre.
+    for axis in [x(), y()] {
+        let reach = transverse(axis) * 1.08;
+        ax.line(c, -reach, reach, 0.8, palette::grid(), 0.5);
+    }
     // The weak-wave prediction, the strain map applied to the rest separations: the integrated
     // beads land on it.
     let (plus, cross) = strain_patterns();
@@ -428,12 +433,12 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     );
     ax.dashed(c, &predicted, 1.0, 3.0, palette::ink(), 0.5);
     let beads = &r.positions[polarization][k];
-    let now: Vec<[f64; 2]> = beads.iter().map(|p| transverse(*p)).collect();
+    let now: Vec<vga2d::Vector<(), f64>> = beads.iter().map(|p| transverse(*p)).collect();
     ax.polyline(c, &closed(now.clone()), 1.2, blue, 0.45);
     let tracked = [0, 6, 12, 18];
     let first = k.saturating_sub(r.time.len() / 7);
     for (j, bead) in tracked.iter().enumerate() {
-        let trail: Vec<[f64; 2]> = r.positions[polarization][first..=k]
+        let trail: Vec<vga2d::Vector<(), f64>> = r.positions[polarization][first..=k]
             .iter()
             .map(|row| transverse(row[*bead]))
             .collect();
@@ -446,7 +451,14 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     for (j, bead) in tracked.iter().enumerate() {
         ax.scatter(c, &[now[*bead]], Marker::Dot, 8.0, tracking()[j], 1.0);
     }
-    ax.scatter(c, &[[0.0, 0.0]], Marker::Dot, 5.0, palette::orange(), 1.0);
+    ax.scatter(
+        c,
+        &[Point2::xy(0.0, 0.0)],
+        Marker::Dot,
+        5.0,
+        palette::orange(),
+        1.0,
+    );
 }
 
 /// The curvature-map view of spacetime: `x` across, `z` along and `t` up, as a map to the
@@ -472,7 +484,7 @@ fn curvature_map(c: &mut Canvas, rect: [f32; 4], azimuth: f32) {
     let cam = Camera::orbit(
         (2.0 * cx) as usize,
         (2.0 * cy) as usize,
-        [0.0, 0.0, 0.0],
+        Point3::xyz(0.0, 0.0, 0.0),
         20.0,
         azimuth,
         0.3,
@@ -480,7 +492,7 @@ fn curvature_map(c: &mut Canvas, rect: [f32; 4], azimuth: f32) {
     );
     let mut s = Scene3::new(cam);
     let view = view();
-    let origin = [0.0; 3];
+    let origin = Point3::xyz(0.0, 0.0, 0.0);
     for axis in [x(), z(), t()] {
         s.arrow(origin, view.of(axis) * 1.05, 1.0, 6.0, palette::grid());
     }
@@ -523,7 +535,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
     for (p, title) in ["PLUS", "CROSS", "CIRCULAR"].into_iter().enumerate() {
         let x0 = w * p as f32 / 3.0;
         let rect = plot::inset([x0, top, x0 + w / 3.0, bottom], 10.0, 18.0, 10.0, 0.0);
-        let ax = Axes::equal(rect, [0.0, 0.0], r.limit);
+        let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), r.limit);
         ring(c, &ax, r, p, k);
         let cx = (rect[0] + rect[2]) * 0.5;
         c.text(
@@ -541,15 +553,22 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let rect = plot::inset([row[0], row[1], w * 0.42, row[3]], 50.0, 18.0, 10.0, 0.0);
     let ax = Axes::new(rect, [0.0, 6.0], [-1.15, 1.15]);
     for (part, colour) in [palette::sky(), palette::orange()].into_iter().enumerate() {
-        let curve: Vec<[f64; 2]> = r
+        let curve: Vec<Point<(), f64>> = r
             .time
             .iter()
             .zip(&r.strain)
-            .map(|(t, s)| [*t, s[part]])
+            .map(|(t, s)| Point::xy(*t, s[part]))
             .collect();
         ax.polyline(c, &curve, 1.3, colour, 0.9);
     }
-    ax.line(c, [now, -1.15], [now, 1.15], 1.2, palette::yellow(), 0.9);
+    ax.line(
+        c,
+        Point::xy(now, -1.15),
+        Point::xy(now, 1.15),
+        1.2,
+        palette::yellow(),
+        0.9,
+    );
     ax.frame(c, "STRAIN / 1E-4: PLUS, CROSS", "TIME (C = 1)", "");
 
     // The curvature map at one event, the view turning.
@@ -584,19 +603,19 @@ fn draw(c: &mut Canvas, t_now: f32) {
     // The Doppler check: tidal amplitude against `exp(-2 rapidity)`.
     let rect = plot::inset([w * 0.74, row[1], w, row[3]], 40.0, 18.0, 14.0, 0.0);
     let ax = Axes::new(rect, [-0.75, 0.75], [0.2, 5.0]).log_y();
-    let fine: Vec<[f32; 2]> = (0..=100)
+    let fine: Vec<Point2> = (0..=100)
         .map(|j| {
             let q = -0.7 + 1.4 * j as f32 / 100.0;
-            [q, (-2.0 * q).exp()]
+            Point2::xy(q, (-2.0 * q).exp())
         })
         .collect();
     ax.polyline(c, &fine, 1.3, palette::ink(), 0.9);
-    let dots: Vec<[f64; 2]> = r
+    let dots: Vec<Point<(), f64>> = r
         .doppler
         .0
         .iter()
         .zip(&r.doppler.1)
-        .map(|(q, a)| [*q, *a])
+        .map(|(q, a)| Point::xy(*q, *a))
         .collect();
     ax.scatter(c, &dots, Marker::Dot, 6.0, palette::sky(), 1.0);
     ax.frame(c, "TIDE VS BOOST", "RAPIDITY", "");

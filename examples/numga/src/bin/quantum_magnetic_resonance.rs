@@ -22,7 +22,8 @@
 use gax::vga3d::{Bivector, Vector};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, backdrop, caption, colormap, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, colormap,
+    palette, run,
 };
 use std::sync::OnceLock;
 
@@ -342,9 +343,19 @@ fn data() -> &'static Data {
     })
 }
 
-/// A Bloch vector seen from above the field: its `x` and `y`.
-fn from_above(r: Vector<(), f64>) -> [f64; 2] {
-    [r.e1(), r.e2()]
+/// A Bloch vector seen from above the field: its part in the `x y` plane.
+fn from_above(r: Vector<(), f64>) -> gax::vga2d::Vector<(), f64> {
+    gax::vga2d::Vector::new(r.e1(), r.e2())
+}
+
+/// A point of a plot, from its two values.
+fn on_plot(across: f64, up: f64) -> gax::pga2d::Point<(), f64> {
+    gax::pga2d::Point::xy(across, up)
+}
+
+/// The unit directions of space.
+fn axes() -> [Vector<(), f64>; 3] {
+    [x(), Vector::new(0.0, 1.0, 0.0), z()]
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -361,17 +372,19 @@ fn draw(c: &mut Canvas, t: f32) {
     let dt = (ECHO_DT * ECHO_EVERY as f64) as f32;
     let now = index as f32 * dt;
     let top_rect = [wf * 0.02, hf * 0.15, wf * 0.34, hf * 0.58];
-    let ax = Axes::equal(top_rect, [0.0, 0.0], 1.12);
+    let ax = Axes::equal(top_rect, Point2::xy(0.0, 0.0), 1.12);
     // The unit circle: x turned about the field.
-    let circle: Vec<[f64; 2]> = (0..=96)
+    let circle: Vec<_> = (0..=96)
         .map(|k| {
             let a = core::f64::consts::TAU * k as f64 / 96.0;
             from_above((Bivector::new(0.0, 0.0, 1.0) * (-a / 2.0)).exp() >> x())
         })
         .collect();
     ax.polyline(c, &circle, 1.0, palette::grid(), 1.0);
-    ax.line(c, [-1.1, 0.0], [1.1, 0.0], 1.0, palette::grid(), 0.6);
-    ax.line(c, [0.0, -1.1], [0.0, 1.1], 1.0, palette::grid(), 0.6);
+    for a in [x(), Vector::new(0.0, 1.0, 0.0)] {
+        let reach = from_above(a * 1.1);
+        ax.line(c, -reach, reach, 1.0, palette::grid(), 0.6);
+    }
     let mut order: Vec<usize> = (0..d.detunings.len()).collect();
     order.sort_by(|a, b| d.detunings[*a].total_cmp(&d.detunings[*b]));
     for k in order {
@@ -380,7 +393,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.scatter(c, &[r], Marker::Dot, 3.5, tone, 0.9);
     }
     let signal = from_above(bloch(mean(&d.ensemble[index])));
-    ax.arrow(c, [0.0, 0.0], signal, 2.5, 9.0, palette::yellow());
+    ax.arrow(c, Point2::xy(0.0, 0.0), signal, 2.5, 9.0, palette::yellow());
     let stage = if now < 0.3 {
         "TIPPED ONTO -Y"
     } else if now < DELAY as f32 - 0.05 {
@@ -420,32 +433,39 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.frame(c, "MEAN TRANSVERSE SPIN", "TIME (US)", "");
     for (at, name) in [(DELAY as f32, "PI PULSE"), (2.0 * DELAY as f32, "ECHO")] {
-        ax.line(c, [at, 0.0], [at, 1.05], 1.0, palette::grid(), 1.0);
+        ax.line(
+            c,
+            Point2::xy(at, 0.0),
+            Point2::xy(at, 1.05),
+            1.0,
+            palette::grid(),
+            1.0,
+        );
         ax.text(
             c,
-            [at + 0.06, 0.95],
+            Point2::xy(at + 0.06, 0.95),
             name,
             small,
             palette::grid(),
             Align::Left,
         );
     }
-    let decay: Vec<[f32; 2]> = (0..=100)
+    let decay: Vec<Point2> = (0..=100)
         .map(|k| {
             let s = total * k as f32 / 100.0;
-            [s, (-s / T2 as f32).exp()]
+            Point2::xy(s, (-s / T2 as f32).exp())
         })
         .collect();
     ax.dashed(c, &decay, 1.0, 5.0, palette::grid(), 1.0);
-    let trace: Vec<[f32; 2]> = d.signal[..=index]
+    let trace: Vec<Point2> = d.signal[..=index]
         .iter()
         .enumerate()
-        .map(|(k, s)| [k as f32 * dt, *s as f32])
+        .map(|(k, s)| Point2::xy(k as f32 * dt, *s as f32))
         .collect();
     ax.polyline(c, &trace, 1.8, palette::sky(), 1.0);
     ax.scatter(
         c,
-        &[[now, d.signal[index] as f32]],
+        &[Point2::xy(now, d.signal[index] as f32)],
         Marker::Dot,
         6.0,
         palette::sky(),
@@ -458,7 +478,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         (ball[2] - ball[0]) as usize,
         (ball[3] - ball[1]) as usize,
-        [0.0; 3],
+        ORIGIN3,
         4.4,
         (-50.0f32).to_radians() + 0.3 * phase,
         18.0f32.to_radians(),
@@ -467,11 +487,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let shown = ((phase * d.nutation.len() as f32) as usize).clamp(1, d.nutation.len());
     let colours = [palette::red(), palette::purple(), palette::sky()];
     panel3(c, ball, cam, |s| {
-        s.sphere_wire([0.0; 3], 1.0, 16, palette::grid(), 0.45);
-        for k in 0..3 {
-            let mut a = [0.0; 3];
-            a[k] = 1.0;
-            s.seg(a.map(|v| -v), a, 1.0, palette::grid(), 1.0);
+        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid(), 0.45);
+        for a in axes() {
+            s.seg(-a, a, 1.0, palette::grid(), 1.0);
         }
         for (j, colour) in colours.iter().enumerate() {
             let path: Vec<_> = d.nutation[..shown]
@@ -501,18 +519,25 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.frame(c, "ABSORPTION PER UNIT DRIVE", "DETUNING (RAD/US)", "");
     let mut legend = Vec::new();
     for (j, drive) in DRIVES.iter().enumerate() {
-        let pts: Vec<[f64; 2]> = d
+        let pts: Vec<_> = d
             .line_detunings
             .iter()
             .zip(&d.lines)
-            .map(|(det, row)| [*det, -bloch(row[j]).e2() / drive])
+            .map(|(det, row)| on_plot(*det, -bloch(row[j]).e2() / drive))
             .collect();
         ax.polyline(c, &pts, 1.5, colours[j], 1.0);
         legend.push((format!("DRIVE {drive}"), colours[j]));
     }
     // A cursor sweeping the detuning.
     let sweep = -3.0 + 6.0 * (0.5 - 0.5 * (core::f32::consts::TAU * phase).cos());
-    ax.line(c, [sweep, 0.0], [sweep, 4.2], 1.0, palette::grid(), 1.0);
+    ax.line(
+        c,
+        Point2::xy(sweep, 0.0),
+        Point2::xy(sweep, 4.2),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
     let entries: Vec<(&str, _)> = legend.iter().map(|(s, c)| (s.as_str(), *c)).collect();
     ax.legend(c, &entries);
 
@@ -524,25 +549,32 @@ fn draw(c: &mut Canvas, t: f32) {
     )
     .log_x();
     ax.frame(c, "ECHO AND FREE DECAY", "TIME AFTER TIP (US)", "");
-    let fine: Vec<[f32; 2]> = (0..=60)
+    let fine: Vec<Point2> = (0..=60)
         .map(|k| {
             let s = 0.02 * (1000.0f32).powf(k as f32 / 60.0);
-            [s, (-s / T2 as f32).exp()]
+            Point2::xy(s, (-s / T2 as f32).exp())
         })
         .collect();
     ax.dashed(c, &fine, 1.0, 5.0, palette::grid(), 1.0);
     for (states, colour) in [(&d.echoed, palette::sky()), (&d.faded, palette::red())] {
-        let pts: Vec<[f64; 2]> = d
+        let pts: Vec<_> = d
             .decay_times
             .iter()
             .zip(states)
-            .map(|(s, rho)| [*s, transverse(*rho)])
+            .map(|(s, rho)| on_plot(*s, transverse(*rho)))
             .collect();
         ax.polyline(c, &pts, 1.5, colour, 1.0);
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour, 1.0);
     }
     if now > 0.02 {
-        ax.line(c, [now, 0.0], [now, 1.05], 1.0, palette::yellow(), 0.7);
+        ax.line(
+            c,
+            Point2::xy(now, 0.0),
+            Point2::xy(now, 1.05),
+            1.0,
+            palette::yellow(),
+            0.7,
+        );
     }
     ax.legend(
         c,

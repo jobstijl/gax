@@ -103,7 +103,7 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     let cam = Camera::orbit(
         c.width,
         c.height,
-        [0.5, 0.0, 0.0],
+        Point::xyz(0.5, 0.0, 0.0),
         6.2,
         azimuth,
         0.45,
@@ -115,16 +115,17 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     // leaving out the quads that face away: those whose plane has the eye on the same side as
     // the bone axis inside. The bones go under it, seen faintly through.
     let at = |i: usize, j: usize| skin[i * AROUND + j % AROUND];
-    let [x, y, z] = cam.eye().map(f64::from);
-    let eye = Point::xyz(x, y, z);
+    let eye = cam.eye().map_coefs(f64::from);
+    let axis = bone_axis();
     let mut quads = Vec::with_capacity((RINGS - 1) * AROUND);
     for i in 0..RINGS - 1 {
         for j in 0..AROUND {
             let q = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
             let mid = (q[0] + q[1] + q[2] + q[3]).unitized();
             let face = q[0] & q[1] & q[2];
-            // The bone axis inside, at the quad's middle.
-            let inside = Point::xyz(mid.to_euclidean()[0], 0.0, 0.0);
+            // The bone axis inside, at the quad's middle: where the plane through the middle
+            // across the axis meets it.
+            let inside = ((mid | axis) ^ axis).unitized();
             if (face & eye).s() * (face & inside).s() > 0.0 {
                 continue;
             }
@@ -134,22 +135,22 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
                 q[2],
                 colormap::viridis(j as f32 / AROUND as f32),
             );
-            quads.push((cam.local(mid)[2], q, colour));
+            quads.push((cam.depth(mid), q, colour));
         }
     }
     quads.sort_by(|a, b| b.0.total_cmp(&a.0));
     // The bones along the axis, and each bone's frame: the root's z axis, and the tip's, turned.
     s.seg(
-        [-0.25, 0.0, 0.0],
-        [1.25, 0.0, 0.0],
+        Point::xyz(-0.25, 0.0, 0.0),
+        Point::xyz(1.25, 0.0, 0.0),
         2.0,
         palette::ink(),
         0.8,
     );
     let up = Point::direction(0.0, 0.0, 1.5);
-    s.arrow([0.0, 0.0, 0.0], up, 2.0, 8.0, palette::orange());
+    s.arrow(Point::xyz(0.0, 0.0, 0.0), up, 2.0, 8.0, palette::orange());
     s.arrow(
-        [1.0, 0.0, 0.0],
+        Point::xyz(1.0, 0.0, 0.0),
         twist(angle) >> up,
         2.0,
         8.0,

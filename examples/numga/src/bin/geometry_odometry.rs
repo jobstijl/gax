@@ -17,8 +17,7 @@
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, f32s, palette,
-    plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -602,23 +601,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let positions =
         |ps: &[plane::M]| -> Vec<plane::P> { ps.iter().map(|p| plane::position(*p)).collect() };
     let (truth, dead) = (positions(&lap.truth), positions(&lap.dead));
-    let (lo, hi) = truth.iter().chain(&dead).map(|p| p.to_euclidean()).fold(
-        ([f64::MAX; 2], [f64::MIN; 2]),
-        |(l, u), p| {
-            (
-                [l[0].min(p[0]), l[1].min(p[1])],
-                [u[0].max(p[0]), u[1].max(p[1])],
-            )
-        },
-    );
     let left = plot::inset([0.0, 50.0, w * 0.6, h], 10.0, 10.0, 10.0, 10.0);
-    let aspect = f64::from((left[3] - left[1]) / (left[2] - left[0]));
-    let half = 0.5 * (hi[1] - lo[1]).max((hi[0] - lo[0]) * aspect);
-    let ax = Axes::equal(
-        left,
-        f32s([0.5 * (lo[0] + hi[0]), 0.5 * (lo[1] + hi[1])]),
-        half as f32 * 1.15,
-    );
+    let ax = Axes::fitting(left, truth.iter().chain(&dead).copied(), 1.15);
     ax.polyline(c, &truth, 4.0, palette::grid(), 1.0);
     ax.dashed(c, &dead, 1.5, 5.0, palette::orange(), 0.9);
     for ((p, u), at) in lap.dead.iter().zip(&lap.reckoned).zip(&dead) {

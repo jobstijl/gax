@@ -27,7 +27,7 @@ pub mod view;
 
 pub use app::{Anim, run};
 pub use canvas::{Canvas, Px, Rgb};
-pub use coords::{Dir2, Dir3, Pos2, Pos3, f32s};
+pub use coords::{Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3};
 pub use font::Align;
 pub use plot::{Axes, Marker};
 pub use scene3::Scene3;
@@ -86,20 +86,26 @@ mod tests {
         let cam = Camera::looking(
             100,
             100,
-            [0.0, -5.0, 0.0],
-            [0.0, 0.0, 0.0],
+            Point3::xyz(0.0, -5.0, 0.0),
+            Point3::xyz(0.0, 0.0, 0.0),
             Lens::Perspective(0.8),
         )
         .viewport([200.0, 50.0, 300.0, 150.0]);
-        let o = cam.px([0.0, 0.0, 0.0]).expect("in view");
+        let o = cam.px(Point3::xyz(0.0, 0.0, 0.0)).expect("in view");
         assert!(
             (o[0] - 250.0).abs() < 1e-3 && (o[1] - 100.0).abs() < 1e-3,
             "{o:?}"
         );
         let (origin, dir) = cam.ray([250.0, 100.0]);
-        let [ox, oy, oz] = origin.to_euclidean();
-        assert!(ox.abs() < 1e-4 && (oy + 5.0).abs() < 1e-4 && oz.abs() < 1e-4);
-        assert!((dir.e013() - 1.0).abs() < 1e-5);
+        // From the eye, straight ahead along +y.
+        assert!(
+            (origin & Point3::xyz(0.0, -5.0, 0.0)).norm() < 1e-4,
+            "{origin:?}"
+        );
+        assert!(
+            (dir - Point3::direction(0.0, 1.0, 0.0)).ideal_norm() < 1e-5,
+            "{dir:?}"
+        );
     }
 
     #[test]
@@ -129,26 +135,26 @@ mod tests {
 
     #[test]
     fn a_circle_s_contour_is_a_closed_ring_of_segments() {
-        let segs = contour::of_fn(|x, y| x * x + y * y, [-2.0, 2.0], [-2.0, 2.0], 41, 1.0);
+        // The unit circle: the level 1 of the squared distance from the origin.
+        let origin = Point2::xy(0.0, 0.0);
+        let r2 = |p: Point2| (p & origin).norm_squared();
+        let segs = contour::of_fn(r2, [-2.0, 2.0], [-2.0, 2.0], 41, 1.0);
         assert!(segs.len() > 20);
-        for [a, b] in segs {
-            for p in [a, b] {
-                let origin = gax::pga2d::Point::xy(0.0, 0.0);
-                let r = (gax::pga2d::Point::xy(p[0], p[1]) & origin).norm();
-                assert!((r - 1.0).abs() < 0.02, "{p:?}");
-            }
+        for p in segs.into_iter().flatten() {
+            let r = (p & origin).norm();
+            assert!((r - 1.0).abs() < 0.02, "{p:?}");
         }
     }
 
     #[test]
     fn axes_map_data_to_pixels_and_back() {
         let ax = Axes::new([10.0, 20.0, 110.0, 220.0], [0.0, 1.0], [-1.0, 1.0]);
-        assert_eq!(ax.px([0.0, -1.0]), [10.0, 220.0]);
-        assert_eq!(ax.px([1.0, 1.0]), [110.0, 20.0]);
-        let back = ax.data(ax.px([0.25, 0.5]));
-        assert!((back[0] - 0.25).abs() < 1e-6 && (back[1] - 0.5).abs() < 1e-6);
+        assert_eq!(ax.px(Point2::xy(0.0, -1.0)), [10.0, 220.0]);
+        assert_eq!(ax.px(Point2::xy(1.0, 1.0)), [110.0, 20.0]);
+        let back = ax.data(ax.px(Point2::xy(0.25, 0.5)));
+        assert!((back & Point2::xy(0.25, 0.5)).norm() < 1e-6, "{back:?}");
         let log = Axes::new([0.0, 0.0, 100.0, 100.0], [0.0, 1.0], [1e-3, 1.0]).log_y();
-        assert!((log.px([0.0, 1e-2])[1] - 200.0 / 3.0).abs() < 1e-3);
+        assert!((log.px(Point2::xy(0.0, 1e-2))[1] - 200.0 / 3.0).abs() < 1e-3);
     }
 
     #[test]
@@ -156,25 +162,25 @@ mod tests {
         let cam = Camera::looking(
             64,
             64,
-            [5.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0],
+            Point3::xyz(5.0, 0.0, 0.0),
+            Point3::xyz(0.0, 0.0, 0.0),
             Lens::Perspective(0.8),
         );
         let mut s = Scene3::new(cam);
         // A red square in front of a green one: the centre is red.
         s.quad(
-            [1.0, -1.0, -1.0],
-            [1.0, 1.0, -1.0],
-            [1.0, 1.0, 1.0],
-            [1.0, -1.0, 1.0],
+            Point3::xyz(1.0, -1.0, -1.0),
+            Point3::xyz(1.0, 1.0, -1.0),
+            Point3::xyz(1.0, 1.0, 1.0),
+            Point3::xyz(1.0, -1.0, 1.0),
             [1.0, 0.0, 0.0],
             1.0,
         );
         s.quad(
-            [-1.0, -1.0, -1.0],
-            [-1.0, 1.0, -1.0],
-            [-1.0, 1.0, 1.0],
-            [-1.0, -1.0, 1.0],
+            Point3::xyz(-1.0, -1.0, -1.0),
+            Point3::xyz(-1.0, 1.0, -1.0),
+            Point3::xyz(-1.0, 1.0, 1.0),
+            Point3::xyz(-1.0, -1.0, 1.0),
             [0.0, 1.0, 0.0],
             1.0,
         );
@@ -190,22 +196,22 @@ mod tests {
         let cam = Camera::looking(
             100,
             100,
-            [0.0, -0.001, 10.0],
-            [0.0, 0.0, 0.0],
+            Point3::xyz(0.0, -0.001, 10.0),
+            Point3::xyz(0.0, 0.0, 0.0),
             Lens::Perspective(0.8),
         );
-        let o = cam.px([0.0, 0.0, 0.0]).expect("in view");
-        let x = cam.px([1.0, 0.0, 0.0]).expect("in view");
-        let y = cam.px([0.0, 1.0, 0.0]).expect("in view");
+        let o = cam.px(Point3::xyz(0.0, 0.0, 0.0)).expect("in view");
+        let x = cam.px(Point3::xyz(1.0, 0.0, 0.0)).expect("in view");
+        let y = cam.px(Point3::xyz(0.0, 1.0, 0.0)).expect("in view");
         assert!(x[0] > o[0] + 1.0, "{o:?} {x:?}");
         assert!(y[1] < o[1] - 1.0, "{o:?} {y:?}");
         // The ray through a point's pixel passes through the point.
+        // The ray meets the ground plane `z = 0` at the point.
         let (origin, dir) = cam.ray(x);
-        let [ox, oy, oz] = origin.to_euclidean();
-        let t = oz / -dir.e021();
-        let hit = [ox + t * dir.e032(), oy + t * dir.e013()];
+        let ray = origin & (origin + dir);
+        let hit = ray ^ gax::pga3d::Plane::from_normal([0.0, 0.0, 1.0], 0.0);
         assert!(
-            (hit[0] - 1.0).abs() < 1e-3 && hit[1].abs() < 1e-3,
+            (hit & Point3::xyz(1.0, 0.0, 0.0)).norm() < 1e-3 * hit.e123().abs(),
             "{hit:?}"
         );
     }
@@ -217,11 +223,11 @@ mod tests {
         let cam = Camera::looking(
             100,
             80,
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
+            Point3::xyz(0.0, 0.0, 0.0),
+            Point3::xyz(1.0, 0.0, 0.0),
             Lens::Perspective(core::f32::consts::FRAC_PI_2),
         );
-        let top = cam.px([1.0, 0.0, 1.0]).expect("in view");
+        let top = cam.px(Point3::xyz(1.0, 0.0, 1.0)).expect("in view");
         assert!(
             (top[1] - 0.0).abs() < 1e-3 && (top[0] - 50.0).abs() < 1e-3,
             "{top:?}"

@@ -359,12 +359,15 @@ struct Scene {
     corners: Vec<simplex::P>,
     inertia: e3::Inertia,
     motors: Vec<rigid::M>,
-    /// Grid and Monte Carlo errors against the lumped inertia: (samples, error).
-    grid: Vec<[f64; 2]>,
-    monte_carlo: Vec<[f64; 2]>,
+    /// Grid and Monte Carlo errors against the lumped inertia, as chart points (samples, error).
+    grid: Vec<Chart>,
+    monte_carlo: Vec<Chart>,
     /// The mesh moments' difference from the lumped second moment.
     mesh: f64,
 }
+
+/// A point of the error chart.
+type Chart = gax::pga2d::Point<(), f64>;
 
 const SECONDS: f32 = 12.0;
 const DT: f64 = 0.01;
@@ -400,10 +403,10 @@ fn scene() -> &'static Scene {
             .iter()
             .map(|&n| {
                 let w = simplex::grid(n);
-                [
+                Chart::xy(
                     w.len() as f64,
                     simplex::relative(simplex::inertia(&w, &tetra), exact),
-                ]
+                )
             })
             .collect();
         // One Monte Carlo stream, its running mean read at logarithmic checkpoints.
@@ -416,10 +419,10 @@ fn scene() -> &'static Scene {
             let unit: Vec<f64> = row.iter().map(|w| w * draws.len() as f64).collect();
             sum += simplex::inertia(&[unit], &tetra);
             if i + 1 == next {
-                monte_carlo.push([
+                monte_carlo.push(Chart::xy(
                     next as f64,
                     simplex::relative(sum * (1.0 / next as f64), exact),
-                ]);
+                ));
                 next = (next as f64 * 1.5).ceil() as usize;
             }
         }
@@ -484,7 +487,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         left as usize,
         c.height,
-        [0.0, 0.0, 0.0],
+        Point::xyz(0.0, 0.0, 0.0),
         9.0,
         0.5 + 0.2 * t,
         0.35,
@@ -535,7 +538,7 @@ fn draw(c: &mut Canvas, t: f32) {
     .log_y();
     ax.frame(c, "SAMPLED SIMPLEX INERTIA", "SAMPLES", "RELATIVE ERROR");
     let shown = (t.rem_euclid(SECONDS) / SECONDS * 1.25).min(1.0);
-    let reveal = |pts: &'static [[f64; 2]]| -> &'static [[f64; 2]] {
+    let reveal = |pts: &'static [Chart]| -> &'static [Chart] {
         let n = ((pts.len() as f32 * shown).ceil() as usize).clamp(1, pts.len());
         &pts[..n]
     };
@@ -544,10 +547,10 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.scatter(c, g, Marker::Dot, 5.0 * u, palette::orange(), 1.0);
     ax.polyline(c, r, 1.4, palette::sky(), 1.0);
     // The lumped inertia takes four points; gax's mesh moments agree with it to rounding.
-    let floor = 2e-16f32;
+    let floor = 2e-16;
     ax.scatter(
         c,
-        &[[4.0, floor]],
+        &[Chart::xy(4.0, floor)],
         Marker::Star,
         13.0 * u,
         palette::green(),
@@ -555,7 +558,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.scatter(
         c,
-        &[[4.0, (sc.mesh as f32).max(floor) * 8.0]],
+        &[Chart::xy(4.0, sc.mesh.max(floor) * 8.0)],
         Marker::Square,
         9.0 * u,
         palette::yellow(),
@@ -654,12 +657,12 @@ mod tests {
     fn simplex_inertia() {
         let sc = scene();
         assert!(sc.mesh < 1e-14, "{}", sc.mesh);
-        let (n, grid) = (sc.grid[sc.grid.len() - 1][0], sc.grid[sc.grid.len() - 1][1]);
+        let [n, grid] = sc.grid[sc.grid.len() - 1].to_euclidean();
         assert!(n > 1e5 && grid < 2e-2, "{n} {grid}");
-        let mc = sc.monte_carlo[sc.monte_carlo.len() - 1][1];
+        let [_, mc] = sc.monte_carlo[sc.monte_carlo.len() - 1].to_euclidean();
         assert!(mc < 2e-2, "{mc}");
         // The grid converges.
-        assert!(sc.grid[4][1] > 2.0 * grid);
+        assert!(sc.grid[4].to_euclidean()[1] > 2.0 * grid);
         let tetra = simplex::tetrahedron();
         let inertia = simplex::lumped(&tetra);
         let rate = Line::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);

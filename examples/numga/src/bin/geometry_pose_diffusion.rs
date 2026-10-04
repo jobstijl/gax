@@ -266,7 +266,7 @@ fn draw(c: &mut Canvas, t: f32) {
             w * 0.02,
             h * 0.13,
         );
-        let ax = Axes::equal(rect, [0.0, 0.0], EXTENT);
+        let ax = Axes::equal(rect, origin(), EXTENT);
         ax.frame(
             c,
             &format!("{name}, T = {seconds:.1} S"),

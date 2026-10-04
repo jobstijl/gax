@@ -18,10 +18,11 @@
 
 use std::sync::OnceLock;
 
+use gax::pga2d::Point;
 use gax_numga_examples::canvas::srgb;
 use gax_numga_examples::font;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Pos2, Rgb, backdrop, caption, f32s, palette, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Pos2, Rgb, backdrop, caption, palette, run,
 };
 
 gax::algebra! {
@@ -412,8 +413,8 @@ fn contact() -> Rgb {
 
 /// An event where the diagrams draw it: position across, time up.
 impl Pos2 for V {
-    fn xy(self) -> [f32; 2] {
-        f32s([position_of(self), time_of(self)])
+    fn point2(self) -> Point2 {
+        Point::xy(position_of(self), time_of(self)).point2()
     }
 }
 
@@ -496,10 +497,11 @@ impl Diagram<'_> {
         let size = ((ax.rect[2] - ax.rect[0]) / 26.0).clamp(7.0, 11.0);
         // The present rises from the bottom of the diagram to its top.
         let tau = f64::from(yr[0] + (yr[1] - yr[0]) * reveal);
-        // Light cones through the origin, faint.
+        // Light cones through the origin, faint: the null directions `t ± x`, far out.
         let big = 10.0;
-        ax.line(c, [-big, -big], [big, big], 0.8, palette::grid(), 0.35);
-        ax.line(c, [-big, big], [big, -big], 0.8, palette::grid(), 0.35);
+        for null in [t() + x(), t() - x()] {
+            ax.line(c, null * -big, null * big, 0.8, palette::grid(), 0.35);
+        }
         Diagram { ax, tau, size, c }
     }
 
@@ -640,8 +642,8 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         d.frame();
         d.title(heading);
     }
-    let end = time_of(s.train[s.train.len() - 1][0]) as f32;
-    let mut d = Diagram::new(c, rect(2), [-0.16, 2.7], [-0.38, end + 0.30], r);
+    let end = time_of(s.train[s.train.len() - 1][0]);
+    let mut d = Diagram::new(c, rect(2), [-0.16, 2.7], [-0.38, end as f32 + 0.30], r);
     d.rod(&s.train, 2.4);
     for step in &s.steps {
         d.dashed(step, kink(), 1.3);
@@ -654,7 +656,7 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         1.0,
         palette::ink(),
     );
-    d.text([0.62, end - 0.05], "ONE FIXED MAP, REPEATED", kink());
+    d.text(event(end - 0.05, 0.62), "ONE FIXED MAP, REPEATED", kink());
     d.now(&end_line(&s.train, 0), &end_line(&s.train, 1));
     d.frame();
     d.title("10 IMPULSES: 0 -> 0.8C");
@@ -693,7 +695,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     barn(&mut d, &s.barn_doors, &s.closure);
     d.rod(&s.barn_ladder, 2.2);
     d.bar(s.incoming, "LADDER 0.60", 1.0, palette::ink());
-    d.text([0.4, -0.45], "DOORS CLOSE TOGETHER", door());
+    d.text(event(-0.45, 0.4), "DOORS CLOSE TOGETHER", door());
     d.now(&end_line(&s.barn_ladder, 0), &end_line(&s.barn_ladder, 1));
     d.frame();
     d.title("1. BARN FRAME: IT FITS");
@@ -704,7 +706,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.rod(&s.moving_ladder, 2.2);
     d.bar(s.ladder_cut, "LADDER 1.00", 1.0, palette::ink());
     d.bar(s.barn_cut, "BARN 0.48", 1.0, door());
-    d.text([1.5, -1.25], "EXIT CLOSES FIRST", door());
+    d.text(event(-1.25, 1.5), "EXIT CLOSES FIRST", door());
     d.now(
         &end_line(&s.moving_ladder, 0),
         &end_line(&s.moving_ladder, 1),
@@ -721,7 +723,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.bar(s.incoming, "0.60 AT CLOSURE", -1.0, palette::ink());
     d.bar(s.stopped, "AT REST 1.00", 1.0, palette::ink());
     d.events(&[s.contact], Marker::Star, 11.0, contact());
-    d.text([0.5, 1.85], "TOO LONG FOR THE BARN", palette::ink());
+    d.text(event(1.85, 0.5), "TOO LONG FOR THE BARN", palette::ink());
     d.now(&end_line(&s.stop_ladder, 0), &end_line(&s.stop_ladder, 1));
     d.frame();
     d.title("3. STRAIN-PRESERVING STOP");
@@ -738,7 +740,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.bar(s.incoming, "COMPRESSED 0.60", -1.0, elastic());
     d.events(&s.contacts, Marker::Star, 11.0, contact());
     d.bar(s.relaxed_cut, "RELAXED 1.00", 1.0, palette::ink());
-    d.text([0.4, 1.05], "ELASTIC RINGING", elastic());
+    d.text(event(1.05, 0.4), "ELASTIC RINGING", elastic());
     let mut left = end_line(&s.ring_incoming, 0);
     left.extend(end_line(&s.ring, 0));
     let mut right = end_line(&s.ring_incoming, 1);
@@ -756,7 +758,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
 fn draw_spaceships(c: &mut Canvas, r: f32) {
     let (_, _, s) = scenes();
     let (w, h) = (c.width as f32, c.height as f32);
-    let end = time_of(s.tracks[0][s.tracks[0].len() - 1][0]) as f32;
+    let end = time_of(s.tracks[0][s.tracks[0].len() - 1][0]);
     let titles = ["STRAIN-PRESERVING TRAIN", "BELL: IDENTICAL CLOCK PROGRAMS"];
     let notes = ["FRONT IMPULSES ON THE BISECTORS", "MATCHING CLOCK READINGS"];
     let colours = [kink(), elastic()];
@@ -767,7 +769,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
             w * 0.36 * (k + 1) as f32 - 8.0,
             h - 60.0,
         ];
-        let mut d = Diagram::new(c, rect, [-0.20, 3.05], [-0.40, end + 0.18], r);
+        let mut d = Diagram::new(c, rect, [-0.20, 3.05], [-0.40, end as f32 + 0.18], r);
         d.rod(&s.tracks[k], 2.4);
         for step in &s.schedules[k] {
             d.dashed(step, colours[k], 1.3);
@@ -778,7 +780,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
             let dy = if time_of(cut[0]) < 0.0 { -1.0 } else { 1.0 };
             d.bar(*cut, &format!("{label}: {gap:.2} L0"), dy, palette::ink());
         }
-        d.text([1.4, end - 0.1], notes[k], colours[k]);
+        d.text(event(end - 0.1, 1.4), notes[k], colours[k]);
         d.now(&end_line(&s.tracks[k], 0), &end_line(&s.tracks[k], 1));
         d.frame();
         d.title(titles[k]);
@@ -794,7 +796,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     );
     let size = 10.0;
     title(c, &ax, "IN THE FINAL REST FRAME", palette::ink());
-    let gaps = s.final_events.map(|e| position_of(e[1]) as f32);
+    let gaps = s.final_events.map(|e| position_of(e[1]));
     let rows = [
         (
             gaps[0],
@@ -815,23 +817,30 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
             ),
         ),
     ];
-    ax.dashed(c, &[[1.0, 0.65], [1.0, 2.25]], 1.0, 3.0, door(), alpha);
+    // Each rope a row: its rear ship at zero, its front ship at the gap, the relaxed length
+    // dashed across both.
+    let relaxed = [Point::xy(1.0, 0.65), Point::xy(1.0, 2.25)];
+    ax.dashed(c, &relaxed, 1.0, 3.0, door(), alpha);
     for (gap, y, colour, head, label) in rows {
-        ax.text(c, [0.0, y + 0.36], head, size, colour, Align::Left);
-        ax.line(c, [0.0, y], [gap, y], 3.0, colour, alpha);
-        for (x, ship) in [(0.0, rear()), (gap, front())] {
-            let [px, py] = ax.px([x, y]);
+        let (rear_ship, front_ship) = (Point::xy(0.0, y), Point::xy(gap, y));
+        let (above, below) = (Point::direction(0.0, 0.36), Point::direction(0.0, -0.3));
+        ax.text(c, rear_ship + above, head, size, colour, Align::Left);
+        ax.line(c, rear_ship, front_ship, 3.0, colour, alpha);
+        for (at, ship) in [(rear_ship, rear()), (front_ship, front())] {
+            let [px, py] = ax.px(at);
             c.fill(
                 &[[px + 9.0, py], [px - 6.0, py - 7.0], [px - 6.0, py + 7.0]],
                 ship,
                 alpha,
             );
         }
-        ax.text(c, [gap * 0.5, y - 0.3], &label, size, colour, Align::Center);
+        // The label under the rope's middle.
+        let under = (rear_ship + front_ship).gp(0.5) + below;
+        ax.text(c, under, &label, size, colour, Align::Center);
     }
     ax.text(
         c,
-        [0.0, 2.85],
+        Point::xy(0.0, 2.85),
         "SAME FINAL SPEED: 0.8C",
         size,
         door(),
@@ -839,7 +848,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     );
     ax.text(
         c,
-        [0.0, 0.1],
+        Point::xy(0.0, 0.1),
         "THE ROPE MUST STRETCH",
         size,
         elastic(),

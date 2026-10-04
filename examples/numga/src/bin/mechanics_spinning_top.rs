@@ -22,7 +22,7 @@
 
 use gax::pga3d::{Direction, Line, Motor, Plane, Point};
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Anim, Axes, Camera, Canvas, Lens, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
@@ -341,7 +341,7 @@ mod scenarios {
     pub const STATIC_FRICTION: f64 = 0.4;
     /// numga's view: elevation and azimuth in degrees, the centre and the half width.
     pub const VIEW: (f64, f64) = (30.0, -60.0);
-    pub const CENTRE: [f64; 3] = [0.0, 0.0, 0.15];
+    pub const CENTRE: P = Point::new(0.0, 0.0, 0.15, 1.0);
     pub const EXTENT: f64 = 0.55;
 
     /// The top's parts, inertia, mass and the height of its centre of mass above the tip.
@@ -600,12 +600,13 @@ fn draw(c: &mut Canvas, t: f32) {
         let ax = Axes::new(rect, [0.0, SECONDS as f32], *range);
         ax.frame(c, title, if p == 1 { "TIME (S)" } else { "" }, "");
         for (v, samples) in runs.samples.iter().enumerate() {
-            let pts: Vec<[f64; 2]> = samples[..=k]
+            // The chart's points: (time, value).
+            let pts: Vec<gax::pga2d::Point<(), f64>> = samples[..=k]
                 .iter()
                 .enumerate()
                 .map(|(j, s)| {
                     let value = if p == 0 { s.tilt.to_degrees() } else { s.spin };
-                    [j as f64 * DT * EVERY as f64, value]
+                    gax::pga2d::Point::xy(j as f64 * DT * EVERY as f64, value)
                 })
                 .collect();
             ax.polyline(
@@ -618,8 +619,8 @@ fn draw(c: &mut Canvas, t: f32) {
         }
         ax.line(
             c,
-            [time, range[0]],
-            [time, range[1]],
+            Point2::xy(time, range[0]),
+            Point2::xy(time, range[1]),
             0.8,
             palette::grid(),
             1.0,

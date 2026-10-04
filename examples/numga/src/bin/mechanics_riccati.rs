@@ -13,7 +13,7 @@
 use gax::Unit;
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, backdrop, canvas, caption, f32s, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, backdrop, canvas, caption, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -243,9 +243,10 @@ mod riccati {
         error.gp(-0.5).exp()
     }
 
-    /// The twist whose pose is the translation by `(x, y)`.
-    pub fn offset(x: f64, y: f64) -> P {
-        Point::translation_twist(x, y).gp(-2.0)
+    /// The twist whose pose is the translation carrying the dock's centre to `to`.
+    pub fn offset(to: P) -> P {
+        let d = to.unitized() - centre();
+        Point::translation_twist(d.e20(), d.e01()).gp(-2.0)
     }
 }
 
@@ -260,9 +261,10 @@ fn cases() -> &'static [Docking; 2] {
 const STEP: f32 = 0.08;
 const HOLD: f32 = 1.4;
 
-/// The corners of a box around every hull position of both approaches and the dock.
-fn limits() -> ([f64; 2], [f64; 2]) {
-    static L: OnceLock<([f64; 2], [f64; 2])> = OnceLock::new();
+/// The lower left and upper right corners of a box around every hull position of both
+/// approaches and the dock.
+fn limits() -> (P, P) {
+    static L: OnceLock<(P, P)> = OnceLock::new();
     *L.get_or_init(|| {
         let mut lo = [f64::MAX; 2];
         let mut hi = [f64::MIN; 2];
@@ -278,7 +280,7 @@ fn limits() -> ([f64; 2], [f64; 2]) {
                 }
             }
         }
-        (lo, hi)
+        (Point::xy(lo[0], lo[1]), Point::xy(hi[0], hi[1]))
     })
 }
 
@@ -297,7 +299,6 @@ fn draw(c: &mut Canvas, t: f32) {
     let (mounts, directions) = (mounts(), directions());
     // Shared limits: a square around every pose of both approaches and the dock.
     let (lo, hi) = limits();
-    let (lo, hi) = (f32s(lo), f32s(hi));
     for (i, (case, label)) in cases().iter().zip(labels).enumerate() {
         let rect = plot::inset(
             [w * i as f32 / 2.0, 0.0, w * (i + 1) as f32 / 2.0, h],
@@ -306,21 +307,15 @@ fn draw(c: &mut Canvas, t: f32) {
             w * 0.02,
             h * 0.04,
         );
-        let ax = Axes::equal(
-            rect,
-            [(lo[0] + hi[0]) * 0.5, (lo[1] + hi[1]) * 0.5],
-            (hi[1] - lo[1]).max((hi[0] - lo[0]) * (rect[3] - rect[1]) / (rect[2] - rect[0]))
-                * 0.5
-                * 1.1,
-        );
+        let ax = Axes::fitting(rect, [lo, hi], 1.1);
         // The level set of the cost still to pay, over translations of the hull with heading
         // zero: everywhere from which the rest of the approach costs 0.15.
         let remaining = if s >= STEPS as f32 { 1 } else { STEPS - k };
         let value = case.values[remaining - 1];
         ax.contour(
             c,
-            |x, y| {
-                let q = offset(f64::from(x), f64::from(y));
+            |p| {
+                let q = offset(p.map_coefs(f64::from));
                 value.of(q).of(q).s() as f32
             },
             90,
@@ -365,7 +360,7 @@ fn draw(c: &mut Canvas, t: f32) {
         }
         ax.text(
             c,
-            [ax.x[0] + 0.05, ax.y[1] - 0.1],
+            Point2::xy(ax.x[0] + 0.05, ax.y[1] - 0.1),
             label,
             12.0,
             palette::ink(),
@@ -373,7 +368,7 @@ fn draw(c: &mut Canvas, t: f32) {
         );
         ax.text(
             c,
-            [ax.x[0] + 0.05, ax.y[1] - 0.22],
+            Point2::xy(ax.x[0] + 0.05, ax.y[1] - 0.22),
             &format!("{remaining} STEPS LEFT: COST 0.15 LEVEL"),
             10.0,
             palette::green(),
@@ -549,9 +544,9 @@ mod tests {
     /// The pose of an offset twist is that translation.
     #[test]
     fn offsets_translate() {
-        let p = pose(offset(0.3, -0.2)) >> centre();
-        let [x, y] = p.to_euclidean();
-        assert!((x - 0.3).abs() < 1e-12 && (y + 0.2).abs() < 1e-12);
+        let to = Point::xy(0.3, -0.2);
+        let p = pose(offset(to)) >> centre();
+        assert!((p.unitized() & to).norm() < 1e-12);
     }
 
     #[test]

@@ -15,7 +15,7 @@ mod s3;
 mod scenes;
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
 };
 use scenes::{Scene3, s2};
 
@@ -123,25 +123,25 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: [f32; 4], f: usize) {
     if tumbling {
         let colours = [palette::sky(), palette::red(), palette::yellow()];
         for (i, colour) in colours.into_iter().enumerate() {
-            let rate: Vec<[f32; 2]> = (0..frames)
-                .map(|k| [time(k), show.s2.rates[k][0].c[i] as f32])
+            let rate: Vec<Point2> = (0..frames)
+                .map(|k| Point2::xy(time(k), show.s2.rates[k][0].c[i] as f32))
                 .collect();
             ax.polyline(c, &rate, 1.5, colour, 1.0);
         }
     }
     let (e0, m0) = (show.s2.energy[0], show.s2.momentum[0].norm());
-    let energy: Vec<[f32; 2]> = (0..frames)
-        .map(|k| [time(k), (show.s2.energy[k] / e0) as f32])
+    let energy: Vec<Point2> = (0..frames)
+        .map(|k| Point2::xy(time(k), (show.s2.energy[k] / e0) as f32))
         .collect();
-    let momentum: Vec<[f32; 2]> = (0..frames)
-        .map(|k| [time(k), (show.s2.momentum[k].norm() / m0) as f32])
+    let momentum: Vec<Point2> = (0..frames)
+        .map(|k| Point2::xy(time(k), (show.s2.momentum[k].norm() / m0) as f32))
         .collect();
     ax.polyline(c, &energy, 1.8, palette::green(), 1.0);
     ax.polyline(c, &momentum, 1.4, palette::purple(), 1.0);
     ax.line(
         c,
-        [time(f), range[0]],
-        [time(f), range[1]],
+        Point2::xy(time(f), range[0]),
+        Point2::xy(time(f), range[1]),
         1.0,
         palette::ink(),
         0.6,

@@ -23,7 +23,7 @@
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, caption, palette, plot, run,
 };
 
 mod pascal {
@@ -168,14 +168,14 @@ fn draw(c: &mut Canvas, t: f32) {
     // The hexagon, its sides, the conic and Pascal's line, on the left.
     let ax = Axes::equal(
         plot::inset([0.0, 0.0, w * 0.58, h], 16.0, 64.0, 8.0, 12.0),
-        [1.0, 1.5],
+        Point2::xy(1.0, 1.5),
         4.0,
     );
     ax.fill(c, &hexagon, palette::grid(), 0.35);
     for i in 0..6 {
         across(&ax, c, hexagon[i] & hexagon[NEXT[i]], 1.0, pairs(i), 0.55);
     }
-    let conic_level = |x: f32, y: f32| on(shape, Point::xy(f64::from(x), f64::from(y))) as f32;
+    let conic_level = |p: Point2| on(shape, p.map_coefs(f64::from)) as f32;
     ax.contour(c, conic_level, 240, 0.0, 2.0, palette::ink());
     across(&ax, c, crossing[0] & crossing[2], 2.4, palette::red(), 1.0);
     ax.scatter(c, &hexagon[..5], Marker::Dot, 7.0, palette::ink(), 1.0);
@@ -189,7 +189,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let right = w * 0.6;
     let ax2 = Axes::equal(
         plot::inset([right, 40.0, w, h * 0.58], 30.0, 28.0, 16.0, 8.0),
-        [0.3, -0.1],
+        Point2::xy(0.3, -0.1),
         1.35,
     );
     let five = five();
@@ -197,8 +197,8 @@ fn draw(c: &mut Canvas, t: f32) {
     ax2.contour(c, conic_level, 160, 0.0, 5.0, palette::grid());
     ax2.contour(
         c,
-        |x, y| {
-            let p = Point::xy(f64::from(x), f64::from(y));
+        |p| {
+            let p = p.map_coefs(f64::from);
             form.of(p).of(p).s() as f32
         },
         160,
@@ -209,7 +209,7 @@ fn draw(c: &mut Canvas, t: f32) {
     ax2.scatter(c, &five, Marker::Dot, 7.0, palette::ink(), 1.0);
     ax2.text(
         c,
-        [ax2.x[0] + 0.05, ax2.y[1] - 0.2],
+        Point2::xy(ax2.x[0] + 0.05, ax2.y[1] - 0.2),
         "PASCAL'S CONDITION IS THE CONIC",
         10.0,
         palette::yellow(),
@@ -224,18 +224,18 @@ fn draw(c: &mut Canvas, t: f32) {
     )
     .log_y();
     ax3.frame(c, "JOIN OF THE CROSSINGS / SIZE", "TURN", "");
-    let samples: Vec<[f32; 2]> = (0..=96)
+    let samples: Vec<Point2> = (0..=96)
         .map(|k| {
             let s = k as f64 / 96.0;
             let (_, _, x) = scene(angle(s, 120.0));
-            [s as f32, collinearity(&x).abs().max(1e-18) as f32]
+            Point2::xy(s as f32, collinearity(&x).abs().max(1e-18) as f32)
         })
         .collect();
     ax3.polyline(c, &samples, 1.4, palette::sky(), 1.0);
     let now = collinearity(&crossing).abs().max(1e-18) as f32;
     ax3.scatter(
         c,
-        &[[phase as f32, now]],
+        &[Point2::xy(phase as f32, now)],
         Marker::Dot,
         8.0,
         palette::orange(),

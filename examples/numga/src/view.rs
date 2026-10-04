@@ -3,7 +3,7 @@
 //! ray through each pixel for the ray-traced examples.
 
 use crate::canvas::Px;
-use crate::coords::{Pos2, Pos3};
+use crate::coords::{Point2, Pos2, Pos3};
 use gax::Unit;
 use gax::pga3d::{Motor, Point};
 
@@ -11,42 +11,37 @@ use gax::pga3d::{Motor, Point};
 /// middle to the top edge, y up.
 #[derive(Clone, Copy, Debug)]
 pub struct View2 {
-    centre: [f32; 2],
+    centre: Point2,
     /// Pixels per world unit.
     pub scale: f32,
-    size: [f32; 2],
+    /// Width and height in pixels.
+    size: Px,
 }
 
 impl View2 {
     /// The view of a `width` x `height` canvas.
-    pub fn new(width: usize, height: usize, centre: [f32; 2], half_height: f32) -> View2 {
+    pub fn new(width: usize, height: usize, centre: impl Pos2, half_height: f32) -> View2 {
         View2 {
-            centre,
+            centre: centre.point2().unitized(),
             scale: height as f32 * 0.5 / half_height,
             size: [width as f32, height as f32],
         }
     }
 
-    /// The pixel of world point `(x, y)`.
+    /// The pixel of a world point.
     pub fn px(&self, p: impl Pos2) -> Px {
-        let p = p.xy();
+        // Its displacement from the centre, in pixels (y down).
+        let d = p.point2().unitized() - self.centre;
         [
-            self.size[0] * 0.5 + (p[0] - self.centre[0]) * self.scale,
-            self.size[1] * 0.5 - (p[1] - self.centre[1]) * self.scale,
+            self.size[0] * 0.5 + d.e20() * self.scale,
+            self.size[1] * 0.5 - d.e01() * self.scale,
         ]
     }
 
     /// The world point at pixel `q`.
-    pub fn world(&self, q: Px) -> [f32; 2] {
-        [
-            self.centre[0] + (q[0] - self.size[0] * 0.5) / self.scale,
-            self.centre[1] - (q[1] - self.size[1] * 0.5) / self.scale,
-        ]
-    }
-
-    /// The pixel of a PGA2D point.
-    pub fn point(&self, p: gax::pga2d::Point<(), f32>) -> Px {
-        self.px(p.to_euclidean())
+    pub fn world(&self, q: Px) -> Point2 {
+        let (dx, dy) = (q[0] - self.size[0] * 0.5, self.size[1] * 0.5 - q[1]);
+        self.centre + Point2::direction(dx, dy).gp(self.scale.recip())
     }
 
     /// The world's half width.
@@ -72,8 +67,9 @@ pub struct Camera {
     /// The projection.
     pub lens: Lens,
     /// The viewport's top left corner on the canvas, in pixels.
-    origin: [f32; 2],
-    size: [f32; 2],
+    origin: Px,
+    /// Its width and height in pixels.
+    size: Px,
 }
 
 impl Camera {
@@ -85,11 +81,12 @@ impl Camera {
         target: impl Pos3,
         lens: Lens,
     ) -> Camera {
-        let eye = eye.xyz();
-        let target = target.xyz();
-        let p = |v: [f32; 3]| Point::xyz(v[0], v[1], v[2]);
         Camera {
-            pose: Motor::look_at(p(eye), p(target), Point::direction(0.0, 0.0, 1.0)),
+            pose: Motor::look_at(
+                eye.point3(),
+                target.point3(),
+                Point::direction(0.0, 0.0, 1.0),
+            ),
             lens,
             origin: [0.0, 0.0],
             size: [width as f32, height as f32],
@@ -107,13 +104,12 @@ impl Camera {
         elevation: f32,
         lens: Lens,
     ) -> Camera {
-        let target = target.xyz();
-        // The eye: the point at `distance` along x, raised by the elevation, then turned by the
-        // azimuth (rotations about the y and z axes).
+        let target = target.point3().unitized();
+        // The eye: `distance` along x, raised by the elevation, then turned by the azimuth
+        // (rotations about the y and z axes), from the target.
         let turn = Motor::rotation_about(0.0, 0.0, 1.0, azimuth)
             * Motor::rotation_about(0.0, -1.0, 0.0, elevation);
-        let eye = (turn >> Point::xyz(distance, 0.0, 0.0)).to_euclidean();
-        let eye = [eye[0] + target[0], eye[1] + target[1], eye[2] + target[2]];
+        let eye = target + (turn >> Point::direction(distance, 0.0, 0.0));
         Camera::looking(width, height, eye, target, lens)
     }
 
@@ -124,7 +120,7 @@ impl Camera {
         Camera::orbit(
             (view[2] - view[0]) as usize,
             height as usize,
-            [0.0; 3],
+            Point::xyz(0.0, 0.0, 0.0),
             20.0,
             azimuth,
             elevation,
@@ -159,18 +155,26 @@ impl Camera {
         }
     }
 
-    /// A world point in the camera's frame: `[x, y, depth]` (`+x` to the right on screen).
-    pub fn local(&self, p: impl Pos3) -> [f32; 3] {
-        let p = p.xyz();
-        let [x, y, z] = (self.pose.reverse() >> Point::xyz(p[0], p[1], p[2])).to_euclidean();
-        // The frame looks along +z with +y up, so +x is to the left on screen.
-        [-x, y, z]
+    /// A world point in the camera's frame, which looks along `+z` with `+y` up (so `+x` is to
+    /// the left on screen).
+    pub fn local(&self, p: impl Pos3) -> Point {
+        self.pose.reverse() >> p.point3()
     }
 
-    /// The pixel of a world point, or `None` behind the camera.
+    /// How far in front of the camera a world point is.
+    pub fn depth(&self, p: impl Pos3) -> f32 {
+        self.local(p).unitized().e021()
+    }
+
+    /// The pixel of a world point, or `None` behind the camera or at infinity.
     pub fn px(&self, p: impl Pos3) -> Option<Px> {
-        let p = p.xyz();
-        let [x, y, z] = self.local(p);
+        let local = self.local(p);
+        if local.e123().abs() < 1e-12 {
+            return None;
+        }
+        let [x, y, z] = local.to_euclidean();
+        // Screen x runs against the frame's x.
+        let x = -x;
         let f = self.focal();
         let (sx, sy) = match self.lens {
             Lens::Perspective(_) if z <= 1e-3 => return None,
@@ -181,14 +185,6 @@ impl Camera {
             self.origin[0] + self.size[0] * 0.5 + sx * f,
             self.origin[1] + self.size[1] * 0.5 - sy * f,
         ])
-    }
-
-    /// The pixel of a PGA3D point (`None` behind the camera or at infinity).
-    pub fn point(&self, p: Point<(), f32>) -> Option<Px> {
-        if p.e123().abs() < 1e-12 {
-            return None;
-        }
-        self.px(p.to_euclidean())
     }
 
     /// The ray through pixel `q`: its origin (a point) and its direction (a unit ideal point).
@@ -212,12 +208,7 @@ impl Camera {
     }
 
     /// The camera's position.
-    pub fn eye(&self) -> [f32; 3] {
-        self.eye_point().to_euclidean()
-    }
-
-    /// The camera's position, as a point.
-    pub fn eye_point(&self) -> Point<(), f32> {
+    pub fn eye(&self) -> Point<(), f32> {
         self.pose >> Point::xyz(0.0, 0.0, 0.0)
     }
 }

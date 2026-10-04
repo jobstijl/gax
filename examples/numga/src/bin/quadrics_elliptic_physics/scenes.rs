@@ -236,7 +236,7 @@ pub fn hyperbolic(frames: usize) -> s2::Trajectory {
 
 // --- S³ ------------------------------------------------------------------------------------
 
-use crate::s3::{Bivector, Rate, Trivector, along, hit, motion, turning};
+use crate::s3::{Bivector, Rate, Tangent, TangentPlane, Trivector, along, hit, motion, turning};
 
 /// The rotor carrying the origin to a point, spun by a rotation bivector: the square root of
 /// the ratio of the two unit points.
@@ -277,7 +277,7 @@ pub fn population(rng: &mut Rng, candidates: usize, sizes: (f64, f64)) -> Vec<s3
             order.sort_by(|a, b| half[*a].total_cmp(&half[*b]));
             rate[order[1]] = if rng.uniform() < 0.5 { -5.0 } else { 5.0 };
             let place = Trivector::from_coeffs(rng.direction::<4>());
-            let spin = turning([rng.normal(), rng.normal(), rng.normal()]);
+            let spin = turning(TangentPlane::new(rng.normal(), rng.normal(), rng.normal()));
             let q = s3::ellipsoid(half);
             let (points, masses) = s3::filled(q, half.iter().product::<f64>() * 200.0, 400, rng);
             s3::body(
@@ -345,7 +345,7 @@ pub fn crowd(frames: usize) -> Scene3 {
     // animation's 240 frames (a body over the eye fills the view with its dark inside).
     let mut rng = rng(9);
     let bodies = admitted(population(&mut rng, 120, (0.05, 0.5)), 0, 28);
-    let light = motion(along([-0.34, 0.0, 0.94]).gp(0.8)) >> s3::origin();
+    let light = motion(along(Tangent::new(-0.34, 0.0, 0.94)).gp(0.8)) >> s3::origin();
     finish(bodies, frames, s3::identity(), light)
 }
 
@@ -372,8 +372,9 @@ pub fn gap(frames: usize) -> Scene3 {
     all.extend(population(&mut rng, 2000, (0.03, 0.15)));
     let bodies = admitted(all, 1, 60);
     let quarter = core::f64::consts::FRAC_PI_2;
-    let eye = motion(along([quarter, 0.0, 0.0])) * motion(turning([0.0, 0.0, -quarter]));
-    let light = (eye * motion(along([-0.3, 0.25, 0.2]))) >> s3::origin();
+    let eye = motion(along(Tangent::new(quarter, 0.0, 0.0)))
+        * motion(turning(TangentPlane::new(0.0, 0.0, -quarter)));
+    let light = (eye * motion(along(Tangent::new(-0.3, 0.25, 0.2)))) >> s3::origin();
     finish(bodies, frames, eye, light)
 }
 
@@ -386,16 +387,16 @@ pub fn needle(frames: usize) -> Scene3 {
     let mut rng = rng(5);
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(80.0).tan(), deg(4.0).tan(), deg(3.0).tan()]);
-    let spin = turning([2.0, 0.0, 0.0]);
+    let spin = turning(TangentPlane::new(2.0, 0.0, 0.0));
     let long = resting([0.9, 0.85, 0.3], shape, spin, 50.0, &mut rng);
     let mut all = vec![long];
     all.extend(population(&mut rng, 1000, (0.05, 0.3)));
     let bodies = admitted(all, 1, 40);
     let quarter = core::f64::consts::FRAC_PI_2;
-    let eye = motion(along([quarter, 0.0, 0.0]))
-        * motion(along([0.0, 0.0, deg(35.0)]))
-        * motion(turning([0.0, -quarter, 0.0]));
-    let light = (eye * motion(along([-0.3, 0.2, 0.3]))) >> s3::origin();
+    let eye = motion(along(Tangent::new(quarter, 0.0, 0.0)))
+        * motion(along(Tangent::new(0.0, 0.0, deg(35.0))))
+        * motion(turning(TangentPlane::new(0.0, -quarter, 0.0)));
+    let light = (eye * motion(along(Tangent::new(-0.3, 0.2, 0.3)))) >> s3::origin();
     finish(bodies, frames, eye, light)
 }
 
@@ -430,7 +431,8 @@ pub fn tunnel(frames: usize) -> Tunnel {
     all.extend(population(&mut rng, 2000, (0.03, 0.1)));
     let bodies = admitted(all, 1, 50);
     let quarter = core::f64::consts::FRAC_PI_2;
-    let eye = motion(along([0.0, 0.0, quarter])) * motion(turning([0.0, quarter, 0.0]));
+    let eye = motion(along(Tangent::new(0.0, 0.0, quarter)))
+        * motion(turning(TangentPlane::new(0.0, quarter, 0.0)));
     let camera = eye >> s3::origin();
     // The pixel up and to the side, a quarter turn off the line of sight, and the wall there.
     let side_up = crate::s3::ScreenPoint::new(0.0, 1.0, 1.0).gp(0.5f64.sqrt());

@@ -12,7 +12,7 @@
 use gax::motions::{Motions, Pga2d};
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -209,7 +209,7 @@ fn spring_colour(extension: f64) -> Rgb {
 
 /// One mode's panel at `phase` (the cosine of the oscillation).
 fn panel(c: &mut Canvas, rect: [f32; 4], case: &ModeCase, mode: usize, phase: f64, title: &str) {
-    let ax = Axes::equal(rect, [1.35, 1.5], 1.4);
+    let ax = Axes::equal(rect, P::xy(1.35, 1.5), 1.4);
     let s = &case.system;
     // The mode's shape, enlarged so that the largest corner moves 0.2.
     let largest = case.body_offsets[mode]
@@ -254,7 +254,7 @@ fn panel(c: &mut Canvas, rect: [f32; 4], case: &ModeCase, mode: usize, phase: f6
     }
     ax.text(
         c,
-        [ax.x[0] + 0.05, ax.y[0] + 0.12],
+        Point2::xy(ax.x[0] + 0.05, ax.y[0] + 0.12),
         title,
         11.0,
         palette::ink(),

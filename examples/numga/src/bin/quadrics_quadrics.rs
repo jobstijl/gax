@@ -183,7 +183,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         half,
         h,
-        [0.0, 0.0, 0.8],
+        Point::xyz(0.0, 0.0, 0.8),
         12.5,
         azimuth,
         0.4,
@@ -202,7 +202,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         w - half,
         h,
-        [0.5, 1.0, 2.4],
+        Point::xyz(0.5, 1.0, 2.4),
         17.0,
         azimuth,
         0.4,

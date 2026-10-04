@@ -18,7 +18,9 @@ use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::rng::{Draw, Rng, rng};
-use gax_numga_examples::{Anim, Axes, Canvas, Marker, backdrop, caption, palette, plot, run};
+use gax_numga_examples::{
+    Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
+};
 
 mod kalman {
     use super::*;
@@ -266,18 +268,9 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|s| s.estimate >> origin())
         .collect();
     // The axes hold every path at every time.
-    let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
-    for p in truth.iter().chain(&dead).chain(&filtered) {
-        for (i, v) in p.to_euclidean().into_iter().enumerate() {
-            lo[i] = lo[i].min(v as f32);
-            hi[i] = hi[i].max(v as f32);
-        }
-    }
     let left = plot::inset([0.0, 0.0, w * 0.58, h], 50.0, 104.0, 16.0, 46.0);
-    let half = ((hi[1] - lo[1]) * 0.5)
-        .max((hi[0] - lo[0]) * 0.5 * (left[3] - left[1]) / (left[2] - left[0]))
-        * 1.12;
-    let ax = Axes::equal(left, [(lo[0] + hi[0]) * 0.5, (lo[1] + hi[1]) * 0.5], half);
+    let every = truth.iter().chain(&dead).chain(&filtered).copied();
+    let ax = Axes::fitting(left, every, 1.12);
     ax.frame(c, "PATHS AND 2 SIGMA ELLIPSES", "X", "Y");
     // The states up to the cursor: a prediction per step, plus an update at each reading.
     let readings_seen = shown / STEPS_PER_READING;
@@ -324,20 +317,21 @@ fn draw(c: &mut Canvas, t: f32) {
     let right = plot::inset([w * 0.58, 0.0, w, h], 50.0, 104.0, 16.0, 46.0);
     let ex = Axes::new(right, [0.0, times[READINGS - 1] + 1.0], [0.0, top]);
     ex.frame(c, "ERROR AT THE READINGS", "TIME", "ERROR");
-    let series = |v: &[f64]| -> Vec<[f32; 2]> {
+    // The chart's points: (time, error).
+    let series = |v: &[f64]| -> Vec<Point2> {
         times
             .iter()
             .zip(v)
             .take(readings_seen)
-            .map(|(t, e)| [*t, *e as f32])
+            .map(|(t, e)| Point2::xy(*t, *e as f32))
             .collect()
     };
     let (d, f) = (series(&dead_err), series(&filt_err));
-    let s2: Vec<[f32; 2]> = times
+    let s2: Vec<Point2> = times
         .iter()
         .zip(&sigma2)
         .take(readings_seen)
-        .map(|(t, e)| [*t, *e])
+        .map(|(t, e)| Point2::xy(*t, *e))
         .collect();
     ex.polyline(c, &d, 1.5, palette::red(), 1.0);
     ex.scatter(c, &d, Marker::Dot, 5.0, palette::red(), 1.0);
@@ -352,7 +346,14 @@ fn draw(c: &mut Canvas, t: f32) {
         1.0,
     );
     let now_t = shown as f32 * DT as f32;
-    ex.line(c, [now_t, 0.0], [now_t, top], 1.0, palette::grid(), 1.0);
+    ex.line(
+        c,
+        Point2::xy(now_t, 0.0),
+        Point2::xy(now_t, top),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
     ex.legend(
         c,
         &[

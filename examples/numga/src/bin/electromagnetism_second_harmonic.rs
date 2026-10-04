@@ -13,8 +13,10 @@
 //! runs over the waveform, a probe circles a fixed pump, and the light grows along three
 //! crystals.
 
+use gax::pga2d::Point;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Marker, Rgb, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Marker, Point3, Rgb, Scene3, backdrop, caption, palette,
+    plot, run,
 };
 
 mod shg {
@@ -281,21 +283,22 @@ fn draw_bonds(c: &mut Canvas, rect: [f32; 4], bonds: &[B; 4], spin: f32) {
     let view = [rect[0], rect[1] + 16.0, rect[2], rect[3]];
     let cam = Camera::parallel(view, (rect[3] - rect[1]) * 0.32, -0.98 + spin, 0.40);
     let mut sc = Scene3::new(cam);
+    let origin = Point3::xyz(0.0, 0.0, 0.0);
     let beam = direction(longitudinal());
     sc.seg(beam * -1.4, beam * 1.4, 1.0, palette::grid(), 1.0);
     sc.arrow(beam, beam * 0.5, 1.5, 8.0, palette::yellow());
     for axis in [horizontal(), vertical()] {
-        sc.arrow([0.0; 3], direction(axis), 1.0, 6.0, palette::grid());
+        sc.arrow(origin, direction(axis), 1.0, 6.0, palette::grid());
     }
     let tips = bonds.map(direction);
     for (i, a) in tips.iter().enumerate() {
-        sc.seg([0.0; 3], *a, 2.5, palette::ink(), 0.8);
+        sc.seg(origin, *a, 2.5, palette::ink(), 0.8);
         for b in &tips[i + 1..] {
             sc.seg(*a, *b, 1.0, palette::sky(), 0.35);
         }
         sc.dot(*a, Marker::Dot, 9.0, palette::orange());
     }
-    sc.dot([0.0; 3], Marker::Dot, 7.0, palette::grid());
+    sc.dot(origin, Marker::Dot, 7.0, palette::grid());
     sc.draw(c);
     title(c, rect, "CRYSTAL BONDS");
     c.text(
@@ -310,10 +313,24 @@ fn draw_bonds(c: &mut Canvas, rect: [f32; 4], bonds: &[B; 4], spin: f32) {
 
 /// The screen: pump directions all around and the doubled polarization each drives.
 fn draw_polarization(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
-    let ax = Axes::equal(plot::inset(rect, 34.0, 30.0, 10.0, 30.0), [0.0, 0.0], 1.15);
+    let ax = Axes::equal(plot::inset(rect, 34.0, 30.0, 10.0, 30.0), centre(), 1.15);
     ax.frame(c, "TRANSVERSE POLARIZATION", "HORIZONTAL", "");
-    ax.line(c, [-1.15, 0.0], [1.15, 0.0], 1.0, palette::grid(), 0.6);
-    ax.line(c, [0.0, -1.15], [0.0, 1.15], 1.0, palette::grid(), 0.6);
+    ax.line(
+        c,
+        Spot::xy(-1.15, 0.0),
+        Spot::xy(1.15, 0.0),
+        1.0,
+        palette::grid(),
+        0.6,
+    );
+    ax.line(
+        c,
+        Spot::xy(0.0, -1.15),
+        Spot::xy(0.0, 1.15),
+        1.0,
+        palette::grid(),
+        0.6,
+    );
     let circle: Vec<Spot> = pumps.iter().map(|p| screen(*p)).collect();
     ax.polyline(c, &circle, 1.0, palette::sky(), 0.35);
     let curve: Vec<Spot> = harmonic.iter().map(|p| screen(*p)).collect();
@@ -328,7 +345,7 @@ fn draw_polarization(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]
 fn draw_power(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
     let intensity: Vec<f64> = harmonic.iter().map(|h| h.dot(*h).s()).collect();
     let top = intensity.iter().cloned().fold(0.0, f64::max).max(1e-9) * 1.12;
-    let ax = Axes::equal(plot::inset(rect, 10.0, 30.0, 10.0, 30.0), [0.0, 0.0], 1.0);
+    let ax = Axes::equal(plot::inset(rect, 10.0, 30.0, 10.0, 30.0), centre(), 1.0);
     title(c, rect, "POWER BY PUMP DIRECTION");
     for k in 1..=4 {
         let ring: Vec<Spot> = pumps.iter().map(|p| screen(p.gp(k as f64 / 4.0))).collect();
@@ -375,27 +392,43 @@ fn draw_waveform(c: &mut Canvas, rect: [f32; 4], at: f32) {
         [-1.2, 1.2],
     );
     ax.frame(c, "WAVEFORM", "PUMP PERIODS", "");
-    let series = |v: &[B], pick: B| -> Vec<[f64; 2]> {
+    let periods = |p: f64| p / core::f64::consts::TAU;
+    let series = |v: &[B], pick: B| -> Vec<Point<(), f64>> {
         phase
             .iter()
             .zip(v)
-            .map(|(p, f)| [p / core::f64::consts::TAU, (*f | pick).s()])
+            .map(|(p, f)| Point::xy(periods(*p), (*f | pick).s()))
             .collect()
     };
     let a = series(pump, horizontal());
     let b = series(harmonic, vertical());
-    ax.line(c, [0.0, 0.0], [2.0, 0.0], 1.0, palette::grid(), 0.6);
+    ax.line(
+        c,
+        Point::xy(0.0, 0.0),
+        Point::xy(2.0, 0.0),
+        1.0,
+        palette::grid(),
+        0.6,
+    );
     ax.polyline(c, &a, 2.0, palette::sky(), 1.0);
     ax.polyline(c, &b, 2.0, palette::orange(), 1.0);
     let k = ((at * (a.len() - 1) as f32) as usize).min(a.len() - 1);
-    ax.line(c, [a[k][0], -1.2], [a[k][0], 1.2], 1.0, palette::ink(), 0.5);
+    let now = periods(phase[k]);
+    ax.line(
+        c,
+        Point::xy(now, -1.2),
+        Point::xy(now, 1.2),
+        1.0,
+        palette::ink(),
+        0.5,
+    );
     ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::sky(), 1.0);
     ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::orange(), 1.0);
 }
 
 fn draw_mixing(c: &mut Canvas, rect: [f32; 4], at: f32) {
     let (pumps, probes, generated) = &still().mixing;
-    let ax = Axes::equal(plot::inset(rect, 30.0, 30.0, 10.0, 34.0), [0.0, 0.0], 0.5);
+    let ax = Axes::equal(plot::inset(rect, 30.0, 30.0, 10.0, 34.0), centre(), 0.5);
     ax.frame(c, "PUMP AT 45: MIXING", "HORIZONTAL", "");
     ax.arrow(
         c,
@@ -427,14 +460,14 @@ fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) 
     let n = ((at * depths.len() as f32) as usize).clamp(1, depths.len());
     let ax = Axes::equal(
         plot::inset(phasor, 30.0, 30.0, 10.0, 34.0),
-        [0.45, 0.2],
+        Point::xy(0.45, 0.2),
         0.62,
     );
     ax.frame(c, "ACCUMULATED FIELD", "IN PHASE", "");
     for (k, path) in amplitude.iter().enumerate() {
-        let pts: Vec<[f64; 2]> = path[..n]
+        let pts: Vec<Point<(), f64>> = path[..n]
             .iter()
-            .map(|a| [(a[0] | vertical()).s(), (a[1] | vertical()).s()])
+            .map(|a| Point::xy((a[0] | vertical()).s(), (a[1] | vertical()).s()))
             .collect();
         ax.polyline(c, &pts, 2.0, case_colour(k), 1.0);
         ax.scatter(c, &pts[n - 1..], Marker::Dot, 7.0, case_colour(k), 1.0);
@@ -446,10 +479,10 @@ fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) 
     );
     ax.frame(c, "GROWTH", "DEPTH", "");
     for (k, path) in amplitude.iter().enumerate() {
-        let pts: Vec<[f64; 2]> = depths
+        let pts: Vec<Point<(), f64>> = depths
             .iter()
             .zip(path)
-            .map(|(d, a)| [*d, power(*a)])
+            .map(|(d, a)| Point::xy(*d, power(*a)))
             .collect();
         ax.polyline(c, &pts, 1.0, case_colour(k), 0.3);
         ax.polyline(c, &pts[..n], 2.0, case_colour(k), 1.0);

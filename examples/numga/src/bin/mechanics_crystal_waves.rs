@@ -16,7 +16,8 @@ use gax::pga2d;
 use gax::vga3d::{Bivector, Scalar, Vector};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, colormap, f32s, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Pos2, Rgb, backdrop, caption, colormap, palette,
+    plot, run,
 };
 use std::sync::OnceLock;
 
@@ -120,16 +121,16 @@ mod crystal {
     /// spread over the sphere: per material and wave, the points of the rays that go up. A
     /// direction read as homogeneous coordinates `(x, y, z)` of the plane is the point where its
     /// ray meets `z = 1`.
-    pub fn focusing(count: usize, seed: u64) -> [[Vec<[f32; 2]>; 3]; 3] {
+    pub fn focusing(count: usize, seed: u64) -> [[Vec<Point2>; 3]; 3] {
         let crystals = crystals();
         let headings = headings(count, seed);
         core::array::from_fn(|m| {
-            let mut out: [Vec<[f32; 2]>; 3] = Default::default();
+            let mut out: [Vec<Point2>; 3] = Default::default();
             for h in &headings {
                 for (w, v) in group_velocities(&crystals[m], m, *h).iter().enumerate() {
                     if v.e3() > 0.0 {
                         let hit = pga2d::Point::new(v.e1(), v.e2(), v.e3());
-                        out[w].push(f32s(hit.to_euclidean()));
+                        out[w].push(hit.unitized().point2());
                     }
                 }
             }
@@ -191,7 +192,7 @@ const BINS: usize = 110;
 const FRONT: usize = 720;
 
 struct Data {
-    focus: [[Vec<[f32; 2]>; 3]; 3],
+    focus: [[Vec<Point2>; 3]; 3],
     fronts: [Vec<[V; 3]>; 3],
 }
 
@@ -204,11 +205,12 @@ fn data() -> &'static Data {
 }
 
 /// A 2D histogram of `pts` over `[-1.5, 1.5]²`.
-fn histogram(pts: &[[f32; 2]]) -> Vec<u32> {
+fn histogram(pts: &[Point2]) -> Vec<u32> {
     let mut h = vec![0u32; BINS * BINS];
     for p in pts {
-        let i = ((p[0] + 1.5) / 3.0 * BINS as f32).floor();
-        let j = ((p[1] + 1.5) / 3.0 * BINS as f32).floor();
+        let [x, y] = p.to_euclidean();
+        let i = ((x + 1.5) / 3.0 * BINS as f32).floor();
+        let j = ((y + 1.5) / 3.0 * BINS as f32).floor();
         if (0.0..BINS as f32).contains(&i) && (0.0..BINS as f32).contains(&j) {
             h[j as usize * BINS + i as usize] += 1;
         }
@@ -216,9 +218,9 @@ fn histogram(pts: &[[f32; 2]]) -> Vec<u32> {
     h
 }
 
-/// A vector in the cube face `z = 0`, as plotted: its `x` and `y`.
-fn face(v: V) -> [f64; 2] {
-    [v.e1(), v.e2()]
+/// A vector in the cube face `z = 0`, as plotted: the point at its tip, from its `x` and `y`.
+fn face(v: V) -> pga2d::Point<(), f64> {
+    pga2d::Point::xy(v.e1(), v.e2())
 }
 
 fn mode_colour(w: usize) -> Rgb {
@@ -251,7 +253,8 @@ fn draw(c: &mut Canvas, t: f32) {
             let n = ((pts.len() as f32 * share) as usize).min(pts.len());
             let hist = histogram(&pts[..n]);
             let peak = (hist.iter().copied().max().unwrap_or(1).max(1) as f32).ln_1p();
-            ax.image(c, 1, |x, y| {
+            ax.image(c, 1, |p| {
+                let [x, y] = p.to_euclidean();
                 let i = ((x + 1.5) / 3.0 * BINS as f32).floor() as usize;
                 let j = ((y + 1.5) / 3.0 * BINS as f32).floor() as usize;
                 let v = hist[j.min(BINS - 1) * BINS + i.min(BINS - 1)] as f32;
@@ -315,10 +318,11 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|v| v.norm())
         .fold(0.0, f64::max) as f32;
     let rect = plot::inset([w * 0.58, 0.0, w, h], w * 0.05, h * 0.2, w * 0.03, h * 0.1);
-    let ax = Axes::equal(rect, [0.0, 0.0], reach * 1.12);
+    let origin = Point2::xy(0.0, 0.0);
+    let ax = Axes::equal(rect, origin, reach * 1.12);
     ax.frame(c, NAMES[current], "KM/S ALONG (100)", "");
     for wv in 0..3 {
-        let pts: Vec<[f64; 2]> = fronts.iter().map(|v| face(v[wv])).collect();
+        let pts: Vec<pga2d::Point<(), f64>> = fronts.iter().map(|v| face(v[wv])).collect();
         ax.scatter(c, &pts, Marker::Dot, 1.6, mode_colour(wv), 0.8);
     }
     let s = (u * 3.0).fract();
@@ -329,7 +333,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let group = d.fronts[current][((s * FRONT as f32) as usize).min(FRONT - 1)];
     ax.line(
         c,
-        [0.0, 0.0],
+        origin,
         face(heading.gp(f64::from(reach) * 1.1)),
         1.0,
         palette::ink(),
@@ -346,7 +350,7 @@ fn draw(c: &mut Canvas, t: f32) {
             mode_colour(wv),
             1.0,
         );
-        ax.arrow(c, [0.0, 0.0], face(group[wv]), 2.0, 9.0, mode_colour(wv));
+        ax.arrow(c, origin, face(group[wv]), 2.0, 9.0, mode_colour(wv));
     }
     let legend: Vec<(&str, Rgb)> = MODES.iter().copied().zip((0..3).map(mode_colour)).collect();
     ax.legend(c, &legend);

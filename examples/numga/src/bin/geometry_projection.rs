@@ -11,7 +11,8 @@
 
 use gax_numga_examples::canvas::{mix, srgb};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, caption,
+    palette, run,
 };
 
 mod projection {
@@ -245,18 +246,19 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     let cam = Camera::orbit(
         c.width,
         c.height,
-        [0.0, 0.3, 1.6],
+        P::xyz(0.0, 0.3, 1.6),
         15.0,
         (-60f32).to_radians() + turn,
         24f32.to_radians(),
         Lens::Perspective(0.5),
     );
     let mut s = Scene3::new(cam);
+    let floor = |x: f64, y: f64| P::xyz(x, y, 0.0);
     for k in 0..=6 {
-        let g = -3.0 + k as f32;
+        let g = -3.0 + f64::from(k);
         let line = mix(palette::grid(), palette::ink(), 0.15);
-        s.seg([g, -3.0, 0.0], [g, 3.0, 0.0], 1.0, line, 0.7);
-        s.seg([-3.0, g, 0.0], [3.0, g, 0.0], 1.0, line, 0.7);
+        s.seg(floor(g, -3.0), floor(g, 3.0), 1.0, line, 0.7);
+        s.seg(floor(-3.0, g), floor(3.0, g), 1.0, line, 0.7);
     }
     let (body, spot) = (&sc.body, &sc.cast.spot);
     let sun = sc.cast.sun.map(|p| p.unitized());
@@ -287,7 +289,7 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     s.dot(spot[7], Marker::Dot, 6.0, amber());
     // The sun's direction, a unit arrow at (-2, 2, 4).
     s.arrow(
-        gax::pga3d::Point::xyz(-2.0, 2.0, 4.0),
+        P::xyz(-2.0, 2.0, 4.0),
         sc.sun.gp(1.0 / sc.sun.ideal_norm()),
         2.0,
         9.0,
@@ -307,7 +309,7 @@ fn screen_panel(
     lines: Option<&[L; 8]>,
 ) {
     let half = 0.5;
-    let ax = Axes::equal(rect, [0.0, 0.0], half as f32);
+    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), half as f32);
     let on_screen = screen_map(rig);
     let image = image.map(|p| on_screen.of(p));
     ax.clip(c);

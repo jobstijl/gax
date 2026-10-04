@@ -9,7 +9,7 @@
 
 use gax::pga2d::{Line, Motor, Point};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
 };
 
 mod collision {
@@ -213,7 +213,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The ellipses, on the left.
     let ax = Axes::equal(
         plot::inset([0.0, 64.0, w * 0.58, h], 20.0, 30.0, 10.0, 20.0),
-        [-0.4, 0.0],
+        Point::xy(-0.4, 0.0),
         3.0,
     );
     ax.frame(c, state, "", "");
@@ -222,8 +222,8 @@ fn draw(c: &mut Canvas, t: f32) {
         let field = separating(q1, q2);
         ax.contour(
             c,
-            |x, y| {
-                let p = Point::xy(f64::from(x), f64::from(y));
+            |p| {
+                let p: P = p.map_coefs(f64::from);
                 (p & field.of(p)).s() as f32
             },
             160,
@@ -266,12 +266,19 @@ fn draw(c: &mut Canvas, t: f32) {
     let top_rect = plot::inset([right[0], right[1], right[2], mid_y], 40.0, 20.0, 0.0, 30.0);
     let ax = Axes::new(top_rect, [0.0, 1.0], [-3.0, 3.0]);
     ax.frame(c, "DET Q(L) ALONG THE BLEND", "L", "");
-    ax.line(c, [0.0, 0.0], [1.0, 0.0], 1.0, palette::grid(), 1.0);
-    let curve = |q2: Quadric| -> Vec<[f32; 2]> {
+    ax.line(
+        c,
+        Point2::xy(0.0, 0.0),
+        Point2::xy(1.0, 0.0),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
+    let curve = |q2: Quadric| -> Vec<Point2> {
         (0..=100)
             .map(|k| {
                 let l = 0.001 + 0.998 * k as f64 / 100.0;
-                [l as f32, det(q1, q2, l) as f32]
+                Point2::xy(l as f32, det(q1, q2, l) as f32)
             })
             .collect()
     };
@@ -282,7 +289,7 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.polyline(c, &curve(q2), 2.4, palette::ink(), 1.0);
     ax.scatter(
         c,
-        &[[lambda as f32, top as f32]],
+        &[Point2::xy(lambda as f32, top as f32)],
         Marker::Dot,
         8.0,
         palette::yellow(),
@@ -298,11 +305,18 @@ fn draw(c: &mut Canvas, t: f32) {
         "OFFSET ALONG THE NORMAL",
         "",
     );
-    ax.line(c, [-0.6, 0.0], [0.8, 0.0], 1.0, palette::grid(), 1.0);
-    let sweep: Vec<[f32; 2]> = (0..=70)
+    ax.line(
+        c,
+        Point2::xy(-0.6, 0.0),
+        Point2::xy(0.8, 0.0),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
+    let sweep: Vec<Point2> = (0..=70)
         .map(|k| {
             let o = -0.6 + 1.4 * k as f64 / 70.0;
-            [o as f32, peak(q1, s.second(o)).1 as f32]
+            Point2::xy(o as f32, peak(q1, s.second(o)).1 as f32)
         })
         .collect();
     ax.polyline(c, &sweep, 2.0, palette::sky(), 1.0);
@@ -313,7 +327,7 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     ax.scatter(
         c,
-        &[[offset as f32, top as f32]],
+        &[Point2::xy(offset as f32, top as f32)],
         Marker::Dot,
         9.0,
         marker,
@@ -321,7 +335,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.text(
         c,
-        [-0.55, 2.2],
+        Point2::xy(-0.55, 2.2),
         &format!("MAX = {top:+.3}"),
         11.0,
         canvas::mix(palette::ink(), marker, 0.3),
@@ -354,8 +368,8 @@ mod tests {
     #[test]
     fn motor_conventions() {
         let m = motor(1.0, 2.0, 0.3);
-        let [x, y] = (m >> origin()).to_euclidean();
-        assert!((x - 1.0).abs() < 1e-14 && (y - 2.0).abs() < 1e-14);
+        // The origin lands on (1, 2): the line joining them has no length.
+        assert!(((m >> origin()) & Point::xy(1.0, 2.0)).norm() < 1e-14);
         let d = motor(0.0, 0.0, 0.3) >> Point::direction(1.0, 0.0);
         assert!((d.e20() - 0.3f64.cos()).abs() < 1e-14 && (d.e01() - 0.3f64.sin()).abs() < 1e-14);
     }
@@ -425,9 +439,9 @@ mod tests {
         // The two contact points are one: their join vanishes.
         let join = other & point;
         assert!(join.max_abs_diff(&Line::zero()) < 1e-5);
-        // numga's contact point.
-        let [x, y] = point.to_euclidean();
-        assert!((x - 0.623064025936332).abs() < 1e-6 && (y - 0.821205844662909).abs() < 1e-6);
+        // numga's contact point, at no distance from ours.
+        let numga = Point::xy(0.623064025936332, 0.821205844662909);
+        assert!((point & numga).norm() < 1e-6);
     }
 
     /// The blend at the peak of the separated pose is a hyperbola: its form takes both signs on

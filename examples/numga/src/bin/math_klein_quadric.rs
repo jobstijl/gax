@@ -269,7 +269,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         wide,
         c.height,
-        [0.0; 3],
+        origin(),
         15.0,
         (-60.0f32).to_radians() + core::f32::consts::TAU * phase as f32,
         18.0f32.to_radians(),
@@ -318,26 +318,38 @@ fn draw(c: &mut Canvas, t: f32) {
         Align::Center,
     );
 
-    // The discriminant along the pencil over the swing.
-    let curve: Vec<[f64; 2]> = (0..=120)
+    // The discriminant along the pencil over the swing, as points of the graph.
+    let graph = |phase: f64, value: f64| gax::pga2d::Point::xy(phase, value);
+    let values: Vec<f64> = (0..=120)
         .map(|k| {
-            let p = k as f64 / 120.0;
             let [a, b, c] = three();
-            [p, discriminant(&[a, b, c, steep(offset(p))])]
+            discriminant(&[a, b, c, steep(offset(k as f64 / 120.0))])
         })
         .collect();
-    let (lo, hi) = curve
+    let curve: Vec<_> = values
         .iter()
-        .fold((0.0f64, 0.0f64), |(lo, hi), p| (lo.min(p[1]), hi.max(p[1])));
+        .enumerate()
+        .map(|(k, &v)| graph(k as f64 / 120.0, v))
+        .collect();
+    let (lo, hi) = values
+        .iter()
+        .fold((0.0f64, 0.0f64), |(lo, hi), &v| (lo.min(v), hi.max(v)));
     let ax = Axes::new(
         plot::inset([w * 0.62, 0.0, w, h], 50.0, h * 0.2, 20.0, h * 0.28),
         [0.0, 1.0],
         [lo as f32 * 1.15, hi as f32 * 1.15],
     );
     ax.frame(c, "DISCRIMINANT ALONG THE PENCIL", "PHASE OF THE SWING", "");
-    ax.line(c, [0.0, 0.0], [1.0, 0.0], 1.0, palette::grid(), 1.0);
+    ax.line(
+        c,
+        graph(0.0, 0.0),
+        graph(1.0, 0.0),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
     ax.polyline(c, &curve, 1.6, palette::sky(), 1.0);
-    let now = [phase, discriminant(&s.lines)];
+    let now = graph(phase, discriminant(&s.lines));
     ax.scatter(
         c,
         &[now],

@@ -24,7 +24,7 @@
 
 use gax::pga2d::{Line, Motor, Point};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
 };
 
 mod poncelet {
@@ -204,10 +204,9 @@ fn draw(c: &mut Canvas, t: f32) {
             14.0,
             14.0,
         );
-        let ax = Axes::equal(rect, [0.4, -0.25], 2.2);
+        let ax = Axes::equal(rect, Point2::xy(0.4, -0.25), 2.2);
         let conic = inner.inverse();
-        let level =
-            |f: Conic| move |x: f32, y: f32| on(f, Point::xy(f64::from(x), f64::from(y))) as f32;
+        let level = |f: Conic| move |p: Point2| on(f, p.map_coefs(f64::from)) as f32;
         ax.contour(c, level(outer), 260, 0.0, 2.0, palette::ink());
         ax.contour(c, level(conic), 260, 0.0, 1.8, palette::sky());
         ax.polyline(c, corners, 1.8, palette::red(), 1.0);
@@ -221,7 +220,7 @@ fn draw(c: &mut Canvas, t: f32) {
         };
         ax.text(
             c,
-            [ax.x[0] + 0.1, ax.y[1] - 0.1],
+            Point2::xy(ax.x[0] + 0.1, ax.y[1] - 0.1),
             TITLES[k],
             12.0,
             colour,
@@ -230,7 +229,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let miss = gap(corners[5], corners[0]);
         ax.text(
             c,
-            [ax.x[0] + 0.1, ax.y[0] + 0.15],
+            Point2::xy(ax.x[0] + 0.1, ax.y[0] + 0.15),
             &format!("GAP AFTER FIVE SIDES: {miss:.1E}"),
             10.0,
             palette::grid(),

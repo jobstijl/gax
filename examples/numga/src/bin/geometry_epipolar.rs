@@ -365,7 +365,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         pw,
         ph,
-        [0.25, 0.0, 2.3],
+        Point::xyz(0.25, 0.0, 2.3),
         6.0,
         azimuth,
         0.3,

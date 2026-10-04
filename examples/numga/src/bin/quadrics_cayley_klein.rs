@@ -188,8 +188,8 @@ fn line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Rgb) {
 fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Rgb) {
     ax.contour(
         c,
-        |x, y| {
-            let p = Point::xy(f64::from(x), f64::from(y));
+        |p| {
+            let p: P = p.map_coefs(f64::from);
             (p & quadric.of(p)).s() as f32
         },
         260,
@@ -205,7 +205,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = hyperbolic_plane(phase);
     let rects = [0, 1].map(|i| plot::inset(plot::panel(c, i, 2), 20.0, 80.0, 20.0, 24.0));
     let rect = |i: usize| rects[i];
-    let box_centre = [0.35, 0.2];
+    let box_centre = Point::xy(0.35, 0.2);
 
     // The triangle, its perpendicular and the reflection, on the left.
     let ax = Axes::equal(rect(0), box_centre, 1.4);

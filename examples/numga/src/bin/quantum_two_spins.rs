@@ -18,8 +18,8 @@
 
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, caption, palette,
-    run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, Scene3, backdrop,
+    caption, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -215,20 +215,21 @@ fn swapped() -> &'static Swap {
 /// The drawing's space.
 type Space = gax::vga3d::Vector<(), f64>;
 
+/// The unit directions of space.
+fn axes() -> [Space; 3] {
+    [
+        Space::new(1.0, 0.0, 0.0),
+        Space::new(0.0, 1.0, 0.0),
+        Space::new(0.0, 0.0, 1.0),
+    ]
+}
+
 /// Each spin's directions drawn as the directions of space: maps from the pair's algebra.
 fn first_in_space() -> gax::vga3d::Vector<(pair::First,), f64> {
-    gax::vga3d::Vector::from_images([
-        Space::new(1.0, 0.0, 0.0),
-        Space::new(0.0, 1.0, 0.0),
-        Space::new(0.0, 0.0, 1.0),
-    ])
+    gax::vga3d::Vector::from_images(axes())
 }
 fn second_in_space() -> gax::vga3d::Vector<(pair::Second,), f64> {
-    gax::vga3d::Vector::from_images([
-        Space::new(1.0, 0.0, 0.0),
-        Space::new(0.0, 1.0, 0.0),
-        Space::new(0.0, 0.0, 1.0),
-    ])
+    gax::vga3d::Vector::from_images(axes())
 }
 
 /// The second spin's direction for each direction of space: the other way round.
@@ -238,20 +239,16 @@ fn space_in_second() -> pair::Second<(gax::vga3d::Vector,), f64> {
 
 /// The unit ball, faintly, with its three axes.
 fn ball(s: &mut Scene3) {
-    s.sphere_wire([0.0; 3], 1.0, 18, palette::grid(), 0.55);
-    for k in 0..3 {
-        let mut a = [0.0; 3];
-        a[k] = 1.0;
-        s.seg(a.map(|v| -v), a, 1.0, palette::grid(), 1.0);
+    s.sphere_wire(ORIGIN3, 1.0, 18, palette::grid(), 0.55);
+    for a in axes() {
+        s.seg(-a, a, 1.0, palette::grid(), 1.0);
     }
 }
 
 /// Axis names at the ends of the axes.
 fn axis_names(c: &mut Canvas, cam: &Camera) {
-    for (k, name) in ["X", "Y", "Z"].iter().enumerate() {
-        let mut a = [0.0; 3];
-        a[k] = 1.18;
-        if let Some(p) = cam.px(a) {
+    for (name, a) in ["X", "Y", "Z"].iter().zip(axes()) {
+        if let Some(p) = cam.px(a * 1.18) {
             c.text(name, p[0], p[1] + 4.0, 11.0, palette::grid(), Align::Center);
         }
     }
@@ -273,7 +270,7 @@ fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Rgb) {
         |u, v| {
             let lon = core::f64::consts::TAU * f64::from(u);
             let lat = core::f64::consts::PI * (f64::from(v) - 0.5);
-            shown.of(on_sphere(lon, lat)).xyz()
+            shown.of(on_sphere(lon, lat))
         },
         28,
         14,
@@ -303,7 +300,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         third,
         bottom - top,
-        [0.0; 3],
+        ORIGIN3,
         4.4,
         azimuth,
         elevation,
@@ -334,7 +331,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 _ => {
                     let (now, path): &(Space, Vec<Space>) = &blochs[k / 2];
                     s.polyline(path, 2.0, colours[k], 0.35);
-                    s.arrow([0.0; 3], *now, 3.0, 11.0, colours[k]);
+                    s.arrow(ORIGIN3, *now, 3.0, 11.0, colours[k]);
                 }
             }
         });
@@ -376,7 +373,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (level, dash) in [(2.0, 6.0), (root8, 2.0)] {
         ax.dashed(
             c,
-            &[[0.0, level], [quarter, level]],
+            &[Point2::xy(0.0, level), Point2::xy(quarter, level)],
             1.0,
             dash,
             palette::grid(),
@@ -386,7 +383,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let small = 9.0;
     ax.text(
         c,
-        [quarter / 2.0, 2.04],
+        Point2::xy(quarter / 2.0, 2.04),
         "EACH SPIN ITS OWN ANSWERS",
         small,
         palette::grid(),
@@ -394,22 +391,22 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.text(
         c,
-        [0.01, root8 + 0.04],
+        Point2::xy(0.01, root8 + 0.04),
         "2 SQRT 2",
         small,
         palette::grid(),
         Align::Left,
     );
-    let curve: Vec<[f32; 2]> = data
+    let curve: Vec<Point2> = data
         .angles
         .iter()
         .zip(&data.bells)
-        .map(|(a, b)| [*a as f32, *b as f32])
+        .map(|(a, b)| Point2::xy(*a as f32, *b as f32))
         .collect();
     ax.polyline(c, &curve, 1.6, colours[1], 1.0);
     ax.scatter(
         c,
-        &[[angle as f32, value as f32]],
+        &[Point2::xy(angle as f32, value as f32)],
         Marker::Dot,
         8.0,
         colours[1],

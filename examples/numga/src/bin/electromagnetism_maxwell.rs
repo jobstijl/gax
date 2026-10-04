@@ -13,8 +13,10 @@
 //! pressure over the energy density from the map's spectrum, against `v² / 3` and the null
 //! cloud's exact third.
 
+use gax::pga2d::Point;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Marker, ORIGIN3, Point3, Rgb, Scene3, backdrop, caption,
+    palette, run,
 };
 
 mod maxwell {
@@ -235,12 +237,14 @@ fn null_ratio() -> f64 {
 
 /// Grey axes with their names at the ends.
 fn axes3(c: &mut Canvas, cam: &Camera, s: &mut Scene3, len: f32) {
-    for (i, name) in ["X", "Y", "Z"].iter().enumerate() {
-        let mut a = [0.0; 3];
-        a[i] = len;
-        s.seg([0.0; 3], a, 1.0, palette::grid(), 1.0);
-        a[i] = len * 1.1;
-        if let Some(q) = cam.px(a) {
+    let axes = [
+        Point3::direction(1.0, 0.0, 0.0),
+        Point3::direction(0.0, 1.0, 0.0),
+        Point3::direction(0.0, 0.0, 1.0),
+    ];
+    for (d, name) in axes.into_iter().zip(["X", "Y", "Z"]) {
+        s.seg(ORIGIN3, ORIGIN3 + d.gp(len), 1.0, palette::grid(), 1.0);
+        if let Some(q) = cam.px(ORIGIN3 + d.gp(len * 1.1)) {
             c.text(name, q[0], q[1] + 4.0, 10.0, palette::grid(), Align::Center);
         }
     }
@@ -314,7 +318,7 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
         sc.polyline(&path, 1.0, *col, 0.45);
     }
     for (v, col) in [(e, cols[0]), (b, cols[1]), (poynting(tm), cols[2])] {
-        sc.arrow([0.0; 3], v, 2.5, 10.0, col);
+        sc.arrow(ORIGIN3, v, 2.5, 10.0, col);
     }
     sc.draw(c);
     c.unclip();
@@ -342,13 +346,14 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
         palette::purple(),
     ];
     for (k, col) in cols.iter().enumerate() {
-        let curve: Vec<[f64; 2]> = readouts.iter().map(|(z, r)| [*z, r[k]]).collect();
+        let curve: Vec<Point<(), f64>> =
+            readouts.iter().map(|(z, r)| Point::xy(*z, r[k])).collect();
         ax.polyline(c, &curve, 1.8, *col, 1.0);
     }
     let now = readout(zeta);
     ax.scatter(
         c,
-        &[[zeta, now[0]], [zeta, now[1]]],
+        &[Point::xy(zeta, now[0]), Point::xy(zeta, now[1])],
         Marker::Dot,
         8.0,
         palette::ink(),
@@ -376,7 +381,7 @@ fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
     let cam = Camera::parallel(view, 80.0, -0.4 + spin, 0.3);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
-    sc.sphere_wire([0.0; 3], 1.0, 12, palette::grid(), 0.5);
+    sc.sphere_wire(ORIGIN3, 1.0, 12, palette::grid(), 0.5);
     for d in dirs.iter().step_by(4) {
         sc.dot(spatial(*d) * speed, Marker::Dot, 3.0, palette::sky());
     }
@@ -401,27 +406,30 @@ fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
 
     let ax = Axes::new(lower(rect), [0.0, 1.0], [0.0, 0.4]);
     ax.frame(c, "", "SPEED", "");
-    let theory: Vec<[f32; 2]> = (0..=60)
+    let theory: Vec<Point<(), f32>> = (0..=60)
         .map(|i| {
             let v = i as f32 / 60.0;
-            [v, v * v / 3.0]
+            Point::xy(v, v * v / 3.0)
         })
         .collect();
     ax.polyline(c, &theory, 1.5, palette::green(), 1.0);
     ax.dashed(
         c,
-        &[[0.0, 1.0 / 3.0], [1.0, 1.0 / 3.0]],
+        &[Point::xy(0.0, 1.0 / 3.0), Point::xy(1.0, 1.0 / 3.0)],
         1.0,
         8.0,
         palette::grid(),
         1.0,
     );
     // Each stress eigenvalue over the energy: the three nearly coincide (isotropy).
-    let marks: Vec<[f64; 2]> = s[..3].iter().map(|p| [speed, -p / energy]).collect();
+    let marks: Vec<Point<(), f64>> = s[..3]
+        .iter()
+        .map(|p| Point::xy(speed, -p / energy))
+        .collect();
     ax.scatter(c, &marks, Marker::Ring, 9.0, palette::orange(), 1.0);
     ax.scatter(
         c,
-        &[[1.0, null_ratio()]],
+        &[Point::xy(1.0, null_ratio())],
         Marker::Star,
         12.0,
         palette::yellow(),

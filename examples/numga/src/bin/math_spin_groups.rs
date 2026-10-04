@@ -36,8 +36,8 @@
 
 use gax::ApproxEq;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, canvas, caption, colormap,
-    palette, run,
+    Align, Anim, Camera, Canvas, Lens, Marker, Point3, Rgb, Scene3, backdrop, canvas, caption,
+    colormap, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -621,7 +621,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let cam = Camera::orbit(
             panel.width,
             panel.height,
-            [0.0; 3],
+            Point3::xyz(0.0, 0.0, 0.0),
             (extent * 4.2) as f32,
             (-55.0f32).to_radians() + 0.5 * (phase * core::f32::consts::TAU).sin(),
             24.0f32.to_radians(),

@@ -16,11 +16,13 @@ use std::sync::OnceLock;
 
 use gax_numga_examples::canvas::{mix, srgb};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Pos2, Rgb, backdrop, caption, contour, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Pos2, Rgb, backdrop, caption, contour, palette,
+    plot, run,
 };
 
 mod lensing {
     use gax::vga2d::{Pseudoscalar, Vector};
+    use gax_numga_examples::Point2;
 
     pub type V = Vector<(), f64>;
     /// A map from a small displacement of a sightline to the displacement it makes at the
@@ -32,8 +34,9 @@ mod lensing {
         Vector::new(x, y)
     }
 
-    /// The direction at a point of a drawing.
-    pub fn at(x: f32, y: f32) -> V {
+    /// The direction at a point of a drawing: the point's place on the sky.
+    pub fn at(p: Point2) -> V {
+        let [x, y] = p.to_euclidean();
         v(f64::from(x), f64::from(y))
     }
 
@@ -161,8 +164,8 @@ fn starlight(t: f64) -> Rgb {
 /// What the frames share: the critical curve and the caustic (as segments), the small round
 /// sources, and a sky grid with the source direction each pixel reaches (for the magnification).
 struct Scene {
-    critical: Vec<[[f32; 2]; 2]>,
-    caustic: Vec<[[f64; 2]; 2]>,
+    critical: Vec<[Point2; 2]>,
+    caustic: Vec<[V; 2]>,
     tissot: Vec<(V, Vec<V>, f64)>,
     grid: (Vec<V>, Vec<V>),
 }
@@ -170,12 +173,12 @@ struct Scene {
 fn scene() -> &'static Scene {
     static SCENE: OnceLock<Scene> = OnceLock::new();
     SCENE.get_or_init(|| {
-        let ratio = |x: f32, y: f32| area(binary_local(at(x, y))) as f32;
+        let ratio = |p: Point2| area(binary_local(at(p))) as f32;
         let critical = contour::of_fn(ratio, [-1.9, 1.9], [-1.9, 1.9], 380, 0.0);
         // The lens carries the critical curve to the caustic.
         let caustic = critical
             .iter()
-            .map(|seg| seg.map(|[x, y]| binary(at(x, y)).c))
+            .map(|seg| seg.map(|p| binary(at(p))))
             .collect();
         let (directions, reached, _) = lens(400);
         Scene {
@@ -199,7 +202,7 @@ fn square(rect: [f32; 4]) -> Axes {
     let top = rect[1];
     Axes::equal(
         [cx - side * 0.5, top, cx + side * 0.5, top + side],
-        [0.0, 0.0],
+        Point2::xy(0.0, 0.0),
         HALF,
     )
 }
@@ -216,7 +219,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (w, h) = (c.width as f32, c.height as f32);
     let critical_colour = srgb(0.333, 0.796, 0.827);
     let caustic_colour = srgb(1.0, 0.53, 0.447);
-    let masses = positions().map(|p| p.c);
+    let masses = positions();
     let centre = source_at(t);
     let size = (h / 34.0).clamp(7.0, 15.0);
     let (top, bottom) = (h * 0.17, h - size * 3.2);
@@ -244,17 +247,15 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The source plane: the source unlensed, with the caustic.
     let ax = panel(0);
-    ax.image(c, 1, |x, y| {
-        Some(starlight(brightness(at(x, y), centre, WIDTH)))
-    });
+    ax.image(c, 1, |p| Some(starlight(brightness(at(p), centre, WIDTH))));
     segments(&ax, c, &s.caustic, 1.3, caustic_colour);
     ax.frame(c, "SOURCE", "", "");
     below(c, &ax, 0.0, "CAUSTIC", caustic_colour, Align::Center);
 
     // The sky: each pixel shows the source's brightness where its sightline arrives.
     let ax = panel(1);
-    ax.image(c, 2, |x, y| {
-        Some(starlight(brightness(binary(at(x, y)), centre, WIDTH)))
+    ax.image(c, 2, |p| {
+        Some(starlight(brightness(binary(at(p)), centre, WIDTH)))
     });
     segments(&ax, c, &s.critical, 1.1, critical_colour);
     ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid(), 1.0);
@@ -274,10 +275,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let preserved = palette::sky();
     let reversed = srgb(0.79, 0.41, 0.28);
     for (_, outline, ratio) in &s.tissot {
-        let pts: Vec<[f64; 2]> = outline.iter().map(|p| p.c).collect();
         let colour = if *ratio >= 0.0 { preserved } else { reversed };
-        ax.fill(c, &pts, colour, 0.35);
-        ax.polyline(c, &pts, 1.0, colour, 0.9);
+        ax.fill(c, outline, colour, 0.35);
+        ax.polyline(c, outline, 1.0, colour, 0.9);
     }
     segments(&ax, c, &s.critical, 1.0, palette::grid());
     ax.scatter(c, &masses, Marker::Ring, 10.0, palette::ink(), 0.8);

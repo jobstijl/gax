@@ -17,6 +17,7 @@
 //! and in a birefringent crystal (two speeds: it turns as the slow and fast modes slip), with
 //! cursors sweeping the dispersion scans, the Fresnel surfaces and the drag curve.
 
+use gax::pga2d::Point;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Marker, Rgb, Scene3, backdrop, caption, palette, plot, run,
 };
@@ -451,18 +452,32 @@ fn draw_dispersion(c: &mut Canvas, rect: [f32; 4], cursor: f64) {
     for (i, (_, scan, expected)) in s.dispersion.iter().enumerate() {
         let col = palette::series(i);
         for v in expected {
-            ax.dashed(c, &[[*v, 1e-4], [*v, 3.0]], 1.0, 4.0, col, 0.6);
+            ax.dashed(
+                c,
+                &[Point::xy(*v, 1e-4), Point::xy(*v, 3.0)],
+                1.0,
+                4.0,
+                col,
+                0.6,
+            );
         }
-        let pts: Vec<[f64; 2]> = s
+        let pts: Vec<Point<(), f64>> = s
             .speeds
             .iter()
             .zip(scan)
-            .map(|(v, m)| [*v, m.max(1e-4)])
+            .map(|(v, m)| Point::xy(*v, m.max(1e-4)))
             .collect();
         ax.polyline(c, &pts, if i == 1 { 1.0 } else { 1.5 }, col, 0.9);
         ax.scatter(c, &pts[k..=k], Marker::Dot, 6.0, col, 1.0);
     }
-    ax.line(c, [cursor, 1e-4], [cursor, 3.0], 1.0, palette::ink(), 0.5);
+    ax.line(
+        c,
+        Point::xy(cursor, 1e-4),
+        Point::xy(cursor, 3.0),
+        1.0,
+        palette::ink(),
+        0.5,
+    );
     let names: Vec<(&str, Rgb)> = s
         .dispersion
         .iter()
@@ -474,18 +489,33 @@ fn draw_dispersion(c: &mut Canvas, rect: [f32; 4], cursor: f64) {
 
 fn draw_polarizations(c: &mut Canvas, rect: [f32; 4], tau: f64) {
     let (_, fields) = scans().crystal;
-    let ax = Axes::equal(plot::inset(rect, 14.0, 26.0, 10.0, 34.0), [0.0, 0.0], 1.3);
+    let origin = Point::xy(0.0, 0.0);
+    let ax = Axes::equal(plot::inset(rect, 14.0, 26.0, 10.0, 34.0), origin, 1.3);
     ax.frame(c, "CRYSTAL MODES", "X", "");
-    ax.line(c, [-1.3, 0.0], [1.3, 0.0], 1.0, palette::grid(), 0.6);
-    ax.line(c, [0.0, -1.3], [0.0, 1.3], 1.0, palette::grid(), 0.6);
+    ax.line(
+        c,
+        Point::xy(-1.3, 0.0),
+        Point::xy(1.3, 0.0),
+        1.0,
+        palette::grid(),
+        0.6,
+    );
+    ax.line(
+        c,
+        Point::xy(0.0, -1.3),
+        Point::xy(0.0, 1.3),
+        1.0,
+        palette::grid(),
+        0.6,
+    );
     // Each mode's field oscillating in its plane at the entrance face, in phase.
     for (f, col) in fields.iter().zip([palette::red(), palette::blue()]) {
         // The electric vector lies across the beam: its x and y, at unit length.
         let (e, _) = arrows(*f);
         let a = e.normalized().into_inner();
-        let along = |k: f64| [k * a.e1(), k * a.e2()];
+        let along = |k: f64| origin + Point::direction(a.e1(), a.e2()).gp(k);
         ax.dashed(c, &[along(-1.0), along(1.0)], 1.0, 4.0, col, 0.7);
-        ax.arrow(c, [0.0, 0.0], along(1.0), 2.5, 9.0, col);
+        ax.arrow(c, origin, along(1.0), 2.5, 9.0, col);
         ax.scatter(
             c,
             &[along(tau.cos())],
@@ -497,21 +527,28 @@ fn draw_polarizations(c: &mut Canvas, rect: [f32; 4], tau: f64) {
     }
     // The names in the top left corner (the panel is narrower than it is tall).
     let left = ax.x[0] + 0.1;
-    ax.text(c, [left, 1.1], "SLOW", 10.0, palette::red(), Align::Left);
-    ax.text(c, [left, 0.9], "FAST", 10.0, palette::blue(), Align::Left);
+    let (slow, fast) = (Point::xy(left, 1.1), Point::xy(left, 0.9));
+    ax.text(c, slow, "SLOW", 10.0, palette::red(), Align::Left);
+    ax.text(c, fast, "FAST", 10.0, palette::blue(), Align::Left);
 }
 
 fn draw_fresnel(c: &mut Canvas, rect: [f32; 4], angle: f64) {
     let s = scans();
-    let ax = Axes::equal(plot::inset(rect, 14.0, 26.0, 10.0, 34.0), [0.0, 0.05], 1.1);
+    let ax = Axes::equal(
+        plot::inset(rect, 14.0, 26.0, 10.0, 34.0),
+        Point::xy(0.0, 0.05),
+        1.1,
+    );
     ax.frame(c, "FRESNEL SURFACES", "X", "");
-    // Zero along +z (up), angles towards +x (right): a point is the speed times the direction.
-    let place = |a: f64, v: f64| -> [f64; 2] {
+    // Zero along +z (up), angles towards +x (right): a point is the speed times the direction
+    // from the origin.
+    let origin = Point::xy(0.0, 0.0);
+    let place = |a: f64, v: f64| -> Point<(), f64> {
         let d = direction(a);
-        [v * d.e1(), v * d.e3()]
+        origin + Point::direction(d.e1(), d.e3()).gp(v)
     };
     for r in [0.25, 0.5, 0.75, 1.0] {
-        let ring: Vec<[f64; 2]> = (0..=72)
+        let ring: Vec<Point<(), f64>> = (0..=72)
             .map(|k| place(core::f64::consts::TAU * k as f64 / 72.0, r))
             .collect();
         ax.polyline(c, &ring, 1.0, palette::grid(), 0.6);
@@ -520,7 +557,7 @@ fn draw_fresnel(c: &mut Canvas, rect: [f32; 4], angle: f64) {
         let col = palette::series([0, 2, 4][m]);
         let branches = per_angle.iter().map(Vec::len).max().unwrap_or(0);
         for b in 0..branches {
-            let pts: Vec<[f64; 2]> = s
+            let pts: Vec<Point<(), f64>> = s
                 .angles
                 .iter()
                 .zip(per_angle)
@@ -531,14 +568,14 @@ fn draw_fresnel(c: &mut Canvas, rect: [f32; 4], angle: f64) {
         // Where the sweeping direction meets each sheet, from the nearest scanned angle.
         let i = ((angle / core::f64::consts::TAU * (s.angles.len() - 1) as f64).round() as usize)
             .min(s.angles.len() - 1);
-        let hits: Vec<[f64; 2]> = per_angle[i]
+        let hits: Vec<Point<(), f64>> = per_angle[i]
             .iter()
             .map(|v| place(s.angles[i], *v))
             .collect();
         ax.scatter(c, &hits, Marker::Dot, 7.0, col, 1.0);
         ax.text(
             c,
-            [-1.0, -0.75 - 0.13 * m as f64],
+            Point::xy(-1.0, -0.75 - 0.13 * m as f64),
             name,
             9.0,
             col,
@@ -546,7 +583,7 @@ fn draw_fresnel(c: &mut Canvas, rect: [f32; 4], angle: f64) {
         );
     }
     let d = place(angle, 1.1);
-    ax.line(c, [0.0, 0.0], d, 1.0, palette::ink(), 0.6);
+    ax.line(c, origin, d, 1.0, palette::ink(), 0.6);
 }
 
 fn draw_drag(c: &mut Canvas, rect: [f32; 4], beta: f64) {
@@ -559,8 +596,9 @@ fn draw_drag(c: &mut Canvas, rect: [f32; 4], beta: f64) {
     );
     ax.frame(c, "FRESNEL DRAG", "MEDIUM SPEED", "");
     let fine = linspace(-0.6, 0.6, 121);
-    let curve =
-        |f: &dyn Fn(f64) -> f64| -> Vec<[f64; 2]> { fine.iter().map(|b| [*b, f(*b)]).collect() };
+    let curve = |f: &dyn Fn(f64) -> f64| -> Vec<Point<(), f64>> {
+        fine.iter().map(|b| Point::xy(*b, f(*b))).collect()
+    };
     let coeff = 1.0 - 1.0 / (n * n);
     let (down, up) = (palette::orange(), palette::sky());
     ax.polyline(c, &curve(&|b| add_speeds(1.0 / n, b)), 1.5, down, 1.0);
@@ -568,15 +606,27 @@ fn draw_drag(c: &mut Canvas, rect: [f32; 4], beta: f64) {
     // First-order Fresnel drag, dashed.
     ax.dashed(c, &curve(&|b| 1.0 / n + b * coeff), 1.0, 5.0, down, 0.6);
     ax.dashed(c, &curve(&|b| 1.0 / n - b * coeff), 1.0, 5.0, up, 0.6);
-    let pts =
-        |v: &[f64]| -> Vec<[f64; 2]> { s.betas.iter().zip(v).map(|(b, v)| [*b, *v]).collect() };
+    let pts = |v: &[f64]| -> Vec<Point<(), f64>> {
+        s.betas
+            .iter()
+            .zip(v)
+            .map(|(b, v)| Point::xy(*b, *v))
+            .collect()
+    };
     ax.scatter(c, &pts(&s.drag.0), Marker::Dot, 6.0, down, 1.0);
     ax.scatter(c, &pts(&s.drag.1), Marker::Square, 6.0, up, 1.0);
     let now = [
-        [beta, add_speeds(1.0 / n, beta)],
-        [beta, add_speeds(1.0 / n, -beta)],
+        Point::xy(beta, add_speeds(1.0 / n, beta)),
+        Point::xy(beta, add_speeds(1.0 / n, -beta)),
     ];
-    ax.line(c, [beta, 0.0], [beta, 1.0], 1.0, palette::ink(), 0.5);
+    ax.line(
+        c,
+        Point::xy(beta, 0.0),
+        Point::xy(beta, 1.0),
+        1.0,
+        palette::ink(),
+        0.5,
+    );
     ax.scatter(c, &now, Marker::Ring, 11.0, palette::ink(), 1.0);
     ax.legend(c, &[("WITH FLOW", down), ("AGAINST", up)]);
 }

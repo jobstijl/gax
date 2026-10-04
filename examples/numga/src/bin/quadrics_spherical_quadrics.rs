@@ -11,8 +11,8 @@
 
 use gax::vga3d::{Bivector, Vector};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Pos3, Scene3, backdrop, canvas, caption, colormap,
-    contour, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Marker, Point2, Point3, Scene3, backdrop, canvas, caption,
+    colormap, contour, palette, run,
 };
 
 mod conic {
@@ -205,6 +205,12 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     let pot = |u: f32, v: f32| conic.potential(grid(u, v));
     let on_sphere = |u: f32, v: f32| grid(u, v).undual();
+    // The same at a point of the unit square, where the level lines are found.
+    let at = |uv: Point2| {
+        let [u, v] = uv.to_euclidean();
+        grid(u, v)
+    };
+    let origin = Point3::xyz(0.0, 0.0, 0.0);
     let (mut lo, mut hi) = (f64::MAX, f64::MIN);
     for i in 0..=60 {
         for j in 0..=30 {
@@ -218,7 +224,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let cam = Camera::orbit(
             p.width,
             p.height,
-            [0.0, 0.0, 0.0],
+            origin,
             6.0,
             azimuth,
             0.45,
@@ -230,7 +236,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 // The potential on the sphere, the oval, its antipodal loop, the foci, and the
                 // geodesics from the running point to both foci.
                 s.surface(
-                    |u, v| on_sphere(u, v).xyz(),
+                    on_sphere,
                     36,
                     18,
                     |u, v| colormap::coolwarm(((pot(u, v) - lo) / (hi - lo)) as f32),
@@ -252,7 +258,7 @@ fn draw(c: &mut Canvas, t: f32) {
             1 => {
                 // The envelope: sixteen tangent great circles, the running one bright with its
                 // normal.
-                s.sphere_wire([0.0; 3], 1.0, 16, palette::grid(), 0.25);
+                s.sphere_wire(origin, 1.0, 16, palette::grid(), 0.25);
                 s.polyline(&oval, 3.0, gold, 1.0);
                 for j in 0..16 {
                     let idx = j * 199 / 15;
@@ -287,32 +293,24 @@ fn draw(c: &mut Canvas, t: f32) {
                 // The dual conic: the normals of the planes with `π ∨ Q(π) = 0`, a level line
                 // of the dual form over the sphere of unit normals (each the plane whose pole is
                 // that point of the sphere).
-                let dual = |u: f32, v: f32| {
-                    let plane = on_sphere(u, v);
+                let dual = |uv: Point2| {
+                    let plane = at(uv).undual();
                     (plane & conic.q.of(plane)).s() as f32
                 };
                 for [a, b] in contour::of_fn(dual, [0.0, 1.0], [0.0, 1.0], 120, 0.0) {
-                    s.seg(
-                        on_sphere(a[0], a[1]),
-                        on_sphere(b[0], b[1]),
-                        2.0,
-                        palette::purple(),
-                        1.0,
-                    );
+                    s.seg(at(a).undual(), at(b).undual(), 2.0, palette::purple(), 1.0);
                 }
                 s.dot(sample.undual(), Marker::Ring, 11.0, palette::ink());
             }
             _ => {
                 // The cone through the oval, and the polhodes: level lines of the potential.
-                s.sphere_wire([0.0; 3], 1.0, 16, palette::grid(), 0.25);
+                s.sphere_wire(origin, 1.0, 16, palette::grid(), 0.25);
                 let ev = conic.eigenvalues;
                 let rotor = conic.rotor;
                 s.surface(
                     |u, v| {
                         let r = 0.1 + 1.15 * f64::from(u);
-                        (rotor >> cone(ev, r, f64::from(v) * std::f64::consts::TAU))
-                            .undual()
-                            .xyz()
+                        (rotor >> cone(ev, r, f64::from(v) * std::f64::consts::TAU)).undual()
                     },
                     12,
                     40,
@@ -327,19 +325,13 @@ fn draw(c: &mut Canvas, t: f32) {
                         (hi * (0.7 - 0.2333 * j as f64), palette::sky()),
                     ] {
                         for [a, b] in contour::of_fn(
-                            |u, v| pot(u, v) as f32,
+                            |uv| conic.potential(at(uv)) as f32,
                             [0.0, 1.0],
                             [0.0, 1.0],
                             90,
                             level as f32,
                         ) {
-                            s.seg(
-                                on_sphere(a[0], a[1]),
-                                on_sphere(b[0], b[1]),
-                                1.4,
-                                colour,
-                                0.85,
-                            );
+                            s.seg(at(a).undual(), at(b).undual(), 1.4, colour, 0.85);
                         }
                     }
                 }
@@ -373,6 +365,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::conic::*;
+    use gax::ApproxEq;
     use gax::vga3d::{Bivector, Vector};
 
     /// A point of the sphere is the dual of the vector of its coordinates.
@@ -417,18 +410,13 @@ mod tests {
     /// The longitude-latitude grid, built by rotors as numga's, is the usual parametrization.
     #[test]
     fn the_sphere_grid_is_spherical_coordinates() {
-        for (phi, theta) in [(0.3, 0.7), (2.0, 1.2), (4.0, 2.9)] {
-            let [x, y, z] = sphere(phi, theta).undual().c;
-            let want = [
+        for (phi, theta) in [(0.3f64, 0.7f64), (2.0, 1.2), (4.0, 2.9)] {
+            let want = Vector::new(
                 theta.sin() * phi.cos(),
                 theta.sin() * phi.sin(),
                 theta.cos(),
-            ];
-            assert!(
-                (x - want[0]).abs() < 1e-14
-                    && (y - want[1]).abs() < 1e-14
-                    && (z - want[2]).abs() < 1e-14
             );
+            assert!(sphere(phi, theta).undual().max_abs_diff(&want) < 1e-14);
         }
     }
 
@@ -449,26 +437,17 @@ mod tests {
         assert!((conic.theta_a - 0.9553166181245093).abs() < 1e-14);
         assert!((product - 0.26666666666523).abs() < 1e-11);
         let numga = [
-            [0.35507764519436, 0.747383015023582, 0.561550082122781],
-            [-0.242143096584461, -0.308517190674206, 0.919882527190074],
+            Vector::new(0.35507764519436, 0.747383015023582, 0.561550082122781),
+            Vector::new(-0.242143096584461, -0.308517190674206, 0.919882527190074),
         ];
         for (f, want) in conic.foci.iter().zip(numga) {
-            for (a, b) in f.undual().c.iter().zip(want) {
-                assert!((a - b).abs() < 1e-10);
-            }
+            assert!(f.undual().max_abs_diff(&want) < 1e-10);
         }
         // The rotor is numga's: it carries the pole e12 to the same place. (numga's exponential
         // is good to a few 1e-12, so these compare to 1e-10.)
         let moved = conic.rotor >> Bivector::new(0.0, 0.0, 1.0);
-        for (a, b) in
-            moved
-                .undual()
-                .c
-                .iter()
-                .zip([0.072898937662932, 0.283286671487454, 0.956260637399548])
-        {
-            assert!((a - b).abs() < 1e-10);
-        }
+        let numga = Vector::new(0.072898937662932, 0.283286671487454, 0.956260637399548);
+        assert!(moved.undual().max_abs_diff(&numga) < 1e-10);
     }
 
     #[test]

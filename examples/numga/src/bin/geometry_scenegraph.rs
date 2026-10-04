@@ -157,18 +157,19 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     let cam = Camera::orbit(
         c.width,
         c.height,
-        [0.1, -2.4, 1.25],
+        Point::xyz(0.1, -2.4, 1.25),
         15.5,
         (-55f32).to_radians() + sway,
         18f32.to_radians(),
         Lens::Perspective(0.42),
     );
     let mut s = Scene3::new(cam);
+    let floor = |x: f64, y: f64| Point::xyz(x, y, 0.0);
     for k in 0..7 {
-        let g = -1.2 + 0.4 * k as f32;
+        let g = -1.2 + 0.4 * f64::from(k);
         let line = mix(palette::grid(), palette::ink(), 0.25);
-        s.seg([g, -1.2, 0.0], [g, 1.2, 0.0], 1.0, line, 0.8);
-        s.seg([-1.2, g, 0.0], [1.2, g, 0.0], 1.0, line, 0.8);
+        s.seg(floor(g, -1.2), floor(g, 1.2), 1.0, line, 0.8);
+        s.seg(floor(-1.2, g), floor(1.2, g), 1.0, line, 0.8);
     }
     for (i, v) in photo.world.iter().enumerate() {
         for f in BOX_FACES {

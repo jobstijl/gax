@@ -31,8 +31,8 @@
 //! a circle, at that plane's rate.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, canvas, caption,
-    palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rgb, Scene3, backdrop, canvas,
+    caption, palette, plot, run,
 };
 
 gax::algebra! {
@@ -252,13 +252,18 @@ const SECONDS: f32 = 12.0;
 const SEED: u64 = 0;
 const SAMPLES: usize = 600;
 
+/// A point in one of the planes, in the plane's own frame.
+type Flat = gax::vga2d::Vector<(), f64>;
+/// A point of the first three directions.
+type Space = gax::vga3d::Vector<(), f64>;
+
 fn plane_colour(k: usize) -> Rgb {
     [palette::red(), palette::sky(), palette::green()][k]
 }
 
-/// The orbit at the sample times, and its projections into each plane as 2D coordinates: along
-/// the direction of the first projected point, and a quarter turn on from it.
-fn tracks(ex: &Example) -> (Vec<V>, [Vec<[f64; 2]>; 3]) {
+/// The orbit at the sample times, and its projections into each plane as vectors of the plane's
+/// own frame: along the direction of the first projected point, and a quarter turn on from it.
+fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
     let points: Vec<V> = (0..SAMPLES)
         .map(|k| {
             let time = ex.period * k as f64 / (SAMPLES - 1) as f64;
@@ -273,7 +278,7 @@ fn tracks(ex: &Example) -> (Vec<V>, [Vec<[f64; 2]>; 3]) {
             .iter()
             .map(|p| {
                 let q = projected(*p, ex.parts)[k];
-                [(q | across).s(), (q | along).s()]
+                Flat::new((q | across).s(), (q | along).s())
             })
             .collect()
     });
@@ -292,14 +297,18 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         wide,
         c.height,
-        [0.0f32; 3],
+        Point3::xyz(0.0, 0.0, 0.0),
         6.5,
         -0.9 + core::f32::consts::TAU * t / SECONDS,
         0.45,
         Lens::Perspective(0.42),
     );
     let mut scene = Scene3::new(cam);
-    let path: Vec<[f64; 3]> = points.iter().map(|p| [p.c[0], p.c[1], p.c[2]]).collect();
+    // The orbit's shadow in the first three directions.
+    let path: Vec<Space> = points
+        .iter()
+        .map(|p| Space::new(p.c[0], p.c[1], p.c[2]))
+        .collect();
     scene.polyline(&path, 0.8, palette::grid(), 0.9);
     scene.polyline(&path[..=index], 1.6, palette::purple(), 1.0);
     scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
@@ -323,11 +332,9 @@ fn draw(c: &mut Canvas, t: f32) {
             4.0,
             4.0,
         );
-        let extent = (track
-            .iter()
-            .fold(0.0f64, |m, p| m.max(p[0].abs()).max(p[1].abs()))
-            * 1.2) as f32;
-        let ax = Axes::equal(rect, [0.0, 0.0], extent);
+        // The circle's radius, with a margin.
+        let extent = (track.iter().fold(0.0f64, |m, p| m.max(p.norm())) * 1.2) as f32;
+        let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), extent);
         ax.polyline(c, track, 0.9, palette::grid(), 1.0);
         ax.polyline(c, &track[..=index], 1.8, plane_colour(k), 1.0);
         ax.scatter(
@@ -341,7 +348,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let rate = (-ex.squares[k]).sqrt();
         ax.text(
             c,
-            [0.0, extent * 1.15],
+            Point2::xy(0.0, extent * 1.15),
             &format!("PLANE {}", k + 1),
             12.0,
             palette::ink(),
@@ -349,7 +356,7 @@ fn draw(c: &mut Canvas, t: f32) {
         );
         ax.text(
             c,
-            [0.0, -extent * 1.3],
+            Point2::xy(0.0, -extent * 1.3),
             &format!("RATE {rate:.2}"),
             10.0,
             canvas::mix(plane_colour(k), palette::ink(), 0.4),

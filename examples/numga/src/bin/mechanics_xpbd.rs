@@ -350,7 +350,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         left as usize,
         c.height,
-        [0.0, 0.0, -0.2],
+        Point::xyz(0.0, 0.0, -0.2),
         3.0,
         azimuth,
         0.3,
@@ -358,13 +358,14 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let mut s = Scene3::new(cam);
     // The ground grid under the pivot.
+    let floor = |x: f64, y: f64| Point::xyz(x, y, -0.62);
     for i in -4..=6 {
-        let x = i as f32 * 0.1;
-        s.seg([x, -0.3, -0.62], [x, 0.3, -0.62], 1.0, palette::grid(), 0.6);
+        let x = f64::from(i) * 0.1;
+        s.seg(floor(x, -0.3), floor(x, 0.3), 1.0, palette::grid(), 0.6);
     }
     for j in -3..=3 {
-        let y = j as f32 * 0.1;
-        s.seg([-0.4, y, -0.62], [0.6, y, -0.62], 1.0, palette::grid(), 0.6);
+        let y = f64::from(j) * 0.1;
+        s.seg(floor(-0.4, y), floor(0.6, y), 1.0, palette::grid(), 0.6);
     }
     // The free end's path so far.
     let [end, start] = anchors(LINK_SPACING);
@@ -403,11 +404,13 @@ fn draw(c: &mut Canvas, t: f32) {
     )
     .log_y();
     ax.frame(c, "JOINT GAPS", "TIME (S)", "METRES");
-    let series = |f: &dyn Fn(&[f64]) -> f64| -> Vec<[f64; 2]> {
+    // The chart's points: (time, gap).
+    let at = gax::pga2d::Point::<(), f64>::xy;
+    let series = |f: &dyn Fn(&[f64]) -> f64| -> Vec<_> {
         gaps[1..=k.max(1)]
             .iter()
             .enumerate()
-            .map(|(j, g)| [(j + 1) as f64 * DT, f(g).max(1e-30)])
+            .map(|(j, g)| at((j + 1) as f64 * DT, f(g).max(1e-30)))
             .collect()
     };
     let largest = series(&|g| g.iter().fold(0.0, |a: f64, &b| a.max(b)));
@@ -418,7 +421,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let bound = 1e-2 * LINK_SPACING;
     ax.dashed(
         c,
-        &[[0.0, bound], [f64::from(SECONDS), bound]],
+        &[at(0.0, bound), at(f64::from(SECONDS), bound)],
         1.0,
         3.0,
         palette::grid(),
@@ -426,7 +429,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.text(
         c,
-        [0.1, bound * 1.4],
+        at(0.1, bound * 1.4),
         "1% OF THE SPACING",
         9.0 * u,
         palette::grid(),

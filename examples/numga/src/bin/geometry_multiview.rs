@@ -20,7 +20,7 @@ use gax::ApproxEq;
 use gax::motions::Linear;
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, caption, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -568,9 +568,9 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
     let height = c.height as f32;
     let splat = palette::orange();
     let me = *ax;
-    ax.image(c, 1, |x, y| {
-        let p = Point::xy(f64::from(x), f64::from(y));
-        let row = me.px([x, y])[1];
+    ax.image(c, 1, |at| {
+        let p = at.map_coefs(f64::from);
+        let row = me.px(at)[1];
         let mut colour = mix(palette::top(), palette::bottom(), row / height);
         let mut ahead = false;
         for (k, cam) in (0..motors.len()).map(|k| (k, camera_colour(k))) {
@@ -700,7 +700,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let top = 64.0;
     let rect = plot::inset([0.0, top, w * 0.5, h], 8.0, 4.0, 8.0, 8.0);
     let span = (Y_RANGE[1] - Y_RANGE[0]) * 0.5;
-    let ax = Axes::equal(rect, [0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])], span);
+    let ax = Axes::equal(rect, Point2::xy(0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])), span);
     scene(c, &ax, &motors, &data.cones);
     if let Some(info) = &s.information {
         let blended: Vec<plane::Information> = info[k]
@@ -715,13 +715,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 1.0]).log_y();
     errors.frame(c, "POINT RMSE ALONG THE STEPS", "GAUSS-NEWTON STEP", "RMSE");
     for (i, sc) in data.scenarios.iter().enumerate() {
-        let curve: Vec<[f32; 2]> = sc
+        // The chart's points: (step, error).
+        let curve: Vec<Point2> = sc
             .states
             .iter()
             .enumerate()
             .map(|(j, m)| {
                 let (points, _) = plane::triangulate(m, &data.cones);
-                [j as f32, plane::rmse(&points, &data.truth).max(1e-5) as f32]
+                Point2::xy(j as f32, plane::rmse(&points, &data.truth).max(1e-5) as f32)
             })
             .collect();
         let shown = if i == which { 2.4 } else { 1.0 };
@@ -741,7 +742,7 @@ fn draw(c: &mut Canvas, t: f32) {
             let e = plane::rmse(&now, &data.truth).max(1e-5) as f32;
             errors.scatter(
                 c,
-                &[[progress, e]],
+                &[Point2::xy(progress, e)],
                 Marker::Dot,
                 9.0,
                 palette::series(i),

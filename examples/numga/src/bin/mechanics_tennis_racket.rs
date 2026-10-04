@@ -15,8 +15,12 @@
 //! to fourth order, Verlet and RK4 to first.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point3, Scene3, backdrop, caption, palette,
+    plot, run,
 };
+
+/// A point of a chart: (time, value).
+type Chart = gax::pga2d::Point<(), f64>;
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
@@ -240,8 +244,8 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: [f32; 2], scale: 
     let cam = Camera::looking(
         (2.0 * centre[0]) as usize,
         (2.0 * centre[1]) as usize,
-        [10.0, -16.0, 9.0],
-        [0.0, 0.0, 0.0],
+        Point3::xyz(10.0, -16.0, 9.0),
+        Point3::xyz(0.0, 0.0, 0.0),
         Lens::Parallel(half),
     );
     let mut s = Scene3::new(cam);
@@ -348,8 +352,8 @@ fn draw(c: &mut Canvas, t: f32) {
         let ax = Axes::new(rect, [0.0, COMPARE_RUN as f32], [1e-12, 1.0]).log_y();
         ax.frame(c, &format!("{}D DRIFT", p + 3), "TIME", "");
         for (s, (name, curve)) in STEPPERS.iter().zip(curves).enumerate() {
-            let pts: Vec<[f64; 2]> = (1..=shown.min(curve.len() - 1))
-                .map(|j| [j as f64 * COMPARE_DT, curve[j].max(1e-30)])
+            let pts: Vec<Chart> = (1..=shown.min(curve.len() - 1))
+                .map(|j| Chart::xy(j as f64 * COMPARE_DT, curve[j].max(1e-30)))
                 .collect();
             if *name == "rk4" {
                 ax.dashed(c, &pts, 1.6, 5.0, colours[s], 1.0);
@@ -368,7 +372,8 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // The time cursor on the rate plots.
     for ax in [rates3, rates4] {
-        ax.line(c, [time, -1.25], [time, 1.25], 1.0, palette::grid(), 1.0);
+        let at = |rate: f64| Chart::xy(time, rate);
+        ax.line(c, at(-1.25), at(1.25), 1.0, palette::grid(), 1.0);
     }
 }
 
@@ -382,7 +387,9 @@ fn rate_curves(
     rate: impl Fn(usize, usize) -> f64,
 ) {
     for i in 0..bodies {
-        let pts: Vec<[f64; 2]> = (0..=k).map(|j| [j as f64 * SHOW_DT, rate(j, i)]).collect();
+        let pts: Vec<Chart> = (0..=k)
+            .map(|j| Chart::xy(j as f64 * SHOW_DT, rate(j, i)))
+            .collect();
         ax.polyline(c, &pts, width, palette::series(i), 1.0);
     }
 }

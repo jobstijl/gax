@@ -15,7 +15,8 @@ use gax::{Real, Unit};
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Scene3, backdrop, caption, palette,
+    plot, run,
 };
 use std::sync::OnceLock;
 
@@ -185,13 +186,10 @@ fn draw(c: &mut Canvas, t: f32) {
         w * 0.02,
         h * 0.06,
     );
-    let ax = Axes::equal(right, [0.0, 0.0], 0.75);
+    let ax = Axes::equal(right, Point2::xy(0.0, 0.0), 0.75);
     ax.frame(c, "THE SCREEN Z = 1", "", "");
-    // A point of the screen `z = 1` by its coordinates across it.
-    let flat = |p: &P| {
-        let [x, y, _] = p.to_euclidean();
-        [x, y]
-    };
+    // A point of the screen `z = 1` as a point of the plane: its `z` dropped.
+    let flat = |p: &P| gax::pga2d::Point::new(p.e032(), p.e013(), p.e123());
     for (a, o) in images.iter().zip(&observed) {
         ax.line(c, flat(a), flat(o), 0.8, palette::red(), 0.5);
     }
@@ -213,16 +211,17 @@ fn draw(c: &mut Canvas, t: f32) {
         .log_x()
         .log_y();
     mx.frame(c, "", "STEP", "MEAN SQUARED IMAGE MISFIT");
-    let curve: Vec<[f32; 2]> = path
+    // The chart's points: (step, misfit).
+    let curve: Vec<Point2> = path
         .iter()
         .enumerate()
-        .map(|(i, p)| [(i + 1) as f32, p.1 as f32])
+        .map(|(i, p)| Point2::xy((i + 1) as f32, p.1 as f32))
         .collect();
     mx.polyline(c, &curve, 1.0, palette::grid(), 1.0);
     mx.polyline(c, &curve[..=k.min(STEPS)], 2.0, palette::yellow(), 1.0);
     mx.scatter(
         c,
-        &[[(k + 1) as f32, value as f32]],
+        &[Point2::xy((k + 1) as f32, value as f32)],
         Marker::Dot,
         7.0,
         palette::yellow(),

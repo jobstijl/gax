@@ -114,16 +114,20 @@ fn draw(c: &mut Canvas, t: f32) {
     let ax = {
         let (rw, rh) = (rect[2] - rect[0], rect[3] - rect[1]);
         let half = ((Y[1] - Y[0]) / 2.0).max((X[1] - X[0]) / 2.0 * rh / rw);
-        Axes::equal(rect, [(X[0] + X[1]) / 2.0, (Y[0] + Y[1]) / 2.0], half)
+        Axes::equal(
+            rect,
+            Point::xy((X[0] + X[1]) / 2.0, (Y[0] + Y[1]) / 2.0),
+            half,
+        )
     };
-    ax.image(c, 1, |x, y| {
-        let d = fit.density(Point::xy(f64::from(x), f64::from(y))) as f32;
+    ax.image(c, 1, |p| {
+        let d = fit.density(p.map_coefs(f64::from)) as f32;
         Some(shade(d))
     });
     ax.scatter(c, &points, Marker::Dot, 3.5, srgb(0.15, 0.21, 0.29), 0.8);
     ax.contour(
         c,
-        |x, y| fit.level(Point::xy(f64::from(x), f64::from(y))) as f32,
+        |p| fit.level(p.map_coefs(f64::from)) as f32,
         220,
         0.0,
         2.4,

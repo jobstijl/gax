@@ -3,7 +3,7 @@
 //! lines, images and legends in data coordinates.
 
 use crate::canvas::{Canvas, Px, Rgb};
-use crate::coords::{Dir2, Pos2};
+use crate::coords::{Dir2, Point2, Pos2, finite};
 use crate::font::Align;
 use crate::{contour, palette};
 use gax::pga2d::{Motor, Point};
@@ -97,7 +97,8 @@ impl Axes {
 
     /// Axes with equal scales across and up, centred on `centre`, `half_height` units from the
     /// middle to the top (for geometry).
-    pub fn equal(rect: [f32; 4], centre: [f32; 2], half_height: f32) -> Axes {
+    pub fn equal(rect: [f32; 4], centre: impl Pos2, half_height: f32) -> Axes {
+        let centre = centre.point2().to_euclidean();
         let (w, h) = (rect[2] - rect[0], rect[3] - rect[1]);
         let half_width = half_height * w / h;
         Axes::new(
@@ -105,6 +106,28 @@ impl Axes {
             [centre[0] - half_width, centre[0] + half_width],
             [centre[1] - half_height, centre[1] + half_height],
         )
+    }
+
+    /// Axes with equal scales, centred on the box around `points` and large enough to show it
+    /// whole in `rect`, with `margin` to spare (`1.1` leaves a tenth).
+    pub fn fitting<P: Pos2>(
+        rect: [f32; 4],
+        points: impl IntoIterator<Item = P>,
+        margin: f32,
+    ) -> Axes {
+        // The box: its lower left and upper right corners.
+        let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
+        for p in points {
+            for (i, v) in p.point2().to_euclidean().into_iter().enumerate() {
+                (lo[i], hi[i]) = (lo[i].min(v), hi[i].max(v));
+            }
+        }
+        let (lo, hi) = (Point2::xy(lo[0], lo[1]), Point2::xy(hi[0], hi[1]));
+        // Its diagonal, fitted to the rectangle's aspect.
+        let span = hi - lo;
+        let aspect = (rect[3] - rect[1]) / (rect[2] - rect[0]);
+        let half = 0.5 * span.e01().max(span.e20() * aspect) * margin;
+        Axes::equal(rect, (lo + hi).unitized(), half)
     }
 
     /// The same, logarithmic up.
@@ -133,17 +156,17 @@ impl Axes {
 
     /// The pixel of data point `p`.
     pub fn px(&self, p: impl Pos2) -> Px {
-        let p = p.xy();
-        let tx = Self::t(p[0], self.x, self.log_x);
-        let ty = Self::t(p[1], self.y, self.log_y);
+        let [x, y] = p.point2().to_euclidean();
+        let tx = Self::t(x, self.x, self.log_x);
+        let ty = Self::t(y, self.y, self.log_y);
         [
             self.rect[0] + tx * (self.rect[2] - self.rect[0]),
             self.rect[3] - ty * (self.rect[3] - self.rect[1]),
         ]
     }
 
-    /// The data point at pixel `q` (linear axes).
-    pub fn data(&self, q: Px) -> [f32; 2] {
+    /// The data point at pixel `q`.
+    pub fn data(&self, q: Px) -> Point2 {
         let tx = (q[0] - self.rect[0]) / (self.rect[2] - self.rect[0]);
         let ty = (self.rect[3] - q[1]) / (self.rect[3] - self.rect[1]);
         let v = |t: f32, r: [f32; 2], log: bool| {
@@ -153,7 +176,7 @@ impl Axes {
                 r[0] + t * (r[1] - r[0])
             }
         };
-        [v(tx, self.x, self.log_x), v(ty, self.y, self.log_y)]
+        Point2::xy(v(tx, self.x, self.log_x), v(ty, self.y, self.log_y))
     }
 
     /// Pixels per data unit across (linear axes).
@@ -194,7 +217,7 @@ impl Axes {
         };
         let step_x = nice_step(self.x[1] - self.x[0], 5.0);
         for v in ticks(self.x, self.log_x) {
-            let [px, _] = self.px([v, self.y[0]]);
+            let [px, _] = self.px(Point2::xy(v, self.y[0]));
             c.line([px, y1], [px, y1 - 4.0], 1.0, dim, 1.0);
             let text = if self.log_x {
                 format!("1E{}", v.log10().round())
@@ -205,7 +228,7 @@ impl Axes {
         }
         let step_y = nice_step(self.y[1] - self.y[0], 5.0);
         for v in ticks(self.y, self.log_y) {
-            let [_, py] = self.px([self.x[0], v]);
+            let [_, py] = self.px(Point2::xy(self.x[0], v));
             c.line([x0, py], [x0 + 4.0, py], 1.0, dim, 1.0);
             let text = if self.log_y {
                 format!("1E{}", v.log10().round())
@@ -263,8 +286,6 @@ impl Axes {
         color: Rgb,
         alpha: f32,
     ) {
-        let a = a.xy();
-        let b = b.xy();
         self.clip(c);
         c.line(self.px(a), self.px(b), width, color, alpha);
         c.unclip();
@@ -272,10 +293,10 @@ impl Axes {
 
     /// A polyline through data points; non-finite points break it.
     pub fn polyline(&self, c: &mut Canvas, pts: &[impl Pos2], width: f32, color: Rgb, alpha: f32) {
-        let pts: Vec<[f32; 2]> = pts.iter().map(|p| p.xy()).collect();
+        let pts: Vec<Point2> = pts.iter().map(|p| p.point2()).collect();
         self.clip(c);
         for w in pts.windows(2) {
-            if w[0].iter().chain(&w[1]).all(|v| v.is_finite()) {
+            if finite(w[0]) && finite(w[1]) {
                 c.line(self.px(w[0]), self.px(w[1]), width, color, alpha);
             }
         }
@@ -292,7 +313,7 @@ impl Axes {
         color: Rgb,
         alpha: f32,
     ) {
-        let pts: Vec<[f32; 2]> = pts.iter().map(|p| p.xy()).collect();
+        let pts: Vec<Point2> = pts.iter().map(|p| p.point2()).collect();
         self.clip(c);
         let mut along = 0.0f32;
         for w in pts.windows(2) {
@@ -329,10 +350,10 @@ impl Axes {
         color: Rgb,
         alpha: f32,
     ) {
-        let pts: Vec<[f32; 2]> = pts.iter().map(|p| p.xy()).collect();
+        let pts: Vec<Point2> = pts.iter().map(|p| p.point2()).collect();
         self.clip(c);
         for p in pts {
-            if p.iter().all(|v| v.is_finite()) {
+            if finite(p) {
                 mark(c, self.px(p), marker, size, color, alpha);
             }
         }
@@ -349,8 +370,6 @@ impl Axes {
         head: f32,
         color: Rgb,
     ) {
-        let from = from.xy();
-        let to = to.xy();
         self.clip(c);
         arrow(c, self.px(from), self.px(to), width, head, color, 1.0);
         c.unclip();
@@ -366,25 +385,15 @@ impl Axes {
         color: Rgb,
         alpha: f32,
     ) {
-        let p = p.xy();
-        let d = d.dxy();
         let big = 4.0 * ((self.x[1] - self.x[0]).abs() + (self.y[1] - self.y[0]).abs());
-        let d = Point::direction(d[0], d[1]);
+        let d = d.dir2();
         let reach = d.gp(big / d.ideal_norm().max(1e-30));
-        let p = Point::xy(p[0], p[1]);
-        self.line(
-            c,
-            (p - reach).to_euclidean(),
-            (p + reach).to_euclidean(),
-            width,
-            color,
-            alpha,
-        );
+        let p = p.point2().unitized();
+        self.line(c, p - reach, p + reach, width, color, alpha);
     }
 
     /// A filled polygon in data coordinates.
     pub fn fill(&self, c: &mut Canvas, poly: &[impl Pos2], color: Rgb, alpha: f32) {
-        let poly: Vec<[f32; 2]> = poly.iter().map(|p| p.xy()).collect();
         self.clip(c);
         let px: Vec<Px> = poly.iter().map(|&p| self.px(p)).collect();
         c.fill(&px, color, alpha);
@@ -401,16 +410,15 @@ impl Axes {
         color: Rgb,
         align: Align,
     ) {
-        let at = at.xy();
         let [x, y] = self.px(at);
         c.text(s, x, y, size, color, align);
     }
 
-    /// The level line `f(x, y) = level`, from `n` x `n` samples over the axes.
+    /// The level line `f(p) = level`, from `n` x `n` samples over the axes.
     pub fn contour(
         &self,
         c: &mut Canvas,
-        f: impl Fn(f32, f32) -> f32,
+        f: impl Fn(Point2) -> f32,
         n: usize,
         level: f32,
         width: f32,
@@ -423,20 +431,12 @@ impl Axes {
         c.unclip();
     }
 
-    /// An image over the axes: `f(x, y)` per pixel (`samples` x `samples` each), `None` showing
-    /// the canvas through.
-    pub fn image(
-        &self,
-        c: &mut Canvas,
-        samples: usize,
-        f: impl Fn(f32, f32) -> Option<Rgb> + Sync,
-    ) {
+    /// An image over the axes: `f` of the data point under each pixel (`samples` x `samples`
+    /// each), `None` showing the canvas through.
+    pub fn image(&self, c: &mut Canvas, samples: usize, f: impl Fn(Point2) -> Option<Rgb> + Sync) {
         self.clip(c);
         let me = *self;
-        c.shade(samples, |x, y| {
-            let [u, v] = me.data([x, y]);
-            f(u, v)
-        });
+        c.shade(samples, |x, y| f(me.data([x, y])));
         c.unclip();
     }
 

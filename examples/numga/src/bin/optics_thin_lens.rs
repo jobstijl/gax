@@ -211,7 +211,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The train, animated, on the left.
     let ax = Axes::equal(
         plot::inset([0.0, 0.0, w * 0.64, h], 20.0, 70.0, 10.0, 20.0),
-        [1.7, 0.85],
+        Point::xy(1.7, 0.85),
         2.2,
     );
     let (subject, planes, legs, _, image) = train(phase);
@@ -262,7 +262,7 @@ fn draw(c: &mut Canvas, t: f32) {
             14.0,
             14.0,
         );
-        let ax = Axes::equal(rect, [0.4, 0.0], 1.1);
+        let ax = Axes::equal(rect, Point::xy(0.4, 0.0), 1.1);
         for (i, leg) in legs.iter().enumerate() {
             rays(&ax, c, leg, palette::series(i + 1));
         }
@@ -273,7 +273,8 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow(), 1.0);
         ax.text(
             c,
-            [ax.x[0] + 0.1, ax.y[1] - 0.25],
+            // Just inside the top left corner of the data box.
+            Point::xy(ax.x[0] + 0.1, ax.y[1] - 0.25),
             title,
             11.0,
             palette::ink(),
@@ -333,7 +334,9 @@ mod tests {
         let f_eff = 1.0 / (1.0 / f1 + 1.0 / f2 - gap / (f1 * f2));
         let back_focal = f_eff * (f1 - gap) / f1;
         assert!(close(x(focus) - 2.1, back_focal, 1e-12));
-        assert!(focus.to_euclidean()[1].abs() < 1e-12);
+        // The focus is on the axis, the line `y = 0`.
+        let axis = gax::pga2d::Line::new(0.0, 1.0, 0.0);
+        assert!((axis & focus.unitized()).s().abs() < 1e-12);
     }
 
     #[test]

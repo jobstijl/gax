@@ -17,7 +17,8 @@
 
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, backdrop, caption, colormap, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, backdrop, caption,
+    colormap, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -266,6 +267,11 @@ const SECONDS: f32 = 9.6;
 const LATITUDES: usize = 12;
 const LONGITUDES: usize = 24;
 
+/// The unit directions of space.
+fn axes() -> [Space; 3] {
+    [x(), Space::new(0.0, 1.0, 0.0), z()]
+}
+
 /// What the frames share, computed once: the experiment, the learned maps and their powers.
 struct Data {
     prepared: Vec<St>,
@@ -371,18 +377,16 @@ fn draw(c: &mut Canvas, t: f32) {
         let cam = Camera::orbit(
             third,
             bottom - top,
-            [0.0; 3],
+            ORIGIN3,
             4.6,
             azimuth,
             24.0f32.to_radians(),
             Lens::Perspective(0.62),
         );
         panel3(c, rect, cam, |s| {
-            s.sphere_wire([0.0; 3], 1.0, 16, palette::grid(), 0.45);
-            for a in 0..3 {
-                let mut v = [0.0; 3];
-                v[a] = 1.0;
-                s.seg(v.map(|x| -x), v, 1.0, palette::grid(), 0.8);
+            s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid(), 0.45);
+            for a in axes() {
+                s.seg(-a, a, 1.0, palette::grid(), 0.8);
             }
             // The image: a translucent surface with its mesh lines.
             for i in 0..LATITUDES {
@@ -450,17 +454,25 @@ fn draw(c: &mut Canvas, t: f32) {
     let y1 = hf * 0.94;
     let ax = Axes::equal(
         [quarter * 0.3, y0, quarter * 0.3 + (y1 - y0), y1],
-        [0.27, 0.27],
+        Point2::xy(0.27, 0.27),
         0.27,
     );
     ax.frame(c, "UNSEEN STATES", "EXACT", "");
-    ax.line(c, [0.0, 0.0], [0.54, 0.54], 1.0, palette::grid(), 1.0);
+    ax.line(
+        c,
+        Point2::xy(0.0, 0.0),
+        Point2::xy(0.54, 0.54),
+        1.0,
+        palette::grid(),
+        1.0,
+    );
     for ((exact, predicted), colour) in validation(&d.learned, uses).iter().zip(colours) {
-        let pts: Vec<[f64; 2]> = exact
+        // Each probability as a point of the plot: exact across, predicted up.
+        let pts: Vec<gax::pga2d::Point<(), f64>> = exact
             .iter()
             .flatten()
             .zip(predicted.iter().flatten())
-            .map(|(a, b)| [*a, *b])
+            .map(|(a, b)| gax::pga2d::Point::xy(*a, *b))
             .collect();
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour, 0.85);
     }

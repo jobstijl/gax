@@ -4,7 +4,7 @@
 //! arrows and axes are built from these.
 
 use crate::canvas::{Canvas, Px, Rgb, scale};
-use crate::coords::{Dir3, Pos3};
+use crate::coords::{Dir3, Point3, Pos3, finite};
 use crate::plot::{Marker, arrow, mark};
 use crate::view::Camera;
 use gax::pga3d::{Motor, Plane, Point};
@@ -22,11 +22,7 @@ pub struct Scene3 {
     pub cam: Camera,
     prims: Vec<(f32, Prim)>,
     /// The direction towards the light (for [`Scene3::lit`]), unit.
-    pub light: [f32; 3],
-}
-
-fn point(p: [f32; 3]) -> Point<(), f32> {
-    Point::xyz(p[0], p[1], p[2])
+    pub light: Point3,
 }
 
 /// The direction `d` at unit length.
@@ -38,39 +34,32 @@ impl Scene3 {
     /// An empty scene seen by `cam`, lit from above and behind the viewer's left shoulder.
     pub fn new(cam: Camera) -> Scene3 {
         // The direction to the eye, turned a little to the left and up.
-        let [x, y, z] = cam.eye();
-        let towards = unit(Point::direction(x, y, z)) + Point::direction(-0.3, 0.2, 0.9);
-        let l = unit(towards);
+        let to_eye = cam.eye().unitized() - Point::xyz(0.0, 0.0, 0.0);
+        let towards = unit(to_eye) + Point::direction(-0.3, 0.2, 0.9);
         Scene3 {
             cam,
             prims: Vec::new(),
-            light: [l.e032(), l.e013(), l.e021()],
+            light: unit(towards),
         }
     }
 
-    fn depth(&self, p: [f32; 3]) -> f32 {
-        self.cam.local(p)[2]
+    fn depth(&self, p: Point3) -> f32 {
+        self.cam.depth(p)
     }
 
     /// `color` shaded by how squarely the triangle `a b c` faces the light (two-sided): the
     /// inner product of its plane `a & b & c` with the plane facing the light, the cosine
     /// between their normals once divided by the face's norm.
     pub fn lit(&self, a: impl Pos3, b: impl Pos3, c: impl Pos3, color: Rgb) -> Rgb {
-        let a = a.xyz();
-        let b = b.xyz();
-        let c = c.xyz();
-        let face = point(a) & point(b) & point(c);
-        let [x, y, z] = self.light;
-        let facing = Plane::orthogonal_to(Point::direction(x, y, z));
+        let face = a.point3() & b.point3() & c.point3();
+        let facing = Plane::orthogonal_to(self.light);
         let k = 0.35 + 0.65 * ((face | facing).s() / face.norm().max(1e-12)).abs();
         scale(color, k)
     }
 
     /// A triangle.
     pub fn tri(&mut self, a: impl Pos3, b: impl Pos3, c: impl Pos3, color: Rgb, alpha: f32) {
-        let a = a.xyz();
-        let b = b.xyz();
-        let c = c.xyz();
+        let (a, b, c) = (a.point3(), b.point3(), c.point3());
         if let (Some(pa), Some(pb), Some(pc)) = (self.cam.px(a), self.cam.px(b), self.cam.px(c)) {
             let d = (self.depth(a) + self.depth(b) + self.depth(c)) / 3.0;
             self.prims.push((d, Prim::Tri([pa, pb, pc], color, alpha)));
@@ -87,18 +76,14 @@ impl Scene3 {
         color: Rgb,
         alpha: f32,
     ) {
-        let a = a.xyz();
-        let b = b.xyz();
-        let c = c.xyz();
-        let d = d.xyz();
+        let (a, b, c, d) = (a.point3(), b.point3(), c.point3(), d.point3());
         self.tri(a, b, c, color, alpha);
         self.tri(a, c, d, color, alpha);
     }
 
     /// A segment `width` pixels wide.
     pub fn seg(&mut self, a: impl Pos3, b: impl Pos3, width: f32, color: Rgb, alpha: f32) {
-        let a = a.xyz();
-        let b = b.xyz();
+        let (a, b) = (a.point3(), b.point3());
         if let (Some(pa), Some(pb)) = (self.cam.px(a), self.cam.px(b)) {
             let d = (self.depth(a) + self.depth(b)) * 0.5;
             self.prims.push((d, Prim::Seg(pa, pb, width, color, alpha)));
@@ -107,9 +92,9 @@ impl Scene3 {
 
     /// Segments through `pts`; non-finite points break the line.
     pub fn polyline(&mut self, pts: &[impl Pos3], width: f32, color: Rgb, alpha: f32) {
-        let pts: Vec<[f32; 3]> = pts.iter().map(|p| p.xyz()).collect();
+        let pts: Vec<Point3> = pts.iter().map(|p| p.point3()).collect();
         for w in pts.windows(2) {
-            if w[0].iter().chain(&w[1]).all(|v| v.is_finite()) {
+            if finite(w[0]) && finite(w[1]) {
                 self.seg(w[0], w[1], width, color, alpha);
             }
         }
@@ -117,7 +102,7 @@ impl Scene3 {
 
     /// A marker of `size` pixels.
     pub fn dot(&mut self, p: impl Pos3, marker: Marker, size: f32, color: Rgb) {
-        let p = p.xyz();
+        let p = p.point3();
         if let Some(q) = self.cam.px(p) {
             self.prims
                 .push((self.depth(p) - 1e-3, Prim::Dot(q, marker, size, color)));
@@ -126,9 +111,8 @@ impl Scene3 {
 
     /// An arrow from `p` along `v`.
     pub fn arrow(&mut self, p: impl Pos3, v: impl Dir3, width: f32, head: f32, color: Rgb) {
-        let p = p.xyz();
-        let v = v.dxyz();
-        let q = [p[0] + v[0], p[1] + v[1], p[2] + v[2]];
+        let p = p.point3().unitized();
+        let q = p + v.dir3();
         if let (Some(a), Some(b)) = (self.cam.px(p), self.cam.px(q)) {
             let d = (self.depth(p) + self.depth(q)) * 0.5;
             self.prims.push((d, Prim::Arrow(a, b, width, head, color)));
@@ -138,20 +122,20 @@ impl Scene3 {
     /// A surface `f(u, v)` over `[0, 1]²` in `nu` x `nv` quads, coloured by `color(u, v)` and lit,
     /// with optional edges.
     #[allow(clippy::too_many_arguments)]
-    pub fn surface(
+    pub fn surface<P: Pos3>(
         &mut self,
-        f: impl Fn(f32, f32) -> [f32; 3],
+        f: impl Fn(f32, f32) -> P,
         nu: usize,
         nv: usize,
         color: impl Fn(f32, f32) -> Rgb,
         alpha: f32,
         edges: Option<(Rgb, f32)>,
     ) {
-        let p = |i: usize, j: usize| f(i as f32 / nu as f32, j as f32 / nv as f32);
+        let p = |i: usize, j: usize| f(i as f32 / nu as f32, j as f32 / nv as f32).point3();
         for i in 0..nu {
             for j in 0..nv {
                 let (a, b, c, d) = (p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1));
-                if [a, b, c, d].iter().flatten().any(|v| !v.is_finite()) {
+                if ![a, b, c, d].into_iter().all(finite) {
                     continue;
                 }
                 let col = self.lit(
@@ -171,27 +155,26 @@ impl Scene3 {
 
     /// A wireframe sphere: `n` meridians and `n / 2` parallels.
     pub fn sphere_wire(&mut self, centre: impl Pos3, r: f32, n: usize, color: Rgb, alpha: f32) {
-        let centre = centre.xyz();
-        // The point `r` along x, raised by the latitude (about -y) and turned by the longitude
-        // (about z), then moved to the centre.
-        let to_centre = Motor::translation(centre[0], centre[1], centre[2]);
+        let centre = centre.point3().unitized();
+        // The direction `r` along x, raised by the latitude (about -y) and turned by the
+        // longitude (about z), from the centre.
         let pt = |lon: f32, lat: f32| {
             let turn = Motor::rotation_about(0.0, 0.0, 1.0, lon)
                 * Motor::rotation_about(0.0, -1.0, 0.0, lat);
-            ((to_centre * turn) >> Point::xyz(r, 0.0, 0.0)).to_euclidean()
+            centre + (turn >> Point::direction(r, 0.0, 0.0))
         };
         let tau = core::f32::consts::TAU;
         let steps = 48;
         for k in 0..n {
             let lon = tau * k as f32 / n as f32;
-            let line: Vec<[f32; 3]> = (0..=steps)
+            let line: Vec<Point3> = (0..=steps)
                 .map(|s| pt(lon, -tau / 4.0 + tau / 2.0 * s as f32 / steps as f32))
                 .collect();
             self.polyline(&line, 1.0, color, alpha);
         }
         for k in 1..n / 2 {
             let lat = -tau / 4.0 + tau / 2.0 * k as f32 / (n / 2) as f32;
-            let line: Vec<[f32; 3]> = (0..=steps)
+            let line: Vec<Point3> = (0..=steps)
                 .map(|s| pt(tau * s as f32 / steps as f32, lat))
                 .collect();
             self.polyline(&line, 1.0, color, alpha);
@@ -200,15 +183,13 @@ impl Scene3 {
 
     /// Axes from `origin`, `len` long, in red, green and blue.
     pub fn axes(&mut self, origin: impl Pos3, len: f32) {
-        let origin = origin.xyz();
-        let cols = [
-            crate::palette::red(),
-            crate::palette::green(),
-            crate::palette::blue(),
+        let origin = origin.point3();
+        let axes = [
+            (Point::direction(len, 0.0, 0.0), crate::palette::red()),
+            (Point::direction(0.0, len, 0.0), crate::palette::green()),
+            (Point::direction(0.0, 0.0, len), crate::palette::blue()),
         ];
-        for (i, col) in cols.into_iter().enumerate() {
-            let mut v = [0.0; 3];
-            v[i] = len;
+        for (v, col) in axes {
             self.arrow(origin, v, 1.5, 8.0, col);
         }
     }
