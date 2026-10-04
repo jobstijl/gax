@@ -394,7 +394,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::pair::*;
     use super::spins::*;
     use gax_numga_examples::rng::{Draw, rng};
 
@@ -454,9 +453,9 @@ mod tests {
         // Any unit directions, drawn at random.
         let mut rng = rng(0x5eed);
         for _ in 0..20 {
-            let mut f = || First::from_coeffs(rng.direction());
+            let mut f = || rng.direction::<F>();
             let (a, a2) = (f(), f());
-            let mut g = || Second::from_coeffs(rng.direction());
+            let mut g = || rng.direction::<G>();
             let (b, b2) = (g(), g());
             let e = bell_element(a, a2, b, b2);
             let want = one() * 4.0 - (a ^ a2) * (b ^ b2) * 4.0;

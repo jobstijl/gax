@@ -222,7 +222,7 @@ mod decomposition {
     pub fn example(seed: u64) -> Example {
         let mut rng = rng(seed);
         let bivector = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
-        let start = V::from_coeffs(rng.direction());
+        let start = rng.direction::<V>();
         let (squares, parts) = from_spectrum(bivector);
         let wedge = from_wedge_powers(bivector);
         let slowest = squares.iter().copied().fold(f64::NEG_INFINITY, f64::max);

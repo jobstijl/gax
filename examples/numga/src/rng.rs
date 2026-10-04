@@ -28,12 +28,14 @@ pub trait Draw: rand::Rng {
         self.sample(rand_distr::StandardNormal)
     }
 
-    /// A direction uniform on the unit sphere in `n` dimensions (`n` normals, normalized).
-    fn direction<const N: usize>(&mut self) -> [f64; N] {
-        let v: [f64; N] = core::array::from_fn(|_| self.normal());
-        #[allow(clippy::disallowed_methods)] // sampling, not geometry
-        let n = v.iter().map(|x| x * x).sum::<f64>().sqrt().max(1e-300);
-        v.map(|x| x / n)
+    /// A value of unit norm, uniform over the directions of its kind (a unit vector of any
+    /// algebra, uniform on its sphere): normal coefficients, normalized.
+    fn direction<V>(&mut self) -> V
+    where
+        V: gax::Extensor<Slots = (), Coef = f64> + gax::Normalize,
+    {
+        let c = <V::Kind as gax::Kind>::arr_from_fn(|_| self.normal());
+        V::from_coeffs(c).normalized().into_inner()
     }
 }
 

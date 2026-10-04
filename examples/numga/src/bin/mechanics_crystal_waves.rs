@@ -114,9 +114,7 @@ mod crystal {
     /// `count` headings spread uniformly over the sphere.
     pub fn headings(count: usize, seed: u64) -> Vec<V> {
         let mut r = rng(seed);
-        (0..count)
-            .map(|_| Vector::from_coeffs(r.direction()))
-            .collect()
+        (0..count).map(|_| r.direction()).collect()
     }
 
     /// Where each wave's energy meets the cube face one unit along `z`, for `count` headings

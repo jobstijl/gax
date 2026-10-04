@@ -505,7 +505,7 @@ mod tests {
     fn blochs(seed: u64, n: usize) -> Vec<Space> {
         let mut r = rng(seed);
         (0..n)
-            .map(|k| Vector::from_coeffs(r.direction()) * (k as f64 / (n - 1) as f64))
+            .map(|k| r.direction::<Vector<(), f64>>() * (k as f64 / (n - 1) as f64))
             .collect()
     }
 

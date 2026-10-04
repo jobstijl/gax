@@ -145,13 +145,13 @@ mod fitting {
     pub fn bundle(n: usize, spread: f64, rng: &mut Rng) -> Vec<L> {
         (0..n)
             .map(|_| {
-                let [x, y, z] = rng.direction::<3>();
+                let d: gax::vga3d::Vector<(), f64> = rng.direction();
                 let foot = Point::xyz(
                     spread * rng.normal(),
                     spread * rng.normal(),
                     spread * rng.normal(),
                 );
-                foot & Point::direction(x, y, z)
+                foot & Point::direction(d.e1(), d.e2(), d.e3())
             })
             .collect()
     }

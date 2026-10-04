@@ -150,8 +150,9 @@ mod maxwell {
     pub fn sphere_directions(n: usize, rng: &mut Rng) -> Vec<V> {
         (0..n)
             .map(|_| {
-                let [a, b, c] = rng.direction();
-                Vector::new(0.0, a, b, c)
+                // A unit vector of space, as a spatial vector of spacetime.
+                let d: gax::vga3d::Vector<(), f64> = rng.direction();
+                Vector::new(0.0, d.e1(), d.e2(), d.e3())
             })
             .collect()
     }

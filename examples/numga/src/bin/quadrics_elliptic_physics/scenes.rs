@@ -219,7 +219,7 @@ pub fn hyperbolic(frames: usize) -> s2::Trajectory {
 
 // --- S³ ------------------------------------------------------------------------------------
 
-use crate::s3::{Bivector, Rate, Tangent, TangentPlane, Trivector, along, hit, motion, turning};
+use crate::s3::{Bivector, Rate, Tangent, TangentPlane, along, hit, motion, turning};
 
 /// The rotor carrying the origin to a point, spun by a rotation bivector: the square root of
 /// the ratio of the two unit points.
@@ -259,7 +259,7 @@ pub fn population(rng: &mut Rng, candidates: usize, sizes: (f64, f64)) -> Vec<s3
             let mut order = [0, 1, 2];
             order.sort_by(|a, b| half[*a].total_cmp(&half[*b]));
             rate[order[1]] = if rng.uniform() < 0.5 { -5.0 } else { 5.0 };
-            let place = Trivector::from_coeffs(rng.direction::<4>());
+            let place = rng.direction();
             let spin = turning(TangentPlane::new(rng.normal(), rng.normal(), rng.normal()));
             let q = s3::ellipsoid(half);
             let (points, masses) = s3::filled(q, half.iter().product::<f64>() * 200.0, 400, rng);
