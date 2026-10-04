@@ -1438,14 +1438,16 @@ mod tests {
 
     #[test]
     fn scalar_channels() {
+        // Against std's functions to a few ulp (Miri perturbs those on purpose, so not to one).
+        let close = |a: f64, b: f64| (a - b).abs() < 1e-14;
         // Rotation by angle 2θ: B² = -θ², exp = cos θ + (sin θ / θ) B.
         let th = 0.7f64;
         let [c0, _, s0, _] = exp_coeffs(1, -th * th, 0.0);
-        assert!((c0 - th.cos()).abs() < 1e-15 && (s0 - th.sin() / th).abs() < 1e-15);
+        assert!(close(c0, th.cos()) && close(s0, th.sin() / th));
         // Boost: B² = φ².
         let ph = 0.4f64;
         let [c0, _, s0, _] = exp_coeffs(-1, ph * ph, 0.0);
-        assert!((c0 - ph.cosh()).abs() < 1e-15 && (s0 - ph.sinh() / ph).abs() < 1e-15);
+        assert!(close(c0, ph.cosh()) && close(s0, ph.sinh() / ph));
         // Log inverts: c = cos θ, u = P² = -sin² θ, H = θ / sin θ.
         let [h0, _] = log_coeffs(0, (th.cos(), 0.0), (-(th.sin() * th.sin()), 0.0));
         assert!((h0 - th / th.sin()).abs() < 1e-14);
