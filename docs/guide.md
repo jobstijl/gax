@@ -433,9 +433,10 @@ gax::algebra! {
   `Multivector` are added if you leave them out.
 * **Parts in the standard algebras.** PGA2D and PGA3D have `Direction`, the ideal points
   (`point.cast::<Direction>()` drops the weight, `Direction::slot()` is a map that takes only
-  directions); VGA3D has `Paravector` (`1 + r`, the Pauli algebra's states); STA has `Phasor`
-  (`a + b e0123`, a complex number commuting with the even subalgebra), the result of the
-  pseudoscalar's `exp`.
+  directions); VGA3D has `Paravector` (`1 + r`, the Pauli algebra's states). STA's `Phasor`
+  (`a + b e0123`, a complex number commuting with the even subalgebra) is a full kind instead:
+  phasors multiply, invert and sandwich to phasors, the pseudoscalar's `exp` lands in one, and
+  so does the anticommutator of two bivectors (a field's invariants, `F∘F = E² − B² + 2 E·B I`).
 * **Build time.** The macro runs the generator at compile time. Add `[profile.dev.build-override]`
   and `[profile.release.build-override]` with `opt-level = 3` to your `Cargo.toml` (both
   profiles build proc macros unoptimized by default), or large algebras expand slowly.
