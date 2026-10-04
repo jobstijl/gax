@@ -115,96 +115,14 @@ pub fn edge_heat<T: Real>(
     -(-stretch.max(motion)).max(-one)
 }
 
-/// Lights: homogeneous points in linear RGB space (`light.rs`). Grassmann's laws of colour
-/// mixing are affine combinations of these points.
-pub type Light<T> = gax::pga3d::Point<(), T>;
-
-/// The additive mix `(1 - t) a + t b`.
-pub fn light_mix<T: Real>(a: Light<T>, b: Light<T>, t: T) -> Light<T> {
-    a * (T::one() - t) + b * t
-}
-
-/// `l` whitened by `t` at the same intensity: mixed with white light of its own weight.
-pub fn light_whiten<T: Real>(l: Light<T>, t: T) -> Light<T> {
-    let w = l.e123();
-    light_mix(l, Light::new(w, w, w, w), t)
-}
-
-/// `l` at `k` times the intensity: the same point, a different weight.
-pub fn light_fade<T: Real>(l: Light<T>, k: T) -> Light<T> {
-    l * k
-}
+/// Lights: homogeneous points in linear RGB space, shared with the other examples
+/// (`gax-light`); the renderer traces these into its shaders.
+#[cfg_attr(not(test), allow(unused_imports))] // Traced by build.rs; the tests check them.
+pub use gax_light::{agx, fade as light_fade, luma, mix as light_mix, whiten as light_whiten};
 
 /// The tail of a streak: where a point moving at `v` was `dt` ago.
 pub fn streak_tail<T: Real>(p: Point<(), T>, v: Point<(), T>, dt: T) -> Point<(), T> {
     p - v * dt
-}
-
-/// The luminance of a light: its pairing with the plane of Rec. 709's weights (`plane & light`,
-/// `0.2126 R + 0.7152 G + 0.0722 B`); lights of equal luminance lie on planes parallel to it.
-pub fn luma<T: Real>(l: Light<T>) -> T {
-    let w = |x: f64| T::from_f64(x);
-    let plane = gax::pga3d::Plane::new(w(0.2126), w(0.7152), w(0.0722), T::zero());
-    (plane & l).s()
-}
-
-/// A linear map of colour, as a gax map on light points (the weight kept): `m` holds the
-/// matrix's rows. Its inverse is the map's own `inverse()`.
-pub fn colour_map<T: Real>(m: [[f64; 3]; 3]) -> gax::pga3d::Point<(gax::pga3d::Point,), T> {
-    let w = |x: f64| T::from_f64(x);
-    let (z, o) = (T::zero(), T::one());
-    gax::pga3d::Point::from_coeffs([
-        [w(m[0][0]), w(m[0][1]), w(m[0][2]), z],
-        [w(m[1][0]), w(m[1][1]), w(m[1][2]), z],
-        [w(m[2][0]), w(m[2][1]), w(m[2][2]), z],
-        [z, z, z, o],
-    ])
-}
-
-/// A function applied to each colour coordinate of a light (the weight kept).
-fn each<T: Real>(l: Light<T>, f: impl Fn(T) -> T) -> Light<T> {
-    Light::new(f(l.e032()), f(l.e013()), f(l.e021()), l.e123())
-}
-
-/// AgX tonemapping (Troy Sobotka's, in Benjamin Wrensch's minimal fitted form) of a light
-/// whose coordinates are radiance, to display light: the inset map, a log encoding and a
-/// contrast curve per coordinate, a look that moves away from the grey of the same luminance
-/// by `saturation` (an affine combination of lights), the outset map, and the display's
-/// 2.2 gamma.
-pub fn agx<T: Real>(l: Light<T>, saturation: T) -> Light<T> {
-    let (min_ev, max_ev) = (T::from_f64(-12.47393), T::from_f64(4.026069));
-    let inset = colour_map::<f64>([
-        [0.842479062253094, 0.0784335999999992, 0.0792237451477643],
-        [0.0423282422610123, 0.878468636469772, 0.0791661274605434],
-        [0.0423756549057051, 0.0784336, 0.879142973793104],
-    ]);
-    // The outset is the inverse of the inset: both constants, computed in f64.
-    let (inset, outset) = (
-        inset.map_coefs(T::from_f64),
-        inset.inverse().map_coefs(T::from_f64),
-    );
-    let log2 = T::from_f64(core::f64::consts::LOG2_E);
-    let v = each(inset.of(l), |x| {
-        let e = (x.max(T::from_f64(1e-10)).ln() * log2)
-            .max(min_ev)
-            .min(max_ev);
-        let x = (e - min_ev) / (max_ev - min_ev);
-        // The contrast curve.
-        let c = |k: f64| T::from_f64(k);
-        let (x2, x4) = (x * x, x * x * x * x);
-        c(15.5) * x4 * x2 - c(40.14) * x4 * x + c(31.96) * x4 - c(6.868) * x2 * x
-            + c(0.4298) * x2
-            + c(0.1191) * x
-            - c(0.00232)
-    });
-    // The look: away from the grey light of the same luminance.
-    let y = luma(v);
-    let grey = Light::new(y, y, y, v.e123());
-    let v = light_mix(grey, v, saturation);
-    let v = outset.of(v);
-    each(v, |x| {
-        (T::from_f64(2.2) * x.max(T::from_f64(1e-10)).ln()).exp()
-    })
 }
 
 /// A shock ripple: the point `p` pushed away from `centre` along its radial direction by a

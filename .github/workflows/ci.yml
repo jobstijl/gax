@@ -192,6 +192,9 @@ jobs:
       - name: dependency contract (Bevy is plumbing only)
         working-directory: examples/warp
         run: ./scripts/check-deps.sh
+      - name: light as geometry, shared with numga (clippy, tests)
+        working-directory: examples/light
+        run: cargo clippy --all-targets -- -D warnings && cargo test
       - name: clippy (all math through gax)
         working-directory: examples/warp
         run: cargo clippy --release --all-targets -- -D warnings

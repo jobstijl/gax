@@ -8,6 +8,7 @@
 /crates/gax-gpu-tests/target
 /crates/gax-highdim-tests/target
 /examples/warp/target
+/examples/light/target
 /examples/warp/shots
 /crates/gax-bench/target
 /examples/numga/target

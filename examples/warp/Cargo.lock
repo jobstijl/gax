@@ -2216,6 +2216,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "gax-light"
+version = "0.1.0"
+dependencies = [
+ "gax",
+]
+
+[[package]]
 name = "gax-macros"
 version = "0.1.0"
 dependencies = [
@@ -4769,6 +4776,7 @@ dependencies = [
  "bevy_seedling",
  "bytemuck",
  "gax",
+ "gax-light",
  "pollster",
  "rand 0.9.5",
  "rand_pcg",

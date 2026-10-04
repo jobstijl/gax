@@ -10,8 +10,7 @@ mod fx;
 mod geom;
 mod headless;
 mod input;
-// The kernels run traced (below); the game uses the generic forms only for `colour_map`, the
-// tests for all of them.
+// The kernels run traced (below); the tests use the generic forms to check them.
 #[cfg_attr(not(test), allow(dead_code))]
 mod kernels;
 mod light;

@@ -32,9 +32,12 @@ pollster = "1"
 wgpu = "30"
 rand = { version = "0.9", features = ["small_rng"] }
 rand_pcg = "0.9"
+# Light as geometry, shared with the other examples.
+gax-light = { path = "../light" }
 
 [build-dependencies]
 gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "pga3d", "trace", "wgsl"] }
+gax-light = { path = "../light" }
 # Links the game's WESL shaders against gax's generated modules at build time.
 wesl = "0.5"
 

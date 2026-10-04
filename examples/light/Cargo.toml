@@ -1,0 +1,14 @@
+[package]
+name = "gax-light"
+description = "Light as geometry, shared by the examples: lights as PGA3D points, OkLab tints, AgX tonemapping"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A standalone crate, used by path from the examples (warp, numga).
+[workspace]
+
+[dependencies]
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga3d"] }
