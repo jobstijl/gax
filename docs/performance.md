@@ -2,7 +2,7 @@
 
 All measurements are on an AMD Ryzen 7 5800X with rustc 1.99.0, taken again on 2026-10-05 (the
 transform, compare and batch benches; the 7D to 9D rows earlier) on an otherwise idle
-machine (load average below 0.2 before the runs, 1 to 2 during them: the
+machine (load average below 0.5 before the runs, 1 to 2 during them: the
 benchmarks themselves). Outliers were re-run in isolation. A single call of a few nanoseconds
 moves by 10–25% between runs and between compiler versions (code placement and inlining in the
 benchmark loop), so compare such rows within one run. They use `--release`, and
