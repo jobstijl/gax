@@ -230,8 +230,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let states = states();
     let n = states.len();
     let s = (t / SECONDS).rem_euclid(1.0) * n as f32;
@@ -245,11 +243,10 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The arm in 3D on the left, the camera swinging gently: its azimuth swings with a wave,
     // once per loop.
-    let scene_w = (w * 0.62) as usize;
+    let scene_w = (w * 0.62).floor();
     let phase = core::f32::consts::TAU * t / SECONDS;
     let cam = Camera::orbit(
-        scene_w,
-        c.height,
+        Rect::new(0.0, 0.0, scene_w, h),
         Point::xyz(0.6, 0.2, 1.2),
         6.2,
         -0.87 + 0.35 * signal::wave(phase),
@@ -334,10 +331,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The statics at rest, in text.
     let (velocity, torques) = statics();
     let (error, _) = homing();
-    let (first, down) = (
-        Point2::xy(w * 0.6, h * 0.7),
-        Point2::direction(0.0, 20.0 * unit),
-    );
+    let (first, down) = (Point2::xy(w * 0.6, h * 0.7), Point2::direction(0.0, 20.0));
     let lines = [
         "AT REST, FORCE (0,2,-1) AT (1,0,3):".to_string(),
         format!(
@@ -359,7 +353,7 @@ fn draw(c: &mut Canvas, t: f32) {
         } else {
             palette::ink()
         };
-        c.text(l, first + down.gp(k as f32), 10.0 * unit, tone, Align::Left);
+        c.text(l, first + down.gp(k as f32), 10.0, tone, Align::Left);
     }
 }
 

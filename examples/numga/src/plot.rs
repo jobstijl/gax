@@ -358,7 +358,7 @@ impl Axes {
         c.unclip();
     }
 
-    /// A marker of `size` pixels at each data point.
+    /// A marker of `size` at each data point.
     pub fn scatter(&self, c: &mut Canvas, pts: &[impl Pos2], marker: Marker, size: f32, l: Light) {
         self.clip(c);
         for p in pts {
@@ -370,7 +370,7 @@ impl Axes {
         c.unclip();
     }
 
-    /// An arrow from `from` to `to` (data coordinates) with a head of `head` pixels.
+    /// An arrow from `from` to `to` (data coordinates) with a head of `head`.
     pub fn arrow(
         &self,
         c: &mut Canvas,
@@ -507,7 +507,7 @@ pub fn mark(c: &mut Canvas, p: Point2, marker: Marker, size: f32, l: Light) {
     }
 }
 
-/// An arrow between pixels with a head of `head` pixels: the shaft one stroke, the head a
+/// An arrow between pixels with a head of `head`: the shaft one stroke, the head a
 /// filled triangle.
 pub fn arrow(c: &mut Canvas, a: Point2, b: Point2, width: f32, head: f32, l: Light) {
     let (pa, pb) = (a.unitized(), b.unitized());

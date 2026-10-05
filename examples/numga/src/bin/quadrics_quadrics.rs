@@ -181,18 +181,18 @@ fn panel(
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width, c.height);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
     let azimuth = 0.66 + 0.35 * (wave(phase) as f32);
-    let half = w / 2;
+    let half = (w / 2.0).floor();
     let normal = normal(phase);
 
     // The body frame, on the left.
-    let mut left = Canvas::new(half, h);
+    let mut left = c.sub(Rect::new(0.0, 0.0, half, h));
     backdrop(&mut left);
     let cam = Camera::orbit(
-        half,
-        h,
+        left.rect(),
         Point::xyz(0.0, 0.0, 0.8),
         12.5,
         azimuth,
@@ -201,17 +201,16 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let (tangent, contact, _) = reciprocity(body(), normal);
     panel(&mut left, cam, body(), tangent, contact, None, None);
-    c.blit(&left, 0, 0);
+    c.blit(&left, screen.lo);
 
     // The world frame, on the right: the screw from the identity to numga's motor and back.
     let s = 0.5 - 0.5 * phasor(phase).e20();
     let m = Motor::interpolate(Motor::translation(0.0, 0.0, 0.0), motor(), s);
     let (world, world_tangent, world_contact, moved) = transport(m, normal);
-    let mut right = Canvas::new(w - half, h);
+    let mut right = c.sub(Rect::new(half, 0.0, w, h));
     backdrop(&mut right);
     let cam = Camera::orbit(
-        w - half,
-        h,
+        right.rect(),
         Point::xyz(0.5, 1.0, 2.4),
         17.0,
         azimuth,
@@ -227,24 +226,21 @@ fn draw(c: &mut Canvas, t: f32) {
         Some(body()),
         Some(moved),
     );
-    c.blit(&right, half, 0);
-    let screen = c.rect();
+    c.blit(&right, Point2::xy(half, 0.0));
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let (body_side, world_side) = (screen.column(0, 2), screen.column(1, 2));
     // The divide between the panels, from under the caption to just above the bottom.
     let divide = world_side.lo;
     c.line(
-        divide + down.gp(60.0 * unit),
-        world_side.bottom_left() + up.gp(20.0 * unit),
+        divide + down.gp(60.0),
+        world_side.bottom_left() + up.gp(20.0),
         1.0,
         palette::grid(),
     );
 
     let label = |c: &mut Canvas, side: Rect, s: &str| {
-        let at = side.bottom_middle() + up.gp(18.0 * unit);
-        c.text(s, at, 11.0 * unit, palette::ink(), Align::Center);
+        let at = side.bottom_middle() + up.gp(18.0);
+        c.text(s, at, 11.0, palette::ink(), Align::Center);
     };
     label(c, body_side, "BODY FRAME: TANGENT -> CONTACT -> TANGENT");
     label(c, world_side, "WORLD FRAME: M >> Q(M << PLANE)");
@@ -255,13 +251,13 @@ fn draw(c: &mut Canvas, t: f32) {
     ];
     // The key, in the bottom right corner: a dot and its name per row.
     for (i, (s, col)) in key.iter().enumerate() {
-        let row = screen.hi + Point2::direction(-230.0, -100.0 + 18.0 * i as f32).gp(unit);
-        c.disk(row + up.gp(4.0 * unit), 4.0 * unit, *col);
-        let name = row + Point2::direction(10.0 * unit, 0.0);
+        let row = screen.hi + Point2::direction(-230.0, -100.0 + 18.0 * i as f32);
+        c.disk(row + up.gp(4.0), 4.0, *col);
+        let name = row + Point2::direction(10.0, 0.0);
         c.text(
             s,
             name,
-            11.0 * unit,
+            11.0,
             palette::ink().mix_light(*col, 0.3),
             Align::Left,
         );

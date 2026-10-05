@@ -261,13 +261,11 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f3
         hi: centre + reach,
     };
     let cam = Camera::looking(
-        view.width() as usize,
-        view.height() as usize,
+        view,
         Point3::xyz(10.0, -16.0, 9.0),
         ORIGIN3,
         Lens::Parallel(5.0),
-    )
-    .viewport(view);
+    );
     let mut s = Scene3::new(cam);
     let corners: Vec<_> = corners::<D3>()
         .into_iter()
@@ -300,7 +298,6 @@ fn draw(c: &mut Canvas, t: f32) {
     let sc = scenes();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let u = c.unit();
     let time = f64::from(t.rem_euclid(LOOP) / LOOP) * SPAN;
     let k = ((time / SHOW_DT) as usize).min(sc.rates3.len() - 1);
     caption(
@@ -314,21 +311,21 @@ fn draw(c: &mut Canvas, t: f32) {
         ("MEDIAL AXIS", "TUMBLES"),
         ("MINOR AXIS", "STABLE"),
     ];
-    let scale = 15.5 * u;
-    let down = Point2::direction(0.0, 13.0 * u);
+    let scale = 15.5;
+    let down = Point2::direction(0.0, 13.0);
     for (i, (axis, fate)) in labels.iter().enumerate() {
         let across = w * (0.09 + 0.16 * i as f32);
         draw_box(c, sc.motors3[k][i], i, Point2::xy(across, h * 0.33), scale);
         let label = Point2::xy(across, h * 0.51);
         for (line, text) in [axis, fate].into_iter().enumerate() {
             let at = label + down.gp(line as f32);
-            c.text(text, at, 10.0 * u, palette::ink(), Align::Center);
+            c.text(text, at, 10.0, palette::ink(), Align::Center);
         }
     }
     // The rates, each body's spin in its own plane: the three 3D bodies, and the six 4D ones,
     // some of whose medial spins wander.
     let rates3 = Axes::new(
-        Rect::new(0.0, h * 0.55, w * 0.5, h).inset(46.0 * u, 34.0 * u, 16.0 * u, 34.0 * u),
+        Rect::new(0.0, h * 0.55, w * 0.5, h).inset(46.0, 34.0, 16.0, 34.0),
         [0.0, SPAN as f32],
         [-1.25, 1.25],
     );
@@ -343,7 +340,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ],
     );
     let rates4 = Axes::new(
-        Rect::new(w * 0.5, h * 0.12, w, h * 0.52).inset(46.0 * u, 34.0 * u, 16.0 * u, 30.0 * u),
+        Rect::new(w * 0.5, h * 0.12, w, h * 0.52).inset(46.0, 34.0, 16.0, 30.0),
         [0.0, SPAN as f32],
         [-1.25, 1.25],
     );
@@ -356,9 +353,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (p, curves) in sc.drift.iter().enumerate() {
         // Each plot keeps room on its left for its decade labels, clear of the time labels of
         // the plot before it.
-        let rect = drifts
-            .column(p, 3)
-            .inset(40.0 * u, 34.0 * u, 12.0 * u, 34.0 * u);
+        let rect = drifts.column(p, 3).inset(40.0, 34.0, 12.0, 34.0);
         let ax = Axes::new(rect, [0.0, COMPARE_RUN as f32], [1e-12, 1.0]).log_y();
         ax.frame(c, &format!("{}D DRIFT", p + 3), "TIME", "");
         for (s, (name, curve)) in STEPPERS.iter().zip(curves).enumerate() {

@@ -244,15 +244,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
     let s = hyperbolic_plane(phase);
     let screen = c.rect();
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
-    let rect = |i: usize| {
-        screen
-            .column(i, 2)
-            .inset(20.0 * unit, 80.0 * unit, 20.0 * unit, 24.0 * unit)
-    };
+    let rect = |i: usize| screen.column(i, 2).inset(20.0, 80.0, 20.0, 24.0);
     // The notes go under the panels, centred.
-    let below = Point2::direction(0.0, 16.0 * unit);
+    let below = Point2::direction(0.0, 16.0);
     let box_centre = Point::xy(0.35, 0.2);
 
     // The triangle, its perpendicular and the reflection, on the left.
@@ -275,7 +269,7 @@ fn draw(c: &mut Canvas, t: f32) {
             c,
             *v + Point::direction(0.04, 0.06),
             &format!("{:.1}", angle.to_degrees()),
-            11.0 * unit,
+            11.0,
             palette::ink(),
             Align::Left,
         );
@@ -286,7 +280,7 @@ fn draw(c: &mut Canvas, t: f32) {
             c,
             midpoint + Point::direction(0.03, -0.07),
             &format!("{:.2}", s.triangle.lengths[i]),
-            10.0 * unit,
+            10.0,
             palette::sky(),
             Align::Left,
         );
@@ -313,7 +307,7 @@ fn draw(c: &mut Canvas, t: f32) {
             s.triangle.area
         ),
         r.bottom_middle() + below,
-        10.0 * unit,
+        10.0,
         palette::ink(),
         Align::Center,
     );
@@ -336,7 +330,7 @@ fn draw(c: &mut Canvas, t: f32) {
             s.radii[0], s.radii[3]
         ),
         r.bottom_middle() + below,
-        10.0 * unit,
+        10.0,
         palette::ink(),
         Align::Center,
     );

@@ -161,8 +161,7 @@ fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
 
 fn camera(c: &Canvas, azimuth: f32) -> Camera {
     Camera::orbit(
-        c.width,
-        c.height,
+        c.rect(),
         Point::xyz(0.0, 0.0, 0.0),
         2.9,
         azimuth,
@@ -235,9 +234,7 @@ fn label(c: &mut Canvas, title: &str) {
 /// A line of text centred across the panel at `height` of the way down, small enough to fit.
 fn centred(c: &mut Canvas, text: &str, height: f32) {
     let panel = c.rect();
-    // Text scales with the canvas, as drawn at 960x540.
-    let unit = c.unit();
-    let size = (panel.height() / 32.0).clamp(8.0 * unit, 12.0 * unit);
+    let size = (panel.height() / 32.0).clamp(8.0, 12.0);
     let fit = panel.width() * 0.94 / gax_numga_examples::font::width(text, 1.0);
     let top_middle = panel.top_middle();
     let at = top_middle + Point2::direction(0.0, height * panel.height());
@@ -252,15 +249,16 @@ fn draw(c: &mut Canvas, t: f32) {
     // Contract, hold, and open again: the phasor's reach across, from 1 down to -1 and back.
     let progress = f64::from((1.5 * (0.5 - 0.5 * phasor(phase).e20())).min(1.0));
     let scene = collapse();
-    let w = c.width / 3;
+    let screen = c.rect();
     for i in 0..3 {
-        let mut sub = Canvas::new(w, c.height);
+        let place = screen.column(i, 3);
+        let mut sub = c.sub(place);
         match i {
             0 => vertex_panel(&mut sub, &scene, 0, azimuth, "1. VERTEX A: A SHARP CORNER"),
             1 => vertex_panel(&mut sub, &scene, 1, azimuth, "2. VERTEX B: A CREASE"),
             _ => collapse_panel(&mut sub, &scene, progress, azimuth),
         }
-        c.blit(&sub, i * w, 0);
+        c.blit(&sub, place.lo);
     }
     caption(
         c,

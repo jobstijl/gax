@@ -277,27 +277,21 @@ fn still() -> &'static Still {
 
 /// A panel's title, centred under its top edge.
 fn title(c: &mut Canvas, rect: Rect, s: &str) {
-    let k = text_scale(rect, unit(c));
+    let k = text_scale(rect);
     let top_middle = rect.top_middle();
     let at = top_middle + Point2::direction(0.0, 12.0 * k);
     c.text(s, at, 11.0 * k, palette::ink(), Align::Center);
 }
 
-/// The canvas's height over 540: pixel sizes scale with it.
-fn unit(c: &Canvas) -> f32 {
-    c.unit()
-}
-
 /// How much smaller a panel's own text is drawn than in a panel 250 pixels tall (numga's
-/// canvas), down to half, on a 960 x 540 canvas (`unit` 1), scaled with the canvas.
-fn text_scale(rect: Rect, unit: f32) -> f32 {
-    (rect.height() / 250.0).clamp(0.5 * unit, unit)
+/// canvas), down to half.
+fn text_scale(rect: Rect) -> f32 {
+    (rect.height() / 250.0).clamp(0.5, 1.0)
 }
 
 /// The crystal's bonds in space, the beam along the face diagonal and the screen's axes.
 fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
-    let unit = unit(c);
-    let view = rect.inset(0.0, 16.0 * unit, 0.0, 0.0);
+    let view = rect.inset(0.0, 16.0, 0.0, 0.0);
     let cam = Camera::parallel(view, rect.height() * 0.32, -0.98 + spin, 0.40);
     let mut sc = Scene3::new(cam);
     // The point an electric plane's direction reaches from the crystal's centre.
@@ -309,15 +303,9 @@ fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
         1.0,
         palette::grid(),
     );
-    sc.arrow(
-        ORIGIN3 + beam,
-        beam.gp(0.5),
-        1.5,
-        8.0 * unit,
-        palette::yellow(),
-    );
+    sc.arrow(ORIGIN3 + beam, beam.gp(0.5), 1.5, 8.0, palette::yellow());
     for axis in [horizontal(), vertical()] {
-        sc.arrow(ORIGIN3, direction(axis), 1.0, 6.0 * unit, palette::grid());
+        sc.arrow(ORIGIN3, direction(axis), 1.0, 6.0, palette::grid());
     }
     let tips = bonds.map(tip);
     for (i, a) in tips.iter().enumerate() {
@@ -325,20 +313,19 @@ fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
         for b in &tips[i + 1..] {
             sc.seg(*a, *b, 1.0, palette::sky().faded(0.35));
         }
-        sc.dot(*a, Marker::Dot, 9.0 * unit, palette::orange());
+        sc.dot(*a, Marker::Dot, 9.0, palette::orange());
     }
-    sc.dot(ORIGIN3, Marker::Dot, 7.0 * unit, palette::grid());
+    sc.dot(ORIGIN3, Marker::Dot, 7.0, palette::grid());
     sc.draw(c);
     title(c, rect, "CRYSTAL BONDS");
-    let k = text_scale(rect, unit);
+    let k = text_scale(rect);
     let corner = rect.hi - Point2::direction(34.0, 10.0).gp(k);
     c.text("BEAM", corner, 10.0 * k, palette::yellow(), Align::Center);
 }
 
 /// The screen: pump directions all around and the doubled polarization each drives.
 fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
-    let unit = unit(c);
-    let inset = rect.inset(34.0 * unit, 30.0 * unit, 10.0 * unit, 30.0 * unit);
+    let inset = rect.inset(34.0, 30.0, 10.0, 30.0);
     let ax = Axes::equal(inset, centre(), 1.15);
     ax.frame(c, "TRANSVERSE POLARIZATION", "HORIZONTAL", "");
     let faint = palette::grid().faded(0.6);
@@ -348,8 +335,8 @@ fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     ax.polyline(c, &circle, 1.0, palette::sky().faded(0.35));
     let curve: Vec<Spot> = harmonic.iter().map(|p| screen(*p)).collect();
     ax.polyline(c, &curve, 2.0, palette::orange().faded(0.8));
-    ax.arrow(c, centre(), circle[0], 2.0, 8.0 * unit, palette::sky());
-    ax.arrow(c, centre(), curve[0], 2.0, 8.0 * unit, palette::orange());
+    ax.arrow(c, centre(), circle[0], 2.0, 8.0, palette::sky());
+    ax.arrow(c, centre(), curve[0], 2.0, 8.0, palette::orange());
 }
 
 /// A polar plot of the power over the pump's direction. (numga uses matplotlib's polar
@@ -358,8 +345,7 @@ fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
 fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     let intensity: Vec<f64> = harmonic.iter().map(|h| h.dot(*h).s()).collect();
     let top = intensity.iter().cloned().fold(0.0, f64::max).max(1e-9) * 1.12;
-    let unit = unit(c);
-    let inset = rect.inset(10.0 * unit, 30.0 * unit, 10.0 * unit, 30.0 * unit);
+    let inset = rect.inset(10.0, 30.0, 10.0, 30.0);
     let ax = Axes::equal(inset, centre(), 1.0);
     title(c, rect, "POWER BY PUMP DIRECTION");
     let faint = palette::grid().faded(0.8);
@@ -374,7 +360,7 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
             c,
             below >> screen(p.gp(1.1)),
             &format!("{}", 45 * k),
-            9.0 * text_scale(rect, unit),
+            9.0 * text_scale(rect),
             palette::grid(),
             Align::Center,
         );
@@ -389,11 +375,11 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     let coarse: Vec<Spot> = pts.iter().step_by(4).copied().collect();
     ax.fill(c, &coarse, palette::orange(), 0.12);
     ax.polyline(c, &pts, 2.0, palette::orange());
-    ax.scatter(c, &pts[..1], Marker::Dot, 9.0 * unit, palette::sky());
+    ax.scatter(c, &pts[..1], Marker::Dot, 9.0, palette::sky());
     c.text(
         &format!("MAX {:.2}", top / 1.12),
-        rect.bottom_left() + Point2::direction(12.0, -10.0).gp(text_scale(rect, unit)),
-        10.0 * text_scale(rect, unit),
+        rect.bottom_left() + Point2::direction(12.0, -10.0).gp(text_scale(rect)),
+        10.0 * text_scale(rect),
         palette::grid(),
         Align::Left,
     );
@@ -401,8 +387,7 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
 
 fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     let (phase, pump, harmonic) = &still().waveform;
-    let unit = unit(c);
-    let inset = rect.inset(34.0 * unit, 30.0 * unit, 10.0 * unit, 34.0 * unit);
+    let inset = rect.inset(34.0, 30.0, 10.0, 34.0);
     let ax = Axes::new(inset, [0.0, 2.0], [-1.2, 1.2]);
     ax.frame(c, "WAVEFORM", "PUMP PERIODS", "");
     let periods = |p: f64| p / core::f64::consts::TAU;
@@ -423,14 +408,13 @@ fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     let now = periods(phase[k]);
     let cursor = palette::ink().faded(0.5);
     ax.line(c, Point::xy(now, -1.2), Point::xy(now, 1.2), 1.0, cursor);
-    ax.scatter(c, &[a[k]], Marker::Dot, 8.0 * unit, palette::sky());
-    ax.scatter(c, &[b[k]], Marker::Dot, 8.0 * unit, palette::orange());
+    ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::sky());
+    ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::orange());
 }
 
 fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
     let (pumps, probes, generated) = &still().mixing;
-    let unit = unit(c);
-    let inset = rect.inset(30.0 * unit, 30.0 * unit, 10.0 * unit, 34.0 * unit);
+    let inset = rect.inset(30.0, 30.0, 10.0, 34.0);
     let ax = Axes::equal(inset, centre(), 0.5);
     ax.frame(c, "PUMP AT 45: MIXING", "HORIZONTAL", "");
     ax.arrow(
@@ -438,7 +422,7 @@ fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
         centre(),
         screen(pumps[1].gp(0.45)),
         3.0,
-        8.0 * unit,
+        8.0,
         palette::grid(),
     );
     let on_screen = |fields: &[B]| -> Vec<Spot> { fields.iter().map(|p| screen(*p)).collect() };
@@ -449,8 +433,8 @@ fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
     ax.polyline(c, &unmixed, 1.0, palette::orange().faded(0.3));
     ax.polyline(c, &image, 2.0, palette::orange());
     let k = ((at * (circle.len() - 1) as f32) as usize).min(circle.len() - 1);
-    ax.arrow(c, centre(), circle[k], 1.5, 6.0 * unit, palette::sky());
-    ax.arrow(c, centre(), image[k], 1.5, 6.0 * unit, palette::orange());
+    ax.arrow(c, centre(), circle[k], 1.5, 6.0, palette::sky());
+    ax.arrow(c, centre(), image[k], 1.5, 6.0, palette::orange());
 }
 
 const CASES: [&str; 3] = ["MATCHED", "MISMATCHED", "FLIPPED"];
@@ -462,9 +446,8 @@ fn case_colour(k: usize) -> Light {
 fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
     let (depths, amplitude) = &still().growth;
     let n = ((at * depths.len() as f32) as usize).clamp(1, depths.len());
-    let unit = unit(c);
     let ax = Axes::equal(
-        phasor.inset(30.0 * unit, 30.0 * unit, 10.0 * unit, 34.0 * unit),
+        phasor.inset(30.0, 30.0, 10.0, 34.0),
         Point::xy(0.45, 0.2),
         0.62,
     );
@@ -475,10 +458,10 @@ fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
             .map(|a| Point::xy((a[0] | vertical()).s(), (a[1] | vertical()).s()))
             .collect();
         ax.polyline(c, &pts, 2.0, case_colour(k));
-        ax.scatter(c, &pts[n - 1..], Marker::Dot, 7.0 * unit, case_colour(k));
+        ax.scatter(c, &pts[n - 1..], Marker::Dot, 7.0, case_colour(k));
     }
     let ax = Axes::new(
-        power_rect.inset(34.0 * unit, 30.0 * unit, 10.0 * unit, 34.0 * unit),
+        power_rect.inset(34.0, 30.0, 10.0, 34.0),
         [0.0, 1.0],
         [0.0, 1.05],
     );
@@ -512,8 +495,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (bonds, harmonic) = turning(angle, &s.pumps);
     // Below the caption, a row of three panels over a row of four.
     // Below the caption's subtitle (three caption sizes down) on a small canvas.
-    let unit = c.unit();
-    let top = (h * 0.11).max((h / 30.0).clamp(10.0 * unit, 22.0 * unit) * 3.0 + 4.0 * unit);
+    let top = (h * 0.11).max((h / 30.0).clamp(10.0, 22.0) * 3.0 + 4.0);
     let mid = top + (h - top) * 0.52;
     let upper = screen.inset(0.0, top, 0.0, h - mid);
     let lower = screen.inset(0.0, mid, 0.0, 0.0);

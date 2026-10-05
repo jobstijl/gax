@@ -46,8 +46,9 @@ pub fn backdrop(c: &mut Canvas) {
 /// A title in the top left corner, and an optional caption under it. Placed by the canvas's
 /// height (the panels below are laid out by it); the text shrinks to fit the canvas's width.
 pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
-    let s = (c.height as f32 / 30.0).min(22.0);
-    let room = c.width as f32 - 1.6 * s;
+    let screen = c.rect();
+    let s = (screen.height() / 30.0).min(22.0);
+    let room = screen.width() - 1.6 * s;
     let fit = |size: f32, text: &str| size.min(room / font::width(text, 1.0).max(1e-6));
     let ink = palette::ink();
     c.text(
@@ -77,7 +78,7 @@ mod tests {
 
     #[test]
     fn a_line_glows_around_a_solid_core() {
-        let mut c = Canvas::new(40, 30);
+        let mut c = Canvas::with_scale(40, 30, 1.0);
         c.line(Point2::xy(5.0, 15.0), Point2::xy(35.0, 15.0), 2.0, WHITE);
         // The core is solid, the glow faint and fading, and beyond its reach nothing.
         assert!((c.get(20, 14)).luma() > 0.95 && (c.get(20, 15)).luma() > 0.95);
@@ -90,7 +91,7 @@ mod tests {
     fn a_polyline_is_one_stroke() {
         // Its joints do not shine twice: the light where two segments meet is the light along
         // either.
-        let mut c = Canvas::new(40, 20);
+        let mut c = Canvas::with_scale(40, 20, 1.0);
         let pts = [
             Point2::xy(5.0, 10.0),
             Point2::xy(20.0, 10.0),
@@ -103,7 +104,7 @@ mod tests {
     #[test]
     fn fills_cover_their_area() {
         // A triangle, and a star with a hole by winding.
-        let mut c = Canvas::new(40, 40);
+        let mut c = Canvas::with_scale(40, 40, 1.0);
         let corners = [
             Point2::xy(0.0, 0.0),
             Point2::xy(40.0, 0.0),
@@ -111,7 +112,7 @@ mod tests {
         ];
         c.fill(&corners, WHITE, 1.0);
         assert!((c.mean().luma() - 0.5).abs() < 2e-3, "{:?}", c.mean());
-        let mut c = Canvas::new(60, 60);
+        let mut c = Canvas::with_scale(60, 60, 1.0);
         // A pentagram: every second corner of a pentagon, by turns of two fifths.
         let centre = Point2::xy(30.0, 30.0);
         let star: Vec<Point2> = (0..5)
@@ -132,7 +133,7 @@ mod tests {
 
     #[test]
     fn a_square_fills_its_area() {
-        let mut c = Canvas::new(10, 10);
+        let mut c = Canvas::with_scale(10, 10, 1.0);
         let r = Rect::new(2.0, 2.0, 8.0, 8.0);
         c.fill(&[r.lo, r.top_right(), r.hi, r.bottom_left()], WHITE, 1.0);
         assert!((c.mean().luma() - 0.36).abs() < 1e-3);
@@ -141,8 +142,7 @@ mod tests {
     #[test]
     fn a_viewport_centres_the_view_in_its_panel() {
         let cam = Camera::looking(
-            100,
-            100,
+            Rect::new(0.0, 0.0, 100.0, 100.0),
             Point3::xyz(0.0, -5.0, 0.0),
             ORIGIN3,
             Lens::Perspective(0.8),
@@ -212,8 +212,7 @@ mod tests {
     #[test]
     fn a_scene_draws_far_to_near() {
         let cam = Camera::looking(
-            64,
-            64,
+            Rect::new(0.0, 0.0, 64.0, 64.0),
             Point3::xyz(5.0, 0.0, 0.0),
             ORIGIN3,
             Lens::Perspective(0.8),
@@ -227,7 +226,7 @@ mod tests {
         s.quad(a, b, c, d, light(1.0, 0.0, 0.0, 1.0), 1.0);
         let [a, b, c, d] = square(-1.0);
         s.quad(a, b, c, d, light(0.0, 1.0, 0.0, 1.0), 1.0);
-        let mut c = Canvas::new(64, 64);
+        let mut c = Canvas::with_scale(64, 64, 1.0);
         s.draw(&mut c);
         let p = c.get(32, 32);
         let [r, g, _, _] = p.to_premultiplied();
@@ -238,8 +237,7 @@ mod tests {
     fn the_camera_does_not_mirror() {
         // Seen from above (+z), the x axis points right and the y axis up on screen.
         let cam = Camera::looking(
-            100,
-            100,
+            Rect::new(0.0, 0.0, 100.0, 100.0),
             Point3::xyz(0.0, -0.001, 10.0),
             ORIGIN3,
             Lens::Perspective(0.8),
@@ -264,8 +262,7 @@ mod tests {
         // 90 degrees: half the view rises one unit per unit ahead, so the point one unit up at
         // distance one is on the top edge.
         let cam = Camera::looking(
-            100,
-            80,
+            Rect::new(0.0, 0.0, 100.0, 80.0),
             ORIGIN3,
             Point3::xyz(1.0, 0.0, 0.0),
             Lens::Perspective(core::f32::consts::FRAC_PI_2),

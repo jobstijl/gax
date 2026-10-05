@@ -298,10 +298,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let value = bell(corr);
     let azimuth = (-55.0f32).to_radians() + 0.35 * wave(tau * phase) as f32;
     let elevation = 18.0f32.to_radians();
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     // The band of the three balls, in thirds.
-    let band = Rect::new(0.0, 92.0 * unit, w, 392.0 * unit);
+    let band = Rect::new(0.0, 92.0, w, 392.0);
     let colours: [Light; 3] = [palette::red(), palette::purple(), palette::sky()];
     let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
     // Each Bloch vector in space, with its tip's path over the whole exchange.
@@ -321,8 +319,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for k in 0..3 {
         let rect = band.column(k, 3);
         let cam = Camera::orbit(
-            rect.width() as usize,
-            rect.height() as usize,
+            rect,
             ORIGIN3,
             4.4,
             azimuth,
@@ -342,14 +339,14 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         });
         axis_names(c, &drawn);
-        let title = rect.top_middle() + up.gp(4.0 * unit);
-        c.text(titles[k], title, 13.0 * unit, colours[k], Align::Center);
+        let title = rect.top_middle() + up.gp(4.0);
+        c.text(titles[k], title, 13.0, colours[k], Align::Center);
     }
     // The lengths of the Bloch vectors under their balls.
     for (k, (now, _)) in [0, 2].into_iter().zip(&blochs) {
-        let note = (band.column(k, 3)).bottom_middle() + down.gp(2.0 * unit);
+        let note = (band.column(k, 3)).bottom_middle() + down.gp(2.0);
         let text = format!("LENGTH {:.2}", now.norm());
-        c.text(&text, note, 11.0 * unit, palette::ink(), Align::Center);
+        c.text(&text, note, 11.0, palette::ink(), Align::Center);
     }
     // The largest Bell combination along the exchange.
     let quarter = core::f32::consts::FRAC_PI_4;
@@ -357,7 +354,7 @@ fn draw(c: &mut Canvas, t: f32) {
         lo: band.bottom_left(),
         hi: screen.hi,
     };
-    let plot = below.inset(w * 0.073, 34.0 * unit, w * 0.03, 42.0 * unit);
+    let plot = below.inset(w * 0.073, 34.0, w * 0.03, 42.0);
     let ax = Axes::new(plot, [0.0, quarter], [1.9, 2.95]);
     ax.frame(c, "", "EXCHANGE ANGLE (RAD)", "LARGEST BELL VALUE");
     let root8 = 2.0 * core::f32::consts::SQRT_2;
@@ -365,13 +362,13 @@ fn draw(c: &mut Canvas, t: f32) {
         let across = [Point2::xy(0.0, level), Point2::xy(quarter, level)];
         ax.dashed(c, &across, 1.0, dash, palette::grid());
     }
-    let small = 9.0 * unit;
+    let small = 9.0;
     let note = Point2::xy(quarter / 2.0, 2.04);
     let text = "EACH SPIN ITS OWN ANSWERS";
     ax.text(c, note, text, small, palette::grid(), Align::Center);
     // The bound's name under its line at the right end, where the curve is low, clear of the
     // axis label above the frame.
-    let note = ax.px(Point2::xy(quarter, root8)) + Point2::direction(-4.0 * unit, small * 1.5);
+    let note = ax.px(Point2::xy(quarter, root8)) + Point2::direction(-4.0, small * 1.5);
     c.text("2 SQRT 2", note, small, palette::grid(), Align::Right);
     let curve: Vec<Point2> = data
         .angles

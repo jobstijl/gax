@@ -515,15 +515,13 @@ const SURFACE: f32 = 1.0;
 fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Rect) {
     let (elevation, azimuth) = (VIEW.0.to_radians(), VIEW.1.to_radians());
     let cam = Camera::orbit(
-        view.width() as usize,
-        view.height() as usize,
+        view,
         CENTRE,
         (20.0 * EXTENT) as f32,
         azimuth as f32,
         elevation as f32,
         Lens::Parallel(EXTENT as f32),
-    )
-    .viewport(view);
+    );
     // The lamp, above the viewer's left shoulder: back toward the viewer (the camera looks
     // along its +z), and up and to the right on screen (its +y and -x).
     let to64 = |p: Point<(), f32>| p.map_coefs(f64::from);

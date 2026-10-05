@@ -289,8 +289,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let down = Point2::direction(0.0, 1.0);
     let ex = example(SEED);
     let (points, flat) = tracks(&ex);
@@ -299,8 +297,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The tangle in the first three directions.
     let left = Rect::new(0.0, 0.0, 0.4 * w, h);
     let cam = Camera::orbit(
-        left.width() as usize,
-        left.height() as usize,
+        left,
         ORIGIN3,
         6.5,
         -0.9 + core::f32::consts::TAU * t / SECONDS,
@@ -318,13 +315,7 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
     });
     let label = Point2::xy(0.2 * w, 0.88 * h);
-    c.text(
-        "X, Y AND Z",
-        label,
-        12.0 * unit,
-        palette::ink(),
-        Align::Center,
-    );
+    c.text("X, Y AND Z", label, 12.0, palette::ink(), Align::Center);
 
     // Each plane: a circle at the plane's own rate, in a square panel of its own.
     let side = 0.18 * w;
@@ -335,7 +326,7 @@ fn draw(c: &mut Canvas, t: f32) {
             lo,
             hi: lo + Point2::direction(side, side),
         }
-        .inset(4.0 * unit, 4.0 * unit, 4.0 * unit, 4.0 * unit);
+        .inset(4.0, 4.0, 4.0, 4.0);
         // The circle's radius, with a margin.
         let radius = track
             .iter()
@@ -349,14 +340,14 @@ fn draw(c: &mut Canvas, t: f32) {
         let rate = ex.parts[k].norm();
         let name = format!("PLANE {}", k + 1);
         let above = Point2::xy(0.0, extent * 1.15);
-        ax.text(c, above, &name, 12.0 * unit, palette::ink(), Align::Center);
+        ax.text(c, above, &name, 12.0, palette::ink(), Align::Center);
         let tone = (plane_colour(k)).mix_light(palette::ink(), 0.4);
         let below = Point2::xy(0.0, -extent * 1.3);
         ax.text(
             c,
             below,
             &format!("RATE {rate:.2}"),
-            10.0 * unit,
+            10.0,
             tone,
             Align::Center,
         );
@@ -382,7 +373,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = Point2::xy(0.43 * w, 0.78 * h);
     for (k, line) in lines.iter().enumerate() {
         let at = first + down.gp(k as f32 * 0.04 * h);
-        c.text(line, at, 10.0 * unit, palette::grid(), Align::Left);
+        c.text(line, at, 10.0, palette::grid(), Align::Left);
     }
     caption(
         c,

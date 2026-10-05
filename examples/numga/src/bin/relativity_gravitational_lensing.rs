@@ -216,8 +216,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let caustic_colour = Light::from_srgb(1.0, 0.53, 0.447, 1.6);
     let masses = positions().map(reach2);
     let centre = source_at(t);
-    let unit = c.unit();
-    let size = (h / 34.0).clamp(7.0 * unit, 15.0 * unit);
+    let size = (h / 34.0).clamp(7.0, 15.0);
     // Three columns between the caption and the notes below the panels, each with room on
     // its left for the tick labels.
     let row = Rect::new(0.0, h * 0.17, w, h - size * 3.2);
@@ -242,7 +241,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Some(starlight(brightness(binary(at(p)), centre, WIDTH)))
     });
     ax.stroke(c, &s.critical, 1.1, critical_colour);
-    ax.scatter(c, &masses, Marker::Ring, 10.0 * unit, palette::grid());
+    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid());
     ax.frame(c, "SKY", "", "");
     // The magnification: the light over the whole sky over the source's own.
     let (directions, reached) = &s.grid;
@@ -265,13 +264,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.polyline(c, &outline, 1.0, colour.faded(0.9));
     }
     ax.stroke(c, &s.critical, 1.0, palette::grid());
-    ax.scatter(
-        c,
-        &masses,
-        Marker::Ring,
-        10.0 * unit,
-        palette::ink().faded(0.8),
-    );
+    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::ink().faded(0.8));
     ax.frame(c, "ROUND SOURCES, AS SEEN", "", "");
     below(c, &ax, -size, "KEPT", preserved, Align::Right);
     below(c, &ax, size, "MIRRORED", reversed, Align::Left);

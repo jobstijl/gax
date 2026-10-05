@@ -354,7 +354,6 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::green(),
         palette::purple(),
     ];
-    // Text scales with the canvas (a smaller frame is a miniature of the full one).
     let small = (h / 50.0).min(11.0);
 
     // Each learned channel, applied `uses` times to the sphere of pure states and to the probes,
@@ -370,8 +369,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .collect();
         let rect = band.column(k, 3);
         let cam = Camera::orbit(
-            rect.width() as usize,
-            rect.height() as usize,
+            rect,
             ORIGIN3,
             4.6,
             azimuth,

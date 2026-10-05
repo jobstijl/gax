@@ -571,7 +571,7 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
     // A pixel's width in the scene, and the backdrop's light at a pixel, by its depth down
     // the canvas.
     let pixel = f64::from(ax.scale().recip());
-    let height = c.height as f32;
+    let height = c.rect().height();
     let backdrop_at =
         |q: Point2| palette::top().mix_light(palette::bottom(), q.unitized().e01() / height);
     let splat = palette::orange();
@@ -694,8 +694,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Text, insets and offsets scale with the canvas, as drawn at 960x540.
-    let unit = c.unit();
     let data = data();
     let per = PER_STEP * ITERATIONS as f32 + HOLD;
     let which = ((t / per) as usize).min(data.scenarios.len() - 1);
@@ -710,9 +708,8 @@ fn draw(c: &mut Canvas, t: f32) {
         .zip(&s.states[k + 1])
         .map(|(a, b)| gax::pga2d::Motor::interpolate(*a, *b, f))
         .collect();
-    let top = 64.0 * unit;
-    let rect =
-        Rect::new(0.0, top, w * 0.5, h).inset(8.0 * unit, 4.0 * unit, 8.0 * unit, 8.0 * unit);
+    let top = 64.0;
+    let rect = Rect::new(0.0, top, w * 0.5, h).inset(8.0, 4.0, 8.0, 8.0);
     let span = (Y_RANGE[1] - Y_RANGE[0]) * 0.5;
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])), span);
     scene(c, &ax, &motors, &data.cones);
@@ -726,12 +723,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // Right: the point error along each scenario's steps, log scale, with a decade of room
     // above the errors for the legend.
-    let chart = Rect::new(w * 0.5, top + 30.0 * unit, w, h * 0.8).inset(
-        60.0 * unit,
-        20.0 * unit,
-        20.0 * unit,
-        40.0 * unit,
-    );
+    let chart = Rect::new(w * 0.5, top + 30.0, w, h * 0.8).inset(60.0, 20.0, 20.0, 40.0);
     let down = Point2::direction(0.0, 1.0);
     let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 10.0]).log_y();
     errors.frame(c, "POINT RMSE ALONG THE STEPS", "GAUSS-NEWTON STEP", "RMSE");
@@ -804,8 +796,8 @@ fn draw(c: &mut Canvas, t: f32) {
     .iter()
     .enumerate()
     {
-        let at = chart.bottom_left() + down.gp((64.0 + 17.0 * k as f32) * unit);
-        c.text(text, at, size * unit, *light, Align::Left);
+        let at = chart.bottom_left() + down.gp(64.0 + 17.0 * k as f32);
+        c.text(text, at, *size, *light, Align::Left);
     }
     caption(
         c,

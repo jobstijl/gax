@@ -262,11 +262,8 @@ fn draw(c: &mut Canvas, t: f32) {
     // A column of the screen by fractions of its width, inset for the frame's labels: the
     // paths on the left, the errors on the right.
     let (w, h) = (screen.width(), screen.height());
-    // The insets scale with the canvas, as drawn at 960x540.
-    let unit = c.unit();
-    let column = |x0: f32, x1: f32| {
-        Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0 * unit, 104.0 * unit, 16.0 * unit, 46.0 * unit)
-    };
+    let column =
+        |x0: f32, x1: f32| Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0, 104.0, 16.0, 46.0);
     let scene = tracking(SEED);
     let n = scene.truth.len();
     // The cursor runs over the drive in the first 85% of the loop, then holds.

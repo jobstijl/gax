@@ -245,12 +245,11 @@ fn axes3(c: &mut Canvas, cam: &Camera, s: &mut Scene3, len: f32) {
         Point3::direction(0.0, 1.0, 0.0),
         Point3::direction(0.0, 0.0, 1.0),
     ];
-    let unit = c.unit();
     for (d, name) in axes.into_iter().zip(["X", "Y", "Z"]) {
         s.seg(ORIGIN3, ORIGIN3 + d.gp(len), 1.0, palette::grid());
         if let Some(q) = cam.px(ORIGIN3 + d.gp(len * 1.1)) {
-            let below = q + Point2::direction(0.0, 4.0 * unit);
-            c.text(name, below, 10.0 * unit, palette::grid(), Align::Center);
+            let below = q + Point2::direction(0.0, 4.0);
+            c.text(name, below, 10.0, palette::grid(), Align::Center);
         }
     }
 }
@@ -261,9 +260,8 @@ fn note(c: &mut Canvas, s: &str, at: Point2, size: f32, col: Light) {
 }
 
 /// A panel's parts: the 3D view in its upper two thirds, the view's clipping rectangle (a
-/// margin above the plot's title), and the plot rectangle below; margins in pixels of a
-/// 960 x 540 canvas, times `unit`.
-fn parts(rect: Rect, unit: f32) -> (Rect, Rect, Rect) {
+/// margin above the plot's title), and the plot rectangle below; margins in canvas units.
+fn parts(rect: Rect) -> (Rect, Rect, Rect) {
     let cut = rect.height() * 0.68;
     let view = Rect {
         lo: rect.lo,
@@ -275,15 +273,15 @@ fn parts(rect: Rect, unit: f32) -> (Rect, Rect, Rect) {
     };
     (
         view,
-        view.inset(0.0, 0.0, 0.0, 12.0 * unit),
-        plot.inset(52.0 * unit, 0.0, 16.0 * unit, 34.0 * unit),
+        view.inset(0.0, 0.0, 0.0, 12.0),
+        plot.inset(52.0, 0.0, 16.0, 34.0),
     )
 }
 
-/// Where a panel's notes start, the step down to the next line, and their size: 11 pixels
-/// on a 960 x 540 canvas, smaller on a small one.
-fn notes(rect: Rect, unit: f32) -> (Point2, Point2, f32) {
-    let size = (rect.height() / 40.0).clamp(5.0 * unit, 11.0 * unit);
+/// Where a panel's notes start, the step down to the next line, and their size: 11, smaller in a
+/// small panel.
+fn notes(rect: Rect) -> (Point2, Point2, f32) {
+    let size = (rect.height() / 40.0).clamp(5.0, 11.0);
     let k = size / 11.0;
     (
         rect.lo + Point2::direction(14.0, 14.0).gp(k),
@@ -316,9 +314,8 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let zeta = rapidity(phase);
     let (g, tm) = boosted_field(zeta);
     let (e, b) = electric_magnetic(g);
-    let unit = c.unit();
-    let (view, clip, plot) = parts(rect, unit);
-    let cam = Camera::parallel(view, 48.0 * unit, 0.6 + spin, 0.35);
+    let (view, clip, plot) = parts(rect);
+    let cam = Camera::parallel(view, 48.0, 0.6 + spin, 0.35);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
     axes3(c, &cam, &mut sc, 2.2);
@@ -336,11 +333,11 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
         sc.polyline(&path, 1.0, (*col).faded(0.45));
     }
     for (v, col) in [(e, cols[0]), (b, cols[1]), (poynting(tm), cols[2])] {
-        sc.arrow(ORIGIN3, v, 2.5, 10.0 * unit, col);
+        sc.arrow(ORIGIN3, v, 2.5, 10.0, col);
     }
     sc.draw(c);
     c.unclip();
-    let (at, line, size) = notes(rect, unit);
+    let (at, line, size) = notes(rect);
     let boost = format!("BOOST ALONG X, RAPIDITY {zeta:+.2}");
     note(c, &boost, at, size, palette::ink());
     let across = Point2::direction(size * 16.0 / 11.0, 0.0);
@@ -370,7 +367,7 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
         c,
         &[Point::xy(zeta, now[0]), Point::xy(zeta, now[1])],
         Marker::Dot,
-        8.0 * unit,
+        8.0,
         palette::ink(),
     );
     ax.legend(
@@ -391,20 +388,19 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let tm = cloud_tensor(&us, 1.0 / us.len() as f64);
     let s = spectrum(tm);
     let (pressure, energy) = pressure_energy(tm);
-    let unit = c.unit();
-    let (view, clip, plot) = parts(rect, unit);
-    let cam = Camera::parallel(view, 80.0 * unit, -0.4 + spin, 0.3);
+    let (view, clip, plot) = parts(rect);
+    let cam = Camera::parallel(view, 80.0, -0.4 + spin, 0.3);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
     sc.sphere_wire(ORIGIN3, 1.0, 12, palette::grid().faded(0.5));
     // Five hundred dots add their light: each faint, so that the cloud glows rather than burns.
     let dot = palette::sky().faded(0.2);
     for d in dirs.iter().step_by(4) {
-        sc.dot(reach3(spatial(*d) * speed), Marker::Dot, 3.0 * unit, dot);
+        sc.dot(reach3(spatial(*d) * speed), Marker::Dot, 3.0, dot);
     }
     sc.draw(c);
     c.unclip();
-    let (at, line, size) = notes(rect, unit);
+    let (at, line, size) = notes(rect);
     let speeds = format!("SPEED {speed:.2}   TRACE {:.3}", tm.trace());
     note(c, &speeds, at, size, palette::ink());
     let balance = format!("ENERGY {energy:.2}   PRESSURE {pressure:.3}");
@@ -438,9 +434,9 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
         .iter()
         .map(|p| Point::xy(speed, -p / energy))
         .collect();
-    ax.scatter(c, &marks, Marker::Ring, 9.0 * unit, palette::orange());
+    ax.scatter(c, &marks, Marker::Ring, 9.0, palette::orange());
     let light = Point::xy(1.0, null_ratio());
-    ax.scatter(c, &[light], Marker::Star, 12.0 * unit, palette::yellow());
+    ax.scatter(c, &[light], Marker::Star, 12.0, palette::yellow());
     ax.legend(
         c,
         &[
@@ -459,10 +455,9 @@ fn draw(c: &mut Canvas, t: f32) {
     // Two panels side by side below the caption.
     // Below the caption's subtitle (three caption sizes down) on a small canvas.
     let h = screen.height();
-    let unit = c.unit();
     let below = screen.inset(
         0.0,
-        (h * 0.12).max((h / 30.0).clamp(10.0 * unit, 22.0 * unit) * 3.0 + 4.0 * unit),
+        (h * 0.12).max((h / 30.0).clamp(10.0, 22.0) * 3.0 + 4.0),
         0.0,
         0.0,
     );

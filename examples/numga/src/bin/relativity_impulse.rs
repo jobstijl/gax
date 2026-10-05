@@ -444,8 +444,7 @@ fn fit(rect: Rect, xr: [f32; 2], yr: [f32; 2]) -> Axes {
 /// A panel title above the axes, shrunk to fit their width.
 fn title(c: &mut Canvas, ax: &Axes, text: &str, colour: Light) {
     let r = ax.rect;
-    let unit = c.unit();
-    let size = (12.0 * unit).min(r.width() / font::width(text, 1.0));
+    let size = 12.0f32.min(r.width() / font::width(text, 1.0));
     let top_middle = r.top_middle();
     let at = top_middle - Point2::direction(0.0, size * 1.1);
     c.text(text, at, size, colour, Align::Center);
@@ -487,8 +486,6 @@ struct Diagram<'a> {
     /// The present, an observer time.
     tau: f64,
     size: f32,
-    /// The canvas's height over 540: pixel sizes scale with it.
-    unit: f32,
     c: &'a mut Canvas,
 }
 
@@ -501,8 +498,7 @@ impl Diagram<'_> {
         reveal: f32,
     ) -> Diagram<'a> {
         let ax = fit(rect, xr, yr);
-        let unit = c.unit();
-        let size = (ax.rect.width() / 26.0).clamp(7.0 * unit, 11.0 * unit);
+        let size = (ax.rect.width() / 26.0).clamp(7.0, 11.0);
         // The present rises from the bottom of the diagram to its top.
         let tau = f64::from(yr[0] + (yr[1] - yr[0]) * reveal);
         // Light cones through the origin, faint: the null directions `t ± x`, far out.
@@ -510,13 +506,7 @@ impl Diagram<'_> {
         for null in [t() + x(), t() - x()] {
             ax.line(c, null * -big, null * big, 0.8, palette::grid().faded(0.35));
         }
-        Diagram {
-            ax,
-            tau,
-            size,
-            unit,
-            c,
-        }
+        Diagram { ax, tau, size, c }
     }
 
     /// A worldline: faint in full, bright up to the present.
@@ -549,8 +539,7 @@ impl Diagram<'_> {
         for e in events {
             let strength = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
             let faded = colour.faded(strength);
-            self.ax
-                .scatter(self.c, &[*e], marker, size * self.unit, faded);
+            self.ax.scatter(self.c, &[*e], marker, size, faded);
         }
     }
 
@@ -620,7 +609,7 @@ impl Diagram<'_> {
 
     fn frame(&mut self) {
         self.ax.frame(self.c, "", "X / L0", "");
-        let at = self.ax.rect.lo + Point2::direction(4.0 * self.unit, self.size * 1.4);
+        let at = self.ax.rect.lo + Point2::direction(4.0, self.size * 1.4);
         self.c
             .text("CT", at, self.size, palette::ink(), Align::Left);
     }
@@ -641,8 +630,7 @@ fn reveal(u: f32) -> f32 {
 fn draw_impulse(c: &mut Canvas, r: f32) {
     let (s, _, _) = scenes();
     let row = diagrams(c);
-    let unit = c.unit();
-    let rect = |i: usize| row.column(i, 3).inset(40.0 * unit, 0.0, 8.0 * unit, 0.0);
+    let rect = |i: usize| row.column(i, 3).inset(40.0, 0.0, 8.0, 0.0);
     let titles = [
         "SYMMETRIC FRAME: -0.5C -> +0.5C",
         "BOOSTED FRAME: 0 -> 0.8C",
@@ -717,8 +705,7 @@ fn barn(d: &mut Diagram, doors: &[[V; 2]], closure: &[V; 2]) {
 fn draw_ladder(c: &mut Canvas, r: f32) {
     let (_, s, _) = scenes();
     let row = diagrams(c);
-    let unit = c.unit();
-    let rect = |i: usize| row.column(i, 4).inset(34.0 * unit, 0.0, 6.0 * unit, 0.0);
+    let rect = |i: usize| row.column(i, 4).inset(34.0, 0.0, 6.0, 0.0);
 
     // 1. In the barn frame it fits at closure.
     let mut d = Diagram::new(c, rect(0), [-0.46, 1.32], [-0.6, 0.65], r);
@@ -790,7 +777,6 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
 fn draw_spaceships(c: &mut Canvas, r: f32) {
     let (_, _, s) = scenes();
     let row = diagrams(c);
-    let unit = c.unit();
     let w = row.width();
     // A share of the row from `x0` to `x1` of the canvas's width.
     let span = |x0: f32, x1: f32| row.inset(w * x0, 0.0, w * (1.0 - x1), 0.0);
@@ -802,8 +788,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     ];
     let colours = [kink(), elastic()];
     for k in 0..2 {
-        let rect =
-            span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0 * unit, 0.0, 8.0 * unit, 0.0);
+        let rect = span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0, 0.0, 8.0, 0.0);
         let mut d = Diagram::new(c, rect, [-0.20, 3.05], [-0.40, end as f32 + 0.18], r);
         d.rod(&s.tracks[k], 2.4);
         for step in &s.schedules[k] {
@@ -827,11 +812,11 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     // diagrams complete.
     let shown = ((r - 0.6) / 0.4).clamp(0.0, 1.0);
     let ax = fit(
-        span(0.73, 1.0).inset(0.0, 0.0, 10.0 * unit, 0.0),
+        span(0.73, 1.0).inset(0.0, 0.0, 10.0, 0.0),
         [-0.22, 2.05],
         [-0.35, 3.03],
     );
-    let size = 10.0 * unit;
+    let size = 10.0;
     title(c, &ax, "IN THE FINAL REST FRAME", palette::ink());
     let gaps = s.final_events.map(|e| position_of(e[1]));
     let rows = [
@@ -866,8 +851,8 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         // A ship: a triangle pointing along the motion, at its pixel.
         for (at, ship) in [(rear_ship, rear()), (front_ship, front())] {
             let p = ax.px(at);
-            let hull = [(9.0, 0.0), (-6.0, -7.0), (-6.0, 7.0)]
-                .map(|(x, y)| p + Point2::direction(x, y).gp(unit));
+            let hull =
+                [(9.0, 0.0), (-6.0, -7.0), (-6.0, 7.0)].map(|(x, y)| p + Point2::direction(x, y));
             c.fill(&hull, ship, shown);
         }
         // The label under the rope's middle.
@@ -909,8 +894,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // The legend, along the bottom edge.
     let screen = c.rect();
-    let unit = c.unit();
-    let size = (screen.height() / 50.0).clamp(7.0 * unit, 11.0 * unit);
+    let size = (screen.height() / 50.0).clamp(7.0, 11.0);
     let entries = [
         ("REAR END", rear()),
         ("FRONT END", front()),
@@ -933,7 +917,7 @@ fn draw(c: &mut Canvas, t: f32) {
 /// The row the diagrams share: below the captions, above the legend.
 fn diagrams(c: &Canvas) -> Rect {
     let screen = c.rect();
-    screen.inset(0.0, screen.height() * 0.2, 0.0, 60.0 * (c.unit()))
+    screen.inset(0.0, screen.height() * 0.2, 0.0, 60.0)
 }
 
 fn main() {

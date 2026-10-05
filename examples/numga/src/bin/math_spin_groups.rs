@@ -599,9 +599,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (w, h) = (screen.width(), screen.height());
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let phase = t / SECONDS;
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
-    let size = 8.7 * unit;
+    let size = 8.7;
     // The table at the right, under the caption: as wide as its header and the three letters
     // by which its last column's entries outrun the header's.
     let table_width = gax_numga_examples::font::width(HEADER, size) + 3.0 * size;
@@ -626,8 +624,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (k, family) in families.iter().enumerate() {
         let rect = below.column(k, 3);
         let cam = Camera::orbit(
-            rect.width() as usize,
-            rect.height() as usize,
+            rect,
             ORIGIN3,
             (extent * 4.2) as f32,
             (-55.0f32).to_radians() + 0.5 * wave(phase * core::f32::consts::TAU),
@@ -651,13 +648,13 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         });
         let top_middle = rect.top_middle();
-        let title = top_middle + down.gp(16.0 * unit);
-        c.text(titles[k], title, 11.0 * unit, palette::ink(), Align::Center);
+        let title = top_middle + down.gp(16.0);
+        c.text(titles[k], title, 11.0, palette::ink(), Align::Center);
         if k < 2 {
             let bottom_middle = rect.bottom_middle();
             let text = format!("LINKING NUMBER {:+.2}", checks().links[k]);
-            let note = bottom_middle + up.gp(12.0 * unit);
-            c.text(&text, note, 10.0 * unit, palette::grid(), Align::Center);
+            let note = bottom_middle + up.gp(12.0);
+            c.text(&text, note, 10.0, palette::grid(), Align::Center);
         }
     }
     let exact = table().iter().all(|row| row.form_is_inner);

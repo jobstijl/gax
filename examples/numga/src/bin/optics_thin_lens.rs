@@ -209,12 +209,11 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let unit = c.unit();
     let phase = f64::from(t) / 4.32 * core::f64::consts::TAU;
     // The train, animated, on the left.
     let left = Rect::new(0.0, 0.0, w * 0.64, h);
     let ax = Axes::equal(
-        left.inset(20.0 * unit, 70.0 * unit, 10.0 * unit, 20.0 * unit),
+        left.inset(20.0, 70.0, 10.0, 20.0),
         Point::xy(1.7, 0.85),
         2.2,
     );
@@ -244,8 +243,8 @@ fn draw(c: &mut Canvas, t: f32) {
     for (s, d) in start.iter().zip(&dir) {
         ax.line(c, *s, *s + d.gp(2.5), 1.3, (palette::series(4)).faded(0.9));
     }
-    ax.scatter(c, &[subject], Marker::Dot, 9.0 * unit, palette::series(0));
-    ax.scatter(c, &[image], Marker::Star, 13.0 * unit, palette::yellow());
+    ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0));
+    ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow());
     caption(
         c,
         "THIN LENS: AN OPTICAL TRAIN AS ONE MAP ON LINES",
@@ -254,7 +253,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // One lens and two lenses, still, on the right.
     let bench = lenses();
     // Below the caption, the right side in two halves, one above the other.
-    let right = Rect::new(w * 0.64, 60.0 * unit, w, h);
+    let right = Rect::new(w * 0.64, 60.0, w, h);
     let half = Point2::direction(0.0, right.height() / 2.0);
     for (k, (legs, title)) in [(&bench.one, "ONE LENS"), (&bench.two, "TWO LENSES")]
         .into_iter()
@@ -262,7 +261,7 @@ fn draw(c: &mut Canvas, t: f32) {
     {
         let lo = right.lo + half.gp(k as f32);
         let hi = lo + Point2::direction(right.width(), 0.0) + half;
-        let rect = Rect { lo, hi }.inset(14.0 * unit, 24.0 * unit, 14.0 * unit, 14.0 * unit);
+        let rect = Rect { lo, hi }.inset(14.0, 24.0, 14.0, 14.0);
         // Both benches at one scale, from the object to a little past the image.
         let corners = [Point::xy(-2.0, -0.85), Point::xy(3.2, 0.85)];
         let ax = Axes::fitting(rect, corners, 1.0);
@@ -273,14 +272,13 @@ fn draw(c: &mut Canvas, t: f32) {
             plane(&ax, c, *pl, 1.0);
         }
         let mark = if k == 0 { bench.image } else { bench.focus };
-        ax.scatter(c, &[mark], Marker::Star, 11.0 * unit, palette::yellow());
+        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow());
         ax.text(
             c,
             // Just inside the top left corner of the data box.
             ax.at(0.0, 1.0) + Point2::direction(0.1, -0.25),
             title,
-            // 11 pixels on a 960 x 540 canvas.
-            11.0 * unit,
+            11.0,
             palette::ink(),
             Align::Left,
         );

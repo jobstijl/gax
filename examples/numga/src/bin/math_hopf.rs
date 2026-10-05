@@ -217,12 +217,9 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // Space: the fibres so far, the newest heavier.
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let right = Rect::new(0.3 * w, 0.0, w, h);
     let cam = Camera::orbit(
-        right.width() as usize,
-        right.height() as usize,
+        right,
         Point3::xyz(0.0, 0.0, -0.3),
         11.0,
         azimuth,
@@ -240,21 +237,20 @@ fn draw(c: &mut Canvas, t: f32) {
     let link = gax_numga_examples::measure::linking(&fibres[0].1, &fibres[fibres.len() - 1].1);
     if fibres.len() > 1 {
         let text = format!("LINKING NUMBER OF THE FIRST AND LAST FIBRE: {link:+.3}");
-        let corner = screen.hi + Point2::direction(-14.0, -14.0).gp(unit);
-        c.text(&text, corner, 11.0 * unit, palette::ink(), Align::Right);
+        let corner = screen.hi + Point2::direction(-14.0, -14.0);
+        c.text(&text, corner, 11.0, palette::ink(), Align::Right);
     }
     if phase >= SWEEP {
         let text = "FIBRES OVER CIRCLES OF DIRECTIONS FILL NESTED TORI";
-        let corner = screen.top_right() + Point2::direction(-14.0, 30.0).gp(unit);
-        c.text(text, corner, 11.0 * unit, palette::ink(), Align::Right);
+        let corner = screen.top_right() + Point2::direction(-14.0, 30.0);
+        c.text(text, corner, 11.0, palette::ink(), Align::Right);
     }
 
     // The sphere of directions, on the left above the lift.
-    let split = h * 0.5 + 30.0 * unit;
-    let sphere_rect = Rect::new(0.0, 60.0 * unit, 0.3 * w, split);
+    let split = h * 0.5 + 30.0;
+    let sphere_rect = Rect::new(0.0, 60.0, 0.3 * w, split);
     let cam = Camera::orbit(
-        sphere_rect.width() as usize,
-        sphere_rect.height() as usize,
+        sphere_rect,
         ORIGIN3,
         6.0,
         azimuth,
@@ -269,21 +265,14 @@ fn draw(c: &mut Canvas, t: f32) {
         }
     });
     // The label clear of the caption, beside the sphere's top.
-    let label = sphere_rect.lo + Point2::direction(14.0, 30.0).gp(unit);
-    c.text(
-        "DIRECTIONS",
-        label,
-        11.0 * unit,
-        palette::ink(),
-        Align::Left,
-    );
+    let label = sphere_rect.lo + Point2::direction(14.0, 30.0);
+    c.text("DIRECTIONS", label, 11.0, palette::ink(), Align::Left);
 
     // The lift: a spinor carried around a circle of directions, drawn up to now.
     let lift_rect = Rect::new(0.0, split, 0.3 * w, h);
     let (_, start, carried) = lift(LIFT_POLAR, 200);
     let cam = Camera::orbit(
-        lift_rect.width() as usize,
-        lift_rect.height() as usize,
+        lift_rect,
         ORIGIN3,
         9.0,
         azimuth,
@@ -307,20 +296,20 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::red());
     });
     let down = Point2::direction(0.0, 1.0);
-    let label = lift_rect.lo + Point2::direction(14.0, 8.0).gp(unit);
+    let label = lift_rect.lo + Point2::direction(14.0, 8.0);
     let ink = palette::ink();
     c.text(
         "BERRY PHASE: BACK ON THE FIBRE,",
         label,
-        10.0 * unit,
+        10.0,
         ink,
         Align::Left,
     );
-    let next = label + down.gp(14.0 * unit);
+    let next = label + down.gp(14.0);
     c.text(
         "TURNED BY HALF THE SOLID ANGLE",
         next,
-        10.0 * unit,
+        10.0,
         ink,
         Align::Left,
     );

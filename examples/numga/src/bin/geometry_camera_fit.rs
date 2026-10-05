@@ -16,8 +16,8 @@ use gax::{Real, Unit};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption,
-    from_above, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
+    caption, from_above, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -140,8 +140,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Text and its offsets scale with the canvas, as drawn at 960x540.
-    let unit = c.unit();
     let path = path();
     // Replay the descent on a logarithmic clock, so that the fast start is seen, then hold.
     let s = ((t / SECONDS) / 0.85).min(1.0);
@@ -151,15 +149,13 @@ fn draw(c: &mut Canvas, t: f32) {
     let observed = image(truth(), &world);
     let images = image(g, &world);
     // The scene on the left, its view turning slowly.
-    let wl = (w * 0.55) as usize;
-    let mut left = Canvas::new(wl, c.height);
+    let mut left = c.sub(Rect::new(0.0, 0.0, (w * 0.55).floor(), h));
     backdrop(&mut left);
     // Centred between the world's origin and the true camera.
     let origin = Point::xyz(0.0, 0.0, 0.0);
     let middle = (origin + (truth().exp() >> origin)).gp(0.5);
     let cam = Camera::orbit(
-        wl,
-        c.height,
+        left.rect(),
         middle,
         17.0,
         -1.2 + 0.5 * wave(t / SECONDS * core::f32::consts::TAU),
@@ -183,7 +179,7 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.seg(centre, *p, 0.6, palette::red().faded(0.25));
     }
     scene.draw(&mut left);
-    c.blit(&left, 0, 0);
+    c.blit(&left, screen.lo);
     // The screen: the observed images and the current ones, tied together.
     let right = screen
         .part(0.55, 0.0, 1.0, 0.6)
@@ -227,8 +223,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let (turn, shift) = pose_error(truth(), g);
     c.text(
         &format!("STEP {k}   POSE ERROR: TURN {turn:.4}  SHIFT {shift:.4}"),
-        screen.bottom_left() + Point2::direction(w * 0.02, -14.0 * unit),
-        12.0 * unit,
+        screen.bottom_left() + Point2::direction(w * 0.02, -14.0),
+        12.0,
         palette::ink(),
         Align::Left,
     );

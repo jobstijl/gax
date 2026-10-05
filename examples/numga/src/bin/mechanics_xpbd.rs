@@ -340,7 +340,6 @@ fn draw(c: &mut Canvas, t: f32) {
     let (motors, gaps) = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let u = c.unit();
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(motors.len() - 1);
     caption(
         c,
@@ -352,8 +351,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let left = w * 0.6;
     let azimuth = -1.25 + 0.25 * signal::wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
-        left as usize,
-        c.height,
+        Rect::new(0.0, 0.0, left, h),
         Point::xyz(0.0, 0.0, -0.2),
         3.0,
         azimuth,
@@ -391,28 +389,23 @@ fn draw(c: &mut Canvas, t: f32) {
     for (i, &m) in motors[k].iter().enumerate() {
         // Each link's mass points, on its three axes, as three bars.
         for axis in 0..3 {
-            s.seg(
-                m >> cloud[axis],
-                m >> cloud[axis + 3],
-                3.0 * u,
-                colours[axis],
-            );
+            s.seg(m >> cloud[axis], m >> cloud[axis + 3], 3.0, colours[axis]);
         }
         // The link's anchors and the rod between them.
-        s.seg(m >> start, m >> end, 1.5 * u, palette::ink().faded(0.8));
+        s.seg(m >> start, m >> end, 1.5, palette::ink().faded(0.8));
         let col = if i == 0 {
             palette::red()
         } else {
             palette::ink()
         };
-        s.dot(m >> origin, Marker::Dot, 5.0 * u, col);
+        s.dot(m >> origin, Marker::Dot, 5.0, col);
     }
-    s.dot(origin, Marker::Square, 9.0 * u, palette::red());
+    s.dot(origin, Marker::Square, 9.0, palette::red());
     s.draw(c);
     // The joint gaps over time, as numga's figure: the largest and the mean.
     let right = Rect::new(left, 0.0, w, h);
     let ax = Axes::new(
-        right.inset(54.0 * u, 80.0 * u, 20.0 * u, 60.0 * u),
+        right.inset(54.0, 80.0, 20.0, 60.0),
         [0.0, SECONDS],
         [1e-7, 1e-2],
     )
@@ -440,7 +433,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c,
         label,
         "1% OF THE SPACING",
-        9.0 * u,
+        9.0,
         palette::grid(),
         Align::Left,
     );

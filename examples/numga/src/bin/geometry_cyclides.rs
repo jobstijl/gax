@@ -1016,11 +1016,9 @@ fn draw(c: &mut Canvas, t: f32) {
     gax_numga_examples::caption(c, &title, shot.note);
     // The shot's number in the bottom right corner.
     let number = format!("{}/{}", index + 1, list.len());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
-    let corner = screen.hi + Point2::direction(-8.0, -8.0).gp(unit);
+    let corner = screen.hi + Point2::direction(-8.0, -8.0);
     let dim = palette::ink().mix_light(palette::bottom(), 0.4);
-    c.text(&number, corner, 10.0 * unit, dim, Align::Right);
+    c.text(&number, corner, 10.0, dim, Align::Right);
 }
 
 fn main() {

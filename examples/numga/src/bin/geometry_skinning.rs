@@ -102,8 +102,7 @@ const TITLES: [&str; 3] = ["NORMALIZED MOTOR BLEND", "MOTOR SLERP", "MATRIX BLEN
 fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     backdrop(c);
     let cam = Camera::orbit(
-        c.width,
-        c.height,
+        c.rect(),
         Point::xyz(0.5, 0.0, 0.0),
         6.2,
         azimuth,
@@ -167,9 +166,7 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     // The title a sixth of the way down the middle, and the least radius near the bottom,
     // from red at no radius to green at the full one.
     let screen = c.rect();
-    // Text scales with the canvas, as drawn at 960x540.
-    let unit = c.unit();
-    let size = (screen.height() / 30.0).clamp(8.0 * unit, 13.0 * unit);
+    let size = (screen.height() / 30.0).clamp(8.0, 13.0);
     let (top, down) = (screen.top_middle(), Point2::direction(0.0, 1.0));
     let title_at = top + down.gp(screen.height() * 0.17);
     c.text(title, title_at, size, palette::ink(), Align::Center);
@@ -192,11 +189,12 @@ fn draw(c: &mut Canvas, t: f32) {
     let angle = 150f64.to_radians() * 0.5 * (1.0 - phasor(phase).e20());
     let azimuth = 0.9 + 0.25 * wave(phase as f32);
     let skins = skinning(angle);
-    let w = c.width / 3;
+    let screen = c.rect();
     for (i, (skin, title)) in skins.iter().zip(TITLES).enumerate() {
-        let mut sub = Canvas::new(w, c.height);
+        let place = screen.column(i, 3);
+        let mut sub = c.sub(place);
         panel(&mut sub, skin, angle, azimuth, title);
-        c.blit(&sub, i * w, 0);
+        c.blit(&sub, place.lo);
     }
     caption(
         c,

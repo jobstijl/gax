@@ -152,27 +152,20 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
         "QUADRIC RIGID BODIES ON S2 AND S3",
         "ONE ENGINE: BLENDS OF FORMS FOR CONTACTS, LIE MIDPOINT STEPS",
     );
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
-    let size = 12.0 * unit;
+    let size = 12.0;
     let top = h * 0.13;
 
     // S²: the hemisphere, and the invariants under it.
     // Room under the disc for its name and the invariants, so the plot's ticks have room.
-    let room = 150.0 * unit;
+    let room = 150.0;
     let radius = (w * 0.2).min((h - top - room) / 2.0).max(4.0);
-    let centre = Point2::xy(w * 0.22, top + 10.0 * unit + radius);
+    let centre = Point2::xy(w * 0.22, top + 10.0 + radius);
     hemisphere(c, centre, radius, &show.s2.surfaces[f], &show.s2.colors);
     let name = format!("S2: {}", show.s2_name);
     let label = centre + down.gp(radius + size * 1.4);
     c.text(&name, label, size, palette::ink(), Align::Center);
     let below = centre + down.gp(radius + size * 1.6);
-    let rect = Rect::new(0.0, below.e01(), w * 0.44, h).inset(
-        34.0 * unit,
-        16.0 * unit,
-        8.0 * unit,
-        20.0 * unit,
-    );
+    let rect = Rect::new(0.0, below.e01(), w * 0.44, h).inset(34.0, 16.0, 8.0, 20.0);
     // A plot frame's text is never under 3 pixels: on a small canvas its title stands taller
     // than the miniature's, so the plot moves down by the difference.
     let scaled = rect.height() / 26.0;
@@ -182,11 +175,11 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     }
 
     // S³: traced from the eye, a 4:3 picture.
-    let width = w - 8.0 * unit - w * 0.46;
+    let width = w - 8.0 - w * 0.46;
     let panel = Rect::new(
         w * 0.46,
         top,
-        w - 8.0 * unit,
+        w - 8.0,
         (top + width * 0.75).min(h - 2.0 * size),
     );
     let trajectory = &show.s3.trajectory;
@@ -210,7 +203,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
         view.surfaces.len(),
         trajectory.impulses
     );
-    let at = panel.bottom_left() + Point2::direction(4.0 * unit, size * 1.5);
+    let at = panel.bottom_left() + Point2::direction(4.0, size * 1.5);
     c.text(&note, at, size, palette::ink(), Align::Left);
 }
 

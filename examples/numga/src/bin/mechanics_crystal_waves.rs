@@ -249,8 +249,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let d = data();
     let total = 3.0 * SWEEP;
     let u = t.rem_euclid(total) / total;
@@ -273,7 +271,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let grid = to_grid();
     for (m, name) in NAMES.iter().enumerate() {
         for (wv, mode) in MODES.iter().enumerate() {
-            let rect = square(m, wv).inset(2.0 * unit, 2.0 * unit, 2.0 * unit, 2.0 * unit);
+            let rect = square(m, wv).inset(2.0, 2.0, 2.0, 2.0);
             let ax = Axes::new(rect, [-1.5, 1.5], [-1.5, 1.5]);
             let pts = &d.focus[m][wv];
             let n = ((pts.len() as f32 * share) as usize).min(pts.len());
@@ -289,34 +287,34 @@ fn draw(c: &mut Canvas, t: f32) {
                 c.polyline(&corners, 1.5, palette::yellow().faded(0.9), true);
             }
             if m == 0 {
-                let above = rect.top_middle() + up.gp(6.0 * unit);
-                c.text(mode, above, 10.0 * unit, mode_colour(wv), Align::Center);
+                let above = rect.top_middle() + up.gp(6.0);
+                c.text(mode, above, 10.0, mode_colour(wv), Align::Center);
             }
         }
         // The crystal's name left of the middle of its row, a word a line where it would not
         // fit in the margin with room to spare.
         let row = square(m, 0);
-        let at = row.left_middle() - right.gp(6.0 * unit);
+        let at = row.left_middle() - right.gp(6.0);
         let tone = if m == current {
             palette::yellow()
         } else {
             palette::ink()
         };
-        let words: Vec<&str> = if font::width(name, 10.0 * unit) + 16.0 * unit > left {
+        let words: Vec<&str> = if font::width(name, 10.0) + 16.0 > left {
             name.split(' ').collect()
         } else {
             vec![name]
         };
         let middle = (words.len() as f32 - 1.0) / 2.0;
         for (i, word) in words.iter().enumerate() {
-            let line = at - up.gp(13.0 * unit * (i as f32 - middle));
-            c.text(word, line, 10.0 * unit, tone, Align::Right);
+            let line = at - up.gp(13.0 * (i as f32 - middle));
+            c.text(word, line, 10.0, tone, Align::Right);
         }
     }
     let count = ((HEADINGS as f32 * share) as usize / 1000) * 1000;
     let at = screen.bottom_left() + Point2::direction(left, -h * 0.005);
     let text = format!("{count} HEADINGS");
-    c.text(&text, at, 10.0 * unit, palette::grid(), Align::Left);
+    c.text(&text, at, 10.0, palette::grid(), Align::Left);
 
     // The wave surfaces of the current crystal in the cube face, and the sweeping heading.
     let fronts = &d.fronts[current];

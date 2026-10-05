@@ -181,41 +181,24 @@ fn lamp(heading: P) -> P {
     back + Point::direction(0.0, 0.0, 0.6 * heading.ideal_norm())
 }
 
-/// A ray-cast view of a surface, `w` x `h` pixels, cut at `|z| < height`.
-fn render(surface: &Surface, cam: &Camera, w: usize, h: usize, height: f64) -> Vec<Option<Seen>> {
-    let rows: Vec<usize> = (0..h).collect();
-    let threads = std::thread::available_parallelism().map_or(4, |t| t.get());
-    let per = h.div_ceil(threads).max(1);
+/// The surface as seen along the ray through the canvas point `q`, cut at `|z| < height`.
+fn seen(surface: &Surface, cam: &Camera, q: Point2, height: f64) -> Option<Seen> {
     let f64p = |p: Point<(), f32>| p.map_coefs(f64::from);
-    let mut out = vec![None; w * h];
-    std::thread::scope(|s| {
-        for (chunk, part) in rows.chunks(per).zip(out.chunks_mut(per * w)) {
-            s.spawn(move || {
-                for (i, &y) in chunk.iter().enumerate() {
-                    for x in 0..w {
-                        let (o, d) = cam.ray(Point2::xy(x as f32 + 0.5, y as f32 + 0.5));
-                        let (o, d) = (f64p(o), f64p(d));
-                        let Some(p) = surface.hit(o, d) else {
-                            continue;
-                        };
-                        if p.to_euclidean()[2].abs() >= height {
-                            continue;
-                        }
-                        // Lit from behind the viewer's shoulder, both sides alike: the cosine
-                        // between the tangent plane and the plane facing the lamp.
-                        let tangent = surface.q.of(p).normalized().into_inner();
-                        let facing = Plane::orthogonal_to(lamp(d)).normalized().into_inner();
-                        part[i * w + x] = Some(Seen {
-                            light: (0.4 + 0.6 * (tangent | facing).s().abs()) as f32,
-                            k: surface.principal(p),
-                            t: surface.confocal(p),
-                        });
-                    }
-                }
-            });
-        }
-    });
-    out
+    let (o, d) = cam.ray(q);
+    let (o, d) = (f64p(o), f64p(d));
+    let p = surface.hit(o, d)?;
+    if p.to_euclidean()[2].abs() >= height {
+        return None;
+    }
+    // Lit from behind the viewer's shoulder, both sides alike: the cosine between the tangent
+    // plane and the plane facing the lamp.
+    let tangent = surface.q.of(p).normalized().into_inner();
+    let facing = Plane::orthogonal_to(lamp(d)).normalized().into_inner();
+    Some(Seen {
+        light: (0.4 + 0.6 * (tangent | facing).s().abs()) as f32,
+        k: surface.principal(p),
+        t: surface.confocal(p),
+    })
 }
 
 /// The range of each confocal parameter over a surface, from a dense sample of its points
@@ -273,16 +256,23 @@ fn scene() -> &'static Scene {
 
 const LEVELS: f64 = 14.0;
 
-/// The colour of a pixel: Gaussian curvature, lit, darkened on the level lines of the two
-/// confocal parameters (a fixed width in pixels, from the parameter's rate across pixels).
+/// The colour at the canvas point `q`, where `look` sees the surface: Gaussian curvature, lit,
+/// darkened on the level lines of the two confocal parameters (a fixed width on the canvas, from
+/// the parameter's rate across a canvas unit).
 fn shade(
-    seen: &[Option<Seen>],
-    w: usize,
-    x: usize,
-    y: usize,
+    look: impl Fn(Point2) -> Option<Seen>,
+    q: Point2,
     ranges: &[[f64; 2]; 2],
 ) -> Option<Light> {
-    let s = seen[y * w + x]?;
+    let s = look(q)?;
+    // What is seen a canvas unit to each side.
+    let step = |x: f32, y: f32| look(q + Point2::direction(x, y));
+    let around = [
+        step(-1.0, 0.0),
+        step(1.0, 0.0),
+        step(0.0, -1.0),
+        step(0.0, 1.0),
+    ];
     let gauss = (s.k[0] * s.k[1] / 1.2).clamp(-1.0, 1.0);
     let mut lit = (colormap::rdbu(0.5 + 0.5 * gauss as f32)).faded(s.light);
     // The level lines cover the surface in near black and dark red.
@@ -292,17 +282,11 @@ fn shade(
     ];
     for f in 0..2 {
         let spacing = (ranges[f][1] - ranges[f][0]) / LEVELS;
-        let at = |x: usize, y: usize| seen[y * w + x].map(|s| s.t[f] / spacing);
+        let at = |k: usize| around[k].map(|s| s.t[f] / spacing);
         let v = s.t[f] / spacing;
         // Central differences, as numpy.gradient; no line where a neighbour is off the surface.
         let grad = |a: Option<f64>, b: Option<f64>| Some((b? - a?) * 0.5);
-        let (Some(dx), Some(dy)) = (
-            grad(at(x.saturating_sub(1), y), at((x + 1).min(w - 1), y)),
-            grad(
-                at(x, y.saturating_sub(1)),
-                at(x, (y + 1).min(seen.len() / w - 1)),
-            ),
-        ) else {
+        let (Some(dx), Some(dy)) = (grad(at(0), at(1)), grad(at(2), at(3))) else {
             continue;
         };
         let rate = gax::pga2d::Point::direction(dx, dy).ideal_norm() + 1e-9;
@@ -317,36 +301,26 @@ const SECONDS: f32 = 16.0;
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let scene = scene();
-    let top = (c.height as f32 * 0.13) as usize;
-    let (pw, ph) = (c.width / 2, c.height - top);
+    let screen = c.rect();
+    let top = (screen.height() * 0.13).floor();
     let turn = core::f32::consts::TAU * t / SECONDS;
     let views = [(25f32, 3.4f32, f64::INFINITY), (18.0, 3.6, 2.0)];
     for (i, (elevation, extent, height)) in views.into_iter().enumerate() {
+        let panel = Rect::new(0.0, top, screen.width(), screen.height()).column(i, 2);
         let cam = Camera::orbit(
-            pw,
-            ph,
+            panel,
             Point::xyz(0.0, 0.0, 0.0),
             10.0 * extent,
             (-60f32).to_radians() + turn,
             elevation.to_radians(),
             Lens::Parallel(extent),
         );
-        let seen = render(&scene.surfaces[i], &cam, pw, ph, height);
-        let x0 = (i * pw) as f32;
-        let panel = Rect::new(x0, top as f32, x0 + pw as f32, c.height as f32);
         c.clip(panel);
-        let ranges = scene.ranges[i];
-        // Each pixel's place in the panel: its offset from the panel's corner.
-        c.shade(1, |p| {
-            let offset = p - panel.lo;
-            let (px, py) = (offset.e20() as usize, offset.e01() as usize);
-            shade(&seen, pw, px, py, &ranges)
-        });
+        let (surface, ranges) = (&scene.surfaces[i], scene.ranges[i]);
+        c.shade(1, |q| shade(|q| seen(surface, &cam, q, height), q, &ranges));
         c.unclip();
         let label = ["ELLIPSOID", "HYPERBOLOID OF ONE SHEET"][i];
-        // Text scales with the canvas, as drawn at 960x540.
-        let unit = c.unit();
-        let size = (c.height as f32 / 30.0).clamp(7.0 * unit, 12.0 * unit);
+        let size = (screen.height() / 30.0).clamp(7.0, 12.0);
         let bottom_middle = panel.bottom_middle();
         let at = bottom_middle - Point2::direction(0.0, size * 0.8);
         c.text(label, at, size, palette::ink(), Align::Center);

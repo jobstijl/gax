@@ -331,8 +331,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Text, insets and offsets scale with the canvas, as drawn at 960x540.
-    let unit = c.unit();
     let s = scene();
     // The motor shown: along the Gauss-Newton steps, eased between them.
     let progress = (t / PER_STEP).min(SHOWN as f32);
@@ -342,11 +340,10 @@ fn draw(c: &mut Canvas, t: f32) {
     let motor = Motor::interpolate(s.motors[k], s.motors[k + 1], f);
     let step = progress.round() as usize;
     // The sensors, left.
-    let top = 70.0 * unit;
+    let top = 70.0;
     let panel = (h - top) / 2.0;
-    let sensor_rect = |y0: f32, y1: f32| {
-        Rect::new(0.0, y0, w * 0.36, y1).inset(46.0 * unit, 18.0 * unit, 10.0 * unit, 30.0 * unit)
-    };
+    let sensor_rect =
+        |y0: f32, y1: f32| Rect::new(0.0, y0, w * 0.36, y1).inset(46.0, 18.0, 10.0, 30.0);
     sensor_panel(
         c,
         sensor_rect(top, top + panel),
@@ -364,17 +361,15 @@ fn draw(c: &mut Canvas, t: f32) {
         &epipolar_lines(&s.rays_1, motor),
     );
     // The scene, right, from a camera circling it.
-    let (x0, y0) = ((w * 0.37) as usize, (72.0 * unit) as usize);
-    let (pw, ph) = (c.width - x0, c.height - y0);
-    let mut sub = Canvas::new(pw, ph);
+    let (x0, y0) = ((w * 0.37).floor(), 72.0);
+    let mut sub = c.sub(Rect::new(x0, y0, w, h));
     sub.backdrop(
-        palette::top().mix_light(palette::bottom(), y0 as f32 / h),
+        palette::top().mix_light(palette::bottom(), y0 / h),
         palette::bottom(),
     );
     let azimuth = -2.2 + 0.5 * wave(core::f32::consts::TAU * t / (PER_STEP * SHOWN as f32 + HOLD));
     let cam = Camera::orbit(
-        pw,
-        ph,
+        sub.rect(),
         Point::xyz(0.25, 0.0, 2.3),
         6.0,
         azimuth,
@@ -419,15 +414,11 @@ fn draw(c: &mut Canvas, t: f32) {
     .iter()
     .enumerate()
     {
-        let at = sub.rect().lo + Point2::direction(10.0 * unit, (18.0 + 16.0 * k as f32) * unit);
-        sub.text(line, at, 11.0 * unit, palette::ink(), Align::Left);
+        let at = sub.rect().lo + Point2::direction(10.0, 18.0 + 16.0 * k as f32);
+        sub.text(line, at, 11.0, palette::ink(), Align::Left);
     }
-    c.blit(&sub, x0, y0);
-    let key = Axes::new(
-        Rect::new(x0 as f32, h - 80.0 * unit, w, h),
-        [0.0, 1.0],
-        [0.0, 1.0],
-    );
+    c.blit(&sub, Point2::xy(x0, y0));
+    let key = Axes::new(Rect::new(x0, h - 80.0, w, h), [0.0, 1.0], [0.0, 1.0]);
     key.legend(
         c,
         &[

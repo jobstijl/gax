@@ -259,21 +259,19 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
         );
     }
     // The title just inside the lower left corner; where it would not fit across the panel,
-    // broken after its colon and made smaller to fit. Its size is in pixels at 960 by 540,
-    // scaled with the canvas.
-    let unit = c.unit();
+    // broken after its colon and made smaller to fit.
     let corner = ax.px(ax.at(0.0, 0.0) + Point2::direction(0.05, 0.12));
     let room = rect.width() * 0.95;
-    let lines: Vec<&str> = if font::width(title, 11.0 * unit) > room {
+    let lines: Vec<&str> = if font::width(title, 11.0) > room {
         title.split(": ").collect()
     } else {
         vec![title]
     };
     let widest = lines
         .iter()
-        .map(|l| font::width(l, 11.0 * unit))
+        .map(|l| font::width(l, 11.0))
         .fold(0.0, f32::max);
-    let size = 11.0 * unit * (room / widest).min(1.0);
+    let size = 11.0 * (room / widest).min(1.0);
     let up = Point2::direction(0.0, -1.3 * size);
     for (i, line) in lines.iter().rev().enumerate() {
         let at = corner + up.gp(i as f32);
@@ -285,8 +283,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let top = h * 0.12;
     let row_h = (h - top) / 2.0;
     for (r, (case, label)) in cases()
@@ -297,9 +293,7 @@ fn draw(c: &mut Canvas, t: f32) {
         // The row of the case's three modes, under the caption.
         let row = Rect::new(0.0, top + r as f32 * row_h, w, top + (r + 1) as f32 * row_h);
         for mode in 0..3 {
-            let rect = row
-                .column(mode, 3)
-                .inset(6.0 * unit, 6.0 * unit, 6.0 * unit, 6.0 * unit);
+            let rect = row.column(mode, 3).inset(6.0, 6.0, 6.0, 6.0);
             let f = case.frequencies[mode];
             // The oscillation: the cosine of its phase, a phasor's reach across.
             let phase = signal::phasor(core::f64::consts::TAU * f * f64::from(t)).e20();

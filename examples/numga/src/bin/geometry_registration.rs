@@ -15,6 +15,7 @@
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
 
+use gax_numga_examples::canvas::HEIGHT;
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{phasor, wave};
@@ -162,15 +163,7 @@ fn panel(
     title: &str,
 ) {
     let centre = (mean(source) + mean(target)).gp(0.5);
-    let cam = Camera::orbit(
-        rect.width() as usize,
-        rect.height() as usize,
-        centre,
-        15.0,
-        az,
-        0.5,
-        Lens::Perspective(0.6),
-    );
+    let cam = Camera::orbit(rect, centre, 15.0, az, 0.5, Lens::Perspective(0.6));
     let identity = Motor::<(), f64>::translation(0.0, 0.0, 0.0);
     let along = Motor::interpolate(identity, estimate, s);
     let moving: Vec<P> = source.iter().map(|p| along >> *p).collect();
@@ -182,8 +175,8 @@ fn panel(
             scene.dot(*m, Marker::Dot, 5.0, palette::red());
         }
     });
-    // Scaled with the panel, as drawn at 960x540, so the titles fit a small canvas too.
-    let size = 13.0 * rect.height() / 540.0;
+    // Scaled with the panel: 13 in a panel as tall as the canvas.
+    let size = 13.0 * rect.height() / HEIGHT;
     // The title a sixth of the way down the middle, the distance near the bottom.
     let down = |f: f32| rect.top_middle() + Point2::direction(0.0, f * rect.height());
     c.text(title, down(0.17), size, palette::ink(), Align::Center);

@@ -274,8 +274,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The lines in space, turning once around the hyperboloid over the loop.
     let left = screen.part(0.0, 0.0, 0.62, 1.0);
     let cam = Camera::orbit(
-        left.width() as usize,
-        left.height() as usize,
+        left,
         origin(),
         15.0,
         (-60.0f32).to_radians() + core::f32::consts::TAU * phase as f32,
@@ -313,14 +312,12 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         ("TWO COMPLEX-CONJUGATE TRANSVERSALS", palette::yellow())
     };
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
     let h = screen.height();
-    let unit = c.unit();
     let bottom_middle = left.bottom_middle();
     c.text(
         verdict,
-        bottom_middle + up.gp(18.0 * unit),
-        13.0 * unit,
+        bottom_middle + up.gp(18.0),
+        13.0,
         tone,
         Align::Center,
     );
@@ -344,7 +341,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let ax = Axes::new(
         screen
             .part(0.62, 0.0, 1.0, 1.0)
-            .inset(50.0 * unit, h * 0.2, 20.0 * unit, h * 0.28),
+            .inset(50.0, h * 0.2, 20.0, h * 0.28),
         [0.0, 1.0],
         [lo as f32 * 1.15, hi as f32 * 1.15],
     );
@@ -360,10 +357,10 @@ fn draw(c: &mut Canvas, t: f32) {
         "A COMPLEX-CONJUGATE PAIR",
     ];
     // The notes stand under the graph, a little out to its left, one line apart.
-    let first = ax.rect.bottom_left() + Point2::direction(-30.0 * unit, h * 0.13);
+    let first = ax.rect.bottom_left() + Point2::direction(-30.0, h * 0.13);
     for (k, note) in notes.iter().enumerate() {
         let at = first + down.gp(k as f32 * h * 0.028);
-        c.text(note, at, 10.0 * unit, palette::ink(), Align::Left);
+        c.text(note, at, 10.0, palette::ink(), Align::Left);
     }
 
     caption(

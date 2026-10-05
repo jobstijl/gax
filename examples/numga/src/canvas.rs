@@ -8,11 +8,13 @@
 //! a polyline do not shine twice, while separate strokes add up where they cross. Fills and
 //! images cover what is below by their opacity, an affine combination of lights.
 //!
-//! Pixel positions are PGA2D points (`x` to the right, `y` down, pixel centres at `+0.5`), and
-//! distances are the norms of joins.
+//! Drawing is laid out in canvas units: the canvas is [`HEIGHT`] units tall at any size, as
+//! many wide as its aspect gives, and a map (a dilation) takes them to pixels, so a smaller
+//! canvas is a miniature of a larger one. Positions are PGA2D points (`x` to the right, `y`
+//! down), and distances are the norms of joins.
 
 use crate::font::{self, Align};
-use crate::points::{Point2, box_map};
+use crate::points::{Map2, Point2, box_map};
 use gax_colour::{DARK, Light, Srgb};
 
 /// How far AgX's look moves colours away from grey (as warp's).
@@ -22,7 +24,10 @@ const SATURATION: f32 = 1.35;
 /// the stroke's half width, plus a pixel and a half.
 const GLOW: (f32, f32) = (0.16, 2.5);
 
-/// A rectangle of the canvas: its top left and bottom right corners, in pixels.
+/// The height of every canvas in canvas units: the examples are laid out at 960x540.
+pub const HEIGHT: f32 = 540.0;
+
+/// A rectangle of the canvas: its top left and bottom right corners, in canvas units.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rect {
     /// The top left corner.
@@ -32,7 +37,7 @@ pub struct Rect {
 }
 
 impl Rect {
-    /// The rectangle from `(x0, y0)` to `(x1, y1)`, in pixels.
+    /// The rectangle from `(x0, y0)` to `(x1, y1)`, in canvas units.
     pub fn new(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
         Rect {
             lo: Point2::xy(x0, y0),
@@ -45,12 +50,12 @@ impl Rect {
         self.hi - self.lo
     }
 
-    /// The width in pixels.
+    /// The width.
     pub fn width(self) -> f32 {
         self.size().e20()
     }
 
-    /// The height in pixels.
+    /// The height.
     pub fn height(self) -> f32 {
         self.size().e01()
     }
@@ -109,7 +114,7 @@ impl Rect {
         self.lo + Point2::direction(self.width(), 0.0)
     }
 
-    /// The rectangle shrunk by `left`, `top`, `right` and `bottom` pixels.
+    /// The rectangle shrunk by `left`, `top`, `right` and `bottom`.
     pub fn inset(self, left: f32, top: f32, right: f32, bottom: f32) -> Rect {
         Rect {
             lo: self.lo + Point2::direction(left, top),
@@ -128,13 +133,15 @@ impl Rect {
     }
 }
 
-/// A grid of lights.
+/// A grid of lights, drawn on in canvas units.
 #[derive(Clone)]
 pub struct Canvas {
-    /// Width in pixels.
-    pub width: usize,
-    /// Height in pixels.
-    pub height: usize,
+    width: usize,
+    height: usize,
+    /// Pixels per canvas unit, and the maps from canvas units to pixels and back.
+    scale: f32,
+    to_pixels: Map2,
+    from_pixels: Map2,
     px: Vec<Light>,
     /// Drawing is confined to these pixels: `[x0, y0, x1, y1]`, ends excluded.
     clip: [usize; 4],
@@ -233,11 +240,22 @@ fn reach(half: f32) -> f32 {
 }
 
 impl Canvas {
-    /// A dark canvas.
+    /// A dark canvas of `width` by `height` pixels, [`HEIGHT`] canvas units tall.
     pub fn new(width: usize, height: usize) -> Canvas {
+        Canvas::with_scale(width, height, height as f32 / HEIGHT)
+    }
+
+    /// A dark canvas of `width` by `height` pixels at `scale` pixels per canvas unit (at 1, the
+    /// canvas units are pixels, as tests of the drawing take them).
+    pub fn with_scale(width: usize, height: usize, scale: f32) -> Canvas {
+        let unit = [Point2::xy(0.0, 0.0), Point2::xy(1.0, 1.0)];
+        let pixel = [Point2::xy(0.0, 0.0), Point2::xy(scale, scale)];
         Canvas {
             width,
             height,
+            scale,
+            to_pixels: box_map(unit, pixel),
+            from_pixels: box_map(pixel, unit),
             px: vec![DARK; width * height],
             clip: [0, 0, width, height],
             cover: vec![0.0; width * height],
@@ -245,21 +263,39 @@ impl Canvas {
         }
     }
 
-    /// The canvas's unit of size: its height over 540 (the examples are laid out at 960x540),
-    /// so that text, insets and markers scaled by it make a smaller canvas a miniature.
-    pub fn unit(&self) -> f32 {
-        self.height as f32 / 540.0
+    /// A dark canvas over the rectangle `r` of this one, at the same scale (a panel drawn on its
+    /// own, then put in place with [`Canvas::blit`]).
+    pub fn sub(&self, r: Rect) -> Canvas {
+        let size = self.to_pixels.of(r.size());
+        let pixels = |v: f32| v.round().max(0.0) as usize;
+        Canvas::with_scale(pixels(size.e20()), pixels(size.e01()), self.scale)
     }
 
-    /// The whole canvas, as a rectangle.
+    /// The canvas's size in pixels.
+    pub fn pixels(&self) -> [usize; 2] {
+        [self.width, self.height]
+    }
+
+    /// The whole canvas, as a rectangle in canvas units.
     pub fn rect(&self) -> Rect {
-        Rect::new(0.0, 0.0, self.width as f32, self.height as f32)
+        let corner = self
+            .from_pixels
+            .of(Point2::xy(self.width as f32, self.height as f32));
+        Rect {
+            lo: Point2::xy(0.0, 0.0),
+            hi: corner,
+        }
+    }
+
+    /// The pixel point of the canvas point `p`.
+    fn pixel(&self, p: Point2) -> Point2 {
+        self.to_pixels.of(p.unitized())
     }
 
     /// Confine drawing to `r` (a panel), until [`Canvas::unclip`].
     pub fn clip(&mut self, r: Rect) {
-        let [x0, y0] = r.lo.to_euclidean();
-        let [x1, y1] = r.hi.to_euclidean();
+        let [x0, y0] = self.pixel(r.lo).to_euclidean();
+        let [x1, y1] = self.pixel(r.hi).to_euclidean();
         let index = |v: f32, n: usize| (v.max(0.0) as usize).min(n);
         let (x0, y0) = (index(x0, self.width), index(y0, self.height));
         // An inverted rectangle (an inset larger than its panel) clips everything away.
@@ -276,8 +312,13 @@ impl Canvas {
         self.clip = [0, 0, self.width, self.height];
     }
 
-    /// Copy `other` with its top left corner at pixel `(x, y)` (a panel drawn on its own canvas).
-    pub fn blit(&mut self, other: &Canvas, x: usize, y: usize) {
+    /// Copy `other` with its top left corner at `at` (a panel drawn on its own canvas, from
+    /// [`Canvas::sub`]).
+    pub fn blit(&mut self, other: &Canvas, at: Point2) {
+        let [x, y] = self
+            .pixel(at)
+            .to_euclidean()
+            .map(|v| v.round().max(0.0) as usize);
         for row in 0..other.height.min(self.height.saturating_sub(y)) {
             let n = other.width.min(self.width.saturating_sub(x));
             let dst = (y + row) * self.width + x;
@@ -286,7 +327,7 @@ impl Canvas {
         }
     }
 
-    /// The light at pixel `(x, y)`.
+    /// The light at pixel `(x, y)` (for tests).
     pub fn get(&self, x: usize, y: usize) -> Light {
         self.px[y * self.width + x]
     }
@@ -313,9 +354,9 @@ impl Canvas {
         self.px[i] = self.px[i].mix_light(l, opacity);
     }
 
-    /// The segments `segs` as one stroke `width` pixels wide: each pixel's coverage from its
-    /// distance to the nearest segment, then the light added once. Thinner than a pixel, the
-    /// stroke is drawn a pixel wide and fainter, keeping its light.
+    /// The segments `segs` as one stroke `width` wide: each pixel's coverage from its distance
+    /// to the nearest segment, then the light added once. Thinner than a pixel, the stroke is
+    /// drawn a pixel wide and fainter, keeping its light.
     pub fn stroke(&mut self, segs: &[[Point2; 2]], width: f32, l: Light) {
         let caps = vec![[true, true]; segs.len()];
         self.stroke_capped(segs, &caps, width, l);
@@ -331,13 +372,14 @@ impl Canvas {
         width: f32,
         l: Light,
     ) {
+        let width = width * self.scale;
         let half = width.max(1.0) * 0.5;
         let l = l * width.min(1.0);
         for (&[a, b], &cap) in segs.iter().zip(caps) {
             if !(drawable(a) && drawable(b)) {
                 continue;
             }
-            let (a, b) = (a.unitized(), b.unitized());
+            let (a, b) = (self.pixel(a), self.pixel(b));
             let [x0, y0, x1, y1] = span(&[a, b], reach(half), self.clip);
             for y in y0..y1 {
                 for x in x0..x1 {
@@ -360,17 +402,18 @@ impl Canvas {
         self.touched.clear();
     }
 
-    /// The segments `segs` as one line `width` pixels wide that covers what is below by
+    /// The segments `segs` as one line `width` wide that covers what is below by
     /// `opacity` (no glow): an edge or outline in a colour darker than what it crosses, which
     /// added light could not draw.
     pub fn outline(&mut self, segs: &[[Point2; 2]], width: f32, l: Light, opacity: f32) {
+        let width = width * self.scale;
         let half = width.max(1.0) * 0.5;
         let opacity = opacity * width.min(1.0);
         for &[a, b] in segs {
             if !(drawable(a) && drawable(b)) {
                 continue;
             }
-            let (a, b) = (a.unitized(), b.unitized());
+            let (a, b) = (self.pixel(a), self.pixel(b));
             let [x0, y0, x1, y1] = span(&[a, b], half + 1.0, self.clip);
             for y in y0..y1 {
                 for x in x0..x1 {
@@ -393,7 +436,7 @@ impl Canvas {
         self.touched.clear();
     }
 
-    /// A segment `width` pixels wide.
+    /// A segment `width` wide.
     pub fn line(&mut self, a: Point2, b: Point2, width: f32, l: Light) {
         self.stroke(&[[a, b]], width, l);
     }
@@ -413,8 +456,8 @@ impl Canvas {
         if !drawable(centre_point) || !r.is_finite() {
             return;
         }
-        let o = centre_point.unitized();
-        let half = r.max(0.5);
+        let o = self.pixel(centre_point);
+        let half = (r * self.scale).max(0.5);
         let [x0, y0, x1, y1] = span(&[o], reach(half), self.clip);
         for y in y0..y1 {
             for x in x0..x1 {
@@ -429,12 +472,13 @@ impl Canvas {
         }
     }
 
-    /// A circle of radius `r`, `width` pixels wide.
+    /// A circle of radius `r`, `width` wide.
     pub fn ring(&mut self, centre_point: Point2, r: f32, width: f32, l: Light) {
         if !drawable(centre_point) || !r.is_finite() {
             return;
         }
-        let o = centre_point.unitized();
+        let o = self.pixel(centre_point);
+        let (r, width) = (r * self.scale, width * self.scale);
         let half = width.max(1.0) * 0.5;
         let l = l * width.min(1.0);
         let [x0, y0, x1, y1] = span(&[o], r + reach(half), self.clip);
@@ -457,7 +501,7 @@ impl Canvas {
         if poly.len() < 3 || !poly.iter().all(|p| drawable(*p)) {
             return;
         }
-        let poly: Vec<Point2> = poly.iter().map(|p| p.unitized()).collect();
+        let poly: Vec<Point2> = poly.iter().map(|p| self.pixel(*p)).collect();
         let [x0, y0, x1, y1] = span(&poly, 0.0, self.clip);
         if x0 >= x1 || y0 >= y1 {
             return;
@@ -518,10 +562,11 @@ impl Canvas {
         }
     }
 
-    /// Shade every pixel from `n` x `n` samples of `f` at points inside it, averaged; a sample
-    /// of `None` leaves the canvas showing through. Rows are shaded in parallel.
+    /// Shade every pixel from `n` x `n` samples of `f` at the canvas points inside it,
+    /// averaged; a sample of `None` leaves the canvas showing through. Rows are shaded in
+    /// parallel.
     pub fn shade(&mut self, n: usize, f: impl Fn(Point2) -> Option<Light> + Sync) {
-        let (w, n, clip) = (self.width, n.max(1), self.clip);
+        let (w, n, clip, back) = (self.width, n.max(1), self.clip, self.from_pixels);
         let threads = std::thread::available_parallelism().map_or(4, |t| t.get());
         let rows_per = self.height.div_ceil(threads).max(1);
         std::thread::scope(|s| {
@@ -541,7 +586,7 @@ impl Canvas {
                                     (sx as f32 + 0.5) / n as f32,
                                     (sy as f32 + 0.5) / n as f32,
                                 );
-                                if let Some(l) = f(corner + inside) {
+                                if let Some(l) = f(back.of(corner + inside)) {
                                     acc += l;
                                     hit += 1;
                                 }
@@ -557,9 +602,10 @@ impl Canvas {
         });
     }
 
-    /// Text `size` pixels tall, its baseline's anchor at `at`, in the stroke font: one stroke.
+    /// Text `size` tall, its baseline's anchor at `at`, in the stroke font: one stroke, at least
+    /// a pixel wide.
     pub fn text(&mut self, s: &str, at: Point2, size: f32, l: Light, align: Align) {
-        // The font's frame (glyph units, y up) onto the canvas (pixels, y down) at `at`.
+        // The font's frame (glyph units, y up) onto the canvas (y down) at `at`.
         let k = size / 6.0;
         let corner = at + Point2::direction(k, -k);
         let place = box_map([Point2::xy(0.0, 0.0), Point2::xy(1.0, 1.0)], [at, corner]);
@@ -567,7 +613,8 @@ impl Canvas {
             .into_iter()
             .map(|[a, b]| [place.of(a), place.of(b)])
             .collect();
-        self.stroke(&segs, (size / 9.0).max(1.0), l);
+        let width = (size * self.scale / 9.0).max(1.0) / self.scale;
+        self.stroke(&segs, width, l);
     }
 
     /// Each pixel as shown: AgX of its light, the colour that makes on black, as sRGB bytes.

@@ -259,13 +259,11 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Text and its offsets scale with the canvas, as drawn at 960x540.
-    let unit = c.unit();
     let runs = runs();
     let frames = runs[0].1.errors.len();
     let index = ((t / (DT as f32 * EVERY as f32)) as usize).min(frames - 1);
     let seconds = index as f32 * DT as f32 * EVERY as f32;
-    let top = (h / 30.0).clamp(10.0 * unit, 22.0 * unit) * 5.2;
+    let top = (h / 30.0).clamp(10.0, 22.0) * 5.2;
     for (k, (name, run)) in runs.iter().enumerate() {
         let rect =
             Rect::new(0.0, top, w, h)
@@ -315,8 +313,8 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     c.text(
         "GUSTS MOSTLY SIDEWAYS, TURNING SPREADS THEM",
-        screen.hi - Point2::direction(12.0 * unit, 8.0 * unit),
-        11.0 * unit,
+        screen.hi - Point2::direction(12.0, 8.0),
+        11.0,
         palette::grid(),
         Align::Right,
     );

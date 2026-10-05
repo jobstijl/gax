@@ -239,15 +239,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     for (i, title) in titles.iter().enumerate() {
         let rect = panels.column(i, 3);
-        let cam = Camera::orbit(
-            rect.width() as usize,
-            rect.height() as usize,
-            ORIGIN3,
-            6.0,
-            azimuth,
-            0.45,
-            Lens::Parallel(1.45),
-        );
+        let cam = Camera::orbit(rect, ORIGIN3, 6.0, azimuth, 0.45, Lens::Parallel(1.45));
         panel3(c, rect, cam, |s| match i {
             0 => {
                 // The potential on the sphere, the oval, its antipodal loop, the foci, and the

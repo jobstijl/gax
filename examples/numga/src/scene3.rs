@@ -100,7 +100,7 @@ impl Scene3 {
         }
     }
 
-    /// A segment `width` pixels wide.
+    /// A segment `width` wide.
     pub fn seg(&mut self, a: impl Pos3, b: impl Pos3, width: f32, color: Light) {
         self.polyline(&[a.point3(), b.point3()], width, color);
     }
@@ -132,7 +132,7 @@ impl Scene3 {
         }
     }
 
-    /// A marker of `size` pixels.
+    /// A marker of `size`.
     pub fn dot(&mut self, p: impl Pos3, marker: Marker, size: f32, color: Light) {
         let p = p.point3();
         if let Some(q) = self.cam.px(p) {

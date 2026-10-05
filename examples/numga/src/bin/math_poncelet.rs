@@ -196,10 +196,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let outer = ellipse();
     let inners = inners();
     let paths = paths(angle, 5);
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let px = c.unit();
     for (k, (inner, corners)) in inners.into_iter().zip(&paths).enumerate() {
-        let rect = plot::panel(c, k, 2).inset(14.0 * px, 90.0 * px, 14.0 * px, 14.0 * px);
+        let rect = plot::panel(c, k, 2).inset(14.0, 90.0, 14.0, 14.0);
         let ax = Axes::equal(rect, Point2::xy(0.4, -0.25), 2.2);
         let conic = inner.inverse();
         let level = |f: Conic| move |p: Point2| on(f, p.map_coefs(f64::from)) as f32;
@@ -217,11 +215,11 @@ fn draw(c: &mut Canvas, t: f32) {
         // The notes sit a tenth of a unit in from the panel's top left and bottom left corners.
         let unit = ax.scale();
         let title = rect.lo + Point2::direction(0.1, 0.1).gp(unit);
-        c.text(TITLES[k], title, 12.0 * px, colour, Align::Left);
+        c.text(TITLES[k], title, 12.0, colour, Align::Left);
         let miss = gap(corners[5], corners[0]);
         let note = rect.bottom_left() + Point2::direction(0.1, -0.15).gp(unit);
         let text = format!("GAP AFTER FIVE SIDES: {miss:.1E}");
-        c.text(&text, note, 10.0 * px, palette::grid(), Align::Left);
+        c.text(&text, note, 10.0, palette::grid(), Align::Left);
     }
     caption(
         c,

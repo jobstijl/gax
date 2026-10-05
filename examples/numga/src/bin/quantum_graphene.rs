@@ -312,14 +312,10 @@ fn draw(c: &mut Canvas, t: f32) {
     let radius = 0.01 + 0.59 * (0.5 - 0.5 * phasor(tau * phase_t).e20());
     let around = (6.0 * phase_t).fract();
 
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
-
     // The bands, turning.
     let bands_rect = screen.part(0.0, 0.13, 0.42, 1.0);
     let cam = Camera::orbit(
-        bands_rect.width() as usize,
-        bands_rect.height() as usize,
+        bands_rect,
         ORIGIN3,
         23.0,
         (tau * phase_t) as f32 - 1.05,
@@ -328,9 +324,9 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     panel3(c, bands_rect, cam, |s| draw_bands(s, &d.bands));
     // The panels' titles stand a line below the caption, level with the field's.
-    let title = bands_rect.top_middle() + down.gp(12.0 * unit);
+    let title = bands_rect.top_middle() + down.gp(12.0);
     let text = "THE TWO BANDS: CONES WHERE THEY MEET";
-    c.text(text, title, 10.0 * unit, palette::ink(), Align::Center);
+    c.text(text, title, 10.0, palette::ink(), Align::Center);
 
     // The field over the momentum plane, with the loop about K.
     let [valley_k, _] = valleys();
@@ -365,7 +361,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let here = valley_k + (turn(tau * around) >> x()) * radius;
     ax.scatter(c, &[on_map(here)], Marker::Dot, 7.0, palette::orange());
     let label = on_map(valley_k + Vector::new(0.25, 0.2, 0.0));
-    ax.text(c, label, "K", 12.0 * unit, palette::ink(), Align::Left);
+    ax.text(c, label, "K", 12.0, palette::ink(), Align::Left);
     ax.frame(c, "THE PSEUDOSPIN FIELD", "MOMENTUM X (1/A)", "");
 
     // The pseudospin met around the loop, on the sphere, with a gap; and a frame carried along.
@@ -394,8 +390,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cone = 1.0 - gap / field.norm();
     let sphere_rect = screen.part(0.74, 0.13, 1.0, 0.6);
     let cam = Camera::orbit(
-        sphere_rect.width() as usize,
-        sphere_rect.height() as usize,
+        sphere_rect,
         ORIGIN3,
         4.6,
         0.6 + 0.3 * wave(tau * phase_t) as f32,
@@ -410,22 +405,22 @@ fn draw(c: &mut Canvas, t: f32) {
         s.arrow(reach3(start), first_frame * 0.45, 1.5, 6.0, palette::grid());
         s.arrow(reach3(current), carried * 0.45, 2.0, 7.0, palette::green());
     });
-    let title = sphere_rect.top_middle() + down.gp(12.0 * unit);
+    let title = sphere_rect.top_middle() + down.gp(12.0);
     c.text(
         "PSEUDOSPIN ON THE LOOP",
         title,
-        10.0 * unit,
+        10.0,
         palette::ink(),
         Align::Center,
     );
-    let note = sphere_rect.bottom_middle() + down.gp(2.0 * unit);
+    let note = sphere_rect.bottom_middle() + down.gp(2.0);
     let text = format!("PHASE {gamma:+.3} PI");
-    c.text(&text, note, 10.0 * unit, palette::green(), Align::Center);
+    c.text(&text, note, 10.0, palette::green(), Align::Center);
     let text = format!("GAP {gap:.1} EV, CONE {cone:.3} PI");
     c.text(
         &text,
-        note + down.gp(14.0 * unit),
-        9.0 * unit,
+        note + down.gp(14.0),
+        9.0,
         palette::green(),
         Align::Center,
     );

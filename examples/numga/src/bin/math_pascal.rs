@@ -167,13 +167,12 @@ fn draw(c: &mut Canvas, t: f32) {
     let screen = c.rect();
     let phase = f64::from(t / SECONDS);
     let (shape, hexagon, crossing) = scene(angle(phase, 120.0));
-    let unit = c.unit();
 
     // The hexagon, its sides, the conic and Pascal's line, on the left.
     let ax = Axes::equal(
         screen
             .part(0.0, 0.0, 0.58, 1.0)
-            .inset(16.0 * unit, 64.0 * unit, 8.0 * unit, 12.0 * unit),
+            .inset(16.0, 64.0, 8.0, 12.0),
         Point2::xy(1.0, 1.5),
         4.0,
     );
@@ -190,24 +189,18 @@ fn draw(c: &mut Canvas, t: f32) {
     let conic_level = |p: Point2| on(shape, p.map_coefs(f64::from)) as f32;
     ax.contour(c, conic_level, 240, 0.0, 2.0, palette::ink());
     across(&ax, c, crossing[0] & crossing[2], 2.4, palette::red());
-    ax.scatter(c, &hexagon[..5], Marker::Dot, 7.0 * unit, palette::ink());
-    ax.scatter(
-        c,
-        &hexagon[5..],
-        Marker::Dot,
-        11.0 * unit,
-        palette::orange(),
-    );
+    ax.scatter(c, &hexagon[..5], Marker::Dot, 7.0, palette::ink());
+    ax.scatter(c, &hexagon[5..], Marker::Dot, 11.0, palette::orange());
     for (i, p) in crossing.iter().enumerate() {
-        ax.scatter(c, &[*p], Marker::Dot, 11.0 * unit, palette::red());
-        ax.scatter(c, &[*p], Marker::Dot, 7.0 * unit, pairs(i));
+        ax.scatter(c, &[*p], Marker::Dot, 11.0, palette::red());
+        ax.scatter(c, &[*p], Marker::Dot, 7.0, pairs(i));
     }
 
     // Pascal's condition as a curve of its own: the form on the sixth point, twice.
     let ax2 = Axes::equal(
         screen
             .part(0.6, 0.0, 1.0, 0.58)
-            .inset(30.0 * unit, 68.0 * unit, 16.0 * unit, 8.0 * unit),
+            .inset(30.0, 68.0, 16.0, 8.0),
         Point2::xy(0.3, -0.1),
         1.35,
     );
@@ -225,17 +218,17 @@ fn draw(c: &mut Canvas, t: f32) {
         1.6,
         palette::yellow(),
     );
-    ax2.scatter(c, &five, Marker::Dot, 7.0 * unit, palette::ink());
+    ax2.scatter(c, &five, Marker::Dot, 7.0, palette::ink());
     // The note sits just in from the panel's top left corner.
     let note = ax2.rect.lo + Point2::direction(0.05, 0.2).gp(ax2.scale());
     let text = "PASCAL'S CONDITION IS THE CONIC";
-    c.text(text, note, 10.0 * unit, palette::yellow(), Align::Left);
+    c.text(text, note, 10.0, palette::yellow(), Align::Left);
 
     // The join of the three crossings over the turn, at round-off.
     let ax3 = Axes::new(
         screen
             .part(0.6, 0.58, 1.0, 1.0)
-            .inset(52.0 * unit, 30.0 * unit, 16.0 * unit, 40.0 * unit),
+            .inset(52.0, 30.0, 16.0, 40.0),
         [0.0, 1.0],
         [1e-18, 1e-12],
     )
@@ -254,7 +247,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c,
         &[Point2::xy(phase as f32, now)],
         Marker::Dot,
-        8.0 * unit,
+        8.0,
         palette::orange(),
     );
 

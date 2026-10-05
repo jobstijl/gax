@@ -302,16 +302,7 @@ fn colours() -> [Light; 3] {
 
 /// A parallel camera drawing into `view`, `half` world units from its middle to its top.
 fn camera(view: Rect, target: Point3, azimuth: f32, elevation: f32, half: f32) -> Camera {
-    Camera::orbit(
-        view.width() as usize,
-        view.height() as usize,
-        target,
-        20.0,
-        azimuth,
-        elevation,
-        Lens::Parallel(half),
-    )
-    .viewport(view)
+    Camera::orbit(view, target, 20.0, azimuth, elevation, Lens::Parallel(half))
 }
 
 /// The rectangle `height` pixels tall (and as wide as `rect`) centred `drop` pixels below the
@@ -330,8 +321,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let unit = c.unit();
-    let size = (h / 36.0).clamp(7.0 * unit, 14.0 * unit);
+    let size = (h / 36.0).clamp(7.0, 14.0);
     let phase = t / SECONDS;
     let colours = colours();
     let down = Point2::direction(0.0, 1.0);
@@ -362,8 +352,8 @@ fn draw(c: &mut Canvas, t: f32) {
         scene3.polyline(&path[..upto], 1.6, colours[k]);
         let here = path[upto - 1];
         let axis = spins[upto - 1].normalized().into_inner() * 0.4;
-        scene3.arrow(here, axis, 2.0, 8.0 * unit, colours[k]);
-        scene3.dot(here, Marker::Dot, 6.0 * unit, colours[k]);
+        scene3.arrow(here, axis, 2.0, 8.0, colours[k]);
+        scene3.dot(here, Marker::Dot, 6.0, colours[k]);
     }
     c.clip(left);
     scene3.draw(c);

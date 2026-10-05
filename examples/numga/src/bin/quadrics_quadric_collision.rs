@@ -205,8 +205,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let s = scene();
     let offset = offset_at(t);
     let q1 = s.q1;
@@ -227,12 +225,7 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The ellipses, on the left; the lowest tick a little above the corner.
     let ax = Axes::equal(
-        Rect::new(0.0, 64.0 * unit, w * 0.58, h).inset(
-            34.0 * unit,
-            30.0 * unit,
-            10.0 * unit,
-            24.0 * unit,
-        ),
+        Rect::new(0.0, 64.0, w * 0.58, h).inset(34.0, 30.0, 10.0, 24.0),
         Point::xy(-0.4, 0.0),
         3.3,
     );
@@ -282,13 +275,13 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The cubic of the current pose, against the three reference poses.
     // The right side, split into an upper and a lower half.
-    let right = Rect::new(w * 0.6, 60.0 * unit, w - 16.0 * unit, h - 10.0 * unit);
+    let right = Rect::new(w * 0.6, 60.0, w - 16.0, h - 10.0);
     let half = Point2::direction(0.0, right.height() / 2.0);
     let top_rect = Rect {
         lo: right.lo,
         hi: right.hi - half,
     }
-    .inset(40.0 * unit, 20.0 * unit, 0.0, 30.0 * unit);
+    .inset(40.0, 20.0, 0.0, 30.0);
     // The lowest tick a little above the corner, so its label clears the axis's.
     let ax = Axes::new(top_rect, [0.0, 1.0], [-3.5, 3.0]);
     ax.frame(c, "DET Q(L) ALONG THE BLEND", "L", "");
@@ -325,7 +318,7 @@ fn draw(c: &mut Canvas, t: f32) {
         lo: right.lo + half,
         hi: right.hi,
     }
-    .inset(40.0 * unit, 20.0 * unit, 0.0, 30.0 * unit);
+    .inset(40.0, 20.0, 0.0, 30.0);
     let ax = Axes::new(bottom_rect, [-0.6, 0.8], [-1.5, 2.5]);
     ax.frame(c, "MAX DET AGAINST THE NORMAL OFFSET", "", "");
     ax.line(
@@ -358,7 +351,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c,
         Point2::xy(-0.55, 2.2),
         &format!("MAX = {top:+.3}"),
-        11.0 * unit,
+        11.0,
         palette::ink().mix_light(marker, 0.3),
         Align::Left,
     );

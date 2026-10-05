@@ -164,8 +164,7 @@ fn rim(pose: M, radius: f64, z: f64) -> Vec<P> {
 fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     let sway = 0.12 * wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
-        c.width,
-        c.height,
+        c.rect(),
         Point::xyz(0.1, -2.4, 1.25),
         15.5,
         (-55f32).to_radians() + sway,
@@ -250,28 +249,26 @@ fn photograph_panel(c: &mut Canvas, rect: Rect, photo: &Photo) {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width, c.height);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let rig = camera_rig();
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let photo = photograph(&rig, sweep(phase), &[7, 6, 2]);
     // The scene on the left, drawn on its own canvas of the full height (so that the backdrop
     // continues) and set in.
-    let left = (w as f32 * 0.58) as usize;
-    let mut sub = Canvas::new(left, h);
+    let left = (w * 0.58).floor();
+    let mut sub = c.sub(Rect::new(0.0, 0.0, left, h));
     backdrop(&mut sub);
     scene_3d(&mut sub, t, &rig, &photo);
-    c.blit(&sub, 0, 0);
+    c.blit(&sub, screen.lo);
     // The photograph on the right.
-    let (wf, hf) = (w as f32, h as f32);
-    let x0 = left as f32 + wf * 0.01;
-    let x1 = wf - wf * 0.03;
+    let x0 = left + w * 0.01;
+    let x1 = w - w * 0.03;
     let ph = (x1 - x0) * 0.75;
-    let y0 = (hf - ph) * 0.5 + hf * 0.03;
+    let y0 = (h - ph) * 0.5 + h * 0.03;
     let rect = Rect::new(x0, y0, x1, y0 + ph);
     photograph_panel(c, rect, &photo);
-    // Text scales with the canvas, as drawn at 960x540.
-    let unit = c.unit();
-    let s = (hf / 45.0).clamp(7.0 * unit, 12.0 * unit);
+    let s = (h / 45.0).clamp(7.0, 12.0);
     let down = Point2::direction(0.0, 1.0);
     c.text(
         "ON THE SENSOR, 640 X 480 PIXELS",

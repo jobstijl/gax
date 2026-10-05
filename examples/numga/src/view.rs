@@ -1,6 +1,7 @@
-//! From the world to pixels: a 2D view (a rectangle of the plane) and a 3D camera whose pose is a
+//! From the world to the canvas: a 2D view (a rectangle of the plane) and a 3D camera whose pose is a
 //! PGA3D motor (`Motor::look_at`), with perspective or parallel projection, and the ray through
-//! each pixel for the ray-traced examples. Both end in a map of the plane onto the canvas.
+//! each canvas point for the ray-traced examples. Both end in a map of the plane onto the
+//! canvas.
 
 use crate::canvas::Rect;
 use crate::points::{Map2, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, box_map, from_above};
@@ -14,21 +15,20 @@ pub struct View2 {
     /// The plane onto the canvas, and back.
     to_px: Map2,
     from_px: Map2,
-    /// Pixels per world unit.
+    /// Canvas units per world unit.
     pub scale: f32,
     /// The world's half width.
     half_width: f32,
 }
 
 impl View2 {
-    /// The view of a `width` x `height` canvas.
-    pub fn new(width: usize, height: usize, centre: impl Pos2, half_height: f32) -> View2 {
-        let scale = height as f32 * 0.5 / half_height;
-        let half_width = width as f32 * 0.5 / scale;
+    /// The view filling the canvas rectangle `canvas`.
+    pub fn new(canvas: Rect, centre: impl Pos2, half_height: f32) -> View2 {
+        let scale = canvas.height() * 0.5 / half_height;
+        let half_width = canvas.width() * 0.5 / scale;
         // The world's top left and bottom right corners onto the canvas's.
         let centre = centre.point2().unitized();
         let half = Point2::direction(half_width, -half_height);
-        let canvas = Rect::new(0.0, 0.0, width as f32, height as f32);
         let to_px = box_map([centre - half, centre + half], [canvas.lo, canvas.hi]);
         View2 {
             to_px,
@@ -38,12 +38,12 @@ impl View2 {
         }
     }
 
-    /// The pixel of a world point.
+    /// The canvas point of a world point.
     pub fn px(&self, p: impl Pos2) -> Point2 {
         self.to_px.of(p.point2())
     }
 
-    /// The world point at pixel `q`.
+    /// The world point at the canvas point `q`.
     pub fn world(&self, q: Point2) -> Point2 {
         self.from_px.of(q).unitized()
     }
@@ -75,14 +75,9 @@ pub struct Camera {
 }
 
 impl Camera {
-    /// A camera at `eye` looking at `target` with `+z` up in the world.
-    pub fn looking(
-        width: usize,
-        height: usize,
-        eye: impl Pos3,
-        target: impl Pos3,
-        lens: Lens,
-    ) -> Camera {
+    /// A camera at `eye` looking at `target` with `+z` up in the world, drawing into the canvas
+    /// rectangle `viewport`.
+    pub fn looking(viewport: Rect, eye: impl Pos3, target: impl Pos3, lens: Lens) -> Camera {
         Camera {
             pose: Motor::look_at(
                 eye.point3(),
@@ -90,15 +85,14 @@ impl Camera {
                 Point::direction(0.0, 0.0, 1.0),
             ),
             lens,
-            viewport: Rect::new(0.0, 0.0, width as f32, height as f32),
+            viewport,
         }
     }
 
     /// A camera on a sphere about `target`: `distance` away, at `azimuth` about the world's `z`
     /// axis (from `+x`) and `elevation` above the horizontal, both in radians.
     pub fn orbit(
-        width: usize,
-        height: usize,
+        viewport: Rect,
         target: impl Pos3,
         distance: f32,
         azimuth: f32,
@@ -111,27 +105,24 @@ impl Camera {
         let turn = Motor::rotation_about(0.0, 0.0, 1.0, azimuth)
             * Motor::rotation_about(0.0, -1.0, 0.0, elevation);
         let eye = target + (turn >> Point::direction(distance, 0.0, 0.0));
-        Camera::looking(width, height, eye, target, lens)
+        Camera::looking(viewport, eye, target, lens)
     }
 
     /// A parallel camera orbiting the origin (see [`Camera::orbit`]) that draws into the canvas
-    /// rectangle `view` at `scale` pixels per world unit.
+    /// rectangle `view` at `scale` canvas units per world unit.
     pub fn parallel(view: Rect, scale: f32, azimuth: f32, elevation: f32) -> Camera {
-        let height = view.height();
         Camera::orbit(
-            view.width() as usize,
-            height as usize,
+            view,
             ORIGIN3,
             20.0,
             azimuth,
             elevation,
-            Lens::Parallel(0.5 * height / scale),
+            Lens::Parallel(0.5 * view.height() / scale),
         )
-        .viewport(view)
     }
 
     /// The same camera drawing into `rect` of a larger canvas (a panel): its view fills the
-    /// rectangle, and [`Camera::px`] and [`Camera::ray`] work in the canvas's pixels. Pair it
+    /// rectangle, and [`Camera::px`] and [`Camera::ray`] work in the canvas's units. Pair it
     /// with `canvas.clip(rect)` to keep the drawing inside.
     pub fn viewport(self, rect: Rect) -> Camera {
         Camera {
@@ -140,7 +131,7 @@ impl Camera {
         }
     }
 
-    /// Pixels per unit of the image plane: at unit depth (perspective) or per world unit
+    /// Canvas units per unit of the image plane: at unit depth (perspective) or per world unit
     /// (parallel).
     fn focal(&self) -> f32 {
         let half = 0.5 * self.viewport.height();

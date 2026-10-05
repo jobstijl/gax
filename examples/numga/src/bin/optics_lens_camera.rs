@@ -481,7 +481,6 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     let z = gax::pga3d::Plane::new(0.0, 0.0, 1.0, 0.0);
     let at = |h: f64| gax::pga3d::Plane::new(0.0, 1.0, 0.0, -h);
     let heights = [radius, 0.6, 0.35];
-    let unit = c.unit();
     let names = ["FRONT", "REAR", "SENSOR"];
     for ((plane, h), name) in exposure.planes.iter().zip(heights).zip(names) {
         let (top, bottom) = (*plane ^ z ^ at(h), *plane ^ z ^ at(-h));
@@ -498,13 +497,13 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         } else {
             pga2d::Motor::translation(0.0, 0.12) >> top
         };
-        ax.text(c, label, name, 7.0 * unit, palette::grid(), Align::Center);
+        ax.text(c, label, name, 7.0, palette::grid(), Align::Center);
     }
     let pts: Vec<_> = scene().iter().map(|p| flat.of(*p)).collect();
     let layer = [palette::red(), palette::green(), palette::blue()];
     let tone = |k: usize| layer[k].mix_light(palette::ink(), 0.3);
     for (k, chunk) in pts.chunks(20).enumerate() {
-        ax.scatter(c, chunk, Marker::Dot, 3.5 * unit, tone(k));
+        ax.scatter(c, chunk, Marker::Dot, 3.5, tone(k));
     }
     // Where the collineation puts each point: its image cone's vertex, the point's focus.
     let images: Vec<_> = scene()
@@ -512,7 +511,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         .map(|p| flat.of(exposure.collineation.of(*p)))
         .collect();
     for (k, chunk) in images.chunks(20).enumerate() {
-        ax.scatter(c, chunk, Marker::Cross, 4.0 * unit, (tone(k)).faded(0.9));
+        ax.scatter(c, chunk, Marker::Cross, 4.0, (tone(k)).faded(0.9));
     }
     for ray in 0..3 {
         let fan: Vec<_> = exposure.legs.iter().map(|leg| flat.of(leg[ray])).collect();
@@ -572,7 +571,7 @@ fn draw(c: &mut Canvas, t: f32) {
             Align::Left,
         );
     }
-    // The stills, below it, side by side, at full size on a 960 x 540 canvas.
+    // The stills, below it, side by side.
     let thumb_size = THUMB.map(|n| (n as f32 * k / 1.5).max(4.0) as usize);
     let stills = stills_images(thumb_size[0], thumb_size[1]);
     let gap = ((width - 3.0 * thumb_size[1] as f32) / 2.0).max(2.0);

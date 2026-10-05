@@ -598,8 +598,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Text, insets and offsets scale with the canvas, as drawn at 960x540.
-    let unit = c.unit();
     let (lap, space_lap) = runs();
     let (poses, uncertainty, k) =
         between(&lap.iterates, t, gax::pga2d::Motor::interpolate, |c, f| {
@@ -609,8 +607,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let positions =
         |ps: &[plane::M]| -> Vec<plane::P> { ps.iter().map(|p| plane::position(*p)).collect() };
     let (truth, dead) = (positions(&lap.truth), positions(&lap.dead));
-    let left = Rect::new(0.0, 50.0 * unit, w * 0.6, h);
-    let margin = 10.0 * unit;
+    let left = Rect::new(0.0, 50.0, w * 0.6, h);
+    let margin = 10.0;
     let ax = Axes::fitting(
         left.inset(margin, margin, margin, margin),
         truth.iter().chain(&dead).copied(),
@@ -645,11 +643,10 @@ fn draw(c: &mut Canvas, t: f32) {
         gax::pga3d::Motor::interpolate,
         |c, f| c.gp(f),
     );
-    let (x0, y0) = ((w * 0.6) as usize, (60.0 * unit) as usize);
-    let (pw, ph) = (c.width - x0, c.height - y0);
-    let mut sub = Canvas::new(pw, ph);
+    let (x0, y0) = ((w * 0.6).floor(), 60.0);
+    let mut sub = c.sub(Rect::new(x0, y0, w, h));
     sub.backdrop(
-        palette::top().mix_light(palette::bottom(), y0 as f32 / h),
+        palette::top().mix_light(palette::bottom(), y0 / h),
         palette::bottom(),
     );
     let positions = |ps: &[space::M]| -> Vec<gax::pga3d::Point<(), f64>> {
@@ -662,8 +659,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .fold(gax::pga3d::Point::zero(), |a, p| a + *p)
         .unitized();
     let cam = Camera::orbit(
-        pw,
-        ph,
+        sub.rect(),
         centre,
         2.6,
         -1.2 + 0.25 * t,
@@ -686,12 +682,12 @@ fn draw(c: &mut Canvas, t: f32) {
     scene.draw(&mut sub);
     sub.text(
         "A SHORT LAP IN SPACE (PGA3D)",
-        sub.rect().lo + Point2::direction(8.0 * unit, 16.0 * unit),
-        11.0 * unit,
+        sub.rect().lo + Point2::direction(8.0, 16.0),
+        11.0,
         palette::ink(),
         Align::Left,
     );
-    c.blit(&sub, x0, y0);
+    c.blit(&sub, Point2::xy(x0, y0));
     caption(
         c,
         "ODOMETRY: CLOSING THE LAP",
@@ -702,15 +698,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // Two lines in the bottom right corner of the plane's side.
     c.text(
         &format!("GRADIENT {gradient:.1e}"),
-        left.hi - Point2::direction(12.0 * unit, 32.0 * unit),
-        12.0 * unit,
+        left.hi - Point2::direction(12.0, 32.0),
+        12.0,
         palette::grid(),
         Align::Right,
     );
     c.text(
         &format!("STEP {} / {ITERATIONS}, DAMPED TO 1/5", k.min(ITERATIONS)),
-        left.hi - Point2::direction(12.0 * unit, 14.0 * unit),
-        12.0 * unit,
+        left.hi - Point2::direction(12.0, 14.0),
+        12.0,
         palette::ink(),
         Align::Right,
     );

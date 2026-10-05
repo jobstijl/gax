@@ -391,8 +391,7 @@ fn wave_at(modes: &([f64; 2], [B; 2]), z: f64, tau: f64) -> B {
 /// The wave in 3D, the beam running across the screen: world x along the beam (scaled),
 /// world y and z the field's x and y.
 fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, label: &str) {
-    let unit = unit(c);
-    let view = rect.inset(0.0, 20.0 * unit, 0.0, 0.0);
+    let view = rect.inset(0.0, 20.0, 0.0, 0.0);
     let length = 6.0;
     let cam = Camera::parallel(view, rect.width() * 0.125, -1.1, 0.35);
     c.clip(rect);
@@ -418,35 +417,29 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
         let z = Z_MAX * k as f64 / 20.0;
         let (e, b) = arrows(wave_at(modes, z, tau));
         for (v, col) in [(e, palette::orange()), (b, palette::sky())] {
-            sc.arrow(on_beam(z), across(v), 1.2, 5.0 * unit, col);
+            sc.arrow(on_beam(z), across(v), 1.2, 5.0, col);
         }
     }
     sc.draw(c);
     c.unclip();
-    // 11 pixels on a 960 x 540 canvas, smaller on a small one, and no wider than the panel.
+    // 11, and no wider than the panel.
     let size = (rect.height() / 21.0)
-        .clamp(5.0 * unit, 11.0 * unit)
+        .clamp(5.0, 11.0)
         .min(rect.width() / gax_numga_examples::font::width(label, 1.0));
     let top_middle = rect.top_middle();
     let at = top_middle + Point2::direction(0.0, size * 14.0 / 11.0);
     c.text(label, at, size, palette::ink(), Align::Center);
 }
 
-/// The canvas's height over 540: pixel sizes scale with it.
-fn unit(c: &Canvas) -> f32 {
-    c.unit()
-}
-
 /// How much smaller a plot's own text is drawn than in a plot 240 pixels tall (numga's
-/// canvas), down to half, on a 960 x 540 canvas (`unit` 1), scaled with the canvas.
-fn text_scale(rect: Rect, unit: f32) -> f32 {
-    (rect.height() / 240.0).clamp(0.5 * unit, unit)
+/// canvas), down to half.
+fn text_scale(rect: Rect) -> f32 {
+    (rect.height() / 240.0).clamp(0.5, 1.0)
 }
 
 fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
     let s = scans();
-    let unit = unit(c);
-    let inset = rect.inset(40.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit);
+    let inset = rect.inset(40.0, 26.0, 10.0, 34.0);
     let ax = Axes::new(inset, [0.05, 1.5], [1e-4, 3.0]).log_y();
     ax.frame(c, "SMALLEST SINGULAR VALUE", "PHASE SPEED", "");
     let k = s
@@ -467,7 +460,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
             .map(|(v, m)| Point::xy(*v, m.max(1e-4)))
             .collect();
         ax.polyline(c, &pts, if i == 1 { 1.0 } else { 1.5 }, col.faded(0.9));
-        ax.scatter(c, &pts[k..=k], Marker::Dot, 6.0 * unit, col);
+        ax.scatter(c, &pts[k..=k], Marker::Dot, 6.0, col);
     }
     ax.line(
         c,
@@ -488,8 +481,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
 fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     let (_, fields) = scans().crystal;
     let origin = Point::xy(0.0, 0.0);
-    let unit = unit(c);
-    let inset = rect.inset(14.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit);
+    let inset = rect.inset(14.0, 26.0, 10.0, 34.0);
     let ax = Axes::equal(inset, origin, 1.3);
     ax.frame(c, "CRYSTAL MODES", "X", "");
     let faint = palette::grid().faded(0.6);
@@ -502,12 +494,12 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
         let a = e.normalized().into_inner();
         let along = |k: f64| origin + Point::direction(a.e1(), a.e2()).gp(k);
         ax.dashed(c, &[along(-1.0), along(1.0)], 1.0, 4.0, col.faded(0.7));
-        ax.arrow(c, origin, along(1.0), 2.5, 9.0 * unit, col);
+        ax.arrow(c, origin, along(1.0), 2.5, 9.0, col);
         ax.scatter(
             c,
             &[along(phasor(tau).e20())],
             Marker::Dot,
-            7.0 * unit,
+            7.0,
             palette::ink(),
         );
     }
@@ -515,16 +507,15 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     let corner = ax.at(0.0, 1.0);
     let slow = corner + Point2::direction(0.1, -0.2);
     let fast = corner + Point2::direction(0.1, -0.45);
-    let size = 10.0 * text_scale(rect, unit);
+    let size = 10.0 * text_scale(rect);
     ax.text(c, slow, "SLOW", size, palette::red(), Align::Left);
     ax.text(c, fast, "FAST", size, palette::blue(), Align::Left);
 }
 
 fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
     let s = scans();
-    let unit = unit(c);
     let ax = Axes::equal(
-        rect.inset(14.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit),
+        rect.inset(14.0, 26.0, 10.0, 34.0),
         Point::xy(0.0, 0.05),
         1.1,
     );
@@ -561,12 +552,12 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
             .iter()
             .map(|v| place(s.angles[i], *v))
             .collect();
-        ax.scatter(c, &hits, Marker::Dot, 7.0 * unit, col);
+        ax.scatter(c, &hits, Marker::Dot, 7.0, col);
         ax.text(
             c,
             Point::xy(-1.0, -0.62 - 0.17 * m as f64),
             name,
-            9.0 * text_scale(rect, unit),
+            9.0 * text_scale(rect),
             col,
             Align::Left,
         );
@@ -579,8 +570,7 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
     let s = scans();
     #[allow(clippy::disallowed_methods)] // the refractive index √(εμ): a physical law
     let n = (EPS_GLASS * MU_GLASS).sqrt();
-    let unit = unit(c);
-    let inset = rect.inset(40.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit);
+    let inset = rect.inset(40.0, 26.0, 10.0, 34.0);
     let ax = Axes::new(inset, [-0.6, 0.6], [0.0, 1.0]);
     ax.frame(c, "FRESNEL DRAG", "MEDIUM SPEED", "");
     let fine = linspace(-0.6, 0.6, 121);
@@ -602,15 +592,15 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
             .map(|(b, v)| Point::xy(*b, *v))
             .collect()
     };
-    ax.scatter(c, &pts(&s.drag.0), Marker::Dot, 6.0 * unit, down);
-    ax.scatter(c, &pts(&s.drag.1), Marker::Square, 6.0 * unit, up);
+    ax.scatter(c, &pts(&s.drag.0), Marker::Dot, 6.0, down);
+    ax.scatter(c, &pts(&s.drag.1), Marker::Square, 6.0, up);
     let now = [
         Point::xy(beta, add_speeds(1.0 / n, beta)),
         Point::xy(beta, add_speeds(1.0 / n, -beta)),
     ];
     let cursor = palette::ink().faded(0.5);
     ax.line(c, Point::xy(beta, 0.0), Point::xy(beta, 1.0), 1.0, cursor);
-    ax.scatter(c, &now, Marker::Ring, 11.0 * unit, palette::ink());
+    ax.scatter(c, &now, Marker::Ring, 11.0, palette::ink());
     ax.legend(c, &[("WITH FLOW", down), ("AGAINST", up)]);
 }
 
@@ -623,8 +613,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = scans();
     // Below the caption (its subtitle's baseline three caption sizes down), two rows: the
     // waves above, the plots below, by fractions across.
-    let unit = c.unit();
-    let top = (h / 30.0).clamp(10.0 * unit, 22.0 * unit) * 3.0 + 4.0 * unit;
+    let top = (h / 30.0).clamp(10.0, 22.0) * 3.0 + 4.0;
     let mid = top + (h - top) * 0.5;
     let upper = |x0: f32, x1: f32| Rect::new(w * x0, top, w * x1, mid);
     let lower = |x0: f32, x1: f32| Rect::new(w * x0, mid, w * x1, h);

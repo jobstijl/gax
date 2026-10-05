@@ -332,8 +332,6 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let down = Point2::direction(0.0, 1.0);
     let generator = vortex();
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
@@ -346,14 +344,12 @@ fn draw(c: &mut Canvas, t: f32) {
         .collect();
     hemisphere(c, Point2::xy(w * 0.26, h * 0.54), big, &trio);
     // Every shape on the right, in a grid of four by three.
-    let grid = Rect::new(w * 0.52, h * 0.13, w - 8.0 * unit, h - 4.0 * unit);
+    let grid = Rect::new(w * 0.52, h * 0.13, w - 8.0, h - 4.0);
     let (cw, ch) = (grid.width() / 4.0, grid.height() / 3.0);
-    let r = (cw.min(ch) * 0.5 - 12.0 * unit).max(4.0 * unit);
+    let r = (cw.min(ch) * 0.5 - 12.0).max(4.0);
     // The labels fit the cells, the longest name included.
     let longest = shapes().iter().map(|s| s.0.len()).max().unwrap_or(1) as f32;
-    let label = (h / 50.0)
-        .clamp(7.0 * unit, 11.0 * unit)
-        .min(cw / (longest + 1.0));
+    let label = (h / 50.0).clamp(7.0, 11.0).min(cw / (longest + 1.0));
     for (k, (name, q, col)) in shapes().into_iter().enumerate() {
         // The middle of the cell, raised by half a label.
         let (i, j) = ((k % 4) as f32, (k / 4) as f32);

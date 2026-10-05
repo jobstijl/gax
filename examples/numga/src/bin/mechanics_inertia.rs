@@ -463,7 +463,6 @@ fn draw(c: &mut Canvas, t: f32) {
     let sc = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let u = c.unit();
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(sc.motors.len() - 1);
     let m = sc.motors[k];
     caption(
@@ -496,8 +495,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let ellipsoid = frame.reverse() >> stretch;
     let left = w * 0.55;
     let cam = Camera::orbit(
-        left as usize,
-        c.height,
+        Rect::new(0.0, 0.0, left, h),
         Point::xyz(0.0, 0.0, 0.0),
         9.0,
         0.5 + 0.2 * t,
@@ -512,7 +510,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let col = s.lit(a, b, d, palette::purple().faded(0.3));
         s.tri(a, b, d, col, 0.55);
         for (x, y) in [(a, b), (b, d), (d, a)] {
-            s.seg(x, y, 1.2 * u, palette::ink().faded(0.7));
+            s.seg(x, y, 1.2, palette::ink().faded(0.7));
         }
     }
     // The principal axes and the second-moment ellipsoid, in the recovered frame: the images
@@ -526,8 +524,8 @@ fn draw(c: &mut Canvas, t: f32) {
     ];
     for (k, axis) in axes.into_iter().enumerate() {
         let tip = ellipsoid.of(origin + axis);
-        s.seg(ellipsoid.of(origin - axis), tip, 2.2 * u, colours[k]);
-        s.dot(tip, Marker::Dot, 6.0 * u, colours[k]);
+        s.seg(ellipsoid.of(origin - axis), tip, 2.2, colours[k]);
+        s.dot(tip, Marker::Dot, 6.0, colours[k]);
         // The ellipse in the plane of the other two axes.
         let start = origin + axes[(k + 1) % 3];
         let ring: Vec<simplex::P> = (0..=64)
@@ -536,14 +534,14 @@ fn draw(c: &mut Canvas, t: f32) {
                 ellipsoid.of(turn >> start)
             })
             .collect();
-        s.polyline(&ring, 1.2 * u, colours[k].faded(0.6));
+        s.polyline(&ring, 1.2, colours[k].faded(0.6));
     }
     s.draw(c);
     // Sampling a tetrahedron's inertia: the error of a grid and of Monte Carlo against the
     // lumped inertia, revealed over the loop.
     let right = Rect::new(left, 0.0, w, h);
     let ax = Axes::new(
-        right.inset(60.0 * u, 110.0 * u, 24.0 * u, 64.0 * u),
+        right.inset(60.0, 110.0, 24.0, 64.0),
         [1.0, 1e5],
         [1e-17, 1e5],
     )
@@ -557,7 +555,7 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     let (g, r) = (reveal(&sc.grid), reveal(&sc.monte_carlo));
     ax.polyline(c, g, 1.8, palette::orange());
-    ax.scatter(c, g, Marker::Dot, 5.0 * u, palette::orange());
+    ax.scatter(c, g, Marker::Dot, 5.0, palette::orange());
     ax.polyline(c, r, 1.4, palette::sky());
     // The lumped inertia takes four points; gax's mesh moments agree with it to rounding.
     let floor = 2e-16;
@@ -565,8 +563,8 @@ fn draw(c: &mut Canvas, t: f32) {
         Chart::xy(4.0, floor),
         Chart::xy(4.0, sc.mesh.max(floor) * 8.0),
     );
-    ax.scatter(c, &[lumped], Marker::Star, 13.0 * u, palette::green());
-    ax.scatter(c, &[mesh], Marker::Square, 9.0 * u, palette::yellow());
+    ax.scatter(c, &[lumped], Marker::Star, 13.0, palette::green());
+    ax.scatter(c, &[mesh], Marker::Square, 9.0, palette::yellow());
     ax.legend(
         c,
         &[

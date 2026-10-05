@@ -314,9 +314,8 @@ const SCENE: f32 = 7.0;
 /// A camera orbiting the origin at `azimuth` and `elevation`, parallel, showing `half` units
 /// above and below the centre of the panel `rect`.
 fn orbit(rect: Rect, azimuth: f32, elevation: f32, half: f32) -> Camera {
-    let (w, h) = (rect.width() as usize, rect.height() as usize);
     let origin = P3::xyz(0.0, 0.0, 0.0);
-    Camera::orbit(w, h, origin, 20.0, azimuth, elevation, Lens::Parallel(half))
+    Camera::orbit(rect, origin, 20.0, azimuth, elevation, Lens::Parallel(half))
 }
 
 /// A surface `radius(d) d` (or the image `f(d)` of the unit sphere) in a scene: longitude by
@@ -356,8 +355,6 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
     let sc_data = scenes();
     let screen = c.rect();
     let h = screen.height();
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     // The band of the panels, under the caption.
     let band = screen.inset(0.0, h * 0.16, 0.0, h * 0.14);
     let down = Point2::direction(0.0, 1.0);
@@ -383,27 +380,21 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
         let (head, foot) = (top_middle(rect), bottom_middle(rect));
         c.text(
             title,
-            head + down.gp(14.0 * unit),
-            13.0 * unit,
+            head + down.gp(14.0),
+            13.0,
             palette::ink(),
             Align::Center,
         );
         c.text(
             sub,
-            head + down.gp(30.0 * unit),
-            10.0 * unit,
+            head + down.gp(30.0),
+            10.0,
             palette::grid(),
             Align::Center,
         );
         let deflection = format!("DEFLECTION {:.1} DEG", degrees(flux, driving));
-        let at = foot + down.gp(22.0 * unit);
-        c.text(
-            &deflection,
-            at,
-            11.0 * unit,
-            palette::orange(),
-            Align::Center,
-        );
+        let at = foot + down.gp(22.0);
+        c.text(&deflection, at, 11.0, palette::orange(), Align::Center);
     }
     caption(
         c,
@@ -416,8 +407,6 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     let sd = scenes();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     let angle = f64::from(s) * core::f64::consts::TAU;
     // The wheel from above, the probe axis through the hub.
     let left = screen
@@ -443,7 +432,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     ax.line(c, hub - reach, hub + reach, 2.5, palette::yellow());
     let note = ax.at(0.0, 1.0) + Point2::direction(0.1, -0.3);
     let text = "THREE UNIT-MASS ARMS, 120 DEG APART";
-    ax.text(c, note, text, 11.0 * unit, palette::ink(), Align::Left);
+    ax.text(c, note, text, 11.0, palette::ink(), Align::Left);
     // The moments about axes in the wheel's plane, as a polar plot traced up to the probe.
     let right = screen
         .column(1, 2)
@@ -488,7 +477,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     let transverse = moment(&sd.inertia, probe(angle));
     let note = pax.at(0.0, 0.0) + Point2::direction(0.0, rmax as f32 * 0.05);
     let text = format!("ABOUT Z: {axial:.3} = 2 X {transverse:.3}");
-    pax.text(c, note, &text, 11.0 * unit, palette::ink(), Align::Left);
+    pax.text(c, note, &text, 11.0, palette::ink(), Align::Left);
     caption(
         c,
         "SYMMETRY: THREE ARMS, AXIALLY SYMMETRIC INERTIA",
@@ -521,8 +510,6 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
     let sd = scenes();
     let screen = c.rect();
     let h = screen.height();
-    // Lengths in pixels at 960 by 540, scaled with the canvas.
-    let unit = c.unit();
     // The band of the panels, under the caption.
     let band = screen.inset(0.0, h * 0.16, 0.0, h * 0.12);
     let down = Point2::direction(0.0, 1.0);
@@ -562,15 +549,15 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
         let (head, foot) = (top_middle(rect), bottom_middle(rect));
         c.text(
             title,
-            head + down.gp(14.0 * unit),
-            13.0 * unit,
+            head + down.gp(14.0),
+            13.0,
             palette::ink(),
             Align::Center,
         );
         c.text(
             sub,
-            foot + down.gp(18.0 * unit),
-            10.0 * unit,
+            foot + down.gp(18.0),
+            10.0,
             palette::grid(),
             Align::Center,
         );

@@ -244,8 +244,7 @@ fn rose() -> Light {
 fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     let turn = 0.25 * wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
-        c.width,
-        c.height,
+        c.rect(),
         P::xyz(0.0, 0.3, 1.6),
         15.0,
         (-60f32).to_radians() + turn,
@@ -332,18 +331,16 @@ fn screen_panel(
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width, c.height);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let sc = scene(phase);
     // The shadows on the left, on a canvas of their own.
-    let left = (w as f32 * 0.42) as usize;
-    let mut sub = Canvas::new(left, h);
+    let left = (w * 0.42).floor();
+    let mut sub = c.sub(Rect::new(0.0, 0.0, left, h));
     backdrop(&mut sub);
     shadow_scene(&mut sub, t, &sc);
-    let (wf, hf) = (w as f32, h as f32);
-    // Text scales with the canvas, as drawn at 960x540.
-    let unit = c.unit();
-    let s = (hf / 40.0).clamp(7.0 * unit, 13.0 * unit);
+    let s = (h / 40.0).clamp(7.0, 13.0);
     // The key in the bottom left corner: a heading on two lines, and a row per light, each `s`
     // in from the left edge and some lines up from the bottom.
     let corner = sub.rect().bottom_left();
@@ -368,13 +365,13 @@ fn draw(c: &mut Canvas, t: f32) {
         let at = baseline + Point2::direction(s * 2.0, 0.0);
         sub.text(label, at, s * 0.75, palette::ink(), Align::Left);
     }
-    c.blit(&sub, 0, 0);
+    c.blit(&sub, screen.lo);
     // The two cameras on the right.
-    let panel = ((wf - left as f32) / 2.0 - wf * 0.035).min(hf * 0.62);
-    let top = (hf - panel) * 0.55;
-    let x0 = left as f32 + wf * 0.035;
+    let panel = ((w - left) / 2.0 - w * 0.035).min(h * 0.62);
+    let top = (h - panel) * 0.55;
+    let x0 = left + w * 0.035;
     let rect_1 = Rect::new(x0, top, x0 + panel, top + panel);
-    let x1 = x0 + panel + wf * 0.035;
+    let x1 = x0 + panel + w * 0.035;
     let rect_2 = Rect::new(x1, top, x1 + panel, top + panel);
     let v = &sc.views;
     screen_panel(c, rect_1, "CAMERA 1", sc.rig_1, &v.image_1, None);
