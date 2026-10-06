@@ -410,6 +410,34 @@ fn jacobi_rotation<T: Real>(app: T, aqq: T, apq: T) -> (T, T) {
     (c, t * c)
 }
 
+/// One where two columns with Gram entries `alpha = |a|²`, `beta = |b|²` and `gamma = a · b`
+/// are not yet orthogonal to working precision, `|γ| > ε |a| |b|`, zero where they are. A zero
+/// column counts as orthogonal to everything; the norms are taken apart so that the test
+/// holds up to columns of length `10¹⁵⁴`.
+#[inline(always)]
+fn not_orthogonal<T: Real>(alpha: T, beta: T, gamma: T) -> T {
+    let bound = T::epsilon() * alpha.sqrt() * beta.sqrt();
+    T::select_lt(bound, gamma.abs(), T::one(), T::zero())
+}
+
+/// The rotation of one-sided Jacobi for two columns with Gram entries `alpha`, `beta`,
+/// `gamma`: the one that makes them orthogonal, or none where they already are. Rotating an
+/// orthogonal pair does harm: for columns of equal length the rotation is an eighth of a turn
+/// however small `γ` is, which mixes two orthogonal columns again. A rank-deficient map
+/// whose null space needs such a pair (columns `(1, 0)`, `(0, 1)` and long ones parallel to
+/// each) then halved its spurious columns once per sweep, and kept singular values of a
+/// thousandth of the largest that should have been zero. LAPACK's `dgesvj` skips them too.
+#[inline(always)]
+fn hestenes_rotation<T: Real>(alpha: T, beta: T, gamma: T) -> (T, T) {
+    let (c, s) = jacobi_rotation(alpha, beta, gamma);
+    let open = not_orthogonal(alpha, beta, gamma);
+    let zero = T::zero();
+    (
+        T::select_lt(zero, open, c, T::one()),
+        T::select_lt(zero, open, s, zero),
+    )
+}
+
 /// Eigen-decomposition of a symmetric matrix by cyclic Jacobi: `A = V diag(λ) Vᵀ`.
 ///
 /// Returns the eigenvalues (unsorted) and the eigenvectors as the *rows* of the second
@@ -551,7 +579,6 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
             // Work on the columns of A: orthogonalize them pairwise with right rotations.
             let mut u = transpose(a); // rows of u = columns of A
             let mut v: M = identity(); // rows of v accumulate the right rotations
-            let tol = T::epsilon() * T::epsilon();
             // The Gram entries of columns `p` and `q`: `(|u_p|², |u_q|², u_p · u_q)`.
             let gram = |u: &M, p: usize, q: usize| {
                 let (mut alpha, mut beta, mut gamma) =
@@ -564,23 +591,22 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
                 (alpha, beta, gamma)
             };
             for _ in 0..sweeps {
-                // Converged when every pair of columns is orthogonal to working precision, in every lane.
-                let mut worst = T::zero();
+                // Converged when every pair of columns is orthogonal to working precision,
+                // relative to its own lengths, in every lane.
+                let mut open = T::zero();
                 for p in 0..n {
                     for q in p + 1..n {
                         let (alpha, beta, gamma) = gram(&u, p, q);
-                        // gamma² / (alpha beta), guarded against zero columns
-                        let r = gamma * gamma - tol * alpha * beta;
-                        worst = worst.max(r);
+                        open = open + not_orthogonal(alpha, beta, gamma);
                     }
                 }
-                if T::all_lt(worst, T::epsilon() * T::epsilon() * T::epsilon()) {
+                if T::all_lt(open, T::from_f64(0.5)) {
                     break;
                 }
                 for p in 0..n {
                     for q in p + 1..n {
                         let (alpha, beta, gamma) = gram(&u, p, q);
-                        let (c, s) = jacobi_rotation(alpha, beta, gamma);
+                        let (c, s) = hestenes_rotation(alpha, beta, gamma);
                         for k in 0..n {
                             let (x, y) = (u[p][k], u[q][k]);
                             u[p][k] = c * x - s * y;
@@ -690,20 +716,16 @@ where
             let n = M::N;
             let mut w = *a;
             let mut v: M = identity();
-            let tol = T::epsilon() * T::epsilon();
             let cols = &mut w;
             for _ in 0..sweeps {
-                // Converged when every pair is orthogonal relative to its own lengths,
-                // `γ² ≤ ε² α β`: a test on sums would let large columns hide a small pair that is
-                // not (singular values from 10⁶ down to 10⁻² left `A⁺ A` wrong by 10⁻³). A zero
-                // column counts as orthogonal to everything.
+                // Converged when every pair is orthogonal relative to its own lengths: a test
+                // on sums would let large columns hide a small pair that is not (singular values
+                // from 10⁶ down to 10⁻² left `A⁺ A` wrong by 10⁻³).
                 let mut open = T::zero();
                 for p in 0..n {
                     for q in p + 1..n {
                         let (cp, cq) = (cols.col(p), cols.col(q));
-                        let g = cp.dot(cq);
-                        let ab = cp.dot(cp) * cq.dot(cq);
-                        open = open + T::select_lt(tol * ab, g * g, T::one(), T::zero());
+                        open = open + not_orthogonal(cp.dot(cp), cq.dot(cq), cp.dot(cq));
                     }
                 }
                 if T::all_lt(open, T::from_f64(0.5)) {
@@ -715,7 +737,7 @@ where
                         let alpha = cp.dot(cp);
                         let beta = cq.dot(cq);
                         let gamma = cp.dot(cq);
-                        let (c, s) = jacobi_rotation(alpha, beta, gamma);
+                        let (c, s) = hestenes_rotation(alpha, beta, gamma);
                         C::rotate(cp, cq, c, s);
                         for k in 0..n {
                             let (x, y) = (v[p][k], v[q][k]);

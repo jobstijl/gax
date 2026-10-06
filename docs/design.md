@@ -1101,7 +1101,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   agreement with the scalar path, and on every SIMD level. The fuzz target found that a summed
   convergence test stops too early when singular values spread from `10⁶` to `10⁻²` (large
   columns hide a small pair that is not yet orthogonal; `A⁺ A` was off by `10⁻³`): each pair is
-  now tested against its own lengths, and the input is a regression test. Cost: 0.93 µs for the pseudo-inverse of a 6 × 4 map (Jacobi sweeps until every column pair is orthogonal), against 0.17 µs for LU on a 6 × 6 map; a map whose columns are already orthogonal stops after the first convergence test.
+  now tested against its own lengths, and the input is a regression test. It later found that rotating such a pair does harm: two orthogonal columns of equal length were turned by an eighth of a turn every sweep, however small their dot product, which on a rank-deficient map undid the progress against longer columns parallel to them; singular values that should be zero only halved per sweep and ended at `2·10⁻⁵` of the largest. Pairs already orthogonal are no longer rotated (as in LAPACK's `dgesvj`), in the least squares and in `svd`, whose convergence test is now the same per-pair one. Cost: 0.93 µs for the pseudo-inverse of a 6 × 4 map (Jacobi sweeps until every column pair is orthogonal), against 0.17 µs for LU on a 6 × 6 map; a map whose columns are already orthogonal stops after the first convergence test.
 
 ## ADR-039: Dual numbers for derivatives
 *Status: accepted, implemented (`gax_core::dual`).*

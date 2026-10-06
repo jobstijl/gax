@@ -66,12 +66,45 @@ fn fuzz_regression_widely_spread_singular_values() {
         0xff, 0xff, 0xff, 0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc6, 0xff, 0xff, 0xff,
         0xff, 0x00, 0x00, 0xfa, 0x7e, 0x00, 0x00, 0xbd, 0x3d, 0x2b, 0x0a, 0x96, 0xff, 0xfe,
     ];
-    let x: Vec<f64> = data
-        .as_chunks::<2>()
+    solver_checks::check(&numbers(data));
+}
+
+/// Found by the `solve` fuzz target: a rank-3 map on lines whose first two rows hold four
+/// columns, two short and orthogonal, `(-78125, 0)` and `(0, -78125)`, each parallel to a long one
+/// (`4687500`). Of equal length, the short pair was turned by an eighth of a turn every sweep
+/// although orthogonal, which undid the progress against the long ones: two singular values that
+/// should be zero halved once per sweep and ended near 100, and `A P A` missed `A`. Pairs that
+/// are already orthogonal are no longer rotated.
+#[test]
+fn fuzz_regression_orthogonal_pairs_of_equal_length() {
+    let data: &[u8] = &[
+        0x0a, 0x6a, 0x68, 0x4f, 0xb4, 0x4f, 0x4b, 0x4f, 0x4f, 0x75, 0x41, 0x75, 0x0a, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0x2e, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+        0xff, 0xff, 0xff, 0x2e, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0xff,
+        0xff, 0xff, 0x00, 0x00, 0x00, 0x06, 0x6e, 0x6a, 0xff, 0x6a,
+    ];
+    solver_checks::check(&numbers(data));
+    // The singular values are those of numpy: two of 4688151, one of 85.94, three zeros.
+    let x = numbers(data);
+    let l = gax::pga3d::Line::<(gax::pga3d::Line,), f64>::from_coeffs(core::array::from_fn(|o| {
+        core::array::from_fn(|i| x.get(20 + 6 * o + i).copied().unwrap_or(0.0))
+    }));
+    let sigma = l.svdvals();
+    let big = 4_688_150.996_461_718;
+    let want = [big, big, 85.941_051_062_996_14, 0.0, 0.0, 0.0];
+    for (s, w) in sigma.iter().zip(want) {
+        assert!((s - w).abs() <= 1e-9 * big, "{sigma:?}");
+    }
+}
+
+/// The fuzz target's numbers: from two bytes each, a mantissa in `[-1, 1)` and a decimal
+/// exponent in `[-8, 8)`.
+fn numbers(data: &[u8]) -> Vec<f64> {
+    data.as_chunks::<2>()
         .0
         .iter()
         .take(83)
         .map(|c| f64::from(c[0] as i8) / 128.0 * 10f64.powi(i32::from(c[1] % 16) - 8))
-        .collect();
-    solver_checks::check(&x);
+        .collect()
 }
