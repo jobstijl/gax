@@ -6,6 +6,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+keywords = ["geometric-algebra", "clifford", "linear-algebra", "simd", "math"]
+categories = ["mathematics", "no-std"]
+readme = "README.md"
 
 
 [package.metadata.docs.rs]

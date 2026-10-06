@@ -6,6 +6,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+keywords = ["geometric-algebra", "clifford", "macro"]
+categories = ["mathematics"]
+readme = "README.md"
 
 [lib]
 proc-macro = true

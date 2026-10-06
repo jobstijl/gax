@@ -6,6 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+keywords = ["geometric-algebra", "clifford", "code-generation", "symbolic"]
+categories = ["mathematics", "development-tools::build-utils"]
+readme = "README.md"
+# The regeneration tool and these tests work inside the repository only (gax's specs, docs).
+exclude = ["src/bin", "tests"]
 
 [dependencies]
 gax-core = { workspace = true }
