@@ -379,7 +379,17 @@ tables of terms); see ADR-034 in [design.md](design.md).
   turn, so near one the planes are determined to about `ε/δ` (`δ` the distance to the half turn).
   Turning them loses more: the pair's `Z` needs the slope of `h` across two roots near `u = 0`,
   and `exp(log R)` is within about `2·10⁻¹⁵/δ²` of `R` (`10⁻⁷` at `δ = 10⁻⁴`, `10⁻³` at `10⁻⁶`),
-  where an exact method would reach `ε`. Reading their product from `⟨R⟩₄` would avoid this.
+  where an exact method would reach `ε`. The loss is the interpolation of `h ∝ √u` across two
+  roots `δ²` apart, where `√u` is steep; the planes' sum itself is determined to `ε/δ`, and
+  that is all an exact method needs. For two planes alone there is such a route. With
+  `E = ⟨R⟩₄ / (sₐ s_b) = b̂ₐ b̂_b` (§5's `E`), `X = ⟨R⟩₂` and `Y = −X E` have their weights swapped
+  (`sₐ c_b, cₐ s_b` and `cₐ s_b, sₐ c_b`), so `X + Y = sin(θₐ + θ_b) Z`. The two planes then have
+  equal weights, and the scalar needs only the pair's sum `S` and product `P`:
+  `(sₐ c_b + cₐ s_b)² = S − 2P + 2√(P(1 − S + P))`. With a third plane, `⟨R⟩₄` and `X` carry
+  its terms too, of order `δ`. Removing them takes a second family of bivectors beside §2's,
+  built from `⟨R⟩₄` rather than `⟨R⟩₂`, in which the third plane, not the pair, has the large
+  weight. It is not implemented: the case is rare (both planes within `δ` of a half turn at
+  once), and it would need the generator's programs for 6D to 9D and the WGSL modules extended.
 * **A loxodromic pair on the branch cut.** A pair of conjugate invariants with a negative real
   part and a small imaginary part (the rotation part of a `(2,2)` block near a half turn) has
   `φ` values across the cut of `√u`: the chord through them divides by the small imaginary part.

@@ -103,6 +103,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series (2026-09-29, idle machine: native runs of every benchmark)
 - [x] Solver agreement on the native SIMD lane types: LU bit-identical on every level (`tests/solver_levels.rs`, through `batch::map`), eigh and svd within `c · n · ε · ‖A‖`
 - [x] 6D log near and past half turns: planes near a half turn are turned by a quarter turn before the closed form (`log_turn_6d`), replacing inverse scaling and squaring, which missed by a central element (±1, ±I) or found no root (docs/log6d.md §5)
+- [x] One-sided Jacobi (SVD, `pinv`, `lstsq`) leaves pairs of columns that are already orthogonal alone: found by the `solve` fuzz target, a rank-deficient map whose orthogonal pair of equal length was turned by an eighth of a turn every sweep kept singular values near 100 that should be zero; the SVD's convergence test is relative now, as the least squares' was
 
 ## Phase 6: shaders (WGSL/WESL)
 - [x] WGSL target for the straight-line-program printer (`fma`, reversed `select`, abstract-float constants), golden tests
@@ -157,6 +158,10 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `normalized`, closed-form `inverse` and `renormalize_fast` for 5D even and odd versors (`x ~x` a scalar plus a 4-vector); the Newton step moved to the left, where odd kinds in 4D need it
 - [x] `of_both` (both slots filled with maps), `svdvals` and `svd_thin` for maps of any shape, `as_map` for forms, `eigh_semidefinite` (generalized eigenproblems against a semidefinite metric, infinite modes last)
 - [x] `lstsq_pair` and `of_pair`: least squares for an unknown in a map's first two slots, columns kept nested (`linalg::Columns`); pose diffusion's Lyapunov unknown and inertia's second moment use it
+- [x] Gax types at every API, not float arrays: numga's drawing code, asteroids, wgpu and warp take points and directions; numga's binaries under the clippy ban on float trigonometry
+- [x] `gax-light` (warp's light model, shared) and `gax-colour` (after bevy_color: colour spaces as gax maps, exact HSV, HSL and HWB, chromaticity, colour temperature); numga draws with light, like warp
+- [x] numga's canvas in canvas units (540 tall at any size), mapped to pixels by one gax dilation: the binaries lay out once, the frames at 960x540 unchanged, smaller ones true miniatures
+- [x] Benchmarks re-measured on an idle machine (2026-10-05); the drift of single-call `exp` traced to code placement, not to a change in its code (performance.md)
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, algebras beyond 9D
 
 ## Decisions for the project owner
