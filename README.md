@@ -69,7 +69,9 @@ RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench      # benchmarks
 cd examples/asteroids && cargo run --release                    # the game
 ```
 
-The minimum supported Rust version is 1.89. The crates are not yet published on crates.io.
+The minimum supported Rust version is 1.89, which the `wide` and `batch` features need; without
+them gax builds on 1.88 ([ADR-002](docs/design.md#adr-002-msrv-189-edition-2024)). The crates are
+not yet published on crates.io.
 
 ## AI disclosure
 

@@ -50,11 +50,23 @@ highlight. `gax-regen --check` also reports part files no longer generated.
 ## ADR-002: MSRV 1.89, edition 2024
 *Status: accepted.*
 
-* **Why 1.89:**
-  * the design needs GATs (1.65), associated type bounds (1.79) and edition 2024 (1.85);
-  * `wide` 1.7, which provides the SIMD lanes, requires 1.89;
-  * 1.89 is thirteen months old at the time of writing.
-* **Enforcement:** CI builds and tests on 1.89 and on stable.
+* **Why 1.89:** each requirement below was checked by building with the release before it
+  (amended 2026-10-12):
+
+  | needs | what | where |
+  |---|---|---|
+  | 1.65 | GATs | `Kind::Arr`, `Slots::Arr`, `HasCat::Cat` |
+  | 1.79 | associated type bounds | `Extensor<Coef: Real>` |
+  | 1.85 | edition 2024 | every crate |
+  | 1.87 | `cast_signed`, `cast_unsigned` | `gax-core` (`math.rs`) |
+  | 1.88 | let chains | `gax-gen`, so the default feature `macros` and `trace` |
+  | 1.89 | `wide` 1.7, `safe_arch` 1.2, `fearless_simd` 1.0 declare it | features `wide` and `batch` |
+
+  Without `wide` and `batch`, the library builds on 1.88. Cargo's `rust-version` is per crate,
+  not per feature, so every crate declares 1.89. That is also the only old release CI tests.
+* **Enforcement:** CI builds and tests on 1.89 and on stable. The two test crates that need the
+  `wesl` crate (`gax-wesl-tests`, `gax-highdim-tests`) declare 1.97.1, as `wesl` does; they are
+  never published.
 
 ## ADR-003: Slot lists are tuples, with the right identity stated as a trait law
 *Status: accepted. Evidence: [research/typelevel.md](research/typelevel.md) §2.5, §2.8.*
@@ -81,7 +93,7 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   * So `fn f<S: Slots>(p: Point<S>) -> Point<S> { (LIGHT & p) ^ GROUND }` compiles with no other bound.
 * **Non-empty tuples:** these define `Cat` through a `Prepend` GAT. The nested array type then needs a
   `prepend_arr` witness, which is the identity at run time.
-* **Maximum length:** tuples have a maximum length of 8. A longer concatenation maps to a sentinel type
+* **Maximum length:** tuples have a maximum length of 12 (`slots::MAX_SLOTS`). A longer concatenation maps to a sentinel type
   whose witness fails in a `const` block, so it is a compile error only if it is actually used.
 * **Associativity** (`Cat<Cat<A,B>,C>` against `Cat<A,Cat<B,C>>`) is not known for generic lists. It only
   matters when a generic signature brackets differently from the expression that produces it.
