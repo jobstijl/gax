@@ -253,7 +253,10 @@ pub fn map_soa<F: Map, E: LaneElem>(f: &F, xs: &Soa<F::X, E>, out: &mut Soa<F::Y
 /// A map's rows applied to `x`: `y_i = Σ_j m_ij x_j`, a multiply-add chain per output
 /// coefficient.
 #[inline(always)]
-fn apply_rows<Y: Kind, X: Kind, L: Coef>(m: &Y::Arr<X::Arr<L>>, x: &Mv<X, L>) -> Mv<Y, L> {
+pub(crate) fn apply_rows<Y: Kind, X: Kind, L: Coef>(
+    m: &Y::Arr<X::Arr<L>>,
+    x: &Mv<X, L>,
+) -> Mv<Y, L> {
     let xc = x.coeffs().as_ref();
     Extensor::from_coeffs(Y::arr_map(
         m,

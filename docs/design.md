@@ -1361,6 +1361,126 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       `Line<(Line,)>` and `PrincipalInertia`", whose note now also names `.to_dense()`
       (`structured_operator`).
 
+## ADR-045: Fields over a fixed number of sites, as kinds
+*Status: proposed (design only; a model, no code in the library).*
+
+* **The problem.** numga's fields put the sites in the type, `vector[4]`, and a field map
+  `vector[4] <- vector[4]` couples them: binding sums over the paired sites, composition over
+  the shared ones, and `solve` solves the whole coupled block system. A fixed count fits Rust
+  as a const generic, `Sites<K, N>`, stored nested, `[K::Arr<X>; N]`, with no arithmetic on
+  `N` in any type. The snag is `Kind::Arr<X>: AsRef<[X]>`: every solver, binding and cast
+  reads coefficients through a flat slice, and a flat `[X; K::N * N]` would need
+  `generic_const_exprs` (ADR-005).
+* **Options, measured.**
+  1. *Relax the bound* (`Arr<X>: Elem` only, a flat index through methods). Removing it breaks
+     129 places in gax-core alone: `extensor.rs` (the solvers, 124 with `linalg.rs`'s
+     `Columns`), `slots.rs` 13, `bind.rs` 4, `dual.rs` 8, `trace.rs` 3, `fill.rs` 2,
+     `cast.rs` 2. Each would become an index method call. That is mechanical, but it touches
+     every algorithm, and gax would then compile and test only fields through those methods.
+  2. *A separate trait beside `Kind`.* Nothing existing breaks, but a field is then not a
+     kind. It cannot fill a slot, so `Vector<(Sites<Vector, 4>,)>` does not exist, and field
+     maps would need their own types and every map method again: binding, composition,
+     solve, eigenproblems.
+  3. **Recommended: a field is a kind, with a flat view of its nested array.** `Sites<K, N>`
+     implements `Kind` with `N = K::N * N` (an associated const, which needs no const
+     generic arithmetic) and `Arr<X> = SiteArr<K, X, N>`, a wrapper around
+     `[K::Arr<X>; N]`. The wrapper implements `AsRef<[X]>` by viewing its `N` arrays as one
+     slice. That is sound when `K::Arr<X>` is exactly `[X; K::N]`, which an `unsafe trait
+     FlatKind` states and the generator emits for its kinds (arrays have no padding between
+     elements). The solvers' `SquareArr` gets one impl for `SiteArr<K, SiteArr<K, T, N>, N>`,
+     square without naming `K::N * N`.
+* **Nothing existing changes, and a field is a kind everywhere.** It fills slots, so field maps
+  are `Vector<(Sites<Vector, 4>,)>`-style extensors (with the output a field kind too); `of`
+  binds and composes over the sites, and `solve`, `inverse` and `eigh` see one `12 × 12` system.
+  A standalone model of exactly this compiled and ran on rustc 1.99 (a `Sites<Vector, 4>` with
+  12 coefficients, flat indexing, and the square matrix of its maps); it has not been checked
+  under miri.
+* **Open.**
+  * The products: `Sites<Vector, 4>` has no generated product impls. Site-by-site
+    operations (`turn >> positions`) need an impl per product for field kinds, generated or
+    blanket over `Sites<K, N>` delegating to `K`'s. The blanket form must not collide with
+    the generated impls, as in ADR-044.
+  * The one `unsafe` cast needs miri in CI, as gax already runs it.
+
+## ADR-046: Fields over a run-time number of sites, and sparse field maps
+*Status: proposed; spike on branch `spike/fields`, for review before generalizing.*
+
+* **The problem.** Meshes have their site counts at run time, and their couplings are sparse:
+  a vertex feels its edges. numga's `SparseExtensor` stores typed cells with row and column
+  indices; `~ends * ends` is a mesh Laplacian. gax had only the batch side (`Soa`, slice
+  kernels), with no sites in any type and nothing that couples them.
+* **The spike (`gax::field`, feature `std`).**
+  * `Field<M>`: a value (or map, or form) of type `M` at each site, in a `Vec`. It has
+    site-by-site `map` and `zip_with`, `+` and `-`, `sum` over the sites, `scaled`, and the
+    coefficient inner product `dot`.
+  * `SparseMap<C>`: cells of type `C` with row and column indices and a shape
+    `(output sites, input sites)`; repeated couplings add.
+  * Multivector cells multiply, as in numga:
+    * `&ends * &positions` multiplies each cell with the value at its column and sums at the
+      rows;
+    * `&ends.reverse() * &ends` multiplies the cells along every path through the shared
+      sites;
+    * `&cells * Vector::slot()` turns the cells into maps.
+  * Map cells apply: `apply`, `compose` (through `Of`), and `solve`, which is conjugate
+    gradients and so only for symmetric positive definite couplings.
+  * `from_diagonal`, `transpose_with` and `reverse` (the couplings run back, the cells
+    reversed), `map_cells`, and `+`.
+  * `apply_batch` is the batch form: lanes of cells and of the values at their columns
+    gathered, multiplied, and scattered into the rows one by one (rows repeat, so the sums
+    stay serial). `packed()` packs the cells into blocks once, for a map applied many times.
+* **Storage: an array of structs, not `Soa`.** A field map reads its input at the columns of its
+  cells, an arbitrary order. In a `Vec` each read is one contiguous value; in a `Soa` it is one
+  strided read per coefficient. `Soa` stays the layout of independent copies.
+* **Checks.**
+  * At compile time, the cell type: map cells `Point <- Point` applied to a field of lines
+    fail with the binding's own message ("a `Line` does not fit a slot of kind `Point`").
+  * At run time, the site counts, with both in the message: "a field map with 4 input sites
+    applied to a field over 3 sites".
+* **numga's bead string** (`tests/fields.rs`, against `numga_fields.py`, numga 93c2ae3):
+  * forces, the composition `stiffness ∘ stiffness`, and the stretches `ends * positions` are
+    exact;
+  * the dense stiffness's solve and the sparse `(~ends * ends + anchors) * Vector` solve
+    agree to 1e-15;
+  * the sparse stiffness has the dense one's blocks exactly.
+* **The typed Newton step.** The gradient and curvature with respect to the whole string come
+  from ADR-043's `hessian`, taken per spring on its stretch and per bead on its anchor, and
+  assembled by the chain rule:
+  * the gradient is `~ends * g_spring + g_anchor`, a field of forms `Scalar <- Vector`;
+  * the curvature is `~ends * diag(H_spring) * ends + diag(H_anchor)`, with form cells
+    `Scalar <- (Vector, Vector)`.
+
+  Both equal numga's `derivative` of the energy of `vector[4]` exactly, and the Newton step
+  `-curvature.solve(gradient)` equals numga's to 1e-15. This works where the energy is a sum of
+  local terms of linear functions of the field (springs, mesh elements). A derivative of a
+  general function of a whole run-time field would need jets over a run-time direction set
+  (`Directions` with heap storage), which this spike does not attempt.
+* **Performance** (`benches/batch.rs`, group `fields`; rustc 1.99.0, idle machine): a string
+  of 1024 sites with 3070 couplings, each its own PGA3D `Point <- Point` (`f32`), against the
+  dense batch path (one map, `of_slice` over as many values).
+
+  | | default target | `target-cpu=native` |
+  |---|---|---|
+  | sparse `apply`, scalar loop | 6.97 µs | 7.79 µs |
+  | sparse `apply_batch` (cells gathered every call) | 10.30 µs | 10.30 µs |
+  | sparse packed apply (cells packed once into blocks) | 7.97 µs | 7.90 µs |
+  | dense batch path, `of_slice` | 2.82 µs | 3.04 µs |
+
+  The sparse map costs about 2.3 ns per coupling against 0.9 ns per value on the dense path,
+  and in this spike SIMD does not pay. Two costs dominate: the gathers of input values at
+  arbitrary columns, and the scatter into the rows, which must stay serial because rows repeat
+  within a lane batch. Packing the cells once (`map.packed()`, in the block layout of `Soa`)
+  removes the cost of transposing the cells but not the other two.
+
+  The next step is a kernel that assigns lanes to rows instead of couplings: compressed sparse
+  rows, each lane summing its own row's couplings, so there are no conflicts and no scatter.
+  This is how SpMV kernels avoid the same problem. It is not built.
+* **Open.**
+  * General sparse solves: CG covers symmetric positive definite systems only. numga's
+    sparse `solve`, `lstsq` and `eigh` go through SciPy; gax would need its own sparse LU or
+    to depend on one.
+  * Batch `combine` for multivector cells (only map cells have `apply_batch`).
+  * Fields of maps in `Soa`, and the fixed tier's products (ADR-045).
+
 ## Hypotheses
 
 | # | hypothesis | verdict | evidence / decision |

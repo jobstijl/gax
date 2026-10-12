@@ -1,0 +1,30 @@
+error[E0277]: a `gax::pga3d::Line` does not fit a slot of kind `gax::pga3d::Point`
+ --> tests/compile_fail/field_wrong_cells.rs:9:25
+  |
+9 |     let _ = cells.apply(&lines);
+  |                   ----- ^^^^^^ some blade of `gax::pga3d::Line` is not a blade of `gax::pga3d::Point`
+  |                   |
+  |                   required by a bound introduced by this call
+  |
+  = help: the trait `SubKind<gax::pga3d::Point>` is not implemented for `gax::pga3d::Line`
+  = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::Point>()` if dropping blades is intended
+help: `gax::pga3d::Line` implements trait `SubKind<K>`
+ --> src/algebras/pga3d/kinds.rs
+  |
+  | impl gx::SubKind<Line> for Line {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Line>`
+...
+      | impl gx::SubKind<Motor> for Line {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Motor>`
+...
+      | impl gx::SubKind<Multivector> for Line {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector>`
+      = note: required for `gax::pga3d::Point<(gax::pga3d::Point,), f64>` to implement `Of<gax::pga3d::Line<(), f64>>`
+note: required by a bound in `SparseMap::<C>::apply`
+ --> $WORKSPACE/crates/gax-core/src/field.rs
+  |
+  |     pub fn apply<X, Y>(&self, x: &Field<X>) -> Field<Y>
+  |            ----- required by a bound in this associated function
+  |     where
+  |         C: Of<X, Output = Y>,
+  |            ^^^^^^^^^^^^^^^^^ required by this bound in `SparseMap::<C>::apply`

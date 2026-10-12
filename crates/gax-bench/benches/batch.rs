@@ -371,5 +371,50 @@ fn rigid_rate(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, uniform, pairwise, exp, rigid_body, rigid_rate);
+/// A sparse field map (ADR-046, spike) against the dense batch path: a string of 1024 sites,
+/// each coupled to itself and its neighbours (3070 cells, each its own `Point <- Point`), and
+/// one dense map applied to as many values.
+fn fields(c: &mut Criterion) {
+    use gax::field::{Field, SparseMap};
+    let n: usize = 1024;
+    let (mut cells, mut rows, mut cols) = (Vec::new(), Vec::new(), Vec::new());
+    for i in 0..n {
+        for j in i.saturating_sub(1)..(i + 2).min(n) {
+            let k = (i * 3 + j) as f32;
+            cells.push(Point::<(Point,), f32>::from_coeffs(core::array::from_fn(
+                |o| core::array::from_fn(|q| ((k + (o * 4 + q) as f32) * 0.37).sin()),
+            )));
+            rows.push(i);
+            cols.push(j);
+        }
+    }
+    let couplings = cells.len();
+    let map = SparseMap::new(cells.clone(), rows, cols, (n, n));
+    let field = Field::new(points(n));
+    let values = points(couplings);
+    let mut out = vec![Point::zero(); couplings];
+    let one = cells[1];
+    let mut g = c.benchmark_group(format!("fields: {couplings} couplings over {n} sites"));
+    g.bench_function("sparse apply, scalar loop", |b| {
+        b.iter(|| black_box(map.apply(black_box(&field))));
+    });
+    g.bench_function("sparse apply_batch (auto)", |b| {
+        b.iter(|| black_box(map.apply_batch(black_box(&field))));
+    });
+    let packed = map.packed();
+    g.bench_function("sparse packed apply (cells packed once, auto)", |b| {
+        b.iter(|| black_box(packed.apply(black_box(&field))));
+    });
+    g.bench_function(
+        "dense batch path: one map, of_slice over as many values",
+        |b| {
+            b.iter(|| one.of_slice(black_box(&values), &mut out));
+        },
+    );
+    g.finish();
+}
+
+criterion_group!(
+    benches, uniform, pairwise, exp, rigid_body, rigid_rate, fields
+);
 criterion_main!(benches);

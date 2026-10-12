@@ -42,6 +42,8 @@ pub mod coef;
 pub mod complex;
 pub mod dual;
 pub mod extensor;
+#[cfg(feature = "std")]
+pub mod field;
 pub mod fill;
 pub mod fp;
 pub mod gpu;
