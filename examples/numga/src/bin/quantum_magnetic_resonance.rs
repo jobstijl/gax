@@ -290,7 +290,8 @@ mod resonance {
 
     /// The state of the whole ensemble: the mean of its spins' states.
     pub fn mean(ensemble: &[St]) -> St {
-        ensemble.iter().fold(St::zero(), |acc, rho| acc + *rho) / ensemble.len() as f64
+        let total: St = ensemble.iter().copied().sum();
+        total / ensemble.len() as f64
     }
 
     /// The ensemble's mean transverse Bloch vector, its length.

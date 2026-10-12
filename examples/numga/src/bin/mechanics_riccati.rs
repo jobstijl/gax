@@ -149,12 +149,11 @@ mod riccati {
 
     pub fn model() -> Model {
         let thrusters = thrusters();
-        let authority = thrusters
+        let authority: Feedback = thrusters
             .iter()
             .zip(THRUSTER_WEIGHTS)
-            .fold(Line::zero(), |s: Feedback, (t, w)| {
-                s + (*t * (*t & Point::slot())).gp(1.0 / w)
-            });
+            .map(|(t, w)| (*t * (*t & Point::slot())).gp(1.0 / w))
+            .sum();
         let resistance = authority.inverse();
         let effort: EffortCost = Line::slot() & resistance.of(Line::slot());
         let effort_cost = EFFORT_SCALES.map(|s| effort.gp(s * DT));
@@ -172,12 +171,11 @@ mod riccati {
         // line); its inverse turns a push into a velocity twist.
         let [x, y] = axes();
         let drag_lines = [centre() & x, centre() & y, x & y];
-        let drag = drag_lines
+        let drag: Feedback = drag_lines
             .iter()
             .zip(DRAG_WEIGHTS)
-            .fold(Line::zero(), |s: Feedback, (l, w)| {
-                s + (*l * (*l & Point::slot())).gp(w)
-            });
+            .map(|(l, w)| (*l * (*l & Point::slot())).gp(w))
+            .sum();
         // Without a push the vessel stays put.
         Model {
             resistance,
@@ -500,10 +498,11 @@ mod tests {
         let thrusters = thrusters();
         for d in docking() {
             for s in 0..STEPS {
-                let supplied = thrusters
+                let supplied: L = thrusters
                     .iter()
                     .zip(d.commands[s])
-                    .fold(Line::zero(), |sum: L, (t, c)| sum + t.gp(c));
+                    .map(|(t, c)| t.gp(c))
+                    .sum();
                 let requested = d.feedbacks[s].of(d.errors[s]);
                 assert!(supplied.max_abs_diff(&requested) < 1e-10);
             }

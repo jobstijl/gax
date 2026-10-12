@@ -95,9 +95,10 @@ mod shg {
 
     /// Each bond responds to the product of the two electric fields along it.
     pub fn response(bonds: &[B]) -> Response {
-        bonds.iter().fold(Response::zero(), |acc, b| {
-            acc + (*b * (*b | open()) * (*b | open())).gp(STRENGTH)
-        })
+        bonds
+            .iter()
+            .map(|b| (*b * (*b | open()) * (*b | open())).gp(STRENGTH))
+            .sum()
     }
 
     /// Pull both fields into the crystal and turn its response forward:

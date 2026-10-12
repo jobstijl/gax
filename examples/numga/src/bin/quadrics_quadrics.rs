@@ -36,10 +36,8 @@ mod quadrics {
     /// tangent planes.
     pub fn ellipsoid(semi_axes: &[P], centre: P) -> DualQuadric {
         let dyad = |p: P| p * (Plane::slot() & p);
-        semi_axes
-            .iter()
-            .fold(DualQuadric::zero(), |q, a| q + dyad(*a))
-            - dyad(centre)
+        let axes: DualQuadric = semi_axes.iter().map(|a| dyad(*a)).sum();
+        axes - dyad(centre)
     }
 
     /// The ellipsoid's tangent plane facing `normal` (its offset is ignored): through the

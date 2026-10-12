@@ -12,7 +12,7 @@
 //! coefficients to infinity, and so does gax's `eigh_semidefinite`, which lists the finite
 //! modes first.
 
-use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
+use gax::pga3d::{Line, Motor, Plane, Point};
 use gax::{Form, Kind, Reverse, ScalarProduct};
 
 use gax_numga_examples::rng::{Draw, Rng, rng};
@@ -48,9 +48,7 @@ mod fitting {
     /// unknown point.
     pub fn point_to_points(samples: &[P]) -> P {
         let x = Point::slot();
-        let misfit = samples
-            .iter()
-            .fold(Scalar::zero(), |acc, s| acc + squared(s.unitized() & x));
+        let misfit = samples.iter().map(|s| squared(s.unitized() & x)).sum();
         least_mode(misfit, squared(x))
     }
 
@@ -59,27 +57,24 @@ mod fitting {
     /// centroid's about the fitted direction, which meets it.
     pub fn line_to_points(samples: &[P]) -> L {
         let x = Line::slot();
-        let misfit = samples
-            .iter()
-            .fold(Scalar::zero(), |acc, s| acc + squared(s.unitized() & x));
+        let misfit = samples.iter().map(|s| squared(s.unitized() & x)).sum();
         least_mode(misfit, squared(x))
     }
 
     /// A plane fitted to points: the squared signed distances.
     pub fn plane_to_points(samples: &[P]) -> Pl {
         let x = Plane::slot();
-        let misfit = samples
-            .iter()
-            .fold(Scalar::zero(), |acc, s| acc + squared(s.unitized() & x));
+        let misfit = samples.iter().map(|s| squared(s.unitized() & x)).sum();
         least_mode(misfit, squared(x))
     }
 
     /// A point fitted to lines: the squared planes joining each line to the unknown point.
     pub fn point_to_lines(samples: &[L]) -> P {
         let x = Point::slot();
-        let misfit = samples.iter().fold(Scalar::zero(), |acc, l| {
-            acc + squared(l.normalized().into_inner() & x)
-        });
+        let misfit = samples
+            .iter()
+            .map(|l| squared(l.normalized().into_inner() & x))
+            .sum();
         least_mode(misfit, squared(x))
     }
 
@@ -415,10 +410,7 @@ mod tests {
 
     /// The mean of points: their sum, unitized.
     fn mean(points: &[P]) -> P {
-        points
-            .iter()
-            .fold(Point::zero(), |s, p| s + p.unitized())
-            .unitized()
+        points.iter().map(|p| p.unitized()).sum::<P>().unitized()
     }
 
     /// The principal axes of points about their centroid, by the symmetric eigenproblem of the
@@ -426,14 +418,14 @@ mod tests {
     fn principal_axes(points: &[P]) -> [vga3d::Vector<(), f64>; 3] {
         let centre = mean(points);
         let v = vga3d::Vector::<(), f64>::slot();
-        let scatter = points.iter().fold(
-            vga3d::Scalar::<(vga3d::Vector, vga3d::Vector), f64>::zero(),
-            |acc, p| {
+        let scatter: vga3d::Scalar<(vga3d::Vector, vga3d::Vector), f64> = points
+            .iter()
+            .map(|p| {
                 let d = p.unitized() - centre;
                 let d = vga3d::Vector::new(d.e032(), d.e013(), d.e021());
-                acc + (d | v) * (d | v)
-            },
-        );
+                (d | v) * (d | v)
+            })
+            .sum();
         scatter.eigh().1
     }
 

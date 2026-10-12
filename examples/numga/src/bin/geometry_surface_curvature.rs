@@ -55,10 +55,12 @@ mod curvature {
         let axes =
             [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]].map(|n| Plane::from_normal(n, 0.0));
         let w = infinity();
-        axes.iter()
+        let dyads: Quadric = axes
+            .iter()
             .zip(weights)
-            .fold(Plane::zero(), |q, (a, k)| q + (*a * (*a & x)).gp(k))
-            - w * (w & x)
+            .map(|(a, k)| (*a * (*a & x)).gp(k))
+            .sum();
+        dyads - w * (w & x)
     }
 
     /// Of three eigenvalues on directions, the two that are not the one nearest zero, in order.

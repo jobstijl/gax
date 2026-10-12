@@ -94,7 +94,7 @@ macro_rules! odometry_core {
                     };
                     basis(i) * (basis(i) & forques()) * (std * std)
                 })
-                .fold(Twist::zero(), |a, b| a + b)
+                .sum()
         }
 
         /// Twists whose outer products sum to an uncertainty: its images of lines orthonormal
@@ -343,9 +343,10 @@ macro_rules! odometry_core {
             noises.push(isotropic(CLOSING.0, CLOSING.1));
             let readings: Vec<M> = (0..=n)
                 .map(|k| {
-                    let error = modes(noises[k])
+                    let error: Tw = modes(noises[k])
                         .into_iter()
-                        .fold(Tw::zero(), |a, m| a + m.gp(rng.normal()));
+                        .map(|m| m.gp(rng.normal()))
+                        .sum();
                     nudged(truth[tails[k]].inverse() * truth[heads[k]], error)
                 })
                 .collect();
@@ -656,7 +657,8 @@ fn draw(c: &mut Canvas, t: f32) {
     // The camera circles the centre of the true lap: the sum of its points, unitized.
     let centre = truth
         .iter()
-        .fold(gax::pga3d::Point::zero(), |a, p| a + *p)
+        .copied()
+        .sum::<gax::pga3d::Point<(), f64>>()
         .unitized();
     let cam = Camera::orbit(
         sub.rect(),

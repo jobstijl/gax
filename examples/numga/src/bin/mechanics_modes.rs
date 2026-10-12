@@ -63,7 +63,7 @@ mod modes {
         let anchors = points(&[[0.2, 2.55], [1.8, 2.55], [2.9, 1.85]][..springs]);
         // Tensor-product two-point Gauss quadrature on the uniform plate: the corners pulled
         // towards the centre by `1 / sqrt(3)`, Gauss's nodes.
-        let center = body.iter().fold(Point::zero(), |s: P, p| s + *p).gp(0.25);
+        let center = body.iter().copied().sum::<P>().gp(0.25);
         #[allow(clippy::disallowed_methods)] // a number: Gauss's quadrature nodes ±1/√3
         let node = 1.0 / 3f64.sqrt();
         let mass_points = body
@@ -93,13 +93,12 @@ mod modes {
     /// twist with a line measures the stretch, and Hooke's law scales the line by it.
     pub fn spring_stiffness(lines: &[L], constants: &[f64]) -> (Response, Vec<Extension>) {
         let extension: Vec<Extension> = lines.iter().map(|l| Point::slot() & *l).collect();
-        let stiffness = lines
+        let stiffness: Response = lines
             .iter()
             .zip(&extension)
             .zip(constants)
-            .fold(Line::zero(), |sum: Response, ((l, e), k)| {
-                sum + (*l * *e).gp(*k)
-            });
+            .map(|((l, e), k)| (*l * *e).gp(*k))
+            .sum();
         (stiffness, extension)
     }
 
@@ -110,9 +109,8 @@ mod modes {
         points
             .iter()
             .zip(masses)
-            .fold(Line::zero(), |sum: Response, (p, m)| {
-                sum + Pga2d::point_inertia(*p).gp(*m)
-            })
+            .map(|(p, m)| Pga2d::point_inertia(*p).gp(*m))
+            .sum()
     }
 
     /// The generalized eigenproblem between the energy forms: the modes as twists (normalized

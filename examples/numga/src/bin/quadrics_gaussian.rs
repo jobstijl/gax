@@ -34,15 +34,14 @@ mod gaussian {
         let n = points.len() as f64;
         let moment = points
             .iter()
-            .fold(Point::<(Line,), f64>::zero(), |m, p| {
-                m + *p * (Line::slot() & *p)
-            })
+            .map(|p| *p * (Line::slot() & *p))
+            .sum::<Point<(Line,), f64>>()
             .gp(1.0 / n);
         let precision: Polarity = moment.inverse();
         // The weight line, from the data: `weight ∨ p == 1` on every unit-weight point. Its
         // dyad evaluates to that constant squared; subtracting it twice makes Mahalanobis
         // distance one the zero locus.
-        let mean = points.iter().fold(Point::zero(), |m, p| m + *p).gp(1.0 / n);
+        let mean = points.iter().copied().sum::<P>().gp(1.0 / n);
         let weight = precision.of(mean);
         let quadric = precision - weight * (weight & Point::slot()).gp(2.0);
         Fit { precision, quadric }

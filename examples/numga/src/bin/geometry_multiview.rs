@@ -129,7 +129,7 @@ macro_rules! multiview_core {
             world_cones(motors, cones)
                 .into_iter()
                 .map(|row| {
-                    let fused = row.into_iter().fold(Plane::zero(), |a, b| a + b);
+                    let fused: Quadric = row.into_iter().sum();
                     let p: P = (fused + gauge).solve(w());
                     (p.unitized(), fused)
                 })

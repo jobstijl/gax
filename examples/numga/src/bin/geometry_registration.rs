@@ -65,21 +65,18 @@ mod registration {
     /// The rotor that maximizes the alignment of corresponding vectors (planes through the
     /// origin): `Σ target · (R source ~R)`, a symmetric form on rotors.
     pub fn fit_rotor(source: &[Plane<(), f64>], target: &[Plane<(), f64>]) -> Unit<Rotor<(), f64>> {
-        let alignment = source
+        let alignment: Scalar<(Rotor, Rotor), f64> = source
             .iter()
             .zip(target)
-            .fold(Scalar::<(Rotor, Rotor), f64>::zero(), |acc, (s, t)| {
-                acc + t.scalar_product((Rotor::slot() * *s) * Rotor::slot().reverse())
-            });
+            .map(|(s, t)| t.scalar_product((Rotor::slot() * *s) * Rotor::slot().reverse()))
+            .sum();
         let (_, rotors) = alignment.eigh();
         rotors[3].normalized()
     }
 
     /// The mean of unit points (a point of unit weight).
     pub fn mean(points: &[P]) -> P {
-        let sum = points
-            .iter()
-            .fold(Point::zero(), |acc, p| acc + p.unitized());
+        let sum: P = points.iter().map(|p| p.unitized()).sum();
         sum.gp(1.0 / points.len() as f64)
     }
 

@@ -102,7 +102,7 @@ mod station {
         basis()
             .iter()
             .map(|b| kicks.of(*b) * (kicks.of(*b) & Line::slot()))
-            .fold(Point::zero(), |a, b| a + b)
+            .sum()
     }
 
     /// The map from white noise to gust twists, from the standard deviations per square root of
@@ -227,10 +227,7 @@ mod station {
 
     /// The sample covariance of the bodies' errors.
     pub fn empirical(errors: &[Twist]) -> Covariance {
-        let sum = errors
-            .iter()
-            .map(|e| *e * (*e & Line::slot()))
-            .fold(Point::zero(), |a, b| a + b);
+        let sum: Covariance = errors.iter().map(|e| *e * (*e & Line::slot())).sum();
         sum.gp(1.0 / errors.len() as f64)
     }
 }

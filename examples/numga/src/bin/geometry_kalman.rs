@@ -137,9 +137,7 @@ mod kalman {
     pub fn sample(cov: Covariance, rng: &mut Rng) -> P {
         let readouts = Line::slot() & cov;
         let (_, lines) = readouts.eigh_with(readouts);
-        lines
-            .iter()
-            .fold(Point::zero(), |acc, l| acc + cov.of(*l).gp(rng.normal()))
+        lines.iter().map(|l| cov.of(*l).gp(rng.normal())).sum()
     }
 
     /// Simulate noisy motion and a pose measurement after each group of increments: the true

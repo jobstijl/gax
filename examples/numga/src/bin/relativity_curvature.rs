@@ -671,12 +671,12 @@ mod tests {
         assert!(largest(cyclic) <= 1e-13);
         // Contract one curvature slot with the reciprocal Lorentz basis.
         let (basis, reciprocal) = frames();
-        let ricci = |r: Curvature| {
+        let ricci = |r: Curvature| -> Tidal {
             basis
                 .iter()
                 .zip(&reciprocal)
                 .map(|(e, f)| r.of(*e ^ Vector::slot()).commutator(*f))
-                .fold(Tidal::zero(), |acc, m| acc + m)
+                .sum()
         };
         assert!(largest(ricci(curvature)) <= 1e-13);
         // Frame-free: the Ricci form is the trace of the curvature against its wedge slot, with

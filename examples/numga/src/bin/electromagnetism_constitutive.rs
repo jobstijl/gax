@@ -114,13 +114,14 @@ mod constitutive {
     /// An anisotropic electric response: each axis's plane with the observer weighted.
     pub fn crystal_medium(eps: [f64; 3], mu: f64, observer: V) -> Medium {
         let (_, magnetic) = observer_projectors(observer);
-        let electric = [x(), y(), z()]
+        let electric: Medium = [x(), y(), z()]
             .iter()
             .zip(eps)
-            .fold(Medium::zero(), |acc, (axis, e)| {
+            .map(|(axis, e)| {
                 let plane = *axis ^ observer;
-                acc + (plane * (plane | open())).gp(e)
-            });
+                (plane * (plane | open())).gp(e)
+            })
+            .sum();
         (electric + magnetic.gp(1.0 / mu)).hodge()
     }
 
@@ -128,13 +129,14 @@ mod constitutive {
     /// permeability.
     pub fn ferrite_medium(eps: f64, mu_inv: [f64; 3], observer: V) -> Medium {
         let (electric, _) = observer_projectors(observer);
-        let magnetic = [x(), y(), z()]
+        let magnetic: Medium = [x(), y(), z()]
             .iter()
             .zip(mu_inv)
-            .fold(Medium::zero(), |acc, (axis, m)| {
+            .map(|(axis, m)| {
                 let plane = (*axis ^ observer).hodge();
-                acc + (plane * (plane | open())).gp(m)
-            });
+                (plane * (plane | open())).gp(m)
+            })
+            .sum();
         (electric.gp(eps) - magnetic).hodge()
     }
 
@@ -382,10 +384,14 @@ fn scans() -> &'static Scans {
 /// amplitude, summed with its phase `ω (z / v - τ)`.
 fn wave_at(modes: &([f64; 2], [B; 2]), z: f64, tau: f64) -> B {
     let (speeds, fields) = modes;
-    speeds.iter().zip(fields).fold(B::zero(), |acc, (v, f)| {
-        let (e, _) = arrows(*f);
-        acc + f.gp(phasor(z / v - tau).e20() / e.norm())
-    })
+    speeds
+        .iter()
+        .zip(fields)
+        .map(|(v, f)| {
+            let (e, _) = arrows(*f);
+            f.gp(phasor(z / v - tau).e20() / e.norm())
+        })
+        .sum()
 }
 
 /// The wave in 3D, the beam running across the screen: world x along the beam (scaled),
@@ -777,12 +783,8 @@ mod tests {
             let k = t().gp(*s) + z();
             assert!(near(k ^ f, Trivector::zero(), 1e-12));
             assert!(near(k ^ crystal.of(f), Trivector::zero(), 1e-12));
-            let e_part = electric_planes
-                .iter()
-                .fold(B::zero(), |acc, p| acc + *p * (*p | f));
-            let m_part = magnetic_planes
-                .iter()
-                .fold(B::zero(), |acc, p| acc + *p * (*p | f));
+            let e_part: B = electric_planes.iter().map(|p| *p * (*p | f)).sum();
+            let m_part: B = magnetic_planes.iter().map(|p| *p * (*p | f)).sum();
             assert!(near(electric.of(f), e_part, 1e-12));
             assert!(near(magnetic.of(f), -m_part, 1e-12));
         }

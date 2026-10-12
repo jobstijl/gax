@@ -140,17 +140,17 @@ mod symmetry {
     /// and turns the output back; a rotation of the group only permutes the terms, so the mean
     /// is invariant: the closest invariant response in the Frobenius norm.
     pub fn conductivities(axes: &[V; 3], gains: [f64; 3], groups: &[Vec<R>]) -> Vec<Response> {
-        let conductivity = axes
+        let conductivity: Response = axes
             .iter()
             .zip(gains)
-            .fold(Vector::zero(), |s: Response, (a, g)| {
-                s + (*a * (*a | Vector::slot())).gp(g)
-            });
+            .map(|(a, g)| (*a * (*a | Vector::slot())).gp(g))
+            .sum();
         let mut out = vec![conductivity];
         for group in groups {
-            let sum = group.iter().fold(Vector::zero(), |s: Response, g| {
-                s + (*g >> conductivity.of(*g << Vector::slot()))
-            });
+            let sum: Response = group
+                .iter()
+                .map(|g| *g >> conductivity.of(*g << Vector::slot()))
+                .sum();
             out.push(sum.gp(1.0 / group.len() as f64));
         }
         out
@@ -165,14 +165,14 @@ mod symmetry {
     ) -> (Inertia, Inertia) {
         let arm_inertia = arm
             .iter()
-            .fold(pga3d::Line::zero(), |s: Inertia, p| {
-                s + Pga3d::point_inertia(*p)
-            })
+            .map(|p| Pga3d::point_inertia(*p))
+            .sum::<Inertia>()
             .gp(1.0 / arm.len() as f64);
         // Unlike conductivity's mean, this sum assembles masses: the wheel has mass three.
-        let inertia = rotations.iter().fold(pga3d::Line::zero(), |s: Inertia, r| {
-            s + (*r >> arm_inertia.of(*r << pga3d::Line::slot()))
-        });
+        let inertia: Inertia = rotations
+            .iter()
+            .map(|r| *r >> arm_inertia.of(*r << pga3d::Line::slot()))
+            .sum();
         (arm_inertia, inertia)
     }
 

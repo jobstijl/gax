@@ -97,9 +97,7 @@ mod tomography {
     /// The overlap of a set of states: the sum of their dyads, each measuring the overlap with
     /// its state and sending it back along it.
     pub fn overlap(states: &[St]) -> Channel {
-        states
-            .iter()
-            .fold(Channel::zero(), |acc, s| acc + dyad(*s, *s))
+        states.iter().map(|s| dyad(*s, *s)).sum()
     }
 
     /// Weights that recover any state from its scalar products with a spanning set of states:
@@ -133,14 +131,16 @@ mod tomography {
         measured
             .iter()
             .zip(&preparation_dual)
-            .fold(Channel::zero(), |acc, (row, dual)| {
-                let output = row
+            .map(|(row, dual)| {
+                let output: St = row
                     .iter()
                     .zip(&measurement_dual)
-                    .fold(St::zero(), |o, (p, m)| o + *m * *p);
+                    .map(|(p, m)| *m * *p)
+                    .sum();
                 // Leaving the input open extends the measured action to every state.
-                acc + dyad(output, *dual)
+                dyad(output, *dual)
             })
+            .sum()
     }
 
     /// One use of the channel, then two, three, and so on, as composed maps.

@@ -105,9 +105,7 @@ macro_rules! engine {
 
         /// The momenta of all bodies carried into the world frame and summed.
         pub fn total_momentum(bodies: &[Body]) -> Mom {
-            bodies
-                .iter()
-                .fold(Mom::zero(), |acc, b| acc + (b.motor >> b.momentum))
+            bodies.iter().map(|b| b.motor >> b.momentum).sum()
         }
 
         /// The simulation, frame by frame: the bodies' colours, the world forms and body rates
@@ -152,10 +150,11 @@ macro_rules! engine {
             points
                 .iter()
                 .zip(masses)
-                .fold(Inertia::zero(), |acc, (p, m)| {
+                .map(|(p, m)| {
                     let motion = p.commutator(rate);
-                    acc + (*p & motion).gp(*m)
+                    (*p & motion).gp(*m)
                 })
+                .sum()
         }
 
         /// A body of any quadric shape, from mass points filling it: inertia from the points,
@@ -190,7 +189,8 @@ macro_rules! engine {
         /// them, normalized.
         fn uniform_on(axes: &[P], rng: &mut Rng) -> P {
             axes.iter()
-                .fold(P::zero(), |p, a| p + a.gp(rng.normal()))
+                .map(|a| a.gp(rng.normal()))
+                .sum::<P>()
                 .normalized()
                 .into_inner()
         }

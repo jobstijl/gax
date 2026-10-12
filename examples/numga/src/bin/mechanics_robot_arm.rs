@@ -56,10 +56,7 @@ mod arm {
         // Each joint's rate carried into its frame, summed: the world twist of the tip link.
         // Its commutator with the tip is the tip's velocity (the tip first: the motor is
         // `exp(-twist / 2)`, so the derivative of its sandwich is `tip × twist`).
-        let twist = frames
-            .iter()
-            .zip(rates)
-            .fold(Line::zero(), |sum: L, (f, r)| sum + (*f >> *r));
+        let twist: L = frames.iter().zip(rates).map(|(f, r)| *f >> *r).sum();
         let velocity = tip.commutator(twist);
         // Each carried axis paired with the forque: the work per unit joint rate.
         let torques = core::array::from_fn(|k| ((frames[k] >> axis[k]) & forque).s());

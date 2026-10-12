@@ -61,7 +61,7 @@ mod qem {
 
     /// The quadric of a set of planes: the sum of their dyads.
     pub fn quadric(planes: &[Pl]) -> Quadric {
-        planes.iter().fold(Plane::zero(), |q, p| q + dyad(*p))
+        planes.iter().map(|p| dyad(*p)).sum()
     }
 
     /// A quadric's error at a point: the point paired with its polar plane.

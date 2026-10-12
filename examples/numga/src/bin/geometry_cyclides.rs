@@ -596,7 +596,8 @@ mod cyclides {
         spheres
             .iter()
             .zip(weights)
-            .fold(Quadric::zero(), |q, (s, k)| q + dyad(*s).gp(k))
+            .map(|(s, k)| dyad(*s).gp(k))
+            .sum()
     }
 
     pub fn six_families() -> Vec<Part> {

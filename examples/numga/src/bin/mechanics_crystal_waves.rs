@@ -58,9 +58,10 @@ mod crystal {
         let s = Vector::slot;
         let dilation: Stiffness = s() * (s() | s());
         let shear: Stiffness = ((s() | s()) * s()).gp(2.0) - (s() | (s() ^ s()));
-        let cubic: Stiffness = axes().iter().fold(Vector::zero(), |sum: Stiffness, a| {
-            sum + *a * ((*a | s()) * (*a | s()) * (*a | s()))
-        });
+        let cubic: Stiffness = axes()
+            .iter()
+            .map(|a| *a * ((*a | s()) * (*a | s()) * (*a | s())))
+            .sum();
         dilation.gp(c12) + shear.gp(c44) + cubic.gp(c11 - c12 - 2.0 * c44)
     }
 

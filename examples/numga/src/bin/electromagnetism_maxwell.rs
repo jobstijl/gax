@@ -134,8 +134,7 @@ mod maxwell {
     /// `1e-14`).
     pub fn cloud_tensor(us: &[V], mass: f64) -> StressEnergy {
         if us.len() <= 8 {
-            us.iter()
-                .fold(StressEnergy::zero(), |acc, u| acc + dyad(*u).gp(mass))
+            us.iter().map(|u| dyad(*u).gp(mass)).sum()
         } else {
             let (a, b) = us.split_at(us.len() / 2);
             cloud_tensor(a, mass) + cloud_tensor(b, mass)
