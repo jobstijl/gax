@@ -381,6 +381,22 @@ fn numerics(c: &mut Criterion) {
     g.bench_function("gax Line::exp, six derivatives", |b| {
         b.iter(|| black_box(bd).exp());
     });
+    // The typed forms (ADR-043): the same exp with its derivative as a `Motor <- Line`, and the
+    // Hessian of a scalar of the moved point, `Scalar <- (Line, Line)`.
+    g.bench_function("gax jacobian of Line::exp (Motor <- Line)", |b| {
+        b.iter(|| gax::dual::jacobian(|b| b.exp().into_inner(), black_box(bl)));
+    });
+    g.bench_function(
+        "gax hessian of a coordinate of exp(B) >> p (Scalar <- (Line, Line))",
+        |b| {
+            b.iter(|| {
+                gax::dual::hessian(
+                    |b| (b.exp() >> black_box(p).map_coefs(gax::Coef::from_f64)).e032(),
+                    black_box(bl),
+                )
+            });
+        },
+    );
     g.finish();
 }
 

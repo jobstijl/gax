@@ -692,20 +692,73 @@ with momentum conserved.
 
 ## 15. Derivatives
 
-`gax::dual::Dual<T, N>` is a coefficient type carrying `N` derivatives along with each value
+The coefficients of a gax value can carry derivatives along with their values
 (forward-mode automatic differentiation). Every product, sandwich, map, solver, `exp` and `log`
-runs on it unchanged, so the derivative of a whole geometric computation comes out exact to
-rounding in one pass. `derivative`, `gradient` and `jacobian` set up the variables:
+runs on such coefficients unchanged, so the derivative of a whole geometric computation comes
+out exact to rounding, in one pass.
+
+The derivative with respect to a gax value is itself an extensor, as in numga:
+
+* `gax::dual::jacobian(f, x)` of `f: A -> B` returns `f(x)` and the map `B <- (A,)`. Binding a
+  small step gives the first-order change: `f(x + dx) ≈ f(x) + df.of(dx)`. A function that
+  returns a map `B <- (S,)` gets `A`'s slot after its own: `B <- (S, A)`.
+* `gradient(f, x)` of a scalar function returns the linear form `Scalar <- (A,)`, not an element
+  of `A`: it sends a step to the change of `f`.
+* `hessian(f, x)` returns the value, the gradient and the second derivative, the symmetric form
+  `Scalar <- (A, A)`.
+
+They are ordinary maps and forms, so `of`, `solve`, `lstsq` and `eigh` apply to them. A Newton
+step is `x - hessian.solve(gradient)`. Here it recovers a rigid motion from where it took three
+points, iterating on the motion's twist `b` (the motion is `exp(b)`):
 
 ```rust
-use gax::dual::{Dual, gradient};
+use gax::dual::hessian;
+use gax::pga3d::{Line, Point};
+use gax::{ApproxEq, Real};
+
+/// The squared distances from the moved points to their targets, summed. It is generic over the
+/// coefficient type, so the same function gives the value, the gradient and the Hessian.
+fn misfit<T: Real>(b: Line<(), T>, pairs: &[(Point<(), f64>, Point<(), f64>)]) -> T {
+    let m = b.exp();
+    let mut sum = T::zero();
+    for (p, q) in pairs {
+        let [x, y, z] = (m >> p.map_coefs(T::from_f64)).to_euclidean();
+        let [u, v, w] = q.to_euclidean().map(T::from_f64);
+        sum = sum + (x - u) * (x - u) + (y - v) * (y - v) + (z - w) * (z - w);
+    }
+    sum
+}
+
+let truth = Line::<(), f64>::new(0.1, -0.2, 0.3, 0.5, 0.0, -0.4);
+let pairs = [Point::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 0.0)]
+    .map(|p| (p, truth.exp() >> p));
+
+let mut b = Line::<(), f64>::zero();
+for _ in 0..8 {
+    // gradient: Scalar <- Line; curvature: Scalar <- (Line, Line)
+    let (_, gradient, curvature) = hessian(|b| misfit(b, &pairs), b);
+    b = b - curvature.solve(gradient); // the Newton step, a twist
+}
+assert!(b.approx_eq(&truth, 1e-12));
+```
+
+On a quadratic energy one Newton step lands on the minimizer. The value `f` sees has jets as its
+coefficients (`gax::dual::Jet<T, A>`: a value and one derivative per coefficient of `A`). For the
+Hessian they are jets of jets. A function written over `T: Real` accepts both; constants enter
+with `map_coefs(T::from_f64)`.
+
+For derivatives along loose parameters rather than a gax value, `Dual<T, N>` carries `N` of them,
+and `derivative`, `gradient_array` and `jacobian_array` set them up:
+
+```rust
+use gax::dual::{Dual, gradient_array};
 use gax::pga3d::{Motor, Point};
 
 type D = Dual<f64, 2>;
 let c = D::constant;
 // The squared distance from a moved point to a target, and its gradient in the motion's
 // parameters: an angle about z, and a shift along x.
-let (d2, grad) = gradient(
+let (d2, grad) = gradient_array(
     |[a, tx]: [D; 2]| {
         let m = Motor::translation(tx, c(0.0), c(0.0))
             * Motor::rotation_about(c(0.0), c(0.0), c(1.0), a);
@@ -717,12 +770,13 @@ let (d2, grad) = gradient(
 assert!((d2 - 1.0).abs() < 1e-12 && (grad[0] + 2.0).abs() < 1e-12 && grad[1].abs() < 1e-12);
 ```
 
-Branch-free code differentiates the branch it selects (one-sided at a switch), and a derivative
-that is exactly zero stays zero through a function that is singular at the value (`√x` at `0`
-inside `cos √x`, as a rotation's closed form computes its angle), so `exp` of a zero bivector has
-the right derivative where plain forward mode gives `NaN`. `Dual<T, N>` over SIMD lanes
-differentiates a batch at once; over `gax::fp::Fp` the derivatives of polynomial kernels are
-exact.
+Branch-free code differentiates the branch it selects (one-sided at a switch). A derivative that
+is exactly zero stays zero through a function that is singular at the value (`√x` at `0` inside
+`cos √x`, as a rotation's closed form computes its angle), so `exp` of a zero bivector has the
+right derivative where plain forward mode gives `NaN`. Jets over SIMD lanes differentiate a batch
+at once; over `gax::fp::Fp` the derivatives of polynomial kernels are exact. The cost is about
+`1 + N` times the arithmetic for `N` directions, and `(1 + N)²` for the Hessian (49 numbers per
+coefficient for a twist).
 
 ## 16. Other math libraries
 

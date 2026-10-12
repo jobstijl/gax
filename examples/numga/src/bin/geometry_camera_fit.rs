@@ -3,13 +3,13 @@
 //! projection onto the plane `z = 1`; the rig moves it by conjugation, `rig >> camera(rig << X)`,
 //! and the rig is the exponential of a bivector. The image misfit is differentiated with respect
 //! to that bivector through `exp`, the sandwiches, the bind and the unitization. numga uses
-//! JAX's reverse mode; here the coefficients are gax's forward-mode dual numbers (`Dual<f64, 6>`,
-//! one derivative per bivector coefficient), so the same generic code returns the misfit and
-//! its gradient in one pass. Nothing is linearized by hand. The animation replays the descent:
+//! JAX's reverse mode; here `gax::dual::gradient` runs it on forward-mode jets over the bivector
+//! (`Jet<f64, Line>`, one derivative per coefficient), so the same generic code returns the
+//! misfit and its gradient, a linear form on bivectors, in one pass. Nothing is linearized by hand. The animation replays the descent:
 //! the estimated camera (red) flies onto the true one (blue), its images onto the observed ones,
 //! and the misfit falls.
 
-use gax::dual::{Dual, gradient};
+use gax::dual::gradient;
 use gax::pga3d::{Line, Plane, Point};
 use gax::{Real, Unit};
 
@@ -26,7 +26,6 @@ mod camera_fit {
 
     pub type P = Point<(), f64>;
     pub type B = Line<(), f64>;
-    pub type D = Dual<f64, 6>;
 
     /// The world: thirty points about the origin.
     pub fn world() -> Vec<P> {
@@ -73,13 +72,12 @@ mod camera_fit {
         truth() + Line::new(0.3, 0.3, 0.3, -0.3, -0.3, -0.3)
     }
 
-    /// The misfit and its gradient with respect to the generator's six coefficients.
+    /// The misfit and its steepest-descent direction with respect to the generator.
     pub fn misfit_and_gradient(generator: B, world: &[P], observed: &[P]) -> (f64, B) {
-        let (value, grad) = gradient(
-            |g: [D; 6]| misfit(&image(Line::from_coeffs(g), world), observed),
-            generator.c,
-        );
-        (value, Line::from_coeffs(grad))
+        // The slope is a form on bivectors, `Scalar <- Line`; steepest descent in the
+        // coefficient metric reads its coefficients as a bivector.
+        let (value, slope) = gradient(|g| misfit(&image(g, world), observed), generator);
+        (value, Line::from_coeffs(slope.c[0]))
     }
 
     /// Plain gradient descent with step 0.25: the generator after each step, with its misfit.

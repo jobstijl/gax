@@ -8,8 +8,9 @@
 //!   [`FillList`] for binding and composition; [`Cast`], [`SubKind`] and [`GradePart`] for
 //!   projections, embeddings and grade parts between kinds.
 //! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`,
-//!   [`fp::Fp`], a prime field for exact randomized identity checks, and [`dual::Dual`], dual
-//!   numbers for forward-mode derivatives, and [`strict::Strict`], coefficients that give the
+//!   [`fp::Fp`], a prime field for exact randomized identity checks, [`dual::Jet`], values with
+//!   their derivatives for forward-mode differentiation (with respect to a kind, or
+//!   [`dual::Dual`] for loose parameters), and [`strict::Strict`], coefficients that give the
 //!   same bits on every target and SIMD level).
 //! * [`SquareMap`], [`Endomorphism`], [`Form`], [`FormAsMap`], [`Pairing`], [`OfBoth`],
 //!   [`TraceFirst`], [`SingularValues`], [`PseudoInverse`], [`LeastSquares`],

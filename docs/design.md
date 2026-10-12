@@ -1122,7 +1122,9 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   kernel is generic over its coefficient type.
 * **Forward mode as a coefficient.** `Dual<T, N>` carries `N` derivatives; it implements `Coef`
   and `Real`, so products, sandwiches, maps, solvers, `exp` and `log` (the 6D–9D closed forms
-  included) run on it unchanged. `derivative`, `gradient` and `jacobian` set up the variables.
+  included) run on it unchanged. `derivative`, `gradient` and `jacobian` set up the variables
+  (amended: the typed derivatives of ADR-043 take the names `gradient` and `jacobian`; the
+  array forms are `gradient_array` and `jacobian_array`, and `Dual<T, N>` is `Jet<T, Params<N>>`).
   Forward mode suits gax's sizes: a motor has 8 coefficients, and the costs scale with the
   number of inputs, which is small for rigid motions.
 * **Selects and zero tangents.** `select_lt` chooses on the values and carries the chosen
@@ -1208,6 +1210,60 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   trace.
 
 ---
+
+## ADR-043: Typed derivatives through jets over a kind
+*Status: accepted, implemented (`gax_core::dual`). Amends ADR-039.*
+
+* **The problem.** `jacobian` returned `([T; M], [[T; N]; M])`: plain arrays, where numga returns
+  extensors. The gradient of a scalar function of `A` is the form `Scalar <- (A,)`, the
+  Jacobian of `f: A -> B` the map `B <- (A,)`, the Hessian the form `Scalar <- (A, A)`, and a
+  Newton step is `hessian.solve(gradient)`. The obstacle was `Dual<T, N>`'s const `N`: a
+  function generic over `A` needs `Dual<T, { A::N }>`, which takes `generic_const_exprs`
+  (ADR-005 keeps gax on stable without it).
+* **Options considered.**
+  1. *A function per kind, generated.* Every kind of every algebra gets its own
+     `jacobian`/`gradient`/`hessian`, with `N` written out. More generated code and compile
+     time for every algebra, and generic code over the kind would still have no single
+     function to call.
+  2. *A GAT on `Kind` for its dual type* (`type Dual<T>: Real` = `Dual<T, 4>` for `Point`). It
+     works, but changes the trait every generated kind implements, for one feature, and the
+     derivatives arrive as `[T; N]` that must be copied into kind arrays.
+  3. *Run `f` once on the slot-generic `A::slot()`.* The derivative of a linear `f` is `f`
+     itself on the slot, but a nonlinear `f` is not one map: `x * x` on a slotted `x` has two
+     slots, `x * x * x` three, and their sum does not type-check. It covers linear maps only,
+     which need no derivative.
+  4. **Chosen: index the derivatives by a set of directions, not a count.**
+     `Jet<T, D>` holds `re: T` and `du: D::Arr<T>`, for `D: Directions`. Every kind is a
+     direction set, with its own coefficient array (`Kind::Arr`, which exists already), so
+     `Jet<T, A>` carries one derivative per coefficient of `A` with no const arithmetic.
+     `Params<N>` is the direction set of `N` loose parameters, `[X; N]`, and
+     `Dual<T, N>` is now an alias for `Jet<T, Params<N>>`: one implementation of the
+     arithmetic, and the existing code with `Dual` unchanged.
+* **The typed functions.**
+  * `jacobian(f, x)` evaluates `f` once at `variables(x)` (each coefficient its own
+    direction) and reads `Df` off the coefficients. The derivative's coefficients for output
+    `o` and step direction `i` are `y.c[o].du[i]`, which is the storage of `B <- (A,)` as it
+    stands (output first). A map-valued `f`, `B <- (S…)`, gets `A`'s slot after its own, as in
+    numga's `derivative`.
+  * `gradient(f, x)` returns the form `Scalar <- (A,)` (of `A`'s algebra), and accepts a
+    coefficient or a scalar-kind value from `f` (`IntoScalar`).
+  * `hessian(f, x)` evaluates `f` once on jets of jets, `Jet<Jet<T, A>, A>`, and returns the
+    value, the gradient and the form `Scalar <- (A, A)`. Nested forward mode costs
+    `(1 + A::N)²` numbers per coefficient (49 for a twist); reverse mode would cost less, but
+    gax's kinds are small and the nesting needs no new machinery.
+  * The results are ordinary extensors: `of`, `solve`, `inverse`, `lstsq` and `eigh` take
+    them. A Newton step is `x - hessian.solve(gradient)`.
+* **Writing `f`.** `f` sees `A` with jet coefficients, so it is written generic over
+  `T: Real` (the same function then serves values, gradients and Hessians), with constants
+  lifted by `map_coefs(T::from_f64)`. Closures work where their argument type is inferred.
+  The array forms are renamed `gradient_array` and `jacobian_array` (`derivative` of one
+  variable is unchanged).
+* **Checks.** `tests/derivatives.rs` compares every typed derivative with central
+  differences, the gradient with `gradient_array` (identical numbers), the Hessian with the
+  difference of the gradient, a Newton step on a quadratic with its exact minimizer, and the
+  gradient, Hessian and Jacobian of `exp` with numga's `derivative` on JAX
+  (`docs/research/experiments/numga_derivatives.py`, VGA3D, where numga's blade order and
+  orientation are gax's).
 
 ## Hypotheses
 

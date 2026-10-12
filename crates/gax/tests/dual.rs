@@ -8,7 +8,7 @@
 mod rng;
 use rng::{Draw, rng};
 
-use gax::dual::{Dual, derivative, gradient, jacobian};
+use gax::dual::{Dual, derivative, gradient_array, jacobian_array};
 use gax::fp::Fp;
 use gax::pga3d::{Line, Motor, Plane, Point};
 use gax::{Coef, Real};
@@ -84,7 +84,7 @@ fn gradient_through_motions() {
     let mut rng = rng(0x9ad);
     for _ in 0..100 {
         let x0: [f64; 3] = core::array::from_fn(|_| rng.next_f64());
-        let (v, g) = gradient(
+        let (v, g) = gradient_array(
             |[x, y, a]: [Dual<f64, 3>; 3]| {
                 let c = Dual::constant;
                 let m = Motor::translation(x, y, c(0.0))
@@ -122,7 +122,7 @@ fn jacobian_of_a_join() {
         [p.e1() / n, p.e2() / n, p.e3() / n, p.e0() / n]
     };
     let x0 = [1.0, 2.0, 0.5];
-    let (v, j) = jacobian(
+    let (v, j) = jacobian_array(
         |x: [Dual<f64, 3>; 3]| {
             let c = Dual::constant;
             let p: Plane<(), Dual<f64, 3>> = Point::xyz(x[0], c(0.0), c(0.0))
@@ -239,7 +239,7 @@ fn csta_exp_along_a_bivector() {
         let m = bv.gp(t0).exp().into_inner();
         let want: Even<(), f64> = bv * m;
         let scale = want.c.iter().fold(1.0f64, |s, v| s.max(v.abs()));
-        let (_, d) = gradient(
+        let (_, d) = gradient_array(
             |[t]: [Dual<f64, 1>; 1]| {
                 let e = Bivector::<(), Dual<f64, 1>>::from_coeffs(b.map(Dual::constant))
                     .gp(t)
