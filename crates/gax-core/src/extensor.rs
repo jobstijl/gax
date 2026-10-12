@@ -113,14 +113,15 @@ where
     M: Extensor<Slots = (A,), Coef: Real>,
     A: Kind,
     <M::Kind as Kind>::Arr<A::Arr<M::Coef>>: SquareArr<M::Coef>,
-    A::Arr<<M::Kind as Kind>::Arr<M::Coef>>: SquareArr<M::Coef>,
 {
     type Input = A;
     type Inverse = A::Mv<(M::Kind,), M::Coef>;
 
     fn inverse(self) -> Self::Inverse {
         let inv = linalg::inverse(self.coeffs());
-        <Self::Inverse as Extensor>::from_coeffs(matrix_from(|i, j| inv[i][j]))
+        <Self::Inverse as Extensor>::from_coeffs(A::arr_from_fn(|i| {
+            <M::Kind as Kind>::arr_from_fn(|j| inv[i][j])
+        }))
     }
 
     fn det(self) -> M::Coef {

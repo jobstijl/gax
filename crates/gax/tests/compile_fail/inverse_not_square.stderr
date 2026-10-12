@@ -1,9 +1,23 @@
-error[E0599]: the method `inverse` exists for struct `Plane<(gax::pga3d::Line,), f64>`, but its trait bounds were not satisfied
+error[E0277]: the coefficients `[[f64; 6]; 4]` are not square: the map's input and output kinds have different sizes
  --> tests/compile_fail/inverse_not_square.rs:5:15
   |
 5 |     let _ = m.inverse();
-  |               ^^^^^^^
+  |               ^^^^^^^ needs a map between kinds of the same size
   |
-  = note: the following trait bounds were not satisfied:
-          `[[f64; 6]; 4]: SquareArr<f64>`
-          `[[f64; 4]; 6]: SquareArr<f64>`
+  = note: a map `B <- A` stores `[[T; size of A]; size of B]`; `inverse`, `solve`, `det`, `eigh`, `eig` and `svd` need the two sizes equal
+  = note: for a map of another shape, `pinv()` is the pseudo-inverse, `lstsq(b)` the least-squares solution and `svd_thin()` the singular value decomposition
+help: the trait `SquareArr<f64>` is not implemented for `[[f64; 6]; 4]`
+      but it is implemented for `[[f64; 6]; 6]`
+ --> $WORKSPACE/crates/gax-core/src/linalg.rs
+  |
+  | impl<T: Real, const N: usize> SquareArr<T> for [[T; N]; N] {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  = note: required for `Plane<(gax::pga3d::Line,), f64>` to implement `SquareMap`
+note: required by a bound in `Plane::<(A,), T>::inverse`
+ --> src/algebras/pga3d/kinds.rs
+  |
+  |     pub fn inverse(self) -> <A as gx::Kind>::Mv<(Plane,), T>
+  |            ------- required by a bound in this associated function
+  |     where
+  |         Self: gx::SquareMap<Coef = T, Kind = Plane, Input = A, Inverse = <A as gx::Kind>::Mv<(Plane,), T>>,
+  |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Plane::<(A,), T>::inverse`

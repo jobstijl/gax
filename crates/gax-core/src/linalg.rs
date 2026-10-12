@@ -36,8 +36,10 @@ use core::ops::{Index, IndexMut};
 
 /// A square matrix stored as an array of rows: `m[i][j]` is row `i`, column `j`.
 #[diagnostic::on_unimplemented(
-    message = "the map is not square: `{Self}`",
-    note = "inverse, det, solve and svd need a map between kinds with the same number of coefficients"
+    message = "the coefficients `{Self}` are not square: the map's input and output kinds have different sizes",
+    label = "needs a map between kinds of the same size",
+    note = "a map `B <- A` stores `[[T; size of A]; size of B]`; `inverse`, `solve`, `det`, `eigh`, `eig` and `svd` need the two sizes equal",
+    note = "for a map of another shape, `pinv()` is the pseudo-inverse, `lstsq(b)` the least-squares solution and `svd_thin()` the singular value decomposition"
 )]
 pub trait SquareArr<T: Real>: Copy + Index<usize, Output = Self::Vector> + IndexMut<usize> {
     /// Dimension.

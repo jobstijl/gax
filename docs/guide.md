@@ -65,6 +65,25 @@ The output slots of an operation are the input slots, concatenated in order. So 
 the slots of `p`, and `(…) ^ ground` keeps them. The compiler checks all of this; with generic
 `S`, `gax` proves that combining an `S`-slotted value with a plain value gives `S` again.
 
+With several generic operands, one thing is not automatic: how the slot lists are bracketed.
+`(a * b) * c` has the slots `Cat<Cat<A, B>, C>`, and the compiler cannot see that this is the
+same list as `Cat<A, Cat<B, C>>`. If the signature brackets the other way, convert with
+`gax::slots::reassoc`, which costs nothing at run time:
+
+```rust
+use gax::pga3d::Point;
+use gax::{Cat, Slots};
+
+fn triple<A: Slots, B: Slots, C: Slots>(a: Point<A>, b: Point<B>, c: Point<C>)
+    -> Point<Cat<A, Cat<B, C>>>
+{
+    gax::slots::reassoc::<A, B, C, _>((a * b) * c)
+}
+```
+
+Without `reassoc` the error is a type mismatch between the two bracketings, and rustc suggests
+the bound `A: Slots<Cat<B> = A>`. Don't add it: it only holds when `B` is `()`.
+
 ## 3. Filling slots
 
 | call | effect |

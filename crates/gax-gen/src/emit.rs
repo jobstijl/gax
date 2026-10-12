@@ -1084,9 +1084,9 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
             r"impl<A: Kind, T: Real> {name}<(A,), T> {{
     /// The inverse map, `A <- {name}`.
     #[inline]
-    pub fn inverse(self) -> <Self as SquareMap>::Inverse
+    pub fn inverse(self) -> <A as Kind>::Mv<({name},), T>
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A, Inverse = <A as Kind>::Mv<({name},), T>>,
     {{
         SquareMap::inverse(self)
     }}

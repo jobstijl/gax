@@ -87,6 +87,21 @@ impl<M> Unit<M> {
     }
 }
 
+/// Not implemented for any type: the bound of the `log` that every versor kind with a
+/// logarithm carries next to [`Unit::log`], so that `m.log()` on a plain `m` fails with this
+/// message instead of "no method named `log`".
+#[doc(hidden)]
+#[diagnostic::on_unimplemented(
+    message = "the logarithm needs a certified unit versor, a `gax::Unit`, not a plain `{Self}`",
+    label = "`log` is a method of `Unit`",
+    note = "certify it first with `.normalized()` (`m.normalized().log()`), or keep the `Unit` that `exp()`, the unit constructors such as `rotation_about`, `sqrt()` and products of units return",
+    note = "`Unit::new_unchecked(m)` certifies a versor already known to satisfy `m ~m = 1` without arithmetic"
+)]
+pub trait LogNeedsUnit<B> {
+    /// Never called: no type implements the trait.
+    fn log(self) -> B;
+}
+
 /// A conversion `M -> N` that keeps the unit condition, so [`Unit::widen`] may carry the
 /// certificate across. The generated algebras implement it for embeddings between kinds and
 /// for the homomorphisms between algebras that commute with the reverse (`φ(~a) = ~φ(a)`, proved

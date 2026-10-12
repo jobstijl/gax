@@ -403,6 +403,14 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if meta.log.is_none() {
         meta.log = emit_log_fallback(spec, k, &mut traits, &mut meta.kernels);
     }
+    // `log` is `Unit::log`. On a plain versor, a method whose bound never holds turns "no method
+    // named `log`" into `LogNeedsUnit`'s message, which says how to get a `Unit`.
+    if let Some(on) = &meta.log {
+        let _ = write!(
+            body,
+            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.normalized().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T>\n    where\n        Self: gx::LogNeedsUnit<{on}<(), T>>,\n    {{\n        gx::LogNeedsUnit::log(self)\n    }}\n\n"
+        );
+    }
 
     // sqrt of a unit versor: normalize(1 + R).
     let scalar_idx = k.layout.position(0);

@@ -23,6 +23,11 @@ pub trait HasCat {
 }
 
 /// The slot list `A` followed by `B`.
+///
+/// For generic lists the compiler knows `Cat<(), S> = S` and `Cat<S, ()> = S`, but not
+/// associativity: `Cat<Cat<A, B>, C>` and `Cat<A, Cat<B, C>>` are different types to it. When a
+/// type mismatch shows the two bracketings, convert with [`reassoc`]. Ignore rustc's suggestion
+/// to restrict `A: Slots<Cat<B> = A>`: that bound holds only for `B = ()`.
 pub type Cat<A, B> = <A as HasCat>::Cat<B>;
 
 /// A list of open slots. Implemented for `()` and tuples of up to 12 kinds.
@@ -39,6 +44,10 @@ pub type Cat<A, B> = <A as HasCat>::Cat<B>;
 /// # let (l, g) = (Point::xyz(0.0, 0.0, 9.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
 /// # let _ = shadow(l, g, Point::slot());
 /// ```
+///
+/// A product of three generic operands brackets its slots as the expression does:
+/// `(a * b) * c` has `Cat<Cat<A, B>, C>`. A signature that brackets the other way needs
+/// [`reassoc`] (see [`Cat`]).
 pub trait Slots: HasCat<Cat<()> = Self> + Copy + 'static {
     /// Number of slots.
     const LEN: usize;
@@ -94,6 +103,11 @@ pub trait Slots: HasCat<Cat<()> = Self> + Copy + 'static {
 /// Rebracket the slots of `m` from `Cat<Cat<A, B>, C>` to `Cat<A, Cat<B, C>>`: the identity on
 /// the coefficients, for generic code whose signature brackets differently from the
 /// expression that computes it.
+///
+/// Without it, such a function fails with E0308, "expected `Point<<A as HasCat>::Cat<<B as
+/// HasCat>::Cat<C>>>`, found `Point<<<A as HasCat>::Cat<B> as HasCat>::Cat<C>>`", and rustc
+/// suggests restricting `A: Slots<Cat<B> = A>`. That suggestion is wrong (the bound holds only
+/// for `B = ()`); `reassoc` is the fix.
 ///
 /// ```
 /// use gax::pga3d::Point;

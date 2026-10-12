@@ -78,7 +78,7 @@ pub use permute::MoveToFront;
 pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};
 pub use trace::Traceable;
-pub use unit::{NewtonStep, Unit, Widen};
+pub use unit::{LogNeedsUnit, NewtonStep, Unit, Widen};
 
 #[cfg(feature = "bytemuck")]
 pub use bytemuck;

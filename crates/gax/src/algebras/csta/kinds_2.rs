@@ -758,9 +758,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Multivector,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A, Inverse = <A as gx::Kind>::Mv<(Multivector,), T>>,
     {
         gx::SquareMap::inverse(self)
     }

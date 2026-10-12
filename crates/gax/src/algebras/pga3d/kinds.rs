@@ -426,9 +426,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Scalar<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Scalar,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A, Inverse = <A as gx::Kind>::Mv<(Scalar,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -1287,9 +1287,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Plane<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Plane<(A,), T> {
     /// The inverse map, `A <- Plane`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Plane,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Plane, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Plane, Input = A, Inverse = <A as gx::Kind>::Mv<(Plane,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -2172,9 +2172,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Line<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Line<(A,), T> {
     /// The inverse map, `A <- Line`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Line,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Line, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Line, Input = A, Inverse = <A as gx::Kind>::Mv<(Line,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -3148,9 +3148,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Point<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Point<(A,), T> {
     /// The inverse map, `A <- Point`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Point,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Point, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Point, Input = A, Inverse = <A as gx::Kind>::Mv<(Point,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -4004,9 +4004,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Direction<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Direction<(A,), T> {
     /// The inverse map, `A <- Direction`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Direction,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A, Inverse = <A as gx::Kind>::Mv<(Direction,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -4748,9 +4748,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Pseudoscalar<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
     /// The inverse map, `A <- Pseudoscalar`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Pseudoscalar,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A, Inverse = <A as gx::Kind>::Mv<(Pseudoscalar,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -5510,9 +5510,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Rotor<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Rotor<(A,), T> {
     /// The inverse map, `A <- Rotor`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Rotor,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Rotor, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Rotor, Input = A, Inverse = <A as gx::Kind>::Mv<(Rotor,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -5908,6 +5908,17 @@ impl<T: gx::Real> Rotor<(), T> {
         let t2 = x[2] * s0;
         let t3 = x[3] * s0;
         gx::Unit::new_unchecked(Rotor::from_coeffs([t0, t1, t2, t3]))
+    }
+
+    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
+    /// (`self.normalized().log()`). This method only makes the compile error say so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn log(self) -> Line<(), T>
+    where
+        Self: gx::LogNeedsUnit<Line<(), T>>,
+    {
+        gx::LogNeedsUnit::log(self)
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
@@ -6437,9 +6448,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Translator<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Translator<(A,), T> {
     /// The inverse map, `A <- Translator`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Translator,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Translator, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Translator, Input = A, Inverse = <A as gx::Kind>::Mv<(Translator,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -6809,6 +6820,17 @@ impl<T: gx::Real> Translator<(), T> {
         let t2 = x[2] * s0;
         let t3 = x[3] * s0;
         gx::Unit::new_unchecked(Translator::from_coeffs([t0, t1, t2, t3]))
+    }
+
+    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
+    /// (`self.normalized().log()`). This method only makes the compile error say so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn log(self) -> Line<(), T>
+    where
+        Self: gx::LogNeedsUnit<Line<(), T>>,
+    {
+        gx::LogNeedsUnit::log(self)
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
@@ -7358,9 +7380,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Motor<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
     /// The inverse map, `A <- Motor`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Motor,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A, Inverse = <A as gx::Kind>::Mv<(Motor,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -7806,6 +7828,17 @@ impl<T: gx::Real> Motor<(), T> {
         let t14 = (-x[3]).mul_add(s1, t9);
         let t15 = x[0].mul_add(s1, t11);
         gx::Unit::new_unchecked(Motor::from_coeffs([t0, t1, t2, t3, t12, t13, t14, t15]))
+    }
+
+    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
+    /// (`self.normalized().log()`). This method only makes the compile error say so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn log(self) -> Line<(), T>
+    where
+        Self: gx::LogNeedsUnit<Line<(), T>>,
+    {
+        gx::LogNeedsUnit::log(self)
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
@@ -8407,9 +8440,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Flector<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Flector<(A,), T> {
     /// The inverse map, `A <- Flector`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Flector,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Flector, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Flector, Input = A, Inverse = <A as gx::Kind>::Mv<(Flector,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -9461,9 +9494,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
 impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Multivector,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A, Inverse = <A as gx::Kind>::Mv<(Multivector,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
