@@ -147,3 +147,39 @@ pub fn probe_batch_exp(bs: &[gax::pga3d::Line], out: &mut [Motor]) {
     }
     gax::batch::map(&Exp, bs, out);
 }
+
+/// Probe: a dense map bound to a value (`Line <- Line`, f64), as `of` runs it.
+#[inline(never)]
+pub fn probe_map_of_value(
+    m: gax::pga3d::Line<(gax::pga3d::Line,), f64>,
+    b: gax::pga3d::Line<(), f64>,
+) -> gax::pga3d::Line<(), f64> {
+    m.of(b)
+}
+
+/// Probe: two dense maps composed, `m ∘ n`.
+#[inline(never)]
+pub fn probe_map_compose(
+    m: gax::pga3d::Line<(gax::pga3d::Line,), f64>,
+    n: gax::pga3d::Line<(gax::pga3d::Line,), f64>,
+) -> gax::pga3d::Line<(gax::pga3d::Line,), f64> {
+    m.of(n)
+}
+
+/// Probe: a bilinear form with a map bound into its first slot.
+#[inline(never)]
+pub fn probe_form_bind(
+    f: gax::pga3d::Scalar<(gax::pga3d::Line, gax::pga3d::Line), f64>,
+    m: gax::pga3d::Line<(gax::pga3d::Line,), f64>,
+) -> gax::pga3d::Scalar<(gax::pga3d::Line, gax::pga3d::Line), f64> {
+    f.of(m)
+}
+
+/// Probe: a dense map solved against a value (LU).
+#[inline(never)]
+pub fn probe_map_solve(
+    m: gax::pga3d::Line<(gax::pga3d::Line,), f64>,
+    b: gax::pga3d::Line<(), f64>,
+) -> gax::pga3d::Line<(), f64> {
+    m.solve(b)
+}
