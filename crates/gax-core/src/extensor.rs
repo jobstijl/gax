@@ -30,7 +30,7 @@ pub trait SquareMap: Extensor<Coef: Real> {
     /// The input kind `A`.
     type Input: Kind;
     /// The inverse map `A <- B`.
-    type Inverse: Extensor<Kind = Self::Input, Coef = Self::Coef>;
+    type Inverse: Extensor<Kind = Self::Input, Slots = (Self::Kind,), Coef = Self::Coef>;
 
     /// The inverse map, by LU factorization with partial pivoting.
     fn inverse(self) -> Self::Inverse;

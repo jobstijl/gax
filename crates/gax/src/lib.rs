@@ -64,7 +64,7 @@ algebras! {
     /// Plane-based projective geometric algebra of Euclidean space, `R(3,0,1)`.
     #[cfg(feature = "pga3d")]
     pga3d {
-        pub use crate::extras::{Between, PrincipalInertia};
+        pub use crate::extras::{Between, PrincipalInertia, PrincipalMobility};
         pub use crate::moments::Moments3 as Moments;
     }
 

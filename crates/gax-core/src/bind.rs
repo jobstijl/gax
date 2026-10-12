@@ -2,6 +2,7 @@
 
 use crate::cast::{Cast, SubKind};
 use crate::kind::{Extensor, Kind, Retype};
+use crate::map::LinearMap;
 use crate::slots::{Cat, SlotArr, SplitFirst};
 
 /// Fill the first slot of an extensor.
@@ -53,19 +54,21 @@ pub trait Of<X> {
 }
 
 /// Result slots of binding `X` into the first slot of `M`.
-pub type OfSlots<M, X> = Cat<<X as Extensor>::Slots, <<M as Extensor>::Slots as SplitFirst>::Tail>;
+pub type OfSlots<M, X> = Cat<<X as LinearMap>::Slots, <<M as Extensor>::Slots as SplitFirst>::Tail>;
 
 impl<M, X> Of<X> for M
 where
     M: Extensor,
     M::Slots: SplitFirst,
-    X: Extensor<Coef = M::Coef>,
+    X: LinearMap<Coef = M::Coef>,
     X::Kind: SubKind<<M::Slots as SplitFirst>::Head>,
 {
     type Output = Retype<M, OfSlots<M, X>, M::Coef>;
 
     #[inline(always)]
     fn of(self, x: X) -> Self::Output {
+        // A structured `x` (ADR-044) binds through its dense form; for a dense `x` this is a copy.
+        let x = x.to_dense();
         // `Σᵢ xs[i] ⊗ col[i]` per output coefficient, `xs` in the slot's layout.
         macro_rules! contract {
             ($xc:expr) => {{
@@ -95,7 +98,8 @@ where
             contract!(x.coeffs())
         } else {
             // A sub-kind: placed in the slot's layout first (zeros on the slot's other blades).
-            let embedded = crate::cast::cast::<X, <M::Slots as SplitFirst>::Head>(&x);
+            let embedded =
+                crate::cast::cast::<crate::map::Dense<X>, <M::Slots as SplitFirst>::Head>(&x);
             contract!(embedded.coeffs())
         };
         <Self::Output as Extensor>::from_coeffs(out)

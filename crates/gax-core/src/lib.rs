@@ -47,6 +47,7 @@ pub mod fp;
 pub mod gpu;
 pub mod kind;
 pub mod linalg;
+pub mod map;
 pub mod math;
 pub mod ops;
 pub mod permute;

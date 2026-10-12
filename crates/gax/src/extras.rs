@@ -7,7 +7,7 @@
 //! `angle`, reflections, principal frames of inertia, and conformal points and spheres.
 
 #[cfg(feature = "pga3d")]
-pub use pga3d_extras::PrincipalInertia;
+pub use pga3d_extras::{PrincipalInertia, PrincipalMobility};
 
 #[cfg(any(feature = "pga2d", feature = "pga3d"))]
 /// The elements a motor carries onto one another, for `Motor::between`: planes, lines and
@@ -84,8 +84,9 @@ mod shared {
 
 #[cfg(feature = "pga3d")]
 mod pga3d_extras {
+    use crate::map::{Dense, LinearMap, SquareLinearMap};
     use crate::pga3d::{Line, Motor, Plane, Point, Translator};
-    use crate::{Real, Unit};
+    use crate::{Of, Real, Slots, Unit};
 
     impl<T: Real> Point<(), T> {
         /// The Euclidean point `(x, y, z)`, with weight 1: `x e032 + y e013 + z e021 + e123`.
@@ -257,17 +258,21 @@ mod pga3d_extras {
         /// // momentum, the angular velocity through the moments to its ideal part: a dual line.
         /// assert_eq!((f.e23(), f.e01()), (2.0 * b.e01(), 0.5 * b.e23()));
         /// ```
+        ///
+        /// A map with open slots is composed: `body.of(m)` is `body ∘ m`, scaled column by
+        /// column, without building the dense map (ADR-044).
         #[inline]
-        pub fn of(self, b: Line<(), T>) -> Line<(), T> {
+        pub fn of<S: Slots>(self, b: Line<S, T>) -> Line<S, T> {
             let (m, i) = (self.mass, self.moments);
-            Line::new(
-                m * b.e01(),
-                m * b.e02(),
-                m * b.e03(),
-                i[0] * b.e23(),
-                i[1] * b.e31(),
-                i[2] * b.e12(),
-            )
+            let c = &b.c;
+            Line::from_coeffs([
+                scale::<S, T>(m, &c[3]),
+                scale::<S, T>(m, &c[4]),
+                scale::<S, T>(m, &c[5]),
+                scale::<S, T>(i[0], &c[0]),
+                scale::<S, T>(i[1], &c[1]),
+                scale::<S, T>(i[2], &c[2]),
+            ])
         }
 
         /// The twist of a momentum, the inverse map: four reciprocals and six products.
@@ -279,17 +284,25 @@ mod pga3d_extras {
         /// assert_eq!(body.inverse_of(body.of(b)), b);
         /// ```
         #[inline]
-        pub fn inverse_of(self, f: Line<(), T>) -> Line<(), T> {
-            let r = self.mass.recip();
-            let i = self.moments.map(Real::recip);
-            Line::new(
-                i[0] * f.e01(),
-                i[1] * f.e02(),
-                i[2] * f.e03(),
-                r * f.e23(),
-                r * f.e31(),
-                r * f.e12(),
-            )
+        pub fn inverse_of<S: Slots>(self, f: Line<S, T>) -> Line<S, T> {
+            self.inverse().of(f)
+        }
+
+        /// The inverse map, from momenta to twists, in the same four numbers: the mass and
+        /// moments inverted (ADR-044).
+        ///
+        /// ```
+        /// use gax::pga3d::{Line, PrincipalInertia};
+        /// let body = PrincipalInertia::new(4.0, [0.5, 0.25, 2.0]);
+        /// let b = Line::new(1.0, -0.5, 0.25, 2.0, 0.5, -1.0);
+        /// assert_eq!(body.inverse().of(body.of(b)), b);
+        /// ```
+        #[inline]
+        pub fn inverse(self) -> PrincipalMobility<T> {
+            PrincipalMobility {
+                inverse_mass: self.mass.recip(),
+                inverse_moments: self.moments.map(Real::recip),
+            }
         }
 
         /// The dense map `Line <- Line`.
@@ -326,6 +339,137 @@ mod pga3d_extras {
         #[inline]
         pub fn energy_form(self) -> crate::pga3d::Scalar<(Line, Line), T> {
             Line::slot() & self.to_map()
+        }
+    }
+
+    /// Every coefficient of a slot array scaled by `k`.
+    #[inline(always)]
+    fn scale<S: Slots, T: Real>(k: T, c: &S::Arr<T>) -> S::Arr<T> {
+        S::map(c, &mut |x: &T| k * *x)
+    }
+
+    /// The inverse of a [`PrincipalInertia`]: a map from momenta (forques) to twists, stored as
+    /// the inverse mass and the inverse principal moments (ADR-044).
+    ///
+    /// ```
+    /// use gax::pga3d::{Line, PrincipalInertia};
+    /// let mobility = PrincipalInertia::new(2.0, [0.5, 0.75, 0.25]).inverse();
+    /// let f = Line::new(2.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    /// let b = mobility.of(f);
+    /// // The angular part of the momentum through the mass, the linear part through the moments.
+    /// assert_eq!((b.e01(), b.e12()), (1.0, 4.0));
+    /// ```
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub struct PrincipalMobility<T> {
+        /// The reciprocal of the mass.
+        pub inverse_mass: T,
+        /// The reciprocals of the principal moments about x, y and z.
+        pub inverse_moments: [T; 3],
+    }
+
+    impl<T: Real> PrincipalMobility<T> {
+        /// The twist of a momentum: six products. A map is composed, as for
+        /// [`PrincipalInertia::of`].
+        #[inline]
+        pub fn of<S: Slots>(self, f: Line<S, T>) -> Line<S, T> {
+            let (r, i) = (self.inverse_mass, self.inverse_moments);
+            let c = &f.c;
+            Line::from_coeffs([
+                scale::<S, T>(i[0], &c[3]),
+                scale::<S, T>(i[1], &c[4]),
+                scale::<S, T>(i[2], &c[5]),
+                scale::<S, T>(r, &c[0]),
+                scale::<S, T>(r, &c[1]),
+                scale::<S, T>(r, &c[2]),
+            ])
+        }
+
+        /// The inertia this is the inverse of.
+        #[inline]
+        pub fn inverse(self) -> PrincipalInertia<T> {
+            PrincipalInertia {
+                mass: self.inverse_mass.recip(),
+                moments: self.inverse_moments.map(Real::recip),
+            }
+        }
+
+        /// The dense map `Line <- Line`.
+        #[inline]
+        pub fn to_map(self) -> Line<(Line,), T> {
+            self.of(Line::slot())
+        }
+    }
+
+    // The structured maps as maps (ADR-044): their dense forms for everything else, their own
+    // paths for applying, solving and inverting, and for composing as the outer map.
+
+    impl<T: Real> LinearMap for PrincipalInertia<T> {
+        type Kind = Line;
+        type Slots = (Line,);
+        type Coef = T;
+        #[inline]
+        fn to_dense(self) -> Dense<Self> {
+            self.to_map()
+        }
+    }
+
+    impl<T: Real> LinearMap for PrincipalMobility<T> {
+        type Kind = Line;
+        type Slots = (Line,);
+        type Coef = T;
+        #[inline]
+        fn to_dense(self) -> Dense<Self> {
+            self.to_map()
+        }
+    }
+
+    impl<T: Real> SquareLinearMap for PrincipalInertia<T> {
+        type Input = Line;
+        type Inverse = PrincipalMobility<T>;
+        #[inline]
+        fn apply(self, x: Line<(), T>) -> Line<(), T> {
+            self.of(x)
+        }
+        #[inline]
+        fn solve(self, b: Line<(), T>) -> Line<(), T> {
+            self.inverse().of(b)
+        }
+        #[inline]
+        fn inverse(self) -> PrincipalMobility<T> {
+            PrincipalInertia::inverse(self)
+        }
+    }
+
+    impl<T: Real> SquareLinearMap for PrincipalMobility<T> {
+        type Input = Line;
+        type Inverse = PrincipalInertia<T>;
+        #[inline]
+        fn apply(self, x: Line<(), T>) -> Line<(), T> {
+            self.of(x)
+        }
+        #[inline]
+        fn solve(self, b: Line<(), T>) -> Line<(), T> {
+            self.inverse().of(b)
+        }
+        #[inline]
+        fn inverse(self) -> PrincipalInertia<T> {
+            PrincipalMobility::inverse(self)
+        }
+    }
+
+    impl<S: Slots, T: Real> Of<Line<S, T>> for PrincipalInertia<T> {
+        type Output = Line<S, T>;
+        #[inline]
+        fn of(self, b: Line<S, T>) -> Line<S, T> {
+            PrincipalInertia::of(self, b)
+        }
+    }
+
+    impl<S: Slots, T: Real> Of<Line<S, T>> for PrincipalMobility<T> {
+        type Output = Line<S, T>;
+        #[inline]
+        fn of(self, f: Line<S, T>) -> Line<S, T> {
+            PrincipalMobility::of(self, f)
         }
     }
 

@@ -1,0 +1,18 @@
+error[E0277]: no regressive product (`&`) of `gax::pga3d::Line<(gax::pga3d::Line,), f64>` and `PrincipalInertia<{float}>`
+ --> tests/compile_fail/structured_operator.rs:7:37
+  |
+7 |     let _ = Line::<(), f64>::slot() & inertia;
+  |                                     ^ the trait `Vee<PrincipalInertia<{float}>>` is not implemented for `gax::pga3d::Line<(gax::pga3d::Line,), f64>`
+  |
+  = note: the product is identically zero for these kinds (so it is not defined), or an operand is not a multivector of the same algebra and coefficient type (versor transport needs a declared versor kind as a value on the left)
+  = help: `gax::pga3d::Line<S1, T>` implements trait `Vee<Rhs>`:
+            Vee<gax::pga3d::Direction<S2, T>>
+            Vee<gax::pga3d::Flector<S2, T>>
+            Vee<gax::pga3d::Line<S2, T>>
+            Vee<gax::pga3d::Motor<S2, T>>
+            Vee<gax::pga3d::Multivector<S2, T>>
+            Vee<gax::pga3d::Point<S2, T>>
+            Vee<gax::pga3d::Pseudoscalar<S2, T>>
+            Vee<gax::pga3d::Rotor<S2, T>>
+            Vee<gax::pga3d::Translator<S2, T>>
+  = note: required for `gax::pga3d::Line<(gax::pga3d::Line,), f64>` to implement `BitAnd<PrincipalInertia<{float}>>`

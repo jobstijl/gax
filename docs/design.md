@@ -1265,6 +1265,98 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   (`docs/research/experiments/numga_derivatives.py`, VGA3D, where numga's blade order and
   orientation are gax's).
 
+## ADR-044: Structured maps beside dense extensors (`LinearMap`)
+*Status: proposed; spike on branch `spike/structured-maps`, for review before the rest of the
+library follows.*
+
+* **The problem.** numga's `PrincipalInertiaPGA3` is a `Bivector <- Bivector` stored as four
+  numbers, with a fast apply and a fast inverse; it subclasses `Extensor`, so generic code takes
+  it as an ordinary map and every other operation rebuilds the dense 6 × 6 on demand. gax's
+  `pga3d::PrincipalInertia` had `of`, `inverse_of` and `to_map()`, but it was a separate struct:
+  composing, binding and solving needed `to_map()` first. It cannot implement `Extensor`, whose
+  `coeffs(&self)` lends out stored dense coefficients that a compact struct does not have, and
+  whose `from_coeffs` builds one from any dense coefficients.
+* **Options.**
+  1. *`Extensor` with its coefficients by value*, and structured maps as `Extensor`s. Every
+     blanket method (`solve`, `eigh`, `lstsq`, binding) would accept them through the dense
+     form, but `from_coeffs` would have to leave the trait, and no fast path could be added:
+     the map methods are blanket impls over `Extensor`, and stable Rust has no specialization.
+     Every generated type would change its core trait, and every use of a large map's
+     coefficients would copy them in debug builds.
+  2. *A representation enum inside the generated types* (dense or structured, chosen at run
+     time). Every map pays a branch and the size of its largest variant; it defeats the
+     straight-line kernels (ADR-006).
+  3. **Chosen: a second trait beside `Extensor`.** `Extensor` stays the dense storage that every
+     generated type implements, unchanged. `map::LinearMap` is any representation: kind, slots,
+     coefficient type, and `to_dense()`, the dense coefficients by value. Every `Extensor`
+     implements it by a blanket impl (`to_dense` is a copy). A structured type implements it
+     itself. This is coherent because the structured type is not an `Extensor`. The blanket impl
+     in gax-core and the impl for a gax type do not overlap, which a two-crate experiment
+     confirmed.
+* **Fast paths without specialization.** `map::SquareLinearMap` (`apply`, `solve`, `inverse`,
+  with an associated `Inverse` representation) is what generic code over square maps is
+  written against. Dense maps implement it through `SquareMap` (LU), and a structured map
+  implements it with its own paths. Neither overrides the other: they are different types, so
+  each has its own impl, and the choice is made at compile time.
+* **Binding.** `Of<X>` now takes any `X: LinearMap` and binds its dense form, so a dense map
+  composes with a structured one (`m.of(inertia)`), and forms bind it (`pairing.of(inertia)`).
+  For a dense `X` the dense form is the value itself, and the release code is unchanged
+  (below). A structured map that is the *outer* map composes by its own `Of` impl, column by
+  column: `inertia.of(m)` scales and permutes `m`'s columns and never builds the 6 × 6.
+* **The spike.**
+  * `PrincipalInertia` (mass and three moments) and `PrincipalMobility`, its inverse in the same
+    four numbers, implement `LinearMap`, `SquareLinearMap` and `Of`.
+  * `of` and `inverse_of` take maps as well as values.
+  * `tests/structured_maps.rs` checks against the dense form:
+    * composition either way round;
+    * binding into forms;
+    * the energy form;
+    * solve and inverse;
+    * one function written against `SquareLinearMap`, called with either representation.
+* **What it does not do (yet).**
+  * Operators: `a * inertia` and `Line::slot() & inertia` do not compile. The products are
+    generated per pair of dense kinds; extending them would mean an impl per product per
+    structured type, or a blanket over `LinearMap` that collides with the generated ones.
+    Binding covers the common uses (`Line::slot() & inertia.of(Line::slot())`).
+  * Concrete signatures: a function that takes `Line<(Line,), T>` still takes only the dense
+    type. Rust has no subclassing, so "accepted as an ordinary map" means accepted by code
+    written against the traits.
+  * The other map methods (`eigh`, `svd`, `lstsq`, `det`) stay on `SquareMap`. Moving them into
+    `SquareLinearMap` with dense defaults (`self.to_dense().eigh()`) is the next step if the
+    design is accepted, as is `motions::Motions::Inertia`, which stays dense.
+* **Measurements** (rustc 1.99.0, against the commit before the spike):
+  * *Release code of dense maps is unchanged.* The `#[inline(never)]` probes in `gax-bench`
+    (`-C target-cpu=native`) have the same instruction counts before and after:
+    | probe | instructions |
+    |---|---|
+    | `Line <- Line` bound to a value | 81 |
+    | two such maps composed | 77, with its two callees |
+    | a form bound with a map | 280 |
+    | `solve` | 423 |
+    | point map applied | 37 |
+    | motor sandwich | 52 |
+    | point map built | 115 |
+  * *Debug build time is unchanged.* Builds of `gax` alone, per algebra, interleaved base and
+    spike, three of each, have medians within the noise of one another:
+    | algebra | base | spike |
+    |---|---|---|
+    | VGA2D | 0.57 s | 0.55 s |
+    | PGA3D | 3.25 s | 3.27 s |
+    | CGA3D | 7.06 s | 6.98 s |
+    | CSTA | 12.43 s | 12.15 s |
+
+    A first, sequential run had the spike 0.2–0.8 s slower; it ran while the machine was still
+    loaded from the release build before it (load average 6.8), and the interleaved runs do
+    not reproduce it.
+  * *Compile errors.* The eleven existing compile-fail messages are byte for byte the same.
+    * A structured map bound to a slot of the wrong kind gets the same message as a dense
+      one, naming the map: "a `Line` does not fit a slot of kind `Point`, required for
+      `Point<(Point,)>` to implement `Of<PrincipalInertia<f64>>`"
+      (`structured_wrong_slot`).
+    * A structured map in a product gets the generic "no regressive product (`&`) of
+      `Line<(Line,)>` and `PrincipalInertia`", whose note covers it only as "an operand is
+      not a multivector" (`structured_operator`). The rollout should name `to_map()` there.
+
 ## Hypotheses
 
 | # | hypothesis | verdict | evidence / decision |
