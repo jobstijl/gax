@@ -164,5 +164,16 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Benchmarks re-measured on an idle machine (2026-10-05); the drift of single-call `exp` traced to code placement, not to a change in its code (performance.md)
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, algebras beyond 9D
 
+## Phase 9: after a review with numga's author (2026-10)
+- [x] Compile errors that explain themselves: `log` on a plain versor names `Unit`, a non-square `inverse`/`solve` names the sizes and `pinv`/`lstsq`; `reassoc` documented where generic bracketing fails; MSRV table in ADR-002
+- [x] numga examples: reductions as `.map(..).sum()` (bit-identical)
+- [x] Typed derivatives (ADR-043): `jacobian`, `gradient`, `hessian` return extensors, on `Jet<T, D>` (a dual number over a kind's own array); checked against numga's JAX `derivative`
+- [x] Structured maps (ADR-044): `LinearMap` beside `Extensor`, `SquareLinearMap` fast paths without specialization; `PrincipalInertia` and `PrincipalMobility` compose, bind and solve without `to_map()`; dense code unchanged (release instructions and build times measured)
+- [x] Fields over run-time sites (ADR-046, docs/fields.md): `Field`, `SparseMap` (CSR, typed cells), solves (preconditioned CG, dense LU), derivatives with respect to a field, sliced-ELLPACK batch products; numga's bead string matched
+- [ ] Fields over a fixed number of sites as kinds (ADR-045: `Sites<K, N>` with a flat view; designed and modelled, not built)
+- [ ] Sparse direct solves, least squares and eigenproblems on field maps (only SPD CG and dense LU now)
+- [ ] Faster sparse products in `f64`: rows sorted by length within slices (SELL-C-σ), cheaper gathers
+- [ ] Proven rounding bounds from gax-bend: parked (its kernels' term order and fusion differ from gax's; gax-gen would have to export its trees)
+
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.
