@@ -824,11 +824,13 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   degenerate); `hodge()` is `~x I` with the metric, numga's `dual`. In STA and other algebras
   with negative squares they differ in sign on some blades: physics written with the Hodge dual
   (Maxwell, constitutive relations) needs `hodge()`.
-* **Coming from numga.** numga orients the PGA3D pseudoscalar as `x∧y∧z∧w = −e0123`, so its
-  points, `&` and `dual` in PGA3D are the negatives of gax's: a formula carries over unchanged when
-  its point literals and `&`s are even in number, and flips sign otherwise (a joined axis turns
-  the other way, `exp(axis θ/2)` becomes `exp(-axis θ/2)`, joint torques change sign). PGA2D agrees.
-  `examples/numga` ports all of numga's examples, with these differences noted where they arise.
+* **Coming from numga.** Since numga 93c2ae3 (October 2026), its PGA3D has gax's basis: `w`
+  first, the blades `wx wy wz wzy wxz wyx xyz wxyz` (gax's `e01 e02 e03 e032 e013 e021 e123
+  e0123`). Joins, meets and `dual` agree in sign: the origin joined with a point on `+x` is
+  `+yz`, and the dual of the origin is `−w` in both. Before that commit, numga ordered the basis
+  `x y z w`, so `x∧y∧z∧w = −e0123`, and its PGA3D points, `&` and `dual` were the negatives of
+  gax's. `examples/numga` ports numga's examples from before the change and notes those sign
+  differences where they arise. PGA2D always agreed.
 * **Clippy and the operators.** `clippy::eq_op` reads `a | a` and `b ^ b` as bitwise operations
   on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.
