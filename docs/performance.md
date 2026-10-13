@@ -341,6 +341,21 @@ SSE4.2, and 0.32 µs on AVX2.
 How the kernels stay vectorized (inlining, `Coef::vectorize`, the block layout) is in ADR-023 of
 the [design record](design.md).
 
+## Field maps (`benches/batch.rs`, groups `fields`)
+
+A string of 1024 sites; rustc 1.99.0 on an idle machine (ADR-046).
+
+| | default target | `target-cpu=native` |
+|---|---|---|
+| `SparseMap::apply`, 3070 couplings, each its own `Point <- Point` (`f32`): scalar loop | 7.04 µs | 7.98 µs |
+| the same, `packed()` (sliced ELLPACK, one row per lane) | **5.44 µs** | **5.23 µs** |
+| the dense batch path, one map `of_slice` over as many values | 2.85 µs | 2.94 µs |
+| one product of the string's stiffness (`f64`): scalar / packed | 8.30 / 8.51 µs | 7.83 / 8.89 µs |
+| `SparseMap::solve` (Jacobi-preconditioned CG, 33 iterations), `f64` / `f32` | 452 / 138 µs | 449 / 146 µs |
+
+A packed solve was measured and dropped: 15–22% slower in `f64` and even in `f32`, because the
+CG's vector arithmetic weighs as much as its products.
+
 ## GPU (`examples/wgpu -- --bench`)
 
 These were measured on an AMD RX 6900 XT (RADV, Vulkan), with `2²⁰` instances or particles, on

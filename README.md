@@ -24,6 +24,8 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 ## Documentation
 
 * [Guide](docs/guide.md): extensors as a composition language, in plain terms.
+* [Fields](docs/fields.md): one object over many sites (a mesh, a string of beads), sparse field
+  maps that couple the sites, their solves and derivatives (feature `std`).
 * [Batch kernels](docs/batch.md): SIMD over slices, with the CPU's best instruction set chosen at
   run time (feature `batch`).
 * [Laws](docs/laws.md): the algebraic laws the library satisfies, each proved by a test on

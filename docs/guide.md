@@ -346,6 +346,11 @@ inverse as a polynomial in `x` from the scalar parts of its powers, refined by a
 (up to 9 products in the kind's product closure in the standard algebras; ADR-037). A kind none of whose values is
 invertible, such as a degenerate pseudoscalar, has no `inverse()`.
 
+The maps above couple the coefficients of one value. A map that couples the values at many
+sites, such as the beads of a string or the vertices of a mesh, is a *field map*: `gax::field`
+stores it sparsely, as typed cells from site to site, and solves the whole coupled system at once.
+See [fields.md](fields.md).
+
 ## 7. Performance: three tiers, and batching
 
 1. **Every product is straight-line code**, generated per pair of kinds. There are no loops over

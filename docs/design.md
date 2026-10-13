@@ -1403,83 +1403,99 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * The one `unsafe` cast needs miri in CI, as gax already runs it.
 
 ## ADR-046: Fields over a run-time number of sites, and sparse field maps
-*Status: proposed; spike on branch `spike/fields`, for review before generalizing.*
+*Status: accepted, implemented (`gax_core::field`, `docs/fields.md`).*
 
-* **The problem.** Meshes have their site counts at run time, and their couplings are sparse:
-  a vertex feels its edges. numga's `SparseExtensor` stores typed cells with row and column
+* **The problem.** Meshes have their site counts at run time, and their couplings are sparse: a
+  vertex feels its edges. numga's `SparseExtensor` stores typed cells with row and column
   indices; `~ends * ends` is a mesh Laplacian. gax had only the batch side (`Soa`, slice
   kernels), with no sites in any type and nothing that couples them.
-* **The spike (`gax::field`, feature `std`).**
-  * `Field<M>`: a value (or map, or form) of type `M` at each site, in a `Vec`. It has
-    site-by-site `map` and `zip_with`, `+` and `-`, `sum` over the sites, `scaled`, and the
-    coefficient inner product `dot`.
-  * `SparseMap<C>`: cells of type `C` with row and column indices and a shape
-    `(output sites, input sites)`; repeated couplings add.
-  * Multivector cells multiply, as in numga:
-    * `&ends * &positions` multiplies each cell with the value at its column and sums at the
-      rows;
-    * `&ends.reverse() * &ends` multiplies the cells along every path through the shared
-      sites;
-    * `&cells * Vector::slot()` turns the cells into maps.
-  * Map cells apply: `apply`, `compose` (through `Of`), and `solve`, which is conjugate
-    gradients and so only for symmetric positive definite couplings.
-  * `from_diagonal`, `transpose_with` and `reverse` (the couplings run back, the cells
-    reversed), `map_cells`, and `+`.
-  * `apply_batch` is the batch form: lanes of cells and of the values at their columns
-    gathered, multiplied, and scattered into the rows one by one (rows repeat, so the sums
-    stay serial). `packed()` packs the cells into blocks once, for a map applied many times.
-* **Storage: an array of structs, not `Soa`.** A field map reads its input at the columns of its
-  cells, an arbitrary order. In a `Vec` each read is one contiguous value; in a `Soa` it is one
-  strided read per coefficient. `Soa` stays the layout of independent copies.
+* **Types.**
+  * `Field<M>`: a value (or map, or form) of type `M` at each site, in a `Vec`.
+    * Site by site: `map`, `zip_with`, and `+`, `-` and unary `-` on owned and borrowed fields.
+    * Over the sites: `sum`, `mean`, and `dot`, the coefficient inner product.
+  * `SparseMap<C>`: cells of type `C`, each with a column, stored by row (compressed sparse
+    rows, the order within a row kept), with a shape `(output sites, input sites)`. Repeated
+    couplings add.
+* **Operations, after numga.**
+  * Multivector cells multiply:
+    * `&ends * &positions`, each cell with the value at its column, summed at the rows;
+    * `&ends.reverse() * &ends`, the cells along every path through the shared sites, summed
+      per pair of sites;
+    * `&cells * Vector::slot()`, which turns the cells into maps;
+    * `&a + &b`, which adds couplings.
+  * Map cells:
+    * `apply` and `compose` go through `Of`, so the cell type is checked as binding checks it;
+    * `transpose` runs the couplings back with the cells transposed: the adjoint under the
+      fields' coefficient inner product.
 * **Checks.**
-  * At compile time, the cell type: map cells `Point <- Point` applied to a field of lines
-    fail with the binding's own message ("a `Line` does not fit a slot of kind `Point`").
-  * At run time, the site counts, with both in the message: "a field map with 4 input sites
-    applied to a field over 3 sites".
-* **numga's bead string** (`tests/fields.rs`, against `numga_fields.py`, numga 93c2ae3):
-  * forces, the composition `stiffness ∘ stiffness`, and the stretches `ends * positions` are
-    exact;
-  * the dense stiffness's solve and the sparse `(~ends * ends + anchors) * Vector` solve
-    agree to 1e-15;
-  * the sparse stiffness has the dense one's blocks exactly.
-* **The typed Newton step.** The gradient and curvature with respect to the whole string come
-  from ADR-043's `hessian`, taken per spring on its stretch and per bead on its anchor, and
-  assembled by the chain rule:
-  * the gradient is `~ends * g_spring + g_anchor`, a field of forms `Scalar <- Vector`;
-  * the curvature is `~ends * diag(H_spring) * ends + diag(H_anchor)`, with form cells
-    `Scalar <- (Vector, Vector)`.
-
-  Both equal numga's `derivative` of the energy of `vector[4]` exactly, and the Newton step
-  `-curvature.solve(gradient)` equals numga's to 1e-15. This works where the energy is a sum of
-  local terms of linear functions of the field (springs, mesh elements). A derivative of a
-  general function of a whole run-time field would need jets over a run-time direction set
-  (`Directions` with heap storage), which this spike does not attempt.
-* **Performance** (`benches/batch.rs`, group `fields`; rustc 1.99.0, idle machine): a string
-  of 1024 sites with 3070 couplings, each its own PGA3D `Point <- Point` (`f32`), against the
-  dense batch path (one map, `of_slice` over as many values).
+  * The cell type is checked at compile time. Map cells `Point <- Point` applied to a field of
+    lines fail with the binding's own message.
+  * The site counts are checked at run time, with both counts in the message: "a field map with
+    4 input sites applied to a field over 3 sites".
+* **Solving: what to promise.** A sparse direct solver (LU with fill-in reordering) is a library
+  of its own; gax does not have one. Instead:
+  * `solve` is conjugate gradients with a diagonal (Jacobi) preconditioner, iterated to a
+    relative residual of `16 ε`. CG is the right method for the symmetric positive definite
+    couplings of physics (stiffness, mass, anchored Laplacians), and it needs only the product.
+    If it fails, because it meets non-positive curvature or its residual stays above `√ε`, it
+    panics with a message that names `solve_dense`. A silent wrong answer would be worse.
+  * `cg(b, tolerance, max_iterations)` returns the iterate with its iterations, residual and
+    whether it converged.
+  * `solve_dense` assembles the `(n · K::N)²` block matrix and solves it by LU with partial
+    pivoting: any nonsingular map, for modest sizes.
+* **Derivatives with respect to a field** (with ADR-043's jets):
+  * `field::gradient` evaluates the function once per site, with jets seeded on that site, and
+    gives a field of forms `Scalar <- A`.
+  * `field::hessian` evaluates it once per pair of sites, `n (n + 1) / 2` times on jets of
+    jets, and gives a sparse map of form cells `Scalar <- (A, A)`. Blocks that come out exactly
+    zero are not stored, so the coupling structure is found, not declared.
+  * That cost suits small fields. For energies that are sums of local terms, the documented
+    path is the chain rule through the sparse map `D` to the terms' arguments: the gradient
+    `~D * g` and the Hessian `~D * diag(H) * D`, with ADR-043's `hessian` on each term.
+  * Both paths match numga's `derivative` on the bead string exactly.
+* **Storage: an array of structs.** A field map reads its input at the columns of its cells, an
+  arbitrary order: in a `Vec` each read is one contiguous value, in a `Soa` one strided read
+  per coefficient. `Soa` stays the layout of independent copies.
+* **Batch kernels: sliced ELLPACK.** The spike's batch apply put lanes on couplings. It gathered
+  each cell and each input, then scattered the products into the rows one by one, because rows
+  repeat; it was slower than the scalar loop. `SparseMap::packed()` builds a
+  `PackedSparseMap` once instead:
+  * The rows go in slices of 16, each slice padded to its longest row. A slice's `j`-th
+    couplings are stored coefficient by coefficient, 16 rows side by side, as `Soa` stores
+    values.
+  * A lane works on one row. Each cell coefficient is a vector load, only the values at the
+    columns are gathered, and a row's sum stays in its lane, so the result is written once per
+    row.
+  * Padding couplings are masked by comparing `j` with the row's length, not multiplied by a
+    zero cell, so a non-finite value at a padding column cannot leak into a row
+    (`packed_padding_is_masked`).
+  * `PackedSparseMap` has `apply` only. A packed `cg` and `solve` were built and measured, and
+    then removed. In conjugate gradients the vector arithmetic weighs as much as the products,
+    and with 4 `f64` lanes the gathers eat the gain: the packed solve was 15–22% slower in
+    `f64` and even in `f32`. A fast path that is slower does not belong in the API. The CG's
+    dot products use four accumulators instead of one chain, which made every solve about 30%
+    faster.
+* **Performance** (`benches/batch.rs`, groups `fields`; rustc 1.99.0, idle machine): a string
+  of 1024 sites.
 
   | | default target | `target-cpu=native` |
   |---|---|---|
-  | sparse `apply`, scalar loop | 6.97 µs | 7.79 µs |
-  | sparse `apply_batch` (cells gathered every call) | 10.30 µs | 10.30 µs |
-  | sparse packed apply (cells packed once into blocks) | 7.97 µs | 7.90 µs |
-  | dense batch path, `of_slice` | 2.82 µs | 3.04 µs |
+  | `apply`, 3070 couplings, each its own PGA3D `Point <- Point` (`f32`): scalar loop | 7.04 µs | 7.98 µs |
+  | the same, packed (sliced ELLPACK) | **5.44 µs** | **5.23 µs** |
+  | the dense batch path: one map, `of_slice` over as many values | 2.85 µs | 2.94 µs |
+  | one product of the string's stiffness (`f64`): scalar / packed | 8.30 / 8.51 µs | 7.83 / 8.89 µs |
+  | `solve` the stiffness, `f64` (33 iterations) | 452 µs | 449 µs |
+  | `solve` the stiffness, `f32` | 138 µs | 146 µs |
 
-  The sparse map costs about 2.3 ns per coupling against 0.9 ns per value on the dense path,
-  and in this spike SIMD does not pay. Two costs dominate: the gathers of input values at
-  arbitrary columns, and the scatter into the rows, which must stay serial because rows repeat
-  within a lane batch. Packing the cells once (`map.packed()`, in the block layout of `Soa`)
-  removes the cost of transposing the cells but not the other two.
-
-  The next step is a kernel that assigns lanes to rows instead of couplings: compressed sparse
-  rows, each lane summing its own row's couplings, so there are no conflicts and no scatter.
-  This is how SpMV kernels avoid the same problem. It is not built.
-* **Open.**
-  * General sparse solves: CG covers symmetric positive definite systems only. numga's
-    sparse `solve`, `lstsq` and `eigh` go through SciPy; gax would need its own sparse LU or
-    to depend on one.
-  * Batch `combine` for multivector cells (only map cells have `apply_batch`).
-  * Fields of maps in `Soa`, and the fixed tier's products (ADR-045).
+  The sparse map costs 1.9× the dense batch path per coupling. That is the cost of a distinct
+  cell per coupling: the dense path loads its one matrix once. The spike's first batch form put
+  lanes on couplings and scattered into the rows; it ran at 10.3 µs, slower than the scalar
+  loop.
+* **Not here.**
+  * A sparse direct solver, sparse least squares, and sparse eigenproblems.
+  * Fields over a fixed number of sites (ADR-045).
+  * Batch products for multivector cells. Through `&cells * K::slot()` they become map cells,
+    which `packed()` takes.
 
 ## Hypotheses
 

@@ -398,9 +398,6 @@ fn fields(c: &mut Criterion) {
     g.bench_function("sparse apply, scalar loop", |b| {
         b.iter(|| black_box(map.apply(black_box(&field))));
     });
-    g.bench_function("sparse apply_batch (auto)", |b| {
-        b.iter(|| black_box(map.apply_batch(black_box(&field))));
-    });
     let packed = map.packed();
     g.bench_function("sparse packed apply (cells packed once, auto)", |b| {
         b.iter(|| black_box(packed.apply(black_box(&field))));
@@ -411,6 +408,50 @@ fn fields(c: &mut Criterion) {
             b.iter(|| one.of_slice(black_box(&values), &mut out));
         },
     );
+    g.finish();
+
+    // Solving the string's stiffness (each site tied to its neighbours and to its rest
+    // position, the identity on points): conjugate gradients, scalar and on lanes, in f64.
+    let (mut cells, mut rows, mut cols) = (Vec::new(), Vec::new(), Vec::new());
+    for i in 0..n {
+        for j in i.saturating_sub(1)..(i + 2).min(n) {
+            let w = if i != j {
+                -1.0
+            } else if i == 0 || i == n - 1 {
+                2.0
+            } else {
+                3.0
+            };
+            cells.push(Point::<(), f64>::slot().gp(w));
+            rows.push(i);
+            cols.push(j);
+        }
+    }
+    let stiffness = SparseMap::new(cells, rows, cols, (n, n));
+    let packed = stiffness.packed();
+    let load = Field::from_fn(n, |i| {
+        Point::<(), f64>::new(0.0, 0.0, -((i % 7) as f64), 0.0)
+    });
+    let mut g = c.benchmark_group(format!("fields: solve a string of {n} sites (f64)"));
+    let x = Field::from_fn(n, |i| Point::<(), f64>::xyz(i as f64, 1.0, 0.5));
+    g.bench_function("one product, scalar", |b| {
+        b.iter(|| black_box(stiffness.apply(black_box(&x))));
+    });
+    g.bench_function("one product, packed (auto)", |b| {
+        b.iter(|| black_box(packed.apply(black_box(&x))));
+    });
+    g.bench_function("cg", |b| {
+        b.iter(|| black_box(stiffness.solve(black_box(&load))));
+    });
+    g.finish();
+
+    // The same in f32, where a lane batch holds twice as many rows.
+    let stiffness32 = stiffness.map_cells(|c| c.map_coefs(|v| v as f32));
+    let load32 = load.map(|p| p.map_coefs(|v| v as f32));
+    let mut g = c.benchmark_group(format!("fields: solve a string of {n} sites (f32)"));
+    g.bench_function("cg", |b| {
+        b.iter(|| black_box(stiffness32.solve(black_box(&load32))));
+    });
     g.finish();
 }
 

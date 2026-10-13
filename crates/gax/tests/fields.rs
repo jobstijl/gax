@@ -174,16 +174,56 @@ fn typed_newton_step() {
     assert_field(&step, &fixture("newton_step"), 1e-15);
 }
 
-/// The batch form agrees with the scalar one (to rounding: it fuses multiply-adds), for a
-/// string long enough to fill lanes and leave a remainder.
-#[cfg(feature = "batch")]
+/// The string's energy, `½ Σ w_ij x_i·x_j − Σ pull_i·x_i` over the beads.
+fn string_energy<T: Real>(x: &Field<Vector<(), T>>, w: &[f64], pulls: &Field<V>) -> T {
+    let n = x.len();
+    let mut e = T::zero();
+    for i in 0..n {
+        for j in 0..n {
+            e = e + T::from_f64(0.5 * w[n * i + j]) * x.site(i).scalar_product(x.site(j)).s();
+        }
+        e = e - pulls
+            .site(i)
+            .map_coefs(T::from_f64)
+            .scalar_product(x.site(i))
+            .s();
+    }
+    e
+}
+
+/// The general derivatives with respect to the whole field, against numga's: the gradient and
+/// the curvature of the string's energy, every site seeded against every other.
 #[test]
-fn batch_apply_agrees() {
-    use gax::ApproxEq;
-    let n: usize = 37;
+fn field_derivatives_against_numga() {
+    let w = fixture("weights");
+    let pulls = vectors(&fixture("loads"));
+    let rest = Field::<V>::zeros(4);
+    let (_, g) = gax::field::gradient(|x| string_energy(x, &w, &pulls), &rest);
+    let (_, g2, h) = gax::field::hessian(|x| string_energy(x, &w, &pulls), &rest);
+    let want = fixture("gradient");
+    for (i, form) in g.sites().iter().enumerate() {
+        for k in 0..3 {
+            assert_eq!(form.c[0][k], want[3 * i + k], "gradient {i} {k}");
+        }
+    }
+    assert_eq!(g, g2);
+    assert_eq!(blocks(&h.map_cells(Scalar::as_map)), fixture("curvature"));
+    // The coupled Newton step, the whole string at once.
+    let step = -&h
+        .map_cells(Scalar::as_map)
+        .solve(&g.map(|f| Vector::from_coeffs(f.c[0])));
+    assert_field(&step, &fixture("newton_step"), 1e-15);
+}
+
+/// A map with rows of different lengths, some empty, over a number of sites that is not a
+/// multiple of the lanes.
+fn ragged(n: usize) -> SparseMap<Vector<(Vector,), f64>> {
     let (mut cells, mut rows, mut cols) = (vec![], vec![], vec![]);
     for i in 0..n {
-        for j in i.saturating_sub(1)..(i + 2).min(n) {
+        if i % 5 == 4 {
+            continue; // an empty row
+        }
+        for j in (0..n).filter(|j| (i * 7 + j * 3) % 11 < 2 + i % 3) {
             let k = (3 * i + j) as f64;
             cells.push(Vector::<(Vector,), f64>::from_coeffs(core::array::from_fn(
                 |o| core::array::from_fn(|q| ((k + (o * 3 + q) as f64) * 0.37).sin()),
@@ -192,13 +232,100 @@ fn batch_apply_agrees() {
             cols.push(j);
         }
     }
-    let map = SparseMap::new(cells, rows, cols, (n, n));
-    let x = Field::from_fn(n, |i| Vector::new((i as f64).sin(), 1.0, i as f64 * 0.1));
-    let (scalar, batch, packed) = (map.apply(&x), map.apply_batch(&x), map.packed().apply(&x));
-    for ((a, b), c) in scalar.sites().iter().zip(batch.sites()).zip(packed.sites()) {
-        assert!(a.approx_eq(b, 1e-14), "{a:?} vs {b:?}");
-        assert!(a.approx_eq(c, 1e-14), "{a:?} vs {c:?}");
+    SparseMap::new(cells, rows, cols, (n, n))
+}
+
+/// The packed form agrees with the scalar one (to rounding: it fuses multiply-adds).
+#[cfg(feature = "batch")]
+#[test]
+fn packed_apply_agrees() {
+    use gax::ApproxEq;
+    for n in [1, 15, 16, 17, 37, 100] {
+        let map = ragged(n);
+        let x = Field::from_fn(n, |i| Vector::new((i as f64).sin(), 1.0, i as f64 * 0.1));
+        let (scalar, packed) = (map.apply(&x), map.packed().apply(&x));
+        for (a, b) in scalar.sites().iter().zip(packed.sites()) {
+            assert!(a.approx_eq(b, 1e-13), "{n}: {a:?} vs {b:?}");
+        }
     }
+}
+
+/// Padding never reads a value: a NaN at one site reaches only the rows that couple to it.
+#[cfg(feature = "batch")]
+#[test]
+fn packed_padding_is_masked() {
+    let map = ragged(37);
+    let mut x = Field::from_fn(37, |i| Vector::new(1.0, i as f64, 0.0));
+    x.sites_mut()[0] = Vector::new(f64::NAN, 0.0, 0.0);
+    let y = map.packed().apply(&x);
+    for (r, v) in y.sites().iter().enumerate() {
+        let touches = map.couplings().any(|(row, col, _)| row == r && col == 0);
+        assert_eq!(v.c.iter().any(|c| c.is_nan()), touches, "row {r}");
+    }
+}
+
+/// Conjugate gradients and LU on the assembled matrix agree; a non-symmetric
+/// map solves densely; an indefinite one is refused.
+#[test]
+fn solvers() {
+    use gax::ApproxEq;
+    let k = stiffness();
+    let loads = vectors(&fixture("loads"));
+    let (cg, dense) = (k.cg(&loads, 1e-15, 100), k.solve_dense(&loads));
+    assert!(cg.converged && cg.iterations <= 12, "{cg:?}");
+    for (a, b) in cg.x.sites().iter().zip(dense.sites()) {
+        assert!(a.approx_eq(b, 1e-14));
+    }
+    // A non-symmetric map (diagonally dominant, so nonsingular).
+    let map =
+        &ragged(23) + &SparseMap::from_diagonal(&Field::from_fn(23, |_| Vector::slot().gp(6.0)));
+    let b = Field::from_fn(23, |i| Vector::new(1.0, -(i as f64), 0.5));
+    let x = map.solve_dense(&b);
+    for (a, c) in map.apply(&x).sites().iter().zip(b.sites()) {
+        assert!(a.approx_eq(c, 1e-12), "{a:?} vs {c:?}");
+    }
+}
+
+#[test]
+#[should_panic(expected = "conjugate gradients did not converge")]
+fn solve_refuses_an_indefinite_map() {
+    let indefinite = SparseMap::from_diagonal(&Field::from_fn(3, |i| {
+        Vector::<(), f64>::slot().gp(if i == 1 { -1.0 } else { 1.0 })
+    }));
+    let _ = indefinite.solve(&Field::from_fn(3, |_| Vector::new(1.0, 1.0, 1.0)));
+}
+
+/// The transpose is the adjoint under the fields' coefficient inner product, and composition is
+/// the block matrix product.
+#[test]
+fn transpose_and_compose() {
+    let a = ragged(19);
+    let b = ragged(19).transpose();
+    let x = Field::from_fn(19, |i| Vector::new(1.0, (i as f64).cos(), -2.0));
+    let y = Field::from_fn(19, |i| Vector::new((i as f64).sin(), 0.5, 1.0));
+    let (left, right) = (y.dot(&a.apply(&x)), a.transpose().apply(&y).dot(&x));
+    assert!((left - right).abs() < 1e-12 * left.abs().max(1.0));
+    let (ab, seq) = (a.compose(&b).apply(&x), a.apply(&b.apply(&x)));
+    for (p, q) in ab.sites().iter().zip(seq.sites()) {
+        assert!(
+            (*p - *q).c.iter().all(|d| d.abs() < 1e-12),
+            "{p:?} vs {q:?}"
+        );
+    }
+}
+
+/// Reductions and site-by-site operations.
+#[test]
+fn field_operations() {
+    let f: Field<V> = (0..4).map(|i| Vector::new(f64::from(i), 1.0, 0.0)).collect();
+    assert_eq!(f.mean(), Vector::new(1.5, 1.0, 0.0));
+    assert_eq!(f.sum(), Vector::new(6.0, 4.0, 0.0));
+    assert_eq!((&f + &(-&f)).sum(), Vector::zero());
+    assert_eq!(f.scaled(2.0).site(3), Vector::new(6.0, 2.0, 0.0));
+    // `~ends` runs the springs back: the transposed incidence, its cells reversed.
+    let ends = ends();
+    assert_eq!(ends.reverse().shape(), (4, 3));
+    assert_eq!(ends.reverse().couplings_len(), 6);
 }
 
 /// Matching site counts are checked at run time, with both counts in the message.

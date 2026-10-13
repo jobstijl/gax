@@ -21,7 +21,7 @@ help: `gax::pga3d::Line` implements trait `SubKind<K>`
       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector>`
       = note: required for `gax::pga3d::Point<(gax::pga3d::Point,), f64>` to implement `Of<gax::pga3d::Line<(), f64>>`
 note: required by a bound in `SparseMap::<C>::apply`
- --> $WORKSPACE/crates/gax-core/src/field.rs
+ --> $WORKSPACE/crates/gax-core/src/field/sparse.rs
   |
   |     pub fn apply<X, Y>(&self, x: &Field<X>) -> Field<Y>
   |            ----- required by a bound in this associated function

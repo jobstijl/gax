@@ -32,7 +32,7 @@
 //! [`map`] or [`map_soa`], or, for any shape, by implementing [`Kernel`] and calling [`run`] (with
 //! [`chunks`], [`gather`] and [`scatter`] for the array-of-structs plumbing).
 
-pub(crate) mod kernels;
+mod kernels;
 mod lanes;
 mod math_simd;
 mod simd_lanes;
