@@ -15,7 +15,6 @@ use crate::coef::Real;
 use crate::kind::{Extensor, Kind};
 use core::fmt;
 use core::marker::PhantomData;
-use std::collections::VecDeque;
 use std::vec;
 use std::vec::Vec;
 
@@ -127,12 +126,25 @@ impl<K: Kind, T: Real> SparseLu<K, T> {
             self.sites,
             b.len()
         );
+        let flat: Vec<T> = b
+            .sites()
+            .iter()
+            .flat_map(|v| v.coeffs().as_ref().iter().copied())
+            .collect();
+        let x = self.solve_flat(&flat);
+        Field::from_fn(self.sites, |s| {
+            Extensor::from_coeffs(K::arr_from_fn(|i| x[s * K::N + i]))
+        })
+    }
+}
+
+impl<K: Kind, T: Real> SparseLu<K, T> {
+    /// `A x = b` on flattened coefficients (`site * K::N + blade`).
+    pub(super) fn solve_flat(&self, b: &[T]) -> Vec<T> {
         let n = self.q.len();
         let mut y = vec![T::zero(); n];
-        for (s, v) in b.sites().iter().enumerate() {
-            for (i, c) in v.coeffs().as_ref().iter().enumerate() {
-                y[self.pinv[s * K::N + i]] = *c;
-            }
+        for (i, &v) in b.iter().enumerate() {
+            y[self.pinv[i]] = v;
         }
         // L y' = P b, L unit lower triangular.
         for j in 0..n {
@@ -159,9 +171,7 @@ impl<K: Kind, T: Real> SparseLu<K, T> {
         for (k, &col) in self.q.iter().enumerate() {
             x[col] = y[k];
         }
-        Field::from_fn(self.sites, |s| {
-            Extensor::from_coeffs(K::arr_from_fn(|i| x[s * K::N + i]))
-        })
+        x
     }
 }
 
@@ -173,8 +183,8 @@ where
 {
     /// The sparse LU factorization of this square map's block matrix, for
     /// [`SparseLu::solve`]: any nonsingular map, symmetric or not, definite or not, such as a
-    /// saddle-point system of constraints. The sites are ordered by reverse Cuthill–McKee, so
-    /// the factors of meshes and chains stay banded. For scalar coefficients.
+    /// saddle-point system of constraints. The sites are ordered by minimum degree, so the
+    /// factors of meshes stay sparse. For scalar coefficients.
     ///
     /// # Errors
     /// [`Singular`] if a column has no nonzero pivot left: the map is singular.
@@ -191,7 +201,7 @@ where
         );
         let sites = self.shape.0;
         let a = self.assemble();
-        let order = self.reverse_cuthill_mckee();
+        let order = minimum_degree(self.site_graph());
         let q: Vec<usize> = order
             .iter()
             .flat_map(|&s| (0..K::N).map(move |b| s * K::N + b))
@@ -220,6 +230,23 @@ where
             Ok(lu) => lu.solve(b),
             Err(e) => panic!("SparseMap::solve_direct: {e}"),
         }
+    }
+
+    /// The sites' graph: each site's neighbours (by a coupling either way), sorted.
+    fn site_graph(&self) -> Vec<Vec<usize>> {
+        let n = self.shape.0;
+        let mut adj: Vec<Vec<usize>> = (0..n).map(|_| Vec::new()).collect();
+        for (r, c, _) in self.couplings() {
+            if r != c {
+                adj[r].push(c);
+                adj[c].push(r);
+            }
+        }
+        for a in &mut adj {
+            a.sort_unstable();
+            a.dedup();
+        }
+        adj
     }
 
     /// The block matrix's coefficients in compressed columns, duplicates summed and exact zeros
@@ -261,85 +288,69 @@ where
             x: vals,
         }
     }
-
-    /// The sites in reverse Cuthill–McKee order (new to old): each connected part from a
-    /// pseudo-peripheral site, breadth first, neighbours by increasing degree.
-    fn reverse_cuthill_mckee(&self) -> Vec<usize> {
-        let n = self.shape.0;
-        let mut adj: Vec<Vec<usize>> = (0..n).map(|_| Vec::new()).collect();
-        for (r, c, _) in self.couplings() {
-            if r != c {
-                adj[r].push(c);
-                adj[c].push(r);
-            }
-        }
-        for a in &mut adj {
-            a.sort_unstable();
-            a.dedup();
-        }
-        let degree: Vec<usize> = adj.iter().map(Vec::len).collect();
-        let mut placed = vec![false; n];
-        let mut order = Vec::with_capacity(n);
-        let mut by_degree: Vec<usize> = (0..n).collect();
-        by_degree.sort_by_key(|&v| degree[v]);
-        for &seed in &by_degree {
-            if placed[seed] {
-                continue;
-            }
-            let start = pseudo_peripheral(seed, &adj, &degree);
-            let mut queue = VecDeque::from([start]);
-            placed[start] = true;
-            while let Some(v) = queue.pop_front() {
-                order.push(v);
-                let mut next: Vec<usize> = adj[v].iter().copied().filter(|&w| !placed[w]).collect();
-                next.sort_by_key(|&w| degree[w]);
-                for w in next {
-                    placed[w] = true;
-                    queue.push_back(w);
-                }
-            }
-        }
-        order.reverse();
-        order
-    }
 }
 
-/// A site far from `seed` in its connected part: repeated breadth-first searches from the
-/// last level's site of least degree, while the eccentricity grows.
-fn pseudo_peripheral(seed: usize, adj: &[Vec<usize>], degree: &[usize]) -> usize {
-    let mut start = seed;
-    let mut eccentricity = 0;
-    loop {
-        let (last, levels) = last_level(start, adj, degree);
-        if levels <= eccentricity {
-            return start;
+/// The sites in minimum-degree order: one at a time, the site with the fewest neighbours left
+/// in the elimination graph, its neighbours then joined into a clique (the fill its
+/// elimination makes). Ties go to the lower site, so the order is deterministic.
+fn minimum_degree(adj: Vec<Vec<usize>>) -> Vec<usize> {
+    use core::cmp::Reverse;
+    use std::collections::BinaryHeap;
+    let n = adj.len();
+    let mut adj = adj;
+    let mut eliminated = vec![false; n];
+    let mut degree: Vec<usize> = adj.iter().map(Vec::len).collect();
+    let mut heap: BinaryHeap<Reverse<(usize, usize)>> =
+        (0..n).map(|v| Reverse((degree[v], v))).collect();
+    let mut order = Vec::with_capacity(n);
+    while let Some(Reverse((d, v))) = heap.pop() {
+        if eliminated[v] || d != degree[v] {
+            continue; // a stale entry
         }
-        eccentricity = levels;
-        start = last;
+        eliminated[v] = true;
+        order.push(v);
+        let clique = core::mem::take(&mut adj[v]);
+        for &u in &clique {
+            // u's neighbours, less v, joined with the rest of the clique.
+            let merged = union_without(&adj[u], &clique, u, v);
+            degree[u] = merged.len();
+            adj[u] = merged;
+            heap.push(Reverse((degree[u], u)));
+        }
     }
+    order
 }
 
-/// From `start`, breadth first: the least-degree site of the last level, and the number of
-/// levels.
-fn last_level(start: usize, adj: &[Vec<usize>], degree: &[usize]) -> (usize, usize) {
-    let mut level = vec![usize::MAX; adj.len()];
-    level[start] = 0;
-    let mut queue = VecDeque::from([start]);
-    let (mut best, mut depth) = (start, 0);
-    while let Some(v) = queue.pop_front() {
-        let d = level[v];
-        if d > depth || (d == depth && degree[v] < degree[best]) {
-            best = v;
-            depth = d;
-        }
-        for &w in &adj[v] {
-            if level[w] == usize::MAX {
-                level[w] = d + 1;
-                queue.push_back(w);
+/// The sorted union of `a` and `b`, without `skip` and `gone`.
+fn union_without(a: &[usize], b: &[usize], skip: usize, gone: usize) -> Vec<usize> {
+    let mut out = Vec::with_capacity(a.len() + b.len());
+    let (mut i, mut j) = (0, 0);
+    while i < a.len() || j < b.len() {
+        let next = match (a.get(i), b.get(j)) {
+            (Some(&x), Some(&y)) if x == y => {
+                i += 1;
+                j += 1;
+                x
             }
+            (Some(&x), Some(&y)) if x < y => {
+                i += 1;
+                x
+            }
+            (Some(&x), None) => {
+                i += 1;
+                x
+            }
+            (Some(_) | None, Some(&y)) => {
+                j += 1;
+                y
+            }
+            (None, None) => break,
+        };
+        if next != skip && next != gone {
+            out.push(next);
         }
     }
-    (best, depth + 1)
+    out
 }
 
 /// Left-looking LU with threshold partial pivoting, the columns of `a` taken in the order `q`:

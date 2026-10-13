@@ -8,7 +8,7 @@
 use gax::Real;
 use gax::dual::hessian;
 use gax::field::{Field, SparseMap};
-use gax::vga3d::{Scalar, Vector};
+use gax::vga3d::{Bivector, Scalar, Vector};
 
 type V = Vector<(), f64>;
 type S = Scalar<(), f64>;
@@ -446,4 +446,179 @@ fn field_operations() {
 #[should_panic(expected = "a field map with 4 input sites applied to a field over 3 sites")]
 fn site_counts_must_match() {
     let _ = stiffness().apply(&Field::<V>::zeros(3));
+}
+
+/// A free chain of `n` sites: the Laplacian of its `n − 1` springs, map cells `Vector <- Vector`.
+fn free_chain(n: usize) -> SparseMap<Vector<(Vector,), f64>> {
+    let s = Scalar::<(), f64>::new;
+    let ends = SparseMap::new(
+        (0..n - 1).flat_map(|_| [s(-1.0), s(1.0)]).collect(),
+        (0..n - 1).flat_map(|e| [e, e]).collect(),
+        (0..n - 1).flat_map(|e| [e, e + 1]).collect(),
+        (n - 1, n),
+    );
+    &(&ends.reverse() * &ends) * Vector::slot()
+}
+
+/// A free chain's spectrum is `2 − 2 cos(kπ/n)`, each value three times on vectors: the block
+/// Lanczos finds every copy, in order, orthonormal in the metric.
+#[test]
+fn eigh_free_chain() {
+    let n = 40;
+    let k = free_chain(n);
+    let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
+    let (values, modes) = k.eigh(&mass, 9);
+    for (i, v) in values.iter().enumerate() {
+        let wave = (i / 3) as f64;
+        let want = 2.0 - 2.0 * (wave * std::f64::consts::PI / n as f64).cos();
+        assert!(
+            (v - want).abs() < 1e-7_f64.max(1e-12 * want),
+            "{i}: {v} vs {want}"
+        );
+    }
+    for (i, a) in modes.iter().enumerate() {
+        for (j, b) in modes.iter().enumerate() {
+            let want = if i == j { 1.0 } else { 0.0 };
+            assert!((a.dot(&mass.apply(b)) - want).abs() < 1e-9, "{i} {j}");
+        }
+    }
+}
+
+/// A generalized problem with varying masses, and a square grid whose modes along its two axes
+/// coincide (six copies on vectors): residuals `A x − λ M x` at rounding, the metric orthonormal.
+#[test]
+fn eigh_generalized_and_degenerate() {
+    let side = 12;
+    let n = side * side;
+    let id = |w: f64| Vector::<(), f64>::slot().gp(w);
+    let (mut cells, mut rows, mut cols) = (vec![], vec![], vec![]);
+    for r in 0..side {
+        for c in 0..side {
+            let s = r * side + c;
+            let mut neighbours = vec![];
+            if r > 0 {
+                neighbours.push(s - side);
+            }
+            if r + 1 < side {
+                neighbours.push(s + side);
+            }
+            if c > 0 {
+                neighbours.push(s - 1);
+            }
+            if c + 1 < side {
+                neighbours.push(s + 1);
+            }
+            cells.push(id(neighbours.len() as f64));
+            rows.push(s);
+            cols.push(s);
+            for t in neighbours {
+                cells.push(id(-1.0));
+                rows.push(s);
+                cols.push(t);
+            }
+        }
+    }
+    let grid = SparseMap::new(cells, rows, cols, (n, n));
+    for (name, mass) in [
+        (
+            "unit",
+            SparseMap::from_diagonal(&Field::from_fn(n, |_| id(1.0))),
+        ),
+        (
+            "varying",
+            SparseMap::from_diagonal(&Field::from_fn(n, |i| id(1.0 + (i % 5) as f64 * 0.25))),
+        ),
+    ] {
+        let (values, modes) = grid.eigh(&mass, 12);
+        for (v, x) in values.iter().zip(&modes) {
+            let r = &grid.apply(x) - &mass.apply(x).scaled(*v);
+            assert!(
+                r.dot(&r).sqrt() < 1e-7,
+                "{name}: residual {} at {v}",
+                r.dot(&r).sqrt()
+            );
+            assert!((x.dot(&mass.apply(x)) - 1.0).abs() < 1e-9);
+        }
+        // The rigid shifts (three), then the first wave along each axis (six together).
+        assert!(
+            values[..3].iter().all(|v| v.abs() < 1e-7),
+            "{name}: {values:?}"
+        );
+        if name == "unit" {
+            let wave = 2.0 - 2.0 * (std::f64::consts::PI / side as f64).cos();
+            assert!(
+                values[3..9].iter().all(|v| (v - wave).abs() < 1e-10),
+                "{values:?}"
+            );
+        }
+    }
+}
+
+/// Rectangular maps from bivectors to vectors, `out × inp` sites, with every cell its own, and
+/// a strong identity on the leading diagonal so that the map has full rank (columns or rows).
+fn rectangular(out: usize, inp: usize) -> SparseMap<Vector<(Bivector,), f64>> {
+    let (mut cells, mut rows, mut cols) = (vec![], vec![], vec![]);
+    for r in 0..out.min(inp) {
+        cells.push(Vector::<(Bivector,), f64>::from_coeffs(
+            core::array::from_fn(|o| core::array::from_fn(|i| if o == i { 4.0 } else { 0.0 })),
+        ));
+        rows.push(r);
+        cols.push(r);
+    }
+    for r in 0..out {
+        for c in (0..inp).filter(|c| (r * 5 + c * 3) % 7 < 3) {
+            let k = (r * inp + c) as f64;
+            cells.push(Vector::<(Bivector,), f64>::from_coeffs(
+                core::array::from_fn(|o| {
+                    core::array::from_fn(|i| ((k + (o * 3 + i) as f64) * 0.71).sin())
+                }),
+            ));
+            rows.push(r);
+            cols.push(c);
+        }
+    }
+    SparseMap::new(cells, rows, cols, (out, inp))
+}
+
+/// Least squares: a consistent over-determined system is solved exactly, an inconsistent one
+/// as the normal equations solve it, an under-determined one with the least norm, and a
+/// singular one with its gauge at zero.
+#[test]
+fn lstsq_cases() {
+    // Over-determined and consistent.
+    let tall = rectangular(30, 12);
+    let truth = Field::from_fn(12, |i| Bivector::new(1.0, -(i as f64) * 0.1, 0.5));
+    let b = tall.apply(&truth);
+    let x = tall.lstsq(&b);
+    let d = &x - &truth;
+    assert!(d.dot(&d) < 1e-20, "{}", d.dot(&d));
+    // Inconsistent: against the normal equations, Aᵀ A x = Aᵀ b.
+    let noisy = Field::from_fn(30, |i| Vector::new((i as f64).cos(), 1.0, -0.5));
+    let x = tall.lstsq(&noisy);
+    let normal = tall.transpose().compose(&tall);
+    let want = normal.solve_direct(&tall.transpose().apply(&noisy));
+    let d = &x - &want;
+    assert!(d.dot(&d) < 1e-18 * want.dot(&want), "{}", d.dot(&d));
+    // Under-determined: the least-norm solution is Aᵀ (A Aᵀ)⁻¹ b.
+    let wide = rectangular(8, 20);
+    let b = Field::from_fn(8, |i| Vector::new(1.0, i as f64, 0.0));
+    let x = wide.lstsq(&b);
+    let y = wide.compose(&wide.transpose()).solve_direct(&b);
+    let want = wide.transpose().apply(&y);
+    let d = &x - &want;
+    assert!(d.dot(&d) < 1e-18 * want.dot(&want), "{}", d.dot(&d));
+    // Singular: a free chain's Laplacian, its rigid shifts left at zero.
+    let k = free_chain(15);
+    let b = Field::from_fn(15, |i| {
+        Vector::new(
+            i as f64 - 7.0,
+            0.0,
+            1.0 - 2.0 * f64::from(u8::from(i % 2 == 0)) + if i == 14 { 1.0 } else { 0.0 },
+        )
+    });
+    let b = &b - &Field::from_fn(15, |_| b.mean()); // in the range: zero mean
+    let x = k.lstsq(&b);
+    assert!(x.mean().c.iter().all(|c| c.abs() < 1e-10), "{:?}", x.mean());
+    let r = &k.apply(&x) - &b;
+    assert!(r.dot(&r) < 1e-18);
 }

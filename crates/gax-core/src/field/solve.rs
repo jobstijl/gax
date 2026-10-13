@@ -30,7 +30,7 @@ where
 {
     /// `y = A x` on flattened coefficients (`site * K::N + blade`), each row's couplings in
     /// order: the block matrix-vector product, with the rounding of `apply`.
-    fn apply_flat(&self, x: &[T], y: &mut [T]) {
+    pub(super) fn apply_flat(&self, x: &[T], y: &mut [T]) {
         let n = K::N;
         for r in 0..self.shape.0 {
             let out = &mut y[r * n..(r + 1) * n];
@@ -52,7 +52,7 @@ where
 
     /// The diagonal of the block matrix: the diagonal coefficients of the cells on the site
     /// diagonal, summed.
-    fn diagonal_flat(&self) -> Vec<T> {
+    pub(super) fn diagonal_flat(&self) -> Vec<T> {
         let n = K::N;
         let mut d = vec![T::zero(); self.shape.0 * n];
         for r in 0..self.shape.0 {
@@ -146,7 +146,7 @@ where
 }
 
 /// The coefficients of a field of values, site by site.
-fn flatten<X: Extensor<Slots = ()>>(f: &Field<X>) -> Vec<X::Coef> {
+pub(super) fn flatten<X: Extensor<Slots = ()>>(f: &Field<X>) -> Vec<X::Coef> {
     f.sites()
         .iter()
         .flat_map(|v| v.coeffs().as_ref().iter().copied())
@@ -154,7 +154,7 @@ fn flatten<X: Extensor<Slots = ()>>(f: &Field<X>) -> Vec<X::Coef> {
 }
 
 /// A field of values from its coefficients, site by site.
-fn unflatten<X: Extensor<Slots = ()>>(c: &[X::Coef]) -> Field<X> {
+pub(super) fn unflatten<X: Extensor<Slots = ()>>(c: &[X::Coef]) -> Field<X> {
     let n = <X::Kind as Kind>::N;
     Field::from_fn(c.len() / n, |s| {
         X::from_coeffs(<X::Kind as Kind>::arr_from_fn(|i| c[s * n + i]))

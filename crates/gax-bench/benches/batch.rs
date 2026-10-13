@@ -513,6 +513,10 @@ fn fields_grid(c: &mut Criterion) {
     g.bench_function("sparse LU: solve with the factors", |b| {
         b.iter(|| black_box(grid_lu.solve(black_box(&grid_load))));
     });
+    let mass = SparseMap::from_diagonal(&Field::from_fn(sites, |_| Point::<(), f64>::slot()));
+    g.bench_function("eigh: the 12 lowest modes", |b| {
+        b.iter(|| black_box(grid.eigh(black_box(&mass), 12)));
+    });
     g.finish();
 }
 

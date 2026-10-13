@@ -39,6 +39,8 @@ extern crate std;
 
 mod derivative;
 mod direct;
+mod eigen;
+mod lsqr;
 #[cfg(feature = "batch")]
 mod packed;
 mod solve;

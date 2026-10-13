@@ -171,8 +171,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Structured maps (ADR-044): `LinearMap` beside `Extensor`, `SquareLinearMap` fast paths without specialization; `PrincipalInertia` and `PrincipalMobility` compose, bind and solve without `to_map()`; dense code unchanged (release instructions and build times measured)
 - [x] Fields over run-time sites (ADR-046, docs/fields.md): `Field`, `SparseMap` (CSR, typed cells), solves (preconditioned CG, sparse LU), derivatives with respect to a field, sliced-ELLPACK batch products; numga's bead string matched
 - [ ] Fields over a fixed number of sites as kinds (ADR-045: `Sites<K, N>` with a flat view; designed and modelled, not built)
-- [x] Sparse direct solves on field maps: sparse LU (Gilbert–Peierls, threshold pivoting) after reverse Cuthill–McKee, reusable factors, singularity reported
-- [ ] Sparse least squares and eigenproblems on field maps
+- [x] Sparse direct solves on field maps: sparse LU (Gilbert–Peierls, threshold pivoting) after a minimum-degree ordering, reusable factors, singularity reported
+- [x] Sparse least squares (LSQR) and generalized eigenproblems (shift-invert block Lanczos, Rayleigh–Ritz on the pencil) on field maps
 - [ ] Faster sparse products in `f64`: rows sorted by length within slices (SELL-C-σ), cheaper gathers
 - [ ] Proven rounding bounds from gax-bend: parked (its kernels' term order and fusion differ from gax's; gax-gen would have to export its trees)
 

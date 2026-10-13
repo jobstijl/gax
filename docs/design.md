@@ -1447,25 +1447,57 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     * The method is the left-looking LU of Gilbert and Peierls, as in Davis's CSparse
       (`cs_lu`). Each column comes from a sparse triangular solve whose pattern a depth-first
       search finds, so the work follows the arithmetic.
-    * The columns are taken in a reverse Cuthill–McKee order of the sites, from a
-      pseudo-peripheral site. That keeps the factors of chains and meshes banded: a 30 × 30
-      grid stays within its band, far below a dense factor.
+    * The columns are taken in a minimum-degree order of the sites: one at a time, the site
+      with the fewest neighbours left in the elimination graph, its neighbours then joined
+      into a clique. It is exact minimum degree on the explicit graph, which is fine for the
+      site graphs of meshes. On a 64 × 64 grid of vectors it leaves 0.42 M stored entries
+      against 1.08 M for a reverse Cuthill–McKee order (banded), and factors in about half the
+      time; the first version used RCM.
     * The rows are pivoted by threshold partial pivoting. The diagonal is kept while it is
       within a factor of 10 of the column's largest candidate, as in UMFPACK.
     * A column with no nonzero pivot is reported as `Err(Singular { site, blade })`.
     * The factors (`SparseLu`) solve again for each right-hand side.
     * Measured (`f64`):
-      * on the string of 1024 sites, factor and solve take 536 µs against CG's 477 µs, and a
-        solve with the factors 21 µs;
-      * on a 64 × 64 grid, factor and solve take 95 ms against CG's 3.8 ms, and a solve with
-        the factors 0.69 ms.
-      * A factorization pays after one solve on a chain and after about 25 on a grid.
+      * on the string of 1024 sites, factor and solve take 601 µs against CG's 467 µs, and a
+        solve with the factors 18 µs;
+      * on a 64 × 64 grid of points (16384 unknowns), factor and solve take 53 ms against CG's
+        3.9 ms, and a solve with the factors 0.24 ms.
+      * A factorization pays after about two solves on a chain and about 14 on a grid.
   * Considered and left out:
-    * Minimum-degree orderings (AMD, COLAMD) give less fill on general graphs than RCM, but
-      they are a substantial algorithm. RCM is near their fill on the banded structures of
-      chains and surface meshes.
+    * Approximate minimum degree (AMD) with quotient graphs scales to millions of sites; the
+      explicit elimination graph is simpler and fast on meshes up to about 10⁵ sites.
     * A supernodal or multifrontal factorization pays from about 10⁵ unknowns.
-    * Sparse least squares (QR) and eigensolvers (Lanczos) remain out of scope.
+  * `lstsq` is LSQR (Paige and Saunders), which converges from zero to the least-norm
+    least-squares solution, for maps of any shape, iterating with the map and its transpose:
+    numga's `lsqr` with its gauge left at zero. `lsqr` reports iterations and residual.
+  * `eigh(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, after
+    numga's `eigsh(…, sigma = −√ε · scale)`:
+    * The search space is grown by block Lanczos on `(A − σM)⁻¹ M`, with one sparse LU of
+      `A − σM` and full reorthogonalization in the metric.
+    * The pairs are taken from `A` itself on the space (Rayleigh–Ritz on `Qᵀ A Q`, which needs
+      no solves), and the space grows until each pair's true residual `‖A x − λ M x‖` is at
+      `ε^¾` of the pencil's scale. It also stops at `√ε` once the residual stops improving: it
+      has a floor of rounding near `10⁵ ε` on small dense spectra.
+    * Why not the Lanczos recurrence's own estimates, as ARPACK uses: with a null space (a free
+      mesh) the shift is within `√ε` of the spectrum, a solve's error in every other direction
+      is the null space's amplified size times `ε κ`, and the recurrence's residual estimates
+      then claim `10⁻¹²` where the true residuals are `10⁻⁵`. That was measured; the
+      projection on `A` restores the precision to about `10⁻¹²`.
+    * A spectrum that starts well above zero (an anchored mesh) makes the shift below zero a
+      poor one: the wanted cluster's inverted values crowd together (1 and 0.9976 on a 64 × 64
+      grid), and the space grows slowly. So once the Ritz values show the cluster, the shift
+      moves to just below it (one spread below the lowest), and moves again whenever it can
+      come at least twice as close. Each move costs one factorization; the space is kept,
+      since the pairs come from the pencil whatever shift built it. On the anchored 64 × 64
+      grid of points this took 12 modes from 57 s to 1.9 s.
+    * Single-vector Lanczos finds one vector per eigenspace, and a field map of isotropic
+      cells repeats every value `K::N` times. The blocks have `2 K::N + 2` vectors, which also
+      covers a doubling by a symmetry of the sites (a square grid); `eigh_with_block` takes
+      more.
+    * Measured: on a free 64 × 64 grid of vectors (12288 unknowns), 12 modes in 0.32 s and 30
+      in 1.1 s; on an anchored grid of points (16384 unknowns), 12 modes in 1.9 s; residuals
+      near `10⁻¹²`.
+  * Not here: a sparse SVD, and a non-symmetric sparse eigensolver.
   * An earlier `solve_dense` (LU on the assembled dense block matrix) is replaced by
     `solve_direct`, which is exact on the same maps and sparse.
 * **Derivatives with respect to a field** (with ADR-043's jets):
@@ -1517,7 +1549,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   lanes on couplings and scattered into the rows; it ran at 10.3 µs, slower than the scalar
   loop.
 * **Not here.**
-  * Sparse least squares and sparse eigenproblems.
+  * A sparse SVD and a non-symmetric sparse eigensolver.
   * Fields over a fixed number of sites (ADR-045).
   * Batch products for multivector cells. Through `&cells * K::slot()` they become map cells,
     which `packed()` takes.

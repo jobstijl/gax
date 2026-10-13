@@ -86,8 +86,7 @@ inner product.
 * `factor` computes a sparse LU of the block matrix, and `solve_direct` is `factor` followed by
   one solve. It works for any nonsingular map: non-symmetric, indefinite, or a saddle-point
   system of constraints, where conjugate gradients fails.
-  * The sites are ordered by reverse Cuthill–McKee, which keeps the factors of meshes and
-    chains banded.
+  * The sites are ordered by minimum degree, which keeps the factors of meshes sparse.
   * The rows are pivoted for stability.
   * A singular map is reported as `Err(Singular { site, blade })`.
   * The factors solve again for every new right-hand side, as the steps of an implicit time
@@ -107,6 +106,59 @@ for step in 1..=3 {
     assert!((sag.site(0).e3() - sag.site(3).e3()).abs() < 1e-15); // symmetric under the load
 }
 ```
+
+### Least squares
+
+`lstsq` takes field maps of any shape:
+- more output sites than input sites (fitting);
+- fewer (under-determined);
+- cells between kinds of different sizes.
+
+It returns the least-squares solution of least norm, so a singular system's gauge (a free
+mesh's translation, a constant potential) is left at zero, as in numga. It runs LSQR, iterating
+with the map and its transpose; `lsqr(b, tolerance, max_iterations)` reports iterations and
+residual.
+
+```rust
+# use gax::field::{Field, SparseMap};
+# use gax::vga3d::{Scalar, Vector};
+# let s = Scalar::<(), f64>::new;
+# let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1, 2, 2], vec![0, 1, 1, 2, 2, 3], (3, 4));
+// The string from its springs' stretches alone: the beads' positions up to a translation,
+// which the least-norm solution leaves at zero (the beads centred on the origin).
+let stretches = Field::from_fn(3, |_| Vector::new(1.0, 0.0, 0.0));
+let beads = (&ends * Vector::slot()).lstsq(&stretches);
+assert!((beads.site(0).e1() + 1.5).abs() < 1e-12 && (beads.site(3).e1() - 1.5).abs() < 1e-12);
+```
+
+### Eigenproblems
+
+`eigh(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, for a
+symmetric field map and a symmetric positive definite metric: the vibration modes of a mesh, or
+the lowest states of a lattice Hamiltonian. The values come ascending, and the fields are
+orthonormal in the metric. Free meshes have a null space (their rigid motions), which comes
+first. Each value repeated on every coefficient of the kind (isotropic cells) is found with all
+its copies.
+
+```rust
+# use gax::field::{Field, SparseMap};
+# use gax::vga3d::{Scalar, Vector};
+# let s = Scalar::<(), f64>::new;
+# let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1, 2, 2], vec![0, 1, 1, 2, 2, 3], (3, 4));
+let laplacian = &(&ends.reverse() * &ends) * Vector::slot(); // the free string
+let mass = SparseMap::from_diagonal(&Field::from_fn(4, |_| Vector::<(), f64>::slot()));
+let (values, modes) = laplacian.eigh(&mass, 6);
+assert!(values[..3].iter().all(|v| v.abs() < 1e-12)); // translations along x, y and z
+let wave = 2.0 - 2.0 * (std::f64::consts::PI / 4.0).cos(); // the half wave, on each axis
+assert!(values[3..].iter().all(|v| (v - wave).abs() < 1e-12));
+assert!((modes[3].dot(&mass.apply(&modes[3])) - 1.0).abs() < 1e-12);
+```
+
+The search space comes from block Lanczos on `(A − σM)⁻¹ M`, with σ just below zero and one
+sparse LU of `A − σM`. The eigenpairs come from `A` and `M` themselves on that space, and the
+space grows until each pair's residual `‖A x − λ M x‖` is at the level of rounding. Blocks of
+`2 K::N + 2` vectors cover values repeated on every coefficient and doubled by a symmetry of the
+sites; `eigh_with_block` takes larger blocks for more symmetric meshes.
 
 ## On SIMD lanes
 
@@ -202,5 +254,5 @@ the dense batch path (one map applied to as many values).
 
 * Sites at compile time. ADR-045 designs fields over a fixed number of sites as kinds,
   `Sites<K, N>`, so that they fill slots and the dense solvers apply. They are not built.
-* Sparse least squares and sparse eigenproblems. A field map has `solve` and `factor`, but no
-  `lstsq`, `pinv` or `eigh`. Its blocks' dense form handles small fields.
+* A sparse SVD and a non-symmetric sparse eigensolver. The SVD of a small field is the dense
+  SVD of its blocks.
