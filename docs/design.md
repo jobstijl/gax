@@ -1532,6 +1532,11 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     `f64` and even in `f32`. A fast path that is slower does not belong in the API. The CG's
     dot products use four accumulators instead of one chain, which made every solve about 30%
     faster.
+  * Also tried and dropped (2026-10-13): reading the input coefficient by coefficient, so that a
+    lane group whose columns are consecutive loads them with one vector load. Columns are
+    consecutive in 100% of lane groups on the string and 95% on a naturally ordered grid, but
+    the per-apply transpose of the input and the per-coupling check cost more than the loads
+    save. `f32` slowed from 5.4 to 6.6 µs and `f64` from 8.2 to 12.1 µs on the string.
 * **Performance** (`benches/batch.rs`, groups `fields`; rustc 1.99.0, idle machine): a string
   of 1024 sites.
 
