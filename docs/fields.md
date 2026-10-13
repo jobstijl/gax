@@ -83,8 +83,30 @@ inner product.
   with anchors are. If the iteration fails, `solve` panics rather than return a wrong answer.
 * `cg(b, tolerance, max_iterations)` is the same iteration, and reports its iterations, its
   residual and whether it converged.
-* `solve_dense` assembles the block matrix and solves it by LU with partial pivoting: any
-  nonsingular map, at the cost of a dense solve, so for modest sizes.
+* `factor` computes a sparse LU of the block matrix, and `solve_direct` is `factor` followed by
+  one solve. It works for any nonsingular map: non-symmetric, indefinite, or a saddle-point
+  system of constraints, where conjugate gradients fails.
+  * The sites are ordered by reverse Cuthill–McKee, which keeps the factors of meshes and
+    chains banded.
+  * The rows are pivoted for stability.
+  * A singular map is reported as `Err(Singular { site, blade })`.
+  * The factors solve again for every new right-hand side, as the steps of an implicit time
+    integration need.
+
+```rust
+# use gax::field::{Field, SparseMap};
+# use gax::vga3d::{Scalar, Vector};
+# let s = Scalar::<(), f64>::new;
+# let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1, 2, 2], vec![0, 1, 1, 2, 2, 3], (3, 4));
+# let anchors = SparseMap::from_diagonal(&Field::from_fn(4, |_| s(1.0)));
+# let stiffness = &(&(&ends.reverse() * &ends) + &anchors) * Vector::slot();
+let lu = stiffness.factor().expect("the anchored string is nonsingular");
+for step in 1..=3 {
+    let loads = Field::from_fn(4, |_| Vector::new(0.0, 0.0, -f64::from(step)));
+    let sag = lu.solve(&loads); // no new factorization
+    assert!((sag.site(0).e3() - sag.site(3).e3()).abs() < 1e-15); // symmetric under the load
+}
+```
 
 ## On SIMD lanes
 
@@ -180,5 +202,5 @@ the dense batch path (one map applied to as many values).
 
 * Sites at compile time. ADR-045 designs fields over a fixed number of sites as kinds,
   `Sites<K, N>`, so that they fill slots and the dense solvers apply. They are not built.
-* General sparse solvers. There is no sparse LU, least squares or eigensolver: `solve` needs
-  symmetric positive definite couplings, and `solve_dense` scales as a dense solve.
+* Sparse least squares and sparse eigenproblems. A field map has `solve` and `factor`, but no
+  `lstsq`, `pinv` or `eigh`. Its blocks' dense form handles small fields.

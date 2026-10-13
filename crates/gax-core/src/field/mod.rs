@@ -14,8 +14,9 @@
 //! * **Map cells apply** ([`SparseMap::apply`]), compose ([`SparseMap::compose`]),
 //!   transpose ([`SparseMap::transpose`]) and solve: [`SparseMap::solve`] (preconditioned
 //!   conjugate gradients, for symmetric positive definite couplings), [`SparseMap::cg`] (the
-//!   same with a report), and [`SparseMap::solve_dense`] (LU on the assembled block matrix,
-//!   for any nonsingular map of modest size).
+//!   same with a report), and [`SparseMap::solve_direct`] and [`SparseMap::factor`] (sparse
+//!   LU after a bandwidth-reducing ordering, for any nonsingular map; the factors solve again
+//!   for every right-hand side).
 //! * **Batch kernels** (feature `batch`): [`SparseMap::packed`] lays the cells out for SIMD
 //!   once, so that a map applied many times (a stiffness inside an iteration) runs on lanes.
 //! * **Derivatives** with respect to a whole field: [`gradient`] and [`hessian`] for any scalar
@@ -37,12 +38,14 @@
 extern crate std;
 
 mod derivative;
+mod direct;
 #[cfg(feature = "batch")]
 mod packed;
 mod solve;
 mod sparse;
 
 pub use derivative::{gradient, hessian};
+pub use direct::{Singular, SparseLu};
 #[cfg(feature = "batch")]
 pub use packed::PackedSparseMap;
 pub use solve::Solved;

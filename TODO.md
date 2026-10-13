@@ -169,9 +169,10 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] numga examples: reductions as `.map(..).sum()` (bit-identical)
 - [x] Typed derivatives (ADR-043): `jacobian`, `gradient`, `hessian` return extensors, on `Jet<T, D>` (a dual number over a kind's own array); checked against numga's JAX `derivative`
 - [x] Structured maps (ADR-044): `LinearMap` beside `Extensor`, `SquareLinearMap` fast paths without specialization; `PrincipalInertia` and `PrincipalMobility` compose, bind and solve without `to_map()`; dense code unchanged (release instructions and build times measured)
-- [x] Fields over run-time sites (ADR-046, docs/fields.md): `Field`, `SparseMap` (CSR, typed cells), solves (preconditioned CG, dense LU), derivatives with respect to a field, sliced-ELLPACK batch products; numga's bead string matched
+- [x] Fields over run-time sites (ADR-046, docs/fields.md): `Field`, `SparseMap` (CSR, typed cells), solves (preconditioned CG, sparse LU), derivatives with respect to a field, sliced-ELLPACK batch products; numga's bead string matched
 - [ ] Fields over a fixed number of sites as kinds (ADR-045: `Sites<K, N>` with a flat view; designed and modelled, not built)
-- [ ] Sparse direct solves, least squares and eigenproblems on field maps (only SPD CG and dense LU now)
+- [x] Sparse direct solves on field maps: sparse LU (Gilbert–Peierls, threshold pivoting) after reverse Cuthill–McKee, reusable factors, singularity reported
+- [ ] Sparse least squares and eigenproblems on field maps
 - [ ] Faster sparse products in `f64`: rows sorted by length within slices (SELL-C-σ), cheaper gathers
 - [ ] Proven rounding bounds from gax-bend: parked (its kernels' term order and fusion differ from gax's; gax-gen would have to export its trees)
 

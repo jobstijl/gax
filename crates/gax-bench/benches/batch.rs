@@ -409,9 +409,11 @@ fn fields(c: &mut Criterion) {
         },
     );
     g.finish();
+}
 
-    // Solving the string's stiffness (each site tied to its neighbours and to its rest
-    // position, the identity on points): conjugate gradients, scalar and on lanes, in f64.
+/// The string's stiffness over `n` sites: each site tied to its neighbours and to its rest
+/// position, the identity on points.
+fn string_stiffness(n: usize) -> gax::field::SparseMap<Point<(Point,), f64>> {
     let (mut cells, mut rows, mut cols) = (Vec::new(), Vec::new(), Vec::new());
     for i in 0..n {
         for j in i.saturating_sub(1)..(i + 2).min(n) {
@@ -427,13 +429,27 @@ fn fields(c: &mut Criterion) {
             cols.push(j);
         }
     }
-    let stiffness = SparseMap::new(cells, rows, cols, (n, n));
+    gax::field::SparseMap::new(cells, rows, cols, (n, n))
+}
+
+/// Solving the string: conjugate gradients, the sparse LU, and the products they use.
+fn fields_string(c: &mut Criterion) {
+    use gax::field::Field;
+    let n: usize = 1024;
+    let stiffness = string_stiffness(n);
     let packed = stiffness.packed();
     let load = Field::from_fn(n, |i| {
         Point::<(), f64>::new(0.0, 0.0, -((i % 7) as f64), 0.0)
     });
     let mut g = c.benchmark_group(format!("fields: solve a string of {n} sites (f64)"));
     let x = Field::from_fn(n, |i| Point::<(), f64>::xyz(i as f64, 1.0, 0.5));
+    g.bench_function("sparse LU: factor and solve", |b| {
+        b.iter(|| black_box(stiffness.solve_direct(black_box(&load))));
+    });
+    let lu = stiffness.factor().expect("nonsingular");
+    g.bench_function("sparse LU: solve with the factors", |b| {
+        b.iter(|| black_box(lu.solve(black_box(&load))));
+    });
     g.bench_function("one product, scalar", |b| {
         b.iter(|| black_box(stiffness.apply(black_box(&x))));
     });
@@ -444,8 +460,69 @@ fn fields(c: &mut Criterion) {
         b.iter(|| black_box(stiffness.solve(black_box(&load))));
     });
     g.finish();
+}
 
-    // The same in f32, where a lane batch holds twice as many rows.
+/// A mesh: a 64 x 64 grid of sites, each tied to its four neighbours and its rest position.
+fn fields_grid(c: &mut Criterion) {
+    use gax::field::{Field, SparseMap};
+    let side: usize = 64;
+    let sites = side * side;
+    let (mut cells, mut rows, mut cols) = (Vec::new(), Vec::new(), Vec::new());
+    for r in 0..side {
+        for col in 0..side {
+            let s = r * side + col;
+            let mut neighbours = Vec::new();
+            if r > 0 {
+                neighbours.push(s - side);
+            }
+            if r + 1 < side {
+                neighbours.push(s + side);
+            }
+            if col > 0 {
+                neighbours.push(s - 1);
+            }
+            if col + 1 < side {
+                neighbours.push(s + 1);
+            }
+            cells.push(Point::<(), f64>::slot().gp(1.0 + neighbours.len() as f64));
+            rows.push(s);
+            cols.push(s);
+            for t in neighbours {
+                cells.push(Point::<(), f64>::slot().gp(-1.0));
+                rows.push(s);
+                cols.push(t);
+            }
+        }
+    }
+    let grid = SparseMap::new(cells, rows, cols, (sites, sites));
+    let grid_load = Field::from_fn(sites, |i| {
+        Point::<(), f64>::new((i as f64).sin(), 1.0, 0.0, 0.0)
+    });
+    let grid_lu = grid.factor().expect("nonsingular");
+    let mut g = c.benchmark_group(format!(
+        "fields: a {side} x {side} grid (f64, fill {})",
+        grid_lu.fill()
+    ));
+    g.sample_size(20);
+    g.bench_function("cg", |b| {
+        b.iter(|| black_box(grid.solve(black_box(&grid_load))));
+    });
+    g.bench_function("sparse LU: factor and solve", |b| {
+        b.iter(|| black_box(grid.solve_direct(black_box(&grid_load))));
+    });
+    g.bench_function("sparse LU: solve with the factors", |b| {
+        b.iter(|| black_box(grid_lu.solve(black_box(&grid_load))));
+    });
+    g.finish();
+}
+
+/// Solving the string in f32, where a lane batch holds twice as many rows.
+fn fields_string_f32(c: &mut Criterion) {
+    let n: usize = 1024;
+    let stiffness = string_stiffness(n);
+    let load = gax::field::Field::from_fn(n, |i| {
+        Point::<(), f64>::new(0.0, 0.0, -((i % 7) as f64), 0.0)
+    });
     let stiffness32 = stiffness.map_cells(|c| c.map_coefs(|v| v as f32));
     let load32 = load.map(|p| p.map_coefs(|v| v as f32));
     let mut g = c.benchmark_group(format!("fields: solve a string of {n} sites (f32)"));
@@ -456,6 +533,15 @@ fn fields(c: &mut Criterion) {
 }
 
 criterion_group!(
-    benches, uniform, pairwise, exp, rigid_body, rigid_rate, fields
+    benches,
+    uniform,
+    pairwise,
+    exp,
+    rigid_body,
+    rigid_rate,
+    fields,
+    fields_string,
+    fields_grid,
+    fields_string_f32
 );
 criterion_main!(benches);

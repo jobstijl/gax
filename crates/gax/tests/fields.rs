@@ -264,26 +264,137 @@ fn packed_padding_is_masked() {
     }
 }
 
-/// Conjugate gradients and LU on the assembled matrix agree; a non-symmetric
-/// map solves densely; an indefinite one is refused.
+/// The residual `‖A x − b‖²` of a solve.
+fn residual(map: &SparseMap<Vector<(Vector,), f64>>, x: &Field<V>, b: &Field<V>) -> f64 {
+    let r = &map.apply(x) - b;
+    r.dot(&r)
+}
+
+/// Conjugate gradients and the sparse LU agree on the string's stiffness, to rounding.
 #[test]
-fn solvers() {
+fn solvers_agree() {
     use gax::ApproxEq;
     let k = stiffness();
     let loads = vectors(&fixture("loads"));
-    let (cg, dense) = (k.cg(&loads, 1e-15, 100), k.solve_dense(&loads));
+    let (cg, direct) = (k.cg(&loads, 1e-15, 100), k.solve_direct(&loads));
     assert!(cg.converged && cg.iterations <= 12, "{cg:?}");
-    for (a, b) in cg.x.sites().iter().zip(dense.sites()) {
-        assert!(a.approx_eq(b, 1e-14));
+    for (a, b) in cg.x.sites().iter().zip(direct.sites()) {
+        assert!(a.approx_eq(b, 1e-14), "{a:?} vs {b:?}");
     }
-    // A non-symmetric map (diagonally dominant, so nonsingular).
+    assert_field(&direct, &fixture("displacements"), 1e-15);
+}
+
+/// The sparse LU solves non-symmetric maps, and maps whose diagonal is zero (pivoting).
+#[test]
+fn direct_solves_what_cg_cannot() {
+    // Non-symmetric and diagonally dominant.
     let map =
         &ragged(23) + &SparseMap::from_diagonal(&Field::from_fn(23, |_| Vector::slot().gp(6.0)));
     let b = Field::from_fn(23, |i| Vector::new(1.0, -(i as f64), 0.5));
-    let x = map.solve_dense(&b);
-    for (a, c) in map.apply(&x).sites().iter().zip(b.sites()) {
-        assert!(a.approx_eq(c, 1e-12), "{a:?} vs {c:?}");
+    let x = map.solve_direct(&b);
+    assert!(residual(&map, &x, &b) < 1e-24);
+    // A cyclic shift of the sites: every diagonal block is zero.
+    let n = 9;
+    let shift = SparseMap::new(
+        (0..n).map(|i| Vector::slot().gp(1.0 + i as f64)).collect(),
+        (0..n).collect(),
+        (0..n).map(|i| (i + 1) % n).collect(),
+        (n, n),
+    );
+    let b = Field::from_fn(n, |i| Vector::new(i as f64, 1.0, -1.0));
+    let x = shift.solve_direct(&b);
+    assert!(residual(&shift, &x, &b) < 1e-24);
+}
+
+/// A saddle-point system: the string's stiffness with a constraint that ties the first and the
+/// last bead together, through a Lagrange multiplier site. Symmetric and indefinite, so
+/// conjugate gradients fails where the sparse LU does not.
+#[test]
+fn saddle_point() {
+    let k = stiffness();
+    let id = |w: f64| Vector::<(), f64>::slot().gp(w);
+    let mut triples: Vec<(usize, usize, Vector<(Vector,), f64>)> = k.couplings().collect();
+    // Site 4 is the multiplier: x0 − x3 = 0.
+    triples.extend([
+        (4, 0, id(1.0)),
+        (4, 3, id(-1.0)),
+        (0, 4, id(1.0)),
+        (3, 4, id(-1.0)),
+    ]);
+    let (rows, rest): (Vec<_>, Vec<_>) = triples.iter().map(|t| (t.0, (t.1, t.2))).unzip();
+    let (cols, cells): (Vec<_>, Vec<_>) = rest.into_iter().unzip();
+    let kkt = SparseMap::new(cells, rows, cols, (5, 5));
+    let mut loads = vectors(&fixture("loads")).into_sites();
+    loads[0] = Vector::new(0.0, 1.0, 0.0);
+    loads.push(Vector::zero());
+    let b = Field::new(loads);
+    let x = kkt.solve_direct(&b);
+    assert!(residual(&kkt, &x, &b) < 1e-26);
+    assert!((x.site(0) - x.site(3)).c.iter().all(|d| d.abs() < 1e-15));
+    assert!(!kkt.cg(&b, 1e-12, 100).converged);
+}
+
+/// The factors solve again for other right-hand sides; a singular map is reported, with the
+/// site whose column found no pivot.
+#[test]
+fn factor_once_singular_reported() {
+    let k = stiffness();
+    let lu = k.factor().expect("nonsingular");
+    for j in 0..4 {
+        let b = Field::from_fn(4, |i| Vector::new(f64::from(u8::from(i == j)), 0.5, -1.0));
+        assert!(residual(&k, &lu.solve(&b), &b) < 1e-28);
     }
+    // ragged() leaves every fifth row empty: no pivot can be found for all its columns.
+    let singular = ragged(10);
+    let err = singular.factor().expect_err("singular");
+    assert!(err.site < 10 && err.blade < 3, "{err}");
+    assert!(err.to_string().contains("singular"));
+}
+
+/// A mesh: a 30 × 30 grid of sites, each tied to its four neighbours and to its rest position.
+/// The sparse LU and conjugate gradients agree, and the ordering keeps the fill near the band
+/// of a grid (`n√n`), far below a dense factor (`n²`).
+#[test]
+fn grid_mesh() {
+    let side = 30;
+    let n = side * side;
+    let id = |w: f64| Vector::<(), f64>::slot().gp(w);
+    let (mut cells, mut rows, mut cols) = (vec![], vec![], vec![]);
+    for r in 0..side {
+        for c in 0..side {
+            let s = r * side + c;
+            let mut neighbours = vec![];
+            if r > 0 {
+                neighbours.push(s - side);
+            }
+            if r + 1 < side {
+                neighbours.push(s + side);
+            }
+            if c > 0 {
+                neighbours.push(s - 1);
+            }
+            if c + 1 < side {
+                neighbours.push(s + 1);
+            }
+            cells.push(id(1.0 + neighbours.len() as f64));
+            rows.push(s);
+            cols.push(s);
+            for t in neighbours {
+                cells.push(id(-1.0));
+                rows.push(s);
+                cols.push(t);
+            }
+        }
+    }
+    let grid = SparseMap::new(cells, rows, cols, (n, n));
+    let b = Field::from_fn(n, |i| Vector::new((i as f64).sin(), 1.0, 0.0));
+    let lu = grid.factor().expect("nonsingular");
+    let (direct, cg) = (lu.solve(&b), grid.solve(&b));
+    assert!(residual(&grid, &direct, &b) < 1e-20);
+    let d = &direct - &cg;
+    assert!(d.dot(&d) < 1e-20 * direct.dot(&direct));
+    let unknowns = 3 * n;
+    assert!(lu.fill() < 3 * unknowns * side * 2, "fill {}", lu.fill());
 }
 
 #[test]
@@ -317,7 +428,9 @@ fn transpose_and_compose() {
 /// Reductions and site-by-site operations.
 #[test]
 fn field_operations() {
-    let f: Field<V> = (0..4).map(|i| Vector::new(f64::from(i), 1.0, 0.0)).collect();
+    let f: Field<V> = (0..4)
+        .map(|i| Vector::new(f64::from(i), 1.0, 0.0))
+        .collect();
     assert_eq!(f.mean(), Vector::new(1.5, 1.0, 0.0));
     assert_eq!(f.sum(), Vector::new(6.0, 4.0, 0.0));
     assert_eq!((&f + &(-&f)).sum(), Vector::zero());

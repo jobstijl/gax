@@ -1,5 +1,4 @@
-//! Solving a square field map of square map cells: conjugate gradients, and LU on the
-//! assembled block matrix.
+//! Solving a square field map of square map cells iteratively: conjugate gradients.
 
 extern crate std;
 
@@ -125,7 +124,7 @@ where
     /// for at most four iterations per unknown.
     ///
     /// For symmetric positive definite couplings. For any other nonsingular map,
-    /// [`solve_dense`](Self::solve_dense) solves exactly by LU.
+    /// [`solve_direct`](Self::solve_direct) solves exactly by sparse LU.
     ///
     /// # Panics
     /// If the map is not square, `b` is not over its sites, or the iteration fails: its
@@ -138,38 +137,11 @@ where
         let s = self.cg(b, eps * T::from_i64(16), 4 * unknowns + 20);
         assert!(
             s.converged || T::all_lt(s.residual, eps.sqrt()),
-            "SparseMap::solve: conjugate gradients did not converge ({} iterations, relative residual {:?}); the couplings must be symmetric positive definite, else use solve_dense",
+            "SparseMap::solve: conjugate gradients did not converge ({} iterations, relative residual {:?}); the couplings must be symmetric positive definite, else use solve_direct",
             s.iterations,
             s.residual
         );
         s.x
-    }
-
-    /// Solve `self.apply(x) == b` exactly, by LU with partial pivoting on the assembled block
-    /// matrix of `(sites · K::N)²` coefficients: any nonsingular square field map, at the cost
-    /// of a dense solve. A singular map gives non-finite coefficients. For scalar coefficients.
-    ///
-    /// # Panics
-    /// If the map is not square, or `b` is not over its sites.
-    #[must_use]
-    #[track_caller]
-    pub fn solve_dense(&self, b: &Field<K::Mv<(), T>>) -> Field<K::Mv<(), T>> {
-        self.check_square(b.len());
-        let n = K::N;
-        let m = self.shape.0 * n;
-        let mut a = vec![T::zero(); m * m];
-        for (r, c, cell) in self.couplings() {
-            let cell = cell.coeffs().as_ref();
-            for o in 0..n {
-                for i in 0..n {
-                    let e = &mut a[(r * n + o) * m + c * n + i];
-                    *e = *e + cell[o].as_ref()[i];
-                }
-            }
-        }
-        let mut x = flatten(b);
-        lu_solve(&mut a, &mut x, m);
-        unflatten(&x)
     }
 }
 
@@ -259,41 +231,4 @@ fn pcg<T: Real>(
     }
     let converged = T::all_lt(rr, target) || rr == target;
     (x, max_iterations, (rr / bb).sqrt(), converged)
-}
-
-/// Solve `a x = b` in place (`a` is `m × m`, row-major) by LU with partial pivoting.
-fn lu_solve<T: Real>(a: &mut [T], b: &mut [T], m: usize) {
-    for k in 0..m {
-        // The pivot: the largest magnitude in column k at or below the diagonal.
-        let mut p = k;
-        for i in k + 1..m {
-            if T::all_lt(a[p * m + k].abs(), a[i * m + k].abs()) {
-                p = i;
-            }
-        }
-        if p != k {
-            for j in 0..m {
-                a.swap(k * m + j, p * m + j);
-            }
-            b.swap(k, p);
-        }
-        let inv = a[k * m + k].recip();
-        for i in k + 1..m {
-            let f = a[i * m + k] * inv;
-            if f == T::zero() {
-                continue;
-            }
-            for j in k + 1..m {
-                a[i * m + j] = (-f).mul_add(a[k * m + j], a[i * m + j]);
-            }
-            b[i] = (-f).mul_add(b[k], b[i]);
-        }
-    }
-    for k in (0..m).rev() {
-        let mut s = b[k];
-        for j in k + 1..m {
-            s = (-a[k * m + j]).mul_add(b[j], s);
-        }
-        b[k] = s / a[k * m + k];
-    }
 }

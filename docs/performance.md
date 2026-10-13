@@ -353,6 +353,17 @@ A string of 1024 sites; rustc 1.99.0 on an idle machine (ADR-046).
 | one product of the string's stiffness (`f64`): scalar / packed | 8.30 / 8.51 µs | 7.83 / 8.89 µs |
 | `SparseMap::solve` (Jacobi-preconditioned CG, 33 iterations), `f64` / `f32` | 452 / 138 µs | 449 / 146 µs |
 
+The sparse LU (`SparseMap::factor`, `f64`) against conjugate gradients:
+
+| | `solve` (CG) | `factor` and solve | solve with the factors |
+|---|---|---|---|
+| the string, 1024 sites (3072 unknowns) | 477 µs | 536 µs | **21 µs** |
+| a 64 × 64 grid, 4096 sites (12288 unknowns, fill 1.45 M after reverse Cuthill–McKee) | 3.8 ms | 95 ms | **0.69 ms** |
+
+A factorization costs about one CG solve on a chain and about 25 on a grid; every solve after
+it is 5 to 20 times faster, and it solves the non-symmetric, indefinite and saddle-point systems
+that CG cannot.
+
 A packed solve was measured and dropped: 15–22% slower in `f64` and even in `f32`, because the
 CG's vector arithmetic weighs as much as its products.
 

@@ -1432,17 +1432,42 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     lines fail with the binding's own message.
   * The site counts are checked at run time, with both counts in the message: "a field map with
     4 input sites applied to a field over 3 sites".
-* **Solving: what to promise.** A sparse direct solver (LU with fill-in reordering) is a library
-  of its own; gax does not have one. Instead:
+* **Solving.** Two methods, for two kinds of system.
   * `solve` is conjugate gradients with a diagonal (Jacobi) preconditioner, iterated to a
     relative residual of `16 ε`. CG is the right method for the symmetric positive definite
-    couplings of physics (stiffness, mass, anchored Laplacians), and it needs only the product.
-    If it fails, because it meets non-positive curvature or its residual stays above `√ε`, it
-    panics with a message that names `solve_dense`. A silent wrong answer would be worse.
+    couplings of physics (stiffness, mass, anchored Laplacians): it needs only the product and
+    no more memory than the map. If it fails, because it meets non-positive curvature or its
+    residual stays above `√ε`, it panics with a message that names `solve_direct`. A silent
+    wrong answer would be worse.
   * `cg(b, tolerance, max_iterations)` returns the iterate with its iterations, residual and
     whether it converged.
-  * `solve_dense` assembles the `(n · K::N)²` block matrix and solves it by LU with partial
-    pivoting: any nonsingular map, for modest sizes.
+  * `factor` is a sparse LU of the block matrix, and `solve_direct` is `factor` followed by a
+    solve. It covers every nonsingular map: non-symmetric couplings, indefinite ones, and
+    saddle-point systems of constraints, where CG fails.
+    * The method is the left-looking LU of Gilbert and Peierls, as in Davis's CSparse
+      (`cs_lu`). Each column comes from a sparse triangular solve whose pattern a depth-first
+      search finds, so the work follows the arithmetic.
+    * The columns are taken in a reverse Cuthill–McKee order of the sites, from a
+      pseudo-peripheral site. That keeps the factors of chains and meshes banded: a 30 × 30
+      grid stays within its band, far below a dense factor.
+    * The rows are pivoted by threshold partial pivoting. The diagonal is kept while it is
+      within a factor of 10 of the column's largest candidate, as in UMFPACK.
+    * A column with no nonzero pivot is reported as `Err(Singular { site, blade })`.
+    * The factors (`SparseLu`) solve again for each right-hand side.
+    * Measured (`f64`):
+      * on the string of 1024 sites, factor and solve take 536 µs against CG's 477 µs, and a
+        solve with the factors 21 µs;
+      * on a 64 × 64 grid, factor and solve take 95 ms against CG's 3.8 ms, and a solve with
+        the factors 0.69 ms.
+      * A factorization pays after one solve on a chain and after about 25 on a grid.
+  * Considered and left out:
+    * Minimum-degree orderings (AMD, COLAMD) give less fill on general graphs than RCM, but
+      they are a substantial algorithm. RCM is near their fill on the banded structures of
+      chains and surface meshes.
+    * A supernodal or multifrontal factorization pays from about 10⁵ unknowns.
+    * Sparse least squares (QR) and eigensolvers (Lanczos) remain out of scope.
+  * An earlier `solve_dense` (LU on the assembled dense block matrix) is replaced by
+    `solve_direct`, which is exact on the same maps and sparse.
 * **Derivatives with respect to a field** (with ADR-043's jets):
   * `field::gradient` evaluates the function once per site, with jets seeded on that site, and
     gives a field of forms `Scalar <- A`.
@@ -1492,7 +1517,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   lanes on couplings and scattered into the rows; it ran at 10.3 µs, slower than the scalar
   loop.
 * **Not here.**
-  * A sparse direct solver, sparse least squares, and sparse eigenproblems.
+  * Sparse least squares and sparse eigenproblems.
   * Fields over a fixed number of sites (ADR-045).
   * Batch products for multivector cells. Through `&cells * K::slot()` they become map cells,
     which `packed()` takes.
