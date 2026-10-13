@@ -49,6 +49,14 @@ pub trait Kind: Copy + Debug + PartialEq + 'static {
     ) -> Self::Arr<Z>;
 }
 
+/// A kind whose coefficient array `Arr<X>` is exactly `[X; Self::N]`: every kind the generator
+/// emits. Fields over a fixed number of sites ([`Sites`](crate::sites::Sites)) view `N` such
+/// arrays side by side as one flat slice, which this layout makes sound.
+///
+/// # Safety
+/// `Arr<X>` must have the layout of `[X; Self::N]` for every `X`.
+pub unsafe trait FlatKind: Kind {}
+
 /// The coefficient storage of a multivector type: one slot array per output coefficient.
 pub type Coeffs<M> = <<M as Extensor>::Kind as Kind>::Arr<
     <<M as Extensor>::Slots as Slots>::Arr<<M as Extensor>::Coef>,
@@ -175,4 +183,20 @@ where
     m.coeffs().as_ref().iter().flat_map(|col| {
         (0..<M::Slots as Slots>::SIZE).map(move |k| <M::Slots as Slots>::get_flat(col, k).into())
     })
+}
+
+/// The zero value, map or form of `M`'s type.
+#[inline(always)]
+pub(crate) fn zero<M: Extensor>() -> M {
+    M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|_| {
+        <M::Slots as Slots>::from_flat(&mut |_| M::Coef::zero(), 0)
+    }))
+}
+
+/// `m` with every coefficient multiplied by `c`.
+#[inline]
+pub(crate) fn scale<M: Extensor>(m: M, c: M::Coef) -> M {
+    M::from_coeffs(<M::Kind as Kind>::arr_map(m.coeffs(), |col| {
+        <M::Slots as Slots>::map(col, &mut |x| *x * c)
+    }))
 }

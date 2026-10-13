@@ -349,7 +349,8 @@ invertible, such as a degenerate pseudoscalar, has no `inverse()`.
 The maps above couple the coefficients of one value. A map that couples the values at many
 sites, such as the beads of a string or the vertices of a mesh, is a *field map*: `gax::field`
 stores it sparsely, as typed cells from site to site, and solves the whole coupled system at once.
-See [fields.md](fields.md).
+When the number of sites is fixed, `gax::sites` makes the field a kind, `Sites<K, N>`, and a field
+map an ordinary map whose slot takes exactly `N` sites. See [fields.md](fields.md).
 
 ## 7. Performance: three tiers, and batching
 

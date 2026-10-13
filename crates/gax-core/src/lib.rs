@@ -56,6 +56,7 @@ pub mod permute;
 pub mod prepared;
 #[cfg(feature = "wide")]
 pub mod simd;
+pub mod sites;
 pub mod slots;
 pub mod strict;
 pub mod study;
@@ -72,7 +73,7 @@ pub use extensor::{
 };
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;
-pub use kind::{ApproxEq, Coeffs, Extensor, Kind, Retype, select_lt};
+pub use kind::{ApproxEq, Coeffs, Extensor, FlatKind, Kind, Retype, select_lt};
 pub use map::{LinearMap, SquareLinearMap};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Exp, Gp, Inverse, Involute, Lc, Log,

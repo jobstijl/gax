@@ -37,6 +37,9 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Scalar<S, T> {
     }
 }
 
+// SAFETY: `Arr<X>` is `[X; 1]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for Scalar {}
+
 impl gx::Kind for Scalar {
     const N: usize = 1;
     const NAME: &'static str = "Scalar";
@@ -889,6 +892,9 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Vector<S, T> {
     }
 }
 
+// SAFETY: `Arr<X>` is `[X; 2]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for Vector {}
+
 impl gx::Kind for Vector {
     const N: usize = 2;
     const NAME: &'static str = "Vector";
@@ -1734,6 +1740,9 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Pseudoscalar<S, T> {
         d.finish()
     }
 }
+
+// SAFETY: `Arr<X>` is `[X; 1]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for Pseudoscalar {}
 
 impl gx::Kind for Pseudoscalar {
     const N: usize = 1;
@@ -2584,6 +2593,9 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Rotor<S, T> {
         d.finish()
     }
 }
+
+// SAFETY: `Arr<X>` is `[X; 2]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for Rotor {}
 
 impl gx::Kind for Rotor {
     const N: usize = 2;
@@ -3484,6 +3496,9 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Multivector<S, T> {
         d.finish()
     }
 }
+
+// SAFETY: `Arr<X>` is `[X; 4]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for Multivector {}
 
 impl gx::Kind for Multivector {
     const N: usize = 4;

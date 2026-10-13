@@ -170,10 +170,10 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Typed derivatives (ADR-043): `jacobian`, `gradient`, `hessian` return extensors, on `Jet<T, D>` (a dual number over a kind's own array); checked against numga's JAX `derivative`
 - [x] Structured maps (ADR-044): `LinearMap` beside `Extensor`, `SquareLinearMap` fast paths without specialization; `PrincipalInertia` and `PrincipalMobility` compose, bind and solve without `to_map()`; dense code unchanged (release instructions and build times measured)
 - [x] Fields over run-time sites (ADR-046, docs/fields.md): `Field`, `SparseMap` (CSR, typed cells), solves (preconditioned CG, sparse LU), derivatives with respect to a field, sliced-ELLPACK batch products; numga's bead string matched
-- [ ] Fields over a fixed number of sites as kinds (ADR-045: `Sites<K, N>` with a flat view; designed and modelled, not built)
+- [x] Fields over a fixed number of sites as kinds (ADR-045): `Sites<K, N>` with a flat view (`FlatKind`, checked under miri), field maps that bind, compose and solve as extensors, products site by site; numga's bead string matched against the sparse solvers
 - [x] Sparse direct solves on field maps: sparse LU (Gilbert–Peierls, threshold pivoting) after a minimum-degree ordering, reusable factors, singularity reported
 - [x] Sparse least squares (LSQR) and generalized eigenproblems (shift-invert block Lanczos, Rayleigh–Ritz on the pencil) on field maps
-- [ ] Faster sparse products in `f64`: rows sorted by length within slices (SELL-C-σ), cheaper gathers
+- [x] Faster sparse products in `f64`: measured and left as is. A packed CG and consecutive-column loads were both slower (ADR-046), and a mesh's rows are nearly equal in length, so sorting them (SELL-C-σ) has little padding to remove
 - [ ] Proven rounding bounds from gax-bend: parked (its kernels' term order and fusion differ from gax's; gax-gen would have to export its trees)
 
 ## Decisions for the project owner

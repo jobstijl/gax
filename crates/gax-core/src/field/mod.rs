@@ -54,18 +54,12 @@ pub use solve::Solved;
 pub use sparse::SparseMap;
 
 use crate::coef::{Coef, Real};
-use crate::kind::{Extensor, Kind};
+use crate::kind::Extensor;
 use crate::slots::Slots;
 use core::ops::{Add, Neg, Sub};
 use std::vec::Vec;
 
-/// The zero value, map or form of `M`'s type.
-#[inline(always)]
-pub(crate) fn zero<M: Extensor>() -> M {
-    M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|_| {
-        <M::Slots as Slots>::from_flat(&mut |_| M::Coef::zero(), 0)
-    }))
-}
+pub(crate) use crate::kind::{scale, zero};
 
 /// One object spread over sites: a value (or map, or form) of type `M` at each site.
 ///
@@ -228,14 +222,6 @@ impl<M: Extensor> Field<M> {
         }
         sum
     }
-}
-
-/// `m` with every coefficient multiplied by `c`.
-#[inline]
-pub(crate) fn scale<M: Extensor>(m: M, c: M::Coef) -> M {
-    M::from_coeffs(<M::Kind as Kind>::arr_map(m.coeffs(), |col| {
-        <M::Slots as Slots>::map(col, &mut |x| *x * c)
-    }))
 }
 
 #[track_caller]

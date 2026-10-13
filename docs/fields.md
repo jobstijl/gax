@@ -244,6 +244,38 @@ assembles in one pass:
 Each term's Hessian is a small dense form, and `D` keeps the coupling as sparse as the mesh. The
 fields test (`tests/fields.rs`) does this for the string and matches numga's derivative exactly.
 
+## Sites at compile time
+
+When the number of sites is fixed, it can be part of the type. `Sites<K, N>` is the field of `K`
+over `N` sites as a kind of its own (`gax::sites`, ADR-045 in the design record), with
+`N · K::N` coefficients. Being a kind, it fills slots: a field map over four beads is an ordinary
+map, `SiteField<Vector, 4, (Sites<Vector, 4>,)>`. `of` sums over the paired sites, composition
+over the shared ones, and the dense solvers (`solve`, `inverse`, `det`, `eigh`, `svd`) see the
+whole coupled system, here one `12 × 12` block matrix.
+
+```rust
+use gax::sites::{SiteField, Sites};
+use gax::vga3d::{Bivector, Vector};
+
+type Beads = SiteField<Vector, 4, (), f64>;
+let w = [[2.0, -1.0, 0.0, 0.0], [-1.0, 3.0, -1.0, 0.0], [0.0, -1.0, 3.0, -1.0], [0.0, 0.0, -1.0, 2.0]];
+// The block from bead `j` to bead `i` is a map `Vector <- Vector`.
+let stiffness: SiteField<Vector, 4, (Sites<Vector, 4>,), f64> =
+    SiteField::from_blocks(|i, j| Vector::slot().gp(w[i][j]));
+let pulls = Beads::from_sites([Vector::new(0.0, 0.0, -1.0); 4]);
+let x = stiffness.solve(pulls);
+assert!((stiffness.of(x) - pulls).c.as_ref().iter().all(|d| d.abs() < 1e-14));
+
+// Products act site by site; a turn turns every bead.
+let turn = Bivector::<(), f64>::new(0.0, 0.0, 0.3).exp();
+let turned = turn >> x;
+assert_eq!(turned.site(2), turn >> x.site(2));
+```
+
+The site count is checked at compile time: a field over four sites does not fit a slot of
+`Sites<Vector, 3>`. Fixed fields are dense, and they are meant for a few sites; `from_field`,
+`to_field` and `from_sparse` convert to and from the run-time fields and sparse maps above.
+
 ## Performance
 
 On a string of 1024 sites with 3070 couplings, each its own PGA3D `Point <- Point` (`f32`), see
@@ -252,7 +284,5 @@ the dense batch path (one map applied to as many values).
 
 ## What a field is not (yet)
 
-* Sites at compile time. ADR-045 designs fields over a fixed number of sites as kinds,
-  `Sites<K, N>`, so that they fill slots and the dense solvers apply. They are not built.
-* A sparse SVD and a non-symmetric sparse eigensolver. The SVD of a small field is the dense
-  SVD of its blocks.
+* A sparse SVD and a non-symmetric sparse eigensolver. For a few sites, the dense `svd` and
+  `eig` of a fixed field map (`SiteField::from_sparse`) cover them.

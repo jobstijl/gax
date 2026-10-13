@@ -1516,6 +1516,9 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Multivector<S, T> {
     }
 }
 
+// SAFETY: `Arr<X>` is `[X; 32]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for Multivector {}
+
 impl gx::Kind for Multivector {
     const N: usize = 32;
     const NAME: &'static str = "Multivector";

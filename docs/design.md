@@ -1362,7 +1362,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       (`structured_operator`).
 
 ## ADR-045: Fields over a fixed number of sites, as kinds
-*Status: proposed (design only; a model, no code in the library).*
+*Status: accepted, implemented (`gax_core::sites`, `docs/fields.md`, `tests/sites.rs`).*
 
 * **The problem.** numga's fields put the sites in the type, `vector[4]`, and a field map
   `vector[4] <- vector[4]` couples them: binding sums over the paired sites, composition over
@@ -1389,18 +1389,37 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
      FlatKind` states and the generator emits for its kinds (arrays have no padding between
      elements). The solvers' `SquareArr` gets one impl for `SiteArr<K, SiteArr<K, T, N>, N>`,
      square without naming `K::N * N`.
-* **Nothing existing changes, and a field is a kind everywhere.** It fills slots, so field maps
-  are `Vector<(Sites<Vector, 4>,)>`-style extensors (with the output a field kind too); `of`
-  binds and composes over the sites, and `solve`, `inverse` and `eigh` see one `12 × 12` system.
-  A standalone model of exactly this compiled and ran on rustc 1.99 (a `Sites<Vector, 4>` with
-  12 coefficients, flat indexing, and the square matrix of its maps); it has not been checked
-  under miri.
-* **Open.**
-  * The products: `Sites<Vector, 4>` has no generated product impls. Site-by-site
-    operations (`turn >> positions`) need an impl per product for field kinds, generated or
-    blanket over `Sites<K, N>` delegating to `K`'s. The blanket form must not collide with
-    the generated impls, as in ADR-044.
-  * The one `unsafe` cast needs miri in CI, as gax already runs it.
+* **Built as recommended (option 3), and nothing existing changed.**
+  * `Sites<K, N>` is a kind, `SiteArr<K, X, N>` its array, `SiteField<K, N, S, T>` its
+    extensor. The generator emits `unsafe impl FlatKind` for every kind (its `Arr<X>` is
+    `[X; N]`). The flat view is the module's one `unsafe` block; a unit test of it runs under
+    miri in CI.
+  * A field kind fills slots: `SiteField<Vector, 4, (Sites<Vector, 4>,)>` is a field map. `of`
+    binds and composes over the sites through the generic `Of`, and `solve`, `inverse`, `det`,
+    `eigh` and `svd` come from the `SquareMap` blanket through one `SquareArr` impl. On
+    numga's bead string they agree with the sparse map's `solve_direct` and `eigh` to 10⁻¹⁴.
+  * A field over four sites in a slot of `Sites<K, 3>` does not compile, with the binding's own
+    message (`compile_fail/sites_wrong_count.rs`).
+  * `Cast` of a field kind to itself slices a static identity table, which bounds a field
+    kind at 4096 coefficients. That is no loss: the dense block solvers are for small systems,
+    and larger fields belong to ADR-046's sparse maps (`from_field`, `to_field` and
+    `from_sparse` convert).
+* **The products, site by site.** Each of the 11 products has four blanket impls in gax-core,
+  none generated: field with value, value with field, unit versor with field
+  (`turn >> positions`), and field with field over the same `N`. They never overlap because a
+  field kind is not `FlatKind`, and the generated impls are untouched.
+  * The first form of value-with-field, `impl<L: Gp<K::Mv<S, T>>> Gp<SiteField<…>> for L`,
+    broke existing code: any `x.gp(c)` with `c`'s type not yet inferred (generic `T`
+    coefficients in `extras.rs`) made the compiler try `L: Gp<SiteField<?…>>`, then
+    `L: Gp<?K::Mv<…>>` with `?K` unknown, recursing to the overflow limit.
+  * The fix asks the bound of the right operand: `K::Mv<S, T>: RightOf<L, GpOp>`, implemented
+    for every value `X` of a flat kind with `L: Gp<X>`. With `X` unknown the compiler finds
+    the goal ambiguous and waits, instead of recursing.
+  * The markers are `GpOp`, `WedgeOp` and so on. Markers named `Gp`, `Wedge`, … made rustc
+    print every product trait by its full path in unrelated errors, which the compile-fail
+    tests caught.
+  * `Unit`'s and `Prepared`'s `>>`/`<<` forwarding now names its trait fully
+    (`<Self as Transform<R>>::transform`) for the same reason.
 
 ## ADR-046: Fields over a run-time number of sites, and sparse field maps
 *Status: accepted, implemented (`gax_core::field`, `docs/fields.md`).*
@@ -1555,7 +1574,6 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   loop.
 * **Not here.**
   * A sparse SVD and a non-symmetric sparse eigensolver.
-  * Fields over a fixed number of sites (ADR-045).
   * Batch products for multivector cells. Through `&cells * K::slot()` they become map cells,
     which `packed()` takes.
 

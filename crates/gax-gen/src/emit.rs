@@ -764,6 +764,9 @@ impl<S: Slots, T: Coef> core::fmt::Debug for {name}<S, T> {{
     }}
 }}
 
+// SAFETY: `Arr<X>` is `[X; {n}]`, the layout `gx::FlatKind` promises.
+unsafe impl gx::FlatKind for {name} {{}}
+
 impl Kind for {name} {{
     const N: usize = {n};
     const NAME: &'static str = "{name}";

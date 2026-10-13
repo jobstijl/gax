@@ -91,7 +91,7 @@ where
     type Output = <Self as crate::ops::Transform<R>>::Output;
     #[inline(always)]
     fn shr(self, rhs: R) -> Self::Output {
-        crate::ops::Transform::transform(self, rhs)
+        <Self as crate::ops::Transform<R>>::transform(self, rhs)
     }
 }
 

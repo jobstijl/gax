@@ -193,7 +193,7 @@ where
     type Output = <Unit<M> as crate::ops::Transform<R>>::Output;
     #[inline(always)]
     fn shr(self, rhs: R) -> Self::Output {
-        crate::ops::Transform::transform(self, rhs)
+        <Self as crate::ops::Transform<R>>::transform(self, rhs)
     }
 }
 
@@ -204,7 +204,7 @@ where
     type Output = <Unit<M> as crate::ops::TransformInv<R>>::Output;
     #[inline(always)]
     fn shl(self, rhs: R) -> Self::Output {
-        crate::ops::TransformInv::transform_inv(self, rhs)
+        <Self as crate::ops::TransformInv<R>>::transform_inv(self, rhs)
     }
 }
 
