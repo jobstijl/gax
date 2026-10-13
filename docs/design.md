@@ -1266,8 +1266,8 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   orientation are gax's).
 
 ## ADR-044: Structured maps beside dense extensors (`LinearMap`)
-*Status: proposed; spike on branch `spike/structured-maps`, for review before the rest of the
-library follows.*
+*Status: accepted (2026-10-13), implemented for `pga3d::PrincipalInertia` and
+`PrincipalMobility`.*
 
 * **The problem.** numga's `PrincipalInertiaPGA3` is a `Bivector <- Bivector` stored as four
   numbers, with a fast apply and a fast inverse; it subclasses `Extensor`, so generic code takes
@@ -1313,17 +1313,21 @@ library follows.*
     * the energy form;
     * solve and inverse;
     * one function written against `SquareLinearMap`, called with either representation.
-* **What it does not do (yet).**
-  * Operators: `a * inertia` and `Line::slot() & inertia` do not compile. The products are
-    generated per pair of dense kinds; extending them would mean an impl per product per
-    structured type, or a blanket over `LinearMap` that collides with the generated ones.
-    Binding covers the common uses (`Line::slot() & inertia.of(Line::slot())`).
+* **Scope, decided after the spike.**
+  * `SquareLinearMap` stays at `apply`, `solve` and `inverse`: the operations where a
+    representation can be faster than its dense form. The rest (`eigh`, `svd`, `lstsq`, `det`)
+    goes through `to_dense()`, as numga rebuilds the dense map for everything but apply and
+    inverse. Generic code with concrete kinds can call them on `m.to_dense()` with no extra
+    bound.
+  * Operators stay dense-only. Products are generated per pair of dense kinds; an impl per
+    product per structured type, or a blanket impl over `LinearMap` that would collide with the
+    generated ones, costs more than `.to_dense()` at the call site. The products' error note
+    now names `.to_dense()`.
+  * `motions::Motions::Inertia` stays a dense `Line <- Line`: a general inertia, about axes that
+    are not principal, has all 36 numbers.
   * Concrete signatures: a function that takes `Line<(Line,), T>` still takes only the dense
     type. Rust has no subclassing, so "accepted as an ordinary map" means accepted by code
-    written against the traits.
-  * The other map methods (`eigh`, `svd`, `lstsq`, `det`) stay on `SquareMap`. Moving them into
-    `SquareLinearMap` with dense defaults (`self.to_dense().eigh()`) is the next step if the
-    design is accepted, as is `motions::Motions::Inertia`, which stays dense.
+    written against `LinearMap` and `SquareLinearMap`. These are exported at the crate root.
 * **Measurements** (rustc 1.99.0, against the commit before the spike):
   * *Release code of dense maps is unchanged.* The `#[inline(never)]` probes in `gax-bench`
     (`-C target-cpu=native`) have the same instruction counts before and after:
@@ -1354,8 +1358,8 @@ library follows.*
       `Point<(Point,)>` to implement `Of<PrincipalInertia<f64>>`"
       (`structured_wrong_slot`).
     * A structured map in a product gets the generic "no regressive product (`&`) of
-      `Line<(Line,)>` and `PrincipalInertia`", whose note covers it only as "an operand is
-      not a multivector" (`structured_operator`). The rollout should name `to_map()` there.
+      `Line<(Line,)>` and `PrincipalInertia`", whose note now also names `.to_dense()`
+      (`structured_operator`).
 
 ## Hypotheses
 

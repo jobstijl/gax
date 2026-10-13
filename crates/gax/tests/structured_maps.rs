@@ -1,4 +1,4 @@
-//! Structured maps as maps (ADR-044, a spike): `PrincipalInertia`, a `Line <- Line` stored as
+//! Structured maps as maps (ADR-044): `PrincipalInertia`, a `Line <- Line` stored as
 //! four numbers, composes, binds into other maps and forms, and solves without `to_map()`, with
 //! the results of its dense form.
 

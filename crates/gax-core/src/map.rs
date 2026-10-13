@@ -1,5 +1,5 @@
 //! Maps in any representation: dense extensors, and structured forms that store fewer numbers
-//! (ADR-044, a spike).
+//! (ADR-044).
 //!
 //! Every generated type stores its coefficients densely and implements [`Extensor`]. A
 //! structured map, such as `pga3d::PrincipalInertia` (a `Line <- Line` stored as four numbers),

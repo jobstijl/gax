@@ -690,6 +690,37 @@ the remaining fuel in a tank. In 2D, `Moments::of_polygon` gives the area, the c
 polar moment; the asteroids example uses it to break rocks into the pieces of their outlines,
 with momentum conserved.
 
+The inertia comes back as a `PrincipalInertia`: the map `Line <- Line` from twists to momenta in
+the body's principal frame, stored as four numbers (the mass and three moments) rather than 36.
+It is a map like the dense ones. It applies, solves and inverts by its four numbers, binds into
+dense maps and forms, and composes either way round; every other operation goes through its
+dense form, `to_dense()`. Code written against `gax::SquareLinearMap` takes either
+representation and uses the fast path where there is one (ADR-044):
+
+```rust
+use gax::pga3d::{Line, PrincipalInertia};
+use gax::{LinearMap, SquareLinearMap};
+
+/// The twist a momentum gives the body, for any representation of its inertia.
+fn twist<I: SquareLinearMap<Kind = Line, Input = Line, Coef = f64>>(i: I, f: Line<(), f64>) -> Line<(), f64> {
+    i.solve(f)
+}
+
+let body = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
+let f = Line::new(1.0, 0.0, -1.0, 0.5, 0.25, 2.0);
+let fast = twist(body, f); // four reciprocals and six products
+let dense = twist(body.to_dense(), f); // LU on the 6 × 6
+assert!((fast - dense).c.iter().all(|x| x.abs() < 1e-15));
+
+// It binds into dense maps and forms as they are, with no `to_map()`:
+let energy = Line::slot() & body.of(Line::slot()); // the kinetic energy form, Scalar <- (Line, Line)
+assert!((energy.of(fast).of(fast).s() - (fast & body.of(fast)).s()).abs() < 1e-15);
+```
+
+Products take its dense form: `Line::slot() & body` does not compile, and
+`Line::slot() & body.to_dense()` does. A general inertia, about axes that are not principal, is
+a dense `Line<(Line,)>`, and that is the type `motions::Motions::Inertia` keeps.
+
 ## 15. Derivatives
 
 The coefficients of a gax value can carry derivatives along with their values

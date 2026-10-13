@@ -19,7 +19,8 @@ macro_rules! binary_trait {
         $(#[$doc])*
         #[diagnostic::on_unimplemented(
             message = $msg,
-            note = "the product is identically zero for these kinds (so it is not defined), or an operand is not a multivector of the same algebra and coefficient type (versor transport needs a declared versor kind as a value on the left)"
+            note = "the product is identically zero for these kinds (so it is not defined), or an operand is not a multivector of the same algebra and coefficient type (versor transport needs a declared versor kind as a value on the left)",
+            note = "a structured map (`map::LinearMap`, such as `PrincipalInertia`) takes part in products as its dense form, `.to_dense()`"
         )]
         pub trait $Trait<Rhs> {
             /// The result type.

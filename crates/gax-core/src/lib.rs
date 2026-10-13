@@ -71,6 +71,7 @@ pub use extensor::{
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;
 pub use kind::{ApproxEq, Coeffs, Extensor, Kind, Retype, select_lt};
+pub use map::{LinearMap, SquareLinearMap};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Exp, Gp, Inverse, Involute, Lc, Log,
     Norm, Normalize, Outermorphism, Rc, Reverse, ScalarProduct, Sqrt, Transform, TransformInv,
