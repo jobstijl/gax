@@ -258,3 +258,20 @@ mod numga {
         assert_eq!((energies, rotors), (2, 2));
     }
 }
+
+/// The distance from the origin of a plane's first two coefficients, `√(a² + b²)`.
+fn radius<T: Real>(p: Plane<(), T>) -> T {
+    (p.c[0] * p.c[0] + p.c[1] * p.c[1]).sqrt()
+}
+
+/// Second derivatives through `√` where a first derivative is exactly zero: at `(1, 0)` the
+/// radius does not change along `b` to first order, but it curves, `∂²r/∂b² = 1/r`. (The chain
+/// rule's guard against `0 · ∞` once dropped such a derivative's own derivative.)
+#[test]
+fn second_derivative_where_the_first_is_zero() {
+    let (r, g, h) = hessian(radius, Plane::<(), f64>::new(1.0, 0.0, 0.0, 0.0));
+    assert_eq!(r, 1.0);
+    assert_eq!(g.c[0], [1.0, 0.0, 0.0, 0.0]);
+    assert_eq!(h.c[0][1][1], 1.0);
+    assert_eq!(h.c[0][0][0], 0.0);
+}

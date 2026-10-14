@@ -158,16 +158,21 @@ impl<T: Coef, D: Directions> Jet<T, D> {
 
 impl<T: Real, D: Directions> Jet<T, D> {
     /// `self` with the derivatives scaled by `f'` at the value: the chain rule for a function
-    /// with value `f` and derivative `df` at `re`. A derivative that is exactly zero stays zero
-    /// even where `df` is infinite: `√x` at `x = 0` inside `cos √x`, as the closed forms
-    /// compute a rotation angle, has an infinite derivative but a zero tangent there, and the
-    /// composition is smooth (plain forward mode would give `0 · ∞ = NaN`).
+    /// with value `f` and derivative `df` at `re`. Where `df` is infinite, a derivative that is
+    /// exactly zero stays zero: `√x` at `x = 0` inside `cos √x`, as the closed forms compute a
+    /// rotation angle, has an infinite derivative but a zero tangent there, and the
+    /// composition is smooth (plain forward mode would give `0 · ∞ = NaN`). Only there: in a
+    /// jet of jets (second derivatives) a derivative whose value is zero still carries its own
+    /// derivatives, which the product keeps.
     #[inline(always)]
     fn chain(self, f: T, df: T) -> Self {
+        let finite = T::from_f64(f64::MAX);
         Jet {
             re: f,
             du: D::map(&self.du, |&d| {
-                T::select_lt(T::zero(), d.abs(), d * df, T::zero())
+                let product = d * df;
+                let guarded = T::select_lt(T::zero(), d.abs(), product, T::zero());
+                T::select_lt(df.abs(), finite, product, guarded)
             }),
         }
     }
