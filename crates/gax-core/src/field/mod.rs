@@ -224,6 +224,22 @@ impl<M: Extensor> Field<M> {
     }
 }
 
+impl<M: Extensor<Coef: Real>> Field<M> {
+    /// The norm of the fields' coefficient vector, `√(self · self)`: the size [`dot`](Self::dot)
+    /// measures.
+    ///
+    /// ```
+    /// use gax::field::Field;
+    /// use gax::pga3d::Plane;
+    /// let f = Field::new(vec![Plane::<(), f64>::new(3.0, 0.0, 0.0, 0.0), Plane::new(0.0, 4.0, 0.0, 0.0)]);
+    /// assert_eq!(f.norm(), 5.0);
+    /// ```
+    #[must_use]
+    pub fn norm(&self) -> M::Coef {
+        self.dot(self).sqrt()
+    }
+}
+
 #[track_caller]
 pub(crate) fn same_sites(a: usize, b: usize) {
     assert!(
