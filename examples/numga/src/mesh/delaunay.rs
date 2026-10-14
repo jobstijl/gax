@@ -13,7 +13,7 @@
 //! the point does not see, so each triangle of the fan turns counter-clockwise.
 
 use gax::{cga2d, pga2d};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 
 /// A point of the plane.
 pub type Point = pga2d::Point<(), f64>;
@@ -133,8 +133,8 @@ impl Triangulation {
 
     /// The triangles whose circumcircles hold the point, connected to `start` through each
     /// other, without the `excluded` ones.
-    fn cavity(&self, p: Point, start: usize, excluded: &HashSet<usize>) -> HashSet<usize> {
-        let mut cavity = HashSet::from([start]);
+    fn cavity(&self, p: Point, start: usize, excluded: &BTreeSet<usize>) -> BTreeSet<usize> {
+        let mut cavity = BTreeSet::from([start]);
         let mut queue = VecDeque::from([start]);
         while let Some(at) = queue.pop_front() {
             for side in sides(self.triangles[at].expect("a live triangle")) {
@@ -156,7 +156,7 @@ impl Triangulation {
 
     /// The cavity's rim: the sides of its triangles that face a triangle outside it, each with
     /// its triangle.
-    fn rim(&self, cavity: &HashSet<usize>) -> Vec<((usize, usize), usize)> {
+    fn rim(&self, cavity: &BTreeSet<usize>) -> Vec<((usize, usize), usize)> {
         let mut rim = Vec::new();
         for &at in cavity {
             for side in sides(self.triangles[at].expect("a live triangle")) {
@@ -172,7 +172,7 @@ impl Triangulation {
     fn insert(&mut self, i: usize) {
         let p = self.points[i];
         let start = self.locate(p);
-        let mut excluded = HashSet::new();
+        let mut excluded = BTreeSet::new();
         let (cavity, rim) = loop {
             let cavity = self.cavity(p, start, &excluded);
             let rim = self.rim(&cavity);
