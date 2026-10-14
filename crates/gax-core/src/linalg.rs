@@ -266,10 +266,15 @@ pub fn det<T: Real, M: SquareArr<T>>(a: &M) -> T {
         || {
             let f = lu(a);
             let mut d = f.sign[0];
+            // A zero pivot (a whole column zero below the diagonal: the matrix is singular)
+            // makes the determinant zero, whatever the divisions by it left in later pivots.
+            let (mut regular, tiny) = (T::one(), T::from_f64(f64::MIN_POSITIVE));
             for i in 0..M::N {
-                d = d * f.lu[i][i];
+                let pivot = f.lu[i][i];
+                regular = T::select_lt(pivot.abs(), tiny, T::zero(), regular);
+                d = d * pivot;
             }
-            d
+            T::select_lt(regular, T::one(), T::zero(), d)
         },
     )
 }
@@ -1183,6 +1188,18 @@ mod tests {
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-10
+    }
+
+    /// A singular matrix's determinant is zero, not the NaN that dividing by its zero pivot
+    /// leaves in the later ones.
+    #[test]
+    fn det_of_a_singular_matrix_is_zero() {
+        assert_eq!(det(&[[0.0_f64; 3]; 3]), 0.0);
+        assert_eq!(
+            det(&[[0.0, 1.0, 2.0], [0.0, 3.0, 4.0], [0.0, 5.0, 6.0]]),
+            0.0
+        );
+        assert!(close(det(&[[2.0, 1.0], [1.0, 3.0]]), 5.0));
     }
 
     #[test]

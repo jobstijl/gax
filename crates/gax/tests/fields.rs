@@ -515,6 +515,27 @@ fn eigh_eigenvectors_across_a_small_gap() {
     }
 }
 
+/// The stopping test does not depend on the pencil's scale: a chain of stiffness `10¹¹` has the
+/// spectrum of the unit chain, scaled, to rounding (a stiff girder's modes once came out
+/// `5·10⁻⁴` off).
+#[test]
+fn eigh_is_scale_invariant() {
+    let n = 40;
+    let stiffness = 1e11;
+    let unit = free_chain(n);
+    let stiff = unit.map_cells(|c| c.gp(stiffness));
+    let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
+    let (values, _) = unit.eigh(&mass, 12);
+    let (stiff_values, _) = stiff.eigh(&mass, 12);
+    for (v, s) in values.iter().zip(&stiff_values) {
+        assert!(
+            (s / stiffness - v).abs() < 1e-12,
+            "{v} vs {}",
+            s / stiffness
+        );
+    }
+}
+
 /// A generalized problem with varying masses, and a square grid whose modes along its two axes
 /// coincide (six copies on vectors): residuals `A x − λ M x` at rounding, the metric orthonormal.
 #[test]

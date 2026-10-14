@@ -32,7 +32,8 @@ where
     /// `self − σ metric`. The eigenpairs are then taken from the pencil itself on that space
     /// (Rayleigh–Ritz with `self` and `metric`, which need no solves; for an indefinite pencil,
     /// chosen first on the inverted operator, where the wanted values are the largest), and the space grows until
-    /// each pair's true residual `‖self(x) − λ metric(x)‖` is within `ε^¾` of the pencil's scale.
+    /// each pair's backward error, its true residual `‖self(x) − λ metric(x)‖` relative to
+    /// `‖self‖ + |λ| ‖metric‖`, is within `ε^¾`.
     /// So the solves near the shift, which lose half their digits where the null space is
     /// amplified, shape the space but do not limit the accuracy. A last step of inverse iteration
     /// on the converged pairs themselves then sharpens the eigenvectors, whose error is the
@@ -119,7 +120,7 @@ where
             |x: &[T], y: &mut [T]| self.apply_flat(x, y),
         );
         space.extend_random(p);
-        let mut progress = Progress::new(a_scale + m_scale);
+        let mut progress = Progress::new();
         let mut reshifts = 0;
         // The space is checked when it has grown by a quarter since the last check: each check
         // costs a dense eigenproblem of the space's size, so the checks then cost a fixed
@@ -137,7 +138,8 @@ where
                 let pairs = space.ritz(count, extra, |x| lu.solve_flat(x));
                 if m >= n
                     || progress.done(&pairs, |value, coefficients| {
-                        space.residual(value, coefficients) / (T::one() + value.abs())
+                        // The backward error: the residual relative to the pencil at λ.
+                        space.residual(value, coefficients) / (a_scale + value.abs() * m_scale)
                     })
                 {
                     let pairs = space.polish(&pairs, count, extra, |x| lu.solve_flat(x));
@@ -218,10 +220,12 @@ where
     }
 }
 
-/// When to stop growing the space: the worst residual within `ε^¾` of the pencil's scale, or
-/// within `√ε` once it has stopped improving (no halving over two checks). The residuals have
-/// a floor of rounding, near `10⁵ ε` of the scale on small dense spectra; past it, the space
-/// would grow to the whole space for nothing.
+/// When to stop growing the space: the worst backward error, `‖A x − λ M x‖ / (‖A‖ + |λ| ‖M‖)`
+/// in ∞-norms, within `ε^¾`, or within `√ε` once it has stopped improving (no halving over two
+/// checks). The measure is the residual relative to the pencil at `λ`, so it does not change
+/// when the pencil is scaled (a stiffness of `10¹¹`). The residuals have a floor of rounding,
+/// near `10⁵ ε` on small dense spectra; past it, the space would grow to the whole space for
+/// nothing.
 struct Progress<T> {
     strict: T,
     loose: T,
@@ -230,11 +234,11 @@ struct Progress<T> {
 }
 
 impl<T: Real> Progress<T> {
-    fn new(scale: T) -> Self {
+    fn new() -> Self {
         let eps = T::epsilon();
         Progress {
-            strict: eps.sqrt() * eps.sqrt().sqrt() * scale,
-            loose: eps.sqrt() * scale,
+            strict: eps.sqrt() * eps.sqrt().sqrt(),
+            loose: eps.sqrt(),
             best: T::from_f64(f64::MAX),
             stalled: 0,
         }
