@@ -22,14 +22,16 @@ where
     /// fields orthonormal under the metric (`xᵢ · metric(xⱼ) = δᵢⱼ`, the coefficient inner
     /// product). `self` must be symmetric and `metric` symmetric positive definite (a stiffness
     /// and a mass, a Laplacian and an area form). `self` may be semidefinite: its null space
-    /// (the rigid motions of a free mesh, a constant potential) then comes first. numga's sparse
-    /// `eigh`.
+    /// (the rigid motions of a free mesh, a constant potential) then comes first. It may also be
+    /// indefinite (a Hamiltonian), the pairs nearest zero then lying on both sides. numga's
+    /// sparse `eigh`.
     ///
     /// The search space is built by block Lanczos on `(self − σ metric)⁻¹ metric`, the spectrum
     /// inverted about a shift `σ` just below zero (`−√ε` relative to the pencil's scale), so that
     /// the eigenvectors nearest zero dominate it; each step solves with one sparse LU of
     /// `self − σ metric`. The eigenpairs are then taken from the pencil itself on that space
-    /// (Rayleigh–Ritz with `self` and `metric`, which need no solves), and the space grows until
+    /// (Rayleigh–Ritz with `self` and `metric`, which need no solves; for an indefinite pencil,
+    /// chosen first on the inverted operator, where the wanted values are the largest), and the space grows until
     /// each pair's true residual `‖self(x) − λ metric(x)‖` is within `ε^¾` of the pencil's scale.
     /// So the solves near the shift, which lose half their digits where the null space is
     /// amplified, shape the space but do not limit the accuracy. A last step of inverse iteration
@@ -104,12 +106,9 @@ where
             count > 0 && count <= n,
             "eigh: {count} eigenpairs asked of {n} unknowns"
         );
-        let zero = T::zero();
-        let largest = |d: Vec<T>| d.into_iter().fold(zero, |m, x| m.max(x.abs()));
-        let (a_scale, m_scale) = (
-            largest(self.diagonal_flat()),
-            largest(metric.diagonal_flat()),
-        );
+        // The scales: the ∞-norms, which bound the spectral radii. (Not the diagonals: a
+        // Hamiltonian of hops alone has none.)
+        let (a_scale, m_scale) = (self.row_sum_norm(), metric.row_sum_norm());
         // The shift, just below zero relative to the pencil's scale.
         let mut sigma = -(T::epsilon().sqrt() * a_scale / m_scale);
         let mut lu = factor_shifted(self, metric, sigma);
@@ -122,30 +121,37 @@ where
         space.extend_random(p);
         let mut progress = Progress::new(a_scale + m_scale);
         let mut reshifts = 0;
+        // The space is checked when it has grown by a quarter since the last check: each check
+        // costs a dense eigenproblem of the space's size, so the checks then cost a fixed
+        // multiple of the last one.
+        let mut next_check = count;
         loop {
-            let (start, end) = space.last_block();
             // The next directions: (A − σM)⁻¹ M q for each vector of the last block.
-            let images: Vec<Vec<T>> = (start..end)
-                .map(|j| lu.solve_flat(&space.metric_images[j]))
-                .collect();
-            space.set_remainder(images);
+            space.image_last_block(|x| lu.solve_flat(x));
+            // Past a re-shift the wanted cluster lies above the shift, not around it: a block
+            // more of candidates keeps a value between zero and the shift in view.
+            let extra = if reshifts > 0 { p } else { 0 };
             let m = space.len();
-            if m >= count {
-                let pairs = space.ritz(count);
+            if m >= next_check || m >= n {
+                next_check = m + m / 4;
+                let pairs = space.ritz(count, extra, |x| lu.solve_flat(x));
                 if m >= n
                     || progress.done(&pairs, |value, coefficients| {
                         space.residual(value, coefficients) / (T::one() + value.abs())
                     })
                 {
-                    let pairs = space.polish(&pairs, count, |x: &[T]| lu.solve_flat(x));
+                    let pairs = space.polish(&pairs, count, extra, |x| lu.solve_flat(x));
                     return space.finish::<K>(pairs);
                 }
                 // A spectrum that starts well above zero: shift to just below the wanted
-                // cluster, so that it dominates the inverted operator. The space is kept, since
-                // the pairs come from the pencil whatever shift built it. Each new shift is at
-                // least twice as close to the cluster as the last, so a factorization is spent
-                // only when the estimates have moved enough.
-                let (low, high) = (pairs[0].0, pairs[pairs.len() - 1].0);
+                // cluster, so that it dominates the inverted operator. The space is kept and
+                // its images are taken again with the new shift. Each new shift is at least
+                // twice as close to the cluster as the last, so a factorization is spent only
+                // when the estimates have moved enough. (The pairs are ordered by distance from
+                // zero, not by value; an indefinite pencil, with wanted values on both sides of
+                // zero, is never re-shifted.)
+                let low = pairs.iter().fold(pairs[0].0, |m, p| m.min(p.0));
+                let high = pairs.iter().fold(pairs[0].0, |m, p| m.max(p.0));
                 let spread = (high - low).max(T::epsilon() * high.abs());
                 let target = low - spread;
                 if reshifts < 16
@@ -155,12 +161,14 @@ where
                 {
                     sigma = target;
                     lu = factor_shifted(self, metric, sigma);
+                    space.images_stale = true;
                     reshifts += 1;
                 }
             }
             if !space.grow(p) {
                 // The space is the whole space: the pairs are exact.
-                let pairs = space.ritz(count);
+                let extra = if reshifts > 0 { p } else { 0 };
+                let pairs = space.ritz(count, extra, |x| lu.solve_flat(x));
                 return space.finish::<K>(pairs);
             }
         }
@@ -184,6 +192,29 @@ where
         Err(e) => panic!(
             "SparseMap::eigh: the shifted pencil is singular ({e}); the metric must be positive definite"
         ),
+    }
+}
+
+impl<C, K, T> SparseMap<C>
+where
+    C: Extensor<Kind = K, Slots = (K,), Coef = T>,
+    K: Kind,
+    T: Real,
+{
+    /// The ∞-norm of the block matrix: its largest sum of absolute values along a row.
+    fn row_sum_norm(&self) -> T {
+        let mut largest = T::zero();
+        for r in 0..self.shape.0 {
+            let cells = &self.cells[self.starts[r]..self.starts[r + 1]];
+            for o in 0..K::N {
+                let sum = cells.iter().fold(T::zero(), |s, cell| {
+                    let row = cell.coeffs().as_ref()[o];
+                    row.as_ref().iter().fold(s, |s, x| s + x.abs())
+                });
+                largest = largest.max(sum);
+            }
+        }
+        largest
     }
 }
 
@@ -248,6 +279,15 @@ struct Space<T, M, A> {
     operator_images: Vec<Vec<T>>,
     /// `Qᵀ A Q`, grown with the basis: `projected[i][j] = qᵢ · A qⱼ` for `j ≤ i`.
     projected: Vec<Vec<T>>,
+    /// `Qᵀ M (A − σM)⁻¹ M Q`, the inverted operator on the space, grown as the images are
+    /// taken: `inverted[j][i] = M qᵢ · wⱼ`, `wⱼ` the image of `qⱼ`, for the `qᵢ` in the basis
+    /// when it was taken.
+    inverted: Vec<Vec<T>>,
+    /// Whether the shift has moved since `inverted` was taken.
+    images_stale: bool,
+    /// Whether the pencil has shown a negative value on the space. A growing space only lowers
+    /// its lowest Ritz value (by interlacing), so once indefinite it stays so.
+    indefinite: bool,
     /// The directions that start the next block.
     remainder: Vec<Vec<T>>,
     /// The first vector of the last block.
@@ -265,6 +305,9 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             metric_images: Vec::new(),
             operator_images: Vec::new(),
             projected: Vec::new(),
+            inverted: Vec::new(),
+            images_stale: false,
+            indefinite: false,
             remainder: Vec::new(),
             block_start: 0,
             seed: 0,
@@ -273,10 +316,6 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
 
     fn len(&self) -> usize {
         self.basis.len()
-    }
-
-    fn last_block(&self) -> (usize, usize) {
-        (self.block_start, self.basis.len())
     }
 
     fn apply_metric(&mut self, x: &[T]) -> Vec<T> {
@@ -345,8 +384,32 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
         self.top_up(p);
     }
 
-    fn set_remainder(&mut self, images: Vec<Vec<T>>) {
-        self.remainder = images;
+    /// The image `w = (A − σM)⁻¹ M q` of each vector of the last block, by `solve`, recorded
+    /// in the inverted operator and kept as the directions that start the next block.
+    fn image_last_block(&mut self, mut solve: impl FnMut(&[T]) -> Vec<T>) {
+        // After a new shift the earlier rows are stale; they are taken again only if the
+        // inverted operator is needed (`ritz`).
+        debug_assert_eq!(self.inverted.len(), self.block_start);
+        self.remainder = (self.block_start..self.basis.len())
+            .map(|j| self.image(j, &mut solve))
+            .collect();
+    }
+
+    /// Every basis vector's image again, after a new shift.
+    fn reimage(&mut self, mut solve: impl FnMut(&[T]) -> Vec<T>) {
+        self.inverted.clear();
+        for j in 0..self.basis.len() {
+            self.image(j, &mut solve);
+        }
+        self.images_stale = false;
+    }
+
+    /// The image of basis vector `j`, its pairings with the basis recorded.
+    fn image(&mut self, j: usize, solve: &mut impl FnMut(&[T]) -> Vec<T>) -> Vec<T> {
+        let w = solve(&self.metric_images[j]);
+        let row = self.metric_images.iter().map(|mq| dot(mq, &w)).collect();
+        self.inverted.push(row);
+        w
     }
 
     /// The next block: the remainder orthonormalized against the basis, topped up with
@@ -363,26 +426,112 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
         self.basis.len() > self.block_start
     }
 
-    /// The `count` Ritz pairs nearest zero of the pencil on the space: the eigenpairs of
-    /// `Qᵀ A Q` (the basis is orthonormal in the metric, so `Qᵀ M Q = I`), as `(λ, x)`, nearest
-    /// first.
-    fn ritz(&self, count: usize) -> Vec<(T, Vec<T>)> {
+    /// The `count` Ritz pairs nearest zero of the pencil on the space, as `(λ, x)` with `x`
+    /// the coefficients on the basis, nearest first.
+    ///
+    /// Where the pencil is semidefinite on the space, the values nearest zero are its lowest,
+    /// and Rayleigh–Ritz with `A` (the basis is orthonormal in the metric, so `Qᵀ M Q = I`)
+    /// finds them best. Inside an indefinite spectrum (a Hamiltonian's levels around its gap)
+    /// it does not: it finds spurious values near zero, mixtures of eigenvectors on both sides.
+    /// There the pairs are chosen on the inverted operator, where the wanted eigenvalues are the
+    /// largest, and the `count + extra` vectors of its largest values are rotated by
+    /// Rayleigh–Ritz with `A` on their span, whose values are exact to rounding however the
+    /// images were rounded.
+    fn ritz(
+        &mut self,
+        count: usize,
+        extra: usize,
+        solve: impl FnMut(&[T]) -> Vec<T>,
+    ) -> Vec<(T, Vec<T>)> {
         let m = self.basis.len();
-        let mut k = vec![T::zero(); m * m];
-        for (i, row) in self.projected.iter().enumerate() {
-            for (j, &v) in row.iter().enumerate() {
-                k[i * m + j] = v;
-                k[j * m + i] = v;
+        let projected = self.projected_matrix();
+        if !self.indefinite {
+            let (values, vectors) = symmetric_eigen(&projected, m);
+            let largest = values.iter().fold(T::zero(), |l, v| l.max(v.abs()));
+            let lowest = values.iter().fold(T::zero(), |l, v| l.min(*v));
+            self.indefinite = T::all_lt(lowest, -(T::epsilon().sqrt() * largest));
+            if !self.indefinite {
+                let mut nearest: Vec<usize> = (0..m).collect();
+                nearest.sort_by(|&i, &j| order(values[i].abs(), values[j].abs()));
+                return nearest
+                    .into_iter()
+                    .take(count)
+                    .map(|i| (values[i], vectors[i].clone()))
+                    .collect();
             }
         }
-        let (values, vectors) = symmetric_eigen(&k, m);
-        let mut nearest: Vec<usize> = (0..m).collect();
-        nearest.sort_by(|&i, &j| order(values[i].abs(), values[j].abs()));
-        nearest
+        if self.images_stale {
+            self.reimage(solve);
+        }
+        let (inverted, vectors) = symmetric_eigen(&self.inverted_matrix(), m);
+        let mut largest: Vec<usize> = (0..m).collect();
+        largest.sort_by(|&i, &j| order(inverted[j].abs(), inverted[i].abs()));
+        let chosen: Vec<&Vec<T>> = largest
+            .iter()
+            .take((count + extra).min(m))
+            .map(|&i| &vectors[i])
+            .collect();
+        let k = chosen.len();
+        let mut on_span = vec![T::zero(); k * k];
+        for (a, ya) in chosen.iter().enumerate() {
+            let pya = mat_vec(&projected, ya, m);
+            for (b, yb) in chosen.iter().enumerate().take(a + 1) {
+                let v = dot(yb, &pya);
+                on_span[a * k + b] = v;
+                on_span[b * k + a] = v;
+            }
+        }
+        let (values, rotations) = symmetric_eigen(&on_span, k);
+        let mut pairs: Vec<(T, Vec<T>)> = values
             .into_iter()
-            .take(count)
-            .map(|i| (values[i], vectors[i].clone()))
-            .collect()
+            .zip(rotations)
+            .map(|(value, z)| {
+                let mut c = vec![T::zero(); m];
+                for (y, &zi) in chosen.iter().zip(&z) {
+                    for (ci, yi) in c.iter_mut().zip(y.iter()) {
+                        *ci = zi.mul_add(*yi, *ci);
+                    }
+                }
+                (value, c)
+            })
+            .collect();
+        pairs.sort_by(|a, b| order(a.0.abs(), b.0.abs()));
+        pairs.truncate(count);
+        pairs
+    }
+
+    /// `Qᵀ A Q`, square.
+    fn projected_matrix(&self) -> Vec<T> {
+        let m = self.basis.len();
+        let mut p = vec![T::zero(); m * m];
+        for (i, row) in self.projected.iter().enumerate() {
+            for (j, &v) in row.iter().enumerate() {
+                p[i * m + j] = v;
+                p[j * m + i] = v;
+            }
+        }
+        p
+    }
+
+    /// `Qᵀ M (A − σM)⁻¹ M Q`, square and symmetric: each entry from the image taken when both
+    /// vectors were in the basis, the mean of the two where both were.
+    fn inverted_matrix(&self) -> Vec<T> {
+        let m = self.basis.len();
+        let half = T::from_f64(0.5);
+        let mut h = vec![T::zero(); m * m];
+        for i in 0..m {
+            for j in 0..=i {
+                let (a, b) = (self.inverted[j].get(i), self.inverted[i].get(j));
+                let v = match (a, b) {
+                    (Some(&a), Some(&b)) => (a + b) * half,
+                    (Some(&v), None) | (None, Some(&v)) => v,
+                    (None, None) => unreachable!("every pair of basis vectors has an image"),
+                };
+                h[i * m + j] = v;
+                h[j * m + i] = v;
+            }
+        }
+        h
     }
 
     /// The vector `x = Σ cᵢ qᵢ` of a pair's coefficients.
@@ -397,16 +546,16 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
     }
 
     /// One step of inverse iteration on the converged pairs themselves: the image
-    /// `(A − σM)⁻¹ M x` of each pair's vector joins the space, and the pairs are taken again.
-    /// The stopping residual bounds an eigenvector's error only by the residual over the gap to
-    /// the next eigenvalue, which on a fine mesh is a small part of the scale; the step shrinks
-    /// each error component by `|λ − σ| / |λⱼ − σ|`, the ratio of the wanted eigenvalue's
-    /// distance from the shift to the other's. The Rayleigh–Ritz over the larger space cannot
-    /// make a pair worse.
+    /// `(A − σM)⁻¹ M x` of each pair's vector joins the space as a block (imaged in turn), and
+    /// the pairs are taken again. The stopping residual bounds an eigenvector's error only by
+    /// the residual over the gap to the next eigenvalue, which on a fine mesh is a small part
+    /// of the scale; the step shrinks each error component by `|λ − σ| / |λⱼ − σ|`, the ratio
+    /// of the wanted eigenvalue's distance from the shift to the other's.
     fn polish(
         &mut self,
         pairs: &[(T, Vec<T>)],
         count: usize,
+        extra: usize,
         mut solve: impl FnMut(&[T]) -> Vec<T>,
     ) -> Vec<(T, Vec<T>)> {
         let images: Vec<Vec<T>> = pairs
@@ -423,7 +572,8 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             }
             self.push(y);
         }
-        self.ritz(count)
+        self.image_last_block(&mut solve);
+        self.ritz(count, extra, solve)
     }
 
     /// The pairs as fields, in ascending order of their values.
@@ -469,6 +619,11 @@ fn order<T: Real>(a: T, b: T) -> Ordering {
     } else {
         Ordering::Equal
     }
+}
+
+/// `P y` for a square `m × m` matrix `P`, row by row.
+fn mat_vec<T: Real>(p: &[T], y: &[T], m: usize) -> Vec<T> {
+    p.chunks(m).map(|row| dot(row, y)).collect()
 }
 
 fn dot<T: Real>(a: &[T], b: &[T]) -> T {

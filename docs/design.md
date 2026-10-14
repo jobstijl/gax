@@ -1504,6 +1504,22 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       sites, the first wave's distance from its exact eigenspace fell from 1.5·10⁻¹¹ to
       1.1·10⁻¹², for `count` more solves with the factors in hand. (Found by the
       spin-transformations port, which needs the constant field to 10⁻¹¹.)
+    * An indefinite pencil (a Hamiltonian, whose levels nearest zero lie around its gap) needs
+      the pairs chosen differently. Rayleigh–Ritz with `A` is reliable only at the ends of a
+      spectrum; inside it, it finds spurious values near zero, mixtures of eigenvectors on both
+      sides, with residuals near 1. The Kane–Mele port's 32 levels of a 620-unknown flake grew
+      the space to nearly all of it. Once the space shows a negative Ritz value (and, by
+      interlacing, it then stays indefinite), the pairs are chosen on the inverted operator
+      `Qᵀ M (A − σM)⁻¹ M Q`, assembled from the images the Lanczos steps take anyway, where the
+      wanted values are the largest. Rayleigh–Ritz with `A` on the chosen vectors' span then
+      gives the values. Semidefinite pencils keep the plain Rayleigh–Ritz with `A`, so their
+      precision is unchanged.
+    * The shift is scaled by the pencil's ∞-norms (the largest absolute row sums, which bound
+      the spectral radii), not by its diagonals: a Hamiltonian of hops alone has none, and its
+      shift was zero, on a singular pencil.
+    * Each check of the space costs a dense eigenproblem of its size, so the space is checked
+      only after it has grown by a quarter since the last check. With these three changes the
+      Kane–Mele port's tests went from 88 s to 11 s.
     * Why not the Lanczos recurrence's own estimates, as ARPACK uses: with a null space (a free
       mesh) the shift is within `√ε` of the spectrum, a solve's error in every other direction
       is the null space's amplified size times `ε κ`, and the recurrence's residual estimates
