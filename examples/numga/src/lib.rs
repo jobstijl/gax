@@ -19,6 +19,7 @@ pub mod contour;
 pub mod disc;
 pub mod font;
 pub mod measure;
+pub mod mesh;
 pub mod palette;
 pub mod plot;
 pub mod points;
