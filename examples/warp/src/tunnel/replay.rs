@@ -73,6 +73,8 @@ impl Record for Packed {
     const TABLE: &'static str = "tunnel-scores.txt";
     const EXT: &'static str = "tunnel";
     const SIZE: usize = 7;
+    const BUILD: &'static str =
+        concat!(env!("CARGO_PKG_VERSION"), "+", env!("WARP_SIM_HASH_TUNNEL"));
 
     fn write(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(&[

@@ -107,10 +107,29 @@ fn main() {
     sim_hash();
 }
 
-/// A hash of everything a replay depends on: both games' simulations (the Plane's `sim`, the
-/// Tunnel's `tunnel`), the helpers they call (`geom`, `signal`), and gax's sources. Replays
-/// record it, so a replay from another build is flagged instead of silently diverging.
+/// Hashes of everything each game's replays depend on: the Plane's simulation (`sim`), the
+/// helpers it calls (`geom`, `signal`, `kernels`) and gax's sources; the Tunnel's adds its own
+/// `tunnel`. Replays record their game's hash, so a replay from another build is flagged instead
+/// of silently diverging, and a change to one game leaves the other's replays valid.
 fn sim_hash() {
+    const PLANE: [&str; 6] = [
+        "src/sim",
+        "src/geom.rs",
+        "src/signal.rs",
+        "src/kernels.rs",
+        "../../crates/gax/src",
+        "../../crates/gax-core/src",
+    ];
+    for path in PLANE.iter().chain(&["src/tunnel"]) {
+        println!("cargo:rerun-if-changed={path}");
+    }
+    println!("cargo:rustc-env=WARP_SIM_HASH_PLANE={}", hash_of(&PLANE));
+    let tunnel: Vec<&str> = PLANE.iter().copied().chain(["src/tunnel"]).collect();
+    println!("cargo:rustc-env=WARP_SIM_HASH_TUNNEL={}", hash_of(&tunnel));
+}
+
+/// FNV-1a over the bytes of every `.rs` file under the paths, in sorted order: 32 bits as hex.
+fn hash_of(paths: &[&str]) -> String {
     fn walk(path: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
         if path.extension().is_some_and(|x| x == "rs") {
             files.push(path.to_path_buf());
@@ -123,25 +142,15 @@ fn sim_hash() {
         }
     }
     let mut files = Vec::new();
-    for path in [
-        "src/sim",
-        "src/tunnel",
-        "src/geom.rs",
-        "src/signal.rs",
-        "src/kernels.rs",
-        "../../crates/gax/src",
-        "../../crates/gax-core/src",
-    ] {
+    for path in paths {
         walk(std::path::Path::new(path), &mut files);
-        println!("cargo:rerun-if-changed={path}");
     }
     files.sort();
-    // FNV-1a over the files' bytes.
     let h = files
         .iter()
         .flat_map(|f| std::fs::read(f).unwrap_or_default())
         .fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
             (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3)
         });
-    println!("cargo:rustc-env=WARP_SIM_HASH={:08x}", h >> 32);
+    format!("{:08x}", h >> 32)
 }

@@ -21,6 +21,9 @@ pub trait Record: Copy + Default + PartialEq + core::fmt::Debug {
     const EXT: &'static str;
     /// Bytes per record.
     const SIZE: usize;
+    /// The build this game's replays are recorded on: the game's version and a hash of its
+    /// simulation's sources (set by `build.rs`). Replays from another build may diverge.
+    const BUILD: &'static str;
     /// Append the bytes.
     fn write(&self, out: &mut Vec<u8>);
     /// Read `SIZE` bytes.
@@ -32,6 +35,8 @@ impl Record for Packed {
     const TABLE: &'static str = "scores.txt";
     const EXT: &'static str = "warp";
     const SIZE: usize = 5;
+    const BUILD: &'static str =
+        concat!(env!("CARGO_PKG_VERSION"), "+", env!("WARP_SIM_HASH_PLANE"));
 
     fn write(&self, out: &mut Vec<u8>) {
         out.push(self.mx as u8);
@@ -48,12 +53,6 @@ impl Record for Packed {
             flags: b[4],
         }
     }
-}
-
-/// The build a replay was recorded on: the game's version and a hash of the simulation's
-/// sources (set by `build.rs`). Replays from another build may diverge.
-pub fn build_id() -> String {
-    format!("{}+{}", env!("CARGO_PKG_VERSION"), env!("WARP_SIM_HASH"))
 }
 
 /// One tick's input, packed: movement in 1/127ths, the aim as an angle, and buttons.
@@ -185,7 +184,7 @@ impl Fnv {
 /// A recorded run.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Replay<I: Record = Packed> {
-    /// The build it was recorded on (`build_id`).
+    /// The build it was recorded on (`Record::BUILD`).
     pub build: String,
     /// The world's seed.
     pub seed: u64,
@@ -231,10 +230,15 @@ impl Replay<Packed> {
 }
 
 impl<I: Record> Replay<I> {
+    /// Whether it was recorded on this build of its game, so it plays back exactly.
+    pub fn is_this_build(&self) -> bool {
+        self.build == I::BUILD
+    }
+
     /// An empty recording of a run from `seed`.
     pub fn new(seed: u64) -> Replay<I> {
         Replay {
-            build: build_id(),
+            build: I::BUILD.to_string(),
             seed,
             score: 0,
             inputs: Vec::new(),

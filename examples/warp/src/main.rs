@@ -30,7 +30,7 @@ use fx::Fx;
 use render::font::Align;
 use render::scene::{self, palette};
 use render::{GridSpec, LineInstance, Renderer};
-use sim::replay::{Packed, Replay};
+use sim::replay::{Packed, Record, Replay};
 use sim::{ARENA, DT, Phase, World as Sim};
 use std::time::Instant;
 use store::{Scores, Settings, Store};
@@ -361,7 +361,7 @@ impl Game {
         self.sim = Sim::new(replay.seed);
         self.watch = Some(Watch {
             end: None,
-            other_build: replay.build != sim::replay::build_id(),
+            other_build: !replay.is_this_build(),
             replay: Watched::Plane(replay),
             next: 0,
             speed: 1,
@@ -377,7 +377,7 @@ impl Game {
         self.mode = Mode::Tunnel;
         self.watch = Some(Watch {
             end: None,
-            other_build: replay.build != sim::replay::build_id(),
+            other_build: !replay.is_this_build(),
             replay: Watched::Tunnel(replay),
             next: 0,
             speed: 1,
@@ -457,15 +457,12 @@ fn main() {
             std::process::exit(2);
         };
         let r = load_any(path);
-        let (build, seconds, hashes) = match &r {
-            Watched::Plane(r) => (r.build.clone(), r.seconds(), r.hashes.len()),
-            Watched::Tunnel(r) => (r.build.clone(), r.seconds(), r.hashes.len()),
+        let (build, this_build, seconds, hashes) = match &r {
+            Watched::Plane(r) => (&r.build, Packed::BUILD, r.seconds(), r.hashes.len()),
+            Watched::Tunnel(r) => (&r.build, TunnelPacked::BUILD, r.seconds(), r.hashes.len()),
         };
-        if build != sim::replay::build_id() {
-            eprintln!(
-                "note: recorded on build {build}, this is {}",
-                sim::replay::build_id()
-            );
+        if build != this_build {
+            eprintln!("note: recorded on build {build}, this is {this_build}");
         }
         let result = match &r {
             Watched::Plane(r) => r.verify().map(|w| w.score),
