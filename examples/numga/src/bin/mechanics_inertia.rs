@@ -10,6 +10,9 @@
 //! coordinate planes is a common eigenvector of the maps `R ↦ reference R source`. The same
 //! text runs in Euclidean PGA3D, in spherical R(4,0,0) and in the PGA of four dimensions.
 //!
+//! The simplex's lumped masses are `shared/mechanics_simplex.rs`, which the bending example
+//! integrates its beam sections with too.
+//!
 //! The animation shows a tetrahedron tumbling freely (the shared Lie integrators), its
 //! principal frame and second-moment ellipsoid recovered every frame from its moving inertia
 //! alone, and the convergence of grid and Monte Carlo sampling of a tetrahedron's inertia to
@@ -26,6 +29,9 @@ use gax_numga_examples::{
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
 use lie::{Lie, rigid};
+
+#[path = "../shared/mechanics_simplex.rs"]
+mod simplex;
 
 /// R(4,0,0): numga's spherical model `x+y+z+w+`, laid out as PGA3D with `e0` squaring to +1.
 mod sga3d {
@@ -263,103 +269,6 @@ pub mod s3 {
 pub mod e4 {
     use crate::pga4d::{Forque, Line, Motor, Plane, Point};
     principal_frame!(5);
-}
-
-/// numga's `simplex.py`: inertia maps of simplices, in PGA3D.
-mod simplex {
-    use super::*;
-    pub use crate::e3::Inertia;
-    pub type P = Point<(), f64>;
-
-    /// The barycentric weights mapping a uniform simplex to its equivalent lumped masses:
-    /// `(1/n + (I - 1/n) sqrt(1 / (1 + n))) / n`, one row per lumped point.
-    #[allow(clippy::disallowed_methods)] // numbers: numga's weights of a simplex's lumped masses
-    pub fn weights(n: usize) -> Vec<Vec<f64>> {
-        let f = (1.0 / (1.0 + n as f64)).sqrt();
-        (0..n)
-            .map(|i| {
-                (0..n)
-                    .map(|j| {
-                        let d = f64::from(u8::from(i == j)) - 1.0 / n as f64;
-                        (1.0 / n as f64 + d * f) / n as f64
-                    })
-                    .collect()
-            })
-            .collect()
-    }
-
-    /// Mass points from barycentric samples: each row of weights gives the point `Σ w c`,
-    /// whose weight `Σ w` is its mass; the points unitized, and their masses.
-    pub fn samples(weights: &[Vec<f64>], corners: &[P]) -> (Vec<P>, Vec<f64>) {
-        weights
-            .iter()
-            .map(|row| {
-                let mass: f64 = row.iter().sum();
-                let p: P = row.iter().zip(corners).map(|(w, c)| *c * *w).sum();
-                (p / mass, mass)
-            })
-            .unzip()
-    }
-
-    /// The inertia map of barycentric samples of a simplex.
-    pub fn inertia(weights: &[Vec<f64>], corners: &[P]) -> Inertia {
-        let (points, masses) = samples(weights, corners);
-        crate::e3::inertia_of(&points, &masses)
-    }
-
-    /// The inertia of the uniform simplex of unit mass, by its lumped masses (exact).
-    pub fn lumped(corners: &[P]) -> Inertia {
-        inertia(&weights(corners.len()), corners)
-    }
-
-    /// The barycentric grid of a tetrahedron: the midpoints of `n` cells along each of three
-    /// barycentric coordinates, those inside, completed by the fourth; unit mass in all.
-    pub fn grid(n: usize) -> Vec<Vec<f64>> {
-        let s: Vec<f64> = (0..n).map(|i| (i as f64 + 0.5) / n as f64).collect();
-        let mut rows = Vec::new();
-        for a in &s {
-            for b in &s {
-                for c in &s {
-                    if a + b + c < 1.0 {
-                        rows.push(vec![*a, *b, *c, 1.0 - a - b - c]);
-                    }
-                }
-            }
-        }
-        let count = rows.len() as f64;
-        rows.iter()
-            .map(|r| r.iter().map(|w| w / count).collect())
-            .collect()
-    }
-
-    /// Uniform barycentric weights: exponential variates normalized (a flat Dirichlet).
-    pub fn random_weights(count: usize, corners: usize, rng: &mut Rng) -> Vec<Vec<f64>> {
-        (0..count)
-            .map(|_| {
-                let e: Vec<f64> = (0..corners).map(|_| -(1.0 - rng.uniform()).ln()).collect();
-                let sum: f64 = e.iter().sum();
-                e.iter().map(|v| v / sum / count as f64).collect()
-            })
-            .collect()
-    }
-
-    /// numga's demo tetrahedron.
-    pub fn tetrahedron() -> Vec<P> {
-        vec![
-            Point::xyz(1.0, 0.0, 0.0),
-            Point::xyz(-0.5, 0.866, 0.0),
-            Point::xyz(-0.5, -0.866, 0.0),
-            Point::xyz(0.0, 0.0, 1.414),
-        ]
-    }
-
-    /// The relative difference of two inertias, by their coefficients.
-    #[allow(clippy::disallowed_methods)] // a relative error, the root of summed squares of coefficients
-    pub fn relative(a: Inertia, b: Inertia) -> f64 {
-        let d = (a - b).c.iter().flatten().map(|v| v * v).sum::<f64>();
-        let n = b.c.iter().flatten().map(|v| v * v).sum::<f64>();
-        (d / n).sqrt()
-    }
 }
 
 /// The scene: a lopsided tetrahedron, centred on its centre of mass, tumbling freely.
