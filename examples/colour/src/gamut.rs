@@ -52,23 +52,24 @@ impl<S: Space> Colour<S> {
         faces().iter().all(|f| (*f & p).s() >= -1e-6)
     }
 
-    /// The colour brought into the sRGB gamut keeping its hue and its grey: in linear sRGB, the
-    /// segment from its grey to it meets the faces it crosses, and the meet nearest the grey is
-    /// the colour, as saturated as the display allows. A grey outside (too bright, or negative)
-    /// is clipped to white or black.
+    /// The colour brought into the sRGB gamut keeping its luminance and its dominant wavelength:
+    /// in linear sRGB, the segment from the grey of its luminance to it (whose chromaticities
+    /// lie on a line through the white point, and whose luminance is constant, luminance being
+    /// linear) meets the faces it crosses, and the meet nearest the grey is the colour, as
+    /// saturated as the display allows at that luminance. A luminance above 1 or below 0 is
+    /// clipped to white or black.
     pub fn to_gamut(self) -> Self {
         if self.in_gamut() {
             return self;
         }
-        let linear = self.convert::<crate::space::LinearRgb>();
-        let (black, white) = (Point::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 1.0, 1.0));
-        let grey = linear.grey().unit();
-        let lightness = linear.lightness().clamp(0.0, 1.0);
-        let grey_in = black + (white - black) * lightness;
-        if (grey & grey_in).norm() > 1e-6 {
-            return LinearRgb::from_point(grey_in * self.alpha()).convert();
+        let y = self.luminance();
+        if !(0.0..=1.0).contains(&y) {
+            return LinearRgb::grey_of(y.clamp(0.0, 1.0))
+                .with_alpha(self.alpha())
+                .convert();
         }
-        let p = linear.unit();
+        let grey = LinearRgb::grey_of(y).unit();
+        let p = self.convert::<crate::space::LinearRgb>().unit();
         let ray = grey & p;
         let nearest = faces()
             .iter()

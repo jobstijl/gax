@@ -35,7 +35,7 @@
 //!
 //! **Luminance and gamut are planes** in linear sRGB: the relative luminance is the pairing with
 //! the plane of luminance weights, and the sRGB gamut is the unit cube, inside six planes; a
-//! colour is brought into it where the segment from its grey meets the faces
+//! colour is brought into it where the segment from the grey of its luminance meets the faces
 //! ([`Colour::to_gamut`]).
 //!
 //! The transfer curves (the display's power, CIELAB's and Oklab's cube roots, AgX's contrast
@@ -259,16 +259,32 @@ mod tests {
         let c = Srgb::rgb(0.2, 0.5, 0.9);
         assert!((c.with_luminance(0.3).luminance() - 0.3).abs() < 1e-5);
         assert!(c.in_gamut());
-        // A colour too saturated for sRGB comes back to the faces, keeping its grey and hue.
-        let vivid = Oklab::new(0.7, 0.0, -0.4, 1.0);
-        assert!(!vivid.in_gamut());
-        let shown = vivid.to_gamut();
-        assert!(shown.in_gamut());
-        let (p, g) = (vivid.to::<LinearRgb>(), shown.to::<LinearRgb>());
-        assert!((p.grey().unit() & g.grey().unit()).norm() < 1e-4);
-        // On the segment from the grey to the colour.
-        let line = p.grey().unit() & p.unit();
-        assert!((line & g.unit()).norm() < 1e-4);
+        // A colour too saturated for sRGB comes back to the faces, keeping its luminance and
+        // its dominant wavelength: on the segment from the grey of its luminance to it.
+        for vivid in [
+            Oklab::new(0.7, 0.0, -0.4, 1.0),
+            Oklab::new(0.6, 0.3, 0.1, 1.0),
+        ] {
+            assert!(!vivid.in_gamut());
+            let shown = vivid.to_gamut();
+            assert!(shown.in_gamut());
+            assert!((shown.luminance() - vivid.luminance()).abs() < 1e-5);
+            let p = vivid.to::<LinearRgb>();
+            let line = LinearRgb::grey_of(p.luminance()).unit() & p.unit();
+            assert!((line & shown.to::<LinearRgb>().unit()).norm() < 1e-4);
+        }
+        // As saturated as the gamut allows: a channel at 0 or 1.
+        let rgb = Oklab::new(0.6, 0.3, 0.1, 1.0)
+            .to_gamut()
+            .to::<LinearRgb>()
+            .unit()
+            .to_euclidean();
+        assert!(rgb.iter().any(|c| c.abs() < 1e-5 || (c - 1.0).abs() < 1e-5));
+        // Too bright to show at any saturation: white.
+        assert_eq!(
+            LinearRgb::rgb(3.0, 1.2, 0.0).to_gamut(),
+            LinearRgb::rgb(1.0, 1.0, 1.0)
+        );
     }
 
     #[test]
