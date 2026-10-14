@@ -30,10 +30,10 @@ mod surfaces_spin;
 
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::{
-    Anim, Camera, Canvas, Lens, Light, Rect, backdrop, caption, colormap, reach3, run,
+    Anim, Camera, Canvas, Lens, Light, Rect, backdrop, caption, colormap, label_under, reach3, run,
 };
 use std::sync::OnceLock;
-use surfaces_spin::{Hit, checker_light, label_under, render};
+use surfaces_spin::{Hit, checker_light, render};
 
 mod spin {
     pub use super::surfaces_sphere::icosphere;
@@ -164,6 +164,7 @@ mod scenes {
     use super::spin::*;
     use gax::field::Field;
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
+    use gax_numga_examples::par_map;
 
     /// How often the sphere's icosahedron is split, and how strongly its mean curvature
     /// changes along y.
@@ -222,24 +223,21 @@ mod scenes {
     /// eigenvalues.
     pub fn dirac(levels: usize) -> (Mesh, Vec<Gallery>) {
         let mesh = icosphere(levels);
-        let galleries = EIGENVALUES
-            .iter()
-            .map(|&eigenvalue| {
-                let (energies, spheres) = dirac_spheres(&mesh, eigenvalue, STATES);
-                Gallery {
-                    eigenvalue,
-                    energies,
-                    spheres,
-                }
-            })
-            .collect();
+        let galleries = par_map(&EIGENVALUES, |&eigenvalue| {
+            let (energies, spheres) = dirac_spheres(&mesh, eigenvalue, STATES);
+            Gallery {
+                eigenvalue,
+                energies,
+                spheres,
+            }
+        });
         (mesh, galleries)
     }
 }
 
 use scenes::*;
 
-/// Every scene, computed once.
+/// Every scene, computed once, the three side by side.
 struct Scenes {
     dipole: Dipole,
     rounding: Vec<Mesh>,
@@ -250,13 +248,17 @@ struct Scenes {
 fn scenes() -> &'static Scenes {
     static SCENES: OnceLock<Scenes> = OnceLock::new();
     SCENES.get_or_init(|| {
-        let (sphere, galleries) = dirac(DIRAC_LEVELS);
-        Scenes {
-            dipole: dipole(),
-            rounding: rounding(),
-            sphere,
-            galleries,
-        }
+        std::thread::scope(|s| {
+            let dipole = s.spawn(dipole);
+            let rounding = s.spawn(rounding);
+            let (sphere, galleries) = dirac(DIRAC_LEVELS);
+            Scenes {
+                dipole: dipole.join().expect("the dipole"),
+                rounding: rounding.join().expect("the rounding"),
+                sphere,
+                galleries,
+            }
+        })
     })
 }
 
@@ -312,7 +314,7 @@ fn checkered(c: &mut Canvas, rect: Rect, mesh: &Mesh, reference: &Mesh, azimuth:
         .fold(0.0, f64::max);
     let cam = camera(rect, mesh, azimuth);
     render(c, &cam, rect, mesh, |hit| checker(reference, reach, hit));
-    label_under(c, rect, label);
+    label_under(c, rect, label, 16.0, 0.8);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -333,7 +335,7 @@ fn draw(c: &mut Canvas, t: f32) {
     render(c, &cam, rect, &dipole.sphere, |hit| {
         colormap::coolwarm((0.5 + 0.5 * dipole.rho.site(hit.face).s() / limit) as f32)
     });
-    label_under(c, rect, "CHANGE IN MEAN CURVATURE");
+    label_under(c, rect, "CHANGE IN MEAN CURVATURE", 16.0, 0.8);
     let (rect, label) = (upper.column(1, 3), "SPIN TRANSFORMATION");
     checkered(c, rect, &dipole.deformed, &dipole.sphere, azimuth, label);
 
@@ -459,17 +461,17 @@ mod tests {
             deformed,
         } = dipole();
         // No change in curvature leaves the sphere as it is, centred. numga asks this to 1e-11;
-        // gax's sparse `eigh` stops at a residual of `ε^¾` of the pencil's scale, which over
-        // this mesh's spectral gap leaves the constant field about 1e-8 off.
+        // gax's sparse `eigh` stops at a backward error of `ε^¾`, which over this mesh's
+        // spectral gap leaves the constant field about 3e-9 off.
         let still = spin_transform_deform(&sphere, &rho.map(|r| r * 0.0));
         let centre = sphere.vertices.mean();
-        assert!(
-            still
-                .vertices
-                .iter()
-                .zip(sphere.vertices.iter())
-                .all(|(a, b)| (a - (b - centre)).norm() < 1e-7)
-        );
+        let off = still
+            .vertices
+            .iter()
+            .zip(sphere.vertices.iter())
+            .map(|(a, b)| (a - (b - centre)).norm())
+            .fold(0.0, f64::max);
+        assert!(off < 1e-8, "{off:e}");
         // The deformation keeps every corner's angle, up to the mesh's resolution.
         assert!(largest(&cosine_changes(&sphere, &deformed)) < 0.05);
         // Mean curvature rises where it was asked to rise.

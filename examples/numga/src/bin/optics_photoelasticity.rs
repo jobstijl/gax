@@ -25,9 +25,10 @@
 
 use std::sync::OnceLock;
 
+use gax_numga_examples::points::circle;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, ORIGIN2, Point2, Rect, backdrop, caption, colormap, palette,
-    run, signal::phasor,
+    plot, run, signal::haversine,
 };
 
 mod photoelasticity {
@@ -223,7 +224,7 @@ fn plate() -> &'static Plate {
 /// The load at time `t`: a smooth cycle from nothing to the full tension and back.
 fn load(t: f32) -> f64 {
     let turn = f64::from(t / SECONDS) * core::f64::consts::TAU;
-    (1.0 - phasor(turn).e20()) / 2.0
+    haversine(turn)
 }
 
 /// A value of the window's pixel grid at a point of the plate (mm), interpolated between the
@@ -231,16 +232,7 @@ fn load(t: f32) -> f64 {
 fn sample(values: &[f64], p: Point2) -> f64 {
     let [x, y] = p.to_euclidean();
     let index = |v: f32| (f64::from(v) + EXTENT) / (2.0 * EXTENT) * PIXELS as f64 - 0.5;
-    let (u, v) = (
-        index(x).clamp(0.0, (PIXELS - 1) as f64),
-        index(y).clamp(0.0, (PIXELS - 1) as f64),
-    );
-    let (c0, r0) = ((u as usize).min(PIXELS - 2), (v as usize).min(PIXELS - 2));
-    let (fu, fv) = (u - c0 as f64, v - r0 as f64);
-    let at = |r: usize, c: usize| values[r * PIXELS + c];
-    let bottom = at(r0, c0) * (1.0 - fu) + at(r0, c0 + 1) * fu;
-    let top = at(r0 + 1, c0) * (1.0 - fu) + at(r0 + 1, c0 + 1) * fu;
-    bottom * (1.0 - fv) + top * fv
+    plot::bilinear(values, PIXELS, index(x), index(y))
 }
 
 /// An image of the plate's window in `rect`, `shade` of each value, with the hole drawn over it
@@ -254,9 +246,7 @@ fn plate_panel(
 ) {
     let ax = Axes::equal(rect, ORIGIN2, EXTENT as f32);
     ax.image(c, 1, |p| Some(shade(sample(values, p))));
-    let hole: Vec<Point2> = (0..=96)
-        .map(|k| ORIGIN2 + phasor(core::f32::consts::TAU * k as f32 / 96.0).gp(RADIUS as f32))
-        .collect();
+    let hole = circle(ORIGIN2, RADIUS as f32, 96);
     ax.fill(c, &hole, palette::bottom(), 1.0);
     ax.polyline(c, &hole, 1.0, palette::grid().faded(2.0));
     let r = ax.rect;

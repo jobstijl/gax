@@ -32,7 +32,7 @@ gax::algebra! {
 
 use gax_colour::{Light, light};
 use gax_numga_examples::points::box_map;
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{Align, Anim, Canvas, Point2, backdrop, palette, run};
 
 // numga's scenes in full: the tests check every one, the animation shows a selection.
@@ -270,7 +270,9 @@ mod cyclides {
                     let (hi, lo) = (pair[0], pair[1]);
                     let (fh, fl) = (eval(hi), eval(lo));
                     if fh * fl <= 0.0 {
-                        roots.push(bisect(eval, lo, hi, fl));
+                        // The root, by bisection to the last bit.
+                        let below = |r: f64| (eval(r) <= 0.0) == (fl <= 0.0);
+                        roots.push(measure::bisect(lo, hi, 80, below));
                         if !all {
                             break;
                         }
@@ -279,24 +281,6 @@ mod cyclides {
                 roots
             }
         }
-    }
-
-    /// The root of `f` in `[lo, hi]`, where `f` changes sign, by bisection to the last bit.
-    fn bisect(f: impl Fn(f64) -> f64, mut lo: f64, mut hi: f64, mut flo: f64) -> f64 {
-        for _ in 0..80 {
-            let mid = 0.5 * (lo + hi);
-            if mid <= lo || mid >= hi {
-                break;
-            }
-            let fm = f(mid);
-            if (fm <= 0.0) == (flo <= 0.0) {
-                lo = mid;
-                flo = fm;
-            } else {
-                hi = mid;
-            }
-        }
-        0.5 * (lo + hi)
     }
 
     /// The nearest hit's angle along the great circle, from the ascending coefficients of the
@@ -838,7 +822,7 @@ enum Scene {
 
 /// Eased there and back over `s` in `[0, 1)`: 0, up to 1 and back to 0.
 fn there_and_back(s: f64) -> f64 {
-    0.5 - 0.5 * phasor(core::f64::consts::TAU * s).e20()
+    haversine(core::f64::consts::TAU * s)
 }
 
 fn lerp_shot(a: &SpindleShot, b: &SpindleShot, k: f64) -> ([f64; 6], f64, f64, f64) {
@@ -890,7 +874,7 @@ fn shots() -> Vec<Shot> {
                 let (angles, ahead, yaw, pitch) = lerp_shot(
                     &SHOTS[i],
                     &SHOTS[(i + 1) % 3],
-                    0.5 - 0.5 * phasor(core::f64::consts::PI * (k - i as f64)).e20(),
+                    haversine(core::f64::consts::PI * (k - i as f64)),
                 );
                 (vec![spindle_shot(0.0, angles, ahead, yaw, pitch)], FOV)
             }),

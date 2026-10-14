@@ -26,7 +26,7 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, from_above, palette,
-    reach3, run,
+    reach3, run, vector3,
 };
 use std::sync::OnceLock;
 
@@ -303,19 +303,13 @@ fn plane(v: V) -> Point2 {
     from_above(reach3(v))
 }
 
-/// An offset in the plane `z = 0`, from a drawn point.
-fn offset(p: Point2) -> V {
-    let [x, y] = p.to_euclidean();
-    V::new(f64::from(x), f64::from(y), 0.0)
-}
-
 /// The density from the derivative of gravity, on a log scale down to a ten-thousandth of the
 /// peak at the mass's centre.
 fn draw_density(c: &mut Canvas, ax: &Axes, masses: &Masses) {
     let density = |p: V| -derivative(masses.tidal(p)).s() / (4.0 * core::f64::consts::PI);
     let peak = density(masses.centres[0]);
     ax.image(c, 1, |q| {
-        let share = density(offset(q)) / peak;
+        let share = density(vector3(q)) / peak;
         let level = 1.0 + share.max(DENSITY_FLOOR).log10() / -DENSITY_FLOOR.log10();
         Some(shade(level as f32))
     });
@@ -372,7 +366,7 @@ fn draw_cluster(c: &mut Canvas, rect: Rect, stars: &Stars, shape: &Shape) {
     draw_stars(c, &ax, stars, 3.0);
     let rim = shape.rim(CLUSTER_RADIUS);
     let level = |p: Point2| {
-        let x = offset(p) - centre;
+        let x = vector3(p) - centre;
         rim.of(x).of(x).s() as f32
     };
     ax.contour(c, level, RIM_SAMPLES, 1.0, 2.4, palette::orange());

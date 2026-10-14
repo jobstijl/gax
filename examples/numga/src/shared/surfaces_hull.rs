@@ -9,7 +9,7 @@
 //! horizon) are joined to it.
 
 use gax::field::Field;
-use gax_numga_examples::measure::lift;
+use gax_numga_examples::measure::{GOLDEN, lift};
 use gax_numga_examples::mesh::{Mesh, Vector3, direction};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{Camera, Canvas, Point3, Rect, palette};
@@ -24,8 +24,6 @@ const DIRECTION_SEED: u64 = 0;
 /// point on it.
 const MESH_SPREAD: f64 = 0.06;
 const MESH_SEED: u64 = 57;
-/// The golden ratio: the spiral turns by `2π φ` from one point to the next.
-const GOLDEN: f64 = 1.618_033_988_749_895;
 
 /// Directions spread evenly over the sphere along a Fibonacci spiral, each nudged a little at
 /// random: the `k`-th at the height `1 - (2k + 1) / count`, on the meridian turned by `2π φ`

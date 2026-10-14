@@ -373,6 +373,6 @@ pub fn lattice() -> Lattice {
 /// static equilibrium; the share is a control setting rather than time.
 pub fn turning(share: f64) -> V {
     let turned = core::f64::consts::TAU * share;
-    let strength = FIELD * (0.5 - 0.5 * gax_numga_examples::signal::phasor(turned).e20());
+    let strength = FIELD * gax_numga_examples::signal::haversine(turned);
     direction(turned) * strength
 }

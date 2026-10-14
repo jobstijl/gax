@@ -25,7 +25,7 @@ mod shg {
     #![cfg_attr(not(test), allow(dead_code))]
 
     use gax::sta::{Bivector, Even, Vector};
-    use gax_numga_examples::signal::phasor;
+    use gax_numga_examples::signal::{linspace, phasor};
 
     pub type B = Bivector<(), f64>;
     /// The crystal's response: two electric fields in, a polarization source out.
@@ -148,9 +148,7 @@ mod shg {
     /// across the beam, its static half removed.
     pub fn waveform(samples: usize) -> (Vec<f64>, Vec<B>, Vec<B>) {
         let crystal = response(&bonds());
-        let phase: Vec<f64> = (0..samples)
-            .map(|i| 4.0 * core::f64::consts::PI * i as f64 / (samples - 1) as f64)
-            .collect();
+        let phase = linspace(0.0, 4.0 * core::f64::consts::PI, samples);
         let pump: Vec<B> = phase
             .iter()
             .map(|p| horizontal().gp(phasor(*p).e20()))

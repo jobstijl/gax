@@ -26,12 +26,12 @@
 //! the repulsion, the swap against the spin-only prediction, the swap frozen by a field that
 //! differs between the sites, and the charge an asymmetry between the sites moves over.
 
-use gax_numga_examples::signal::wave;
+use gax_numga_examples::points::circle;
+use gax_numga_examples::signal::{linspace, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
     run,
 };
-use quantum::unit_circle;
 use std::sync::OnceLock;
 
 #[path = "../shared/quantum.rs"]
@@ -47,8 +47,9 @@ gax::algebra! {
 
 mod hubbard {
     use super::dimer::{Orbital, Pair};
-    pub use super::quantum::{InTime, linspace};
+    pub use super::quantum::InTime;
     use core::f64::consts::FRAC_1_SQRT_2;
+    use gax_numga_examples::signal::linspace;
     use gax_numga_examples::signal::phasor;
 
     /// An orbital, and a state of two electrons.
@@ -374,7 +375,7 @@ fn amplitude(state: &InTime<P>, configuration: usize) -> Point2 {
 /// One dial: the unit circle, the path of the amplitude over the cycle, and the amplitude now as
 /// the triplet's share followed by the singlet block's.
 fn draw_dial(c: &mut Canvas, ax: &Axes, cycle: &[InTime<P>], now: usize, configuration: usize) {
-    ax.polyline(c, &unit_circle(64), 1.0, palette::grid());
+    ax.polyline(c, &circle(ORIGIN2, 1.0, 64), 1.0, palette::grid());
     let path: Vec<Point2> = cycle.iter().map(|s| amplitude(s, configuration)).collect();
     ax.polyline(c, &path, 1.0, palette::purple().faded(0.3));
     let state = cycle[now];
@@ -538,6 +539,7 @@ fn main() {
 #[allow(clippy::disallowed_methods)] // the two-site solution's closed forms, the references checked against
 mod tests {
     use super::hubbard::*;
+    use gax_numga_examples::signal::linspace;
 
     const ROUND_OFF: f64 = 1e-10;
     /// The strong case's bounds, numga's: they test the localized-spin approximation at a

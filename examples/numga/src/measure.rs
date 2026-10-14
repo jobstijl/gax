@@ -1,7 +1,13 @@
 //! Measures computed with gax: the angle between two directions (in space, and signed in the
-//! plane), and the Gauss linking number of two closed curves.
+//! plane), and the Gauss linking number of two closed curves; and the scalar tools the measures
+//! of the examples share: the golden ratio and a root by bisection.
 
 use gax::vga3d::{Bivector, Vector};
+
+/// The golden ratio `φ = (1 + √5) / 2`: the icosahedron's corners are `(0, ±1, ±φ)` cycled, a
+/// Fibonacci spiral turns by `2π φ` per point, and a golden-section search splits its bracket at
+/// `1 / φ = φ - 1`.
+pub const GOLDEN: f64 = 1.618_033_988_749_895;
 
 /// The angle between `a` and `b`, in radians: the norm of the logarithm of the rotor `b a`
 /// (normalized) that turns one into the other.
@@ -59,4 +65,22 @@ pub fn linking(first: &[Vector<(), f64>], second: &[Vector<(), f64>]) -> f64 {
         }
     }
     sum / (4.0 * core::f64::consts::PI)
+}
+
+/// Where `below` stops holding between `lo`, where it holds, and `hi`, where it does not: the
+/// bracket halved at most `steps` times, or until its ends are neighbouring numbers, and its
+/// midpoint. For a function's root, `below` is whether its sign is the one at `lo`.
+pub fn bisect(mut lo: f64, mut hi: f64, steps: usize, below: impl Fn(f64) -> bool) -> f64 {
+    for _ in 0..steps {
+        let mid = 0.5 * (lo + hi);
+        if mid <= lo || mid >= hi {
+            break;
+        }
+        if below(mid) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    0.5 * (lo + hi)
 }

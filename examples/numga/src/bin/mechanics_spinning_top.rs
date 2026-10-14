@@ -24,7 +24,7 @@ use gax::pga3d::{Direction, Line, Motor, Plane, Point};
 use gax_colour::light;
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, run,
+    Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, par_map, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
@@ -486,16 +486,7 @@ struct Runs {
 fn runs() -> &'static Runs {
     static RUNS: std::sync::OnceLock<Runs> = std::sync::OnceLock::new();
     RUNS.get_or_init(|| {
-        let all: Vec<_> = std::thread::scope(|s| {
-            let handles: Vec<_> = VARIATIONS
-                .iter()
-                .map(|(_, setup)| s.spawn(move || spin(*setup, SECONDS, DT, EVERY)))
-                .collect();
-            handles
-                .into_iter()
-                .map(|h| h.join().expect("a run"))
-                .collect()
-        });
+        let all = par_map(&VARIATIONS, |(_, setup)| spin(*setup, SECONDS, DT, EVERY));
         let (base, ground, _) = &all[0];
         Runs {
             parts: base.parts.clone(),

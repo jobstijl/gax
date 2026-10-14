@@ -403,8 +403,8 @@ pub fn along_y() -> Wave {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::scenes::linspace;
     use gax::{ApproxEq, Extensor, Slots};
+    use gax_numga_examples::signal::linspace;
 
     /// numga's tolerance for the frequency-domain checks.
     pub const ROUND_OFF: f64 = 1e-10;

@@ -30,6 +30,7 @@
 
 use gax::field::Field;
 use gax::vga2d::Pseudoscalar;
+use gax_numga_examples::signal::linspace;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, reach2, run,
 };
@@ -68,9 +69,7 @@ fn scene() -> &'static Scene {
     static SCENE: OnceLock<Scene> = OnceLock::new();
     SCENE.get_or_init(|| {
         let lattice = lattice();
-        let strengths: Vec<f64> = (0..LOAD_SAMPLES)
-            .map(|i| FIELD * i as f64 / (LOAD_SAMPLES - 1) as f64)
-            .collect();
+        let strengths = linspace(0.0, FIELD, LOAD_SAMPLES);
         let shapes: Vec<Field<V>> = strengths
             .iter()
             .map(|s| lattice.equilibrium(X * *s, NEWTON_STEPS))

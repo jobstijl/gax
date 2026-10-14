@@ -21,8 +21,8 @@ use gax::field::Field;
 use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Rect, Scene3, backdrop,
-    caption, font, palette, run,
+    Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Rect, Scene3, backdrop,
+    caption, label_under, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -304,14 +304,6 @@ fn truss(
     );
 }
 
-/// A label under the panel's middle, shrunk to fit its width.
-fn label_under(c: &mut Canvas, rect: Rect, label: &str) {
-    let fitting = 0.8 * rect.width() / font::width(label, 1.0);
-    let size = (rect.height() / 30.0).clamp(7.0, 12.0).min(fitting);
-    let at = rect.bottom_middle() - Point2::direction(0.0, size * 0.6);
-    c.text(label, at, size, palette::ink(), Align::Center);
-}
-
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let scene = scene();
@@ -325,9 +317,15 @@ fn draw(c: &mut Canvas, t: f32) {
     terrain(c, left, &scene.mesh, &heights, &stresses);
     truss(c, right, &scene.mesh, &stresses, &duals);
     let net = unbalanced(&scene.mesh, &stresses);
-    label_under(c, left, "THE LIFTED TERRAIN: ITS CREASES ARE BARS");
+    label_under(
+        c,
+        left,
+        "THE LIFTED TERRAIN: ITS CREASES ARE BARS",
+        30.0,
+        0.8,
+    );
     let truss_label = format!("THE TRUSS AND ITS RECIPROCAL, NET FORCE {net:.0E}");
-    label_under(c, right, &truss_label);
+    label_under(c, right, &truss_label, 30.0, 0.8);
     caption(
         c,
         "RECIPROCAL DIAGRAMS: A LIFTED MESH AND THE STRESSES OF ITS CREASES",

@@ -10,7 +10,7 @@
 
 use gax::pga3d::{Motor, Plane, Point};
 use gax_numga_examples::measure::roots;
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption, palette,
     run,
@@ -247,7 +247,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let phase = t / SECONDS * core::f32::consts::TAU;
     let azimuth = 48f32.to_radians() + 0.5 * wave(phase);
     // Contract, hold, and open again: the phasor's reach across, from 1 down to -1 and back.
-    let progress = f64::from((1.5 * (0.5 - 0.5 * phasor(phase).e20())).min(1.0));
+    let progress = f64::from((1.5 * haversine(phase)).min(1.0));
     let scene = collapse();
     let screen = c.rect();
     for i in 0..3 {

@@ -26,7 +26,8 @@
 //! gives way to strain, the walkabout with the vortices' paths.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, reach2, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, reach2,
+    run, vector2,
 };
 use std::sync::OnceLock;
 
@@ -365,12 +366,6 @@ fn scenes() -> &'static Scenes {
     })
 }
 
-/// A point of the plane, from a drawn point.
-fn vector(p: Point2) -> V {
-    let [x, y] = p.to_euclidean();
-    V::new(f64::from(x), f64::from(y))
-}
-
 /// The frame a fraction of the way through `frames`.
 fn frame_at(fraction: f32, frames: usize) -> usize {
     ((fraction * frames as f32) as usize).min(frames - 1)
@@ -399,7 +394,7 @@ fn shade(vorticity: f64, limit: f64) -> Light {
 /// The vorticity over the axes, from the derivative of the flow.
 fn draw_vorticity(c: &mut Canvas, ax: &Axes, vortices: &Vortices, limit: f64) {
     ax.image(c, 1, |q| {
-        let curl = vortices.derivative(vector(q)).e12();
+        let curl = vortices.derivative(vector2(q)).e12();
         Some(shade(curl, limit))
     });
 }
@@ -423,7 +418,7 @@ fn draw_scene(c: &mut Canvas, rect: Rect, scene: &Scene, vortices: &Vortices) {
     let half = half_height(rect, scene.half_width, scene.half_height);
     let ax = Axes::equal(rect, reach2(vortices.mean()), half);
     draw_vorticity(c, &ax, vortices, scene.vorticity_limit);
-    let swirling = |p: Point2| swirl(vortices.gradient(vector(p))) as f32;
+    let swirling = |p: Point2| swirl(vortices.gradient(vector2(p))) as f32;
     ax.contour(c, swirling, SWIRL_SAMPLES, 0.0, 1.0, swirl_line());
     // A repeating layer's vortices are too many to mark.
     if scene.vortices.copies.len() == 1 {

@@ -20,6 +20,7 @@ use std::sync::OnceLock;
 
 use gax::pga2d::Point;
 use gax_numga_examples::font;
+use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, palette, run,
 };
@@ -623,8 +624,7 @@ fn scenes() -> &'static (Impulse, Ladder, Spaceships) {
 
 /// Smoothly from 0 to 1 over the first 85% of a scene, then held.
 fn reveal(u: f32) -> f32 {
-    let s = (u / 0.85).clamp(0.0, 1.0);
-    s * s * (3.0 - 2.0 * s)
+    smoothstep(u / 0.85)
 }
 
 fn draw_impulse(c: &mut Canvas, r: f32) {

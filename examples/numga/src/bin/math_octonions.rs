@@ -25,6 +25,7 @@
 //! preserve the product as it turns: an ordinary rotation in the `ab` plane, and its part in
 //! G₂, which keeps it at round-off.
 
+use gax_numga_examples::points;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
@@ -256,12 +257,7 @@ fn draw_triple(ax: &Axes, c: &mut Canvas, triple: [usize; 3], colour: Light) {
 /// The Fano plane in `rect`, the triple `lit` brighter.
 fn fano_panel(c: &mut Canvas, rect: Rect, lit: usize) {
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.1), 1.05);
-    let circle: Vec<Point2> = (0..=96)
-        .map(|k| {
-            let p = phasor(core::f32::consts::TAU * k as f32 / 96.0);
-            Point2::xy(0.5 * p.e20(), 0.5 * p.e01())
-        })
-        .collect();
+    let circle = points::circle(Point2::xy(0.0, 0.0), 0.5, 96);
     let dim = palette::sky().faded(0.45);
     let circle_lit = on_circle(TRIPLES[lit]);
     ax.polyline(

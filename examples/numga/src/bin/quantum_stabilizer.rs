@@ -24,16 +24,13 @@
 //! state's sixteen spinor components change and the checks that notice it light up. Beside it,
 //! the runs kept and the infidelities under noise.
 
+use gax_numga_examples::points::circle;
 use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
     run,
 };
-use quantum::unit_circle;
 use std::sync::OnceLock;
-
-#[path = "../shared/quantum.rs"]
-mod quantum;
 
 gax::algebra! {
     algebra cl44 "Cl(4,4): four directions that square to one (ea eb ec ed) and four that square to minus one (ee ef eg eh).";
@@ -45,7 +42,7 @@ gax::algebra! {
 
 mod stabilizer {
     use super::cl44::{Multivector, Scalar, State, Vector};
-    use super::quantum::linspace;
+    use gax_numga_examples::signal::linspace;
     use gax_numga_examples::signal::phasor;
 
     /// An operator, any element of the algebra, and a state: a spinor of the ideal.
@@ -352,7 +349,7 @@ fn draw_logical(c: &mut Canvas, area: Rect, d: &Data, state: St) {
     for k in 0..LOGICAL {
         let cell = area.column(k, LOGICAL);
         let ax = Axes::equal(cell, ORIGIN2, 1.3);
-        ax.polyline(c, &unit_circle(64), 1.0, palette::grid());
+        ax.polyline(c, &circle(ORIGIN2, 1.0, 64), 1.0, palette::grid());
         let reading = Point2::xy(
             d.code.expectation(phase_flips[k], state) as f32,
             d.code.expectation(flips[k], state) as f32,

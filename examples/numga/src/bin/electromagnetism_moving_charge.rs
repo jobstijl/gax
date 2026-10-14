@@ -24,7 +24,7 @@
 //! and the magnetic field across the plane), and circles point charges at half and nine tenths
 //! of the speed of light (right: the magnetic field times the distance, the waves they shed).
 
-use gax_numga_examples::signal::phasor;
+use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, colormap, palette, run,
 };
@@ -465,7 +465,7 @@ fn wave_panel(c: &mut Canvas, rect: Rect, radiator: &Radiator, turned: f64) {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let share = f64::from(t / SECONDS).rem_euclid(1.0);
-    let rapidity = TOP_RAPIDITY * (0.5 - 0.5 * phasor(core::f64::consts::TAU * share).e20());
+    let rapidity = TOP_RAPIDITY * haversine(core::f64::consts::TAU * share);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let top = (h / 30.0).clamp(10.0, 22.0) * 3.6;

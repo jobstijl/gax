@@ -21,6 +21,7 @@ pub mod font;
 pub mod measure;
 pub mod mesh;
 pub mod palette;
+pub mod parallel;
 pub mod plot;
 pub mod points;
 pub mod rng;
@@ -32,9 +33,11 @@ pub use app::{Anim, run};
 pub use canvas::{Canvas, Rect};
 pub use font::Align;
 pub use gax_colour::{Light, light};
+pub use parallel::par_map;
 pub use plot::{Axes, Marker};
 pub use points::{
-    Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above, reach2, reach3,
+    Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above, reach2, reach3, vector2,
+    vector3,
 };
 pub use scene3::Scene3;
 pub use view::{Camera, Lens, View2};
@@ -63,6 +66,15 @@ pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
         let at = Point2::xy(s * 0.8, s * 3.0);
         c.text(sub, at, fit(s * 0.7, sub), ink.faded(0.45), Align::Left);
     }
+}
+
+/// A label under a panel's middle: a `rows`-th of the panel's height (between 7 and 12 pixels),
+/// shrunk to fit the `share` of its width (less where panels sit close).
+pub fn label_under(c: &mut Canvas, rect: Rect, label: &str, rows: f32, share: f32) {
+    let fitting = share * rect.width() / font::width(label, 1.0);
+    let size = (rect.height() / rows).clamp(7.0, 12.0).min(fitting);
+    let at = rect.bottom_middle() - Point2::direction(0.0, size * 0.6);
+    c.text(label, at, size, palette::ink(), Align::Center);
 }
 
 #[cfg(test)]
@@ -175,6 +187,30 @@ mod tests {
             mean.abs() < 0.03 && (var - 1.0).abs() < 0.05,
             "{mean} {var}"
         );
+    }
+
+    #[test]
+    fn a_circle_closes_at_its_radius_and_a_drawn_point_reads_back() {
+        let centre = Point2::xy(2.0, -1.0);
+        let ring = points::circle(centre, 3.0, 12);
+        assert_eq!(ring.len(), 13);
+        assert!(near(ring[0], ring[12], 1e-5) && near(ring[3], Point2::xy(2.0, 2.0), 1e-5));
+        for p in &ring {
+            assert!(((*p & centre).norm() - 3.0).abs() < 1e-5, "{p:?}");
+        }
+        let v = gax::vga2d::Vector::new(0.25, -1.5);
+        assert_eq!(vector2(reach2(v)), v);
+        let w = gax::vga3d::Vector::new(0.25, -1.5, 0.0);
+        assert_eq!(vector3(from_above(reach3(w))), w);
+    }
+
+    #[test]
+    fn a_grid_reads_between_its_samples() {
+        // Two rows of three: the value is the column plus ten times the row.
+        let grid = [0.0, 1.0, 2.0, 10.0, 11.0, 12.0];
+        assert_eq!(plot::bilinear(&grid, 3, 1.5, 0.5), 6.5);
+        assert_eq!(plot::bilinear(&grid, 3, 2.0, 1.0), 12.0);
+        assert_eq!(plot::bilinear(&grid, 3, -1.0, 4.0), 10.0, "past the edge");
     }
 
     #[test]

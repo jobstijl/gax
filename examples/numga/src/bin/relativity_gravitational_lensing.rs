@@ -17,12 +17,11 @@ use std::sync::OnceLock;
 use gax_colour::Srgb;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    contour, palette, reach2, run, signal::phasor,
+    contour, palette, reach2, run, signal::phasor, vector2,
 };
 
 mod lensing {
     use gax::vga2d::{Pseudoscalar, Vector};
-    use gax_numga_examples::Point2;
 
     pub type V = Vector<(), f64>;
     /// A map from a small displacement of a sightline to the displacement it makes at the
@@ -32,12 +31,6 @@ mod lensing {
     /// A direction from its `x` and `y` components.
     pub fn v(x: f64, y: f64) -> V {
         Vector::new(x, y)
-    }
-
-    /// The direction at a point of a drawing: the point's place on the sky.
-    pub fn at(p: Point2) -> V {
-        let [x, y] = p.to_euclidean();
-        v(f64::from(x), f64::from(y))
     }
 
     /// The source direction each observed direction reaches.
@@ -174,12 +167,12 @@ struct Scene {
 fn scene() -> &'static Scene {
     static SCENE: OnceLock<Scene> = OnceLock::new();
     SCENE.get_or_init(|| {
-        let ratio = |p: Point2| area(binary_local(at(p))) as f32;
+        let ratio = |p: Point2| area(binary_local(vector2(p))) as f32;
         let critical = contour::of_fn(ratio, [-1.9, 1.9], [-1.9, 1.9], 380, 0.0);
         // The lens carries the critical curve to the caustic.
         let caustic = critical
             .iter()
-            .map(|seg| seg.map(|p| reach2(binary(at(p)))))
+            .map(|seg| seg.map(|p| reach2(binary(vector2(p)))))
             .collect();
         let (directions, reached, _) = lens(400);
         Scene {
@@ -230,7 +223,9 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The source plane: the source unlensed, with the caustic.
     let ax = panel(0);
-    ax.image(c, 1, |p| Some(starlight(brightness(at(p), centre, WIDTH))));
+    ax.image(c, 1, |p| {
+        Some(starlight(brightness(vector2(p), centre, WIDTH)))
+    });
     ax.stroke(c, &s.caustic, 1.3, caustic_colour);
     ax.frame(c, "SOURCE", "", "");
     below(c, &ax, 0.0, "CAUSTIC", caustic_colour, Align::Center);
@@ -238,7 +233,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The sky: each pixel shows the source's brightness where its sightline arrives.
     let ax = panel(1);
     ax.image(c, 2, |p| {
-        Some(starlight(brightness(binary(at(p)), centre, WIDTH)))
+        Some(starlight(brightness(binary(vector2(p)), centre, WIDTH)))
     });
     ax.stroke(c, &s.critical, 1.1, critical_colour);
     ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid());

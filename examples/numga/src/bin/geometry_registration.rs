@@ -18,7 +18,7 @@ use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
 use gax_numga_examples::canvas::HEIGHT;
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -188,7 +188,7 @@ const SECONDS: f32 = 6.0;
 fn draw(c: &mut Canvas, t: f32) {
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     // Fly over, hold, and fly back.
-    let s = (1.4 * (0.5 - 0.5 * phasor(phase).e20())).min(1.0);
+    let s = (1.4 * haversine(phase)).min(1.0);
     let az = 0.6 + 0.35 * wave(phase as f32);
     let (source, target) = correspondences();
     let fits = [

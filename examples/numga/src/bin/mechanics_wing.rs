@@ -32,10 +32,10 @@
 //! wing as the critical points move apart, their images marked, with the cylinder's centre.
 
 use gax_numga_examples::points::box_map;
-use gax_numga_examples::signal::phasor;
+use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, contour, palette,
-    reach2, run,
+    reach2, run, vector2,
 };
 
 #[path = "../shared/mechanics_vga2d.rs"]
@@ -258,16 +258,10 @@ const LIFT_SCALE: f64 = 0.35;
 /// Points around the wing's outline.
 const OUTLINE: usize = 180;
 
-/// A point of the plane, from a drawn point.
-fn vector(p: Point2) -> V {
-    let [x, y] = p.to_euclidean();
-    V::new(f64::from(x), f64::from(y))
-}
-
-/// The smooth sweep `(1 - cos(2π t / T)) / 2` from 0 up to 1 and back over a loop.
+/// The smooth sweep from 0 up to 1 and back over a loop: the haversine of `2π t / T`.
 fn sweep(t: f32) -> f64 {
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
-    (1.0 - phasor(phase).e20()) / 2.0
+    haversine(phase)
 }
 
 /// The light of a pressure coefficient: warm where the flow is fast (suction), cool where it
@@ -284,7 +278,7 @@ fn shade(pressure: f64) -> Light {
 /// The pressure coefficient around the wing, `1 - |v|² / U²`.
 fn draw_pressure(c: &mut Canvas, ax: &Axes, wing: &Wing, critical: V) {
     ax.image(c, 1, |q| {
-        let flow = flow_at(wing, stream(), vector(q), critical)?;
+        let flow = flow_at(wing, stream(), vector2(q), critical)?;
         Some(shade(1.0 - flow.velocity.norm_squared() / (SPEED * SPEED)))
     });
 }
@@ -302,7 +296,7 @@ fn draw_streamlines(c: &mut Canvas, ax: &Axes, wing: &Wing, critical: V) {
     let values: Vec<f32> = (0..columns * rows)
         .map(|k| {
             let at = to_plane.of(Point2::xy((k % columns) as f32, (k / columns) as f32));
-            flow_at(wing, stream(), vector(at), critical)
+            flow_at(wing, stream(), vector2(at), critical)
                 .map_or(f32::NAN, |f| f.stream.e12() as f32)
         })
         .collect();

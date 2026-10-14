@@ -22,6 +22,7 @@ use gax_numga_examples::{
 mod dirac {
     use gax::sta::{Bivector, Even, Phasor, Pseudoscalar, Scalar, Vector};
     use gax::vga3d;
+    use gax_numga_examples::signal::linspace;
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
@@ -231,9 +232,7 @@ mod dirac {
         let tx: Spinor = (time() ^ x_axis()).into();
         let electron = unit_density((scalar(1.0) + h.of(scalar(1.0)) * (1.0 / e)) * 0.5);
         let positron = unit_density((tx - h.of(tx) * (1.0 / e)) * 0.5);
-        let times: Vec<f64> = (0..count)
-            .map(|i| seconds * i as f64 / (count - 1) as f64)
-            .collect();
+        let times = linspace(0.0, seconds, count);
         let dt = times[1] - times[0];
         let mut spinors = Vec::new();
         let mut paths = Vec::new();

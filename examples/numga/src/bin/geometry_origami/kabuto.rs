@@ -3,6 +3,7 @@
 
 use super::paper::{L, P, Paper, Pl, line_bisector, point_bisector};
 use gax::pga3d::{Motor, Plane, Point};
+use gax_numga_examples::signal::smoothstep;
 use std::f64::consts::PI;
 
 /// The square's half side.
@@ -101,11 +102,10 @@ impl Stage {
     /// The turn a fraction of the way through the fold: out to the peak and on to the end, each
     /// half eased in and out (numga's smoothstep).
     pub fn angle(&self, fraction: f64) -> f64 {
-        let ease = |s: f64| s * s * (3.0 - 2.0 * s);
         if fraction < 0.5 {
-            self.peak * ease(2.0 * fraction)
+            self.peak * smoothstep(2.0 * fraction)
         } else {
-            self.peak + (self.end - self.peak) * ease(2.0 * fraction - 1.0)
+            self.peak + (self.end - self.peak) * smoothstep(2.0 * fraction - 1.0)
         }
     }
 }

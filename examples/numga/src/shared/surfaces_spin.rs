@@ -7,7 +7,7 @@
 use gax::field::Field;
 use gax::{Extensor, vga3d};
 use gax_numga_examples::mesh::{Mesh, Vector3};
-use gax_numga_examples::{Align, Camera, Canvas, Light, Point2, Rect, font, palette, reach3};
+use gax_numga_examples::{Camera, Canvas, Light, Point2, Rect, palette, reach3};
 use std::collections::BTreeSet;
 
 /// The surface of the cube `[-1, 1]³`, each side a grid of `divisions` by `divisions` squares, two
@@ -227,14 +227,6 @@ pub fn render(
         Some(colour(&hit).faded(AMBIENT + (1.0 - AMBIENT) * facing) + glint)
     });
     c.unclip();
-}
-
-/// A label under the panel's middle, shrunk to fit its width.
-pub fn label_under(c: &mut Canvas, rect: Rect, label: &str) {
-    let fitting = 0.8 * rect.width() / font::width(label, 1.0);
-    let size = (rect.height() / 16.0).clamp(7.0, 12.0).min(fitting);
-    let at = rect.bottom_middle() - Point2::direction(0.0, size * 0.6);
-    c.text(label, at, size, palette::ink(), Align::Center);
 }
 
 #[cfg(test)]

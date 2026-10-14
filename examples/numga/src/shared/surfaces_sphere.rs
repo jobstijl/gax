@@ -1,13 +1,12 @@
 //! What numga's `surfaces/spin_transformations` shares with `surfaces/dirac_waves`: the unit
 //! sphere's surface mesh.
 
+use gax_numga_examples::measure::GOLDEN;
 use gax_numga_examples::mesh::{Mesh, Vector3};
 
-/// The golden ratio, `(1 + √5) / 2`: the icosahedron's corners are `(0, ±1, ±φ)` cycled.
-const GOLDEN: f64 = 1.618_033_988_749_895;
-
-/// A unit sphere: an icosahedron with each face split in four at the midpoints of its
-/// edges, the given number of times, its vertices pushed out onto the sphere at the end.
+/// A unit sphere: an icosahedron (its corners `(0, ±1, ±φ)` cycled) with each face split in four
+/// at the midpoints of its edges, the given number of times, its vertices pushed out onto the
+/// sphere at the end.
 pub fn icosphere(levels: usize) -> Mesh {
     let corners = [
         [-1.0, GOLDEN, 0.0],

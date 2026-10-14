@@ -18,14 +18,13 @@
 
 #[path = "../shared/surfaces_loop.rs"]
 mod surfaces_loop;
-#[path = "../shared/surfaces_panels.rs"]
-mod surfaces_panels;
 
 use gax::field::Field;
+use gax_numga_examples::label_under;
+use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{Anim, Canvas, Rect, Scene3, backdrop, caption, palette, run};
 use surfaces_loop::{Point64, framing, net, separation, surface};
-use surfaces_panels::{label_under, row};
 
 mod motors {
     use super::surfaces_loop::{Point64, refine};
@@ -72,7 +71,7 @@ mod scenes {
     use gax::field::Field;
     use gax_numga_examples::mesh::{Mesh, Vector3};
     use gax_numga_examples::rng::{Draw, rng};
-    use gax_numga_examples::signal::{phasor, wave};
+    use gax_numga_examples::signal::{haversine, wave};
 
     /// The ribbon's control mesh: its vertices along and across, its length and width; its four
     /// corners are pinned.
@@ -126,10 +125,10 @@ mod scenes {
     }
 
     /// The control frames at a phase of the wind-up and release: the far end turned by
-    /// `WOUND (1 - cos phase) / 2`, each frame by that times the square of its share of the way
+    /// `WOUND` times the haversine of the phase, `(1 - cos phase) / 2`, each frame by that times the square of its share of the way
     /// along.
     pub fn winding(phase: f64) -> Field<Motor64> {
-        let wound = WOUND * (1.0 - phasor(phase).e20()) / 2.0;
+        let wound = WOUND * haversine(phase);
         let held = |along: f64| ((along + LENGTH / 2.0) / LENGTH).powi(2);
         grid()
             .into_iter()
@@ -219,13 +218,13 @@ fn panel(c: &mut Canvas, rect: Rect, refined: &Refined, points: &Field<Point64>,
             }
         }
     });
-    label_under(c, rect, label);
+    label_under(c, rect, label, 30.0, 0.9);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
-    let panels: [Rect; 4] = row(c, 4.0);
+    let panels: [Rect; 4] = panel_row(c, 4.0);
     let wound = refined(winding(phase));
     let turning = refined(Turning::new().at(phase));
     let scenes = [(&wound, "WOUND"), (&turning, "TURNING")];

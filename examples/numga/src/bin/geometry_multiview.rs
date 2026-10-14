@@ -19,6 +19,7 @@
 use gax::ApproxEq;
 use gax::motions::Linear;
 
+use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -701,8 +702,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let local = (t - which as f32 * per).max(0.0);
     let progress = (local / PER_STEP).min(ITERATIONS as f32);
     let k = (progress as usize).min(ITERATIONS - 1);
-    let f = f64::from(progress - k as f32);
-    let f = f * f * (3.0 - 2.0 * f);
+    let f = smoothstep(f64::from(progress - k as f32));
     let motors: Vec<plane::M> = s.states[k]
         .iter()
         .zip(&s.states[k + 1])

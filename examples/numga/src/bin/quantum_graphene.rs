@@ -21,10 +21,10 @@
 use gax::vga3d::Vector;
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
-    backdrop, caption, colormap, from_above, palette, reach3, run,
+    backdrop, caption, colormap, from_above, palette, reach3, run, vector3,
 };
 use std::sync::OnceLock;
 
@@ -309,7 +309,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let tau = core::f64::consts::TAU;
     let phase_t = f64::from(t / SECONDS);
     // The loop's radius grows and shrinks; a marker runs round it six times per cycle.
-    let radius = 0.01 + 0.59 * (0.5 - 0.5 * phasor(tau * phase_t).e20());
+    let radius = 0.01 + 0.59 * haversine(tau * phase_t);
     let around = (6.0 * phase_t).fract();
 
     // The bands, turning.
@@ -332,7 +332,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let [valley_k, _] = valleys();
     let ax = Axes::equal(screen.part(0.46, 0.16, 0.72, 0.56), ORIGIN2, 3.2);
     ax.image(c, 1, |p| {
-        let f = pseudospin(momentum(p), 0.0);
+        let f = pseudospin(vector3(p), 0.0);
         let len = f.norm() as f32;
         Some((colormap::viridis(len / (3.0 * HOPPING as f32))).faded(0.75))
     });
@@ -346,7 +346,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let step = 0.8f32;
     for i in -4..=4 {
         for j in -4..=4 {
-            let k = momentum(Point2::xy(i as f32 * step, j as f32 * step));
+            let k = vector3(Point2::xy(i as f32 * step, j as f32 * step));
             let d = upper_pseudospin(k, GAPS[SHOWN]);
             let half = d * 0.3;
             let tone = colormap::coolwarm(0.5 + 0.5 * d.e3() as f32);
@@ -471,13 +471,6 @@ fn draw(c: &mut Canvas, t: f32) {
         "GRAPHENE: DIRAC CONES AND THE BERRY PHASE",
         "THE PSEUDOSPIN FIELD IN VGA3D, H(PSI) = FIELD PSI Z",
     );
-}
-
-/// The momentum at a point of the drawn momentum plane: the point's displacement from the
-/// origin.
-fn momentum(p: Point2) -> V {
-    let d = p.unitized() - ORIGIN2;
-    Vector::new(f64::from(d.e20()), f64::from(d.e01()), 0.0)
 }
 
 fn main() {

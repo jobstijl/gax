@@ -21,17 +21,16 @@
 
 #[path = "../shared/surfaces_loop.rs"]
 mod surfaces_loop;
-#[path = "../shared/surfaces_panels.rs"]
-mod surfaces_panels;
 
 use gax::field::{Field, SparseMap};
 use gax::pga3d::Scalar;
+use gax_numga_examples::label_under;
 use gax_numga_examples::mesh::Mesh;
+use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{Anim, Canvas, Light, Rect, backdrop, caption, palette, run};
 use std::sync::OnceLock;
 use surfaces_loop::{Point64, framing, net, separation, surface};
-use surfaces_panels::{label_under, row};
 
 mod projective {
     use super::surfaces_loop::{Point64, refine};
@@ -236,7 +235,7 @@ fn face_gaps(orders: &[Field<Point64>; 2], faces: &[[usize; 3]]) -> Vec<f64> {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let s = shown();
-    let [left, middle, right] = row(c, 6.0);
+    let [left, middle, right] = panel_row(c, 6.0);
 
     // The sweep: the top vertex's weight, out and back.
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
@@ -244,7 +243,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let refined = &s.subdivide * &control;
     shaded(c, left, &control, &refined, |_| agreed());
     let label = format!("TOP VERTEX OF WEIGHT {:.2}", top_weight(phase));
-    label_under(c, left, &label);
+    label_under(c, left, &label, 30.0, 0.9);
 
     // The two orders after the perspective, on one scale of gaps.
     let p = &s.perspective;
@@ -258,7 +257,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let light = |f: usize| agreed().blend(apart(), (gaps[f] / largest) as f32);
         shaded(c, rect, &p.seen, &orders[0], light);
         let gap = separation(&orders[0], &orders[1]);
-        label_under(c, rect, &format!("{name}: GAP {gap:.0E}"));
+        label_under(c, rect, &format!("{name}: GAP {gap:.0E}"), 30.0, 0.9);
     }
     caption(
         c,

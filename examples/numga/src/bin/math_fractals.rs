@@ -22,7 +22,7 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
-    signal::phasor,
+    signal::haversine,
 };
 
 mod fractals {
@@ -137,7 +137,7 @@ fn colour(norm_squared: f64, steps: u32, limit: u32) -> Option<Light> {
 /// The slice's turn at time `t`: out to a quarter turn and back.
 fn slice_angle(t: f32) -> f64 {
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
-    0.5 * QUARTER * (1.0 - phasor(phase).e20())
+    QUARTER * haversine(phase)
 }
 
 /// The Mandelbrot set in `rect`, and the Julia constant's complex shadow on it.

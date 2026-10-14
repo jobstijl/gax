@@ -14,7 +14,7 @@ use gax_numga_examples::{Anim, Canvas, Point2, backdrop, caption, palette, run};
 
 mod elliptical {
     use gax::vga3d::{Bivector, Rotor, Vector};
-    use gax_numga_examples::signal::phasor;
+    use gax_numga_examples::signal::haversine;
 
     pub type V = Vector<(), f64>;
     pub type R = gax::Unit<Rotor<(), f64>>;
@@ -60,7 +60,7 @@ mod elliptical {
         } else {
             (third(), s * 2.0 - 1.0)
         };
-        let eased = 0.5 - 0.5 * phasor(core::f64::consts::PI * along).e20();
+        let eased = haversine(core::f64::consts::PI * along);
         // The generator's logarithm scaled: a fraction of its turn.
         let partial: R = (generator.log() * eased).exp();
         let tilt = turn(Bivector::new(0.5, -0.3, 0.15), 0.45);

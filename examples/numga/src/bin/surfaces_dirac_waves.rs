@@ -34,9 +34,11 @@ use gax::field::Field;
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::palette;
 use gax_numga_examples::run;
-use gax_numga_examples::{Anim, Camera, Canvas, Lens, Light, ORIGIN3, Rect, backdrop, caption};
+use gax_numga_examples::{
+    Anim, Camera, Canvas, Lens, Light, ORIGIN3, Rect, backdrop, caption, label_under,
+};
 use std::sync::OnceLock;
-use surfaces_spin::{Hit, label_under, render};
+use surfaces_spin::{Hit, render};
 
 mod waves {
     use gax::field::{Field, SparseMap};
@@ -351,7 +353,7 @@ fn sphere_panel(c: &mut Canvas, rect: Rect, sphere: &Mesh, amplitudes: &Amplitud
         Lens::Perspective(0.5),
     );
     render(c, &cam, rect, sphere, |hit| colour(amplitudes, sphere, hit));
-    label_under(c, rect, label);
+    label_under(c, rect, label, 16.0, 0.8);
 }
 
 fn draw(c: &mut Canvas, t: f32) {

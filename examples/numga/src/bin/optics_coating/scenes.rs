@@ -10,6 +10,7 @@ use crate::coating::{
 use crate::line::{Line, swept};
 use gax::field::Field;
 use gax::sta::Bivector;
+use gax_numga_examples::signal::linspace;
 
 /// The coatings' design wavelength, nm.
 const DESIGN_WAVELENGTH: f64 = 550.0;
@@ -234,13 +235,6 @@ pub fn time_domain() -> [PulseRun; 3] {
             frames: states.into_iter().map(|(e, _)| e).collect(),
         }
     })
-}
-
-/// `n` evenly spaced values from `a` to `b`, both included.
-pub fn linspace(a: f64, b: f64, n: usize) -> Vec<f64> {
-    (0..n)
-        .map(|i| a + (b - a) * i as f64 / (n - 1) as f64)
-        .collect()
 }
 
 /// The spectra and the run at numga's sizes, computed once: the coatings' and the helix's

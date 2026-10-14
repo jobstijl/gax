@@ -263,8 +263,7 @@ macro_rules! engine {
             // Two probes c < d split the bracket in the golden ratio; whichever side holds the
             // larger value keeps the bracket, and the surviving probe already sits at the golden
             // point of the shrunk bracket, so each step evaluates one fresh probe.
-            #[allow(clippy::disallowed_methods)] // the golden ratio, a constant of the search
-            let golden = (5f64.sqrt() - 1.0) / 2.0;
+            let golden = gax_numga_examples::measure::GOLDEN - 1.0;
             let (mut lo, mut hi) = (0.0, core::f64::consts::FRAC_PI_2);
             let (mut c, mut d) = (hi - golden * (hi - lo), lo + golden * (hi - lo));
             let (mut fc, mut fd) = (least(a, b, c).0, least(a, b, d).0);

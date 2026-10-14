@@ -7,7 +7,8 @@
 //! conversion here. Positions are PGA points; a VGA vector is a direction only (to draw where it
 //! points, add it to the origin).
 
-use gax::{Coef, pga2d, pga3d, vga2d, vga3d};
+use crate::signal::phasor;
+use gax::{Coef, Real, pga2d, pga3d, vga2d, vga3d};
 use pga2d::Motor;
 
 /// A point of the plane, as the drawing code holds it.
@@ -137,6 +138,35 @@ pub fn reach2(d: impl Dir2) -> Point2 {
 /// The point a direction reaches from the origin of space.
 pub fn reach3(d: impl Dir3) -> Point3 {
     ORIGIN3 + d.dir3()
+}
+
+/// The direction from the origin of the plane to a drawn point, as the examples compute in: a
+/// VGA vector in `f64`. The inverse of [`reach2`].
+pub fn vector2(p: Point2) -> vga2d::Vector<(), f64> {
+    let [x, y] = p.to_euclidean();
+    vga2d::Vector::new(f64::from(x), f64::from(y))
+}
+
+/// The direction from the origin of space to the point of the ground plane `z = 0` under a
+/// drawn point seen from above: a VGA vector in `f64`. The inverse of [`from_above`] of
+/// [`reach3`] there.
+pub fn vector3(p: Point2) -> vga3d::Vector<(), f64> {
+    let [x, y] = p.to_euclidean();
+    vga3d::Vector::new(f64::from(x), f64::from(y), 0.0)
+}
+
+/// The circle about `centre` of `radius` as a closed polygon of `segments` sides: `segments + 1`
+/// points, the first repeated last, the phasors of even turns scaled and moved to the centre.
+pub fn circle<T: Real>(
+    centre: pga2d::Point<(), T>,
+    radius: T,
+    segments: usize,
+) -> Vec<pga2d::Point<(), T>> {
+    let tau = T::from_f64(core::f64::consts::TAU);
+    let turn = |k: usize| tau * T::from_f64(k as f64) / T::from_f64(segments as f64);
+    (0..=segments)
+        .map(|k| centre + phasor(turn(k)).gp(radius))
+        .collect()
 }
 
 /// A point of space seen from above (along `-z`): the point of the plane under it, its `z`

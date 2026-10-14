@@ -28,6 +28,7 @@ use gax_numga_examples::{
 mod curvature {
     use core::ops::{Add, Mul};
     use gax::sta::{Bivector, Odd, Pseudoscalar, Vector};
+    use gax_numga_examples::signal::linspace;
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
@@ -217,14 +218,6 @@ mod curvature {
     pub const BEADS: usize = 24;
     /// Display magnification of the displacements.
     pub const AMPLIFICATION: f64 = 4000.0;
-
-    /// `n` evenly spaced values from `a` to `b`, as numpy's `linspace`.
-    pub fn linspace(a: f64, b: f64, n: usize) -> Vec<f64> {
-        let step = (b - a) / (n - 1) as f64;
-        (0..n)
-            .map(|i| if i == n - 1 { b } else { a + step * i as f64 })
-            .collect()
-    }
 
     /// The bead ring's response: `[polarization][time][bead]` accelerations, integrated twice
     /// from rest into displacements.
@@ -621,6 +614,7 @@ mod tests {
     /// numga draws normals from `np.random.default_rng(seed)`, which cannot be reproduced; the
     /// identities hold for any vectors.
     use gax_numga_examples::rng::{Draw, Rng, rng};
+    use gax_numga_examples::signal::linspace;
 
     /// A vector of four standard normal coefficients.
     fn vector(draws: &mut Rng) -> V {

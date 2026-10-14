@@ -7,7 +7,7 @@
 
 use super::mirrors::curvature;
 use super::{fold, tile};
-use gax_numga_examples::signal::phasor;
+use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{Align, Canvas, Light, Point2, palette};
 
 /// The geometries: where the second and third mirrors meet (a half turn over `m`), and the
@@ -62,7 +62,7 @@ fn colour(sides: [f64; 3], flips: u32) -> Option<Light> {
 /// The three disks of tiles at time `t` of the act, moving along `x` and back.
 pub fn draw(c: &mut Canvas, t: f32) {
     let phase = core::f64::consts::TAU * f64::from(t / super::ACT);
-    let travel = 0.5 * TRAVEL * (1.0 - phasor(phase).e20());
+    let travel = TRAVEL * haversine(phase);
     let screen = c.rect();
     for (k, (m, name)) in GEOMETRIES.into_iter().enumerate() {
         let column = screen.part(k as f32 / 3.0, 0.16, (k + 1) as f32 / 3.0, 0.92);

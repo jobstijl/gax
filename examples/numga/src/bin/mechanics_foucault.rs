@@ -26,10 +26,11 @@
 use gax::vga2d;
 
 use gax_numga_examples::plot::Axes;
+use gax_numga_examples::points;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Light, Point2, Point3, Rect, backdrop, caption, colormap, measure,
-    palette, reach2, reach3, run, signal,
+    palette, reach2, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -271,10 +272,7 @@ fn draw_globe(c: &mut Canvas, rect: Rect, earth_turn: f64) {
 fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth_turn: f64) {
     let site = compass(latitudes()[latitude]);
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.08), 1.3);
-    let tau = core::f64::consts::TAU;
-    let ring: Vec<Point2> = (0..=CIRCLE)
-        .map(|k| reach2(signal::phasor(tau * k as f64 / CIRCLE as f64)))
-        .collect();
+    let ring = points::circle(gax::pga2d::Point::xy(0.0, 0.0), 1.0, CIRCLE);
     ax.polyline(c, &ring, 1.0, palette::grid());
     let track: Vec<Point2> = tracks()[latitude][..=reached]
         .iter()

@@ -21,7 +21,7 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    palette, run, signal::phasor,
+    palette, run, signal::haversine,
 };
 
 mod crystal {
@@ -168,7 +168,7 @@ const POSITION_LIMIT: f32 = 7.8;
 /// The share of the deformation at time `t`: a smooth cycle out and back.
 fn share(t: f32) -> f64 {
     let turn = f64::from(t / SECONDS) * core::f64::consts::TAU;
-    (1.0 - phasor(turn).e20()) / 2.0
+    haversine(turn)
 }
 
 /// A vector of the layer's plane as a drawing point.

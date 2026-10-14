@@ -22,7 +22,7 @@
 use gax::vga3d::{Bivector, Vector};
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::phasor;
+use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, ORIGIN3, Point2, backdrop, caption,
     colormap, from_above, palette, reach3, run,
@@ -505,7 +505,7 @@ fn draw(c: &mut Canvas, t: f32) {
         legend.push((format!("DRIVE {drive}"), colours[j]));
     }
     // A cursor sweeping the detuning.
-    let sweep = -3.0 + 6.0 * (0.5 - 0.5 * phasor(core::f32::consts::TAU * phase).e20());
+    let sweep = -3.0 + 6.0 * haversine(core::f32::consts::TAU * phase);
     ax.line(
         c,
         Point2::xy(sweep, 0.0),

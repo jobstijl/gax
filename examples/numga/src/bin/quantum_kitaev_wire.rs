@@ -20,18 +20,17 @@
 //! (two energies drop to zero), and the splitting of the boundary modes as the segment
 //! shortens, exponentially small while they do not overlap.
 
+use gax_numga_examples::signal::linspace;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/quantum.rs"]
-mod quantum;
-
 mod kitaev {
-    pub use super::quantum::linspace;
     use gax::field::{Field, SparseMap};
     use gax::vga2d::{Pseudoscalar, Scalar, Vector};
+    use gax_numga_examples::par_map;
+    use gax_numga_examples::signal::linspace;
 
     /// Two Majorana amplitudes, a map on them, and a field of them over the wire's sites.
     pub type Majorana = Vector<(), f64>;
@@ -52,12 +51,6 @@ mod kitaev {
     }
     fn open() -> Map {
         Vector::slot()
-    }
-
-    /// The norm of a field: its coefficients' Euclidean length.
-    #[allow(clippy::disallowed_methods)] // a field's norm, which gax's fields do not provide
-    pub fn norm(field: &Modes) -> f64 {
-        field.dot(field).sqrt()
     }
 
     /// A chain of sites with its bonds: the couplings between neighbours.
@@ -102,7 +95,7 @@ mod kitaev {
         pub fn modes(&self, generator: &Generator, count: usize) -> (Vec<f64>, Vec<Modes>) {
             let normal = generator.transpose().compose(generator);
             let (_, modes) = normal.eigh(&self.identity(), count);
-            let energies = modes.iter().map(|m| norm(&generator.apply(m))).collect();
+            let energies = modes.iter().map(|m| generator.apply(m).norm()).collect();
             (energies, modes)
         }
 
@@ -213,10 +206,9 @@ mod kitaev {
     pub fn formation(samples: usize, count: usize) -> (Vec<f64>, Vec<Vec<f64>>) {
         let wire = wire();
         let potentials = linspace(OUTSIDE, INSIDE, samples);
-        let energies = potentials
-            .iter()
-            .map(|mu| wire.modes(&wire.generator(&gated(*mu, LEFT)), count).0)
-            .collect();
+        let energies = par_map(&potentials, |mu| {
+            wire.modes(&wire.generator(&gated(*mu, LEFT)), count).0
+        });
         (potentials, energies)
     }
 
@@ -247,10 +239,7 @@ mod kitaev {
             .map(|k| (k * STRIDE) as f64 / STEPS as f64)
             .collect();
         let potentials: Vec<Potential> = progress.iter().map(|p| gate_at(*p)).collect();
-        let pairs: Vec<Vec<Modes>> = potentials
-            .iter()
-            .map(|p| wire.modes(&wire.generator(p), 2).1)
-            .collect();
+        let pairs = par_map(&potentials, |p| wire.modes(&wire.generator(p), 2).1);
         let target: Vec<Modes> = pairs
             .iter()
             .map(|pair| {
@@ -261,7 +250,10 @@ mod kitaev {
         let midpoints: Vec<Potential> = (0..STEPS)
             .map(|k| gate_at((k as f64 + 0.5) / STEPS as f64))
             .collect();
-        let history = DURATIONS.map(|d| transport(&wire, &target[0], &midpoints, d, STRIDE));
+        let history = par_map(&DURATIONS, |d| {
+            transport(&wire, &target[0], &midpoints, *d, STRIDE)
+        });
+        let history: [Vec<Modes>; 2] = history.try_into().expect("two durations");
         let share = [0, 1].map(|case| {
             pairs
                 .iter()
@@ -282,13 +274,10 @@ mod kitaev {
     /// boundary fixed: the mean of the boundary pair's two quadratures.
     pub fn overlap(separations: &[f64]) -> Vec<f64> {
         let wire = wire();
-        separations
-            .iter()
-            .map(|s| {
-                let (energies, _) = wire.modes(&wire.generator(&gated(INSIDE, RIGHT - s)), 2);
-                (energies[0] + energies[1]) / 2.0
-            })
-            .collect()
+        par_map(separations, |s| {
+            let (energies, _) = wire.modes(&wire.generator(&gated(INSIDE, RIGHT - s)), 2);
+            (energies[0] + energies[1]) / 2.0
+        })
     }
 }
 
@@ -515,6 +504,7 @@ mod tests {
     use super::kitaev::*;
     use gax::field::Field;
     use gax::vga2d::{Scalar, Vector};
+    use gax_numga_examples::signal::linspace;
 
     gax::algebra! {
         algebra majoranas "The Clifford algebra of the four Majoranas of a wire of two sites, R(4,0): site 0's ea eb, site 1's ec ed.";

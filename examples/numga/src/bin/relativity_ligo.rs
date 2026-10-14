@@ -28,9 +28,10 @@
 
 use std::sync::OnceLock;
 
+use gax_numga_examples::points::circle;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    palette, run, signal::phasor,
+    palette, plot, run,
 };
 
 mod ligo {
@@ -240,15 +241,7 @@ fn sky_maps() -> &'static Sky {
 fn sample(values: &[f64], longitude_deg: f32, latitude_deg: f32) -> f64 {
     let column = (f64::from(longitude_deg) + 180.0) / 360.0 * (SKY_COLUMNS - 1) as f64;
     let row = (f64::from(latitude_deg) + 90.0) / 180.0 * (SKY_SAMPLES - 1) as f64;
-    let (c0, r0) = (
-        (column.floor() as usize).min(SKY_COLUMNS - 2),
-        (row.floor() as usize).min(SKY_SAMPLES - 2),
-    );
-    let (u, v) = (column - c0 as f64, row - r0 as f64);
-    let at = |r: usize, c: usize| values[r * SKY_COLUMNS + c];
-    let bottom = at(r0, c0) * (1.0 - u) + at(r0, c0 + 1) * u;
-    let top = at(r0 + 1, c0) * (1.0 - u) + at(r0 + 1, c0 + 1) * u;
-    bottom * (1.0 - v) + top * v
+    plot::bilinear(values, SKY_COLUMNS, column, row)
 }
 
 /// A map over the sky in `rect`: each value through `colour`, a faint graticule, and the sites.
@@ -310,9 +303,7 @@ fn draw_ring(c: &mut Canvas, rect: Rect, angle: f64) {
     let side = rect.width().min(rect.height());
     let square = Rect::around(rect.centre(), Point2::direction(side / 2.0, side / 2.0));
     let ax = Axes::equal(square, ORIGIN2, 1.5);
-    let rest: Vec<Point2> = (0..=96)
-        .map(|k| ORIGIN2 + phasor(core::f32::consts::TAU * k as f32 / 96.0))
-        .collect();
+    let rest = circle(ORIGIN2, 1.0, 96);
     ax.polyline(c, &rest, 1.0, palette::grid().faded(1.5));
     for arm in detector.arms() {
         ax.line(c, ORIGIN2, level(arm * ARM_REACH), 4.0, palette::orange());

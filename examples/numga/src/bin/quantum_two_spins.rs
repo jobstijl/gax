@@ -17,7 +17,7 @@
 //! combination rises from 2 to `2 sqrt 2` and falls back.
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, palette, reach3, run,
@@ -41,6 +41,7 @@ gax::algebra! {
 
 mod spins {
     use super::pair::*;
+    use gax_numga_examples::signal::linspace;
 
     /// A direction of the first spin, of the second, and a state of the pair.
     pub type F = First<(), f64>;
@@ -179,9 +180,7 @@ mod spins {
     }
 
     pub fn swap(frames: usize) -> Swap {
-        let angles: Vec<f64> = (0..frames)
-            .map(|k| core::f64::consts::FRAC_PI_4 * k as f64 / (frames - 1) as f64)
-            .collect();
+        let angles = linspace(0.0, core::f64::consts::FRAC_PI_4, frames);
         let states: Vec<Sp> = angles.iter().map(|a| exchange(up_down(), *a)).collect();
         let (first, second) = states.iter().map(|s| bloch(*s)).unzip();
         let bells = states.iter().map(|s| bell(correlation(*s))).collect();
@@ -290,7 +289,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let tau = core::f64::consts::TAU;
     let phase = f64::from(t) / 8.0;
     // From up-down to swapped and back, easing in and out.
-    let angle = core::f64::consts::FRAC_PI_8 * (1.0 - phasor(tau * phase).e20());
+    let angle = core::f64::consts::FRAC_PI_4 * haversine(tau * phase);
     let state = exchange(up_down(), angle);
     let data = swapped();
     let (first, second) = bloch(state);

@@ -9,7 +9,7 @@ use crate::kerr::{
     Hole, PolarizedRay, Ray, Rotor, V, camera_rays, camera_screen, camera_trace, initial_momentum,
     polarized_rates, trace, x, xy, y, z,
 };
-use crate::par_map;
+use gax_numga_examples::par_map;
 use gax_numga_examples::signal::{phasor, tangent};
 
 pub const MASS: f64 = 1.0;

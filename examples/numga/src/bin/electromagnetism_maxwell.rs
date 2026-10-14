@@ -18,7 +18,7 @@ use gax::pga2d::Point;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
     backdrop, caption, palette, reach3, run,
-    signal::{phasor, wave},
+    signal::{haversine, wave},
 };
 
 mod maxwell {
@@ -218,7 +218,7 @@ fn sampled(i: usize) -> f64 {
 
 /// The cloud's speed at animation phase `p`: from dust nearly to light and back.
 fn cloud_speed(p: f64) -> f64 {
-    0.02 + 0.94 * 0.5 * (1.0 - phasor(p).e20())
+    0.02 + 0.94 * haversine(p)
 }
 
 /// The fixed cloud directions; the animation boosts the rest observer along them.

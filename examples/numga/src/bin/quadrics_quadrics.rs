@@ -9,7 +9,7 @@
 
 use gax::pga3d::{Motor, Point};
 
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption, palette,
     run,
@@ -202,7 +202,7 @@ fn draw(c: &mut Canvas, t: f32) {
     c.blit(&left, screen.lo);
 
     // The world frame, on the right: the screw from the identity to numga's motor and back.
-    let s = 0.5 - 0.5 * phasor(phase).e20();
+    let s = haversine(phase);
     let m = Motor::interpolate(Motor::translation(0.0, 0.0, 0.0), motor(), s);
     let (world, world_tangent, world_contact, moved) = transport(m, normal);
     let mut right = c.sub(Rect::new(half, 0.0, w, h));

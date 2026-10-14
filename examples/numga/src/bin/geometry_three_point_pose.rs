@@ -16,6 +16,7 @@
 //! translation, through the first point for the turn, along the first edge for the roll. On the
 //! right, the markers after each stage.
 
+use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
     palette, run, scene3::panel3,
@@ -105,8 +106,10 @@ fn marker_colour() -> Light {
 /// smoothstep); past the last stage, the last one complete.
 fn stage_at(t: f32) -> (usize, f64) {
     let stage = ((t / STAGE) as usize).min(2);
-    let s = f64::from((t - stage as f32 * STAGE) / STAGE).clamp(0.0, 1.0);
-    (stage, s * s * (3.0 - 2.0 * s))
+    (
+        stage,
+        smoothstep(f64::from((t - stage as f32 * STAGE) / STAGE)),
+    )
 }
 
 /// The camera on the markers from `distance` away: numga's view from 55 degrees up at an

@@ -28,8 +28,6 @@
 
 #[path = "../shared/surfaces_hull.rs"]
 mod surfaces_hull;
-#[path = "../shared/surfaces_panels.rs"]
-mod surfaces_panels;
 
 gax::algebra! {
     algebra sphere "The algebra of the unit sphere, R(3,1): `x`, `y` and `z` square to one, `w` to minus one.";
@@ -43,7 +41,9 @@ gax::algebra! {
 }
 
 use gax::field::Field;
+use gax_numga_examples::label_under;
 use gax_numga_examples::mesh::{Mesh, Vector3};
+use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{Anim, Canvas, Light, Marker, Point3, Rect, Scene3, backdrop, caption};
@@ -51,7 +51,6 @@ use gax_numga_examples::{palette, run};
 use koebe::{Circle, apexes, face_circles, spatial, touching};
 use std::sync::OnceLock;
 use surfaces_hull::{beside, camera, drawn, facing, ghost, near_side};
-use surfaces_panels::{label_under, row};
 
 mod koebe {
     use super::sphere::{Rotor, Scalar, Vector};
@@ -390,7 +389,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = shown();
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
     let circles = boosted(&s.mesh.vertices, phase);
-    let [left, right] = row(c, 6.0);
+    let [left, right] = panel_row(c, 6.0);
     polyhedra(c, left, &circles);
     pattern(c, right, &circles);
     let (_, rapidity) = boost_at(phase);
@@ -398,8 +397,16 @@ fn draw(c: &mut Canvas, t: f32) {
         c,
         left,
         &format!("THE POLYHEDRON AND ITS DUAL, BOOSTED BY RAPIDITY {rapidity:.2}"),
+        30.0,
+        0.9,
     );
-    label_under(c, right, "THEIR CIRCLES, TOUCHING ALONG EVERY EDGE");
+    label_under(
+        c,
+        right,
+        "THEIR CIRCLES, TOUCHING ALONG EVERY EDGE",
+        30.0,
+        0.9,
+    );
     caption(
         c,
         "KOEBE POLYHEDRA: EDGES THAT ALL TOUCH THE SPHERE",

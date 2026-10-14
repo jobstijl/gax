@@ -39,6 +39,7 @@ use std::sync::OnceLock;
 mod kepler {
     use super::*;
     use core::f64::consts::{PI, TAU};
+    use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
     pub type V = Vector<(), f64>;
@@ -151,16 +152,9 @@ mod kepler {
             let mean_radius =
                 (self.spinor.norm_squared() + self.rate.norm_squared() / (w * w)) / 2.0;
             let guess = time / mean_radius;
-            let (mut lower, mut upper) = (guess - PI / w, guess + PI / w);
-            for _ in 0..iterations {
-                let middle = (lower + upper) / 2.0;
-                if self.time_at(middle) < time {
-                    lower = middle;
-                } else {
-                    upper = middle;
-                }
-            }
-            self.sample((lower + upper) / 2.0)
+            let (lower, upper) = (guess - PI / w, guess + PI / w);
+            let early = |parameter| self.time_at(parameter) < time;
+            self.sample(measure::bisect(lower, upper, iterations, early))
         }
 
         /// The RMS position error of a trajectory against the exact orbit at its own times,

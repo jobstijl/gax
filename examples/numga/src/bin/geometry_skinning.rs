@@ -11,7 +11,7 @@
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Point};
 
-use gax_numga_examples::signal::{phasor, wave};
+use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Point2, Scene3, backdrop, caption, colormap, palette, run,
 };
@@ -186,7 +186,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let phase = f64::from(t) / SECONDS * core::f64::consts::TAU;
     // The twist rises to 150 degrees and returns, as the phasor's reach across goes from 1 to
     // -1 and back; the view sways with its height.
-    let angle = 150f64.to_radians() * 0.5 * (1.0 - phasor(phase).e20());
+    let angle = 150f64.to_radians() * haversine(phase);
     let azimuth = 0.9 + 0.25 * wave(phase as f32);
     let skins = skinning(angle);
     let screen = c.rect();

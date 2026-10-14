@@ -53,6 +53,29 @@ pub fn panel(c: &Canvas, i: usize, n: usize) -> Rect {
     c.rect().column(i, n)
 }
 
+/// `N` panels side by side under the caption (which takes the top 12% of the canvas), each inset
+/// by `margin` on every side.
+pub fn panel_row<const N: usize>(c: &Canvas, margin: f32) -> [Rect; N] {
+    let screen = c.rect();
+    let below = Rect::new(0.0, screen.height() * 0.12, screen.width(), screen.height());
+    core::array::from_fn(|i| below.column(i, N).inset(margin, margin, margin, margin))
+}
+
+/// A grid of samples, stored row by row with `columns` to a row, read at a fractional `column`
+/// and `row`: interpolated between the four samples around the place (bilinearly), a place past
+/// the grid's edge read at the edge.
+pub fn bilinear(values: &[f64], columns: usize, column: f64, row: f64) -> f64 {
+    let rows = values.len() / columns;
+    let u = column.clamp(0.0, (columns - 1) as f64);
+    let v = row.clamp(0.0, (rows - 1) as f64);
+    let (c0, r0) = ((u as usize).min(columns - 2), (v as usize).min(rows - 2));
+    let (fu, fv) = (u - c0 as f64, v - r0 as f64);
+    let at = |r: usize, c: usize| values[r * columns + c];
+    let bottom = at(r0, c0) * (1.0 - fu) + at(r0, c0 + 1) * fu;
+    let top = at(r0 + 1, c0) * (1.0 - fu) + at(r0 + 1, c0 + 1) * fu;
+    bottom * (1.0 - fv) + top * fv
+}
+
 /// A round step for about `n` ticks over `span`: 1, 2 or 5 times a power of ten.
 fn nice_step(span: f32, n: f32) -> f32 {
     let raw = (span / n).abs().max(1e-30);

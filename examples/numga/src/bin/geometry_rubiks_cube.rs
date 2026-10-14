@@ -20,6 +20,7 @@
 //! In Singmaster's notation the faces along +x, -x, +y, -y, +z and -z read as R, L, B, F, U
 //! and D. The animation plays a random scramble and then the solution the search found.
 
+use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, Scene3, backdrop, caption, light,
     palette, run,
@@ -438,8 +439,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let step = t / PER_MOVE;
     let index = (step as usize).min(moves.len());
     // The turn under way, eased in and out (numga's smoothstep).
-    let s = f64::from(step.fract());
-    let (corners, cut) = pose(&moves, index, s * s * (3.0 - 2.0 * s));
+    let (corners, cut) = pose(&moves, index, smoothstep(f64::from(step.fract())));
     draw_cube(c, screen.part(0.0, 0.05, 0.66, 1.0), &corners, &cut);
     let panel = screen.part(0.66, 0.25, 1.0, 1.0).lo;
     let current = |offset: usize, len: usize| index.checked_sub(offset).filter(|k| *k < len);

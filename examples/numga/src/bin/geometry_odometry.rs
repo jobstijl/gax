@@ -15,6 +15,7 @@
 //! plane on the left with each pose's 2σ ellipse, and a short lap in space on the right.
 
 use gax_numga_examples::rng::{Draw, rng};
+use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption,
     palette, run,
@@ -581,7 +582,7 @@ fn between<P: Copy, C: Copy + core::ops::Add<Output = C> + core::ops::Sub<Output
     };
     let (a, b) = (&iterates[k], &iterates[(k + 1).min(iterates.len() - 1)]);
     // Ease in and out within a step.
-    let f = f * f * (3.0 - 2.0 * f);
+    let f = smoothstep(f);
     let poses =
         a.0.iter()
             .zip(&b.0)

@@ -25,13 +25,10 @@ use gax_numga_examples::{
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/quantum.rs"]
-mod quantum;
-
 mod neutrino {
-    use super::quantum::linspace;
     use gax::Unit;
     use gax::vga3d::{Bivector, Paravector, Pseudoscalar, Rotor, Vector};
+    use gax_numga_examples::signal::linspace;
 
     /// A state `(1 + P) / 2`, and its isospin vector.
     pub type St = Paravector<(), f64>;

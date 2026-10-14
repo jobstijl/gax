@@ -40,7 +40,7 @@ use coating::{Polarization, in_plane, t};
 use gax::pga2d::Point;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Rect, backdrop, caption, colormap, measure, palette,
-    run, signal::phasor,
+    run, signal::haversine,
 };
 use scenes::{
     BAND_WAVELENGTH, CELLS, LINEAR, SLAB_END, SLAB_START, helix, in_slab, positions, results,
@@ -255,7 +255,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let mid = top + (h - top) * 0.5;
     draw_pulse(c, Rect::new(0.0, top, w, mid), at);
     // The cursors sweep the spectra back and forth.
-    let sweep = 0.5 - 0.5 * phasor(core::f64::consts::TAU * at).e20();
+    let sweep = haversine(core::f64::consts::TAU * at);
     let sample = |n: usize| (sweep * (n - 1) as f64).round() as usize;
     let lower = |x0: f32, x1: f32| Rect::new(w * x0, mid, w * x1, h);
     let s = results();

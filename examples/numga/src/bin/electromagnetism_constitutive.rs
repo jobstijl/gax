@@ -21,7 +21,8 @@ use gax::pga2d::Point;
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
-    palette, run, signal::phasor,
+    palette, run,
+    signal::{haversine, linspace, phasor},
 };
 
 mod constitutive {
@@ -237,12 +238,6 @@ mod constitutive {
     /// light in glass moving at `v`, for its speed `u` in the glass at rest.
     pub fn add_speeds(u: f64, v: f64) -> f64 {
         (u + v) / (1.0 + u * v)
-    }
-
-    pub fn linspace(a: f64, b: f64, n: usize) -> Vec<f64> {
-        (0..n)
-            .map(|i| a + (b - a) * i as f64 / (n - 1) as f64)
-            .collect()
     }
 
     /// The crystal of the scenes: slow along x, fast along y and z.
@@ -637,7 +632,7 @@ fn draw(c: &mut Canvas, t: f32) {
         tau,
         "CRYSTAL: SLOW AND FAST MODES SLIP",
     );
-    let sweep = 0.5 - 0.5 * phasor(core::f64::consts::TAU * at).e20();
+    let sweep = haversine(core::f64::consts::TAU * at);
     draw_dispersion(c, lower(0.0, 0.34), 0.05 + 1.45 * sweep);
     draw_polarizations(c, lower(0.34, 0.5), tau);
     draw_fresnel(c, lower(0.5, 0.75), core::f64::consts::TAU * at);
@@ -659,6 +654,7 @@ mod tests {
     use gax::ApproxEq;
     use gax::sta::{Pseudoscalar, Trivector};
     use gax_numga_examples::rng::{Draw, Rng, rng};
+    use gax_numga_examples::signal::linspace;
 
     fn speeds() -> Vec<f64> {
         linspace(0.05, 1.5, 6001)

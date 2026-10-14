@@ -18,10 +18,11 @@
 //! the light cone (middle), the boost sweeping; and the densities of a Majorana state in the two
 //! eigenspaces of charge conjugation as a phase turns it (right).
 
+use gax_numga_examples::points::circle;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
     run,
-    signal::{phasor, wave},
+    signal::{linspace, wave},
 };
 
 mod spinors {
@@ -173,13 +174,6 @@ fn hands() -> [Light; 3] {
     [palette::orange(), palette::sky(), palette::ink()]
 }
 
-/// A closed circle about `centre`, as a polygon.
-fn circle(centre: Point2, radius: f32) -> Vec<Point2> {
-    (0..=96)
-        .map(|k| centre + phasor(core::f32::consts::TAU * k as f32 / 96.0).gp(radius))
-        .collect()
-}
-
 /// A panel's title, centred above it.
 fn title(c: &mut Canvas, panel: Rect, text: &str, size: f32) {
     let at = panel.top_middle() - Point2::direction(0.0, size * 0.8);
@@ -214,7 +208,12 @@ fn draw_rotation(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
         palette::grid().faded(4.0),
         Align::Left,
     );
-    ax.polyline(c, &circle(ORIGIN2, 1.0), 1.2, palette::grid().faded(2.0));
+    ax.polyline(
+        c,
+        &circle(ORIGIN2, 1.0, 96),
+        1.2,
+        palette::grid().faded(2.0),
+    );
     let tip = ORIGIN2 + in_plane(spin, V::e1, V::e3);
     ax.arrow(c, ORIGIN2, tip, 2.4, 10.0, palette::yellow());
     let turns = angle / core::f64::consts::PI;
@@ -231,7 +230,7 @@ fn draw_rotation(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
         let radius = cell.height() * 0.24;
         c.ring(centre, radius + 3.0, 1.0, palette::grid().faded(2.0));
         // The port's light covers the dark disk by its intensity.
-        let disk = circle(centre, radius);
+        let disk = circle(centre, radius, 96);
         c.fill(&disk, palette::sky(), intensity.clamp(0.0, 1.0) as f32);
         let below = centre + Point2::direction(0.0, radius + size * 1.5);
         c.text(label, below, size * 0.75, palette::ink(), Align::Center);
@@ -274,9 +273,7 @@ fn draw_majorana(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
     let ax = Axes::new(rect.inset(34.0, 0.0, 10.0, 30.0), [0.0, 2.0], [0.0, 1.3]);
     let at =
         |phase: f64, share: f64| Point2::xy((phase / core::f64::consts::PI) as f32, share as f32);
-    let phases: Vec<f64> = (0..PHASE_SAMPLES)
-        .map(|k| core::f64::consts::TAU * k as f64 / (PHASE_SAMPLES - 1) as f64)
-        .collect();
+    let phases = linspace(0.0, core::f64::consts::TAU, PHASE_SAMPLES);
     let colours = [palette::sky(), palette::orange()];
     let shares: Vec<[f64; 2]> = phases.iter().map(|p| majorana_shares(*p)).collect();
     let now = majorana_shares(angle);

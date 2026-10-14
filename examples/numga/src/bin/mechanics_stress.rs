@@ -21,8 +21,8 @@
 //! with the diameter joining the tractions on the faces facing x and y, and those of numga's
 //! three fixed frames: the lab, the principal frame and the frame of greatest shear.
 
+use gax_numga_examples::points;
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, palette, reach3, run,
@@ -207,7 +207,7 @@ const FACES: [[usize; 4]; 6] = [
     [0, 4, 6, 2],
 ];
 /// Points around each of Mohr's circles.
-const CIRCLE_SAMPLES: u32 = 96;
+const CIRCLE_SAMPLES: usize = 96;
 /// The camera: numga's view, 25 degrees round from x and 22 up.
 const AZIMUTH: f32 = 25.0;
 const ELEVATION: f32 = 22.0;
@@ -281,13 +281,8 @@ fn draw_cube(c: &mut Canvas, rect: Rect, view: &View) {
 
 /// A circle on axes, centred on the normal-stress axis.
 fn circle(ax: &Axes, c: &mut Canvas, centre: f64, radius: f64, width: f32, light: Light) {
-    let points: Vec<_> = (0..=CIRCLE_SAMPLES)
-        .map(|k| {
-            let around = phasor(core::f64::consts::TAU * f64::from(k) / f64::from(CIRCLE_SAMPLES));
-            gax::pga2d::Point::xy(centre, 0.0) + around * radius
-        })
-        .collect();
-    ax.polyline(c, &points, width, light);
+    let ring = points::circle(gax::pga2d::Point::xy(centre, 0.0), radius, CIRCLE_SAMPLES);
+    ax.polyline(c, &ring, width, light);
 }
 
 /// The diameter of a view on Mohr's circles: the face facing x, at its normal traction along x

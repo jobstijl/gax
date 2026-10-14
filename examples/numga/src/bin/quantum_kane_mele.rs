@@ -30,15 +30,13 @@ use gax_numga_examples::{
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/quantum.rs"]
-mod quantum;
-
 mod kane_mele {
-    use super::quantum::linspace;
     use gax::field::{Field, SparseMap};
     use gax::vga2d::Rotor as Up;
     use gax::vga3d::{Bivector, Rotor, Vector};
     use gax::{Extensor, Kind};
+    use gax_numga_examples::par_map;
+    use gax_numga_examples::signal::linspace;
 
     /// A coupling between atoms: a scalar plus a multiple of `xy`, the even multivectors of the
     /// plane.
@@ -378,21 +376,18 @@ mod kane_mele {
     /// equally near, at `E` and `-E` without a mass, their states have the same density: the
     /// sublattice sign times the reverse takes one to the other.
     pub fn sweep(flake: &Flake, masses: &[f64]) -> Vec<Spectrum> {
-        masses
-            .iter()
-            .map(|m| {
-                let (energies, states) = up_levels(&hamiltonian(flake, SPIN_ORBIT, *m), LEVELS);
-                let densities: Vec<Vec<f64>> = states.iter().map(density).collect();
-                let nearest = (0..energies.len())
-                    .min_by(|a, b| energies[*a].abs().total_cmp(&energies[*b].abs()))
-                    .expect("levels");
-                Spectrum {
-                    shares: densities.iter().map(|d| rim_share(flake, d)).collect(),
-                    nearest: densities[nearest].clone(),
-                    energies,
-                }
-            })
-            .collect()
+        par_map(masses, |m| {
+            let (energies, states) = up_levels(&hamiltonian(flake, SPIN_ORBIT, *m), LEVELS);
+            let densities: Vec<Vec<f64>> = states.iter().map(density).collect();
+            let nearest = (0..energies.len())
+                .min_by(|a, b| energies[*a].abs().total_cmp(&energies[*b].abs()))
+                .expect("levels");
+            Spectrum {
+                shares: densities.iter().map(|d| rim_share(flake, d)).collect(),
+                nearest: densities[nearest].clone(),
+                energies,
+            }
+        })
     }
 
     /// The states inside the gap without a mass, both spins: their energies and states.

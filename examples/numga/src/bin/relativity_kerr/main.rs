@@ -42,37 +42,14 @@ use std::sync::OnceLock;
 
 use emission::{Sky, blackbody, blackbody_colour, emissivity, flowing_waves};
 use gax::{vga2d, vga3d};
+use gax_numga_examples::points;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, ORIGIN2, Point2, Rect, backdrop, caption, colormap, light,
-    palette, run,
+    palette, par_map, run,
 };
 use kerr::V;
 use scenes::Glint;
-
-/// `f` of each item, on all cores: the items are dealt out in turn, so that costly runs of
-/// them spread evenly.
-fn par_map<T: Sync, U: Send>(items: &[T], f: impl Fn(&T) -> U + Sync) -> Vec<U> {
-    let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
-    let mut parts: Vec<std::vec::IntoIter<U>> = std::thread::scope(|s| {
-        let workers: Vec<_> = (0..threads)
-            .map(|k| {
-                let f = &f;
-                s.spawn(move || {
-                    let dealt = items.iter().skip(k).step_by(threads);
-                    dealt.map(f).collect::<Vec<U>>()
-                })
-            })
-            .collect();
-        workers
-            .into_iter()
-            .map(|w| w.join().expect("a worker").into_iter())
-            .collect()
-    });
-    (0..items.len())
-        .map(|i| parts[i % threads].next().expect("dealt"))
-        .collect()
-}
 
 /// The loop, numga's 80 frames of 80 ms: the spin sweeps there and back, the polarizer turns
 /// half a turn, and the disk's gas turns through [`scenes::FLOW_TIME`].
@@ -231,9 +208,7 @@ fn draw_sweep(c: &mut Canvas, ax: &Axes, t: f32) {
     }
     let hole = scenes::hole(spin);
     let outline = vga2d::Vector::new(hole.horizon(), spin).norm() as f32;
-    let circle: Vec<Point2> = (0..=96)
-        .map(|k| ORIGIN2 + phasor(core::f32::consts::TAU * k as f32 / 96.0).gp(outline))
-        .collect();
+    let circle = points::circle(ORIGIN2, outline, 96);
     ax.fill(c, &circle, light(0.01, 0.012, 0.03, 1.0), 1.0);
     ax.polyline(c, &circle, 1.0, palette::grid());
     ax.frame(c, "EQUATORIAL RAYS", "X / M", "Y / M");

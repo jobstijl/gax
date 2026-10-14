@@ -33,6 +33,7 @@ mod hanging_chain {
     use gax::Real;
     use gax::field::{Field, SparseMap};
     use gax::vga2d::{Pseudoscalar, Scalar, Vector};
+    use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
     /// A position in the plane of the chain, from the point midway between the pins.
@@ -170,16 +171,8 @@ mod hanging_chain {
     /// to rounding.
     pub fn catenary_scale() -> f64 {
         let length = |a: f64| 2.0 * a * (SPAN / (2.0 * a)).sinh();
-        let (mut lo, mut hi) = (SPAN / 20.0, 100.0 * SPAN);
-        for _ in 0..f64::MANTISSA_DIGITS + 10 {
-            let middle = 0.5 * (lo + hi);
-            if length(middle) > LENGTH {
-                lo = middle;
-            } else {
-                hi = middle;
-            }
-        }
-        0.5 * (lo + hi)
+        let steps = f64::MANTISSA_DIGITS as usize + 10;
+        measure::bisect(SPAN / 20.0, 100.0 * SPAN, steps, |a| length(a) > LENGTH)
     }
 
     /// The catenary of the rest length at `across`: `a cosh(x / a)`, lowered to put the pins

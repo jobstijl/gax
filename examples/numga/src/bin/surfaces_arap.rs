@@ -38,9 +38,11 @@
 mod surfaces_spin;
 
 use gax_numga_examples::mesh::Mesh;
-use gax_numga_examples::{Anim, Camera, Canvas, Lens, Point3, Rect, backdrop, caption, run};
+use gax_numga_examples::{
+    Anim, Camera, Canvas, Lens, Point3, Rect, backdrop, caption, label_under, run,
+};
 use std::sync::OnceLock;
-use surfaces_spin::{checker_light, label_under, render};
+use surfaces_spin::{checker_light, render};
 
 mod arap {
     pub use super::surfaces_spin::cube;
@@ -274,7 +276,7 @@ fn panel(c: &mut Canvas, rect: Rect, shape: &Mesh, dark: &[bool], label: &str) {
     render(c, &cam, rect, shape, |hit| {
         checker_light(dark[hit.face], hit.outside)
     });
-    label_under(c, rect, label);
+    label_under(c, rect, label, 16.0, 0.8);
 }
 
 /// Each face's checker parity at rest: the cell, one grid square of the bar, its centroid lies in.

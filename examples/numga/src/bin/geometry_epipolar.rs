@@ -17,7 +17,7 @@ use gax::{Unit, pga2d, vga3d};
 
 use gax_numga_examples::measure::angle;
 use gax_numga_examples::rng::{Draw, rng};
-use gax_numga_examples::signal::wave;
+use gax_numga_examples::signal::{smoothstep, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
     caption, colormap, palette, run,
@@ -335,8 +335,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The motor shown: along the Gauss-Newton steps, eased between them.
     let progress = (t / PER_STEP).min(SHOWN as f32);
     let k = (progress as usize).min(SHOWN - 1);
-    let f = f64::from(progress - k as f32);
-    let f = f * f * (3.0 - 2.0 * f);
+    let f = smoothstep(f64::from(progress - k as f32));
     let motor = Motor::interpolate(s.motors[k], s.motors[k + 1], f);
     let step = progress.round() as usize;
     // The sensors, left.

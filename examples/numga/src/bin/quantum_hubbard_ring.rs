@@ -25,11 +25,12 @@
 //! halfway, the more cleanly the stronger the repulsion. Below, the lowest levels against the
 //! repulsion, approaching the Heisenberg ring's.
 
+use gax_numga_examples::points::circle;
+use gax_numga_examples::signal::linspace;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
     run,
 };
-use quantum::{linspace, unit_circle};
 use std::sync::OnceLock;
 
 #[path = "../shared/quantum.rs"]
@@ -289,7 +290,7 @@ fn place(site: usize) -> Point2 {
 /// One ring at a moment: each site's spin-up count as an arrow up, its spin-down count as an
 /// arrow down.
 fn draw_ring(c: &mut Canvas, ax: &Axes, counts: &Occupation) {
-    ax.polyline(c, &unit_circle(96), 1.0, palette::grid());
+    ax.polyline(c, &circle(ORIGIN2, 1.0, 96), 1.0, palette::grid());
     let up = Point2::direction(0.0, 1.0);
     for (site, [n_up, n_down]) in counts.iter().enumerate() {
         let at = place(site);
@@ -372,7 +373,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::hubbard::*;
-    use super::quantum::linspace;
+    use gax_numga_examples::signal::linspace;
 
     fn small(s: S) -> bool {
         s.c.iter().all(|x| x.abs() < 1e-12)

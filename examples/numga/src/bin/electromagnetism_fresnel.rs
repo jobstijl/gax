@@ -20,7 +20,7 @@
 //! `xz` plane, which touch at the optic axes.
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::phasor;
+use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, ORIGIN3, Point2, Rect, Scene3, backdrop,
     caption, palette, run,
@@ -295,7 +295,7 @@ fn sections(c: &mut Canvas, rect: Rect, section: &[[V; 2]]) {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
-    let weight = 0.5 - 0.5 * phasor(phase).e20();
+    let weight = haversine(phase);
     let permittivity = between(weight);
     let medium = dielectric(permittivity, RELUCTIVITY);
     let grid: Vec<Vec<[V; 2]>> = sphere(MOVIE_LATITUDES, MOVIE_LONGITUDES)

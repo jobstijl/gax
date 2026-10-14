@@ -29,18 +29,17 @@ mod dual;
 mod program;
 #[path = "../../shared/surfaces_hull.rs"]
 mod surfaces_hull;
-#[path = "../../shared/surfaces_panels.rs"]
-mod surfaces_panels;
 
 use dual::{dual_lengths, poles, sides};
 use gax::field::Field;
+use gax_numga_examples::label_under;
 use gax_numga_examples::mesh::{Mesh, Vector3};
+use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{Anim, Canvas, Light, Marker, Point3, Rect, Scene3, backdrop, caption};
 use gax_numga_examples::{colormap, palette, run};
 use std::sync::OnceLock;
 use surfaces_hull::{beside, camera, drawn, facing, ghost, near_side};
-use surfaces_panels::{label_under, row};
 
 mod scenes {
     use super::dual::{fold_map, inside_map, weighted};
@@ -267,21 +266,21 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let s = shown();
     let share = f64::from((t / SECONDS).rem_euclid(1.0));
-    let [breath_space, breath_sphere, rescue_space, rescue_sphere] = row(c, 4.0);
+    let [breath_space, breath_sphere, rescue_space, rescue_sphere] = panel_row(c, 4.0);
 
     let breathing = s.breath.points(core::f64::consts::TAU * share);
     space(c, breath_space, &s.breath.mesh, &breathing);
     on_sphere(c, breath_sphere, &s.breath.mesh, &breathing);
-    label_under(c, breath_space, "BREATHING: HULL AND POLAR DUAL");
-    label_under(c, breath_sphere, "BREATHING: ON THE SPHERE");
+    label_under(c, breath_space, "BREATHING: HULL AND POLAR DUAL", 30.0, 0.9);
+    label_under(c, breath_sphere, "BREATHING: ON THE SPHERE", 30.0, 0.9);
 
     let rescuing = s.rescue.points(share);
     space(c, rescue_space, &s.rescue.mesh, &rescuing);
     on_sphere(c, rescue_sphere, &s.rescue.mesh, &rescuing);
     let (edges, outside) = crossed(&rescuing, &s.rescue.mesh);
     let label = format!("RESCUE: {edges} CROSSED, {outside} POLES OUT");
-    label_under(c, rescue_space, &label);
-    label_under(c, rescue_sphere, "RESCUE: ON THE SPHERE");
+    label_under(c, rescue_space, &label, 30.0, 0.9);
+    label_under(c, rescue_sphere, "RESCUE: ON THE SPHERE", 30.0, 0.9);
     caption(
         c,
         "WEIGHTED DUALS: A HULL, ITS POLES, AND THE SPHERE",

@@ -350,6 +350,7 @@ mod tests {
     use super::cayley_klein::*;
     use gax::ApproxEq;
     use gax::pga2d::{Line, Point};
+    use gax_numga_examples::measure;
 
     /// A pole map, lines to points (`Point <- Line`).
     type Pole = Point<(Line,), f64>;
@@ -478,13 +479,8 @@ mod tests {
         let c = hyperbolic();
         let (centre, r) = (Point::xy(0.45, 0.25), 0.9);
         let ring = circle(c, centre, r);
-        let (mut lo, mut hi) = (0.45, 0.999);
-        for _ in 0..60 {
-            let mid = 0.5 * (lo + hi);
-            let d = Hyperbolic::distance(centre, Point::xy(mid, 0.25));
-            if d < r { lo = mid } else { hi = mid }
-        }
-        let on = Point::xy(lo, 0.25);
+        let inside = |x| Hyperbolic::distance(centre, Point::xy(x, 0.25)) < r;
+        let on = Point::xy(measure::bisect(0.45, 0.999, 60, inside), 0.25);
         assert!((on & ring.of(on)).s().abs() < 1e-12);
     }
 

@@ -37,7 +37,7 @@ gax::algebra! {
 
 use gax::{Of, Slots};
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::phasor;
+use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Point3, Rect, Scene3, backdrop, caption,
     contour, palette, run,
@@ -261,7 +261,7 @@ fn solved() -> &'static [(St, f64); 2] {
 /// The pull at time `t`, from nothing to full and back once a loop.
 fn load(t: f32) -> f64 {
     let angle = std::f64::consts::TAU * f64::from(t.rem_euclid(SECONDS) / SECONDS);
-    (1.0 - phasor(angle).e20()) / 2.0
+    haversine(angle)
 }
 
 /// A point of the strip for drawing.
