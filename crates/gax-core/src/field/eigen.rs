@@ -32,7 +32,10 @@ where
     /// (Rayleigh–Ritz with `self` and `metric`, which need no solves), and the space grows until
     /// each pair's true residual `‖self(x) − λ metric(x)‖` is within `ε^¾` of the pencil's scale.
     /// So the solves near the shift, which lose half their digits where the null space is
-    /// amplified, shape the space but do not limit the accuracy.
+    /// amplified, shape the space but do not limit the accuracy. A last step of inverse iteration
+    /// on the converged pairs themselves then sharpens the eigenvectors, whose error is the
+    /// residual over the gap to the next eigenvalue: on a fine mesh, where that gap is a small
+    /// part of the scale, it gains about a digit.
     ///
     /// The blocks have `2 K::N + 2` vectors, so an eigenvalue repeated on every coefficient of
     /// the kind (a field map of isotropic cells repeats each one `K::N` times), and doubled by a
@@ -134,6 +137,7 @@ where
                         space.residual(value, coefficients) / (T::one() + value.abs())
                     })
                 {
+                    let pairs = space.polish(&pairs, count, |x: &[T]| lu.solve_flat(x));
                     return space.finish::<K>(pairs);
                 }
                 // A spectrum that starts well above zero: shift to just below the wanted
@@ -381,22 +385,55 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             .collect()
     }
 
-    /// The pairs as fields, in ascending order of their values: `x = Σ cᵢ qᵢ`.
+    /// The vector `x = Σ cᵢ qᵢ` of a pair's coefficients.
+    fn combine(&self, coefficients: &[T]) -> Vec<T> {
+        let mut x = vec![T::zero(); self.n];
+        for (q, &c) in self.basis.iter().zip(coefficients) {
+            for (xi, qi) in x.iter_mut().zip(q) {
+                *xi = c.mul_add(*qi, *xi);
+            }
+        }
+        x
+    }
+
+    /// One step of inverse iteration on the converged pairs themselves: the image
+    /// `(A − σM)⁻¹ M x` of each pair's vector joins the space, and the pairs are taken again.
+    /// The stopping residual bounds an eigenvector's error only by the residual over the gap to
+    /// the next eigenvalue, which on a fine mesh is a small part of the scale; the step shrinks
+    /// each error component by `|λ − σ| / |λⱼ − σ|`, the ratio of the wanted eigenvalue's
+    /// distance from the shift to the other's. The Rayleigh–Ritz over the larger space cannot
+    /// make a pair worse.
+    fn polish(
+        &mut self,
+        pairs: &[(T, Vec<T>)],
+        count: usize,
+        mut solve: impl FnMut(&[T]) -> Vec<T>,
+    ) -> Vec<(T, Vec<T>)> {
+        let images: Vec<Vec<T>> = pairs
+            .iter()
+            .map(|(_, c)| {
+                let x = self.combine(c);
+                solve(&self.apply_metric(&x))
+            })
+            .collect();
+        self.block_start = self.basis.len();
+        for y in images {
+            if self.basis.len() >= self.n {
+                break;
+            }
+            self.push(y);
+        }
+        self.ritz(count)
+    }
+
+    /// The pairs as fields, in ascending order of their values.
     #[allow(clippy::type_complexity)]
     fn finish<K: Kind>(&self, mut pairs: Vec<(T, Vec<T>)>) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
         pairs.sort_by(|a, b| order(a.0, b.0));
         let values = pairs.iter().map(|p| p.0).collect();
         let fields = pairs
             .iter()
-            .map(|(_, c)| {
-                let mut x = vec![T::zero(); self.n];
-                for (q, &ci) in self.basis.iter().zip(c) {
-                    for (xi, qi) in x.iter_mut().zip(q) {
-                        *xi = ci.mul_add(*qi, *xi);
-                    }
-                }
-                unflatten(&x)
-            })
+            .map(|(_, c)| unflatten(&self.combine(c)))
             .collect();
         (values, fields)
     }

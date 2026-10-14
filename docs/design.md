@@ -1497,6 +1497,13 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       no solves), and the space grows until each pair's true residual `‖A x − λ M x‖` is at
       `ε^¾` of the pencil's scale. It also stops at `√ε` once the residual stops improving: it
       has a floor of rounding near `10⁵ ε` on small dense spectra.
+    * A converged eigenvector's error is its residual over the gap to the next eigenvalue,
+      which is a small part of the scale on a fine mesh: `(π/n)²` above a free chain's rigid
+      shift. So the converged pairs get one more step of inverse iteration, their own images
+      `(A − σM)⁻¹ M x` added to the space, and Rayleigh–Ritz once more. On a free chain of 400
+      sites, the first wave's distance from its exact eigenspace fell from 1.5·10⁻¹¹ to
+      1.1·10⁻¹², for `count` more solves with the factors in hand. (Found by the
+      spin-transformations port, which needs the constant field to 10⁻¹¹.)
     * Why not the Lanczos recurrence's own estimates, as ARPACK uses: with a null space (a free
       mesh) the shift is within `√ε` of the spectrum, a solve's error in every other direction
       is the null space's amplified size times `ε κ`, and the recurrence's residual estimates

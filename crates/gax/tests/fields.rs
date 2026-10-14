@@ -484,6 +484,37 @@ fn eigh_free_chain() {
     }
 }
 
+/// On a long chain the gap above the rigid shift is small (`(π/n)²` of the scale), so the
+/// eigenvectors must be accurate well beyond the residual: each mode lies in its exact eigenspace,
+/// the cosine wave `cos((j + ½) kπ / n)` on each coefficient. (Without the final step of inverse
+/// iteration, the first wave was 1.5·10⁻¹¹ outside.)
+#[test]
+fn eigh_eigenvectors_across_a_small_gap() {
+    let n = 400;
+    let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
+    let (values, modes) = free_chain(n).eigh(&mass, 6);
+    for (i, (value, mode)) in values.iter().zip(&modes).enumerate() {
+        let wave = (i / 3) as f64;
+        let exact = |j: usize| (((j as f64 + 0.5) * wave * std::f64::consts::PI) / n as f64).cos();
+        let norm2: f64 = (0..n).map(|j| exact(j) * exact(j)).sum();
+        // The mode less its projection on the exact eigenspace (each coefficient separately).
+        let mut outside = 0.0;
+        for k in 0..3 {
+            let along: f64 = (0..n).map(|j| mode.site(j).c[k] * exact(j)).sum::<f64>() / norm2;
+            outside += (0..n)
+                .map(|j| (mode.site(j).c[k] - along * exact(j)).powi(2))
+                .sum::<f64>();
+        }
+        let want = 2.0 - 2.0 * (wave * std::f64::consts::PI / n as f64).cos();
+        assert!(
+            outside.sqrt() < 1e-11,
+            "mode {i}: {:e} outside its eigenspace",
+            outside.sqrt()
+        );
+        assert!((value - want).abs() < 1e-14, "{i}: {value} vs {want}");
+    }
+}
+
 /// A generalized problem with varying masses, and a square grid whose modes along its two axes
 /// coincide (six copies on vectors): residuals `A x − λ M x` at rounding, the metric orthonormal.
 #[test]
