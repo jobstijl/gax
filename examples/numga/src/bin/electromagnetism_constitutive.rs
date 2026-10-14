@@ -404,14 +404,13 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
     let across = |v: Space| gax::pga3d::Point::direction(v.e3() * 0.1, v.e1() * 0.8, v.e2() * 0.8);
     sc.seg(on_beam(0.0), on_beam(Z_MAX), 1.0, palette::grid());
     let samples = 200;
-    let mut e_line = Vec::new();
-    let mut b_line = Vec::new();
-    for i in 0..samples {
-        let z = Z_MAX * i as f64 / (samples - 1) as f64;
-        let (e, b) = arrows(wave_at(modes, z, tau));
-        e_line.push(on_beam(z) + across(e));
-        b_line.push(on_beam(z) + across(b));
-    }
+    let (e_line, b_line): (Vec<_>, Vec<_>) = (0..samples)
+        .map(|i| {
+            let z = Z_MAX * i as f64 / (samples - 1) as f64;
+            let (e, b) = arrows(wave_at(modes, z, tau));
+            (on_beam(z) + across(e), on_beam(z) + across(b))
+        })
+        .unzip();
     sc.polyline(&b_line, 1.5, palette::sky().faded(0.8));
     sc.polyline(&e_line, 2.0, palette::orange());
     for k in 0..21 {

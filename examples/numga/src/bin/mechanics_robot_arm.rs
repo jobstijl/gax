@@ -83,8 +83,8 @@ mod arm {
             // The joint increments whose tip velocities best sum to the remaining error, applied
             // along the home-pose axes.
             let w = jacobian.lstsq(target - tip);
-            for (k, j) in joints.iter_mut().enumerate() {
-                *j += axis[k].gp(w.c[k]);
+            for ((j, a), rate) in joints.iter_mut().zip(axis).zip(w.c) {
+                *j += a.gp(rate);
             }
         }
         let (pose, frames) = forward_kinematics(&joints);

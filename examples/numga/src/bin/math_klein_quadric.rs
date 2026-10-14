@@ -83,10 +83,7 @@ mod klein {
     /// between it and a bivector is zero exactly on the bivectors that meet all four, which are
     /// the right singular vectors of zero singular value. Returns the pencil's two bivectors.
     pub fn pencil(lines: &[L; 4]) -> [L; 2] {
-        let mut misses: Line<(Line,), f64> = Line::zero();
-        for l in lines {
-            misses += *l * klein().of(*l).dual();
-        }
+        let misses: Line<(Line,), f64> = lines.iter().map(|l| *l * klein().of(*l).dual()).sum();
         let (_, _, right) = misses.svd();
         [right[4], right[5]]
     }

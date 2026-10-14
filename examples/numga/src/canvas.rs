@@ -394,12 +394,10 @@ impl Canvas {
                 }
             }
         }
-        for n in 0..self.touched.len() {
-            let i = self.touched[n];
-            self.add(i, l * self.cover[i]);
+        for i in self.touched.drain(..) {
+            self.px[i] += l * self.cover[i];
             self.cover[i] = 0.0;
         }
-        self.touched.clear();
     }
 
     /// The segments `segs` as one line `width` wide that covers what is below by
@@ -428,12 +426,10 @@ impl Canvas {
                 }
             }
         }
-        for n in 0..self.touched.len() {
-            let i = self.touched[n];
-            self.cover_with(i, l, opacity * self.cover[i]);
+        for i in self.touched.drain(..) {
+            self.px[i] = self.px[i].mix_light(l, opacity * self.cover[i]);
             self.cover[i] = 0.0;
         }
-        self.touched.clear();
     }
 
     /// A segment `width` wide.
@@ -514,7 +510,7 @@ impl Canvas {
         let mut cross: Vec<(f32, i32)> = Vec::new();
         const SUB: usize = 4;
         for y in y0..y1 {
-            cover.iter_mut().for_each(|v| *v = 0.0);
+            cover.fill(0.0);
             for sub in 0..SUB {
                 let fy = y as f32 + (sub as f32 + 0.5) / SUB as f32;
                 let row = Point2::xy(0.0, fy) & Point2::xy(1.0, fy);
@@ -528,12 +524,11 @@ impl Canvas {
                 }
                 cross.sort_by(|p, q| p.0.total_cmp(&q.0));
                 let mut wind = 0;
-                for k in 0..cross.len() {
+                for (k, &(start, d)) in cross.iter().enumerate() {
                     let before = wind;
-                    wind += cross[k].1;
+                    wind += d;
                     if before == 0 && wind != 0 {
                         // An inside span starts here and ends where the winding returns to 0.
-                        let start = cross[k].0;
                         let mut w = wind;
                         let mut end = start;
                         for &(x, d) in &cross[k + 1..] {

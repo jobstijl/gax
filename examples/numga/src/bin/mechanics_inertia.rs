@@ -91,11 +91,9 @@ macro_rules! principal_frame {
 
         /// The inertia of point masses, `Σ m p & [p, ·]`.
         pub fn inertia_of(points: &[Pt], masses: &[f64]) -> Inertia {
-            let mut inertia = Inertia::zero();
-            for (p, m) in points.iter().zip(masses) {
-                inertia += (*p & p.commutator(Line::slot())) * *m;
-            }
-            inertia
+            (points.iter().zip(masses))
+                .map(|(p, m)| (*p & p.commutator(Line::slot())) * *m)
+                .sum()
         }
 
         /// The point cloud's second-moment map, recovered from its inertia alone.
@@ -150,12 +148,10 @@ macro_rules! principal_frame {
         /// part is the motor (the pure ideal candidates of PGA have none).
         pub fn diagonalizing_motor(source: &[(f64, Pl); N], reference: &[Pl; N]) -> Mo {
             let slot = Motor::<(), f64>::slot();
-            let mut t = Motor::<(Motor,), f64>::zero();
-            let mut weights = [0.0; N];
-            for k in 0..N {
-                weights[k] = f64::from(1u32 << (N - 1 - k));
-                t += (reference[k] * slot * source[k].1).cast::<Motor>() * weights[k];
-            }
+            let weights: [f64; N] = core::array::from_fn(|k| f64::from(1u32 << (N - 1 - k)));
+            let t: Motor<(Motor,), f64> = (0..N)
+                .map(|k| (reference[k] * slot * source[k].1).cast::<Motor>() * weights[k])
+                .sum();
             let norms: Vec<f64> = source.iter().map(|(_, p)| p.norm()).collect();
             let scale = norms.iter().zip(&weights).map(|(n, w)| n * w).sum::<f64>();
             let live = norms.iter().filter(|n| **n > 1e-9 * norms[0]).count();

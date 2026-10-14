@@ -274,7 +274,7 @@ fn fano_panel(c: &mut Canvas, rect: Rect, lit: usize) {
             if k == lit { palette::orange() } else { dim },
         );
     }
-    for (k, place) in places().iter().enumerate().skip(1) {
+    for (place, name) in places().iter().zip(NAMES).skip(1) {
         ax.scatter(
             c,
             &[*place],
@@ -284,7 +284,7 @@ fn fano_panel(c: &mut Canvas, rect: Rect, lit: usize) {
         );
         ax.scatter(c, &[*place], Marker::Ring, 22.0, palette::ink());
         let label = *place + Point2::direction(0.0, -0.035);
-        ax.text(c, label, NAMES[k], 12.0, palette::ink(), Align::Center);
+        ax.text(c, label, name, 12.0, palette::ink(), Align::Center);
     }
     let [a, b, cc] = TRIPLES[lit].map(|k| NAMES[k]);
     let rule = format!("{a} {b} = {cc},  {b} {cc} = {a},  {cc} {a} = {b}");

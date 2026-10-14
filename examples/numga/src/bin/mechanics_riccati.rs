@@ -159,13 +159,13 @@ mod riccati {
         let effort_cost = EFFORT_SCALES.map(|s| effort.gp(s * DT));
 
         // Each tracking line's reading squared is that displacement's cost.
-        let mut state_cost: StateCost = Scalar::zero();
-        for (row, weights) in tracking_lines().iter().zip(TRACKING_WEIGHTS) {
-            for (l, w) in row.iter().zip(weights) {
+        let state_cost: StateCost = (tracking_lines().as_flattened().iter())
+            .zip(TRACKING_WEIGHTS.as_flattened())
+            .map(|(l, w)| {
                 let readout = *l & Point::slot();
-                state_cost += (readout * readout).gp(w * DT);
-            }
-        }
+                (readout * readout).gp(w * DT)
+            })
+            .sum();
 
         // Drag resists moving along either axis through the centre, and turning (the ideal
         // line); its inverse turns a push into a velocity twist.
@@ -453,12 +453,10 @@ mod tests {
                 .errors
                 .iter()
                 .map(|e| {
-                    let mut sum = 0.0;
-                    for (row, weights) in lines.iter().zip(TRACKING_WEIGHTS) {
-                        for (l, w) in row.iter().zip(weights) {
-                            sum += (*l & *e).s().powi(2) * w;
-                        }
-                    }
+                    let sum: f64 = (lines.as_flattened().iter())
+                        .zip(TRACKING_WEIGHTS.as_flattened())
+                        .map(|(l, w)| (*l & *e).s().powi(2) * w)
+                        .sum();
                     sum * DT
                 })
                 .collect();

@@ -604,6 +604,7 @@ fn main() {
 }
 
 #[cfg(test)]
+// The `[polarization][time][bead]` tables are read at neighbouring times and middles by index.
 #[allow(clippy::needless_range_loop)]
 mod tests {
     use super::curvature::*;
@@ -802,15 +803,10 @@ mod tests {
             let acceleration = accelerations(&time, 3.0, &reference);
             let displacement = integrate(&time, &acceleration);
             let prediction = expected(&time, &reference);
-            let mut error = 0.0f64;
-            for p in 0..3 {
-                for k in 0..count {
-                    for b in 0..reference.len() {
-                        let d = displacement[p][k][b];
-                        error = error.max(d.max_abs_diff(&prediction[p][k][b]));
-                    }
-                }
-            }
+            let error = (displacement.iter().flatten().flatten())
+                .zip(prediction.iter().flatten().flatten())
+                .map(|(d, want)| d.max_abs_diff(want))
+                .fold(0.0, f64::max);
             errors.push(error);
             last = Some((time, acceleration, displacement));
         }

@@ -56,10 +56,9 @@ mod camera_fit {
     /// by a direction, the displacement on the screen.
     pub fn misfit<T: Real>(images: &[Point<(), T>], observed: &[P]) -> T {
         let c = T::from_f64;
-        let mut sum = c(0.0);
-        for (a, o) in images.iter().zip(observed) {
-            sum = sum + (*a - o.map_coefs(c)).ideal_norm_squared();
-        }
+        let sum = images.iter().zip(observed).fold(c(0.0), |sum, (a, o)| {
+            sum + (*a - o.map_coefs(c)).ideal_norm_squared()
+        });
         sum / c(images.len() as f64)
     }
 

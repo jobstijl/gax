@@ -115,10 +115,12 @@ pub trait Lie: Motions<f64> {
     /// rate-to-momentum map `p & [p, ·]`: the join of the point with its own velocity under an
     /// open rate.
     fn inertia_of(points: &[P<Self>], masses: &[f64]) -> (Inertia<Self>, InertiaInv<Self>) {
-        let mut inertia = Inertia::<Self>::zero();
-        for (p, m) in points.iter().zip(masses) {
-            inertia += Self::point_inertia(*p) * *m;
-        }
+        let inertia = points
+            .iter()
+            .zip(masses)
+            .fold(Inertia::<Self>::zero(), |sum, (p, m)| {
+                sum + Self::point_inertia(*p) * *m
+            });
         (inertia, Self::mobility(inertia))
     }
 

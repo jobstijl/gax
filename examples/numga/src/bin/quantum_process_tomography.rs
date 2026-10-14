@@ -145,12 +145,9 @@ mod tomography {
 
     /// One use of the channel, then two, three, and so on, as composed maps.
     pub fn powers(device: Channel, steps: usize) -> Vec<Channel> {
-        let mut out = vec![device];
-        for _ in 1..steps {
-            let last = *out.last().expect("one use");
-            out.push(device.of(last));
-        }
-        out
+        std::iter::successors(Some(device), |last| Some(device.of(*last)))
+            .take(steps.max(1))
+            .collect()
     }
 
     /// Pure states on a closed latitude-longitude mesh of the Bloch sphere, `[latitude][longitude]`:

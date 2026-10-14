@@ -111,17 +111,16 @@ mod tests {
             let cone = outline(identity, *surface);
             let (conic, polar) = project(identity, *surface);
             let k_eye = surface.of(o);
-            let mut discs = Vec::new();
-            for r in 0..rows {
-                for col in 0..cols {
-                    let px = chart(Point2::xy(col as f32, r as f32));
+            let discs: Vec<_> = (0..rows)
+                .flat_map(|r| (0..cols).map(move |col| Point2::xy(col as f32, r as f32)))
+                .map(|pixel| {
+                    let px = chart(pixel);
                     let ray: Point = px.cast::<Trivector>();
                     let k_dir = surface.of(ray);
                     let (a, b, c) = ((ray & k_dir).s(), (ray & k_eye).s(), (o & k_eye).s());
-                    let disc = b * b - a * c;
-                    discs.push((px, disc, c));
-                }
-            }
+                    (px, b * b - a * c, c)
+                })
+                .collect();
             let largest = discs.iter().map(|d| d.1.abs()).fold(0.0, f64::max);
             let mut covered = 0;
             for (px, disc, c) in discs {
@@ -153,16 +152,10 @@ mod tests {
         let chart = chart(scene.fov, Rect::new(0.0, 0.0, 120.0, 90.0));
         let count = |surface: Quadric| {
             let cone = outline(identity, surface);
-            let mut n = 0;
-            for r in 0..90 {
-                for col in 0..120 {
-                    let px = chart(Point2::xy(col as f32, r as f32));
-                    if inside(cone, px) {
-                        n += 1;
-                    }
-                }
-            }
-            n
+            (0..90)
+                .flat_map(|r| (0..120).map(move |col| Point2::xy(col as f32, r as f32)))
+                .filter(|pixel| inside(cone, chart(*pixel)))
+                .count()
         };
         let sizes: Vec<usize> = scene.surfaces.iter().map(|s| count(*s)).collect();
         assert!(sizes[2] > sizes[1] && sizes[3] > sizes[1], "{sizes:?}");

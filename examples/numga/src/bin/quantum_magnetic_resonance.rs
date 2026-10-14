@@ -164,13 +164,10 @@ mod resonance {
 
     /// The evolution over its own span, then over twice and four times that span, and so on: each
     /// composed with itself for the next.
-    pub fn doublings(mut span: Evolution, count: usize) -> Vec<Evolution> {
-        let mut out = Vec::with_capacity(count);
-        for _ in 0..count {
-            out.push(span);
-            span = span.of(span);
-        }
-        out
+    pub fn doublings(span: Evolution, count: usize) -> Vec<Evolution> {
+        std::iter::successors(Some(span), |s| Some(s.of(*s)))
+            .take(count)
+            .collect()
     }
 
     /// Normal deviates of the given spread (numga's NumPy streams cannot be reproduced; the

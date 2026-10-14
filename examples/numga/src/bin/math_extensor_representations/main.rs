@@ -502,8 +502,8 @@ mod tests {
             use super::algebras::$name::{Scalar, $state as State};
             use super::$name::*;
             let reps = representations();
-            for (i, rep) in reps.blades.iter().enumerate() {
-                assert_eq!(reps.readout(*rep), blade(super::canonical_masks(N)[i]));
+            for (rep, mask) in reps.blades.iter().zip(super::canonical_masks(N)) {
+                assert_eq!(reps.readout(*rep), blade(mask));
             }
             let one = Scalar::<(), f64>::new(1.0);
             let arbitrary: Rep = (one * one.scalar_product(State::slot())).cast::<State>();

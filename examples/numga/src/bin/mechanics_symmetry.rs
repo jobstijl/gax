@@ -145,15 +145,16 @@ mod symmetry {
             .zip(gains)
             .map(|(a, g)| (*a * (*a | Vector::slot())).gp(g))
             .sum();
-        let mut out = vec![conductivity];
-        for group in groups {
+        let average = |group: &Vec<R>| {
             let sum: Response = group
                 .iter()
                 .map(|g| *g >> conductivity.of(*g << Vector::slot()))
                 .sum();
-            out.push(sum.gp(1.0 / group.len() as f64));
-        }
-        out
+            sum.gp(1.0 / group.len() as f64)
+        };
+        core::iter::once(conductivity)
+            .chain(groups.iter().map(average))
+            .collect()
     }
 
     /// One arm's inertia (unit mass), and the flywheel's: the arm's turned by each rotation and

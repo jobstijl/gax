@@ -557,11 +557,12 @@ pub fn ellipse(
     n: usize,
 ) -> Vec<gax::pga2d::Point<(), f64>> {
     use gax::pga2d::{Line, Point};
-    let mut stretch = Point::<(Point,), f64>::zero();
-    for (a, v) in axes.iter().zip(variances) {
-        let along = Point::direction(a.c[0], a.c[1]);
-        stretch += along.gp(2.0 * gax::Real::sqrt(v.max(0.0))) * (Line::from(*a) & Point::slot());
-    }
+    let stretch: Point<(Point,), f64> = (axes.iter().zip(variances))
+        .map(|(a, v)| {
+            let along = Point::direction(a.c[0], a.c[1]);
+            along.gp(2.0 * gax::Real::sqrt(v.max(0.0))) * (Line::from(*a) & Point::slot())
+        })
+        .sum();
     let (origin, east) = (Point::xy(0.0, 0.0), Point::direction(1.0, 0.0));
     (0..=n)
         .map(|k| {

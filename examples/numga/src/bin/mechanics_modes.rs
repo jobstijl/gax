@@ -175,15 +175,15 @@ fn spring_path(a: P, b: P) -> Vec<P> {
     let axis = b - a;
     let side = across(axis);
     let turns = 15;
-    let mut along = vec![(0.0, 0.0), (0.16, 0.0)];
-    for k in 0..turns {
+    let coil = (0..turns).map(|k| {
         let s = 0.20 + 0.60 * k as f64 / (turns - 1) as f64;
-        along.push((s, if k % 2 == 0 { 0.048 } else { -0.048 }));
-    }
-    along.extend([(0.84, 0.0), (1.0, 0.0)]);
-    along
-        .iter()
-        .map(|&(s, q)| a + axis.gp(s) + side.gp(q))
+        (s, if k % 2 == 0 { 0.048 } else { -0.048 })
+    });
+    [(0.0, 0.0), (0.16, 0.0)]
+        .into_iter()
+        .chain(coil)
+        .chain([(0.84, 0.0), (1.0, 0.0)])
+        .map(|(s, q)| a + axis.gp(s) + side.gp(q))
         .collect()
 }
 

@@ -234,19 +234,19 @@ mod dirac {
         let positron = unit_density((tx - h.of(tx) * (1.0 / e)) * 0.5);
         let times = linspace(0.0, seconds, count);
         let dt = times[1] - times[0];
-        let mut spinors = Vec::new();
-        let mut paths = Vec::new();
-        for share in MIXTURES {
-            let psi = evolve(
-                momentum,
-                MASS,
-                electron * (1.0 - share).sqrt() + positron * share.sqrt(),
-                &times,
-            );
-            let velocities: Vec<B> = psi.iter().map(|p| velocity(current(*p))).collect();
-            paths.push(path(&velocities, dt));
-            spinors.push(psi);
-        }
+        let (spinors, paths) = MIXTURES
+            .iter()
+            .map(|share| {
+                let psi = evolve(
+                    momentum,
+                    MASS,
+                    electron * (1.0 - share).sqrt() + positron * share.sqrt(),
+                    &times,
+                );
+                let velocities: Vec<B> = psi.iter().map(|p| velocity(current(*p))).collect();
+                (psi, path(&velocities, dt))
+            })
+            .unzip();
         (times, spinors, paths)
     }
 }

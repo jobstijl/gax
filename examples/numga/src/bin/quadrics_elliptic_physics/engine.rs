@@ -126,11 +126,11 @@ macro_rules! engine {
         /// weighted; negative weights mark the inside's core, positive ones its extents.
         pub fn quadric(diagonal: [f64; DIM]) -> DualQuadric {
             let plane = Plane::slot();
-            let mut q = DualQuadric::zero();
-            for (p, d) in basis().iter().zip(diagonal) {
-                q += (*p & plane) * p.gp(d);
-            }
-            q
+            basis()
+                .iter()
+                .zip(diagonal)
+                .map(|(p, d)| (*p & plane) * p.gp(d))
+                .sum()
         }
 
         /// The ellipsoid about the origin with the given half-widths along the axes, each the
@@ -287,15 +287,11 @@ macro_rules! engine {
         /// Broad phase: the pairs whose poles are closer than their reaches summed.
         pub fn candidates_near(bodies: &[Body]) -> Vec<(usize, usize)> {
             let poles: Vec<P> = bodies.iter().map(|b| b.motor >> origin()).collect();
-            let mut pairs = Vec::new();
-            for i in 0..bodies.len() {
-                for j in i + 1..bodies.len() {
-                    if arc(poles[i], poles[j]) < bodies[i].reach + bodies[j].reach {
-                        pairs.push((i, j));
-                    }
-                }
-            }
-            pairs
+            let n = bodies.len();
+            (0..n)
+                .flat_map(|i| (i + 1..n).map(move |j| (i, j)))
+                .filter(|&(i, j)| arc(poles[i], poles[j]) < bodies[i].reach + bodies[j].reach)
+                .collect()
         }
 
         /// The margin and deepest point of a pair, in the first body's frame, and the relative

@@ -220,14 +220,12 @@ pub fn deflection(body: &Body, beam: &Beam) -> [f64; 2] {
 /// polar line: a square larger than the section, cut by each of those half-planes.
 pub fn kern(body: &Body) -> Vec<P2> {
     let reach = 1.0;
-    let mut kern: Vec<P2> = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
+    let square: Vec<P2> = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
         .iter()
         .map(|(x, y)| P2::xy(x * reach, y * reach))
         .collect();
-    for q in &body.section.boundary {
-        kern = cut(&kern, pull(body.stiffness, *q));
-    }
-    kern
+    let cut_by = |kern: Vec<P2>, q: &P2| cut(&kern, pull(body.stiffness, *q));
+    body.section.boundary.iter().fold(square, cut_by)
 }
 
 /// The part of a convex polygon on the positive side of a line.

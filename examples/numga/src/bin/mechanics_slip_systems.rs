@@ -322,11 +322,9 @@ fn title(c: &mut Canvas, rect: Rect, text: &str) {
 fn mixed(amounts: &Systems<f64>) -> Light {
     let weights: Vec<f32> = amounts.iter().flatten().map(|a| a.abs() as f32).collect();
     let total: f32 = weights.iter().sum();
-    let mut light = gax_colour::DARK;
-    for (k, w) in weights.iter().enumerate() {
-        light += system_colour(k) * (w / total);
-    }
-    light
+    (weights.iter().enumerate()).fold(gax_colour::DARK, |light, (k, w)| {
+        light + system_colour(k) * (w / total)
+    })
 }
 
 /// The systems that carry a step's slip, one bit each.

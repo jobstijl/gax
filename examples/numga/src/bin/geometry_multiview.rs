@@ -157,11 +157,14 @@ macro_rules! multiview_core {
                 .iter()
                 .enumerate()
                 .map(|(c, m)| {
-                    let mut gradient: Scalar<(Twist,), f64> = Scalar::zero();
-                    for (p, row) in points.iter().zip(cones) {
-                        let local = *m << *p;
-                        gradient += row[c].of(local) & motion(local);
-                    }
+                    let gradient: Scalar<(Twist,), f64> = points
+                        .iter()
+                        .zip(cones)
+                        .map(|(p, row)| {
+                            let local = *m << *p;
+                            row[c].of(local) & motion(local)
+                        })
+                        .sum();
                     let step: Tw = information[c].lstsq_with(-gradient, 1e-4);
                     *m * step.gp(0.5 * damping * free[c]).exp()
                 })
@@ -179,12 +182,14 @@ macro_rules! multiview_core {
                 .iter()
                 .enumerate()
                 .map(|(c, m)| {
-                    let mut h: Information = Scalar::zero();
-                    for (p, row) in points.iter().zip(cones) {
-                        let moving = motion(*m << *p);
-                        h += row[c].of(moving) & moving;
-                    }
-                    h
+                    points
+                        .iter()
+                        .zip(cones)
+                        .map(|(p, row)| {
+                            let moving = motion(*m << *p);
+                            row[c].of(moving) & moving
+                        })
+                        .sum()
                 })
                 .collect()
         }
@@ -259,10 +264,8 @@ macro_rules! multiview_core {
                 let h_cam = camera_curvature(&motors, &scaled, &points);
                 information = h_cam;
                 for (p, row) in points.iter().zip(&scaled) {
-                    let mut h_pt: Scalar<(Direction, Direction), f64> = Scalar::zero();
-                    for (q, mv) in row.iter().zip(&moved) {
-                        h_pt += q.of(*mv) & *mv;
-                    }
+                    let h_pt: Scalar<(Direction, Direction), f64> =
+                        row.iter().zip(&moved).map(|(q, mv)| q.of(*mv) & *mv).sum();
                     for (c, m) in motors.iter().enumerate() {
                         let moving = motion(*m << *p);
                         let polar = row[c].of(moving);
@@ -589,17 +592,21 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
                 continue;
             }
             ahead = true;
-            let mut keep = 1.0;
-            for cone in &world {
-                keep *= 1.0 - 0.3 * coverage(value(&cone[k], p), PIXEL_ANGLE * d.max(0.05), pixel);
-            }
+            let keep: f64 = world
+                .iter()
+                .map(|cone| {
+                    1.0 - 0.3 * coverage(value(&cone[k], p), PIXEL_ANGLE * d.max(0.05), pixel)
+                })
+                .product();
             colour = cam.mix_light(colour, keep as f32);
         }
         if ahead {
-            let mut keep = 1.0;
-            for ((f, floor), r) in fused.iter().zip(&floors).zip(&radii) {
-                keep *= 1.0 - 0.95 * coverage(value(f, p) - floor, *r, pixel);
-            }
+            let keep: f64 = fused
+                .iter()
+                .zip(&floors)
+                .zip(&radii)
+                .map(|((f, floor), r)| 1.0 - 0.95 * coverage(value(f, p) - floor, *r, pixel))
+                .product();
             colour = splat.mix_light(colour, keep as f32);
         }
         Some(colour)

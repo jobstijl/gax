@@ -53,19 +53,11 @@ mod reciprocal {
                 side[e] = Some(f);
             }
         }
-        let mut beside = Beside {
-            inner: Vec::new(),
-            left: Vec::new(),
-            right: Vec::new(),
-        };
-        for e in 0..mesh.edges.len() {
-            if let (Some(l), Some(r)) = (left[e], right[e]) {
-                beside.inner.push(e);
-                beside.left.push(l);
-                beside.right.push(r);
-            }
-        }
-        beside
+        // The interior edges are those with a face on both sides.
+        let (inner, (left, right)) = (left.into_iter().zip(right).enumerate())
+            .filter_map(|(e, (l, r))| l.zip(r).map(|sides| (e, sides)))
+            .unzip();
+        Beside { inner, left, right }
     }
 
     /// The plane of each face of the terrain, through its corners at their heights, as the
@@ -147,15 +139,15 @@ mod scenes {
     pub fn grid() -> (Mesh, Field<Scalar3>) {
         let mut nudges = rng(GRID_SEED);
         let across = |i: usize| -1.0 + 2.0 * i as f64 / (SIDE - 1) as f64;
-        let mut points = Vec::new();
-        for i in 0..SIDE {
-            for j in 0..SIDE {
+        let points = (0..SIDE)
+            .flat_map(|i| (0..SIDE).map(move |j| (i, j)))
+            .map(|(i, j)| {
                 let point = Vector3::new(across(i), across(j), 0.0);
                 let inside = i > 0 && j > 0 && i < SIDE - 1 && j < SIDE - 1;
                 let nudge = Vector3::new(nudges.normal(), nudges.normal(), 0.0) * JITTER;
-                points.push(if inside { point + nudge } else { point });
-            }
-        }
+                if inside { point + nudge } else { point }
+            })
+            .collect();
         let mesh = Mesh::triangulate(Field::new(points));
         let heights = mesh.vertices.map(|v| Scalar3::new(v.norm_squared() / 2.0));
         (mesh, heights)

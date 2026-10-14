@@ -275,10 +275,8 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     // light of the path at once.
     let mut trail = sc.cast.trail.clone();
     trail.push(trail[0]);
-    for (k, w) in trail.windows(2).enumerate() {
-        if k % 2 == 0 {
-            s.seg(w[0], w[1], 1.2, amber().faded(0.8));
-        }
+    for w in trail.windows(2).step_by(2) {
+        s.seg(w[0], w[1], 1.2, amber().faded(0.8));
     }
     // The light's path, dimmer.
     let path: Vec<P> = sc.path.iter().chain(&sc.path[..1]).copied().collect();

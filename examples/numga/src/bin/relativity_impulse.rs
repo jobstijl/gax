@@ -928,6 +928,7 @@ fn main() {
 }
 
 #[cfg(test)]
+// The checks pair each kink with the next one and both ends by index.
 #[allow(clippy::needless_range_loop)]
 mod tests {
     use super::impulse::*;
@@ -1001,8 +1002,8 @@ mod tests {
         for rapidity in [-1.1, 1.1] {
             let (train, directions) = small_impulses(rapidity, 1, 0.2);
             let (events, step_directions) = velocity_step(0.0, rapidity);
-            for end in 0..2 {
-                assert!(train[0][end].max_abs_diff(&events[end]) <= ATOL);
+            for (a, b) in train[0].iter().zip(&events) {
+                assert!(a.max_abs_diff(b) <= ATOL);
             }
             for (a, b) in directions.iter().zip(step_directions) {
                 assert!(close(velocity(*a), velocity(b)));

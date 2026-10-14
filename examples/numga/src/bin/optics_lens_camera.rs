@@ -201,15 +201,11 @@ mod scenes {
     /// A grid of points at three depths in front of the camera, `[depth][height][width]`
     /// flattened (index `20 d + 4 h + w`).
     pub fn scene() -> Vec<P> {
-        let mut pts = Vec::with_capacity(60);
-        for x in [-3.2, -2.2, -1.6] {
-            for h in 0..5 {
-                for w in 0..4 {
-                    pts.push(Point::xyz(x, -0.8 + 0.4 * h as f64, -0.5 + w as f64 / 3.0));
-                }
-            }
-        }
-        pts
+        [-3.2, -2.2, -1.6]
+            .into_iter()
+            .flat_map(|x| (0..5).flat_map(move |h| (0..4).map(move |w| (x, h, w))))
+            .map(|(x, h, w)| Point::xyz(x, -0.8 + 0.4 * h as f64, -0.5 + w as f64 / 3.0))
+            .collect()
     }
 
     /// The subject on the far layer whose rays through the aperture rim are traced.
@@ -331,10 +327,8 @@ mod raster {
                 (y + SENSOR[0]) / pitch - 0.5,
                 (SENSOR[1] - z) / (2.0 * SENSOR[1] / rows as f64) - 0.5,
             ];
-            for i in 0..2 {
-                lo[i] = lo[i].min(at[i]);
-                hi[i] = hi[i].max(at[i]);
-            }
+            lo = std::array::from_fn(|i| lo[i].min(at[i]));
+            hi = std::array::from_fn(|i| hi[i].max(at[i]));
         }
         if !(lo.iter().chain(&hi).all(|v| v.is_finite())) {
             return [0, rows, 0, cols];

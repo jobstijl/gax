@@ -356,14 +356,14 @@ fn draw(c: &mut Canvas, t: f32) {
         let rect = drifts.column(p, 3).inset(40.0, 34.0, 12.0, 34.0);
         let ax = Axes::new(rect, [0.0, COMPARE_RUN as f32], [1e-12, 1.0]).log_y();
         ax.frame(c, &format!("{}D DRIFT", p + 3), "TIME", "");
-        for (s, (name, curve)) in STEPPERS.iter().zip(curves).enumerate() {
+        for ((name, curve), colour) in STEPPERS.iter().zip(curves).zip(colours) {
             let pts: Vec<Chart> = (1..=shown.min(curve.len() - 1))
                 .map(|j| Chart::xy(j as f64 * COMPARE_DT, curve[j].max(1e-30)))
                 .collect();
             if *name == "rk4" {
-                ax.dashed(c, &pts, 1.6, 5.0, colours[s]);
+                ax.dashed(c, &pts, 1.6, 5.0, colour);
             } else {
-                ax.polyline(c, &pts, 1.6, colours[s]);
+                ax.polyline(c, &pts, 1.6, colour);
             }
         }
         if p == 2 {

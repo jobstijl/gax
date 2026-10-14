@@ -178,10 +178,8 @@ mod cube {
 
     fn key(cube: &Cube) -> Key {
         let mut k = [0; 162];
-        for (i, v) in cube.iter().enumerate() {
-            for (j, c) in v.c.iter().enumerate() {
-                k[3 * i + j] = c.round() as i8;
-            }
+        for (slot, c) in k.iter_mut().zip(cube.iter().flat_map(|v| v.c)) {
+            *slot = c.round() as i8;
         }
         k
     }

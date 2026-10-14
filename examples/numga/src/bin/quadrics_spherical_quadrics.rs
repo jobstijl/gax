@@ -230,13 +230,9 @@ fn draw(c: &mut Canvas, t: f32) {
         let [u, v] = uv.to_euclidean();
         grid(u, v)
     };
-    let (mut lo, mut hi) = (f64::MAX, f64::MIN);
-    for i in 0..=60 {
-        for j in 0..=30 {
-            let v = pot(i as f32 / 60.0, j as f32 / 30.0);
-            (lo, hi) = (lo.min(v), hi.max(v));
-        }
-    }
+    let (lo, hi) = (0..=60)
+        .flat_map(|i| (0..=30).map(move |j| pot(i as f32 / 60.0, j as f32 / 30.0)))
+        .fold((f64::MAX, f64::MIN), |(lo, hi), v| (lo.min(v), hi.max(v)));
     for (i, title) in titles.iter().enumerate() {
         let rect = panels.column(i, 3);
         let cam = Camera::orbit(rect, ORIGIN3, 6.0, azimuth, 0.45, Lens::Parallel(1.45));
