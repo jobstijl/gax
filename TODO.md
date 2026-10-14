@@ -174,6 +174,9 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Sparse direct solves on field maps: sparse LU (Gilbert–Peierls, threshold pivoting) after a minimum-degree ordering, reusable factors, singularity reported
 - [x] Sparse least squares (LSQR) and generalized eigenproblems (shift-invert block Lanczos, Rayleigh–Ritz on the pencil) on field maps
 - [x] Faster sparse products in `f64`: measured and left as is. A packed CG and consecutive-column loads were both slower (ADR-046), and a mesh's rows are nearly equal in length, so sorting them (SELL-C-σ) has little padding to remove
+- [x] All of numga's examples ported (`examples/numga`, 104 binaries with every numga test): a mesh module with a gax Delaunay, scipy's optimizers replaced by gax solvers. Fixed in gax on the way: sparse `eigh` on indefinite pencils (Rayleigh–Ritz on the inverted operator), its stopping test (the backward error), its scale (∞-norms) and a final inverse-iteration step; jets' second derivatives where a first derivative is zero; `det` of a singular matrix; gax-colour's gamut mapping (keeps luminance); `Field::norm`
+- [ ] gax-gen derives the outermorphism from every full grade-1 kind to every single-grade kind eagerly: an 8D algebra declaring a 4-vector kind exhausts 6 GB at compile time (the Hubbard ring port split its orbitals by spin to avoid it). Needs a size limit or an opt-out
+- [ ] An algebra with an empty basis, Cl(0,0), cannot be declared (the extensor-representations port uses Cl(1,0)'s scalars for that row)
 - [ ] Proven rounding bounds from gax-bend: parked (its kernels' term order and fusion differ from gax's; gax-gen would have to export its trees)
 
 ## Decisions for the project owner
