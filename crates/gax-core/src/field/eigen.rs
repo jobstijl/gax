@@ -657,7 +657,6 @@ fn start_vector<T: Real>(n: usize, seed: u64) -> Vec<T> {
 /// 1-based indexing.
 fn symmetric_eigen<T: Real>(a: &[T], m: usize) -> (Vec<T>, Vec<Vec<T>>) {
     let zero = T::zero();
-    let one = T::one();
     // 1-based copies: a1[i][j] for i, j in 1..=m.
     let mut z: Vec<Vec<T>> = (0..=m)
         .map(|i| {
@@ -683,7 +682,6 @@ fn symmetric_eigen<T: Real>(a: &[T], m: usize) -> (Vec<T>, Vec<Vec<T>>) {
         .iter()
         .map(|&i| (1..=m).map(|row| z[row][i]).collect())
         .collect();
-    let _ = one;
     (theta, vectors)
 }
 
@@ -856,9 +854,7 @@ mod tests {
                 })
                 .collect();
             let (theta, s) = symmetric_eigen(&a, m);
-            for w in theta.windows(2) {
-                assert!(w[0] <= w[1]);
-            }
+            assert!(theta.windows(2).all(|w| w[0] <= w[1]));
             for (t, v) in theta.iter().zip(&s) {
                 for i in 0..m {
                     let av: f64 = (0..m).map(|j| a[i * m + j] * v[j]).sum();

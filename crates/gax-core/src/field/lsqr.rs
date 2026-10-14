@@ -22,12 +22,12 @@ where
             for k in self.starts[r]..self.starts[r + 1] {
                 let xs = &x[self.cols[k] * na..(self.cols[k] + 1) * na];
                 for (o, row) in self.cells[k].coeffs().as_ref().iter().enumerate() {
-                    let row = row.as_ref();
-                    let mut acc = y[r * nk + o];
-                    for i in 0..na {
-                        acc = row[i].mul_add(xs[i], acc);
-                    }
-                    y[r * nk + o] = acc;
+                    let out = &mut y[r * nk + o];
+                    *out = row
+                        .as_ref()
+                        .iter()
+                        .zip(xs)
+                        .fold(*out, |acc, (a, xi)| a.mul_add(*xi, acc));
                 }
             }
         }
@@ -40,10 +40,10 @@ where
         for r in 0..self.shape.0 {
             let ys = &y[r * nk..(r + 1) * nk];
             for k in self.starts[r]..self.starts[r + 1] {
-                let c = self.cols[k];
-                for (o, row) in self.cells[k].coeffs().as_ref().iter().enumerate() {
-                    for (i, &a) in row.as_ref().iter().enumerate() {
-                        x[c * na + i] = a.mul_add(ys[o], x[c * na + i]);
+                let xs = &mut x[self.cols[k] * na..(self.cols[k] + 1) * na];
+                for (row, &yo) in self.cells[k].coeffs().as_ref().iter().zip(ys) {
+                    for (xi, &a) in xs.iter_mut().zip(row.as_ref()) {
+                        *xi = a.mul_add(yo, *xi);
                     }
                 }
             }

@@ -62,11 +62,7 @@ impl<K: Kind, H: Kind, Tail: Slots + FillList<K>> FillStep<K, H, Tail> for True 
         // H and K are the same kind here, so both arrays have its length.
         let (a, xs) = (a.as_ref(), x.as_ref());
         let term = |i: usize| SlotArr::<Tail::Out, T>(Tail::fill(&a[i], x)).scale(xs[i]);
-        let mut acc = term(0);
-        for i in 1..a.len() {
-            acc = acc + term(i);
-        }
-        acc.0
+        (1..a.len()).fold(term(0), |acc, i| acc + term(i)).0
     }
 }
 

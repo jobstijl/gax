@@ -110,11 +110,7 @@ where
         let xc = x.coeffs().as_ref();
         Extensor::from_coeffs(<M::Kind as Kind>::arr_map(self.coeffs(), |col| {
             let col = col.as_ref();
-            let mut acc = xc[0] * col[0];
-            for i in 1..col.len() {
-                acc = acc + xc[i] * col[i];
-            }
-            acc
+            (1..col.len()).fold(xc[0] * col[0], |acc, i| acc + xc[i] * col[i])
         }))
     }
 

@@ -6,6 +6,7 @@
 //! have residuals `‖A v − λ v‖ ≤ c · n² · ε · ‖A‖` after convergence. With `n ≤ 8` and
 //! `ε = 2.2e-16` these are about 1e-14 relative; we assert 1e-11, which leaves a margin of about
 //! 1000 for growth and accumulated rounding while still catching any real error (which is O(1)).
+// The checks index rows, columns and lanes of several matrices at once.
 #![allow(clippy::needless_range_loop)]
 
 use gax_core::linalg::*;
@@ -56,9 +57,9 @@ fn check_lu<const N: usize>(v: &[f64], b: &[f64]) {
     let b: [f64; N] = core::array::from_fn(|i| b[i]);
     let x = lu_solve(&lu(&a), &b);
     let r = matvec(&a, &x);
-    for i in 0..N {
+    for (ri, bi) in r.iter().zip(&b) {
         assert!(
-            (r[i] - b[i]).abs() <= TOL * norm(&a) * vmax(&x).max(1.0),
+            (ri - bi).abs() <= TOL * norm(&a) * vmax(&x).max(1.0),
             "LU residual n={N}"
         );
     }
@@ -87,9 +88,9 @@ fn check_cholesky<const N: usize>(v: &[f64], b: &[f64]) {
     let b: [f64; N] = core::array::from_fn(|i| b[i]);
     let x = cholesky_solve(&l, &b);
     let r = matvec(&a, &x);
-    for i in 0..N {
+    for (ri, bi) in r.iter().zip(&b) {
         assert!(
-            (r[i] - b[i]).abs() <= TOL * norm(&a) * vmax(&x).max(1.0),
+            (ri - bi).abs() <= TOL * norm(&a) * vmax(&x).max(1.0),
             "Cholesky solve n={N}"
         );
     }

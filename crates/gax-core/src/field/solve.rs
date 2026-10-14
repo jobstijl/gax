@@ -40,11 +40,7 @@ where
                 let cell = self.cells[k].coeffs().as_ref();
                 for (o, row) in cell.iter().enumerate() {
                     let row = row.as_ref();
-                    let mut acc = xs[0] * row[0];
-                    for i in 1..n {
-                        acc = acc + xs[i] * row[i];
-                    }
-                    out[o] = out[o] + acc;
+                    out[o] = out[o] + (1..n).fold(xs[0] * row[0], |acc, i| acc + xs[i] * row[i]);
                 }
             }
         }
@@ -168,8 +164,8 @@ fn dot<T: Real>(a: &[T], b: &[T]) -> T {
     let (ca, ra) = a.as_chunks::<4>();
     let (cb, rb) = b.as_chunks::<4>();
     for (x, y) in ca.iter().zip(cb) {
-        for l in 0..4 {
-            s[l] = x[l].mul_add(y[l], s[l]);
+        for ((s, x), y) in s.iter_mut().zip(x).zip(y) {
+            *s = x.mul_add(*y, *s);
         }
     }
     let mut t = (s[0] + s[1]) + (s[2] + s[3]);
@@ -225,8 +221,8 @@ fn pcg<T: Real>(
         let rz_new = dot(&r, &z);
         let beta = rz_new / rz;
         rz = rz_new;
-        for k in 0..m {
-            p[k] = beta.mul_add(p[k], z[k]);
+        for (p, z) in p.iter_mut().zip(&z) {
+            *p = beta.mul_add(*p, *z);
         }
     }
     let converged = T::all_lt(rr, target) || rr == target;

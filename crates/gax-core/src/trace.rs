@@ -147,9 +147,7 @@ impl<M: Extensor<Slots = ()>> Traceable for M {
         M::from_coeffs(<M::Kind as Kind>::arr_from_fn(f))
     }
     fn for_each(&self, f: &mut dyn FnMut(M::Coef)) {
-        for &c in self.coeffs().as_ref() {
-            f(c);
-        }
+        self.coeffs().as_ref().iter().copied().for_each(f);
     }
     fn write_type(w: &mut dyn Write, coef: &str) -> fmt::Result {
         write_kind_path::<M::Kind>(w)?;
@@ -190,9 +188,7 @@ where
         Unit::new_unchecked(M::from_coeffs(<M::Kind as Kind>::arr_from_fn(f)))
     }
     fn for_each(&self, f: &mut dyn FnMut(M::Coef)) {
-        for &c in self.coeffs().as_ref() {
-            f(c);
-        }
+        self.coeffs().as_ref().iter().copied().for_each(f);
     }
     fn write_type(w: &mut dyn Write, coef: &str) -> fmt::Result {
         w.write_str("::gax::Unit<")?;
@@ -413,11 +409,11 @@ impl<A: Traceable, const N: usize> Traceable for [A; N] {
     }
     fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
         w.write_str("[")?;
-        for i in 0..N {
+        for (i, part) in parts.chunks(A::LEN).enumerate() {
             if i > 0 {
                 w.write_str(", ")?;
             }
-            A::write_construct(w, &parts[i * A::LEN..(i + 1) * A::LEN])?;
+            A::write_construct(w, part)?;
         }
         w.write_str("]")
     }
@@ -439,11 +435,11 @@ impl<A: Traceable, const N: usize> Traceable for [A; N] {
     fn write_wgsl_construct(w: &mut dyn Write, hint: &str, parts: &[&str]) -> fmt::Result {
         let inner = FieldBuf::hint(hint, 0);
         w.write_str("array(")?;
-        for i in 0..N {
+        for (i, part) in parts.chunks(A::LEN).enumerate() {
             if i > 0 {
                 w.write_str(", ")?;
             }
-            A::write_wgsl_construct(w, &inner, &parts[i * A::LEN..(i + 1) * A::LEN])?;
+            A::write_wgsl_construct(w, &inner, part)?;
         }
         w.write_str(")")
     }

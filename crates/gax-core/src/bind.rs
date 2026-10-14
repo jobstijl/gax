@@ -80,11 +80,7 @@ where
                         SlotArr::<X::Slots, M::Coef>(xs[i])
                             * SlotArr::<<M::Slots as SplitFirst>::Tail, M::Coef>(c[i])
                     };
-                    let mut acc = term(0);
-                    for i in 1..c.len() {
-                        acc = acc + term(i);
-                    }
-                    acc.0
+                    (1..c.len()).fold(term(0), |acc, i| acc + term(i)).0
                 })
             }};
         }

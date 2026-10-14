@@ -54,10 +54,7 @@ fn permute<S: Slots, D: Slots, X: Elem>(a: &S::Arr<X>, dims: &[usize], i: usize)
                     k += 1;
                 }
             }
-            let mut f = 0;
-            for d in 0..n {
-                f = f * dims[d] + orig[d];
-            }
+            let f = dims.iter().zip(&orig).fold(0, |f, (dim, o)| f * dim + o);
             S::get_flat(a, f)
         },
         0,

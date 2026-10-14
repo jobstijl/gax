@@ -9,7 +9,9 @@
 //! values agree within `c · n · ε · ‖A‖`, and vectors within that divided by the gap to the
 //! nearest other value, with the same order and the same signs.
 #![cfg(feature = "batch")]
-#![allow(clippy::needless_range_loop, clippy::float_cmp)] // exact comparisons are the point
+// Index loops: the checks compare rows, columns and lanes of several matrices at once. Exact
+// float comparisons are the point.
+#![allow(clippy::needless_range_loop, clippy::float_cmp)]
 
 use gax_core::batch::Lanes;
 use gax_core::linalg::*;
@@ -56,8 +58,8 @@ fn clustered<const N: usize>(v: &[f64], gap: f64) -> [[f64; N]; N] {
             }
         }
         let n = (0..N).map(|j| q[i][j] * q[i][j]).sum::<f64>().sqrt();
-        for j in 0..N {
-            q[i][j] /= n;
+        for x in &mut q[i] {
+            *x /= n;
         }
     }
     let vals: [f64; N] = core::array::from_fn(|k| match k {

@@ -230,11 +230,8 @@ where
     fn trace(self) -> M::Coef {
         let c = self.coeffs();
         let n = <M::Kind as Kind>::N;
-        let mut t = <M::Slots as Slots>::get_flat(&c.as_ref()[0], 0);
-        for i in 1..n {
-            t = t + <M::Slots as Slots>::get_flat(&c.as_ref()[i], i);
-        }
-        t
+        let diagonal = |i: usize| <M::Slots as Slots>::get_flat(&c.as_ref()[i], i);
+        (1..n).fold(diagonal(0), |t, i| t + diagonal(i))
     }
 }
 
@@ -336,10 +333,7 @@ where
         // `b x = μ (a + σ b) x`, μ ascending: λ = 1/μ − σ descends; finite λ have μ > 0.
         let (mus, xs) = linalg::eigh_generalized(&b, &shifted, sweeps(n));
         let tiny = T::<M>::epsilon() * T::<M>::from_i64(64);
-        let mut largest = T::<M>::zero();
-        for k in 0..n {
-            largest = largest.max(mus[k].abs());
-        }
+        let largest = (0..n).fold(T::<M>::zero(), |m, k| m.max(mus[k].abs()));
         let lambda = |k: usize| {
             if T::<M>::all_lt(tiny * largest, mus[k]) {
                 mus[k].recip() - sigma
@@ -485,11 +479,7 @@ where
         let term = |k: usize| {
             SlotArr::<Tail<M>, M::Coef>(<M::Slots as SplitFirst>::split(&c[k]).as_ref()[k])
         };
-        let mut acc = term(0);
-        for k in 1..c.len() {
-            acc = acc + term(k);
-        }
-        let v = acc.0;
+        let v = (1..c.len()).fold(term(0), |acc, k| acc + term(k)).0;
         <Self::Output as Extensor>::from_coeffs(<<M::Kind as Kind>::Scalar as Kind>::arr_from_fn(
             |_| v,
         ))

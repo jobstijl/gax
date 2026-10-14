@@ -713,10 +713,10 @@ mod tests {
             interp4([e[0], e[1], e[2], e[3]], &Tau).to_vec()
         };
         for &x in l {
-            let mut at = Cx::real(0.0);
-            for a in alpha.iter().rev() {
-                at = at * x + Cx::real(*a);
-            }
+            let at = alpha
+                .iter()
+                .rev()
+                .fold(Cx::real(0.0), |at, a| at * x + Cx::real(*a));
             let want = if x.norm2() < 1e-20 {
                 Cx::real(1.0)
             } else {
@@ -761,10 +761,7 @@ mod tests {
             } else {
                 x.sqrt().cosh().ln()
             };
-            let mut s = 0.0;
-            for a in LNCOSH.iter().rev() {
-                s = s * x + a;
-            }
+            let s = LNCOSH.iter().rev().fold(0.0, |s, a| s * x + a);
             assert!((s - want).abs() < 1e-14, "{x}: {s} vs {want}");
         }
         // ln C over the roots, against Σ ln cosh μ.
@@ -791,10 +788,7 @@ mod tests {
             } else {
                 x.sqrt().tanh() / x.sqrt()
             };
-            let mut s = 0.0;
-            for a in TAU.iter().rev() {
-                s = s * x + a;
-            }
+            let s = TAU.iter().rev().fold(0.0, |s, a| s * x + a);
             assert!((s - want).abs() < 1e-14, "{x}: {s} vs {want}");
         }
     }

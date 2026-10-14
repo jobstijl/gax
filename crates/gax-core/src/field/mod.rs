@@ -210,18 +210,19 @@ impl<M: Extensor> Field<M> {
     #[must_use]
     pub fn dot(&self, other: &Self) -> M::Coef {
         same_sites(self.len(), other.len());
-        let n = <M::Slots as Slots>::SIZE;
-        let mut sum = M::Coef::zero();
-        for (a, b) in self.sites.iter().zip(&other.sites) {
-            for (ca, cb) in a.coeffs().as_ref().iter().zip(b.coeffs().as_ref()) {
-                for k in 0..n {
-                    sum = <M::Slots as Slots>::get_flat(ca, k)
-                        .mul_add(<M::Slots as Slots>::get_flat(cb, k), sum);
-                }
-            }
-        }
-        sum
+        self.sites
+            .iter()
+            .zip(&other.sites)
+            .flat_map(|(a, b)| coefficients(a).zip(coefficients(b)))
+            .fold(M::Coef::zero(), |sum, (x, y)| x.mul_add(y, sum))
     }
+}
+
+/// Every coefficient of `m`, output first, each slot array in its flat order.
+fn coefficients<M: Extensor>(m: &M) -> impl Iterator<Item = M::Coef> + '_ {
+    m.coeffs().as_ref().iter().flat_map(|col| {
+        (0..<M::Slots as Slots>::SIZE).map(move |k| <M::Slots as Slots>::get_flat(col, k))
+    })
 }
 
 impl<M: Extensor<Coef: Real>> Field<M> {
