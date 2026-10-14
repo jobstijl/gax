@@ -8,8 +8,9 @@
 
 use crate::canvas::{Canvas, Rect};
 use crate::font::{self, Align};
-use crate::points::{Dir2, Map2, Point2, Pos2, box_map, finite};
+use crate::points::{Dir2, Map2, Point2, Pos2, box_map};
 use crate::{contour, palette};
+use gax::Extensor;
 use gax::pga2d::Motor;
 use gax_colour::Light;
 
@@ -323,7 +324,7 @@ impl Axes {
         let mut runs = vec![Vec::new()];
         for p in pts {
             let p = p.point2();
-            if finite(p) {
+            if p.is_finite() {
                 runs.last_mut().expect("a run").push(self.px(p));
             } else if !runs.last().expect("a run").is_empty() {
                 runs.push(Vec::new());
@@ -386,7 +387,7 @@ impl Axes {
         self.clip(c);
         for p in pts {
             let p = p.point2();
-            if finite(p) {
+            if p.is_finite() {
                 mark(c, self.px(p), marker, size, l);
             }
         }
@@ -548,8 +549,8 @@ pub fn arrow(c: &mut Canvas, a: Point2, b: Point2, width: f32, head: f32, l: Lig
 }
 
 /// The 2σ ellipse of a planar Gaussian about `centre`, from its variances and principal axes
-/// (unit directions, as `eigh` gives them), as `n + 1` points around it: the unit circle turned
-/// by rotations and stretched by `2√variance` along each axis (a sum of dyads).
+/// (unit directions, as `eigh` gives them), as `n + 1` points around it: the unit directions
+/// round the circle, stretched by `2√variance` along each axis (a sum of dyads).
 pub fn ellipse(
     centre: gax::pga2d::Point<(), f64>,
     variances: [f64; 2],
@@ -563,11 +564,10 @@ pub fn ellipse(
             along.gp(2.0 * gax::Real::sqrt(v.max(0.0))) * (Line::from(*a) & Point::slot())
         })
         .sum();
-    let (origin, east) = (Point::xy(0.0, 0.0), Point::direction(1.0, 0.0));
     (0..=n)
         .map(|k| {
-            let turn = Motor::rotation(origin, core::f64::consts::TAU * k as f64 / n as f64);
-            centre + stretch.of(turn >> east)
+            let d = Point::direction_from_angle(core::f64::consts::TAU * k as f64 / n as f64);
+            centre + stretch.of(d)
         })
         .collect()
 }

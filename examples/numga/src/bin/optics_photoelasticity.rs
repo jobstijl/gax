@@ -49,11 +49,6 @@ mod photoelasticity {
         Planar::new(1.0, 0.0)
     }
 
-    /// The direction in the plate at `angle` from `x`, counterclockwise.
-    pub fn heading(angle: f64) -> Planar {
-        Pseudoscalar::new(-angle / 2.0).exp() >> x()
-    }
-
     /// The circular state, at the sphere's pole.
     pub fn circular() -> Polarization {
         Polarization::new(0.0, 0.0, 1.0)
@@ -180,7 +175,7 @@ mod photoelasticity {
     /// The states light enters the polariscopes in: the two linear states, and the circular
     /// one. Each analyser passes the opposite state, so without stress every view is dark.
     pub fn incident_states() -> [Polarization; 3] {
-        let linear = POLARIZER_ANGLES.map(|angle| polarization(heading(angle)));
+        let linear = POLARIZER_ANGLES.map(|angle| polarization(Planar::from_angle(angle)));
         [linear[0], linear[1], circular()]
     }
 }
@@ -391,7 +386,7 @@ mod tests {
         let (radius, tension, samples) = (1.4, 2.3, 73);
         let remote = uniform_stress(1.7, -0.4, 0.6);
         for k in 0..samples {
-            let normal = heading(core::f64::consts::TAU * k as f64 / samples as f64);
+            let normal = Planar::from_angle(core::f64::consts::TAU * k as f64 / samples as f64);
             let traction = kirsch(normal * radius, radius, remote).of(normal);
             assert!(traction.max_abs_diff(&Planar::zero()) < ROUND_OFF);
         }

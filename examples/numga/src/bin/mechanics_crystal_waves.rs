@@ -397,7 +397,7 @@ mod tests {
                 let (values, polarization) = waves(crystal, *h);
                 let velocity = energy_flow(crystal, *h, &polarization, DENSITY[m]);
                 for v in velocity {
-                    swing[m] = swing[m].max(gax_numga_examples::measure::angle(*h, v));
+                    swing[m] = swing[m].max(h.angle_between(v));
                 }
                 if m == 0 {
                     assert!((values[0] - values[1]).abs() <= 1e-8 * values[1]);
@@ -430,8 +430,7 @@ mod tests {
     fn angles_between_vectors() {
         for a in [0.0, 0.4, 1.9, 3.1] {
             let b = 0.25;
-            let angle =
-                gax_numga_examples::measure::angle(face_heading(b), face_heading(a + b).gp(2.5));
+            let angle = face_heading(b).angle_between(face_heading(a + b).gp(2.5));
             assert!((angle - a).abs() < 1e-12, "{a} {angle}");
         }
     }

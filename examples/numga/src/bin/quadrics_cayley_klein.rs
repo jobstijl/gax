@@ -20,7 +20,6 @@ use gax_numga_examples::{
 
 mod cayley_klein {
     use gax::pga2d::{Line, Point};
-    use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
     pub type P = Point<(), f64>;
@@ -69,7 +68,7 @@ mod cayley_klein {
 
     /// A Cayley-Klein geometry: its absolute, and the angles and distances it measures, each the
     /// norm of the logarithm of the rotor between two vectors of the algebra whose metric is the
-    /// absolute.
+    /// absolute (for the elliptic plane's Euclidean metric, gax's `angle_between`).
     pub trait Geometry {
         /// The absolute.
         fn absolute() -> Polarity;
@@ -114,12 +113,12 @@ mod cayley_klein {
 
         fn angle(l: L, m: L) -> f64 {
             let line = |l: L| gax::vga3d::Vector::<(), f64>::new(l.e1(), l.e2(), l.e0());
-            measure::angle(line(l), line(m))
+            line(l).angle_between(line(m))
         }
 
         fn distance(a: P, b: P) -> f64 {
             let point = |p: P| gax::vga3d::Vector::<(), f64>::new(p.e20(), p.e01(), p.e12());
-            measure::angle(point(a), point(b))
+            point(a).angle_between(point(b))
         }
     }
 

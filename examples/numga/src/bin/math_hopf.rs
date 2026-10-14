@@ -172,12 +172,10 @@ fn at(v: V) -> gax::pga3d::Point<(), f64> {
     gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
 }
 
-/// A direction's azimuth: the angle about z from x to its part in the xy plane, read off the
-/// logarithm of the rotor that turns one into the other (`level x` turns by minus the angle).
+/// A direction's azimuth: the signed angle about z from x to its part in the xy plane.
 fn azimuth(d: V) -> f64 {
-    let level: V = Vector::new(d.e1(), d.e2(), 0.0);
-    let turn: Bivector<(), f64> = (level * Vector::new(1.0, 0.0, 0.0)).normalized().log();
-    -turn.e12()
+    let x = gax::vga2d::Vector::new(1.0, 0.0);
+    x.angle_to(gax::vga2d::Vector::new(d.e1(), d.e2()))
 }
 
 /// A direction's colour: its azimuth as the hue, whitened a little, fainter towards the south

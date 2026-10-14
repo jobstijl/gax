@@ -346,10 +346,9 @@ fn bottom_middle(r: Rect) -> Point2 {
     r.bottom_middle()
 }
 
-/// The angle between two vectors in degrees: the norm of the logarithm of the rotor from one to
-/// the other, `b a` normalized.
+/// The angle between two vectors in degrees.
 fn degrees(a: V, b: V) -> f64 {
-    gax_numga_examples::measure::angle(a, b).to_degrees()
+    a.angle_between(b).to_degrees()
 }
 
 fn conduction_scene(c: &mut Canvas, s: f32) {

@@ -304,7 +304,6 @@ mod tests {
     use super::scenegraph::*;
     use gax::ApproxEq;
     use gax::pga3d::{Motor, Plane, Point};
-    use gax_numga_examples::measure::turn;
 
     /// Whether `p` is the Euclidean point `want` to within `tol` in each coordinate.
     fn at(p: P, want: [f64; 3], tol: f64) -> bool {
@@ -369,7 +368,7 @@ mod tests {
         // As numga builds it: a pitch about x, after the translation. The pitch is the turn
         // from straight ahead (4 along y) to the target (down 0.5).
         let level = gax::vga2d::Vector::new(4.0, 0.0);
-        let pitch = turn(level, gax::vga2d::Vector::new(4.0, 1.0 - 1.5));
+        let pitch = level.angle_to(gax::vga2d::Vector::new(4.0, 1.0 - 1.5));
         let numga = Motor::translation(0.0, -4.0, 1.5)
             * Motor::rotation(axis(1.0, 0.0, 0.0), pitch - core::f64::consts::FRAC_PI_2);
         let p = Point::xyz(0.3, -0.2, 0.7);

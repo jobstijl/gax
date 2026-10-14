@@ -7,7 +7,6 @@
 //! conversion here. Positions are PGA points; a VGA vector is a direction only (to draw where it
 //! points, add it to the origin).
 
-use crate::signal::phasor;
 use gax::{Coef, Real, pga2d, pga3d, vga2d, vga3d};
 use pga2d::Motor;
 
@@ -156,16 +155,17 @@ pub fn vector3(p: Point2) -> vga3d::Vector<(), f64> {
 }
 
 /// The circle about `centre` of `radius` as a closed polygon of `segments` sides: `segments + 1`
-/// points, the first repeated last, the phasors of even turns scaled and moved to the centre.
+/// points, the first repeated last, the unit directions at even angles scaled and moved to the
+/// centre.
 pub fn circle<T: Real>(
     centre: pga2d::Point<(), T>,
     radius: T,
     segments: usize,
 ) -> Vec<pga2d::Point<(), T>> {
     let tau = T::from_f64(core::f64::consts::TAU);
-    let turn = |k: usize| tau * T::from_f64(k as f64) / T::from_f64(segments as f64);
+    let angle = |k: usize| tau * T::from_f64(k as f64) / T::from_f64(segments as f64);
     (0..=segments)
-        .map(|k| centre + phasor(turn(k)).gp(radius))
+        .map(|k| centre + pga2d::Point::direction_from_angle(angle(k)).gp(radius))
         .collect()
 }
 
@@ -174,25 +174,4 @@ pub fn circle<T: Real>(
 pub fn from_above(p: impl Pos3) -> Point2 {
     let p = p.point3();
     Point2::new(p.e032(), p.e013(), p.e123())
-}
-
-/// A drawing point whose coefficients can be checked.
-pub trait Finite: Copy {
-    /// Whether every coefficient is finite.
-    fn is_finite(self) -> bool;
-}
-impl Finite for Point2 {
-    fn is_finite(self) -> bool {
-        self.c.iter().all(|x| x.is_finite())
-    }
-}
-impl Finite for Point3 {
-    fn is_finite(self) -> bool {
-        self.c.iter().all(|x| x.is_finite())
-    }
-}
-
-/// Whether a sample did not blow up: every coefficient finite.
-pub fn finite(p: impl Finite) -> bool {
-    p.is_finite()
 }

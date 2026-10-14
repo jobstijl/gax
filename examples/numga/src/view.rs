@@ -137,10 +137,9 @@ impl Camera {
         let half = 0.5 * self.viewport.height();
         match self.lens {
             Lens::Perspective(fov) => {
-                // The edge of the view: the direction along x turned by half the field of view;
-                // its height over its width is the tangent.
-                let edge = gax::pga2d::Motor::rotation(ORIGIN2, fov * 0.5)
-                    >> gax::pga2d::Point::direction(1.0, 0.0);
+                // The edge of the view: the direction at half the field of view; its height
+                // over its width is the tangent.
+                let edge = Point2::direction_from_angle(fov * 0.5);
                 half * edge.e20() / edge.e01()
             }
             Lens::Parallel(half_height) => half / half_height,

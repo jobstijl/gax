@@ -15,6 +15,7 @@
 
 use crate::font::{self, Align};
 use crate::points::{Map2, Point2, box_map};
+use gax::Extensor;
 use gax_colour::{DARK, Light, Srgb};
 
 /// How far AgX's look moves colours away from grey (as warp's).
@@ -175,7 +176,7 @@ fn centre(x: usize, y: usize) -> Point2 {
 
 /// Whether a point is finite and not at infinity (a sample that did not blow up).
 fn drawable(p: Point2) -> bool {
-    p.c.iter().all(|x| x.is_finite()) && p.e12() != 0.0
+    p.is_finite() && p.e12() != 0.0
 }
 
 /// The distance of `q` to the segment from `a` to `b` (unit points): to its line where the foot

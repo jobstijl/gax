@@ -100,7 +100,7 @@ fn the_chain_rule_gives_the_derivatives_through_the_solve() {
     let lattice = lattice();
     // A shape off its equilibrium, in a field off the lattice's axes.
     let positions = &lattice.rest + &displacement(5, lattice.particles(), 0.05);
-    let applied = direction(0.4) * FIELD;
+    let applied = V::from_angle(0.4) * FIELD;
     let chained = lattice.derivatives(&positions, applied);
     let solved = through_the_solve(&lattice, &positions, applied);
     let difference = |a: &Field<Form>, b: &Field<Form>| {

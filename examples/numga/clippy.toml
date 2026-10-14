@@ -1,25 +1,26 @@
 # The shared drawing code's geometry goes through gax, as in examples/warp: no square roots,
 # trigonometry or hypotenuses on floats. Lengths are the norms of joins (or ideal norms), turns
-# are rotation motors, shading is the inner product of planes. The ban is an error in the
-# library and the example binaries alike (`[lints]` in Cargo.toml); a scalar formula that is not
-# geometry (a physical law, a statistic, a test's reference) carries its own `allow` and reason.
+# are rotation motors, the direction at an angle and the angle between directions are gax's,
+# shading is the inner product of planes. The ban is an error in the library and the example
+# binaries alike (`[lints]` in Cargo.toml); a scalar formula that is not geometry (a physical
+# law, a statistic, a test's reference) carries its own `allow` and reason.
 disallowed-methods = [
     { path = "f32::sqrt", reason = "lengths are gax: the norm of a join, ideal_norm" },
     { path = "f64::sqrt", reason = "lengths are gax: the norm of a join, ideal_norm" },
     { path = "f32::hypot", reason = "lengths are gax: ideal_norm" },
     { path = "f64::hypot", reason = "lengths are gax: ideal_norm" },
-    { path = "f32::sin", reason = "turns are rotation motors" },
-    { path = "f64::sin", reason = "turns are rotation motors" },
-    { path = "f32::cos", reason = "turns are rotation motors" },
-    { path = "f64::cos", reason = "turns are rotation motors" },
-    { path = "f32::sin_cos", reason = "turns are rotation motors" },
-    { path = "f64::sin_cos", reason = "turns are rotation motors" },
+    { path = "f32::sin", reason = "turns are rotation motors; a phasor is gax's direction_from_angle" },
+    { path = "f64::sin", reason = "turns are rotation motors; a phasor is gax's direction_from_angle" },
+    { path = "f32::cos", reason = "turns are rotation motors; a phasor is gax's direction_from_angle" },
+    { path = "f64::cos", reason = "turns are rotation motors; a phasor is gax's direction_from_angle" },
+    { path = "f32::sin_cos", reason = "turns are rotation motors; a phasor is gax's direction_from_angle" },
+    { path = "f64::sin_cos", reason = "turns are rotation motors; a phasor is gax's direction_from_angle" },
     { path = "f32::tan", reason = "a turned direction's height over its width" },
     { path = "f64::tan", reason = "a turned direction's height over its width" },
-    { path = "f32::atan2", reason = "angles come from rotations between directions" },
-    { path = "f64::atan2", reason = "angles come from rotations between directions" },
-    { path = "f32::asin", reason = "angles come from rotations between directions" },
-    { path = "f64::asin", reason = "angles come from rotations between directions" },
-    { path = "f32::acos", reason = "angles come from rotations between directions" },
-    { path = "f64::acos", reason = "angles come from rotations between directions" },
+    { path = "f32::atan2", reason = "angles between directions are gax's angle_between and angle_to" },
+    { path = "f64::atan2", reason = "angles between directions are gax's angle_between and angle_to" },
+    { path = "f32::asin", reason = "angles between directions are gax's angle_between and angle_to" },
+    { path = "f64::asin", reason = "angles between directions are gax's angle_between and angle_to" },
+    { path = "f32::acos", reason = "angles between directions are gax's angle_between and angle_to" },
+    { path = "f64::acos", reason = "angles between directions are gax's angle_between and angle_to" },
 ]

@@ -91,12 +91,6 @@ mod pascal {
         Point::xy(0.0, 0.0)
     }
 
-    /// The point at infinity in the direction at an angle: the direction along x turned about
-    /// the origin.
-    pub fn heading(angle: f64) -> P {
-        Motor::rotation(origin(), angle) >> Point::direction(1.0, 0.0)
-    }
-
     /// The point at an angle on an ellipse off the origin: the point of the unit circle at the
     /// angle, stretched by 1.6 along x and moved to (0.3, -0.1).
     pub fn ellipse_point(angle: f64) -> P {
@@ -120,7 +114,7 @@ mod pascal {
     pub fn scene(angle: f64) -> (Conic, [P; 6], [P; 3]) {
         let five = five();
         let shape = conic(five);
-        let sixth = second_crossing(shape, five[0], heading(angle));
+        let sixth = second_crossing(shape, five[0], Point::direction_from_angle(angle));
         let sixth = sixth.unitized();
         let hexagon = [five[0], five[1], five[2], five[3], five[4], sixth];
         (shape, hexagon, crossings(&hexagon))

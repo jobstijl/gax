@@ -436,8 +436,8 @@ mod scenarios {
                 dt,
             );
             if i % every == 0 {
-                // The axis's angle from vertical: twice the size of the turn between them.
-                let lean = Motor::rotation_between(up, motor >> up).log().norm() * 2.0;
+                // The axis's angle from vertical.
+                let lean = up.angle_between(motor >> up);
                 samples.push(Sample {
                     motor,
                     tilt: lean,

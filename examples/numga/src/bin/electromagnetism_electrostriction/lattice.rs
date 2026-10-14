@@ -5,8 +5,7 @@ use super::pairs::between_others;
 use gax::Real;
 use gax::dual::hessian;
 use gax::field::{Field, SparseLu, SparseMap};
-use gax::vga2d::{Pseudoscalar, Scalar, Vector};
-use gax_numga_examples::mesh::from_columns;
+use gax::vga2d::{Scalar, Vector};
 
 pub type V = Vector<(), f64>;
 /// A vector with coefficients `T`: a position, or one carrying derivatives.
@@ -22,11 +21,6 @@ pub type Form2 = Scalar<(Vector, Vector), f64>;
 
 pub const X: V = V::new(1.0, 0.0);
 pub const Y: V = V::new(0.0, 1.0);
-
-/// The unit vector at `angle` counter-clockwise from `x`: `x` turned by `exp(-angle/2 e12)`.
-pub fn direction(angle: f64) -> V {
-    Pseudoscalar::new(-angle / 2.0).exp() >> X
-}
 
 /// A value of `f64` as one of coefficients `T`.
 pub fn lift<T: Real>(v: V) -> Vt<T> {
@@ -79,7 +73,7 @@ impl Lattice {
     /// Each bond's second particle less its first, from the particles to the bonds.
     pub fn bond_ends<T: Real>(&self) -> SparseMap<Scalar<(), T>> {
         let sign = |end: usize| Scalar::new(T::from_f64([-1.0, 1.0][end]));
-        from_columns(&self.bonds, self.particles(), |_, end| sign(end))
+        SparseMap::from_columns(&self.bonds, self.particles(), |_, end| sign(end))
     }
 
     /// Each bond, directed from its first particle to its second.
@@ -354,7 +348,7 @@ pub const LOAD_SAMPLES: usize = 25;
 /// The lattice: its two directions meet at sixty degrees.
 pub fn lattice() -> Lattice {
     let (indices, bonds) = hexagonal_indices(RINGS);
-    let across = direction(core::f64::consts::PI / 3.0);
+    let across = V::from_angle(core::f64::consts::PI / 3.0);
     let rest = indices
         .iter()
         .map(|&[a, b]| (X * a as f64 + across * b as f64) * SPACING)
@@ -374,5 +368,5 @@ pub fn lattice() -> Lattice {
 pub fn turning(share: f64) -> V {
     let turned = core::f64::consts::TAU * share;
     let strength = FIELD * gax_numga_examples::signal::haversine(turned);
-    direction(turned) * strength
+    V::from_angle(turned) * strength
 }

@@ -5,8 +5,9 @@
 
 use crate::canvas::{Canvas, Rect};
 use crate::plot::{Marker, arrow, mark};
-use crate::points::{Dir3, ORIGIN3, Point2, Point3, Pos3, finite};
+use crate::points::{Dir3, ORIGIN3, Point2, Point3, Pos3};
 use crate::view::Camera;
+use gax::Extensor;
 use gax::pga3d::{Motor, Plane, Point};
 use gax_colour::Light;
 
@@ -110,7 +111,7 @@ impl Scene3 {
         let id = self.strokes;
         self.strokes += 1;
         let pts: Vec<Point3> = pts.iter().map(|p| p.point3()).collect();
-        let ok = |k: usize| finite(pts[k]) && finite(pts[k + 1]);
+        let ok = |k: usize| pts[k].is_finite() && pts[k + 1].is_finite();
         let n = pts.len().saturating_sub(1);
         for k in (0..n).filter(|&k| ok(k)) {
             // Round where the stroke ends (or a non-finite point breaks it), flat at joints.
@@ -126,7 +127,7 @@ impl Scene3 {
         self.strokes += 1;
         for &[a, b] in segs {
             let (a, b) = (a.point3(), b.point3());
-            if finite(a) && finite(b) {
+            if a.is_finite() && b.is_finite() {
                 self.segment([a, b], [true, true], width, color, id);
             }
         }
@@ -167,7 +168,7 @@ impl Scene3 {
         for i in 0..nu {
             for j in 0..nv {
                 let (a, b, c, d) = (p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1));
-                if ![a, b, c, d].into_iter().all(finite) {
+                if ![a, b, c, d].into_iter().all(|p| p.is_finite()) {
                     continue;
                 }
                 let col = self.lit(

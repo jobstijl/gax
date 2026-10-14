@@ -136,7 +136,7 @@ mod conic {
         let (x0, y0) = semi_axes(eigenvalues);
         let pole = Vector::new(0.0, 0.0, 1.0);
         let (minor, major) = (lift(x0, 0.0).undual(), lift(0.0, y0).undual());
-        let theta_a = measure::angle(pole, major);
+        let theta_a = pole.angle_between(major);
         // Spherical Pythagoras: the focal arc's cosine is the ratio of the semi-axes' cosines,
         // their heights over the equator. The foci are the points of the meridian plane x = 0
         // at that height.

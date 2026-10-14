@@ -17,8 +17,7 @@
 //! The disks are flat meshes in the xy plane: concentric rings ([`Mesh::disk`]), rings of nearly
 //! equilateral cells ([`Mesh::concentric_disk`]), and a hexagonal lattice mapped onto a circle
 //! ([`Mesh::triangular_disk`]); the last two are Delaunay triangulations of their vertices
-//! ([`Mesh::triangulate`], written here with gax predicates, where numga calls scipy). Angles are
-//! rotors: the direction at an angle is `e1` turned by `exp(-angle/2 e12)`.
+//! ([`Mesh::triangulate`], written here with gax predicates, where numga calls scipy).
 
 mod delaunay;
 mod disks;
@@ -42,30 +41,11 @@ pub fn scalar<V: Extensor>(x: f64) -> ScalarOf<V> {
     ScalarOf::<V>::from_coeffs(<<V::Kind as Kind>::Scalar as Kind>::arr_from_fn(|_| x))
 }
 
-/// The field map whose row `r` couples to the input sites `columns[r]`, its `k`-th through the
-/// cell `cell(r, k)`: numga's `SparseExtensor.from_columns`.
-pub fn from_columns<C: Copy, const N: usize>(
-    columns: &[[usize; N]],
-    inputs: usize,
-    mut cell: impl FnMut(usize, usize) -> C,
-) -> SparseMap<C> {
-    let mut cells = Vec::with_capacity(columns.len() * N);
-    let mut rows = Vec::with_capacity(columns.len() * N);
-    for r in 0..columns.len() {
-        for k in 0..N {
-            cells.push(cell(r, k));
-            rows.push(r);
-        }
-    }
-    let cols = columns.iter().flatten().copied().collect();
-    SparseMap::new(cells, rows, cols, (columns.len(), inputs))
-}
-
-/// The unit vector at `angle` counter-clockwise from `e1` in the xy plane: `e1` turned by the
-/// rotor `exp(-angle/2 e12)`.
+/// The unit vector at `angle` counter-clockwise from `e1` in the xy plane, the disks' plane:
+/// gax's `vga2d::Vector::from_angle`, set in space.
 pub fn direction(angle: f64) -> Vector3 {
-    let half_turn = Bivector3::new(0.0, 0.0, -angle / 2.0);
-    half_turn.exp() >> Vector3::new(1.0, 0.0, 0.0)
+    let [x, y] = gax::vga2d::Vector::from_angle(angle).c;
+    Vector3::new(x, y, 0.0)
 }
 
 /// An oriented triangle mesh: vertices of type `V` and faces counter-clockwise from outside,
@@ -149,7 +129,7 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// `[E, V]`: the difference along each edge, its higher vertex less its lower.
     #[must_use]
     pub fn d0(&self) -> SparseMap<ScalarOf<V>> {
-        from_columns(&self.edges, self.vertices.len(), |_, end| {
+        SparseMap::from_columns(&self.edges, self.vertices.len(), |_, end| {
             scalar::<V>([-1.0, 1.0][end])
         })
     }
@@ -157,7 +137,7 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// `[F, E]`: the oriented circulation around each face.
     #[must_use]
     pub fn d1(&self) -> SparseMap<ScalarOf<V>> {
-        from_columns(&self.face_edges, self.edges.len(), |f, k| {
+        SparseMap::from_columns(&self.face_edges, self.edges.len(), |f, k| {
             scalar::<V>(self.face_edge_orientation[f][k])
         })
     }
@@ -165,13 +145,13 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// `[E, V]`: the mean of each edge's two vertices.
     #[must_use]
     pub fn edge_means(&self) -> SparseMap<ScalarOf<V>> {
-        from_columns(&self.edges, self.vertices.len(), |_, _| scalar::<V>(0.5))
+        SparseMap::from_columns(&self.edges, self.vertices.len(), |_, _| scalar::<V>(0.5))
     }
 
     /// `[F, V]`: the mean of each face's three corners.
     #[must_use]
     pub fn face_means(&self) -> SparseMap<ScalarOf<V>> {
-        from_columns(&self.faces, self.vertices.len(), |_, _| {
+        SparseMap::from_columns(&self.faces, self.vertices.len(), |_, _| {
             scalar::<V>(1.0 / 3.0)
         })
     }
@@ -314,14 +294,14 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// cells of three face fields, one per corner.
     #[must_use]
     pub fn by_corner<C: Extensor>(&self, cells: &[Field<C>; 3]) -> SparseMap<C> {
-        from_columns(&self.face_edges, self.edges.len(), |f, k| cells[k].site(f))
+        SparseMap::from_columns(&self.face_edges, self.edges.len(), |f, k| cells[k].site(f))
     }
 
     /// `[F, V]`: couplings from each face to the vertex at each of its corners, through the
     /// cells of three face fields, one per corner.
     #[must_use]
     pub fn at_corners<C: Extensor>(&self, cells: &[Field<C>; 3]) -> SparseMap<C> {
-        from_columns(&self.faces, self.vertices.len(), |f, k| cells[k].site(f))
+        SparseMap::from_columns(&self.faces, self.vertices.len(), |f, k| cells[k].site(f))
     }
 }
 

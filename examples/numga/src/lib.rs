@@ -3,9 +3,10 @@
 //! a window or writes a GIF or PNG.
 //!
 //! The drawing code's geometry goes through gax too, as in `examples/warp`: distances are the
-//! norms of joins, turns are rotation motors, shading is the inner product of planes. Square
-//! roots and trigonometry on floats are denied here (`clippy.toml`); normalizing a random
-//! direction is the one exception.
+//! norms of joins, turns are rotation motors, the direction at an angle and the angle between
+//! two directions are gax's (`direction_from_angle`, `angle_between`, `angle_to`), shading is
+//! the inner product of planes. Square roots and trigonometry on floats are denied here
+//! (`clippy.toml`); normalizing a random direction is the one exception.
 //!
 //! The ports follow the examples of numga (Eelco Hoogendoorn,
 //! <https://github.com/EelcoHoogendoorn/numga>), one binary each, with their tests.

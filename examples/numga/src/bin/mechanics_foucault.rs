@@ -16,8 +16,8 @@
 //! by step, each step the least turn `(1 + b a)` (normalized) that takes one site's vertical
 //! `a` to the next `b`, and it comes back turned by the area of the polar cap the circle
 //! encloses on the unit sphere, a full turn less the pendulum's. How far a direction on the
-//! floor has turned is read from the logarithm of the rotor between it and north in the
-//! floor's plane (`measure::turn`, where numga takes an `arctan2`).
+//! floor has turned is its signed angle to north in the floor's plane (gax's `angle_to`, the
+//! `arctan2` numga takes).
 //!
 //! The animation runs through a day: on the left the earth turning the floor in Paris under the
 //! pendulum's swing, with the latitude circle and its polar cap; on the right the bob's track on
@@ -29,8 +29,8 @@ use gax_numga_examples::plot::Axes;
 use gax_numga_examples::points;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Light, Point2, Point3, Rect, backdrop, caption, colormap, measure,
-    palette, reach2, reach3, run,
+    Align, Anim, Camera, Canvas, Light, Point2, Point3, Rect, backdrop, caption, colormap, palette,
+    reach2, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -187,7 +187,7 @@ fn on_floor(v: V, site: &Compass) -> vga2d::Vector<(), f64> {
 /// How far a direction on its floor has turned from north, clockwise seen from above: the
 /// signed turn from the direction to north.
 fn turned(v: V, site: &Compass) -> f64 {
-    measure::turn(on_floor(v, site), vga2d::Vector::new(0.0, 1.0))
+    on_floor(v, site).angle_to(vga2d::Vector::new(0.0, 1.0))
 }
 
 /// The colour of a track at a fraction of the day.

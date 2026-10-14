@@ -668,11 +668,11 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
                 )
             })
             .collect();
-        // Round the ellipse: a unit direction turned round, its coordinates along the axes.
+        // Round the ellipse: the unit direction at each angle, its coordinates along the axes.
         let ring: Vec<Point<(), f64>> = (0..=64)
             .map(|i| {
                 let angle = core::f64::consts::TAU * f64::from(i) / 64.0;
-                let u = Motor::rotation(origin, angle) >> Point::direction(1.0, 0.0);
+                let u = Point::direction_from_angle(angle);
                 let offset = axes
                     .iter()
                     .zip([u.e20(), u.e01()])
@@ -858,8 +858,7 @@ mod tests {
         for f in &fused {
             for i in 0..12 {
                 let a = core::f64::consts::PI * f64::from(i) / 12.0;
-                let turn = gax::pga2d::Motor::rotation(plane::origin(), a);
-                let d = turn >> gax::pga2d::Point::direction(1.0, 0.0);
+                let d = gax::pga2d::Point::direction_from_angle(a);
                 assert!((f.of(d) & d).s() > 0.0);
             }
         }

@@ -15,7 +15,6 @@
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
 use gax::{Unit, pga2d, vga3d};
 
-use gax_numga_examples::measure::angle;
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::{smoothstep, wave};
 use gax_numga_examples::{
@@ -227,7 +226,7 @@ mod epipolar {
         [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
             .map(|n| {
                 let plane = Plane::from_normal(n, 0.0);
-                angle(normal(est >> plane), normal(truth >> plane))
+                normal(est >> plane).angle_between(normal(truth >> plane))
             })
             .into_iter()
             .fold(0.0, f64::max)
@@ -241,11 +240,8 @@ mod epipolar {
     /// The angle, in radians, between the true and recovered baselines: between the
     /// directions from camera 1 to camera 2 (the difference of two unit points).
     pub fn baseline_error(est: M, truth: M) -> f64 {
-        let towards = |motor: M| {
-            let d = (motor >> origin()).unitized() - origin();
-            vga3d::Vector::new(d.e032(), d.e013(), d.e021())
-        };
-        angle(towards(est), towards(truth))
+        let towards = |motor: M| (motor >> origin()).unitized() - origin();
+        towards(est).angle_between(towards(truth))
     }
 
     /// A unit point scaled about camera 1 by `scale`.

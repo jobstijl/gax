@@ -298,7 +298,6 @@ mod tests {
     use super::sundial::*;
     use gax::vga2d;
     use gax::vga3d::Vector;
-    use gax_numga_examples::measure::angle;
     use gax_numga_examples::signal::{phasor, wave};
 
     /// A quadratic form on rays.
@@ -326,7 +325,7 @@ mod tests {
         for k in 0..5 {
             let declination = -TILT + 2.0 * TILT * f64::from(k) / 4.0;
             let noon = sun(pole, equator, declination, 0.0);
-            let elevation = quarter - angle(noon, up());
+            let elevation = quarter - noon.angle_between(up());
             let expected = quarter - LATITUDE + declination;
             assert!(
                 (elevation - expected).abs() < 1e-12,

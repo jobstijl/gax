@@ -133,7 +133,7 @@ mod graphene {
         let about = Pseudoscalar::new(1.0) * start;
         let turned = (r.cast::<Bivector>() | about).s();
         let east = gax::vga2d::Vector::new(1.0, 0.0);
-        -gax_numga_examples::measure::turn(east, gax::vga2d::Vector::new(r.s(), -turned))
+        -east.angle_to(gax::vga2d::Vector::new(r.s(), -turned))
     }
 
     fn grid(extent: f64, count: usize) -> Vec<V> {

@@ -292,7 +292,7 @@ mod cyclides {
         let across = gax::vga2d::Vector::new(1.0, 0.0);
         real_roots(&c, false)
             .first()
-            .map(|r| 2.0 * measure::turn(across, gax::vga2d::Vector::new(*r, 1.0)))
+            .map(|r| 2.0 * across.angle_to(gax::vga2d::Vector::new(*r, 1.0)))
     }
 
     /// One surface with the forms of its quartic: `form(X, Y) = X ∨ surface(Y)` along
@@ -637,7 +637,7 @@ mod cyclides {
     /// ([`measure::lift`]).
     pub fn arcsine(s: f64) -> f64 {
         let pole = gax::vga3d::Vector::new(0.0, 0.0, 1.0);
-        measure::angle(pole, measure::lift(s, 0.0).expect("a sine"))
+        pole.angle_between(measure::lift(s, 0.0).expect("a sine"))
     }
 
     pub fn linked_tori() -> Vec<Part> {

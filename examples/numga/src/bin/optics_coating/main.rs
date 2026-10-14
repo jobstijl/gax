@@ -39,8 +39,8 @@ mod scenes;
 use coating::{Polarization, in_plane, t};
 use gax::pga2d::Point;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Rect, backdrop, caption, colormap, measure, palette,
-    run, signal::haversine,
+    Align, Anim, Axes, Canvas, Light, Marker, Rect, backdrop, caption, colormap, palette, run,
+    signal::haversine,
 };
 use scenes::{
     BAND_WAVELENGTH, CELLS, LINEAR, SLAB_END, SLAB_START, helix, in_slab, positions, results,
@@ -71,7 +71,7 @@ fn on_line(depth: f64) -> Point<(), f64> {
 /// is strong.
 fn direction_light(v: Polarization<(), f64>) -> Light {
     let east = Polarization::new(1.0, 0.0);
-    let hue = measure::turn(east, v) / core::f64::consts::TAU;
+    let hue = east.angle_to(v) / core::f64::consts::TAU;
     let strength = (4.0 * v.norm()).min(1.0);
     colormap::hsv(hue as f32).faded(1.6 * strength as f32)
 }

@@ -56,7 +56,7 @@ mod koebe {
     use super::sphere::{Rotor, Scalar, Vector};
     use gax::field::{Field, SparseMap};
     use gax::vga3d;
-    use gax_numga_examples::mesh::{Vector3, from_columns};
+    use gax_numga_examples::mesh::Vector3;
     use gax_numga_examples::signal::phasor;
 
     /// A circle on the sphere, a point of the sphere (null), or a point of space at unit weight
@@ -90,7 +90,7 @@ mod koebe {
     /// The null vector of the point where the circles at the ends of each edge touch: their
     /// sum.
     pub fn touching(circles: &Field<Circle>, edges: &[[usize; 2]]) -> Field<Circle> {
-        let sums = from_columns(edges, circles.len(), |_, _| Scalar::new(1.0));
+        let sums = SparseMap::from_columns(edges, circles.len(), |_, _| Scalar::new(1.0));
         &sums * circles
     }
 
@@ -156,7 +156,7 @@ mod koebe {
         /// change of the circles, `c_b | dc_a + c_a | dc_b`, a field map of linear forms (a circle
         /// paired with itself couples to itself twice, `2 c | dc`).
         fn jacobian(&self, circles: &Field<Circle>) -> SparseMap<CircleForm> {
-            from_columns(&self.pairs, circles.len(), |r, end| {
+            SparseMap::from_columns(&self.pairs, circles.len(), |r, end| {
                 circles.site(self.pairs[r][1 - end]) | Circle::slot()
             })
         }
@@ -231,7 +231,6 @@ mod scenes {
     use super::koebe::*;
     use super::surfaces_hull::{POINTS, directions, uneven_faces};
     use gax::field::Field;
-    use gax_numga_examples::measure::angle;
     use gax_numga_examples::mesh::{Mesh, Vector3};
     use gax_numga_examples::signal::{phasor, wave};
 
@@ -249,7 +248,7 @@ mod scenes {
         let mesh = Mesh::new(directions.clone(), faces.clone());
         let mut angles = vec![0.0; POINTS];
         for &[a, b] in &mesh.edges {
-            let between = angle(directions.site(a), directions.site(b));
+            let between = directions.site(a).angle_between(directions.site(b));
             angles[a] += between;
             angles[b] += between;
         }

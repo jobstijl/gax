@@ -1,37 +1,14 @@
-//! Measures computed with gax: the angle between two directions (in space, and signed in the
-//! plane), and the Gauss linking number of two closed curves; and the scalar tools the measures
-//! of the examples share: the golden ratio and a root by bisection.
+//! Measures computed with gax: the roots of a quadratic as a circle, the sphere over the unit
+//! disc, and the Gauss linking number of two closed curves; and the scalar tools the measures
+//! of the examples share: the golden ratio and a root by bisection. (Angles between directions
+//! are gax's own: `angle_between`, and the signed `angle_to` in the plane.)
 
-use gax::vga3d::{Bivector, Vector};
+use gax::vga3d::Vector;
 
 /// The golden ratio `φ = (1 + √5) / 2`: the icosahedron's corners are `(0, ±1, ±φ)` cycled, a
 /// Fibonacci spiral turns by `2π φ` per point, and a golden-section search splits its bracket at
 /// `1 / φ = φ - 1`.
 pub const GOLDEN: f64 = 1.618_033_988_749_895;
-
-/// The angle between `a` and `b`, in radians: the norm of the logarithm of the rotor `b a`
-/// (normalized) that turns one into the other.
-pub fn angle(a: Vector<(), f64>, b: Vector<(), f64>) -> f64 {
-    let log: Bivector<(), f64> = (b * a).normalized().log();
-    log.norm()
-}
-
-/// The signed angle from `a` to `b` in the plane, in radians from `-π` to `π`, counterclockwise
-/// positive: the product `a b` is `cos θ + sin θ e12` (normalized), and its logarithm `θ e12`.
-/// Past a quarter turn (the product's scalar part negative) the angle is read from `-a`, within
-/// a quarter turn of `b`, and half a turn added: the logarithm is exact there, where at half a
-/// turn the rotor `-1` has no unique one.
-pub fn turn(a: gax::vga2d::Vector<(), f64>, b: gax::vga2d::Vector<(), f64>) -> f64 {
-    let rotor = (a * b).normalized();
-    if rotor.into_inner().s() >= 0.0 {
-        let log: gax::vga2d::Pseudoscalar<(), f64> = rotor.log();
-        return log.e12();
-    }
-    let log: gax::vga2d::Pseudoscalar<(), f64> = ((-a) * b).normalized().log();
-    let pi = core::f64::consts::PI;
-    let angle = log.e12() + pi;
-    if angle > pi { angle - 2.0 * pi } else { angle }
-}
 
 /// The roots of `a t² + 2 b t + c` as a circle on the line of `t`: in CGA2D, the dual circle
 /// `S = eo - (b / a) e1 + c / (2 a) ei`, whose round points `X(t) = eo + t e1 + ½ t² ei` on the

@@ -244,6 +244,7 @@ mod tests {
     use super::scenes::*;
     use super::xpbd::{Bodies, Constraints, Couple, coupling, step};
     use super::{derived, xpbd};
+    use gax::Extensor;
     use gax::field::{Field, SparseMap};
     use gax::pga2d::{Direction, Motor};
 
@@ -393,12 +394,7 @@ mod tests {
             }
         }
         let points = bodies.points(&shape);
-        assert!(
-            points
-                .iter()
-                .flat_map(|f| f.iter())
-                .all(|p| p.c.iter().all(|x| x.is_finite()))
-        );
+        assert!(points.iter().flat_map(|f| f.iter()).all(|p| p.is_finite()));
         assert!(energy(&bodies, g) < 1e-8, "{}", energy(&bodies, g));
         assert!(peak_gap < 0.001, "{peak_gap}");
         assert!(0.01 < peak_flex && peak_flex < 0.05, "{peak_flex}");

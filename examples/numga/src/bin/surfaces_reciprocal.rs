@@ -27,9 +27,9 @@ use gax_numga_examples::{
 use std::sync::OnceLock;
 
 mod reciprocal {
-    use gax::field::Field;
+    use gax::field::{Field, SparseMap};
     use gax::vga3d::Pseudoscalar;
-    use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3, from_columns};
+    use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 
     /// Up: a point of the plane lifted to unit height is the point plus `e3`.
     pub const UP: Vector3 = Vector3::new(0.0, 0.0, 1.0);
@@ -109,7 +109,7 @@ mod reciprocal {
             .collect();
         // A bar pulls its lower end towards its higher, and the higher back.
         let ends: Vec<[usize; 2]> = inner.iter().map(|&e| mesh.edges[e]).collect();
-        let pulled = from_columns(&ends, mesh.vertices.len(), |_, end| {
+        let pulled = SparseMap::from_columns(&ends, mesh.vertices.len(), |_, end| {
             Scalar3::new([1.0, -1.0][end])
         });
         let net = &pulled.reverse() * &pulls;

@@ -504,7 +504,7 @@ mod plane {
         (0..=n)
             .map(|i| {
                 let angle = core::f64::consts::TAU * i as f64 / n as f64;
-                let d = Motor::rotation(origin(), angle) >> Point::direction(1.0, 0.0);
+                let d = Point::direction_from_angle(angle);
                 let (a, b) = (value(d, d), 0.5 * (value(h, d) + value(d, h)));
                 let s = roots(a, b, c).map_or(0.0, |(mid, half)| mid + half);
                 h + d.gp(s)
