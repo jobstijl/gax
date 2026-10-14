@@ -115,6 +115,25 @@ mod pga3d_extras {
             Point::new(x, y, z, T::zero())
         }
 
+        /// The angle between this direction and `other` (points at infinity), in `[0, π]`: with
+        /// `A` and `B` the planes through the origin orthogonal to them, `atan2` of the norm of
+        /// their meet (a line through the origin, its norm the sine) and their inner product (the
+        /// cosine), scaled alike, so the directions need no normalizing and the angle is well
+        /// conditioned at every angle. (Directions have no signed angle in space: no orientation
+        /// of a plane is singled out.)
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// let (a, b) = (Point::<(), f64>::direction(1.0, 0.0, 0.0), Point::direction(0.0, 0.0, -2.0));
+        /// assert!((a.angle_between(b) - std::f64::consts::FRAC_PI_2).abs() < 1e-15);
+        /// ```
+        pub fn angle_between(self, other: Self) -> T {
+            let zero = T::zero();
+            let a = Plane::new(self.e032(), self.e013(), self.e021(), zero);
+            let b = Plane::new(other.e032(), other.e013(), other.e021(), zero);
+            (a ^ b).norm().atan2((a | b).s())
+        }
+
         /// Euclidean coordinates `(x/w, y/w, z/w)`. Not finite for directions.
         ///
         /// ```
@@ -715,6 +734,55 @@ mod pga2d_extras {
             Point::new(x, y, T::zero())
         }
 
+        /// The unit direction at `angle` counterclockwise from the x axis: its x coordinate is
+        /// the angle's cosine, its y the sine (a phasor, for oscillations). The inverse of
+        /// [`angle_to`](Self::angle_to) from the x axis.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let d = Point::<(), f64>::direction_from_angle(std::f64::consts::FRAC_PI_2);
+        /// assert!(d.e20().abs() < 1e-15 && (d.e01() - 1.0).abs() < 1e-15 && d.e12() == 0.0);
+        /// ```
+        #[inline]
+        pub fn direction_from_angle(angle: T) -> Self {
+            let (sine, cosine) = angle.sin_cos();
+            Point::direction(cosine, sine)
+        }
+
+        /// The signed angle from this direction to `other`, counterclockwise, in `[-π, π]`. With
+        /// `A` and `B` the lines through the origin orthogonal to them, it is `atan2` of the
+        /// weight of their meet (the origin) and their inner product: the sine and cosine, scaled
+        /// alike, so the directions need no normalizing and the angle is well conditioned
+        /// everywhere, a half turn included.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let (a, b) = (Point::<(), f64>::direction(1.0, 0.0), Point::direction(0.0, -3.0));
+        /// assert!((a.angle_to(b) + std::f64::consts::FRAC_PI_2).abs() < 1e-15);
+        /// ```
+        pub fn angle_to(self, other: Self) -> T {
+            let (a, b) = (self.orthogonal_line(), other.orthogonal_line());
+            (a ^ b).e12().atan2((a | b).s())
+        }
+
+        /// The angle between this direction and `other`, in `[0, π]`: the size of
+        /// [`angle_to`](Self::angle_to), as in every dimension.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let (a, b) = (Point::<(), f64>::direction(1.0, 0.0), Point::direction(0.0, -3.0));
+        /// assert!((a.angle_between(b) - std::f64::consts::FRAC_PI_2).abs() < 1e-15);
+        /// ```
+        pub fn angle_between(self, other: Self) -> T {
+            let (a, b) = (self.orthogonal_line(), other.orthogonal_line());
+            (a ^ b).e12().abs().atan2((a | b).s())
+        }
+
+        /// The line through the origin orthogonal to this direction, with its weight.
+        fn orthogonal_line(self) -> Line<(), T> {
+            Line::new(self.e20(), self.e01(), T::zero())
+        }
+
         /// Euclidean coordinates `(x/w, y/w)`.
         ///
         /// ```
@@ -865,11 +933,9 @@ mod pga2d_extras {
         }
 
         /// The shortest rotation about the origin that turns the direction `from` into the
-        /// direction `to`. With `A` and `B` the lines through the origin orthogonal to them,
-        /// the angle is `atan2` of the weight of their meet (the origin) and their inner
-        /// product: the sine and cosine, scaled alike, so no normalization is needed and the
-        /// angle is well conditioned everywhere, a half turn included. Its angle, the signed
-        /// angle from `from` to `to` in `[-π, π]`, is [`Motor::angle`].
+        /// direction `to`: by their signed angle, [`Point::angle_to`] (no normalization needed,
+        /// well conditioned everywhere, a half turn included), which is also its
+        /// [`Motor::angle`].
         ///
         /// ```
         /// use gax::pga2d::{Motor, Point};
@@ -878,11 +944,7 @@ mod pga2d_extras {
         /// ```
         pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
             let zero = T::zero();
-            let a = Line::new(from.e20(), from.e01(), zero);
-            let b = Line::new(to.e20(), to.e01(), zero);
-            let sine = (a ^ b).e12();
-            let angle = sine.atan2((a | b).s());
-            Self::rotation(Point::xy(zero, zero), angle)
+            Self::rotation(Point::xy(zero, zero), from.angle_to(to))
         }
 
         /// The rigid motion from `a` to `b`, at `t`: `a exp(t log(~a b))`, the shorter way (the
@@ -910,6 +972,81 @@ mod pga2d_extras {
         pub fn angle(self) -> T {
             let log: Point<(), T> = Unit::new_unchecked(self).log();
             log.e12() * T::from_f64(-2.0)
+        }
+    }
+}
+
+/// Angles of Euclidean vectors, from their outer and inner products: `angle_between`, unsigned,
+/// in every dimension; `angle_to`, signed, in the plane, where an orientation is given; and the
+/// unit vector `from_angle`, the inverse of `angle_to` from `e1`.
+#[cfg(feature = "vga2d")]
+mod vga2d_extras {
+    use crate::Real;
+    use crate::vga2d::Vector;
+
+    impl<T: Real> Vector<(), T> {
+        /// The unit vector at `angle` counterclockwise from `e1`: its `e1` coordinate is the
+        /// angle's cosine, its `e2` the sine. The inverse of [`angle_to`](Self::angle_to) from
+        /// `e1`.
+        ///
+        /// ```
+        /// use gax::vga2d::Vector;
+        /// let v = Vector::<(), f64>::from_angle(std::f64::consts::PI);
+        /// assert!((v.e1() + 1.0).abs() < 1e-15 && v.e2().abs() < 1e-15);
+        /// ```
+        #[inline]
+        pub fn from_angle(angle: T) -> Self {
+            let (sine, cosine) = angle.sin_cos();
+            Vector::new(cosine, sine)
+        }
+
+        /// The signed angle from this vector to `other`, counterclockwise, in `[-π, π]`: `atan2`
+        /// of their outer product (the sine, as a multiple of `e12`) and their inner product
+        /// (the cosine), scaled alike, so no normalizing is needed and a half turn is exact.
+        ///
+        /// ```
+        /// use gax::vga2d::Vector;
+        /// let (a, b) = (Vector::<(), f64>::new(2.0, 0.0), Vector::new(-1.0, 1.0));
+        /// assert!((a.angle_to(b) - 3.0 * std::f64::consts::FRAC_PI_4).abs() < 1e-15);
+        /// ```
+        pub fn angle_to(self, other: Self) -> T {
+            (self ^ other).e12().atan2((self | other).s())
+        }
+
+        /// The angle between this vector and `other`, in `[0, π]`: the size of
+        /// [`angle_to`](Self::angle_to), as in every dimension.
+        ///
+        /// ```
+        /// use gax::vga2d::Vector;
+        /// let (a, b) = (Vector::<(), f64>::new(2.0, 0.0), Vector::new(-1.0, -1.0));
+        /// assert!((a.angle_between(b) - 3.0 * std::f64::consts::FRAC_PI_4).abs() < 1e-15);
+        /// ```
+        pub fn angle_between(self, other: Self) -> T {
+            (self ^ other).e12().abs().atan2((self | other).s())
+        }
+    }
+}
+
+/// Angles of Euclidean vectors, from their outer and inner products (see the 2D module).
+#[cfg(feature = "vga3d")]
+mod vga3d_extras {
+    use crate::Real;
+    use crate::vga3d::Vector;
+
+    impl<T: Real> Vector<(), T> {
+        /// The angle between this vector and `other`, in `[0, π]`: `atan2` of the norm of their
+        /// outer product (the sine, the area they span) and their inner product (the cosine),
+        /// scaled alike, so no normalizing is needed and the angle is well conditioned at every
+        /// angle (an arc cosine of the normalized inner product loses half the digits near 0
+        /// and π).
+        ///
+        /// ```
+        /// use gax::vga3d::Vector;
+        /// let (a, b) = (Vector::<(), f64>::new(1.0, 0.0, 0.0), Vector::new(1.0, 1.0, 0.0));
+        /// assert!((a.angle_between(b) - std::f64::consts::FRAC_PI_4).abs() < 1e-15);
+        /// ```
+        pub fn angle_between(self, other: Self) -> T {
+            (self ^ other).norm().atan2((self | other).s())
         }
     }
 }

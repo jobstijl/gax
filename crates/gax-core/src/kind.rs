@@ -85,6 +85,32 @@ pub trait Extensor: Copy + Debug + PartialEq + 'static {
     /// The output-first coefficients.
     fn coeffs(&self) -> &Coeffs<Self>;
 
+    /// Whether every coefficient is finite (no infinity, no NaN): a value that did not blow
+    /// up. A coefficient `x` is finite exactly when `x - x` is zero, for plain floats, SIMD lanes
+    /// (every lane) and dual numbers alike.
+    ///
+    /// ```
+    /// use gax::Extensor;
+    /// use gax::pga3d::Point;
+    /// assert!(Point::<(), f64>::xyz(1.0, 2.0, 3.0).is_finite());
+    /// assert!(!Point::<(), f64>::new(0.0, f64::NAN, 0.0, 1.0).is_finite());
+    /// ```
+    fn is_finite(&self) -> bool
+    where
+        Self::Coef: crate::coef::Real,
+    {
+        use crate::coef::Real;
+        let one = <Self::Coef as crate::coef::Coef>::one();
+        self.coeffs().as_ref().iter().all(|col| {
+            (0..<Self::Slots as Slots>::SIZE).all(|k| {
+                let x = <Self::Slots as Slots>::get_flat(col, k);
+                #[allow(clippy::eq_op)] // `x - x` is zero exactly when `x` is finite
+                let zero_if_finite = x - x;
+                Self::Coef::all_lt(zero_if_finite.abs(), one)
+            })
+        })
+    }
+
     /// Every coefficient mapped by `f`, kind and slots kept: a value or map of `f64` as
     /// `Complex<f64>`, as `Dual<f64, N>` (to differentiate through it), or as `f32`.
     ///

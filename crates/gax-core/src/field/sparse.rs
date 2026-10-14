@@ -116,6 +116,38 @@ impl<C: Copy> SparseMap<C> {
         }
     }
 
+    /// The field map whose row `r` couples to the input sites `columns[r]`, its `k`-th through
+    /// the cell `cell(r, k)`, over `inputs` input sites: numga's `SparseExtensor.from_columns`.
+    /// A mesh's incidence maps are built this way, from its edges or faces.
+    ///
+    /// ```
+    /// use gax::field::SparseMap;
+    /// use gax::pga3d::Scalar;
+    /// // Each edge's head less its tail, for the edges 0-1 and 1-2 of a chain.
+    /// let edges = [[0, 1], [1, 2]];
+    /// let d = SparseMap::from_columns(&edges, 3, |_, end| Scalar::<(), f64>::new([-1.0, 1.0][end]));
+    /// assert_eq!(d.shape(), (2, 3));
+    /// assert_eq!(d.couplings().count(), 4);
+    /// ```
+    ///
+    /// # Panics
+    /// If a column is not below `inputs`.
+    #[must_use]
+    #[track_caller]
+    pub fn from_columns<const N: usize>(
+        columns: &[[usize; N]],
+        inputs: usize,
+        mut cell: impl FnMut(usize, usize) -> C,
+    ) -> Self {
+        let cells = (0..columns.len())
+            .flat_map(|r| (0..N).map(move |k| (r, k)))
+            .map(|(r, k)| cell(r, k))
+            .collect();
+        let rows = (0..columns.len()).flat_map(|r| [r; N]).collect();
+        let cols = columns.iter().flatten().copied().collect();
+        SparseMap::new(cells, rows, cols, (columns.len(), inputs))
+    }
+
     /// The numbers of output and input sites.
     #[must_use]
     pub fn shape(&self) -> (usize, usize) {
