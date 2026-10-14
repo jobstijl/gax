@@ -1494,9 +1494,13 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     * The search space is grown by block Lanczos on `(A − σM)⁻¹ M`, with one sparse LU of
       `A − σM` and full reorthogonalization in the metric.
     * The pairs are taken from `A` itself on the space (Rayleigh–Ritz on `Qᵀ A Q`, which needs
-      no solves), and the space grows until each pair's true residual `‖A x − λ M x‖` is at
-      `ε^¾` of the pencil's scale. It also stops at `√ε` once the residual stops improving: it
-      has a floor of rounding near `10⁵ ε` on small dense spectra.
+      no solves), and the space grows until each pair's backward error, its true residual
+      `‖A x − λ M x‖` relative to `‖A‖ + |λ| ‖M‖` (∞-norms), is at `ε^¾`. It also stops at
+      `√ε` once the residual stops improving: it has a floor of rounding near `10⁵ ε` on small
+      dense spectra. (The first version divided the residual by `1 + |λ|` and compared it with
+      `ε^¾` times the pencil's scale, scaling twice: a girder of stiffness `10¹¹` stopped with
+      its eighth mode `5·10⁻⁴` off. The backward error does not change when the pencil is
+      scaled.)
     * A converged eigenvector's error is its residual over the gap to the next eigenvalue,
       which is a small part of the scale on a fine mesh: `(π/n)²` above a free chain's rigid
       shift. So the converged pairs get one more step of inverse iteration, their own images
