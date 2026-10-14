@@ -465,12 +465,10 @@ fn sandwich_plain(
     for t in &first {
         through[t.o].insert(t.j);
     }
-    let mut entries = BTreeSet::new();
-    for &(o, m, _, _) in &second {
-        for &i in &through[m] {
-            entries.insert((o, i));
-        }
-    }
+    let entries: BTreeSet<(usize, usize)> = second
+        .iter()
+        .flat_map(|&(o, m, _, _)| through[m].iter().map(move |&i| (o, i)))
+        .collect();
     if first.len() + second.len() > PLAIN_MAX_TERMS {
         return None;
     }
@@ -695,8 +693,8 @@ impl Emitter<'_> {
         let spec = self.spec;
         let alg = &spec.algebra;
         let mut basis = String::new();
-        for (i, c) in alg.basis_suffixes().iter().enumerate() {
-            let row: Vec<String> = alg.metric()[i].iter().map(ToString::to_string).collect();
+        for (c, row) in alg.basis_suffixes().iter().zip(alg.metric()) {
+            let row: Vec<String> = row.iter().map(ToString::to_string).collect();
             let _ = writeln!(basis, "//   e{c}: [{}]", row.join(", "));
         }
         let _ = write!(
@@ -1500,29 +1498,29 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 .push((op, a.name.clone(), b.name.clone(), out.name.clone()));
             return;
         }
-        let mut exprs = Vec::new();
-        for o in 0..out.layout.len() {
-            let terms: Vec<_> = table.iter().filter(|t| t.o == o).collect();
-            if terms.is_empty() {
-                exprs.push("<Cat<S1, S2> as Slots>::from_flat(&mut |_| T::zero(), 0)".to_string());
-                continue;
-            }
-            let items: Vec<(bool, String)> = terms
-                .iter()
-                .map(|t| {
-                    let prod = format!("p({}, {})", t.i, t.j);
-                    let mag = t.coef.abs();
-                    let term = if mag == 1 {
-                        prod
-                    } else {
-                        format!("{prod}.scale(T::from_i64({mag}))")
-                    };
-                    (t.coef < 0, term)
-                })
-                .collect();
-            let e = balanced_sum(&items);
-            exprs.push(format!("({e}).0"));
-        }
+        let exprs: Vec<String> = (0..out.layout.len())
+            .map(|o| {
+                let items: Vec<(bool, String)> = table
+                    .iter()
+                    .filter(|t| t.o == o)
+                    .map(|t| {
+                        let prod = format!("p({}, {})", t.i, t.j);
+                        let mag = t.coef.abs();
+                        let term = if mag == 1 {
+                            prod
+                        } else {
+                            format!("{prod}.scale(T::from_i64({mag}))")
+                        };
+                        (t.coef < 0, term)
+                    })
+                    .collect();
+                if items.is_empty() {
+                    "<Cat<S1, S2> as Slots>::from_flat(&mut |_| T::zero(), 0)".to_string()
+                } else {
+                    format!("({}).0", balanced_sum(&items))
+                }
+            })
+            .collect();
         // The product of coefficients as one closure: its operator (and the slot list of its
         // result, `Cat<S1, S2>`) is resolved once per impl instead of once per term, which
         // takes a third off type checking. `move`: it captures the two small arrays by copy,
@@ -1572,18 +1570,17 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             .push((op, k.name.clone(), out.name.clone()));
         let (tr, m) = unop_trait(op);
         let (kn, on) = (&k.name, &out.name);
-        let mut exprs = Vec::new();
-        for o in 0..out.layout.len() {
-            match table.iter().find(|t| t.o == o) {
-                None => exprs.push("S::from_flat(&mut |_| T::zero(), 0)".to_string()),
-                Some(t) if t.coef == 1 => exprs.push(format!("a[{}]", t.i)),
-                Some(t) if t.coef == -1 => exprs.push(format!("(-SlotArr::<S, T>(a[{}])).0", t.i)),
-                Some(t) => exprs.push(format!(
+        let exprs: Vec<String> = (0..out.layout.len())
+            .map(|o| match table.iter().find(|t| t.o == o) {
+                None => "S::from_flat(&mut |_| T::zero(), 0)".to_string(),
+                Some(t) if t.coef == 1 => format!("a[{}]", t.i),
+                Some(t) if t.coef == -1 => format!("(-SlotArr::<S, T>(a[{}])).0", t.i),
+                Some(t) => format!(
                     "SlotArr::<S, T>(a[{}]).scale(T::from_i64({})).0",
                     t.i, t.coef
-                )),
-            }
-        }
+                ),
+            })
+            .collect();
         let _ = write!(
             self.out,
             "impl<S: Slots, T: Coef> {tr} for {kn}<S, T> {{\n    type Output = {on}<S, T>;\n    #[inline]\n    fn {m}(self) -> {on}<S, T> {{\n        let a = self.c;\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
@@ -1826,21 +1823,22 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             cols.join(", ")
         );
         // The dense map, written entry by entry (no multiplication by an identity's zeros).
-        let mut rows = Vec::new();
-        for o in 0..nout {
-            let row: Vec<String> = (0..nxv)
-                .map(
-                    |i| match entries.iter().position(|e| e.0 == o && e.1 == i) {
-                        None => "T::zero()".to_string(),
-                        Some(k) => match &vals[k] {
-                            Ok(c) => constant(*c),
-                            Err(e) => format!("m[{}]", stored_at(e)),
+        let rows: Vec<String> = (0..nout)
+            .map(|o| {
+                let row: Vec<String> = (0..nxv)
+                    .map(
+                        |i| match entries.iter().position(|e| e.0 == o && e.1 == i) {
+                            None => "T::zero()".to_string(),
+                            Some(k) => match &vals[k] {
+                                Ok(c) => constant(*c),
+                                Err(e) => format!("m[{}]", stored_at(e)),
+                            },
                         },
-                    },
-                )
-                .collect();
-            rows.push(format!("[{}]", row.join(", ")));
-        }
+                    )
+                    .collect();
+                format!("[{}]", row.join(", "))
+            })
+            .collect();
         let _ = write!(
             s,
             "impl<T: Coef> From<{prep_ty}> for {on}<({xn},), T> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",

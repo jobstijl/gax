@@ -75,17 +75,10 @@ fn diagonalize(g: &[Vec<i64>]) -> (Mat, Vec<Q>) {
         if gram(&c, k, k).is_zero() {
             if let Some(j) = (k + 1..n).find(|&j| !gram(&c, k, j).is_zero()) {
                 // f_k <- f_k + f_j (or f_k - f_j if that is still null)
-                let mut plus = c[k].clone();
-                for i in 0..n {
-                    plus[i] = plus[i].add(c[j][i]);
-                }
+                let plus = c[k].iter().zip(&c[j]).map(|(x, y)| x.add(*y)).collect();
                 let old = std::mem::replace(&mut c[k], plus);
                 if gram(&c, k, k).is_zero() {
-                    let mut minus = old.clone();
-                    for i in 0..n {
-                        minus[i] = minus[i].sub(c[j][i]);
-                    }
-                    c[k] = minus;
+                    c[k] = old.iter().zip(&c[j]).map(|(x, y)| x.sub(*y)).collect();
                 }
             }
         }
@@ -167,39 +160,32 @@ fn bits(mask: u32) -> Vec<usize> {
 /// Outermorphism of a basis change: blade e_A (wedge of rows A of M) in the other basis.
 fn outermorphism(m: &Mat, a: u32, n: usize) -> BTreeMap<u32, Q> {
     let rows = bits(a);
-    let mut out = BTreeMap::new();
-    for k in 0..(1u32 << n) {
-        if k.count_ones() as usize != rows.len() {
-            continue;
-        }
-        let cols = bits(k);
-        let minor: Mat = rows
-            .iter()
-            .map(|&r| cols.iter().map(|&c| m[r][c]).collect())
-            .collect();
-        let d = det(&minor);
-        if !d.is_zero() {
-            out.insert(k, d);
-        }
-    }
-    out
+    (0..(1u32 << n))
+        .filter(|k| k.count_ones() as usize == rows.len())
+        .filter_map(|k| {
+            let cols = bits(k);
+            let minor: Mat = rows
+                .iter()
+                .map(|&r| cols.iter().map(|&c| m[r][c]).collect())
+                .collect();
+            let d = det(&minor);
+            (!d.is_zero()).then_some((k, d))
+        })
+        .collect()
 }
 
 /// Textbook orthogonal-basis product: sign from swaps, metric factor per shared vector.
 fn diag_blade_product(d: &[Q], a: u32, b: u32) -> (u32, Q) {
-    let mut swaps = 0;
-    for i in bits(a) {
-        for j in bits(b) {
-            if i > j {
-                swaps += 1;
-            }
-        }
-    }
-    let mut c = Q::int(if swaps % 2 == 0 { 1 } else { -1 });
-    for i in bits(a & b) {
-        c = c.mul(d[i]);
-    }
-    (a ^ b, c)
+    let bb = bits(b);
+    let swaps: usize = bits(a)
+        .into_iter()
+        .map(|i| bb.iter().filter(|&&j| i > j).count())
+        .sum();
+    let sign = Q::int(if swaps.is_multiple_of(2) { 1 } else { -1 });
+    (
+        a ^ b,
+        bits(a & b).into_iter().fold(sign, |c, i| c.mul(d[i])),
+    )
 }
 
 fn oracle_product(alg: &Algebra, a: u32, b: u32) -> BTreeMap<u32, i64> {

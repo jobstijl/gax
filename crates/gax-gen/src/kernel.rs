@@ -89,13 +89,13 @@ pub enum Source {
 /// The sources of parameters with `sizes` coefficients each, as consecutive program variables
 /// from 0.
 pub fn arg_vars(sizes: &[usize]) -> Vec<(Var, Source)> {
-    let mut vars = Vec::new();
-    for (param, &n) in sizes.iter().enumerate() {
-        for index in 0..n {
-            vars.push((vars.len() as Var, Source::Arg { param, index }));
-        }
-    }
-    vars
+    sizes
+        .iter()
+        .enumerate()
+        .flat_map(|(param, &n)| (0..n).map(move |index| Source::Arg { param, index }))
+        .enumerate()
+        .map(|(v, src)| (v as Var, src))
+        .collect()
 }
 
 /// A Study-number helper called between two programs (see `gax_core::study`).
@@ -448,9 +448,7 @@ impl Kernel {
                         StudyFn::Exp6Turn => study::exp_turn_6d([x[0], x[1], x[2]]).to_vec(),
                         StudyFn::Exp6Reach => study::exp_reach_6d([x[0], x[1], x[2]]).to_vec(),
                     };
-                    for (n, v) in names.iter().zip(r) {
-                        locals.push((n.clone(), v));
-                    }
+                    locals.extend(names.iter().cloned().zip(r));
                     outs.push(Vec::new());
                 }
             }

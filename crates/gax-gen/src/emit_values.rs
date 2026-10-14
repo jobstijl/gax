@@ -188,9 +188,12 @@ fn study_method(
     let nv = k.layout.len();
     if let Some((name, doc, result, func)) = kernel {
         let mut post_vars = arg_vars(&[nv]);
-        for (i, l) in c.locals.iter().enumerate() {
-            post_vars.push(((nv + i) as Var, Source::Local((*l).into())));
-        }
+        post_vars.extend(
+            c.locals
+                .iter()
+                .enumerate()
+                .map(|(i, l)| ((nv + i) as Var, Source::Local((*l).into()))),
+        );
         kernels.extend(value_kernel(
             k,
             &name,
@@ -1085,16 +1088,15 @@ fn emit_log_fallback(
     if !grade2.is_subset(&blades) {
         return None;
     }
-    for &a in &blades {
-        for &b in &blades {
-            if alg
-                .blade_product(a, b)
+    let closed = blades.iter().all(|&a| {
+        blades.iter().all(|&b| {
+            alg.blade_product(a, b)
                 .iter()
-                .any(|(m, _)| !blades.contains(m))
-            {
-                return None;
-            }
-        }
+                .all(|(m, _)| blades.contains(m))
+        })
+    });
+    if !closed {
+        return None;
     }
     let bv = spec.kind_for_support(&grade2)?;
     if bv.layout.len() != grade2.len() {
@@ -1477,8 +1479,8 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     };
     let mut outs = vec![r0.clone(), p1, p2, p3, p4];
     outs.extend(bivectors(&parts[0]));
-    for m in 1..4 {
-        let prod = symbolic::binop(alg, BinOp::Gp, &parts[m], &parts[m - 1]);
+    for (lower, part) in parts.iter().zip(&parts[1..]) {
+        let prod = symbolic::binop(alg, BinOp::Gp, part, lower);
         outs.extend(bivectors(&scale_mv(&prod, &r0)));
     }
     let prog = cse::compile_best(&outs, &BTreeSet::new(), &[]);
@@ -1678,18 +1680,19 @@ fn emit_exp_closed(
         w.push(wm);
     }
     let l0 = grade(0);
-    let mut outs: Vec<Operand> = Vec::new();
-    for m in 1..=planes {
-        let sq = product(
-            &mut b,
-            BinOp::Gp,
-            (&layouts[m], &w[m]),
-            (&layouts[m], &w[m]),
-            &l0,
-            Rational::ONE,
-        );
-        outs.push(sq[0]);
-    }
+    let mut outs: Vec<Operand> = (1..=planes)
+        .map(|m| {
+            let sq = product(
+                &mut b,
+                BinOp::Gp,
+                (&layouts[m], &w[m]),
+                (&layouts[m], &w[m]),
+                &l0,
+                Rational::ONE,
+            );
+            sq[0]
+        })
+        .collect();
     for m in 1..=planes {
         let h = if m == 1 {
             w1.clone()
@@ -1709,9 +1712,7 @@ fn emit_exp_closed(
             outs.push(b.mul(Operand::Const(int(sb, 1)), h[pos]));
         }
     }
-    for wm in &w[2..=planes] {
-        outs.extend(wm.iter().copied());
-    }
+    outs.extend(w[2..=planes].iter().flatten().copied());
     let mut prog = b.prog;
     prog.outputs = outs;
     if planes == 3 {

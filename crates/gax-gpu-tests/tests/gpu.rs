@@ -537,10 +537,7 @@ fn csta_log_on_the_gpu() {
     let mut inputs: Vec<f32> = Vec::with_capacity(SAMPLES * n_in);
     for n in 0..SAMPLES {
         if n % 4 == 3 {
-            let mut b = [0.0f64; 15];
-            for x in &mut b {
-                *x = 0.05 * f64::from(rng.next());
-            }
+            let mut b: [f64; 15] = core::array::from_fn(|_| 0.05 * f64::from(rng.next()));
             b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
             inputs.extend(B::from_coeffs(b).exp().into_inner().c.iter().map(|x| *x as f32));
         } else if n % 4 == 2 {

@@ -85,13 +85,13 @@ pub fn random_map<M: Extensor<Coef = f64>>(rng: &mut Rng) -> M {
 
 /// Flattened coefficients of any extensor.
 pub fn flat<M: Extensor<Coef = f64>>(m: &M) -> Vec<f64> {
-    let mut v = Vec::new();
-    for col in m.coeffs().as_ref() {
-        for k in 0..<M::Slots as Slots>::SIZE {
-            v.push(<M::Slots as Slots>::get_flat(col, k));
-        }
-    }
-    v
+    m.coeffs()
+        .as_ref()
+        .iter()
+        .flat_map(|col| {
+            (0..<M::Slots as Slots>::SIZE).map(move |k| <M::Slots as Slots>::get_flat(col, k))
+        })
+        .collect()
 }
 
 #[track_caller]

@@ -320,9 +320,7 @@ fn compile_staged_with(
     let n = b.prog.outputs.len();
     let mut stage_vars: Vec<Var> = env.keys().copied().collect();
     stage_vars.sort_unstable();
-    for v in &stage_vars {
-        b.prog.outputs.push(env[v]);
-    }
+    b.prog.outputs.extend(stage_vars.iter().map(|v| env[v]));
     let mut prog = b.prog;
     prog.compact();
     let extra = prog.outputs.split_off(n);
@@ -491,19 +489,16 @@ fn extract_kernels(polys: &mut [Poly], first_free: Var) -> Vec<(Var, Poly)> {
                 if n < 2 {
                     continue;
                 }
-                let mut subsets: Vec<Vec<usize>> = Vec::new();
-                if n <= 7 {
-                    for mask in 1u32..(1 << n) {
-                        if mask.count_ones() >= 2 {
-                            subsets.push((0..n).filter(|i| mask & (1 << i) != 0).collect());
-                        }
-                    }
+                let subsets: Vec<Vec<usize>> = if n <= 7 {
+                    (1u32..(1 << n))
+                        .filter(|mask| mask.count_ones() >= 2)
+                        .map(|mask| (0..n).filter(|i| mask & (1 << i) != 0).collect())
+                        .collect()
                 } else {
-                    subsets.push((0..n).collect());
-                    for skip in 0..n {
-                        subsets.push((0..n).filter(|&i| i != skip).collect());
-                    }
-                }
+                    std::iter::once((0..n).collect())
+                        .chain((0..n).map(|skip| (0..n).filter(|&i| i != skip).collect()))
+                        .collect()
+                };
                 for sub in subsets {
                     let lead = residual[sub[0]].1;
                     let mut kernel = Poly::zero();
@@ -539,9 +534,7 @@ fn extract_kernels(polys: &mut [Poly], first_free: Var) -> Vec<(Var, Poly)> {
                     .iter()
                     .all(|m| !used.contains(&(o.output, m.clone())))
                 {
-                    for m in &o.monomials {
-                        used.insert((o.output, m.clone()));
-                    }
+                    used.extend(o.monomials.iter().map(|m| (o.output, m.clone())));
                     kept.push(o.clone());
                 }
             }
@@ -670,9 +663,9 @@ fn extract_products(b: &mut Builder, outs: &mut [Vec<Term>]) {
         let mut count: HashMap<(Operand, Operand), usize> = HashMap::new();
         for t in outs.iter().flatten() {
             let mut seen = BTreeSet::new();
-            for i in 0..t.atoms.len() {
-                for j in i + 1..t.atoms.len() {
-                    let pair = (t.atoms[i], t.atoms[j]);
+            for (i, &a) in t.atoms.iter().enumerate() {
+                for &c in &t.atoms[i + 1..] {
+                    let pair = (a, c);
                     if seen.insert(pair) {
                         *count.entry(pair).or_default() += 1;
                     }
@@ -706,10 +699,8 @@ fn extract_sums(b: &mut Builder, sums: &mut [Vec<(Rational, Operand)>]) {
     loop {
         let mut count: HashMap<(Operand, Operand, Rational), usize> = HashMap::new();
         for s in sums.iter() {
-            for i in 0..s.len() {
-                for j in i + 1..s.len() {
-                    let (ci, pi) = s[i];
-                    let (cj, pj) = s[j];
+            for (i, &(ci, pi)) in s.iter().enumerate() {
+                for &(cj, pj) in &s[i + 1..] {
                     if matches!(pi, Operand::Const(_)) || matches!(pj, Operand::Const(_)) {
                         continue;
                     }
@@ -767,16 +758,17 @@ pub fn emit_sum(b: &mut Builder, s: &[(Rational, Operand)]) -> Operand {
                 .push((c < Rational::ZERO, o));
         }
     }
-    let mut parts: Vec<(bool, Operand)> = Vec::new();
-    for (mag, items) in groups {
-        let (neg, sum) = signed_sum(b, &items);
-        if mag == Rational::ONE {
-            parts.push((neg, sum));
-        } else {
-            let scaled = b.mul(Operand::Const(mag), sum);
-            parts.push((neg, scaled));
-        }
-    }
+    let parts: Vec<(bool, Operand)> = groups
+        .into_iter()
+        .map(|(mag, items)| {
+            let (neg, sum) = signed_sum(b, &items);
+            if mag == Rational::ONE {
+                (neg, sum)
+            } else {
+                (neg, b.mul(Operand::Const(mag), sum))
+            }
+        })
+        .collect();
     let (neg, total) = signed_sum(b, &parts);
     if neg {
         b.emit(Instr::Neg(total))
@@ -955,11 +947,11 @@ pub fn repair_degree(prog: &Program, nv: Var, norm: &Poly, target: usize) -> Opt
         };
         temps.push(r);
     }
-    let outs: Vec<(Operand, usize)> = prog.outputs.iter().map(|o| get(o, &temps)).collect();
-    let mut outputs = Vec::with_capacity(outs.len());
-    for o in outs {
-        outputs.push(raise(&mut st, norm, o, target)?);
-    }
+    let outputs = prog
+        .outputs
+        .iter()
+        .map(|o| raise(&mut st, norm, get(o, &temps), target))
+        .collect::<Option<Vec<_>>>()?;
     let mut p = st.b.prog;
     p.outputs = outputs;
     p.compact();

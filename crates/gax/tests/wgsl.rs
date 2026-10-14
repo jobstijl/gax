@@ -3,7 +3,6 @@
 //! matrices equals the layout of the Rust types (`{Kind}Gpu`, `GpuMat`).
 
 #![cfg(all(feature = "wgsl", feature = "bytemuck"))]
-#![allow(clippy::needless_range_loop)]
 
 use gax::wgsl::Module;
 use naga::valid::{Capabilities, ValidationFlags, Validator};
@@ -177,15 +176,11 @@ fn conversions_follow_the_layout() {
     let gm = gax::GpuMat::<4>::from(map);
     let p = Point::<(), f32>::new(0.3, -0.2, 0.5, 1.0);
     // m * p with columns as inputs.
-    let mut mp = [0.0f32; 4];
-    for (i, col) in gm.cols.iter().enumerate() {
-        for o in 0..4 {
-            mp[o] += col[o] * p.c[i];
-        }
-    }
+    let mp: [f32; 4] =
+        core::array::from_fn(|o| gm.cols.iter().zip(p.c).map(|(col, x)| col[o] * x).sum());
     let want = map.of(p);
-    for o in 0..4 {
-        assert!((mp[o] - want.c[o]).abs() < 1e-6);
+    for (got, want) in mp.iter().zip(want.c) {
+        assert!((got - want).abs() < 1e-6);
     }
     assert_eq!(Point::<(Point,), f32>::from(gm), map);
 }

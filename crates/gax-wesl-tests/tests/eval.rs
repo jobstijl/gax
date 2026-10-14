@@ -339,10 +339,7 @@ fn reference_log(algebra: &str, kind: &str, rng: &mut Rng, case: usize) -> (Vec<
                     .iter()
                     .position(|n| *n == "e12")
                     .expect("e12");
-                let mut b = [0.0f64; 15];
-                for x in &mut b {
-                    *x = 0.05 * f64::from(rng.next());
-                }
+                let mut b: [f64; 15] = core::array::from_fn(|_| 0.05 * f64::from(rng.next()));
                 b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
                 let r = B::from_coeffs(b).exp().into_inner().c;
                 r.iter().map(|x| *x as f32).collect()

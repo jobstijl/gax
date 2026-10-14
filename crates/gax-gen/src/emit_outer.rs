@@ -43,13 +43,7 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> (String, Vec<(String, String, bool)
             )
         },
     );
-    let mut out = String::new();
-    let mut pairs = Vec::new();
-    for (code, pair) in done.into_iter().flatten() {
-        out.push_str(&code);
-        pairs.push(pair);
-    }
-    (out, pairs)
+    done.into_iter().flatten().unzip()
 }
 
 /// The outermorphism from maps on the base kind `v` to the kind `b`, if `b` extends it.
@@ -100,10 +94,7 @@ fn outermorphism(
             alg.right_complement(ma)
         };
         let mut col: Option<SymMv> = None;
-        for i in 0..n {
-            if factors & (1 << i) == 0 {
-                continue;
-            }
+        for i in (0..n).filter(|i| factors & (1 << i) != 0) {
             let (m, sign) = if wedge {
                 (1 << i, 1)
             } else {

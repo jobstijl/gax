@@ -88,7 +88,6 @@ impl Algebra {
     /// If the dimension exceeds [`MAX_DIM`], the metric is not a symmetric `n × n` matrix with
     /// entries of magnitude at most [`MAX_METRIC`], or the basis names are not distinct ASCII
     /// alphanumerics.
-    #[allow(clippy::needless_range_loop)]
     pub fn new(basis: &str, metric: Vec<Vec<i64>>) -> Result<Self, AlgebraError> {
         let names: Vec<char> = basis.chars().collect();
         let n = names.len();
@@ -100,12 +99,12 @@ impl Algebra {
         if metric.len() != n || metric.iter().any(|row| row.len() != n) {
             return err("metric must be an n x n matrix");
         }
-        for i in 0..n {
-            for j in 0..n {
-                if metric[i][j] != metric[j][i] {
+        for (i, row) in metric.iter().enumerate() {
+            for (j, &x) in row.iter().enumerate() {
+                if x != metric[j][i] {
                     return err("metric must be symmetric");
                 }
-                if metric[i][j].abs() > MAX_METRIC {
+                if x.abs() > MAX_METRIC {
                     return err(format!(
                         "metric entries must be at most {MAX_METRIC} in magnitude"
                     ));
@@ -221,13 +220,14 @@ impl Algebra {
         if mask == 0 {
             return "1".into();
         }
-        let mut s = String::from("e");
-        for (i, c) in self.names.iter().enumerate() {
-            if mask & (1 << i) != 0 {
-                s.push(*c);
-            }
-        }
-        s
+        let factors: String = self
+            .names
+            .iter()
+            .enumerate()
+            .filter(|&(i, _)| mask & (1 << i) != 0)
+            .map(|(_, &c)| c)
+            .collect();
+        format!("e{factors}")
     }
 
     /// Parse a blade written as `1` or `e` followed by factor suffixes in any order.
@@ -257,16 +257,13 @@ impl Algebra {
             return err(format!("blade {s:?} has no factors"));
         }
         // Sign of the permutation that sorts the indices (count inversions).
-        let mut inversions = 0;
-        for a in 0..indices.len() {
-            for b in a + 1..indices.len() {
-                if indices[a] > indices[b] {
-                    inversions += 1;
-                }
-            }
-        }
+        let inversions: usize = indices
+            .iter()
+            .enumerate()
+            .map(|(a, &i)| indices[a + 1..].iter().filter(|&&j| i > j).count())
+            .sum();
         let mask = indices.iter().fold(0u32, |m, &i| m | (1 << i));
-        Ok((mask, if inversions % 2 == 0 { 1 } else { -1 }))
+        Ok((mask, if inversions.is_multiple_of(2) { 1 } else { -1 }))
     }
 
     /// Grade of a blade.
@@ -299,20 +296,20 @@ impl Algebra {
             *out.entry(b | bit).or_default() += s;
         }
         // Left contraction: e_i ⌋ (b1 ^ ... ^ bk) = Σ_j (-1)^(j) g(i, b_j) (b without b_j).
-        let mut position = 0;
-        for j in 0..self.dim() {
-            if b & (1 << j) == 0 {
-                continue;
-            }
+        for (position, j) in self.factors(b).enumerate() {
             let g = self.metric[i][j];
             if g != 0 {
                 let sign = if position % 2 == 0 { 1 } else { -1 };
                 *out.entry(b & !(1 << j)).or_default() += sign * g;
             }
-            position += 1;
         }
         out.retain(|_, v| *v != 0);
         out
+    }
+
+    /// The indices of the basis vectors in blade `b`, in increasing order.
+    fn factors(&self, b: u32) -> impl Iterator<Item = usize> {
+        (0..self.dim()).filter(move |&j| b & (1 << j) != 0)
     }
 
     /// Product of a vector (as index) with a sparse multivector.
@@ -331,17 +328,12 @@ impl Algebra {
     fn vector_lc(&self, i: usize, x: &Sparse) -> Sparse {
         let mut out = Sparse::new();
         for (&b, &c) in x {
-            let mut position = 0;
-            for j in 0..self.dim() {
-                if b & (1 << j) == 0 {
-                    continue;
-                }
+            for (position, j) in self.factors(b).enumerate() {
                 let g = self.metric[i][j];
                 if g != 0 {
                     let sign = if position % 2 == 0 { 1 } else { -1 };
                     *out.entry(b & !(1 << j)).or_default() += sign * g * c;
                 }
-                position += 1;
             }
         }
         out.retain(|_, v| *v != 0);
@@ -370,14 +362,11 @@ impl Algebra {
     }
 
     fn build_table(&self) -> Vec<Vec<(u32, i64)>> {
-        let n = self.blade_count();
-        let mut table = Vec::with_capacity(n * n);
-        for a in 0..n as u32 {
-            for b in 0..n as u32 {
-                table.push(self.blade_product_uncached(a, b).into_iter().collect());
-            }
-        }
-        table
+        let n = self.blade_count() as u32;
+        (0..n)
+            .flat_map(|a| (0..n).map(move |b| (a, b)))
+            .map(|(a, b)| self.blade_product_uncached(a, b).into_iter().collect())
+            .collect()
     }
 
     /// Geometric product of two basis blades as a list of `(blade, coefficient)`.

@@ -220,27 +220,13 @@ impl Program {
     /// Which instructions contribute to the outputs.
     pub fn live(&self) -> Vec<bool> {
         let mut live = vec![false; self.instrs.len()];
-        let mut stack: Vec<usize> = self
-            .outputs
-            .iter()
-            .filter_map(|o| {
-                if let Operand::Temp(k) = o {
-                    Some(*k)
-                } else {
-                    None
-                }
-            })
-            .collect();
+        let mut stack: Vec<usize> = self.outputs.iter().filter_map(temp).collect();
         while let Some(k) = stack.pop() {
             if live[k] {
                 continue;
             }
             live[k] = true;
-            for o in operands(&self.instrs[k]) {
-                if let Operand::Temp(j) = o {
-                    stack.push(j);
-                }
-            }
+            stack.extend(temps(&self.instrs[k]));
         }
         live
     }
@@ -434,19 +420,14 @@ impl Program {
         let live = self.live();
         // Uses of each temporary (outputs count), to fuse single-use products into their sum.
         let mut uses = vec![0usize; self.instrs.len()];
-        for (k, i) in self.instrs.iter().enumerate() {
-            if live[k] {
-                for o in operands(i) {
-                    if let Operand::Temp(j) = o {
-                        uses[j] += 1;
-                    }
-                }
-            }
-        }
-        for o in &self.outputs {
-            if let Operand::Temp(j) = o {
-                uses[*j] += 1;
-            }
+        let live_reads = self
+            .instrs
+            .iter()
+            .zip(&live)
+            .filter(|&(_, &l)| l)
+            .flat_map(|(i, _)| temps(i));
+        for j in live_reads.chain(self.outputs.iter().filter_map(temp)) {
+            uses[j] += 1;
         }
         let single_mul = |o: &Operand| match o {
             Operand::Temp(j) if uses[*j] == 1 => match &self.instrs[*j] {
@@ -555,17 +536,11 @@ impl Program {
         // levels overflow its stack).
         let refs = |k: usize| -> Vec<usize> {
             let mut r = Vec::new();
-            for o in operands(&self.instrs[k]) {
-                if let Operand::Temp(j) = o {
-                    if fused[j] {
-                        for p in operands(&self.instrs[j]) {
-                            if let Operand::Temp(q) = p {
-                                r.push(q);
-                            }
-                        }
-                    } else {
-                        r.push(j);
-                    }
+            for j in temps(&self.instrs[k]) {
+                if fused[j] {
+                    r.extend(temps(&self.instrs[j]));
+                } else {
+                    r.push(j);
                 }
             }
             r
@@ -577,10 +552,8 @@ impl Program {
                 last_use[j] = last_use[j].max(at);
             }
         }
-        for o in &self.outputs {
-            if let Operand::Temp(j) = o {
-                last_use[*j] = usize::MAX;
-            }
+        for j in self.outputs.iter().filter_map(temp) {
+            last_use[j] = usize::MAX;
         }
         let chunks: Vec<&[(usize, String)]> = stmts.chunks(LETS_MAX).collect();
         let last = chunks.len() - 1;
@@ -687,6 +660,19 @@ fn operands(i: &Instr) -> Vec<Operand> {
         Instr::Neg(a) | Instr::Call(_, a) => vec![*a],
         Instr::Select(a, b, x, y) => vec![*a, *b, *x, *y],
     }
+}
+
+/// The temporary an operand reads, if any.
+fn temp(o: &Operand) -> Option<usize> {
+    match o {
+        Operand::Temp(k) => Some(*k),
+        _ => None,
+    }
+}
+
+/// The temporaries an instruction reads.
+fn temps(i: &Instr) -> impl Iterator<Item = usize> {
+    operands(i).into_iter().filter_map(|o| temp(&o))
 }
 
 fn remap(i: &Instr, map: &[usize]) -> Instr {

@@ -18,21 +18,22 @@ pub fn variables(layout: &Layout, first: Var) -> SymMv {
 
 /// A multivector from coefficients in a layout (applying orientation signs).
 pub fn from_coeffs(layout: &Layout, coeffs: &[Poly]) -> SymMv {
-    let mut mv = SymMv::new();
-    for (&(m, s), c) in layout.blades.iter().zip(coeffs) {
-        if !c.is_zero() {
-            mv.insert(m, c.scale(Rational::int(i128::from(s))));
-        }
-    }
-    mv
+    layout
+        .blades
+        .iter()
+        .zip(coeffs)
+        .filter(|(_, c)| !c.is_zero())
+        .map(|(&(m, s), c)| (m, c.scale(Rational::int(i128::from(s)))))
+        .collect()
 }
 
 /// Coefficients of a multivector in a layout, or `None` if its support is not contained in it.
 pub fn to_coeffs(layout: &Layout, mv: &SymMv) -> Option<Vec<Poly>> {
-    for (m, p) in mv {
-        if !p.is_zero() && layout.position(*m).is_none() {
-            return None;
-        }
+    if mv
+        .iter()
+        .any(|(m, p)| !p.is_zero() && layout.position(*m).is_none())
+    {
+        return None;
     }
     Some(
         layout
@@ -72,12 +73,12 @@ pub fn binop(alg: &Algebra, op: BinOp, a: &SymMv, b: &SymMv) -> SymMv {
 
 /// A unary operation.
 pub fn unop(alg: &Algebra, op: UnOp, a: &SymMv) -> SymMv {
-    let mut out = SymMv::new();
-    for (&m, p) in a {
-        let (mm, s) = blade_unop(alg, op, m);
-        out.insert(mm, p.scale(Rational::int(i128::from(s))));
-    }
-    out
+    a.iter()
+        .map(|(&m, p)| {
+            let (mm, s) = blade_unop(alg, op, m);
+            (mm, p.scale(Rational::int(i128::from(s))))
+        })
+        .collect()
 }
 
 /// Sum of two multivectors.

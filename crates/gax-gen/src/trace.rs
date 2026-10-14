@@ -614,28 +614,28 @@ fn wgsl_form(
 
 /// The non-polynomial steps and opaque nodes of the current trace, in creation order.
 fn stages_of_arena() -> Vec<Stage> {
-    let mut stages = Vec::new();
-    for v in 0..Sym::var_count() as Var {
-        let (op, args) = match Sym::var_def(v) {
-            VarDef::Atom { func, arg } => (StageOp::Call(func), vec![arg.poly()]),
-            VarDef::Atan2 { y, x } => (StageOp::Atan2, vec![y.poly(), x.poly()]),
-            VarDef::Select { a, b, x, y } => (
-                StageOp::Select,
-                vec![a.poly(), b.poly(), x.poly(), y.poly()],
-            ),
-            VarDef::Node { op, a, b } => (
-                match op {
-                    NodeOp::Add => StageOp::Add,
-                    NodeOp::Sub => StageOp::Sub,
-                    NodeOp::Mul => StageOp::Mul,
-                },
-                vec![a.poly(), b.poly()],
-            ),
-            VarDef::Input { .. } | VarDef::Constant(_) => continue,
-        };
-        stages.push(Stage { var: v, op, args });
-    }
-    stages
+    (0..Sym::var_count() as Var)
+        .filter_map(|v| {
+            let (op, args) = match Sym::var_def(v) {
+                VarDef::Atom { func, arg } => (StageOp::Call(func), vec![arg.poly()]),
+                VarDef::Atan2 { y, x } => (StageOp::Atan2, vec![y.poly(), x.poly()]),
+                VarDef::Select { a, b, x, y } => (
+                    StageOp::Select,
+                    vec![a.poly(), b.poly(), x.poly(), y.poly()],
+                ),
+                VarDef::Node { op, a, b } => (
+                    match op {
+                        NodeOp::Add => StageOp::Add,
+                        NodeOp::Sub => StageOp::Sub,
+                        NodeOp::Mul => StageOp::Mul,
+                    },
+                    vec![a.poly(), b.poly()],
+                ),
+                VarDef::Input { .. } | VarDef::Constant(_) => return None,
+            };
+            Some(Stage { var: v, op, args })
+        })
+        .collect()
 }
 
 /// Map from variables to their definition, for inspection in tests.

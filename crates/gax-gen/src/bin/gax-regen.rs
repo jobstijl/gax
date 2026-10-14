@@ -146,12 +146,9 @@ fn main() -> ExitCode {
                 stats.sandwich_impls
             ));
             if verbose {
-                for (v, x, unit, cost, _) in &stats.sandwich_costs {
-                    log.push(format!(
-                        "    {}{v} >> {x}: {cost}",
-                        if *unit { "Unit " } else { "" }
-                    ));
-                }
+                log.extend(stats.sandwich_costs.iter().map(|(v, x, unit, cost, _)| {
+                    format!("    {}{v} >> {x}: {cost}", if *unit { "Unit " } else { "" })
+                }));
             }
             // The module as an index of `include!`s and its parts (gax_gen::split).
             let (index, parts) = gax_gen::split::split(&spec.name, &code, PART_BUDGET);
@@ -256,9 +253,7 @@ fn main() -> ExitCode {
          algebras and checked by CI, so a change to the generator that changes any kernel's cost\n\
          shows up here, in review. See [performance.md](performance.md) for timings.\n\n",
     );
-    for o in &outputs {
-        costs.push_str(&o.4);
-    }
+    costs.extend(outputs.iter().map(|o| o.4.as_str()));
     let outputs = outputs
         .into_iter()
         .map(|(files, table, log, _, _)| (files, table, log));

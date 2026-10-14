@@ -498,13 +498,14 @@ fn eigh_eigenvectors_across_a_small_gap() {
         let exact = |j: usize| (((j as f64 + 0.5) * wave * std::f64::consts::PI) / n as f64).cos();
         let norm2: f64 = (0..n).map(|j| exact(j) * exact(j)).sum();
         // The mode less its projection on the exact eigenspace (each coefficient separately).
-        let mut outside = 0.0;
-        for k in 0..3 {
-            let along: f64 = (0..n).map(|j| mode.site(j).c[k] * exact(j)).sum::<f64>() / norm2;
-            outside += (0..n)
-                .map(|j| (mode.site(j).c[k] - along * exact(j)).powi(2))
-                .sum::<f64>();
-        }
+        let outside: f64 = (0..3)
+            .map(|k| {
+                let along: f64 = (0..n).map(|j| mode.site(j).c[k] * exact(j)).sum::<f64>() / norm2;
+                (0..n)
+                    .map(|j| (mode.site(j).c[k] - along * exact(j)).powi(2))
+                    .sum::<f64>()
+            })
+            .sum();
         let want = 2.0 - 2.0 * (wave * std::f64::consts::PI / n as f64).cos();
         assert!(
             outside.sqrt() < 1e-11,

@@ -394,10 +394,7 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
         .filter(|(v, b, _)| is_law(v) && is_law(b) && kind(v).layout.len() <= OUTER_BASE)
         .collect();
     let mut unit_det = Vec::new();
-    for (base, top, is_top) in &outer {
-        if !is_top {
-            continue;
-        }
+    for (base, top, _) in outer.iter().filter(|(_, _, is_top)| *is_top) {
         for v in &versors {
             if keeps(&v.name, base, true)
                 && let Some(d) = unit_det_sign(spec, v, kind(base))

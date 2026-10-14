@@ -15,13 +15,11 @@ pub fn grevlex(a: &Monomial, b: &Monomial) -> Ordering {
         // Compare exponent vectors from the last variable; the one with the smaller exponent
         // in the last differing variable is larger.
         let vars: std::collections::BTreeSet<u32> = a.0.iter().chain(&b.0).copied().collect();
-        for &v in vars.iter().rev() {
-            let (ea, eb) = (a.power(v), b.power(v));
-            if ea != eb {
-                return eb.cmp(&ea);
-            }
-        }
-        Ordering::Equal
+        vars.iter()
+            .rev()
+            .map(|&v| (a.power(v), b.power(v)))
+            .find(|(ea, eb)| ea != eb)
+            .map_or(Ordering::Equal, |(ea, eb)| eb.cmp(&ea))
     })
 }
 
@@ -33,14 +31,12 @@ pub fn leading(p: &Poly) -> Option<(Monomial, Rational)> {
 }
 
 fn lcm(a: &Monomial, b: &Monomial) -> Monomial {
-    let mut out = Vec::new();
     let vars: std::collections::BTreeSet<u32> = a.0.iter().chain(&b.0).copied().collect();
-    for v in vars {
-        for _ in 0..a.power(v).max(b.power(v)) {
-            out.push(v);
-        }
-    }
-    Monomial(out)
+    Monomial(
+        vars.into_iter()
+            .flat_map(|v| std::iter::repeat_n(v, a.power(v).max(b.power(v))))
+            .collect(),
+    )
 }
 
 fn times(p: &Poly, m: &Monomial, c: Rational) -> Poly {
@@ -51,21 +47,28 @@ fn times(p: &Poly, m: &Monomial, c: Rational) -> Poly {
     out
 }
 
+/// The first element of `basis` whose leading monomial (in `leads`) divides `m`, with the
+/// quotient and that leading coefficient.
+fn divisor<'a>(
+    basis: &'a [Poly],
+    leads: &'a [(Monomial, Rational)],
+    m: &Monomial,
+) -> Option<(&'a Poly, Monomial, Rational)> {
+    basis
+        .iter()
+        .zip(leads)
+        .find_map(|(g, (lm, lc))| m.div(lm).map(|q| (g, q, *lc)))
+}
+
 /// Full normal form of `p` modulo the polynomials in `basis`.
 pub fn normal_form(p: &Poly, basis: &[Poly]) -> Poly {
     let leads: Vec<(Monomial, Rational)> = basis.iter().filter_map(leading).collect();
     let mut p = p.clone();
     let mut rem = Poly::zero();
     while let Some((m, c)) = leading(&p) {
-        let mut reduced = false;
-        for (g, (lm, lc)) in basis.iter().zip(&leads) {
-            if let Some(q) = m.div(lm) {
-                p = &p - &times(g, &q, c * lc.recip());
-                reduced = true;
-                break;
-            }
-        }
-        if !reduced {
+        if let Some((g, q, lc)) = divisor(basis, &leads, &m) {
+            p = &p - &times(g, &q, c * lc.recip());
+        } else {
             rem.add_term(m.clone(), c);
             p.add_term(m, -c);
         }
@@ -81,16 +84,10 @@ fn normal_form_bounded(p: &Poly, basis: &[Poly], budget: &mut usize) -> Option<P
     let mut p = p.clone();
     let mut rem = Poly::zero();
     while let Some((m, c)) = leading(&p) {
-        let mut reduced = false;
-        for (g, (lm, lc)) in basis.iter().zip(&leads) {
-            if let Some(q) = m.div(lm) {
-                *budget = budget.checked_sub(g.len() + p.len())?;
-                p = &p - &times(g, &q, c * lc.recip());
-                reduced = true;
-                break;
-            }
-        }
-        if !reduced {
+        if let Some((g, q, lc)) = divisor(basis, &leads, &m) {
+            *budget = budget.checked_sub(g.len() + p.len())?;
+            p = &p - &times(g, &q, c * lc.recip());
+        } else {
             rem.add_term(m.clone(), c);
             p.add_term(m, -c);
         }
