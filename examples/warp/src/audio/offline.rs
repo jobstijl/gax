@@ -104,8 +104,8 @@ pub fn wav(l: &[f32], r: &[f32]) -> Vec<u8> {
     out.extend_from_slice(&16u16.to_le_bytes());
     out.extend_from_slice(b"data");
     out.extend_from_slice(&data.to_le_bytes());
-    for i in 0..n {
-        for x in [l[i], r[i]] {
+    for (&a, &b) in l.iter().zip(r) {
+        for x in [a, b] {
             let y = super::dsp::soft(x * 1.2) * 0.9;
             out.extend_from_slice(&((y * 32767.0) as i16).to_le_bytes());
         }

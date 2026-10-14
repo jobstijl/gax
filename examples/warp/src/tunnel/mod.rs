@@ -532,13 +532,13 @@ impl Field {
     /// The pull at `p`, `k s d / (|d|² + 1)^(3/2)` towards each singularity: an inverse
     /// square with a softened core.
     pub fn pull(&self, p: P, k: f32) -> P {
-        let mut acc = dir(0.0, 0.0, 0.0);
-        for &(w, strength) in &self.wells {
-            let d = w - p;
-            let soft = d.ideal_norm_squared() + 1.0;
-            acc += d * (k * strength / soft.powf(1.5));
-        }
-        acc
+        self.wells
+            .iter()
+            .fold(dir(0.0, 0.0, 0.0), |acc, &(w, strength)| {
+                let d = w - p;
+                let soft = d.ideal_norm_squared() + 1.0;
+                acc + d * (k * strength / soft.powf(1.5))
+            })
     }
 
     /// Whether there are any.

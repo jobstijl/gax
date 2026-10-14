@@ -459,19 +459,15 @@ impl Game {
         if self.shield <= 0.0 {
             self.ship_shape.placed(self.ship.pose, ship);
             let sc = self.ship.position();
-            for a in &self.asteroids {
+            crashed = self.asteroids.iter().any(|a| {
                 let c = a.body.position();
                 if !near(c, sc, a.shape.radius + self.ship_shape.radius) {
-                    continue;
+                    return false;
                 }
                 a.shape.placed(a.body.pose, placed);
-                if ship.iter().any(|&p| contains(placed, c, p))
+                ship.iter().any(|&p| contains(placed, c, p))
                     || placed.iter().any(|&p| contains(ship, sc, p))
-                {
-                    crashed = true;
-                    break;
-                }
-            }
+            });
         }
         for &(i, b) in split.iter().rev() {
             let a = self.asteroids.swap_remove(i);

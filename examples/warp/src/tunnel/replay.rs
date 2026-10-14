@@ -103,9 +103,10 @@ impl Record for Packed {
 pub fn hash(w: &World) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     let mut u = |x: u64| {
-        for b in x.to_le_bytes() {
-            h = (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3);
-        }
+        h = x
+            .to_le_bytes()
+            .into_iter()
+            .fold(h, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3));
     };
     u(w.tick);
     u(w.rng.state());

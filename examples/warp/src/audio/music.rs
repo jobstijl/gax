@@ -448,6 +448,7 @@ impl Music {
         }
         if self.frag_gain.value > 1e-3 {
             let pos = (step % 32) as u8;
+            // By index: `ring_bell` needs all of `self`.
             for k in 0..self.motif_len {
                 let (p, d) = self.motif[k];
                 if p == pos {

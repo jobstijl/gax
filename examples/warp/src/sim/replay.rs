@@ -170,9 +170,9 @@ struct Fnv(u64);
 
 impl Fnv {
     fn u(&mut self, x: u64) {
-        for b in x.to_le_bytes() {
-            self.0 = (self.0 ^ u64::from(b)).wrapping_mul(0x100_0000_01b3);
-        }
+        self.0 = x.to_le_bytes().into_iter().fold(self.0, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3)
+        });
     }
 
     fn fs(&mut self, xs: &[f32]) {

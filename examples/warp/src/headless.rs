@@ -404,13 +404,13 @@ fn save(r: &Renderer, target: &wgpu::Texture, path: &Path) {
         .poll(wgpu::PollType::wait_indefinitely())
         .expect("the GPU finishes");
     let data = slice.get_mapped_range().expect("mapped").to_vec();
-    let mut rgb = Vec::with_capacity((w * h * 3) as usize);
-    for y in 0..h {
-        for x in 0..w {
-            let i = (y * row + x * 4) as usize;
-            rgb.extend_from_slice(&data[i..i + 3]);
-        }
-    }
+    // Rows padded to `row` bytes, of RGBA pixels: their RGB.
+    let rgb: Vec<u8> = data
+        .chunks(row as usize)
+        .take(h as usize)
+        .flat_map(|line| line[..(w * 4) as usize].as_chunks::<4>().0)
+        .flat_map(|&[r, g, b, _]| [r, g, b])
+        .collect();
     std::fs::write(path, png(w, h, &rgb)).expect("write the PNG");
 }
 
@@ -440,9 +440,9 @@ pub fn png(w: u32, h: u32, rgb: &[u8]) -> Vec<u8> {
         out.extend_from_slice(&crc(&body).to_be_bytes());
     };
     let mut raw = Vec::with_capacity(((w * 3 + 1) * h) as usize);
-    for y in 0..h as usize {
+    for line in rgb.chunks_exact(w as usize * 3) {
         raw.push(0); // no filter
-        raw.extend_from_slice(&rgb[y * w as usize * 3..(y + 1) * w as usize * 3]);
+        raw.extend_from_slice(line);
     }
     let mut z = vec![0x78, 0x01];
     let chunks: Vec<&[u8]> = raw.chunks(65535).collect();
@@ -452,11 +452,11 @@ pub fn png(w: u32, h: u32, rgb: &[u8]) -> Vec<u8> {
         z.extend_from_slice(&(!(c.len() as u16)).to_le_bytes());
         z.extend_from_slice(c);
     }
-    let (mut a, mut b) = (1u32, 0u32);
-    for x in &raw {
-        a = (a + u32::from(*x)) % 65521;
-        b = (b + a) % 65521;
-    }
+    // Adler-32.
+    let (a, b) = raw.iter().fold((1u32, 0u32), |(a, b), &x| {
+        let a = (a + u32::from(x)) % 65521;
+        (a, (b + a) % 65521)
+    });
     z.extend_from_slice(&((b << 16) | a).to_be_bytes());
     let mut out = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
     let mut ihdr = Vec::new();
@@ -749,6 +749,17 @@ mod tests {
             .create_view(&wgpu::TextureViewDescriptor::default())
     }
 
+    /// A position and a velocity.
+    type Motion = (Point<(), f32>, Point<(), f32>);
+
+    /// The largest relative difference of `got`'s coefficients from `want`'s.
+    fn difference(got: Motion, want: Motion) -> f32 {
+        (got.0.c.iter().zip(&want.0.c))
+            .chain(got.1.c.iter().zip(&want.1.c))
+            .map(|(a, b)| (a - b).abs() / (1.0 + b.abs()))
+            .fold(0.0, f32::max)
+    }
+
     /// The lattice kernel on the GPU and its CPU twin (the fused batch kernel) agree: one step
     /// to within a few f32 ulps of the motion's scale, and after 240 steps with blasts and a
     /// well they have not drifted apart.
@@ -781,19 +792,11 @@ mod tests {
             Source::new(Point::xy(-10.0, 5.0), 80.0, 3.0),
         ];
         let compare = |r: &Renderer, cpu: &CpuGrid| {
-            let gpu = r.read_grid();
-            let mut worst = 0.0f32;
-            for (k, n) in gpu.iter().enumerate() {
-                let (gp, gv): (Point<(), f32>, Point<(), f32>) = (n.p.into(), n.v.into());
-                for (a, b) in
-                    gp.c.iter()
-                        .zip(&cpu.p[k].c)
-                        .chain(gv.c.iter().zip(&cpu.v[k].c))
-                {
-                    worst = worst.max((a - b).abs() / (1.0 + b.abs()));
-                }
-            }
-            worst
+            r.read_grid()
+                .iter()
+                .zip(cpu.p.iter().zip(&cpu.v))
+                .map(|(n, (&p, &v))| difference((n.p.into(), n.v.into()), (p, v)))
+                .fold(0.0, f32::max)
         };
         let steps = vec![sources.clone()];
         r.render(&view, &frame(&steps, &[], &[]));
@@ -828,18 +831,18 @@ mod tests {
         let steps = vec![Vec::new(); 3];
         r.render(&view, &frame(&steps, &wells, &ps));
         let gpu = r.read_particles(ps.len());
-        let mut worst = 0.0f32;
-        for (q, g) in ps.iter().zip(&gpu) {
-            let (mut p, mut v): (Point<(), f32>, Point<(), f32>) = (q.p.into(), q.v.into());
-            for _ in 0..3 {
-                let f = crate::source_force(p, wells[0].at, wells[0].k());
-                (p, v) = crate::particle_step(p, v, f, [q.life[2], sim::DT]);
-            }
-            let (gp, gv): (Point<(), f32>, Point<(), f32>) = (g.p.into(), g.v.into());
-            for (a, b) in gp.c.iter().zip(&p.c).chain(gv.c.iter().zip(&v.c)) {
-                worst = worst.max((a - b).abs() / (1.0 + b.abs()));
-            }
-        }
+        let worst = ps
+            .iter()
+            .zip(&gpu)
+            .map(|(q, g)| {
+                let (mut p, mut v): Motion = (q.p.into(), q.v.into());
+                for _ in 0..3 {
+                    let f = crate::source_force(p, wells[0].at, wells[0].k());
+                    (p, v) = crate::particle_step(p, v, f, [q.life[2], sim::DT]);
+                }
+                difference((g.p.into(), g.v.into()), (p, v))
+            })
+            .fold(0.0, f32::max);
         println!("particles CPU vs GPU after 3 steps: {worst:.1e}");
         assert!(worst < 1e-5, "{worst:e}");
     }

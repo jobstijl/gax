@@ -91,22 +91,23 @@ impl Director {
         let singularities = count(Kind::Singularity);
         // The roster unlocks over the run; each newcomer is a "feature" formation.
         let heavy = count(Kind::Serpent) + count(Kind::Carrier);
-        let mut features: Vec<Kind> = Vec::new();
-        for (kind, from) in [
+        let features: Vec<Kind> = [
             (Kind::Evader, 20.0),
             (Kind::Splitter, 30.0),
             (Kind::Warden, 50.0),
             (Kind::Serpent, 70.0),
             (Kind::Carrier, 90.0),
-        ] {
+        ]
+        .into_iter()
+        .filter(|&(kind, from)| {
             let room = match kind {
                 Kind::Serpent | Kind::Carrier => heavy < 1 + (i * 2.0) as usize,
                 _ => true,
             };
-            if self.clock > from && room {
-                features.push(kind);
-            }
-        }
+            self.clock > from && room
+        })
+        .map(|(kind, _)| kind)
+        .collect();
         let feature_roll = rng.unit();
         let chaser_share = (0.25 + 0.6 * i).min(0.8);
         let kind = |rng: &mut super::rng::Rng| {

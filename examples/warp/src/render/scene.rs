@@ -164,8 +164,7 @@ pub fn outline(
     style: [f32; 4],
     m: Pose,
 ) {
-    for (i, &a) in pts.iter().enumerate() {
-        let b = pts[(i + 1) % pts.len()];
+    for (&a, &b) in pts.iter().zip(pts.iter().cycle().skip(1)) {
         out.push(seg(scaled(a, size), scaled(b, size), color, style, m));
     }
 }

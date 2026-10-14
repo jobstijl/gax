@@ -235,6 +235,7 @@ impl Sfx {
     }
 
     fn release(&mut self) {
+        // By index: `trigger` needs all of `self`.
         for k in 0..self.held.len() {
             if let Some(t) = self.held[k].take() {
                 self.trigger(&t);

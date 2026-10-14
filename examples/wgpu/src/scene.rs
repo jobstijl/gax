@@ -174,14 +174,15 @@ impl Scene {
     /// Compare the probes' GPU motors with their CPU twins (blocking readback); returns the
     /// largest coefficient difference.
     pub fn check(&mut self, gfx: &Gfx) -> f32 {
-        let mut worst = 0.0f32;
-        for p in &self.probes {
-            let gpu: Motor<(), f32> = gfx.read_particles(p.index, 1)[0].motor.into();
-            for (a, b) in gpu.c.iter().zip(&p.cpu.c) {
-                worst = worst.max((a - b).abs());
-            }
-            self.compared += 1;
-        }
+        let worst = self
+            .probes
+            .iter()
+            .flat_map(|p| {
+                let gpu: Motor<(), f32> = gfx.read_particles(p.index, 1)[0].motor.into();
+                gpu.c.into_iter().zip(p.cpu.c).map(|(a, b)| (a - b).abs())
+            })
+            .fold(0.0f32, f32::max);
+        self.compared += self.probes.len();
         self.worst = self.worst.max(worst);
         worst
     }

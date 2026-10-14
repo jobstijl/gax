@@ -121,8 +121,7 @@ impl Lattice {
             for j in 0..AROUND {
                 let i = r * AROUND + j;
                 let at = self.ring[j] + along;
-                let mut f = zero();
-                for src in sources {
+                let f = sources.iter().fold(zero(), |f, src| {
                     // Away from the source, softened: `strength (p - s) / (|p - s|² + r²)`.
                     let away = at - src.pos;
                     let n2 = away.ideal_norm_squared();
@@ -131,8 +130,8 @@ impl Lattice {
                     } else {
                         1.0
                     };
-                    f += away * (src.strength * reach / (n2 + src.r2));
-                }
+                    f + away * (src.strength * reach / (n2 + src.r2))
+                });
                 let around = |jj: usize| self.d[r * AROUND + jj % AROUND];
                 // Along the track, the end rings see themselves (a free edge).
                 let prev = if r > 0 { self.d[i - AROUND] } else { self.d[i] };

@@ -374,14 +374,11 @@ impl Reverb {
         let fb = 0.7 + 0.28 * self.room;
         let mut out = [0.0f32; 2];
         for ((o, combs), alls) in out.iter_mut().zip(&mut self.combs).zip(&mut self.alls) {
-            let mut s = 0.0;
-            for c in combs {
-                s += c.tick(input, fb, self.damp);
-            }
-            for a in alls {
-                s = a.tick(s);
-            }
-            *o = s;
+            // The combs in parallel, then the allpasses in series.
+            let s = combs
+                .iter_mut()
+                .fold(0.0, |s, c| s + c.tick(input, fb, self.damp));
+            *o = alls.iter_mut().fold(s, |s, a| a.tick(s));
         }
         (out[0], out[1])
     }
