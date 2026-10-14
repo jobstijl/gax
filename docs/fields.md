@@ -74,7 +74,8 @@ assert!((stiffness.apply(&displacements) - &loads).dot(&(stiffness.apply(&displa
 Cells that are maps *apply* to the values: `apply` is the block matrix-vector product, `compose`
 the block matrix product (summed along the paths through the shared sites), and `transpose` runs
 every coupling back with its cell's matrix transposed, the adjoint under the fields' coefficient
-inner product.
+inner product. A simulation that steps a field every tick writes the products into a field it
+keeps, with `apply_into` (map cells) and `mul_into` (multivector cells), and allocates nothing.
 
 ### Solving
 

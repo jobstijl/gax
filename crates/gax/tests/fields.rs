@@ -537,6 +537,23 @@ fn eigh_is_scale_invariant() {
     }
 }
 
+/// The in-place products write what the allocating ones return, into a field reused across
+/// calls (its old contents do not leak in).
+#[test]
+fn products_into_an_existing_field() {
+    let n = 12;
+    let k = free_chain(n);
+    let x = Field::from_fn(n, |i| Vector::<(), f64>::new(i as f64, (i * i) as f64, 1.0));
+    let mut y = Field::from_fn(n, |_| Vector::<(), f64>::new(9.0, 9.0, 9.0));
+    k.apply_into(&x, &mut y);
+    assert_eq!(y, k.apply(&x));
+    let s = Scalar::<(), f64>::new;
+    let ends = SparseMap::new(vec![s(-1.0), s(1.0)], vec![0, 0], vec![0, 1], (1, n));
+    let mut d = Field::from_fn(1, |_| Vector::<(), f64>::new(5.0, 5.0, 5.0));
+    ends.mul_into(&x, &mut d);
+    assert_eq!(d, &ends * &x);
+}
+
 /// A generalized problem with varying masses, and a square grid whose modes along its two axes
 /// coincide (six copies on vectors): residuals `A x − λ M x` at rounding, the metric orthonormal.
 #[test]

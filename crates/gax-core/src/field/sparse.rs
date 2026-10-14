@@ -181,22 +181,84 @@ impl<C: Copy> SparseMap<C> {
         self.combine(x, Of::of)
     }
 
+    /// [`apply`](Self::apply) into an existing field over the map's output sites, which it
+    /// overwrites: no allocation, for loops that step a field every tick.
+    ///
+    /// ```
+    /// use gax::field::{Field, SparseMap};
+    /// use gax::pga3d::{Plane, Scalar};
+    /// let s = Scalar::<(), f64>::new;
+    /// // Differences along a chain of three sites, as map cells on planes.
+    /// let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1], vec![0, 1, 1, 2], (2, 3));
+    /// let ends = &ends * Plane::slot();
+    /// let x = Field::from_fn(3, |i| Plane::new(i as f64, 0.0, 0.0, 0.0));
+    /// let mut steps = Field::zeros(2);
+    /// ends.apply_into(&x, &mut steps);
+    /// assert_eq!(steps, ends.apply(&x));
+    /// ```
+    ///
+    /// # Panics
+    /// If `x` is not over the map's input sites or `y` over its output sites.
+    #[track_caller]
+    pub fn apply_into<X, Y>(&self, x: &Field<X>, y: &mut Field<Y>)
+    where
+        C: Of<X, Output = Y>,
+        X: Extensor,
+        Y: Extensor + Add<Output = Y>,
+    {
+        self.combine_into(x, y, Of::of);
+    }
+
+    /// The product of multivector cells with a field (`&self * x`) into an existing field over
+    /// the map's output sites, which it overwrites: no allocation.
+    ///
+    /// # Panics
+    /// If `x` is not over the map's input sites or `y` over its output sites.
+    #[track_caller]
+    pub fn mul_into<X, Y>(&self, x: &Field<X>, y: &mut Field<Y>)
+    where
+        C: Mul<X, Output = Y>,
+        X: Extensor,
+        Y: Extensor + Add<Output = Y>,
+    {
+        self.combine_into(x, y, |c, v| c * v);
+    }
+
     /// Each cell combined with the value at its column, summed at the rows.
     #[track_caller]
     fn combine<X: Extensor, Y: Extensor + Add<Output = Y>>(
         &self,
         x: &Field<X>,
-        mut f: impl FnMut(C, X) -> Y,
+        f: impl FnMut(C, X) -> Y,
     ) -> Field<Y> {
+        let mut y = Field::zeros(self.shape.0);
+        self.combine_into(x, &mut y, f);
+        y
+    }
+
+    /// [`combine`](Self::combine) into `y`, overwriting it.
+    #[track_caller]
+    fn combine_into<X: Extensor, Y: Extensor + Add<Output = Y>>(
+        &self,
+        x: &Field<X>,
+        y: &mut Field<Y>,
+        mut f: impl FnMut(C, X) -> Y,
+    ) {
         self.check_input(x.len());
+        assert!(
+            y.len() == self.shape.0,
+            "a field map with {} output sites written into a field over {} sites",
+            self.shape.0,
+            y.len()
+        );
         let x = x.sites();
-        Field::from_fn(self.shape.0, |r| {
+        for (r, out) in y.sites_mut().iter_mut().enumerate() {
             let mut acc = zero::<Y>();
             for k in self.starts[r]..self.starts[r + 1] {
                 acc = acc + f(self.cells[k], x[self.cols[k]]);
             }
-            acc
-        })
+            *out = acc;
+        }
     }
 
     #[track_caller]
