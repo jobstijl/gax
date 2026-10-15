@@ -461,8 +461,11 @@ mod tests {
             deformed,
         } = dipole();
         // No change in curvature leaves the sphere as it is, centred. numga asks this to 1e-11;
-        // gax's sparse `eigh` stops at a backward error of `ε^¾`, which over this mesh's
-        // spectral gap leaves the constant field about 3e-9 off.
+        // here it holds to about 3e-9. The constant fields are an exact null space of the
+        // energy (to 1e-14), but its gap to the next eigenvalue, 1 against the area metric, is
+        // only 2.5e-5 of the energy's scale, so the mode's residuals (whose floor of rounding is
+        // near 1e4 ε) leave it about 1e-8 off the null space; from the exact constant field the
+        // sphere comes back to 1e-14.
         let still = spin_transform_deform(&sphere, &rho.map(|r| r * 0.0));
         let centre = sphere.vertices.mean();
         let off = still

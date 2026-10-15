@@ -12,6 +12,32 @@ use core::ops::Add;
 use std::vec;
 use std::vec::Vec;
 
+/// How [`SparseMap::eigh_with`] searches; [`Default`] is what [`SparseMap::eigh`] uses.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EighOptions<T> {
+    /// Vectors per Lanczos block (`None`: `2 K::N + 2`). A block finds an eigenvalue with up to
+    /// `block` copies at once; the default covers a value repeated on every coefficient of the
+    /// kind and doubled by a symmetry of the sites (a square grid's modes along its two axes).
+    /// Use a larger block for more symmetric meshes.
+    pub block: Option<usize>,
+    /// The backward error each pair must reach, `‖A x − λ M x‖ / (‖A‖ + |λ| ‖M‖)` (`None`:
+    /// `ε^¾`). An eigenvector's error is about its backward error over the gap to the next
+    /// eigenvalue (both relative to the pencil's scale), so a mesh whose gaps are a small part
+    /// of the scale may ask for less; a looser tolerance stops sooner. The residuals have a floor
+    /// of rounding (near `10⁴ ε` to `10⁵ ε`): past it, the search stops where they stop
+    /// improving.
+    pub tolerance: Option<T>,
+}
+
+impl<T> Default for EighOptions<T> {
+    fn default() -> Self {
+        EighOptions {
+            block: None,
+            tolerance: None,
+        }
+    }
+}
+
 impl<C, K, T> SparseMap<C>
 where
     C: Extensor<Kind = K, Slots = (K,), Coef = T> + Add<Output = C>,
@@ -43,7 +69,7 @@ where
     /// The blocks have `2 K::N + 2` vectors, so an eigenvalue repeated on every coefficient of
     /// the kind (a field map of isotropic cells repeats each one `K::N` times), and doubled by a
     /// symmetry of the sites, is found with its whole eigenspace
-    /// ([`eigh_with_block`](Self::eigh_with_block) for more).
+    /// ([`eigh_with`](Self::eigh_with) for another block or tolerance).
     ///
     /// ```
     /// use gax::field::{Field, SparseMap};
@@ -76,25 +102,43 @@ where
     #[track_caller]
     #[allow(clippy::type_complexity)]
     pub fn eigh(&self, metric: &SparseMap<C>, count: usize) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
-        self.eigh_with_block(metric, count, 2 * K::N + 2)
+        self.eigh_with(metric, count, EighOptions::default())
     }
 
-    /// [`eigh`](Self::eigh) with Lanczos blocks of `block` vectors. A block finds an eigenvalue
-    /// with up to `block` copies at once; the default, `2 K::N + 2`, covers a value repeated on
-    /// every coefficient of the kind and doubled by a symmetry of the sites (a square grid's
-    /// modes along its two axes). Use a larger block for more symmetric meshes.
+    /// [`eigh`](Self::eigh) with the search's [`EighOptions`]: the Lanczos block's size, the
+    /// backward error to reach.
+    ///
+    /// ```
+    /// use gax::field::{EighOptions, Field, SparseMap};
+    /// use gax::pga3d::Scalar;
+    /// let s = Scalar::<(), f64>::new;
+    /// let k = SparseMap::new(vec![s(2.0), s(-1.0), s(-1.0), s(2.0)], vec![0, 0, 1, 1], vec![0, 1, 0, 1], (2, 2));
+    /// let k = &k * Scalar::slot(); // map cells
+    /// let mass = SparseMap::from_diagonal(&Field::from_fn(2, |_| Scalar::<(), f64>::slot()));
+    /// let options = EighOptions { block: Some(2), tolerance: Some(64.0 * f64::EPSILON) };
+    /// let (values, _) = k.eigh_with(&mass, 2, options);
+    /// assert!((values[0] - 1.0).abs() < 1e-14 && (values[1] - 3.0).abs() < 1e-14);
+    /// ```
     ///
     /// # Panics
-    /// As [`eigh`](Self::eigh), and if `block` is zero.
+    /// As [`eigh`](Self::eigh), and if the block is zero vectors or the tolerance not positive.
     #[must_use]
     #[track_caller]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with_block(
+    pub fn eigh_with(
         &self,
         metric: &SparseMap<C>,
         count: usize,
-        block: usize,
+        options: EighOptions<T>,
     ) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
+        let block = options.block.unwrap_or(2 * K::N + 2);
+        let tolerance = options
+            .tolerance
+            .unwrap_or_else(Progress::default_tolerance);
+        assert!(
+            T::all_lt(T::zero(), tolerance),
+            "eigh: the tolerance must be positive"
+        );
         assert!(block > 0, "eigh: a Lanczos block of zero vectors");
         assert!(
             self.shape.0 == self.shape.1 && metric.shape == self.shape,
@@ -120,7 +164,7 @@ where
             |x: &[T], y: &mut [T]| self.apply_flat(x, y),
         );
         space.extend_random(p);
-        let mut progress = Progress::new();
+        let mut progress = Progress::new(tolerance);
         let mut reshifts = 0;
         // The space is checked when it has grown by a quarter since the last check: each check
         // costs a dense eigenproblem of the space's size, so the checks then cost a fixed
@@ -221,11 +265,11 @@ where
 }
 
 /// When to stop growing the space: the worst backward error, `‖A x − λ M x‖ / (‖A‖ + |λ| ‖M‖)`
-/// in ∞-norms, within `ε^¾`, or within `√ε` once it has stopped improving (no halving over two
-/// checks). The measure is the residual relative to the pencil at `λ`, so it does not change
-/// when the pencil is scaled (a stiffness of `10¹¹`). The residuals have a floor of rounding,
-/// near `10⁵ ε` on small dense spectra; past it, the space would grow to the whole space for
-/// nothing.
+/// in ∞-norms, within the tolerance (by default `ε^¾`), or within `√ε` once it has stopped
+/// improving (no halving over two checks). The measure is the residual relative to the pencil
+/// at `λ`, so it does not change when the pencil is scaled (a stiffness of `10¹¹`). The
+/// residuals have a floor of rounding, near `10⁴ ε` to `10⁵ ε`; past it, the space would grow
+/// to the whole space for nothing.
 struct Progress<T> {
     strict: T,
     loose: T,
@@ -234,11 +278,17 @@ struct Progress<T> {
 }
 
 impl<T: Real> Progress<T> {
-    fn new() -> Self {
+    /// `ε^¾`.
+    fn default_tolerance() -> T {
         let eps = T::epsilon();
+        eps.sqrt() * eps.sqrt().sqrt()
+    }
+
+    /// Stop at `tolerance`, or at `√ε` (or the tolerance, if looser) once stalled.
+    fn new(tolerance: T) -> Self {
         Progress {
-            strict: eps.sqrt() * eps.sqrt().sqrt(),
-            loose: eps.sqrt(),
+            strict: tolerance,
+            loose: T::epsilon().sqrt().max(tolerance),
             best: T::from_f64(f64::MAX),
             stalled: 0,
         }

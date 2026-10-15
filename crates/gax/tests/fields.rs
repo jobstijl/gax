@@ -7,7 +7,7 @@
 
 use gax::Real;
 use gax::dual::hessian;
-use gax::field::{Field, SparseMap};
+use gax::field::{EighOptions, Field, SparseMap};
 use gax::vga3d::{Bivector, Scalar, Vector};
 
 type V = Vector<(), f64>;
@@ -552,6 +552,39 @@ fn products_into_an_existing_field() {
     let mut d = Field::from_fn(1, |_| Vector::<(), f64>::new(5.0, 5.0, 5.0));
     ends.mul_into(&x, &mut d);
     assert_eq!(d, &ends * &x);
+}
+
+/// The tolerance steers the search: a loose one stops sooner, with eigenvectors to match; the
+/// default meets the small-gap test's bar above.
+#[test]
+fn eigh_stops_at_its_tolerance() {
+    let n = 400;
+    let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
+    let chain = free_chain(n);
+    let first_wave_error = |options: EighOptions<f64>| {
+        let (_, modes) = chain.eigh_with(&mass, 6, options);
+        let exact = |j: usize| ((j as f64 + 0.5) * std::f64::consts::PI / n as f64).cos();
+        let norm2: f64 = (0..n).map(|j| exact(j) * exact(j)).sum();
+        (0..3)
+            .map(|k| {
+                let mode = &modes[3 + k];
+                let along: f64 = (0..n).map(|j| mode.site(j).c[k] * exact(j)).sum::<f64>() / norm2;
+                (0..n)
+                    .map(|j| (mode.site(j).c[k] - along * exact(j)).powi(2))
+                    .sum::<f64>()
+            })
+            .sum::<f64>()
+            .sqrt()
+    };
+    let loose = first_wave_error(EighOptions {
+        tolerance: Some(1e-7),
+        ..EighOptions::default()
+    });
+    let default = first_wave_error(EighOptions::default());
+    assert!(
+        default < 1e-11 && loose > 100.0 * default,
+        "{loose:e} {default:e}"
+    );
 }
 
 /// A generalized problem with varying masses, and a square grid whose modes along its two axes
