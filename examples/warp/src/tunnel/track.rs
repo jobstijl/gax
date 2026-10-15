@@ -1,7 +1,8 @@
 //! The track: a chain of screw motions. The frame at arc length `s` is
 //! `M(s) = K_i exp((s - s_i) T_i)`, where each segment's twist `T_i` (a PGA3D line) is a unit
 //! forward translation plus small rotations: pitch, yaw and roll. The keyframes `K_i` are the
-//! running product, and between them `M(s)` is motor interpolation, which for a screw is exact.
+//! running product, `K_{i+1} = K_i exp(SEG T_i)`, and each segment keeps its keyframe and its
+//! twist, so a frame costs one exponential and one product.
 //!
 //! Gameplay lives in *straightened* coordinates `(x, y, s)`: across the tunnel and along it.
 //! `M(s) >> (x, y, 0)` is the world point. Forward is the frame's `+z`.
@@ -22,17 +23,20 @@ const MAX_BEND: f32 = 0.036;
 /// The largest roll rate.
 const MAX_ROLL: f32 = 0.025;
 
-/// `a exp(t log(~a b))`: the screw motion from `a` to `b`, at `t`, the shorter way (`m` and
-/// `-m` are the same motion; see `Motor::interpolate`).
-pub fn interpolate(a: Frame, b: Frame, t: f32) -> Frame {
-    Motor::interpolate(a, b, t).renormalize_fast()
+/// A segment of the track: the frame where it starts, and its twist per unit of arc length.
+#[derive(Clone, Copy, Debug)]
+struct Segment {
+    start: Frame,
+    twist: Line<(), f32>,
 }
 
 /// The procedurally generated track, extended ahead on demand.
 pub struct Track {
     rng: Rng,
-    /// Keyframes from segment `first` on.
-    keys: Vec<Frame>,
+    /// The segments from segment `first` on.
+    segments: Vec<Segment>,
+    /// The frame where the last segment ends (the next one's start).
+    end: Frame,
     first: usize,
     /// The current bend and roll rates (a bounded random walk).
     pitch: f32,
@@ -45,7 +49,8 @@ impl Track {
     pub fn new(seed: u64) -> Track {
         let mut t = Track {
             rng: Rng::new(seed ^ 0x7ac0),
-            keys: vec![Motor::translation(0.0, 0.0, 0.0)],
+            segments: Vec::new(),
+            end: Motor::translation(0.0, 0.0, 0.0),
             first: 0,
             pitch: 0.0,
             yaw: 0.0,
@@ -68,8 +73,9 @@ impl Track {
             + Line::rotation_twist(o & Point::direction(0.0, 0.0, 1.0), roll)
     }
 
+    /// A new segment at the end, with the given rotation rates.
     fn push(&mut self, pitch: f32, yaw: f32, roll: f32) {
-        let last = *self.keys.last().expect("keys");
+        let last = self.end;
         // Keep the heading near level, so that a camera without roll stays comfortable: the
         // world's up in the frame's own coordinates says how much it climbs (`uz`), and a
         // rotation about `forward × up` (in the frame) turns it back.
@@ -78,8 +84,9 @@ impl Track {
         let across = Point::direction(ux, uy, 0.0).ideal_norm().max(1e-3);
         let o = Point::xyz(0.0, 0.0, 0.0);
         let level = Line::rotation_twist(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
-        let step = ((Track::twist(pitch, yaw, roll) + level) * SEG).exp();
-        self.keys.push(last.mul_renormalized(step));
+        let twist = Track::twist(pitch, yaw, roll) + level;
+        self.segments.push(Segment { start: last, twist });
+        self.end = last.mul_renormalized((twist * SEG).exp());
     }
 
     fn grow(&mut self) {
@@ -93,23 +100,25 @@ impl Track {
 
     /// Make sure the track reaches arc length `s`, and forget what lies before `behind`.
     pub fn extend(&mut self, s: f32, behind: f32) {
-        while ((self.first + self.keys.len() - 1) as f32) * SEG < s + SEG {
+        while ((self.first + self.segments.len()) as f32) * SEG < s + SEG {
             self.grow();
         }
         let drop = ((behind / SEG).floor().max(0.0) as usize).saturating_sub(self.first);
-        let drop = drop.min(self.keys.len().saturating_sub(2));
+        let drop = drop.min(self.segments.len().saturating_sub(1));
         if drop > 0 {
-            self.keys.drain(..drop);
+            self.segments.drain(..drop);
             self.first += drop;
         }
     }
 
-    /// The frame at arc length `s` (clamped to the generated range).
+    /// The frame at arc length `s` (clamped to the generated range): its segment's start
+    /// moved along the segment's screw, `K_i exp((s - s_i) T_i)`.
     pub fn frame(&self, s: f32) -> Frame {
         let u = (s / SEG).max(self.first as f32);
-        let i = ((u.floor() as usize).max(self.first) - self.first).min(self.keys.len() - 2);
-        let t = (u - (self.first + i) as f32).clamp(0.0, 1.0);
-        interpolate(self.keys[i], self.keys[i + 1], t)
+        let i = ((u.floor() as usize).max(self.first) - self.first).min(self.segments.len() - 1);
+        let along = (u - (self.first + i) as f32).clamp(0.0, 1.0) * SEG;
+        let seg = self.segments[i];
+        seg.start.mul_renormalized((seg.twist * along).exp())
     }
 
     /// The motion that places straightened points near arc length `s` in the world: back along
@@ -173,6 +182,24 @@ mod tests {
             // Never steep: the heading's vertical part stays small.
             assert!(f.e013().abs() < 0.6, "at {s}: climbing {}", f.e013());
             s += 3.7;
+        }
+    }
+
+    /// Between the keyframes, the frame is the screw motion from one to the next: the motor
+    /// interpolation of the two (exact for a screw), computed here from the stored twist.
+    #[test]
+    fn frames_are_the_screws_between_keyframes() {
+        let mut t = Track::new(11);
+        t.extend(300.0, 0.0);
+        for i in 0..t.segments.len() - 1 {
+            let (a, b) = (t.segments[i].start, t.segments[i + 1].start);
+            for k in 0..=4 {
+                let u = k as f32 / 4.0;
+                let s = (t.first + i) as f32 * SEG + u * SEG;
+                let p = Point::xyz(1.5, -2.0, 0.5);
+                let expect = Motor::interpolate(a, b, u).renormalize_fast() >> p;
+                assert!(dist(t.frame(s) >> p, expect) < 2e-4, "segment {i} at {u}");
+            }
         }
     }
 

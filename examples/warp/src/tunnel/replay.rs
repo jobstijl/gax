@@ -101,7 +101,8 @@ impl Record for Packed {
     }
 }
 
-/// A hash of the Tunnel's state (FNV-1a over the bits that matter).
+/// A hash of the Tunnel's state (FNV-1a over the bits that matter): the run's counters, the
+/// generator, the ship, every enemy, shot, bolt, gate, shard and spawn, and the wall's radii.
 pub fn hash(w: &World) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     let mut u = |x: u64| {
@@ -126,10 +127,13 @@ pub fn hash(w: &World) -> u64 {
         }
     };
     fs(&w.ship.pos.c);
-    fs(&[w.ship.speed]);
+    fs(&[w.ship.speed, w.ship.cooldown]);
+    fs(&w.ship.roll.map_or([-1.0, 0.0], |r| [r.t, r.dir]));
     for e in &w.enemies {
         fs(&e.pos.c);
-        fs(&[e.hp, e.mass, e.timer, e.id as f32]);
+        fs(&e.vel.c);
+        fs(&[e.hp, e.mass, e.timer, e.angle, e.id as f32]);
+        fs(&[e.flight as u8 as f32]);
         for s in &e.body {
             fs(&s.pos.c);
         }
@@ -141,7 +145,15 @@ pub fn hash(w: &World) -> u64 {
     for g in &w.gates {
         fs(&g.pos.c);
     }
-    fs(&[w.lattice.radius(w.ship.s() + 20.0)]);
+    fs(&[w.shards.len() as f32]);
+    for s in &w.shards {
+        fs(&s.pos.c);
+    }
+    fs(&[w.pending.len() as f32]);
+    for p in &w.pending {
+        fs(&p.pos.c);
+    }
+    fs(w.lattice.radii());
     h
 }
 
@@ -180,7 +192,8 @@ impl Replay<Packed> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tunnel::{AIM_DEPTH, about_axis};
+    use crate::tunnel::about_axis;
+    use crate::tunnel::tests::aim_ahead;
 
     /// A flight with weaving, aiming at the nearest enemy, fire in bursts, rolls, throttle
     /// and a bomb: recorded, it replays exactly, also through the file form.
@@ -190,17 +203,10 @@ mod tests {
         let mut w = World::new(seed);
         let mut rec: Replay<Packed> = Replay::new(seed);
         for t in 0..120 * 70u64 {
-            let s = w.ship.s();
-            let aim = w
-                .enemies
-                .iter()
-                .filter(|e| arc(e.pos) > s + 5.0)
-                .min_by(|a, b| arc(a.pos).total_cmp(&arc(b.pos)))
-                .map_or(at(0.0, 0.0, s + AIM_DEPTH), |e| e.pos);
             let a = t as f32 * 0.009;
             let input = Input {
                 movement: about_axis(a) >> dir(0.7, 0.0, 0.0),
-                aim,
+                aim: aim_ahead(&w),
                 fire: (t / 100) % 3 != 2,
                 bomb: t == 5000,
                 roll: if t % 900 == 450 { 1 } else { 0 },
