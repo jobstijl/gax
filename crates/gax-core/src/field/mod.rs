@@ -11,13 +11,18 @@
 //!   value at its column and sums at the rows; `&ends.reverse() * &ends` multiplies the cells
 //!   along every path through the shared sites (a mesh Laplacian); `&cells * Vector::slot()`
 //!   turns the cells into maps.
-//! * **Map cells apply** ([`SparseMap::apply`]), compose ([`SparseMap::compose`]),
-//!   transpose ([`SparseMap::transpose`]) and solve: [`SparseMap::solve`] (preconditioned
-//!   conjugate gradients, for symmetric positive definite couplings), [`SparseMap::cg`] (the
-//!   same with a report), and [`SparseMap::solve_direct`] and [`SparseMap::factor`] (sparse
-//!   LU after a bandwidth-reducing ordering, for any nonsingular map; the factors solve again
-//!   for every right-hand side).
-//! * **Batch kernels** (feature `batch`): [`SparseMap::packed`] lays the cells out for SIMD
+//! * **Maps are built** from couplings ([`SparseMap::new`]), from the input sites of each row
+//!   ([`SparseMap::from_columns`]: a mesh's edges or faces), or on the diagonal
+//!   ([`SparseMap::from_diagonal`]).
+//! * **Map cells apply** ([`SparseMap::apply`], or [`SparseMap::apply_into`] a kept field, with
+//!   no allocation), compose ([`SparseMap::compose`]), transpose ([`SparseMap::transpose`]) and
+//!   solve: [`SparseMap::solve`] (preconditioned conjugate gradients, for symmetric positive
+//!   definite couplings), [`SparseMap::cg`] (the same with a report), [`SparseMap::solve_direct`]
+//!   and [`SparseMap::factor`] (sparse LU after a minimum-degree ordering, for any nonsingular
+//!   map; the factors solve again for every right-hand side), [`SparseMap::lstsq`] (least
+//!   squares, LSQR, any shape) and [`SparseMap::eigh`] (the eigenpairs nearest zero of a
+//!   pencil).
+//! * **Batch kernels** (feature `batch`): `SparseMap::packed` lays the cells out for SIMD
 //!   once, so that a map applied many times (a stiffness inside an iteration) runs on lanes.
 //! * **Derivatives** with respect to a whole field: [`gradient`] and [`hessian`] for any scalar
 //!   function of a field; for energies that are sums of local terms, the chain rule through a
@@ -48,6 +53,7 @@ mod sparse;
 
 pub use derivative::{gradient, hessian};
 pub use direct::{Singular, SparseLu};
+pub use eigen::EighOptions;
 #[cfg(feature = "batch")]
 pub use packed::PackedSparseMap;
 pub use solve::Solved;

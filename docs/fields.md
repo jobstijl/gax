@@ -71,6 +71,18 @@ assert!((stiffness.apply(&displacements) - &loads).dot(&(stiffness.apply(&displa
 # let _ = forces;
 ```
 
+A map is often given row by row, by the input sites each row couples to: the springs by their
+beads, a mesh's edges by their ends, its faces by their corners. `SparseMap::from_columns` builds
+it from those lists and a cell for each entry (numga's `from_columns`):
+
+```rust
+# use gax::field::SparseMap;
+# use gax::vga3d::Scalar;
+let springs = [[0, 1], [1, 2], [2, 3]];
+let ends = SparseMap::from_columns(&springs, 4, |_, end| Scalar::<(), f64>::new([-1.0, 1.0][end]));
+assert_eq!(ends.shape(), (3, 4));
+```
+
 Cells that are maps *apply* to the values: `apply` is the block matrix-vector product, `compose`
 the block matrix product (summed along the paths through the shared sites), and `transpose` runs
 every coupling back with its cell's matrix transposed, the adjoint under the fields' coefficient

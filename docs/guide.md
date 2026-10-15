@@ -208,6 +208,25 @@ takes any scale and stays precise near a half turn, where the plain square root 
 angle to cancellation. A `Unit<Translator>` or `Unit<Rotor>` becomes a motor with `widen()`,
 and any kind becomes a larger one that contains it with `From` (`Motor::from(rotor)`).
 
+**Angles.** The angle between two directions is `atan2` of their outer product's size (the
+sine) and their inner product (the cosine), scaled alike, so nothing needs normalizing and the
+angle keeps its digits near 0 and a half turn. `angle_between` is unsigned, in `[0, π]`, in
+every dimension; `angle_to` is signed, counterclockwise, in the plane, where an orientation is
+given; and `from_angle` (VGA2D) or `direction_from_angle` (PGA2D) is the unit direction at an
+angle, the inverse of `angle_to` from the x axis:
+
+```rust
+use gax::pga2d::Point;
+use gax::pga3d;
+
+let east = Point::<(), f64>::direction(1.0, 0.0);
+let d = Point::direction_from_angle(-2.0);
+assert!((east.angle_to(d) + 2.0).abs() < 1e-15);
+assert!((east.angle_between(d) - 2.0).abs() < 1e-15);
+let (x, y) = (pga3d::Point::<(), f64>::direction(1.0, 0.0, 0.0), pga3d::Point::direction(0.0, 5.0, 0.0));
+assert!((x.angle_between(y) - std::f64::consts::FRAC_PI_2).abs() < 1e-15);
+```
+
 The matrix of a motor is not a separate concept. It is the motor applied to an open slot:
 
 ```rust
