@@ -13,6 +13,8 @@ use gax::pga3d::Plane;
 pub(super) const BOLT_SPEED: f32 = 13.0;
 /// A singularity bursts at this mass.
 const WELL_BURST: f32 = 5.0;
+/// How fast a ring of drones turns (radians per second).
+const RING_TURN: f32 = 0.9;
 
 impl World {
     /// Every enemy's tick, in the singularities' pull `wells`.
@@ -59,7 +61,7 @@ impl World {
             let ahead = arc(e.pos) - s_ship;
             match e.foe {
                 Foe::Drone => {
-                    e.angle += DT * 0.9;
+                    e.angle += DT * RING_TURN;
                     // An escort's ring turns about its singularity; a lost escort joins the
                     // ship's band.
                     let well = e
@@ -71,12 +73,23 @@ impl World {
                         e.depth = 8.0;
                         e.flight = Flight::Approach;
                     }
+                    // Its place moves with the ship (or the singularity), and turns with the
+                    // ring: along its radial offset turned a quarter about the axis, at the
+                    // ring's rate. Gliding with both motions, a drone reaches its place instead
+                    // of trailing it.
+                    let quarter = core::f32::consts::FRAC_PI_2;
+                    let turning =
+                        (around(e.orbit, e.angle + quarter, 0.0) - at(0.0, 0.0, 0.0)) * RING_TURN;
                     let (place, place_vel) = match well {
-                        Some(&(_, w, v)) => {
-                            (w + (around(e.orbit, e.angle, 0.0) - at(0.0, 0.0, 0.0)), v)
-                        }
-                        // Its place in the ring, which turns and holds `depth` ahead of the ship.
-                        None => (around(e.orbit, e.angle, s_ship + e.depth), with_ship),
+                        Some(&(_, w, v)) => (
+                            w + (around(e.orbit, e.angle, 0.0) - at(0.0, 0.0, 0.0)),
+                            v + turning,
+                        ),
+                        // Its place in the ring, which holds `depth` ahead of the ship.
+                        None => (
+                            around(e.orbit, e.angle, s_ship + e.depth),
+                            with_ship + turning,
+                        ),
                     };
                     e.vel = match e.flight {
                         Flight::Approach | Flight::Hold => {
@@ -334,14 +347,42 @@ mod tests {
         );
     }
 
-    /// An escort whose singularity is gone joins the ship's band of drones.
-    #[test]
-    fn an_escort_that_loses_its_singularity_rejoins_the_band() {
-        let mut w = World::new(4);
+    /// The seconds until drone `i`, approaching its place, holds there and then (the dives
+    /// let loose) dives, if within `limit`.
+    fn hold_and_dive(w: &mut World, i: usize, limit: f32) -> Option<(f32, f32)> {
+        let id = w.enemies[i].id;
+        let mut held = None;
+        for t in 1..=(limit / DT) as usize {
+            w.tick(&Input::default());
+            let e = w.enemies.iter().find(|e| e.id == id)?;
+            if held.is_none() && e.flight == Flight::Hold {
+                held = Some(t as f32 * DT);
+                w.dive_cooldown = 0.0;
+            }
+            if let Some(h) = held
+                && w.events.iter().any(|ev| matches!(ev, Event::Dive { .. }))
+            {
+                return Some((h, t as f32 * DT));
+            }
+        }
+        None
+    }
+
+    /// A quiet world for one drone: no spawns, no slaloms, no dives until let loose.
+    fn quiet(seed: u64) -> World {
+        let mut w = World::new(seed);
         w.spawn_cooldown = 1e9;
         w.gate_timer = 1e9;
         w.dive_cooldown = 1e9;
         w.ship.invulnerable = 1e9;
+        w
+    }
+
+    /// An escort whose singularity is gone joins the ship's band of drones, holds its place
+    /// in the ring there, and dives like the others.
+    #[test]
+    fn an_escort_that_loses_its_singularity_rejoins_the_band() {
+        let mut w = quiet(4);
         let s = w.ship.s();
         let well = spawn(&mut w, Foe::Singularity, at(1.0, 0.0, s + 25.0));
         let id = w.enemies[well].id;
@@ -355,13 +396,26 @@ mod tests {
         let e = &w.enemies[0];
         assert_eq!((e.anchor, e.flight), (None, Flight::Approach));
         assert_eq!((e.orbit, e.depth), (4.6, 8.0));
-        for _ in 0..240 {
-            w.tick(&Input::default());
+        let (held, dove) = hold_and_dive(&mut w, 0, 6.0).expect("never held and dove");
+        assert!(
+            held < 3.0 && dove < held + 0.1,
+            "held at {held} s, dove at {dove} s"
+        );
+    }
+
+    /// Drones in rings of every width the director makes come to their places, hold, and
+    /// dive.
+    #[test]
+    fn drones_of_every_ring_width_hold_and_dive() {
+        for orbit in [4.0f32, 4.6, 5.3] {
+            let mut w = quiet(5);
+            let s = w.ship.s();
+            let i = spawn(&mut w, Foe::Drone, around(orbit, 0.0, s + 30.0));
+            let e = &mut w.enemies[i];
+            (e.flight, e.orbit, e.depth, e.angle) = (Flight::Approach, orbit, 8.0, 0.0);
+            let (held, _) = hold_and_dive(&mut w, i, 6.0).expect("never held and dove");
+            assert!(held < 3.0, "orbit {orbit}: held at {held} s");
         }
-        let e = &w.enemies[0];
-        let ahead = arc(e.pos) - w.ship.s();
-        assert!((4.0..14.0).contains(&ahead), "{ahead}");
-        assert!((off_axis(e.pos) - 4.6).abs() < 0.5, "{}", off_axis(e.pos));
     }
 
     /// A serpent's body is the helix its head has swum: every segment stays at the head's
