@@ -1,7 +1,7 @@
 //! Light as geometry: the colours of `gax-colour` (shared with the other examples), lights being
 //! colours of linear sRGB whose weight is their intensity, and the game's own redshift.
 
-pub use gax_colour::{DARK, Light, light};
+pub use gax_colour::{Light, light};
 
 /// Gravitational redshift by `z` (`0` none): the spectrum slides towards red, blue through
 /// green and yellow, which in Oklab is a turn of the hue about the lightness axis (towards

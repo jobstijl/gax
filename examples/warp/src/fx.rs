@@ -14,7 +14,7 @@
 
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
-use crate::render::{Particle, PostSettings, Shock, Source};
+use crate::render::{GridSteps, Particle, PostSettings, Shock, Source};
 use crate::sim::body::{Body, ORIGIN, Pose, heading, pose_at, turned};
 use crate::sim::rng::Rng;
 use crate::sim::{ARENA, Event, Kind, World, Wreck};
@@ -111,7 +111,7 @@ pub struct Fx {
     /// Less motion (a setting): no shock ripple.
     pub reduced_motion: bool,
     /// The grid's sources per simulation tick this frame.
-    pub grid_steps: Vec<Vec<Source>>,
+    pub grid_steps: GridSteps,
     /// Floating texts.
     pub popups: Vec<Popup>,
     /// The view's half height and aspect ratio (for the camera's bounds).
@@ -136,7 +136,7 @@ impl Fx {
             shake_scale: 1.0,
             flash_scale: 1.0,
             reduced_motion: false,
-            grid_steps: Vec::new(),
+            grid_steps: GridSteps::default(),
             popups: Vec::new(),
             half_height: 14.0,
             aspect: 16.0 / 9.0,
@@ -337,26 +337,28 @@ impl Fx {
         }
     }
 
-    /// The grid's sources for one simulation tick (blasts and wells), and age the blasts.
+    /// The grid's sources for one simulation tick, and age the blasts. The wells come first,
+    /// then the ship's wake, then the blasts from the newest: a step past
+    /// `render::MAX_SOURCES` keeps the wells and loses the oldest, weakest blasts.
     pub fn grid_tick(&mut self, w: &World, dt: f32) {
-        let mut s = Vec::new();
-        for b in &mut self.blasts {
+        debug_assert!(w.wells.len() < crate::render::MAX_SOURCES, "the wells fit");
+        let wells = w
+            .wells
+            .iter()
+            .map(|well| Source::new(well.pos, well.strength * 3.0, 12.0));
+        // The ship's wake: a light push where it flies.
+        let speed = w.ship.body.vel.ideal_norm();
+        let wake = (w.phase == crate::sim::Phase::Playing && speed > 1.0)
+            .then(|| Source::new(w.ship.body.pos(), -3.0 * speed, 0.8));
+        let blasts = self.blasts.iter().rev().map(|b| {
             let k = (b.life / b.total).clamp(0.0, 1.0);
-            s.push(Source::new(b.pos, b.strength * k, b.r2));
+            Source::new(b.pos, b.strength * k, b.r2)
+        });
+        self.grid_steps.push(wells.chain(wake).chain(blasts));
+        for b in &mut self.blasts {
             b.life -= dt;
         }
         self.blasts.retain(|b| b.life > 0.0);
-        for well in &w.wells {
-            s.push(Source::new(well.pos, well.strength * 3.0, 12.0));
-        }
-        // The ship's wake: a light push where it flies.
-        if w.phase == crate::sim::Phase::Playing {
-            let v = w.ship.body.vel.ideal_norm();
-            if v > 1.0 {
-                s.push(Source::new(w.ship.body.pos(), -3.0 * v, 0.8));
-            }
-        }
-        self.grid_steps.push(s);
     }
 
     /// The wells as particle attractors.

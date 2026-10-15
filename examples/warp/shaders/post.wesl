@@ -7,8 +7,12 @@
 // tonemapper applies gax maps and moves away from grey; the ripple pushes points along their
 // radial direction; the edge effects scale about the screen's centre point.
 
+import package::common::{Full, display, euclidean, full_screen};
 import package::fused::{luma, agx, ripple, scale_about, distance, light_fade};
 import gax::pga2d::point_new;
+
+// Whether the output needs sRGB's transfer function applied (a target without an sRGB format).
+override ENCODE_SRGB: bool = false;
 
 struct Post {
     // 1 / width, 1 / height of the source, upsample radius, unused.
@@ -26,15 +30,9 @@ struct Post {
 @group(0) @binding(2) var<uniform> post: Post;
 @group(0) @binding(3) var bloom: texture_2d<f32>;
 
-struct Full {
-    @builtin(position) pos: vec4<f32>,
-    @location(0) uv: vec2<f32>,
-}
-
 @vertex
 fn vs_full(@builtin(vertex_index) k: u32) -> Full {
-    let uv = vec2<f32>(f32((k << 1u) & 2u), f32(k & 2u));
-    return Full(vec4<f32>(uv * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0), uv);
+    return full_screen(k);
 }
 
 // A radiance as a light of weight 1.
@@ -106,7 +104,7 @@ fn at(uv: vec2<f32>) -> gax::pga2d::Point {
 }
 
 fn uv_of(p: gax::pga2d::Point) -> vec2<f32> {
-    return p.c0.xy / p.c0.z;
+    return euclidean(p);
 }
 
 @fragment
@@ -135,5 +133,5 @@ fn fs_composite(f: Full) -> @location(0) vec4<f32> {
     // Grain: a little grey light added (lights add as points).
     let n = (hash(f.pos.xy + vec2<f32>(post.k.w * 61.0, post.k.w * 17.0)) - 0.5) * post.look.y;
     let out = c.c0.xyz + vec3<f32>(n);
-    return vec4<f32>(max(out, vec3<f32>(0.0)), 1.0);
+    return vec4<f32>(display(max(out, vec3<f32>(0.0)), ENCODE_SRGB), 1.0);
 }

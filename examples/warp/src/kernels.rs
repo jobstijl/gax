@@ -1,6 +1,7 @@
 //! Kernels written once and traced at build time (`build.rs`) into fused Rust functions (with
-//! SIMD batch forms) and WGSL functions: the GPU runs them in compute shaders, and the CPU runs
-//! the same programs as the fallback and as the test oracle.
+//! SIMD batch forms) and WGSL functions: the GPU runs them in its shaders, and the tests run the
+//! same programs on the CPU as the GPU's oracle (`render/cpu_grid.rs`). The simulation calls
+//! `segment_distance` for its collisions.
 //!
 //! Points are PGA2D points: a finite point is `(x, y, 1)`, a direction (a velocity, a force)
 //! a point at infinity `(x, y, 0)`. The difference of two finite points is the direction
@@ -16,7 +17,12 @@ use gax::pga2d::Point;
 /// * `n`: its four neighbours' positions (a missing neighbour is `p` itself, which exerts no
 ///   force);
 /// * `force`: the external acceleration (explosions, wells), a direction;
-/// * `k`: `[spring stiffness, rest length, anchor stiffness, damping, dt]`.
+/// * `k`: `[spring stiffness, anchor stiffness, damping, dt]`.
+///
+/// The springs have rest length zero: each pulls by `spring (q - p)`, linear in the positions,
+/// so the lattice pinches smoothly under a well or a blast instead of folding (a spring with a
+/// rest length pushes back when compressed, and nodes pass through their neighbours). The
+/// regular lattice is still at rest: its neighbours' pulls cancel.
 ///
 /// Returns the new position and velocity.
 pub fn grid_node<T: Real>(
@@ -25,27 +31,41 @@ pub fn grid_node<T: Real>(
     rest: Point<(), T>,
     n: [Point<(), T>; 4],
     force: Point<(), T>,
-    k: [T; 5],
+    k: [T; 4],
 ) -> (Point<(), T>, Point<(), T>) {
-    let [spring, len, anchor, damping, dt] = k;
-    let eps = T::from_f64(1e-4);
+    let [spring, anchor, damping, dt] = k;
     let mut acc = force + (rest - p) * anchor;
     for q in n {
-        // Hooke along each spring: the join's norm is the distance.
-        let dist = (p & q).norm();
-        acc += (q - p) * (spring * (dist - len) / (dist + eps));
+        acc += (q - p) * spring;
     }
     let v = (v + acc * dt) * (T::one() - damping * dt);
     (p + v * dt, v)
 }
 
-/// The acceleration a source at `s` gives a body at `p`: `strength (s - p) / (|s - p|² + r²)`,
-/// towards the source for a positive strength (a well), away for a negative one (a blast).
-/// `k` is `[strength, r²]`.
+/// The rest position of the lattice's node in column `i` and row `j`: the lower-left node
+/// `origin` moved by the direction `(i, j) spacing`. `k` is `[i, j, spacing]`.
+pub fn lattice_rest<T: Real>(origin: Point<(), T>, k: [T; 3]) -> Point<(), T> {
+    let [i, j, spacing] = k;
+    origin + Point::direction(i * spacing, j * spacing)
+}
+
+/// The acceleration a source at `s` gives a body at `p`: `pull (s - p) / (|s - p|² + r²)`,
+/// towards the source for a positive pull (a well), away for a negative one (a blast).
+/// `k` is `[pull, r²]`.
 pub fn source_force<T: Real>(p: Point<(), T>, s: Point<(), T>, k: [T; 2]) -> Point<(), T> {
-    let [strength, r2] = k;
+    let [pull, r2] = k;
     let d2 = (p & s).norm_squared();
-    (s - p) * (strength / (d2 + r2))
+    (s - p) * (pull / (d2 + r2))
+}
+
+/// `acc` plus the acceleration of a source (`source_force`): forces add, as directions.
+pub fn add_source_force<T: Real>(
+    acc: Point<(), T>,
+    p: Point<(), T>,
+    s: Point<(), T>,
+    k: [T; 2],
+) -> Point<(), T> {
+    acc + source_force(p, s, k)
 }
 
 /// One step of a particle: velocity from the external acceleration, drag, then motion.
@@ -95,7 +115,7 @@ pub fn segment_distance<T: Real>(a: Point<(), T>, b: Point<(), T>, p: Point<(), 
     let sa = ((l | a) & p).s();
     let sb = ((l | b) & p).s();
     let to_line = (l & p).s().abs() / (len + T::from_f64(1e-30));
-    let to_ends = -(-(a & p).norm()).max(-(b & p).norm());
+    let to_ends = (a & p).norm().min((b & p).norm());
     T::select_lt(sa * sb, T::zero(), to_line, to_ends)
 }
 
@@ -112,7 +132,7 @@ pub fn edge_heat<T: Real>(
     let one = T::one();
     let stretch = ((a & b).norm() / rest - one).abs() * stretch_gain;
     let motion = (va.ideal_norm() + vb.ideal_norm()) * motion_gain;
-    -(-stretch.max(motion)).max(-one)
+    stretch.max(motion).min(one)
 }
 
 /// Lights: homogeneous points of linear sRGB, shared with the other examples (`gax-colour`);
@@ -152,4 +172,147 @@ pub fn distance<T: Real>(a: Point<(), T>, b: Point<(), T>) -> T {
 pub fn wave<T: Real>(phase: T) -> T {
     let o = Point::xy(T::zero(), T::zero());
     (gax::pga2d::Motor::rotation(o, phase) >> Point::direction(T::one(), T::zero())).e01()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::sim::rng::Rng;
+    use gax::pga2d::Point;
+
+    /// The traced kernels equal the code they were traced from.
+    #[test]
+    fn traced_kernels_equal_their_source() {
+        let mut rng = Rng::new(2);
+        for _ in 0..500 {
+            let mut pt = || Point::xy(rng.range(-5.0, 5.0), rng.range(-5.0, 5.0));
+            let (p, rest, s) = (pt(), pt(), pt());
+            let n = [pt(), pt(), pt(), pt()];
+            let v = Point::direction(0.3, -0.7);
+            let f = Point::direction(1.5, 0.2);
+            let k = [95.0, 5.0, 4.5, crate::sim::DT];
+            let (a, b) = (
+                crate::grid_node(p, v, rest, n, f, k),
+                crate::kernels::grid_node(p, v, rest, n, f, k),
+            );
+            for (x, y) in a.0.c.iter().zip(&b.0.c).chain(a.1.c.iter().zip(&b.1.c)) {
+                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()), "{x} {y}");
+            }
+            let (a, b) = (
+                crate::particle_step(p, v, f, [2.0, crate::sim::DT]),
+                crate::kernels::particle_step(p, v, f, [2.0, crate::sim::DT]),
+            );
+            for (x, y) in a.0.c.iter().zip(&b.0.c).chain(a.1.c.iter().zip(&b.1.c)) {
+                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
+            }
+            let (a, b) = (
+                crate::source_force(p, s, [-40.0, 2.0]),
+                crate::kernels::source_force(p, s, [-40.0, 2.0]),
+            );
+            for (x, y) in a.c.iter().zip(&b.c) {
+                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
+            }
+            let (a, b) = (
+                crate::add_source_force(f, p, s, [60.0, 2.0]),
+                crate::kernels::add_source_force(f, p, s, [60.0, 2.0]),
+            );
+            for (x, y) in a.c.iter().zip(&b.c) {
+                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
+            }
+            let (a, b) = (
+                crate::lattice_rest(rest, [7.0, 3.0, 0.5]),
+                crate::kernels::lattice_rest(rest, [7.0, 3.0, 0.5]),
+            );
+            for (x, y) in a.c.iter().zip(&b.c) {
+                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
+            }
+            // The line renderer's geometry, the lattice's heat, and the light kernels.
+            let close = |x: f32, y: f32| (x - y).abs() <= 1e-4 * (1.0 + y.abs());
+            let k = [1.0, -1.0, 0.3];
+            let (a, b) = (
+                crate::segment_corner(p, rest, k),
+                crate::kernels::segment_corner(p, rest, k),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            assert!(close(
+                crate::segment_distance(p, rest, s),
+                crate::kernels::segment_distance(p, rest, s)
+            ));
+            let k = [0.5, 1.2, 0.012];
+            assert!(close(
+                crate::edge_heat(p, rest, v, f, k),
+                crate::kernels::edge_heat(p, rest, v, f, k)
+            ));
+            let (a, b) = (
+                crate::streak_tail(p, v, 0.03),
+                crate::kernels::streak_tail(p, v, 0.03),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            // The traced kernels work on the lights' bare points.
+            let l1 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 2.0).point();
+            let l2 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 0.5).point();
+            let t = rng.unit();
+            let pairs = [
+                (
+                    crate::light_mix(l1, l2, t),
+                    crate::kernels::light_mix(l1, l2, t),
+                ),
+                (
+                    crate::light_whiten(l1, t),
+                    crate::kernels::light_whiten(l1, t),
+                ),
+                (crate::light_fade(l1, t), crate::kernels::light_fade(l1, t)),
+            ];
+            for (a, b) in pairs {
+                assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            }
+            // Post-processing: luminance, the tonemapper, the ripple, edge scaling, distance,
+            // the phasor.
+            assert!(close(crate::luma(l1), crate::kernels::luma(l1)));
+            let (a, b) = (crate::agx(l1, 1.35), crate::kernels::agx(l1, 1.35));
+            assert!(
+                a.c.iter().zip(&b.c).all(|(x, y)| (x - y).abs() < 1e-3),
+                "{a:?} {b:?}"
+            );
+            let (a, b) = (
+                crate::ripple(p, s, [0.3, 0.05]),
+                crate::kernels::ripple(p, s, [0.3, 0.05]),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            let (a, b) = (
+                crate::scale_about(p, s, 0.9),
+                crate::kernels::scale_about(p, s, 0.9),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            assert!(close(crate::distance(p, s), crate::kernels::distance(p, s)));
+            assert!(close(crate::wave(t * 7.0), crate::kernels::wave(t * 7.0)));
+        }
+    }
+
+    /// The traced segment distance is the Euclidean distance to the segment.
+    #[test]
+    fn segment_distance_by_joins_is_the_distance() {
+        let (a, b) = (Point::xy(0.0f32, 0.0), Point::xy(4.0, 0.0));
+        let d = |x: f32, y: f32| crate::segment_distance(a, b, Point::xy(x, y));
+        assert!((d(2.0, 1.5) - 1.5).abs() < 1e-5);
+        assert!((d(-3.0, 4.0) - 5.0).abs() < 1e-5);
+        assert!((d(7.0, -4.0) - 5.0).abs() < 1e-5);
+        // A degenerate segment is a point.
+        assert!((crate::segment_distance(a, a, Point::xy(3.0, 4.0)) - 5.0).abs() < 1e-5);
+    }
+
+    /// A lattice node with its neighbours where they rest feels no spring: the pulls of
+    /// springs of rest length zero cancel on a regular lattice.
+    #[test]
+    fn a_regular_lattice_is_at_rest() {
+        let p = Point::xy(1.0f32, 2.0);
+        let n = [
+            Point::xy(0.5, 2.0),
+            Point::xy(1.5, 2.0),
+            Point::xy(1.0, 1.5),
+            Point::xy(1.0, 2.5),
+        ];
+        let zero = Point::direction(0.0, 0.0);
+        let (q, v) = super::grid_node(p, zero, p, n, zero, [95.0, 5.0, 4.5, crate::sim::DT]);
+        assert_eq!((q, v), (p, zero));
+    }
 }

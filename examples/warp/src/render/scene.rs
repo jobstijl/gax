@@ -155,7 +155,8 @@ pub fn seg(
     }
 }
 
-/// A closed outline through `pts`, scaled by `size`, in the frame of `m`.
+/// A closed outline through `pts`, scaled by `size`, in the frame of `m`. An outline of size
+/// zero is nothing (its points would be at infinity, of weight `1 / 0`).
 pub fn outline(
     out: &mut Vec<LineInstance>,
     pts: &[Point<(), f32>],
@@ -164,6 +165,9 @@ pub fn outline(
     style: [f32; 4],
     m: Pose,
 ) {
+    if size == 0.0 {
+        return;
+    }
     for (&a, &b) in pts.iter().zip(pts.iter().cycle().skip(1)) {
         out.push(seg(scaled(a, size), scaled(b, size), color, style, m));
     }
@@ -210,12 +214,10 @@ const HULL: [Point<(), f32>; 4] = [
     pt(-0.45, -0.48),
 ];
 
-/// A regular polygon of `n` corners on the unit circle.
-fn regular(n: usize) -> Vec<Point<(), f32>> {
-    (0..n)
-        .map(|k| polar(1.0, k as f32 * core::f32::consts::TAU / n as f32))
-        .collect()
-}
+/// The regular hexagon on the unit circle (the carriers'), turned out once.
+static HEX: std::sync::LazyLock<[Point<(), f32>; 6]> = std::sync::LazyLock::new(|| {
+    core::array::from_fn(|k| polar(1.0, k as f32 * core::f32::consts::TAU / 6.0))
+});
 
 /// The main outline of a family at radius 1, for its wreckage (`None` for a singularity, which
 /// is drawn as circles and goes up in particles).
@@ -230,12 +232,13 @@ pub fn hull(kind: Kind) -> Option<Vec<Point<(), f32>>> {
         Kind::Fragment => Some(ARROW.to_vec()),
         Kind::Serpent => Some(HEAD.to_vec()),
         Kind::Warden => Some(TAIL.to_vec()),
-        Kind::Carrier => Some(regular(6)),
+        Kind::Carrier => Some(HEX.to_vec()),
         Kind::Singularity => None,
     }
 }
 
-/// The shape of a family, drawn at pose `m` (time `t` animates it).
+/// The shape of a family, drawn at pose `m` (time `t` animates it); nothing at radius zero
+/// (an enemy appearing, a warp-in's first frame).
 #[allow(clippy::too_many_arguments)]
 pub fn draw_enemy(
     out: &mut Vec<LineInstance>,
@@ -247,6 +250,9 @@ pub fn draw_enemy(
     t: f32,
     bright: f32,
 ) {
+    if radius == 0.0 {
+        return;
+    }
     // A hit flashes towards white, briefly and partly: under fire the colour must stay. A
     // singularity (under fire for seconds) swells instead.
     let swell = flash;
@@ -308,10 +314,9 @@ pub fn draw_enemy(
             outline(out, &TAIL, radius, c, THIN, m);
         }
         Kind::Carrier => {
-            let hex = regular(6);
-            outline(out, &hex, radius, c, THIN, m);
+            outline(out, &*HEX, radius, c, THIN, m);
             let inner = m * Motor::rotation(ORIGIN, -t * 1.3);
-            outline(out, &hex, radius * 0.62, c.faded(0.7), THIN, inner);
+            outline(out, &*HEX, radius * 0.62, c.faded(0.7), THIN, inner);
             // Cargo circling inside: each piece a turn about the centre, then out.
             for k in 0..3 {
                 let a = t * 2.0 + k as f32 * core::f32::consts::TAU / 3.0;
@@ -385,6 +390,16 @@ pub fn draw_ship(out: &mut Vec<LineInstance>, m: Pose, speed: f32, t: f32, alpha
             m,
         ));
     }
+}
+
+/// Half the HUD's height, in HUD units: the screen is `2 HUD_HALF_HEIGHT` units tall, centred,
+/// whatever its size in pixels.
+pub const HUD_HALF_HEIGHT: f32 = 18.0;
+
+/// The HUD's camera on a target of `size` pixels at `time`: the identity pose, showing
+/// [`HUD_HALF_HEIGHT`] above and below the centre.
+pub fn hud_camera(size: [u32; 2], time: f32) -> CameraUniform {
+    camera(identity(), HUD_HALF_HEIGHT, size, time)
 }
 
 /// The view of a camera at `cam` showing `half_height` world units above and below its
@@ -487,7 +502,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
     }
 }
 
-/// Text into the HUD (HUD units: the screen is 36 units tall, centred), its baseline at `at`.
+/// Text into the HUD (HUD units, [`HUD_HALF_HEIGHT`]), its baseline at `at`.
 pub fn text(
     out: &mut Vec<LineInstance>,
     s: &str,
@@ -519,6 +534,7 @@ pub fn grouped(n: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gax::Extensor;
 
     #[test]
     fn weights_scale_and_motors_turn() {
@@ -526,5 +542,43 @@ mod tests {
         assert!((p[0] - 3.0).abs() < 1e-6 && (p[1] + 6.0).abs() < 1e-6);
         let q = polar(2.0, core::f32::consts::FRAC_PI_2).to_euclidean();
         assert!(q[0].abs() < 1e-6 && (q[1] - 2.0).abs() < 1e-6);
+    }
+
+    /// A frame's lines are finite: a bot plays a run, and every frame's world and HUD lines
+    /// (warp-ins and enemies appearing at size zero included) have finite coefficients.
+    #[test]
+    fn the_games_lines_are_finite() {
+        let mut g = crate::Game::new(crate::store::Store::new(None));
+        let mut sound = crate::audio::Sound::silent();
+        g.start_seeded(4);
+        let finite = |l: &LineInstance| {
+            let (a, b): (Point<(), f32>, Point<(), f32>) = (l.a.into(), l.b.into());
+            let m: gax::pga2d::Motor<(), f32> = l.motor.into();
+            let c: gax::pga3d::Point<(), f32> = l.color.into();
+            a.is_finite()
+                && b.is_finite()
+                && m.is_finite()
+                && c.is_finite()
+                && l.style.iter().all(|s| s.is_finite())
+        };
+        let mut t = 0.0;
+        while t < 40.0 {
+            t += 1.0 / 60.0;
+            g.time = t;
+            let input = crate::headless::bot_input(&g, t);
+            crate::advance(
+                &mut g,
+                input,
+                Default::default(),
+                1.0 / 60.0,
+                16.0 / 9.0,
+                &mut sound,
+            );
+            world_lines(&g.sim, g.alpha, g.time, &mut g.world_lines);
+            crate::hud(&mut g, [1600, 900], None);
+            for (k, l) in g.world_lines.iter().chain(&g.hud_lines).enumerate() {
+                assert!(finite(l), "at {t:.2} s, line {k}: {l:?}");
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 // A faint parallax starfield behind the arena: three layers of hashed stars, moving slower
 // than the world as the camera pans. The distance to a star is the norm of a join, the
 // twinkle a phasor (traced gax kernels).
-import package::common::Camera;
+import package::common::{Camera, Full, euclidean, full_screen};
 import package::fused::{distance, wave};
 import gax::pga2d::{Point, point_new};
 
@@ -13,15 +13,9 @@ struct Stars {
 @group(0) @binding(0) var<uniform> cam: Camera;
 @group(0) @binding(1) var<uniform> stars: Stars;
 
-struct Full {
-    @builtin(position) pos: vec4<f32>,
-    @location(0) uv: vec2<f32>,
-}
-
 @vertex
 fn vs_main(@builtin(vertex_index) k: u32) -> Full {
-    let uv = vec2<f32>(f32((k << 1u) & 2u), f32(k & 2u));
-    return Full(vec4<f32>(uv * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0), uv);
+    return full_screen(k);
 }
 
 fn hash2(p: vec2<f32>) -> vec2<f32> {
@@ -36,7 +30,7 @@ fn fs_main(f: Full) -> @location(0) vec4<f32> {
     for (var layer = 0; layer < 3; layer++) {
         let depth = 0.15 + 0.2 * f32(layer);
         let scale = 38.0 + 22.0 * f32(layer);
-        let p = (px + stars.centre.c0.xy / stars.centre.c0.z * vec2<f32>(1.0, -1.0) / cam.viewport.z * depth) / scale;
+        let p = (px + euclidean(stars.centre) * vec2<f32>(1.0, -1.0) / cam.viewport.z * depth) / scale;
         let cell = floor(p);
         let h = hash2(cell + f32(layer) * 17.0);
         let star = cell + 0.15 + 0.7 * h;

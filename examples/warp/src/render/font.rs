@@ -155,7 +155,12 @@ pub fn width(s: &str, size: f32) -> f32 {
 }
 
 /// The segments of `s` with its baseline at `at` and glyphs `size` tall, as endpoint pairs.
-pub fn segments(s: &str, at: Point<(), f32>, size: f32, align: Align) -> Vec<[Point<(), f32>; 2]> {
+pub fn segments(
+    s: &str,
+    at: Point<(), f32>,
+    size: f32,
+    align: Align,
+) -> impl Iterator<Item = [Point<(), f32>; 2]> {
     let k = size / 6.0;
     let w = width(s, size);
     // The left end of the baseline.
@@ -164,18 +169,15 @@ pub fn segments(s: &str, at: Point<(), f32>, size: f32, align: Align) -> Vec<[Po
         Align::Center => -w * 0.5,
         Align::Right => -w,
     };
-    let mut out = Vec::new();
-    for (i, c) in s.chars().enumerate() {
+    s.chars().enumerate().flat_map(move |(i, c)| {
         let gx = start + i as f32 * 6.0 * k;
-        let on_grid = |(x, y): (f32, f32)| at + Point::direction(gx + x * k, y * k);
+        let on_grid = move |(x, y): (f32, f32)| at + Point::direction(gx + x * k, y * k);
         let strokes = glyph(c).or_else(|| glyph('?')).unwrap_or(&[]);
-        for stroke in strokes {
-            for pair in stroke.windows(2) {
-                out.push([on_grid(pair[0]), on_grid(pair[1])]);
-            }
-        }
-    }
-    out
+        strokes
+            .iter()
+            .flat_map(|stroke| stroke.windows(2))
+            .map(move |pair| [on_grid(pair[0]), on_grid(pair[1])])
+    })
 }
 
 #[cfg(test)]
@@ -188,7 +190,7 @@ mod tests {
             assert!(glyph(c).is_some(), "{c}");
         }
         let s = segments("WARP 2x", Point::xy(0.0, 0.0), 6.0, Align::Center);
-        assert!(s.len() > 15);
+        assert!(s.count() > 15);
         assert!((width("AB", 6.0) - 10.0).abs() < 1e-6);
     }
 }

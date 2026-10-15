@@ -1102,9 +1102,7 @@ fn advance(
                     g.end_run();
                 }
             }
-            if g.fx.grid_steps.len() < 8 {
-                g.fx.grid_tick(&g.sim, DT);
-            }
+            g.fx.grid_tick(&g.sim, DT);
         }
         g.alpha = g.acc / DT;
     }
@@ -1216,22 +1214,15 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
         hud(game, size, renderer.timings());
         let f = render::Frame {
             camera: hud_cam,
-            hud: hud_cam,
-            centre: crate::geom::ORIGIN,
             world: &game.world_lines,
             hud_lines: &game.hud_lines,
-            grid_steps: &[],
-            wells: &[],
-            spawn: &[],
-            grid_color: light::DARK,
             post,
-            plane: false,
+            plane: None,
         };
         renderer.render(view, &f);
         return;
     }
     let camera = scene::camera(game.cam, game.half_height, size, game.time);
-    let hud_cam = scene::camera(sim::body::pose_at(0.0, 0.0, 0.0), 18.0, size, game.time);
     scene::world_lines(&game.sim, game.alpha, game.time, &mut game.world_lines);
     for p in &game.fx.wreckage {
         let c = p.color.faded(p.life / fx::WRECK_LIFE);
@@ -1277,16 +1268,16 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
         .faded((0.85 + 0.5 * intensity) * dim);
     let f = render::Frame {
         camera,
-        hud: hud_cam,
-        centre: game.cam >> crate::geom::ORIGIN,
         world: &game.world_lines,
         hud_lines: &game.hud_lines,
-        grid_steps: &game.fx.grid_steps,
-        wells: &wells,
-        spawn: &game.fx.spawn,
-        grid_color,
         post,
-        plane: true,
+        plane: Some(render::PlaneLayers {
+            centre: game.cam >> crate::geom::ORIGIN,
+            grid_steps: &game.fx.grid_steps,
+            grid_light: grid_color,
+            wells: &wells,
+            spawn: &game.fx.spawn,
+        }),
     };
     renderer.render(view, &f);
 }

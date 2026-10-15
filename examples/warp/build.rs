@@ -1,6 +1,7 @@
 //! Trace the kernels in `src/kernels.rs` into Rust and WGSL, then link the game's WESL shaders
-//! against gax's generated modules with the `wesl` crate. The game includes plain WGSL; it
-//! does not depend on `wesl` at run time.
+//! against gax's generated modules with the `wesl` crate. The game includes plain WGSL (the
+//! list of shaders, `shaders.rs`, is written here too); it does not depend on `wesl` at run
+//! time.
 
 #[path = "src/kernels.rs"]
 #[allow(dead_code)]
@@ -33,10 +34,16 @@ fn main() {
     t.wgsl(true);
     t.kernel(
         "grid_node",
-        |p: P, v: P, rest: P, n: [P; 4], f: P, k: [Sym; 5]| kernels::grid_node(p, v, rest, n, f, k),
+        |p: P, v: P, rest: P, n: [P; 4], f: P, k: [Sym; 4]| kernels::grid_node(p, v, rest, n, f, k),
     );
+    t.kernel("lattice_rest", |origin: P, k: [Sym; 3]| {
+        kernels::lattice_rest(origin, k)
+    });
     t.kernel("source_force", |p: P, s: P, k: [Sym; 2]| {
         kernels::source_force(p, s, k)
+    });
+    t.kernel("add_source_force", |acc: P, p: P, s: P, k: [Sym; 2]| {
+        kernels::add_source_force(acc, p, s, k)
     });
     t.kernel("particle_step", |p: P, v: P, f: P, k: [Sym; 2]| {
         kernels::particle_step(p, v, f, k)
@@ -67,11 +74,15 @@ fn main() {
     t.kernel("light_whiten", |l: L, t: Sym| kernels::light_whiten(l, t));
     t.kernel("light_fade", |l: L, k: Sym| kernels::light_fade(l, k));
     t.write_out_dir("fused.rs");
-    for r in t.reports() {
-        println!(
-            "cargo:warning={}: {} (generic code: {})",
-            r.name, r.cost, r.naive
-        );
+    // `WARP_KERNEL_COSTS=1`: each kernel's cost, against the generic code's (VERIFY.md's numbers).
+    println!("cargo:rerun-if-env-changed=WARP_KERNEL_COSTS");
+    if std::env::var_os("WARP_KERNEL_COSTS").is_some() {
+        for r in t.reports() {
+            println!(
+                "cargo:warning={}: {} (generic code: {})",
+                r.name, r.cost, r.naive
+            );
+        }
     }
 
     let out = std::env::var("OUT_DIR").expect("OUT_DIR");
@@ -103,8 +114,35 @@ fn main() {
         .unwrap_or_else(|e| panic!("shaders/{s}.wesl: {e}"));
         std::fs::write(out.join(format!("{s}.wgsl")), res.syntax.to_string()).expect("write WGSL");
     }
+    write_shader_list(out);
     println!("cargo:rerun-if-changed=src/kernels.rs");
     sim_hash();
+}
+
+/// `shaders.rs`: a constant with each main shader's WGSL, and `ALL`, every one by name.
+fn write_shader_list(out: &Path) {
+    let mains: Vec<&str> = SHADERS
+        .iter()
+        .filter(|(_, main)| *main)
+        .map(|(s, _)| *s)
+        .collect();
+    let mut src = String::new();
+    for s in &mains {
+        src += &format!(
+            "/// `shaders/{s}.wesl`, linked.\npub const {}: &str = include_str!(concat!(env!(\"OUT_DIR\"), \"/{s}.wgsl\"));\n",
+            s.to_uppercase()
+        );
+    }
+    let all: Vec<String> = mains
+        .iter()
+        .map(|s| format!("(\"{s}\", {})", s.to_uppercase()))
+        .collect();
+    src += &format!(
+        "/// Every shader, by name.\n#[cfg_attr(not(test), allow(dead_code))]\npub const ALL: [(&str, &str); {}] = [{}];\n",
+        mains.len(),
+        all.join(", ")
+    );
+    std::fs::write(out.join("shaders.rs"), src).expect("write the shader list");
 }
 
 /// Hashes of everything each game's replays depend on: the Plane's simulation (`sim`), the
