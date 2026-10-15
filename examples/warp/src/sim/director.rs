@@ -1,8 +1,90 @@
 //! The spawn director: an intensity curve over time with calm stretches between spikes, and
 //! formations that are always telegraphed and never land within the safe radius.
 
-use super::body::{heading, turned};
-use super::{ARENA, Kind, P, Phase, World, at, dir};
+use super::body::{distance, heading, turned, with_length};
+use super::{ARENA, DT, Event, Kind, P, Phase, SAFE_RADIUS, World, at, dir};
+
+/// A telegraphed spawn.
+#[derive(Clone, Copy, Debug)]
+pub struct Pending {
+    /// What comes.
+    pub kind: Kind,
+    /// Where.
+    pub pos: P,
+    /// Seconds until it lands.
+    pub t: f32,
+    /// Its warning time, for drawing the warp-in.
+    pub total: f32,
+}
+
+impl World {
+    /// Announce a spawn: it lands after `t` seconds, never within the safe radius.
+    pub fn announce(&mut self, kind: Kind, pos: P, t: f32) {
+        let pos = self.safe_spot(pos);
+        self.pending.push(Pending {
+            kind,
+            pos,
+            t,
+            total: t,
+        });
+        self.events.push(Event::Warn { pos, kind });
+    }
+
+    /// `p` clamped into the arena (a box: its coordinates bounded), then pushed out of the safe
+    /// radius around the ship along the ray from it (or back through it, if that leaves the
+    /// arena).
+    pub fn safe_spot(&self, p: P) -> P {
+        let inside = |p: P| {
+            let [x, y] = p.to_euclidean();
+            at(
+                x.clamp(-ARENA[0] + 1.5, ARENA[0] - 1.5),
+                y.clamp(-ARENA[1] + 1.5, ARENA[1] - 1.5),
+            )
+        };
+        let p = inside(p);
+        let s = self.ship.body.pos();
+        let need = SAFE_RADIUS + 1.0;
+        if distance(p, s) >= need {
+            return p;
+        }
+        let away = p - s;
+        let u = if away.ideal_norm() > 1e-3 {
+            with_length(away, need)
+        } else {
+            dir(need, 0.0)
+        };
+        let (out, back) = (inside(s + u), inside(s - u));
+        if distance(out, s) >= distance(back, s) {
+            out
+        } else {
+            back
+        }
+    }
+
+    /// Count down the warp-ins, and land the ones whose time has come.
+    pub(super) fn step_pending(&mut self) {
+        let mut landed = Vec::new();
+        let ship = self.ship.body.pos();
+        let playing = self.phase == Phase::Playing;
+        self.pending.retain_mut(|p| {
+            p.t -= DT;
+            if p.t > 0.0 {
+                return true;
+            }
+            // Never land inside the safe radius: wait until the player has moved away.
+            if playing && distance(p.pos, ship) < SAFE_RADIUS {
+                p.t = 0.1;
+                return true;
+            }
+            landed.push((p.kind, p.pos));
+            false
+        });
+        for (kind, pos) in landed {
+            self.spawn(kind, pos);
+            self.events.push(Event::Spawn { pos, kind });
+        }
+    }
+}
 
 /// The director's state.
 pub struct Director {
@@ -15,8 +97,9 @@ pub struct Director {
     /// Intensity right now, `0..1` (for music and effects too).
     pub intensity: f32,
     /// A dip after a death or bomb, recovering.
-    relief: f32,
-    wave: u32,
+    pub(super) relief: f32,
+    /// Formations so far.
+    pub(super) wave: u32,
 }
 
 impl Default for Director {
@@ -62,9 +145,8 @@ impl Director {
         if !self.enabled || w.phase != Phase::Playing {
             return;
         }
-        let dt = super::DT;
-        self.clock += dt;
-        self.relief = (self.relief - dt / 8.0).max(0.0);
+        self.clock += DT;
+        self.relief = (self.relief - DT / 8.0).max(0.0);
         // A light response to the player's state: fewer lives, slightly calmer.
         let health = match w.lives {
             1 => 0.9,
@@ -72,7 +154,7 @@ impl Director {
             _ => 1.0,
         };
         self.intensity = Director::curve(self.clock) * (1.0 - 0.6 * self.relief) * health;
-        self.cooldown -= dt;
+        self.cooldown -= DT;
         let alive = w.enemies.len() + w.pending.len();
         let target =
             (3.0 + 55.0 * self.intensity * self.intensity + 10.0 * self.intensity) as usize;
@@ -219,11 +301,7 @@ impl Director {
             }
         }
         for (k, p) in spawns {
-            let t = match k {
-                Kind::Singularity | Kind::Serpent | Kind::Carrier => 1.4,
-                _ => 0.8,
-            };
-            w.announce(k, p, t);
+            w.announce(k, p, k.stats().warning);
         }
         self.cooldown = 2.2 + 3.5 * (1.0 - i) + w.rng.range(0.0, 1.5);
     }

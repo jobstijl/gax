@@ -435,7 +435,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         let f = 1.0 - (p.t / p.total).clamp(0.0, 1.0);
         let m = crate::sim::body::place(p.pos, f * 6.0);
         let c = (color(p.kind)).faded(0.4 + 0.8 * f);
-        let r = p.kind.radius();
+        let r = p.kind.stats().radius;
         circle(out, r * (3.0 - 2.0 * f), 20, time * 4.0, c, THIN, m);
         draw_enemy(out, p.kind, m, r * f, 0.0, 0.0, time, 0.25 + 0.5 * f);
     }
@@ -444,11 +444,12 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         if !e.chain.is_empty() {
             let c = color(Kind::Serpent);
             let mut prev = e.body.lerp(alpha) >> ORIGIN;
-            for (k, seg_pose) in e.chain.iter().enumerate() {
-                let p = *seg_pose >> ORIGIN;
+            for (k, body) in e.chain.iter().enumerate() {
+                let pose = body.lerp(alpha);
+                let p = pose >> ORIGIN;
                 let f = 1.0 - 0.5 * k as f32 / e.chain.len() as f32;
                 out.push(seg(prev, p, c.faded(0.35), THIN, identity()));
-                outline(out, &DIAMOND, 0.38 * f, c.faded(0.9 * f), THIN, *seg_pose);
+                outline(out, &DIAMOND, 0.38 * f, c.faded(0.9 * f), THIN, pose);
                 prev = p;
             }
         }

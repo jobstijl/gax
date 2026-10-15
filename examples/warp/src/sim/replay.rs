@@ -6,6 +6,7 @@
 //! for both games; each has its own input record (`Record`): the Plane's here, the Tunnel's in
 //! `tunnel::replay`.
 
+use super::body::Body;
 use super::{Input, Phase, World};
 use gax::pga2d::Point;
 
@@ -128,39 +129,54 @@ pub fn quantize(i: &Input) -> Input {
     Packed::pack(i).unpack()
 }
 
-/// A hash of the world's state (FNV-1a over the bits that matter).
+/// A hash of the world's state (FNV-1a over its bits): everything a later tick depends on,
+/// so a divergence shows at the next hash even before it reaches a position or the score.
 pub fn hash(w: &World) -> u64 {
     let mut h = Fnv(0xcbf2_9ce4_8422_2325);
     h.u(w.tick);
+    h.fs(&[w.time]);
     h.u(w.rng.state());
     h.u(w.score);
     h.u(u64::from(w.mult) << 32 | u64::from(w.lives) << 16 | u64::from(w.bombs));
+    h.u(u64::from(w.next_id));
+    h.u(w.next_life);
+    h.u(w.next_bomb);
     h.u(match w.phase {
         Phase::Playing => 1,
         Phase::Dead(t) => 2 ^ u64::from(t.to_bits()) << 8,
         Phase::Over => 3,
     });
-    h.fs(&w.ship.body.pose.into_inner().c);
-    h.fs(&w.ship.body.vel.c);
+    let d = &w.director;
+    h.u(u64::from(d.enabled) << 32 | u64::from(d.wave));
+    h.fs(&[d.clock, d.cooldown, d.relief]);
+    let s = &w.ship;
+    h.body(&s.body);
+    h.fs(&[s.cooldown, s.invulnerable]);
+    h.u(u64::from(s.barrel));
     for e in &w.enemies {
         h.u(u64::from(e.id) << 8 | e.kind as u64);
-        h.fs(&e.body.pose.into_inner().c);
-        h.fs(&[e.hp, e.mass, e.timer]);
-        for p in &e.chain {
-            h.fs(&p.into_inner().c);
+        h.body(&e.body);
+        h.fs(&[e.hp, e.radius, e.mass, e.age, e.flash, e.phase, e.timer]);
+        h.fs(&e.intent.c);
+        h.fs(&e.pull.c);
+        for seg in &e.chain {
+            h.fs(&seg.pose.into_inner().c);
         }
     }
     for b in &w.bullets {
         h.fs(&b.pos.c);
+        h.fs(&b.prev.c);
         h.fs(&b.vel.c);
+        h.fs(&[b.life]);
     }
     for s in &w.shards {
-        h.fs(&s.body.pose.into_inner().c);
+        h.body(&s.body);
+        h.fs(&[s.life]);
     }
     for p in &w.pending {
         h.u(p.kind as u64);
         h.fs(&p.pos.c);
-        h.fs(&[p.t]);
+        h.fs(&[p.t, p.total]);
     }
     h.0
 }
@@ -178,6 +194,13 @@ impl Fnv {
         for x in xs {
             self.u(u64::from(x.to_bits()));
         }
+    }
+
+    /// A body's pose and motion.
+    fn body(&mut self, b: &Body) {
+        self.fs(&b.pose.into_inner().c);
+        self.fs(&b.vel.c);
+        self.fs(&[b.spin]);
     }
 }
 
@@ -444,6 +467,32 @@ mod tests {
             Err(Desync::Hash(t)) => assert_eq!(t, 1080),
             Err(d) => panic!("{d:?}"),
             Ok(_) => panic!("the change went unnoticed"),
+        }
+    }
+
+    /// A change that has not yet moved anything (the director's timer, an enemy's pull) is
+    /// caught at the next hash.
+    #[test]
+    fn hidden_state_is_hashed() {
+        let (rec, _) = record(7, 120 * 20);
+        let perturbations: [fn(&mut World); 2] = [
+            |w| w.director.cooldown += 1e-3,
+            |w| {
+                let e = w.enemies.last_mut().expect("an enemy");
+                e.pull += super::super::dir(1e-6, 0.0);
+            },
+        ];
+        for perturb in perturbations {
+            let mut w = World::new(rec.seed);
+            let mut result = Ok(());
+            for (t, i) in rec.inputs.iter().enumerate() {
+                w.tick(&i.unpack());
+                if t == 1200 {
+                    perturb(&mut w);
+                }
+                result = result.and(rec.check(&w));
+            }
+            assert_eq!(result, Err(Desync::Hash(1320)));
         }
     }
 

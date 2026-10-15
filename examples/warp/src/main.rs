@@ -112,6 +112,9 @@ struct Game {
     screen: Screen,
     acc: f32,
     alpha: f32,
+    /// Seconds of hit-stop left: the world holds its breath (ticks skipped, effects go on).
+    /// Not simulation state, so replays are unaffected.
+    hitstop: f32,
     input: sim::Input,
     device: input::Device,
     latch: input::Latch,
@@ -167,6 +170,7 @@ impl Game {
             screen: Screen::Title,
             acc: 0.0,
             alpha: 0.0,
+            hitstop: 0.0,
             input: sim::Input::default(),
             device: input::Device::Mouse,
             latch: input::Latch::default(),
@@ -246,7 +250,7 @@ impl Game {
     /// A fresh Tunnel run from `seed`, its view set up by the settings.
     fn tunnel_run(&self, seed: u64) -> TunnelRun {
         let mut view = render::tunnel::View::new(f32::from(self.settings.fov));
-        view.follow_roll = self.settings.camera_roll;
+        view.settings.follow_roll = self.settings.camera_roll;
         TunnelRun {
             world: tunnel::World::new(seed),
             view,
@@ -341,7 +345,7 @@ impl Game {
     fn end_run(&mut self) {
         self.rec.score = self.sim.score;
         self.best = self.best.max(self.sim.score);
-        self.sim.phase = Phase::Over;
+        self.sim.end();
         self.over_timer = 0.0;
         if self.demo {
             self.back_to_title();
@@ -398,16 +402,18 @@ impl Game {
         }
         self.fx.reduced_motion = s.reduced_motion;
         if let Some(run) = self.tunnel.as_mut() {
-            run.view.shake_scale = if s.reduced_motion {
-                0.0
-            } else {
-                f32::from(s.shake) / 4.0
+            run.view.settings = render::tunnel::ViewSettings {
+                focal: render::tunnel::View::focal_for(f32::from(s.fov)),
+                follow_roll: s.camera_roll,
+                shake_scale: if s.reduced_motion {
+                    0.0
+                } else {
+                    f32::from(s.shake) / 4.0
+                },
+                flash_scale: if s.reduced_flashes { 0.3 } else { 1.0 },
+                assist: s.aim_reach(),
+                lensing: !s.reduced_motion,
             };
-            run.view.flash_scale = if s.reduced_flashes { 0.3 } else { 1.0 };
-            run.view.focal = render::tunnel::View::focal_for(f32::from(s.fov));
-            run.view.follow_roll = s.camera_roll;
-            run.view.assist = s.aim_reach();
-            run.view.lensing = !s.reduced_motion;
         }
         sound.gains = s.gains();
         sound.on_beat = s.on_beat;
@@ -1084,11 +1090,12 @@ fn advance(
         g.acc += dt * speed as f32;
         while g.acc >= DT {
             g.acc -= DT;
-            if g.sim.hitstop > 0.0 {
+            if g.hitstop > 0.0 {
                 // Hit-stop: the world holds its breath; effects go on.
-                g.sim.hitstop = (g.sim.hitstop - DT * speed as f32).max(0.0);
+                g.hitstop = (g.hitstop - DT * speed as f32).max(0.0);
             } else {
                 tick(g);
+                g.hitstop = hitstop(&g.sim.events);
                 g.fx.on_events(&g.sim.events);
                 sound.on_events(&g.sim.events, &g.sim, g.cam);
                 if g.screen == Screen::Playing && g.sim.events.contains(&sim::Event::GameOver) {
@@ -1108,8 +1115,22 @@ fn advance(
     g.half_height = 14.0_f32.max(24.0 / aspect);
     g.fx.half_height = g.half_height;
     g.fx.aspect = aspect;
+    g.fx.frame(dt);
     g.cam = g.fx.camera(&g.sim, dt);
     quit
+}
+
+/// The hit-stop a tick's events call for: a death's, or a singularity shot down.
+fn hitstop(events: &[sim::Event]) -> f32 {
+    events.iter().fold(0.0, |stop, e| match e {
+        sim::Event::Death { .. } => 0.15,
+        sim::Event::Kill {
+            kind: sim::Kind::Singularity,
+            scored: true,
+            ..
+        } => stop.max(0.07),
+        _ => stop,
+    })
 }
 
 /// Build the frame and draw it (an exclusive system: the surface lives on the main thread).
@@ -1223,11 +1244,11 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
             p.body.pose,
         );
     }
-    for (p, text, age, color) in &game.fx.popups {
+    for p in &game.fx.popups {
         // Rising and fading.
-        let c = (*color).faded((1.0 - age / 1.1).max(0.0));
-        let at = *p + gax::pga2d::Point::direction(0.0, 0.8 + age * 1.5);
-        scene::text(&mut game.world_lines, text, at, 0.9, c, Align::Center);
+        let c = p.color.faded((1.0 - p.age / fx::POPUP_LIFE).max(0.0));
+        let at = p.pos + gax::pga2d::Point::direction(0.0, 0.8 + p.age * 1.5);
+        scene::text(&mut game.world_lines, &p.text, at, 0.9, c, Align::Center);
     }
     // Menus over the world: the world steps back.
     let backdrop = matches!(

@@ -43,12 +43,7 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
     let run = g.tunnel.as_ref().expect("tunnel");
     let w = &run.world;
     let s = w.ship.s();
-    let target = w
-        .enemies
-        .iter()
-        .filter(|e| crate::tunnel::arc(e.pos) > s + 6.0)
-        .min_by(|a, b| crate::tunnel::arc(a.pos).total_cmp(&crate::tunnel::arc(b.pos)))
-        .map(|e| e.pos);
+    let target = w.nearest_ahead(6.0).map(|e| e.pos);
     let cursor = target.and_then(|q| run.view.on_screen(w, q));
     let danger = w.bolts.iter().any(|b| {
         let d = crate::tunnel::arc(b.pos) - s;
@@ -159,13 +154,13 @@ pub fn shots(args: &[String]) {
     if std::env::var("WARP_SCENE").as_deref() == Ok("singularity") {
         g.start_seeded(7);
         g.sim.director.enabled = false;
-        g.sim.ship.body.shift(-20.0, -10.0);
+        g.sim.ship.body.shift(sim::dir(-20.0, -10.0));
         g.sim.spawn(sim::Kind::Singularity, sim::at(0.0, 0.0));
-        g.sim.enemies[0].body.vel = Point::direction(0.0, 0.0);
+        g.sim.enemies[0].intent = Point::direction(0.0, 0.0);
         for _ in 0..120 {
             g.time += dt;
             advance(&mut g, sim::Input::default(), none, dt, aspect, &mut sound);
-            g.sim.enemies[0].body.vel = Point::direction(0.0, 0.0);
+            g.sim.enemies[0].intent = Point::direction(0.0, 0.0);
             render_game(&mut g, &mut renderer, &view, SIZE);
         }
         save(&renderer, &target, &Path::new(dir).join("singularity.png"));
@@ -289,7 +284,7 @@ pub fn shots(args: &[String]) {
             Ok("2") => crate::store::Scheme::BlueYellow,
             _ => crate::store::Scheme::Standard,
         };
-        g.sim.ship.body.shift(0.0, -9.0);
+        g.sim.ship.body.shift(sim::dir(0.0, -9.0));
         g.sim.ship.invulnerable = 1e9;
         use sim::Kind::*;
         let kinds = [

@@ -566,9 +566,10 @@ impl Sound {
     pub fn update(&mut self, w: &World, playing: bool, _cam: Pose) {
         let ship = w.ship.body.pos();
         let darkness = w
-            .wells()
-            .map(|(p, _)| {
-                let d = crate::sim::body::distance(p, ship);
+            .wells
+            .iter()
+            .map(|well| {
+                let d = crate::sim::body::distance(well.pos, ship);
                 (1.0 - d / 14.0).clamp(0.0, 1.0)
             })
             .fold(0.0f32, f32::max);

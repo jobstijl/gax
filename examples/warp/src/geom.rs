@@ -26,9 +26,22 @@ where
     x.dot(onto).wedge(onto)
 }
 
+/// The cube of a length from its square, `(r²)^{3/2}`: the denominator of an inverse-square
+/// law written along the offset, `s d / |d|³`, softened by adding to the square.
+#[inline]
+pub fn length_cubed(squared: f32) -> f32 {
+    squared * gax::Real::sqrt(squared)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::foot;
+    use super::{foot, length_cubed};
+
+    #[test]
+    fn a_length_cubed() {
+        assert_eq!(length_cubed(4.0), 8.0);
+        assert!((length_cubed(2.5) - 2.5f32.powf(1.5)).abs() < 1e-6);
+    }
 
     #[test]
     fn feet_in_2d_and_3d() {

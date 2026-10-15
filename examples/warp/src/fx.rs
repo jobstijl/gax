@@ -53,16 +53,32 @@ pub fn shatter(hull: &[P], wreck: &Wreck, kick: f32) -> Vec<(Body, [P; 3])> {
             let c = Moments::of_polygon(&tri).centroid();
             let [cx, cy] = c.to_euclidean();
             let local = Motor::translation(-cx, -cy);
-            let pose = wreck.pose * Motor::translation(cx, cy);
+            let pose = wreck.body.pose * Motor::translation(cx, cy);
             // The body's velocity at the piece's centroid, then the kick, along the offset from
             // the centre of area.
             let mut body = Body::new(pose);
-            body.vel = wreck.velocity_at(pose >> ORIGIN) + (wreck.pose >> (c - g)) * (kick / r);
-            body.spin = wreck.spin;
+            body.vel =
+                wreck.velocity_at(pose >> ORIGIN) + (wreck.body.pose >> (c - g)) * (kick / r);
+            body.spin = wreck.body.spin;
             (body, tri.map(|p| local >> p))
         })
         .collect()
 }
+
+/// A floating text: a score or a multiplier, rising and fading where it was earned.
+pub struct Popup {
+    /// Where it was earned.
+    pub pos: P,
+    /// What it says.
+    pub text: String,
+    /// Seconds since it appeared.
+    pub age: f32,
+    /// Its light.
+    pub color: Light,
+}
+
+/// How long a popup lasts, in seconds.
+pub const POPUP_LIFE: f32 = 1.1;
 
 struct Blast {
     pos: P,
@@ -96,8 +112,8 @@ pub struct Fx {
     pub reduced_motion: bool,
     /// The grid's sources per simulation tick this frame.
     pub grid_steps: Vec<Vec<Source>>,
-    /// Floating texts: `(position, text, age, light)`.
-    pub popups: Vec<(P, String, f32, Light)>,
+    /// Floating texts.
+    pub popups: Vec<Popup>,
     /// The view's half height and aspect ratio (for the camera's bounds).
     pub half_height: f32,
     /// Width over height of the view.
@@ -170,6 +186,15 @@ impl Fx {
         }
     }
 
+    fn popup(&mut self, pos: P, text: String, color: Light) {
+        self.popups.push(Popup {
+            pos,
+            text,
+            age: 0.0,
+            color,
+        });
+    }
+
     fn blast(&mut self, pos: P, strength: f32, r2: f32, life: f32) {
         self.blasts.push(Blast {
             pos,
@@ -223,7 +248,7 @@ impl Fx {
                         }
                     }
                     if points >= 250 {
-                        self.popups.push((p, points.to_string(), 0.0, c));
+                        self.popup(p, points.to_string(), c);
                     }
                     let n = (70.0 * size) as usize + if scored { 20 } else { 0 };
                     let reach = 16.0 * gax::Real::sqrt(size);
@@ -272,8 +297,7 @@ impl Fx {
                 }
                 Event::Pickup { pos, mult } => {
                     if mult % 10 == 0 {
-                        self.popups
-                            .push((pos, format!("X{mult}"), 0.0, scene::shard()));
+                        self.popup(pos, format!("X{mult}"), scene::shard());
                     }
                     self.burst(pos, scene::shard(), 6, (2.0, 6.0), (0.2, 0.45), 0.3);
                 }
@@ -322,8 +346,8 @@ impl Fx {
             b.life -= dt;
         }
         self.blasts.retain(|b| b.life > 0.0);
-        for (p, strength) in w.wells() {
-            s.push(Source::new(p, strength * 3.0, 12.0));
+        for well in &w.wells {
+            s.push(Source::new(well.pos, well.strength * 3.0, 12.0));
         }
         // The ship's wake: a light push where it flies.
         if w.phase == crate::sim::Phase::Playing {
@@ -337,13 +361,36 @@ impl Fx {
 
     /// The wells as particle attractors.
     pub fn particle_wells(w: &World) -> Vec<Source> {
-        w.wells()
-            .map(|(p, s)| Source::new(p, s * 1.2, 4.0))
+        w.wells
+            .iter()
+            .map(|well| Source::new(well.pos, well.strength * 1.2, 4.0))
             .collect()
     }
 
+    /// Advance the effects by a frame of `dt`: popups and wreckage age, shake, flash and the
+    /// shock ripple fade.
+    pub fn frame(&mut self, dt: f32) {
+        for p in &mut self.popups {
+            p.age += dt;
+        }
+        for p in &mut self.wreckage {
+            p.body.step(dt);
+            p.life -= dt;
+        }
+        self.wreckage.retain(|p| p.life > 0.0);
+        self.popups.retain(|p| p.age < POPUP_LIFE);
+        self.shake = (self.shake - dt * 2.2).max(0.0);
+        self.flash = (self.flash - dt * 2.5).max(0.0);
+        if let Some((_, t)) = &mut self.shock {
+            *t += dt;
+            if *t > 0.8 {
+                self.shock = None;
+            }
+        }
+    }
+
     /// Advance the camera by a frame of `dt`: towards a point between the arena's centre and
-    /// the ship, and shake. Returns the camera pose to draw with.
+    /// the ship. Returns the camera pose to draw with, shaken.
     pub fn camera(&mut self, w: &World, dt: f32) -> Pose {
         let [sx, sy] = w.ship.body.pos().to_euclidean();
         // Follow the ship, but keep the view inside the arena (with a small margin).
@@ -358,23 +405,6 @@ impl Fx {
         let err: P = (target * self.cam.reverse()).log();
         self.cam_vel += (err * (omega * omega) - self.cam_vel * (2.0 * omega)) * dt;
         self.cam = (self.cam_vel * dt).exp().mul_renormalized(self.cam);
-        for p in &mut self.popups {
-            p.2 += dt;
-        }
-        for p in &mut self.wreckage {
-            p.body.step(dt);
-            p.life -= dt;
-        }
-        self.wreckage.retain(|p| p.life > 0.0);
-        self.popups.retain(|p| p.2 < 1.1);
-        self.shake = (self.shake - dt * 2.2).max(0.0);
-        self.flash = (self.flash - dt * 2.5).max(0.0);
-        if let Some((_, t)) = &mut self.shock {
-            *t += dt;
-            if *t > 0.8 {
-                self.shock = None;
-            }
-        }
         let a = self.shake * self.shake * self.shake_scale;
         if a > 1e-4 {
             let jitter = Point::translation_twist(
@@ -425,8 +455,7 @@ mod tests {
         use crate::sim::{DT, Input, at, dir};
         let mut w = World::new(1);
         w.director.enabled = false;
-        w.spawn(Kind::Drifter, at(8.0, 0.0));
-        w.enemies[0].body.vel = dir(0.0, 0.0);
+        w.spawn(Kind::Drifter, at(8.0, 0.0)).intent = dir(0.0, 0.0);
         let mut fx = Fx::new();
         let fire = Input {
             aim: dir(1.0, 0.0),
@@ -437,7 +466,7 @@ mod tests {
         for _ in 0..240 {
             w.tick(&fire);
             fx.on_events(&w.events);
-            fx.camera(&w, DT);
+            fx.frame(DT);
             most = most.max(fx.wreckage.len());
         }
         // A diamond breaks into its four triangles.
@@ -449,7 +478,7 @@ mod tests {
                 .all(|p| crate::sim::body::distance(p.body.pos(), at(8.0, 0.0)) < 8.0);
         assert!(near);
         for _ in 0..240 {
-            fx.camera(&w, DT);
+            fx.frame(DT);
         }
         assert!(fx.wreckage.is_empty(), "wreckage outlived its life");
     }
@@ -465,12 +494,10 @@ mod tests {
     /// and their spins and orbits to its angular momentum, for every family's outline.
     #[test]
     fn wreckage_conserves_momentum() {
-        let wreck = Wreck {
-            pose: pose_at(1.0, 2.0, 0.7),
-            vel: Point::direction(3.0, -1.0),
-            spin: 2.0,
-            radius: 1.3,
-        };
+        let mut body = Body::new(pose_at(1.0, 2.0, 0.7));
+        body.vel = Point::direction(3.0, -1.0);
+        body.spin = 2.0;
+        let wreck = Wreck { body, radius: 1.3 };
         let kinds = [
             Kind::Drifter,
             Kind::Chaser,
@@ -488,7 +515,7 @@ mod tests {
                 .iter()
                 .map(|&p| scene::scaled(p, wreck.radius))
                 .collect();
-            let whole = Moments::of_polygon(&pts).moved(wreck.pose);
+            let whole = Moments::of_polygon(&pts).moved(wreck.body.pose);
             let (area, g) = (whole.area(), whole.centroid());
             let v_g = wreck.velocity_at(g);
             let (mut p, mut l, mut a) = (Point::direction(0.0, 0.0), 0.0, 0.0);
@@ -499,7 +526,7 @@ mod tests {
                 l += m.polar_moment(1.0) * body.spin + m.area() * cross(body.pos(), body.vel);
             }
             let want_p = v_g * area;
-            let want_l = whole.polar_moment(1.0) * wreck.spin + area * cross(g, v_g);
+            let want_l = whole.polar_moment(1.0) * wreck.body.spin + area * cross(g, v_g);
             assert!((a - area).abs() < 1e-5, "{kind:?}: area {a} vs {area}");
             assert!(
                 (p - want_p).ideal_norm() < 1e-4 * want_p.ideal_norm(),

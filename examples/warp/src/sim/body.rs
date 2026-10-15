@@ -19,7 +19,7 @@ pub fn pose_at(x: f32, y: f32, angle: f32) -> Pose {
 }
 
 /// A moving rigid body.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Body {
     /// Where it is now.
     pub pose: Pose,
@@ -65,15 +65,14 @@ impl Body {
         self.pose = (self.twist() * dt).exp().mul_renormalized(self.pose);
     }
 
-    /// Move by `(dx, dy)` in world coordinates (a wall bounce, a respawn).
-    pub fn shift(&mut self, dx: f32, dy: f32) {
-        self.pose = Motor::translation(dx, dy) * self.pose;
+    /// Move by the direction `d` in world coordinates.
+    pub fn shift(&mut self, d: Point<(), f32>) {
+        self.pose = Motor::translation(d.e20(), d.e01()) * self.pose;
     }
 
-    /// Move its position to the point `p`, keeping its orientation.
+    /// Move its position to the point `p`, keeping its orientation (a wall bounce).
     pub fn move_to(&mut self, p: Point<(), f32>) {
-        let d = p.unitized() - self.pos();
-        self.shift(d.e20(), d.e01());
+        self.shift(p.unitized() - self.pos());
     }
 
     /// The drawn pose between the last two ticks: `prev exp(t log(~prev pose))`.

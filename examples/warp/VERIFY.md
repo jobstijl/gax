@@ -82,7 +82,7 @@ The only exception is a test that checks a phasor against `sin`.
 
 | gax feature | where | found |
 |---|---|---|
-| The deterministic mode | not used: replays promise same-build determinism | A state hash every second over all poses, velocities and the generator; runs of 75 s on three seeds replay bit for bit, also through the game loop with hit-stops and uneven frames (tests). The build id includes a hash of gax's sources, since any change in gax's arithmetic may change a run |
+| The deterministic mode | not used: replays promise same-build determinism, by design | A state hash every second over the whole simulation state: every body's pose, velocity and spin, every enemy's timers, intent and pull, the shots, shards and warp-ins, the director, the counters and the generator (a test perturbs the director's timer, and an enemy's pull, and the next hash catches each). Runs of 75 s on three seeds replay bit for bit, also through the game loop with hit-stops and uneven frames (tests). The build id includes a hash of gax's sources, since any change in gax's arithmetic may change a run. It does not capture the system's math library (`std` floats' `exp`, and the `sin`/`cos` inside gax's motors), so a replay is for the machine that recorded it. `SparseMap::packed()` must never be used in the simulation: its fused multiply-adds depend on the CPU's SIMD level |
 | Tunnel replays | the same container with the Tunnel's record: the aim point is kept relative to the ship's arc length, so it unpacks to the same point in play and in playback | A 70 s flight with rolls, throttle and a bomb replays bit for bit, also through the game loop, the table and the watch screen (tests); the attract mode plays the best run of each game |
 
 ## Numbers

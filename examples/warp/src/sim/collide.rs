@@ -8,6 +8,7 @@
 //! * A facing test (for shielded enemies) is the side of a point against the line through the
 //!   enemy along its heading's normal.
 
+use super::ARENA;
 use super::body::Pose;
 use gax::pga2d::{Line, Point};
 
@@ -34,12 +35,32 @@ pub fn walls(hw: f32, hh: f32) -> [Line<(), f32>; 4] {
     core::array::from_fn(|i| (c[i] & c[(i + 1) % 4]).normalized().into_inner())
 }
 
-/// Is `p` in front of a body at `pose` (on the side its local x axis points to)?
+/// The wall that a path from `from` to `to` (unit points) crossed out of the arena, `margin` in
+/// from its edge: of the walls `to` is outside of, the one met first along the path (at a
+/// corner, the one it really crossed). A path that starts outside a wall crossed it first.
+pub fn outside(from: Point<(), f32>, to: Point<(), f32>, margin: f32) -> Option<Line<(), f32>> {
+    walls(ARENA[0] - margin, ARENA[1] - margin)
+        .into_iter()
+        .filter_map(|w| {
+            // Signed distances inwards at the ends; where between them the wall is met.
+            let (a, b) = ((w & from).s(), (w & to).s());
+            let t = if a > 0.0 { a / (a - b) } else { 0.0 };
+            (b < 0.0).then_some((t, w))
+        })
+        .min_by(|x, y| x.0.total_cmp(&y.0))
+        .map(|(_, w)| w)
+}
+
+/// The shield line of a body at `pose`: through its centre along its local y axis, across its
+/// heading.
+pub fn shield(pose: Pose) -> Line<(), f32> {
+    (pose >> crate::geom::ORIGIN) & (pose >> Point::xy(0.0, 1.0))
+}
+
+/// Is `p` in front of a body at `pose` (on the side its local x axis points to)? The heading
+/// side of its shield line is negative for this orientation of the join.
 pub fn in_front(pose: Pose, p: Point<(), f32>) -> bool {
-    let (o, up) = (pose >> crate::geom::ORIGIN, pose >> Point::xy(0.0, 1.0));
-    // The line from the centre along the local y axis; the heading side is negative for this
-    // orientation of the join.
-    ((o & up) & p).s() < 0.0
+    (shield(pose) & p).s() < 0.0
 }
 
 /// A uniform spatial hash over the arena, rebuilt each tick.
