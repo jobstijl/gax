@@ -5,7 +5,6 @@ use super::super::scene::{self, palette};
 use super::{BOLT, GATE_LIGHT, View};
 use crate::light::{self, Light};
 use crate::tunnel::{Event, Foe, P, dir, foot};
-use gax::pga2d::Point as Point2;
 use gax::pga3d::Motor;
 
 /// The most sparks alive at once (the oldest go first).
@@ -190,17 +189,18 @@ impl View {
         }
     }
 
-    /// Post settings for the frame (`aspect`: the screen's width over its height).
-    pub fn post(&self, w: &crate::tunnel::World, aspect: f32) -> super::super::PostSettings {
+    /// Post settings for a frame of `size` pixels.
+    pub fn post(&self, w: &crate::tunnel::World, size: [u32; 2]) -> super::super::PostSettings {
         let flash_scale = self.settings.flash_scale;
-        // The collapse's ripple, from where the singularity was on screen.
+        // The collapse's ripple, from where the singularity was on screen (in HUD units, which
+        // the HUD's view map takes to the target's uv).
+        let hud = scene::view_map(crate::sim::body::identity(), scene::HUD_HALF_HEIGHT, size);
         let shock = self
             .shock
             .filter(|_| self.settings.lensing)
             .and_then(|(q, t)| {
-                let [x, y] = self.on_screen(w, q)?.to_euclidean();
                 Some(super::super::Shock {
-                    at: Point2::xy(x / (36.0 * aspect) + 0.5, 0.5 - y / 36.0),
+                    at: scene::to_uv(&hud, self.on_screen(w, q)?),
                     radius: t * 1.1,
                     strength: 0.05 * (1.0 - t / SHOCK_TIME) * (0.4 + 0.6 * flash_scale),
                 })

@@ -1,7 +1,7 @@
 //! The spawn director: an intensity curve over time with calm stretches between spikes, and
 //! formations that are always telegraphed and never land within the safe radius.
 
-use super::body::{distance, heading, turned, with_length};
+use super::body::{distance, turned, with_length};
 use super::{ARENA, DT, Event, Kind, P, Phase, SAFE_RADIUS, World, at, dir};
 
 /// A telegraphed spawn.
@@ -148,7 +148,7 @@ impl Director {
         self.clock += DT;
         self.relief = (self.relief - DT / 8.0).max(0.0);
         // A light response to the player's state: fewer lives, slightly calmer.
-        let health = match w.lives {
+        let health = match w.ledger.lives {
             1 => 0.9,
             2 => 0.96,
             _ => 1.0,
@@ -273,7 +273,7 @@ impl Director {
             // A ring around the player.
             let n = 6 + (i * 10.0) as usize;
             // A radius turned an n-th of a circle at a time.
-            let mut d = heading(rng.angle(), 13.0);
+            let mut d = P::direction_from_angle(rng.angle()) * 13.0;
             for _ in 0..n {
                 spawns.push((Kind::Chaser, ship + d));
                 d = turned(d, core::f32::consts::TAU / n as f32);
@@ -309,8 +309,8 @@ impl Director {
 
 #[cfg(test)]
 mod tests {
-    use super::super::body::{distance, heading};
-    use super::super::{Event, Input, Kind, SAFE_RADIUS, World};
+    use super::super::body::distance;
+    use super::super::{Event, Input, Kind, P, SAFE_RADIUS, World};
 
     /// Over many seeded runs with a wandering player, no spawn ever lands within the safe
     /// radius of the ship, and the whole roster turns up.
@@ -324,7 +324,7 @@ mod tests {
             for t in 0..120 * 150 {
                 let a = t as f32 * 0.004 + seed as f32;
                 w.tick(&Input {
-                    movement: heading(a * 1.7, 1.0),
+                    movement: P::direction_from_angle(a * 1.7),
                     ..Input::default()
                 });
                 let ship = w.ship.body.pos();

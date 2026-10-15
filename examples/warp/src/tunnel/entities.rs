@@ -202,10 +202,10 @@ impl Shot {
         }
     }
 
-    /// How far it has been bent: the angle of the rotation from the velocity it left with to
-    /// the one it has (twice its logarithm's norm).
+    /// How far it has been bent: the angle between the velocity it left with and the one it
+    /// has.
     pub fn bend(&self) -> f32 {
-        2.0 * Motor::rotation_between(self.from, self.vel).log().norm()
+        self.from.angle_between(self.vel)
     }
 }
 

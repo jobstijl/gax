@@ -154,7 +154,12 @@ impl Renderer {
         adapter.features() & wgpu::Features::TIMESTAMP_QUERY
     }
 
-    /// Build the renderer for output `format` and `size`, with the lattice `grid`.
+    /// Build the renderer for output `format` and `size`, with the lattice `grid`. The format
+    /// is sRGB: the shaders write linear light, and the output encodes it (a surface without
+    /// an sRGB format is viewed through its sRGB twin, see `gfx.rs`).
+    ///
+    /// # Panics
+    /// If `format` is not sRGB.
     pub fn new(
         device: wgpu::Device,
         queue: wgpu::Queue,
@@ -162,6 +167,7 @@ impl Renderer {
         size: [u32; 2],
         grid: GridSpec,
     ) -> Renderer {
+        assert!(format.is_srgb(), "the output format {format:?} is not sRGB");
         let f = Factory(&device);
         let cam_world = f.uniform("camera", size_of::<CameraUniform>());
         let cam_hud = f.uniform("hud camera", size_of::<CameraUniform>());

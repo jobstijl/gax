@@ -95,12 +95,6 @@ pub fn drift(m: Pose) -> f32 {
 
 pub use crate::geom::ORIGIN;
 
-/// The direction of length `speed` at `angle` from the x axis: `(speed, 0)` turned by a
-/// rotation motor.
-pub fn heading(angle: f32, speed: f32) -> Point<(), f32> {
-    Motor::rotation(ORIGIN, angle) >> Point::direction(speed, 0.0)
-}
-
 /// The velocity of the point `p` (a unit point) of a body moving with the world twist `twist`:
 /// the rate of `exp(t B) p exp(-t B)`, `B p - p B`, twice gax's commutator (which is half the
 /// bracket).
@@ -111,17 +105,6 @@ pub fn velocity_at(twist: Point<(), f32>, p: Point<(), f32>) -> Point<(), f32> {
 /// The direction `d` turned by `angle`.
 pub fn turned(d: Point<(), f32>, angle: f32) -> Point<(), f32> {
     Motor::rotation(ORIGIN, angle) >> d
-}
-
-/// The signed angle from direction `a` to direction `b`, in `[-π, π]`: the angle of the
-/// rotation between them.
-pub fn turn(a: Point<(), f32>, b: Point<(), f32>) -> f32 {
-    Motor::rotation_between(a, b).angle()
-}
-
-/// The angle of a direction from the x axis, in `(-π, π]`: of the rotation from `(1, 0)` to it.
-pub fn angle_of(d: Point<(), f32>) -> f32 {
-    turn(Point::direction(1.0, 0.0), d)
 }
 
 /// `d` scaled to length `len` (a zero direction stays zero).

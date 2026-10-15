@@ -4,15 +4,8 @@
 use gax::pga2d;
 use gax::{Dot, Wedge};
 
-/// The origin of the plane: the centre of every turn in the Plane, the HUD and the phasors.
+/// The origin of the plane: the centre of every turn in the Plane and the HUD.
 pub const ORIGIN: pga2d::Point<(), f32> = pga2d::Point::new(0.0, 0.0, 1.0);
-
-/// The unit phasor at `angle`: the direction `(1, 0)` turned by a rotation motor about the
-/// origin. Its height is the sine, its width the cosine.
-#[inline]
-pub fn phasor(angle: f32) -> pga2d::Point<(), f32> {
-    pga2d::Motor::rotation(ORIGIN, angle) >> pga2d::Point::direction(1.0, 0.0)
-}
 
 /// The foot of `x` on the flat `onto`, up to weight: the meet of `onto` with the flat through
 /// `x` orthogonal to it, `(x | onto) ^ onto`. In PGA2D a point and a line give a line, then a
@@ -40,7 +33,8 @@ mod tests {
     #[test]
     fn a_length_cubed() {
         assert_eq!(length_cubed(4.0), 8.0);
-        assert!((length_cubed(2.5) - 2.5f32.powf(1.5)).abs() < 1e-6);
+        // 2.5^1.5.
+        assert!((length_cubed(2.5) - 3.952_847).abs() < 1e-6);
     }
 
     #[test]

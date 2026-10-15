@@ -36,7 +36,7 @@ pub use space::{P, about_axis, arc, around, at, dir, foot, off_axis};
 pub use wells::{PINCH, PINCH_REACH2, Wells};
 
 use crate::sim::rng::Rng;
-use crate::sim::{DT, Phase};
+use crate::sim::{DT, Ledger, Phase};
 use lattice::{Lattice, Source};
 use track::Track;
 
@@ -89,8 +89,6 @@ impl Default for Input {
 
 /// The tunnel's whole state.
 pub struct World {
-    /// The run's seed.
-    pub seed: u64,
     rng: Rng,
     /// Ticks since the start.
     pub tick: u64,
@@ -116,14 +114,8 @@ pub struct World {
     pub chain: u32,
     /// Spawns on their way.
     pub pending: Vec<Pending>,
-    /// Score.
-    pub score: u64,
-    /// Multiplier.
-    pub mult: u32,
-    /// Lives left, including the current one.
-    pub lives: u32,
-    /// Bombs left.
-    pub bombs: u32,
+    /// The score, multiplier, lives and bombs.
+    pub ledger: Ledger,
     /// Where the run is.
     pub phase: Phase,
     /// This tick's events.
@@ -147,9 +139,6 @@ pub struct World {
     /// Whether a singularity has come yet (likewise).
     well_introduced: bool,
     next_id: u32,
-    /// The scores of the next extra life and bomb.
-    next_life: u64,
-    next_bomb: u64,
 }
 
 impl World {
@@ -159,7 +148,6 @@ impl World {
         track.extend(SPAWN_AHEAD + 60.0, 0.0);
         let start = at(0.0, -2.0, 0.0);
         World {
-            seed,
             rng: Rng::new(seed ^ 0x7e11),
             tick: 0,
             time: 0.0,
@@ -182,10 +170,7 @@ impl World {
             gates: Vec::new(),
             chain: 0,
             pending: Vec::new(),
-            score: 0,
-            mult: 1,
-            lives: 3,
-            bombs: 3,
+            ledger: Ledger::new(),
             phase: Phase::Playing,
             events: Vec::new(),
             blasts: Vec::new(),
@@ -198,8 +183,6 @@ impl World {
             serpent_introduced: false,
             well_introduced: false,
             next_id: 1,
-            next_life: 100_000,
-            next_bomb: 150_000,
         }
     }
 
@@ -343,9 +326,10 @@ impl World {
         for (pos, through) in passed {
             if through {
                 self.chain += 1;
-                self.mult += 1;
-                let points = (250.0 * self.chain as f32 * bonus).round() as u64;
-                self.score += points;
+                self.ledger.raise();
+                let points = self
+                    .ledger
+                    .award((250.0 * self.chain as f32 * bonus).round() as u64);
                 self.events.push(Event::Gate {
                     pos,
                     chain: self.chain,
@@ -383,11 +367,9 @@ impl World {
             sh.life > 0.0 && arc(sh.pos) > arc(ship) - 4.0
         });
         for _ in 0..got {
-            self.mult += 1;
-            self.events.push(Event::Pickup {
-                pos: self.ship.pos,
-                mult: self.mult,
-            });
+            let mult = self.ledger.raise();
+            let pos = self.ship.pos;
+            self.events.push(Event::Pickup { pos, mult });
         }
     }
 
@@ -423,19 +405,11 @@ impl World {
         self.lattice.step(DT, &sources);
     }
 
-    /// An extra life every 100 000 points and an extra bomb every 150 000 (a big kill may pass
-    /// more than one threshold).
+    /// The extra lives and bombs the score has earned.
     fn extras(&mut self) {
-        while self.score >= self.next_life {
-            self.next_life += 100_000;
-            self.lives += 1;
-            self.events.push(Event::Extra { life: true });
-        }
-        while self.score >= self.next_bomb {
-            self.next_bomb += 150_000;
-            self.bombs += 1;
-            self.events.push(Event::Extra { life: false });
-        }
+        let events = &mut self.events;
+        self.ledger
+            .extras(|life| events.push(Event::Extra { life }));
     }
 }
 
@@ -522,7 +496,7 @@ pub(crate) mod tests {
         assert!(warned > 30, "{warned} warnings");
         assert!(kills > 20, "{kills} kills");
         assert!(w.ship.s() > 60.0 * CRUISE * 0.9);
-        assert!(w.score > 0);
+        assert!(w.ledger.score > 0);
     }
 
     /// Extra lives come every 100 000 points and extra bombs every 150 000, as many as a
@@ -532,10 +506,10 @@ pub(crate) mod tests {
         let mut w = World::new(1);
         w.spawn_cooldown = 1e9;
         w.gate_timer = 1e9;
-        let (lives, bombs) = (w.lives, w.bombs);
+        let (lives, bombs) = (w.ledger.lives, w.ledger.bombs);
         // The extra lives and bombs a tick at `score` brings.
         fn extras(w: &mut World, score: u64) -> (usize, usize) {
-            w.score = score;
+            w.ledger.score = score;
             w.tick(&Input::default());
             let n = |life: bool| {
                 w.events
@@ -548,7 +522,7 @@ pub(crate) mod tests {
         assert_eq!(extras(&mut w, 99_999), (0, 0));
         assert_eq!(extras(&mut w, 100_000), (1, 0));
         assert_eq!(extras(&mut w, 450_000), (3, 3));
-        assert_eq!((w.lives, w.bombs), (lives + 4, bombs + 3));
+        assert_eq!((w.ledger.lives, w.ledger.bombs), (lives + 4, bombs + 3));
     }
 
     /// Through a gate: the chain grows and scores; past one: the chain breaks.
@@ -579,6 +553,6 @@ pub(crate) mod tests {
         }
         assert_eq!(chains, [(1, true), (2, true), (0, false)]);
         assert_eq!(w.chain, 0);
-        assert_eq!(w.mult, 3);
+        assert_eq!(w.ledger.mult, 3);
     }
 }

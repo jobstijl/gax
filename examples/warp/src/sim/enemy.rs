@@ -1,6 +1,6 @@
 //! The enemies: landing, moving by their family's rule, bouncing off the walls, and dying.
 
-use super::body::{Body, ORIGIN, distance, heading, interpolate, place, turn, turned, with_length};
+use super::body::{Body, ORIGIN, distance, interpolate, place, turned, with_length};
 use super::collide::outside;
 use super::kind::{Kind, SERPENT_GAP, SERPENT_LEN};
 use super::shots::Wreck;
@@ -72,7 +72,7 @@ impl World {
         let id = self.next_id();
         let stats = kind.stats();
         let mut body = Body::new(place(at, self.rng.angle()));
-        let intent = heading(self.rng.angle(), stats.launch);
+        let intent = P::direction_from_angle(self.rng.angle()) * stats.launch;
         body.vel = intent;
         let [lo, hi] = stats.spin;
         body.spin = if lo < hi { self.rng.range(lo, hi) } else { lo };
@@ -151,8 +151,9 @@ impl World {
     /// points gained.
     fn reward(&mut self, e: &Enemy) -> u64 {
         let stats = e.kind.stats();
-        let points = (stats.value + 100 * e.mass as u64) * u64::from(self.mult);
-        self.score += points;
+        let points = self
+            .ledger
+            .award((stats.value + 100 * e.mass as u64) * u64::from(self.ledger.mult));
         let extra = stats.extra_shard > 0.0 && self.rng.chance(stats.extra_shard);
         let shards = stats.shards + e.mass as usize + usize::from(extra);
         self.drop_shards(e.body.pos(), shards);
@@ -164,7 +165,7 @@ impl World {
         match kind {
             // Three fragments, flung apart: a direction turned a third at a time.
             Kind::Splitter => {
-                let mut d = heading(self.rng.angle(), 1.0);
+                let mut d = P::direction_from_angle(self.rng.angle());
                 for _ in 0..3 {
                     let f = self.spawn(Kind::Fragment, pos + d * 0.5);
                     f.intent = d * 9.0;
@@ -221,7 +222,7 @@ impl World {
     /// reflected in it, where a bounce would have put it.
     fn launch(&mut self, p: P) {
         for side in [-1.0f32, 1.0] {
-            let to = p + heading(self.rng.angle(), 1.3 * side);
+            let to = p + P::direction_from_angle(self.rng.angle()) * (1.3 * side);
             let margin = Kind::Mote.stats().radius;
             let at = outside(p, to, margin).map_or(to, |wall| wall.reflect(to));
             self.spawn(Kind::Mote, at);
@@ -273,13 +274,13 @@ impl Enemy {
                 let target = if view.hunting {
                     view.ship
                 } else {
-                    ORIGIN + heading(self.phase, 15.0)
+                    ORIGIN + P::direction_from_angle(self.phase) * 15.0
                 };
                 self.steer(p, target, view);
             }
             Kind::Warden => {
                 // Turn slowly to face the ship, and come on behind the shield.
-                let d = turn(self.body.heading(), view.ship - p);
+                let d = self.body.heading().angle_to(view.ship - p);
                 self.body.spin = d.clamp(-1.0, 1.0) * stats.turn_rate;
                 self.intent = self.body.heading() * (stats.speed * self.ramp());
             }
@@ -326,12 +327,12 @@ impl Enemy {
         };
         // Turn towards the target at a limited rate: part of the rotation between.
         let limit = stats.turn_rate * DT;
-        let d = (turn(have, to) + wind).clamp(-limit, limit);
+        let d = (have.angle_to(to) + wind).clamp(-limit, limit);
         let way = with_length(turned(have, d), 1.0);
         self.intent = way * (stats.speed * self.ramp());
         self.body.spin = if matches!(self.kind, Kind::Evader | Kind::Serpent) {
             // Face the way it goes.
-            turn(self.body.heading(), way) * 10.0
+            self.body.heading().angle_to(way) * 10.0
         } else {
             stats.hunting_spin
         };
@@ -507,8 +508,8 @@ mod tests {
             for t in 0..120 * 150 {
                 let a = t as f32 * 0.004 + seed as f32;
                 w.tick(&Input {
-                    movement: heading(a * 1.7, 1.0),
-                    aim: heading(a * 5.0, 1.0),
+                    movement: P::direction_from_angle(a * 1.7),
+                    aim: P::direction_from_angle(a * 5.0),
                     fire: t % 600 < 300,
                     bomb: false,
                 });

@@ -79,7 +79,8 @@ impl GridSpec {
         crate::lattice_rest(self.origin, [i as f32, j as f32, self.spacing])
     }
 
-    /// Whether node `k` is on the border (pinned).
+    /// Whether node `k` is on the border (pinned; the CPU twin's test, the GPU's is in WGSL).
+    #[cfg(test)]
     pub fn is_border(self, k: usize) -> bool {
         let (i, j) = self.cell(k);
         i == 0 || j == 0 || i == self.cols - 1 || j == self.rows - 1

@@ -1,7 +1,7 @@
 //! Gravity wells: singularities pull shots, enemies, the grid and the particles with an
 //! inverse-square law, eat what falls in, and burst when overfed.
 
-use super::body::{distance, heading};
+use super::body::distance;
 use super::kind::Kind;
 use super::{Event, P, World, dir};
 use crate::geom::length_cubed;
@@ -49,7 +49,7 @@ impl World {
                 let pos = e.body.pos();
                 self.events.push(Event::Burst { pos });
                 for _ in 0..14 {
-                    let d = heading(self.rng.angle(), 1.2);
+                    let d = P::direction_from_angle(self.rng.angle()) * 1.2;
                     self.spawn(Kind::Mote, pos + d);
                 }
             }

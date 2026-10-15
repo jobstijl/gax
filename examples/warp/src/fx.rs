@@ -15,7 +15,7 @@
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
 use crate::render::{GridSteps, Particle, PostSettings, Shock, Source};
-use crate::sim::body::{Body, ORIGIN, Pose, heading, pose_at, turned};
+use crate::sim::body::{Body, ORIGIN, Pose, pose_at, turned};
 use crate::sim::rng::Rng;
 use crate::sim::{ARENA, Event, Kind, World, Wreck};
 use gax::pga2d::{Moments, Motor, Point};
@@ -169,7 +169,8 @@ impl Fx {
             (color, hot)
         };
         for _ in 0..n {
-            let v = heading(self.rng.angle(), self.rng.range(speed.0, speed.1));
+            let v =
+                Point::direction_from_angle(self.rng.angle()) * self.rng.range(speed.0, speed.1);
             // Some sparks leave white: the same light, all the way to white, a little brighter.
             let c = if self.rng.chance(hot) {
                 (color.whitened(1.0)).faded(1.3)
@@ -284,7 +285,8 @@ impl Fx {
                     // Particles converging on the spot: from a ring around it, inwards.
                     let c = (scene::color(kind)).faded(0.6);
                     for _ in 0..24 {
-                        let out = heading(self.rng.angle(), self.rng.range(1.5, 3.0));
+                        let out = Point::direction_from_angle(self.rng.angle())
+                            * self.rng.range(1.5, 3.0);
                         self.particle(pos + out, out * -2.5, c, [0.0, 0.4, 0.5, 0.03]);
                     }
                 }

@@ -1,9 +1,8 @@
 //! The boundary with Bevy's input: stick and cursor vectors (glam) become gax directions here,
-//! and nowhere else in the game touches glam (see `clippy.toml`).
+//! and nowhere else in the game touches glam (see `clippy.toml`; the functions that read
+//! them are the only ones allowed to).
 
-// The one module allowed to read Bevy's glam vectors; they become gax types right away.
-#![allow(clippy::disallowed_types, clippy::disallowed_methods)]
-
+use crate::render::scene::HUD_HALF_HEIGHT;
 use crate::sim;
 use crate::sim::body::Pose;
 use bevy::input::gamepad::{Gamepad, GamepadButton};
@@ -48,7 +47,8 @@ pub struct Menu {
 /// The Tunnel's extra controls.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Flight {
-    /// The cursor in the HUD's screen units (`y` in `-18..18`), if it is over the window.
+    /// The cursor in the HUD's units (`y` within `HUD_HALF_HEIGHT` of the centre), if it is
+    /// over the window.
     pub cursor: Option<Point<(), f32>>,
     /// The right stick, when it is held: a direction.
     pub stick: Option<Point<(), f32>>,
@@ -60,9 +60,33 @@ pub struct Flight {
     pub bomb: bool,
 }
 
-/// The left stick's last menu direction, so that holding it moves once per flick.
-#[derive(Clone, Copy, Debug, Default)]
+/// The left stick's menu direction, `-1`, `0` or `1` across and up; as a latch, the last
+/// one over all pads, so that holding a stick moves once per flick.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Latch(i8, i8);
+
+impl Latch {
+    /// This direction, or on an axis where it has none, `other`'s (the first pad pushed far
+    /// enough flicks).
+    fn or(self, other: Latch) -> Latch {
+        let pick = |a: i8, b: i8| if a != 0 { a } else { b };
+        Latch(pick(self.0, other.0), pick(self.1, other.1))
+    }
+
+    /// The menu moves where the sticks' combined direction `now` points if it differs from
+    /// the last, once when it passes half way and again after it returns; `now` is kept.
+    fn flick(&mut self, now: Latch, menu: &mut Menu) {
+        if now.0 != 0 && now.0 != self.0 {
+            menu.right |= now.0 > 0;
+            menu.left |= now.0 < 0;
+        }
+        if now.1 != 0 && now.1 != self.1 {
+            menu.up |= now.1 > 0;
+            menu.down |= now.1 < 0;
+        }
+        *self = now;
+    }
+}
 
 /// A deadzone with a smooth rescale: `|v| < dz` is zero, and the rest maps to `0..1`.
 fn deadzone(x: f32, y: f32, dz: f32) -> Point<(), f32> {
@@ -74,34 +98,53 @@ fn deadzone(x: f32, y: f32, dz: f32) -> Point<(), f32> {
     v * (((l - dz) / (1.0 - dz)).min(1.0) / l)
 }
 
-/// Read this frame's input: the simulation's (in gax types) and the menu buttons.
-///
-/// `camera` and `half_height` place the cursor in the world; `ship` is where the ship is.
-#[allow(clippy::too_many_arguments)]
+/// Where the Plane's view is: its camera and half height, and the ship it aims from.
+#[derive(Clone, Copy)]
+pub struct View {
+    pub camera: Pose,
+    pub half_height: f32,
+    pub ship: Point<(), f32>,
+}
+
+/// Read this frame's input: the simulation's (in gax types), the menu buttons, and the
+/// Tunnel's controls. `device` follows what aimed last; `latch` keeps the menu flick.
 pub fn read(
     keys: &ButtonInput<KeyCode>,
     mouse: &ButtonInput<MouseButton>,
     window: Option<&Window>,
     pads: &Query<&Gamepad>,
-    camera: Pose,
-    half_height: f32,
-    ship: Point<(), f32>,
+    view: View,
     device: &mut Device,
     latch: &mut Latch,
 ) -> (sim::Input, Menu, Flight) {
-    let mut input = sim::Input::default();
-    let mut menu = Menu {
-        start: keys.any_just_pressed([KeyCode::Enter, KeyCode::NumpadEnter]),
-        back: keys.just_pressed(KeyCode::Escape),
-        debug: keys.just_pressed(KeyCode::F3),
-        fullscreen: keys.just_pressed(KeyCode::F11),
-        up: keys.any_just_pressed([KeyCode::ArrowUp, KeyCode::KeyW]),
-        down: keys.any_just_pressed([KeyCode::ArrowDown, KeyCode::KeyS]),
-        left: keys.any_just_pressed([KeyCode::ArrowLeft, KeyCode::KeyA]),
-        right: keys.any_just_pressed([KeyCode::ArrowRight, KeyCode::KeyD]),
-        letter: None,
-        erase: keys.just_pressed(KeyCode::Backspace),
+    let mut menu = menu_keys(keys);
+    let mut flight = flight_keys(keys, mouse);
+    let mut input = sim::Input {
+        movement: movement_keys(keys),
+        aim: Point::direction(0.0, 0.0),
+        fire: mouse.pressed(MouseButton::Left),
+        bomb: flight.bomb,
     };
+    if let Some(w) = window {
+        cursor(w, view, &mut input, &mut flight);
+    }
+    if input.fire || mouse.just_pressed(MouseButton::Left) {
+        *device = Device::Mouse;
+    }
+    let mut flick = Latch::default();
+    for pad in pads.iter() {
+        if read_pad(pad, &mut input, &mut menu, &mut flight) {
+            *device = Device::Pad;
+        }
+        flick = flick.or(stick_flick(pad));
+    }
+    latch.flick(flick, &mut menu);
+    flight.throttle = flight.throttle.clamp(-1.0, 1.0);
+    (input, menu, flight)
+}
+
+/// The keyboard's menu buttons.
+fn menu_keys(keys: &ButtonInput<KeyCode>) -> Menu {
     const LETTERS: [KeyCode; 26] = [
         KeyCode::KeyA,
         KeyCode::KeyB,
@@ -130,14 +173,27 @@ pub fn read(
         KeyCode::KeyY,
         KeyCode::KeyZ,
     ];
-    if let Some(i) = LETTERS.iter().position(|k| keys.just_pressed(*k)) {
-        menu.letter = Some((b'A' + i as u8) as char);
+    let letter = LETTERS.iter().position(|k| keys.just_pressed(*k));
+    Menu {
+        start: keys.any_just_pressed([KeyCode::Enter, KeyCode::NumpadEnter]),
+        back: keys.just_pressed(KeyCode::Escape),
+        debug: keys.just_pressed(KeyCode::F3),
+        fullscreen: keys.just_pressed(KeyCode::F11),
+        up: keys.any_just_pressed([KeyCode::ArrowUp, KeyCode::KeyW]),
+        down: keys.any_just_pressed([KeyCode::ArrowDown, KeyCode::KeyS]),
+        left: keys.any_just_pressed([KeyCode::ArrowLeft, KeyCode::KeyA]),
+        right: keys.any_just_pressed([KeyCode::ArrowRight, KeyCode::KeyD]),
+        letter: letter.map(|i| (b'A' + i as u8) as char),
+        erase: keys.just_pressed(KeyCode::Backspace),
     }
-    // Keyboard movement.
+}
+
+/// The keyboard's movement: WASD or the arrows, a diagonal no faster (at most unit length).
+fn movement_keys(keys: &ButtonInput<KeyCode>) -> Point<(), f32> {
     let axis = |neg: [KeyCode; 2], pos: [KeyCode; 2]| {
         f32::from(u8::from(keys.any_pressed(pos))) - f32::from(u8::from(keys.any_pressed(neg)))
     };
-    let mut movement = Point::direction(
+    let movement = Point::direction(
         axis(
             [KeyCode::KeyA, KeyCode::ArrowLeft],
             [KeyCode::KeyD, KeyCode::ArrowRight],
@@ -147,98 +203,126 @@ pub fn read(
             [KeyCode::KeyW, KeyCode::ArrowUp],
         ),
     );
-    // A diagonal is no faster: at most unit length.
     let l = movement.ideal_norm();
     if l > 1.0 {
-        movement = movement * (1.0 / l);
+        movement * (1.0 / l)
+    } else {
+        movement
     }
-    let mut flight = Flight {
+}
+
+/// The Tunnel's keys and buttons: roll, throttle and the bomb (the Plane's too).
+fn flight_keys(keys: &ButtonInput<KeyCode>, mouse: &ButtonInput<MouseButton>) -> Flight {
+    let held = |k: [KeyCode; 2]| f32::from(u8::from(keys.any_pressed(k)));
+    Flight {
         cursor: None,
         stick: None,
         roll: i8::from(keys.just_pressed(KeyCode::KeyE))
             - i8::from(keys.just_pressed(KeyCode::KeyQ)),
-        throttle: f32::from(u8::from(
-            keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
-        )) - f32::from(u8::from(
-            keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]),
-        )),
+        throttle: held([KeyCode::ShiftLeft, KeyCode::ShiftRight])
+            - held([KeyCode::ControlLeft, KeyCode::ControlRight]),
         bomb: keys.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Right),
+    }
+}
+
+/// The cursor: in the HUD's units for the Tunnel's reticle, and placed in the world through
+/// the Plane's camera motor for its aim.
+#[allow(clippy::disallowed_methods)] // the cursor's glam vector, read here only
+fn cursor(w: &Window, view: View, input: &mut sim::Input, flight: &mut Flight) {
+    let Some(c) = w.cursor_position() else {
+        return;
     };
-    // Mouse aim: the cursor placed in the world through the camera motor.
-    let mut aim = Point::direction(0.0, 0.0);
-    if let Some(w) = window
-        && let Some(c) = w.cursor_position()
-    {
-        let (width, height) = (w.width().max(1.0), w.height().max(1.0));
-        let (nx, ny) = (2.0 * c.x / width - 1.0, 1.0 - 2.0 * c.y / height);
-        flight.cursor = Some(Point::xy(nx * 18.0 * width / height, ny * 18.0));
-        let local = Point::xy(nx * half_height * width / height, ny * half_height);
-        aim = (camera >> local) - ship;
+    let (width, height) = (w.width().max(1.0), w.height().max(1.0));
+    let (nx, ny) = (2.0 * c.x / width - 1.0, 1.0 - 2.0 * c.y / height);
+    let aspect = width / height;
+    flight.cursor = Some(Point::xy(
+        nx * HUD_HALF_HEIGHT * aspect,
+        ny * HUD_HALF_HEIGHT,
+    ));
+    let local = Point::xy(nx * view.half_height * aspect, ny * view.half_height);
+    input.aim = (view.camera >> local) - view.ship;
+}
+
+/// A gamepad: the left stick moves, the right stick aims and fires, the shoulders roll and
+/// the triggers set the throttle (any of them bombs in the Plane, Y in the Tunnel), and the
+/// face buttons and the D-pad work the menus. Returns whether a stick was pushed.
+#[allow(clippy::disallowed_methods)] // the sticks' glam vectors, read here only
+fn read_pad(pad: &Gamepad, input: &mut sim::Input, menu: &mut Menu, flight: &mut Flight) -> bool {
+    let (ls, rs) = (pad.left_stick(), pad.right_stick());
+    let left = deadzone(ls.x, ls.y, 0.15);
+    let right = deadzone(rs.x, rs.y, 0.25);
+    let moved = left.ideal_norm() > 0.0;
+    let aimed = right.ideal_norm() > 0.0;
+    if moved {
+        input.movement = left;
     }
-    input.fire = mouse.pressed(MouseButton::Left);
-    input.bomb = mouse.just_pressed(MouseButton::Right) || keys.just_pressed(KeyCode::Space);
-    if input.fire || mouse.just_pressed(MouseButton::Left) {
-        *device = Device::Mouse;
+    if aimed {
+        input.aim = right;
+        input.fire = true;
+        flight.stick = Some(right);
     }
-    // Gamepads: left stick moves, right stick aims and fires.
-    for pad in pads.iter() {
-        let ls = pad.left_stick();
-        let rs = pad.right_stick();
-        let left = deadzone(ls.x, ls.y, 0.15);
-        let right = deadzone(rs.x, rs.y, 0.25);
-        if left.ideal_norm() > 0.0 {
-            movement = left;
-            *device = Device::Pad;
+    let pressed = |b: GamepadButton| pad.just_pressed(b);
+    let held = |b: GamepadButton| f32::from(u8::from(pad.pressed(b)));
+    flight.roll += i8::from(pressed(GamepadButton::RightTrigger))
+        - i8::from(pressed(GamepadButton::LeftTrigger));
+    flight.throttle += held(GamepadButton::RightTrigger2) - held(GamepadButton::LeftTrigger2);
+    flight.bomb |= pressed(GamepadButton::North);
+    let triggers = [
+        GamepadButton::RightTrigger,
+        GamepadButton::LeftTrigger,
+        GamepadButton::RightTrigger2,
+        GamepadButton::LeftTrigger2,
+    ];
+    input.bomb |= triggers.into_iter().any(pressed);
+    menu.start |= pressed(GamepadButton::Start) || pressed(GamepadButton::South);
+    menu.back |= pressed(GamepadButton::Select) || pressed(GamepadButton::East);
+    menu.up |= pressed(GamepadButton::DPadUp);
+    menu.down |= pressed(GamepadButton::DPadDown);
+    menu.left |= pressed(GamepadButton::DPadLeft);
+    menu.right |= pressed(GamepadButton::DPadRight);
+    moved || aimed
+}
+
+/// The left stick's menu direction: `±1` on an axis pushed past half way, else 0.
+#[allow(clippy::disallowed_methods)] // the stick's glam vector, read here only
+fn stick_flick(pad: &Gamepad) -> Latch {
+    let ls = pad.left_stick();
+    let dir = |v: f32| {
+        if v > 0.6 {
+            1
+        } else if v < -0.6 {
+            -1
+        } else {
+            0
         }
-        if right.ideal_norm() > 0.0 {
-            aim = right;
-            input.fire = true;
-            flight.stick = Some(right);
-            *device = Device::Pad;
+    };
+    Latch(dir(ls.x), dir(ls.y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One pad held to the right and another at rest: the menu moves once, not every frame
+    /// (each pad's latch used to overwrite the other's).
+    #[test]
+    fn a_held_stick_flicks_once_with_two_pads() {
+        let (held, rest) = (Latch(1, 0), Latch(0, 0));
+        let mut latch = Latch::default();
+        let mut moves = 0;
+        for _ in 0..5 {
+            let mut menu = Menu::default();
+            latch.flick(held.or(rest), &mut menu);
+            moves += usize::from(menu.right);
+            let mut menu = Menu::default();
+            latch.flick(rest.or(held), &mut menu);
+            moves += usize::from(menu.right);
         }
-        flight.roll += i8::from(pad.just_pressed(GamepadButton::RightTrigger))
-            - i8::from(pad.just_pressed(GamepadButton::LeftTrigger));
-        flight.throttle += f32::from(u8::from(pad.pressed(GamepadButton::RightTrigger2)))
-            - f32::from(u8::from(pad.pressed(GamepadButton::LeftTrigger2)));
-        flight.bomb |= pad.just_pressed(GamepadButton::North);
-        let bomb = [
-            GamepadButton::RightTrigger,
-            GamepadButton::LeftTrigger,
-            GamepadButton::RightTrigger2,
-            GamepadButton::LeftTrigger2,
-        ];
-        input.bomb |= bomb.iter().any(|b| pad.just_pressed(*b));
-        menu.start |=
-            pad.just_pressed(GamepadButton::Start) || pad.just_pressed(GamepadButton::South);
-        menu.back |=
-            pad.just_pressed(GamepadButton::Select) || pad.just_pressed(GamepadButton::East);
-        menu.up |= pad.just_pressed(GamepadButton::DPadUp);
-        menu.down |= pad.just_pressed(GamepadButton::DPadDown);
-        menu.left |= pad.just_pressed(GamepadButton::DPadLeft);
-        menu.right |= pad.just_pressed(GamepadButton::DPadRight);
-        // A flick of the left stick: once when it passes half way, again after it returns.
-        let dir = |v: f32| {
-            if v > 0.6 {
-                1
-            } else if v < -0.6 {
-                -1
-            } else {
-                0
-            }
-        };
-        let (fx, fy) = (dir(ls.x), dir(ls.y));
-        if fx != 0 && fx != latch.0 {
-            menu.right |= fx > 0;
-            menu.left |= fx < 0;
-        }
-        if fy != 0 && fy != latch.1 {
-            menu.up |= fy > 0;
-            menu.down |= fy < 0;
-        }
-        *latch = Latch(fx, fy);
+        assert_eq!(moves, 1);
+        // Back to rest, and flicked again: another move, up this time from the other pad.
+        let mut menu = Menu::default();
+        latch.flick(rest.or(rest), &mut menu);
+        latch.flick(rest.or(Latch(0, 1)), &mut menu);
+        assert!(menu.up && !menu.right);
     }
-    input.movement = movement;
-    input.aim = aim;
-    flight.throttle = flight.throttle.clamp(-1.0, 1.0);
-    (input, menu, flight)
 }

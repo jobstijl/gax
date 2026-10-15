@@ -159,7 +159,7 @@ impl World {
 
 #[cfg(test)]
 mod tests {
-    use super::super::body::{distance, heading, place, pose_at};
+    use super::super::body::{distance, place, pose_at};
     use super::super::kind::SERPENT_GAP;
     use super::super::{ARENA, Input, at, dir};
     use super::*;
@@ -194,7 +194,7 @@ mod tests {
             });
         }
         assert!(killed, "the drifter survived");
-        assert_eq!(w.score, 50);
+        assert_eq!(w.ledger.score, 50);
         assert_ne!(w.shards.len(), 0);
     }
 
@@ -222,8 +222,8 @@ mod tests {
         for t in 0..120 * 20 {
             let a = t as f32 * 0.013;
             w.tick(&Input {
-                movement: heading(a * 0.7, 1.0),
-                aim: heading(a * 3.0, 1.0),
+                movement: P::direction_from_angle(a * 0.7),
+                aim: P::direction_from_angle(a * 3.0),
                 fire: true,
                 bomb: false,
             });

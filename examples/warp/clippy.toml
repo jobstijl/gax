@@ -2,10 +2,11 @@
 # dependency tree (through input and seedling) but must not be used, except in `input.rs`,
 # the boundary that turns stick and cursor vectors into gax types right away.
 #
-# Geometry by hand is banned too: no square roots, trigonometry or hypotenuses on floats.
-# Lengths are ideal norms and joins, angles come from rotations between directions (and
-# their logarithms), turns are rotation motors, oscillations are phasors (`signal.rs`). The
-# exception is the audio DSP (`src/audio`), which allows it at its root.
+# Geometry by hand is banned too: no square roots, trigonometry, hypotenuses or fractional
+# powers on floats (`f32` and `f64`, and Bevy's `ops` versions of them), the audio included.
+# Lengths are ideal norms and joins, angles come from directions (`angle_to`, `angle_between`)
+# and rotations between them, turns are rotation motors, oscillations are phasors
+# (`signal.rs`), and an inverse-square law's `|d|³` is `geom::length_cubed`.
 # The square roots that are not lengths (a radius from a mass or an area, uniform sampling in a
 # disc, an RMS level, an Einstein radius) are written `gax::Real::sqrt`, which the ban leaves
 # alone on purpose: grep for it to review them.
@@ -33,11 +34,35 @@ disallowed-methods = [
     { path = "bevy::input::gamepad::Gamepad::dpad", reason = "hands out a glam Vec2: read it in input.rs only" },
     { path = "f32::sqrt", reason = "lengths and distances are gax: ideal_norm, the norm of a join" },
     { path = "f32::hypot", reason = "lengths are gax: ideal_norm" },
+    { path = "f32::powf", reason = "a power of a length is gax: geom::length_cubed" },
     { path = "f32::sin", reason = "turns are rotation motors; oscillations are phasors (signal::wave)" },
     { path = "f32::cos", reason = "turns are rotation motors; oscillations are phasors (signal::wave)" },
-    { path = "f32::sin_cos", reason = "turns are rotation motors" },
+    { path = "f32::sin_cos", reason = "turns are rotation motors; a direction at an angle is Point::direction_from_angle" },
     { path = "f32::tan", reason = "use gax (a phasor's height over its width)" },
-    { path = "f32::atan2", reason = "angles come from rotations between directions (body::angle_of, body::turn)" },
-    { path = "f32::asin", reason = "angles come from rotations between directions" },
-    { path = "f32::acos", reason = "angles come from rotations between directions" },
+    { path = "f32::atan2", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f32::atan", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f32::asin", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f32::acos", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f64::sqrt", reason = "lengths and distances are gax: ideal_norm, the norm of a join" },
+    { path = "f64::hypot", reason = "lengths are gax: ideal_norm" },
+    { path = "f64::powf", reason = "a power of a length is gax: geom::length_cubed" },
+    { path = "f64::sin", reason = "turns are rotation motors; oscillations are phasors (signal::wave)" },
+    { path = "f64::cos", reason = "turns are rotation motors; oscillations are phasors (signal::wave)" },
+    { path = "f64::sin_cos", reason = "turns are rotation motors; a direction at an angle is Point::direction_from_angle" },
+    { path = "f64::tan", reason = "use gax (a phasor's height over its width)" },
+    { path = "f64::atan2", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f64::atan", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f64::asin", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "f64::acos", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "bevy::math::ops::sqrt", reason = "lengths are gax" },
+    { path = "bevy::math::ops::hypot", reason = "lengths are gax" },
+    { path = "bevy::math::ops::powf", reason = "a power of a length is gax: geom::length_cubed" },
+    { path = "bevy::math::ops::sin", reason = "turns are rotation motors; oscillations are phasors" },
+    { path = "bevy::math::ops::cos", reason = "turns are rotation motors; oscillations are phasors" },
+    { path = "bevy::math::ops::sin_cos", reason = "turns are rotation motors" },
+    { path = "bevy::math::ops::tan", reason = "use gax (a phasor's height over its width)" },
+    { path = "bevy::math::ops::atan2", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "bevy::math::ops::atan", reason = "angles come from directions: angle_to, angle_between" },
+    { path = "bevy::math::ops::asin", reason = "angles come from directions" },
+    { path = "bevy::math::ops::acos", reason = "angles come from directions" },
 ]

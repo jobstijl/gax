@@ -7,12 +7,9 @@
 // tonemapper applies gax maps and moves away from grey; the ripple pushes points along their
 // radial direction; the edge effects scale about the screen's centre point.
 
-import package::common::{Full, display, euclidean, full_screen};
+import package::common::{Full, euclidean, full_screen};
 import package::fused::{luma, agx, ripple, scale_about, distance, light_fade};
 import gax::pga2d::point_new;
-
-// Whether the output needs sRGB's transfer function applied (a target without an sRGB format).
-override ENCODE_SRGB: bool = false;
 
 struct Post {
     // 1 / width, 1 / height of the source, upsample radius, unused.
@@ -133,5 +130,5 @@ fn fs_composite(f: Full) -> @location(0) vec4<f32> {
     // Grain: a little grey light added (lights add as points).
     let n = (hash(f.pos.xy + vec2<f32>(post.k.w * 61.0, post.k.w * 17.0)) - 0.5) * post.look.y;
     let out = c.c0.xyz + vec3<f32>(n);
-    return vec4<f32>(display(max(out, vec3<f32>(0.0)), ENCODE_SRGB), 1.0);
+    return vec4<f32>(max(out, vec3<f32>(0.0)), 1.0);
 }

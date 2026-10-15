@@ -1,7 +1,7 @@
 //! The ship: flying and firing, dying and coming back, bombs, extra lives and bombs, and the
 //! shards it collects.
 
-use super::body::{Body, ORIGIN, distance, heading, place, pose_at, turn, turned, with_length};
+use super::body::{Body, ORIGIN, distance, place, pose_at, turned, with_length};
 use super::collide::outside;
 use super::shots::Bullet;
 use super::{DT, Event, Input, P, Phase, World};
@@ -15,10 +15,6 @@ const FIRE_INTERVAL: f32 = 1.0 / 22.0;
 const RESPAWN_TIME: f32 = 2.2;
 /// Seconds of invulnerability after a respawn.
 const RESPAWN_SHIELD: f32 = 2.5;
-/// The score of the first extra life, and between the next ones.
-const LIFE_EVERY: u64 = 100_000;
-/// The score of the first extra bomb, and between the next ones.
-const BOMB_EVERY: u64 = 150_000;
 
 /// The ship.
 #[derive(Clone, Debug)]
@@ -76,7 +72,7 @@ impl World {
         ship.body.vel = ship.body.vel + (want - ship.body.vel) * k;
         // Turn the nose towards the motion: by the rotation from heading to velocity.
         ship.body.spin = if ship.body.vel.ideal_norm() > 0.5 {
-            (turn(ship.body.heading(), ship.body.vel) * 16.0).clamp(-24.0, 24.0)
+            (ship.body.heading().angle_to(ship.body.vel) * 16.0).clamp(-24.0, 24.0)
         } else {
             0.0
         };
@@ -137,16 +133,15 @@ impl World {
     fn die(&mut self) {
         let pos = self.ship.body.pos();
         self.events.push(Event::Death { pos });
-        self.lives -= 1;
-        self.mult = 1;
+        let left = self.ledger.lose_life();
         self.bullets.clear();
         self.pending.clear();
         self.kill_all();
-        if self.lives == 0 {
+        if left {
+            self.phase = Phase::Dead(RESPAWN_TIME);
+        } else {
             self.end();
             self.events.push(Event::GameOver);
-        } else {
-            self.phase = Phase::Dead(RESPAWN_TIME);
         }
     }
 
@@ -161,10 +156,9 @@ impl World {
 
     /// A bomb, if one is left: every enemy and warp-in gone, a moment of invulnerability.
     pub(super) fn bomb(&mut self) {
-        if self.bombs == 0 {
+        if !self.ledger.take_bomb() {
             return;
         }
-        self.bombs -= 1;
         let pos = self.ship.body.pos();
         self.events.push(Event::Bomb { pos });
         self.kill_all();
@@ -173,18 +167,11 @@ impl World {
         self.director.after_bomb();
     }
 
-    /// An extra life every 100 000 points, an extra bomb every 150 000.
+    /// The extra lives and bombs the score has earned.
     pub(super) fn extras(&mut self) {
-        while self.score >= self.next_life {
-            self.next_life += LIFE_EVERY;
-            self.lives += 1;
-            self.events.push(Event::Extra { life: true });
-        }
-        while self.score >= self.next_bomb {
-            self.next_bomb += BOMB_EVERY;
-            self.bombs += 1;
-            self.events.push(Event::Extra { life: false });
-        }
+        let events = &mut self.events;
+        self.ledger
+            .extras(|life| events.push(Event::Extra { life }));
     }
 
     /// Scatter `count` shards from `pos`.
@@ -192,7 +179,7 @@ impl World {
         for _ in 0..count {
             let a = self.rng.angle();
             let mut body = Body::new(place(pos, a));
-            body.vel = heading(a, self.rng.range(2.0, 7.0));
+            body.vel = P::direction_from_angle(a) * self.rng.range(2.0, 7.0);
             body.spin = self.rng.range(-5.0, 5.0);
             self.shards.push(Shard { body, life: 7.0 });
         }
@@ -233,11 +220,9 @@ impl World {
             true
         });
         for _ in 0..picked {
-            self.mult += 1;
-            self.events.push(Event::Pickup {
-                pos: self.ship.body.pos(),
-                mult: self.mult,
-            });
+            let mult = self.ledger.raise();
+            let pos = self.ship.body.pos();
+            self.events.push(Event::Pickup { pos, mult });
         }
     }
 }
@@ -245,6 +230,7 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::super::kind::Kind;
+    use super::super::ledger::{BOMB_EVERY, LIFE_EVERY};
     use super::super::{ARENA, at, dir};
     use super::*;
 
@@ -260,7 +246,7 @@ mod tests {
             died |= w.events.iter().any(|e| matches!(e, Event::Death { .. }));
         }
         assert!(died);
-        assert_eq!(w.lives, 2);
+        assert_eq!(w.ledger.lives, 2);
     }
 
     #[test]
@@ -275,7 +261,7 @@ mod tests {
             ..Input::default()
         });
         assert_eq!(w.enemies.len(), 0);
-        assert_eq!(w.bombs, 2);
+        assert_eq!(w.ledger.bombs, 2);
     }
 
     #[test]
@@ -286,7 +272,7 @@ mod tests {
         s.vel = dir(0.0, 0.0);
         w.shards.push(Shard { body: s, life: 5.0 });
         w.tick(&Input::default());
-        assert_eq!(w.mult, 2);
+        assert_eq!(w.ledger.mult, 2);
     }
 
     /// The ship stops at a wall: its motion into the wall gone.
@@ -312,7 +298,7 @@ mod tests {
         let mut w = World::new(16);
         w.director.enabled = false;
         w.die();
-        assert_eq!((w.lives, w.phase), (2, Phase::Dead(RESPAWN_TIME)));
+        assert_eq!((w.ledger.lives, w.phase), (2, Phase::Dead(RESPAWN_TIME)));
         let mut ticks = 0;
         while !w.events.contains(&Event::Respawn) {
             w.tick(&Input::default());
@@ -334,7 +320,7 @@ mod tests {
     fn the_last_life_ends_the_run() {
         let mut w = World::new(17);
         w.director.enabled = false;
-        w.lives = 1;
+        w.ledger.lives = 1;
         w.drop_shards(at(10.0, 5.0), 5);
         w.announce(Kind::Chaser, at(-12.0, 5.0), 1.0);
         w.tick(&Input {
@@ -361,19 +347,19 @@ mod tests {
     fn extras_at_their_scores() {
         let mut w = World::new(18);
         w.director.enabled = false;
-        w.score = LIFE_EVERY - 1;
+        w.ledger.score = LIFE_EVERY - 1;
         w.tick(&Input::default());
-        assert_eq!((w.lives, w.bombs), (3, 3));
-        w.score = LIFE_EVERY;
+        assert_eq!((w.ledger.lives, w.ledger.bombs), (3, 3));
+        w.ledger.score = LIFE_EVERY;
         w.tick(&Input::default());
-        assert_eq!((w.lives, w.bombs), (4, 3));
+        assert_eq!((w.ledger.lives, w.ledger.bombs), (4, 3));
         assert!(w.events.contains(&Event::Extra { life: true }));
-        w.score = BOMB_EVERY;
+        w.ledger.score = BOMB_EVERY;
         w.tick(&Input::default());
-        assert_eq!((w.lives, w.bombs), (4, 4));
+        assert_eq!((w.ledger.lives, w.ledger.bombs), (4, 4));
         assert!(w.events.contains(&Event::Extra { life: false }));
-        w.score = 2 * LIFE_EVERY;
+        w.ledger.score = 2 * LIFE_EVERY;
         w.tick(&Input::default());
-        assert_eq!((w.lives, w.bombs), (5, 4));
+        assert_eq!((w.ledger.lives, w.ledger.bombs), (5, 4));
     }
 }

@@ -105,81 +105,189 @@ impl Default for Settings {
     }
 }
 
-impl Settings {
-    /// The rows of the settings menu (their labels), in order.
-    pub const ROWS: [&'static str; 12] = [
-        "SCREEN SHAKE",
-        "FLASHES",
-        "MOTION",
-        "COLOURS",
-        "MASTER VOLUME",
-        "MUSIC",
-        "EFFECTS",
-        "EFFECTS ON THE BEAT",
-        "TUNNEL FIELD OF VIEW",
-        "TUNNEL CAMERA ROLL",
-        "TUNNEL AIM ASSIST",
-        "FULL SCREEN",
+/// A row of the settings menu: a setting, its label, how it changes, and its key in the
+/// settings file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Row {
+    Shake,
+    Flashes,
+    Motion,
+    Colours,
+    MasterVolume,
+    MusicVolume,
+    EffectsVolume,
+    OnBeat,
+    FieldOfView,
+    CameraRoll,
+    AimAssist,
+    FullScreen,
+}
+
+/// How a row's value changes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RowKind {
+    /// On or off: any step flips it.
+    Toggle,
+    /// One of a few, wrapping round.
+    Cycle,
+    /// A volume, `0..=10`, shown as bars.
+    Level,
+    /// A number in steps, held at its ends.
+    Step,
+}
+
+impl RowKind {
+    /// Whether Enter steps it (as right does).
+    pub fn steps_on_enter(self) -> bool {
+        matches!(self, RowKind::Toggle | RowKind::Cycle)
+    }
+}
+
+/// A row's value as the menu shows it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Value {
+    /// Words or a number.
+    Text(String),
+    /// A volume's level, out of 10 (drawn as bars).
+    Level(u8),
+}
+
+impl Row {
+    /// The rows, in the menu's (and the file's) order.
+    pub const ALL: [Row; 12] = [
+        Row::Shake,
+        Row::Flashes,
+        Row::Motion,
+        Row::Colours,
+        Row::MasterVolume,
+        Row::MusicVolume,
+        Row::EffectsVolume,
+        Row::OnBeat,
+        Row::FieldOfView,
+        Row::CameraRoll,
+        Row::AimAssist,
+        Row::FullScreen,
     ];
 
-    /// Rows that toggle or cycle (Enter steps them too).
-    pub fn toggles(row: usize) -> bool {
-        matches!(row, 1 | 2 | 3 | 7 | 9 | 10 | 11)
+    /// What the menu shows.
+    pub fn label(self) -> &'static str {
+        match self {
+            Row::Shake => "SCREEN SHAKE",
+            Row::Flashes => "FLASHES",
+            Row::Motion => "MOTION",
+            Row::Colours => "COLOURS",
+            Row::MasterVolume => "MASTER VOLUME",
+            Row::MusicVolume => "MUSIC",
+            Row::EffectsVolume => "EFFECTS",
+            Row::OnBeat => "EFFECTS ON THE BEAT",
+            Row::FieldOfView => "TUNNEL FIELD OF VIEW",
+            Row::CameraRoll => "TUNNEL CAMERA ROLL",
+            Row::AimAssist => "TUNNEL AIM ASSIST",
+            Row::FullScreen => "FULL SCREEN",
+        }
     }
 
+    /// Its key in the settings file.
+    pub fn key(self) -> &'static str {
+        match self {
+            Row::Shake => "shake",
+            Row::Flashes => "reduced_flashes",
+            Row::Motion => "reduced_motion",
+            Row::Colours => "scheme",
+            Row::MasterVolume => "master",
+            Row::MusicVolume => "music",
+            Row::EffectsVolume => "sfx",
+            Row::OnBeat => "on_beat",
+            Row::FieldOfView => "fov",
+            Row::CameraRoll => "camera_roll",
+            Row::AimAssist => "aim_assist",
+            Row::FullScreen => "fullscreen",
+        }
+    }
+
+    /// How it changes.
+    pub fn kind(self) -> RowKind {
+        match self {
+            Row::Shake | Row::FieldOfView => RowKind::Step,
+            Row::Colours | Row::AimAssist => RowKind::Cycle,
+            Row::MasterVolume | Row::MusicVolume | Row::EffectsVolume => RowKind::Level,
+            Row::Flashes | Row::Motion | Row::OnBeat | Row::CameraRoll | Row::FullScreen => {
+                RowKind::Toggle
+            }
+        }
+    }
+}
+
+/// The names of the aim assist's levels.
+const ASSIST: [&str; 3] = ["OFF", "LOW", "HIGH"];
+
+impl Settings {
     /// The Tunnel's lock-on margin (screen units beyond an enemy's apparent size).
     pub fn aim_reach(&self) -> f32 {
         [0.25, 1.1, 2.2][usize::from(self.aim_assist.min(2))]
     }
 
-    /// A row's value as the menu shows it; volumes are `(level, 10)` bars instead.
-    pub fn value(&self, row: usize) -> Result<String, u8> {
+    /// The flag a toggle row sets.
+    fn flag(&mut self, row: Row) -> Option<&mut bool> {
         match row {
-            0 => Ok(match self.shake {
-                0 => "OFF".into(),
-                n => format!("{}%", 25 * u32::from(n)),
-            }),
-            1 => Ok(if self.reduced_flashes {
-                "REDUCED"
-            } else {
-                "FULL"
-            }
-            .into()),
-            2 => Ok(if self.reduced_motion {
-                "REDUCED"
-            } else {
-                "FULL"
-            }
-            .into()),
-            3 => Ok(self.scheme.name().into()),
-            4 => Err(self.master),
-            5 => Err(self.music),
-            6 => Err(self.sfx),
-            7 => Ok(if self.on_beat { "ON" } else { "OFF" }.into()),
-            8 => Ok(format!("{}", self.fov)),
-            9 => Ok(if self.camera_roll { "FOLLOW" } else { "LEVEL" }.into()),
-            10 => Ok(["OFF", "LOW", "HIGH"][usize::from(self.aim_assist.min(2))].into()),
-            _ => Ok(if self.fullscreen { "ON" } else { "OFF" }.into()),
+            Row::Flashes => Some(&mut self.reduced_flashes),
+            Row::Motion => Some(&mut self.reduced_motion),
+            Row::OnBeat => Some(&mut self.on_beat),
+            Row::CameraRoll => Some(&mut self.camera_roll),
+            Row::FullScreen => Some(&mut self.fullscreen),
+            _ => None,
         }
     }
 
-    /// Step a row's value by `by` (toggles flip on any step).
-    pub fn adjust(&mut self, row: usize, by: i32) {
-        let vol = |v: &mut u8| *v = (i32::from(*v) + by).clamp(0, 10) as u8;
+    /// The number a step, level or cycle row sets, with its range.
+    fn number(&mut self, row: Row) -> Option<(&mut u8, u8, u8)> {
         match row {
-            0 => self.shake = (i32::from(self.shake) + by).clamp(0, 4) as u8,
-            1 => self.reduced_flashes = !self.reduced_flashes,
-            2 => self.reduced_motion = !self.reduced_motion,
-            3 => self.scheme = self.scheme.step(by),
-            4 => vol(&mut self.master),
-            5 => vol(&mut self.music),
-            6 => vol(&mut self.sfx),
-            7 => self.on_beat = !self.on_beat,
-            8 => self.fov = (i32::from(self.fov) + 5 * by).clamp(60, 110) as u8,
-            9 => self.camera_roll = !self.camera_roll,
-            10 => self.aim_assist = (i32::from(self.aim_assist) + by).rem_euclid(3) as u8,
-            11 => self.fullscreen = !self.fullscreen,
-            _ => {}
+            Row::Shake => Some((&mut self.shake, 0, 4)),
+            Row::MasterVolume => Some((&mut self.master, 0, 10)),
+            Row::MusicVolume => Some((&mut self.music, 0, 10)),
+            Row::EffectsVolume => Some((&mut self.sfx, 0, 10)),
+            Row::FieldOfView => Some((&mut self.fov, 60, 110)),
+            Row::AimAssist => Some((&mut self.aim_assist, 0, 2)),
+            _ => None,
+        }
+    }
+
+    /// A row's value as the menu shows it.
+    pub fn value(&self, row: Row) -> Value {
+        let on_off = |on: bool| if on { "ON" } else { "OFF" };
+        let full = |reduced: bool| if reduced { "REDUCED" } else { "FULL" };
+        Value::Text(match row {
+            Row::Shake if self.shake == 0 => "OFF".into(),
+            Row::Shake => format!("{}%", 25 * u32::from(self.shake)),
+            Row::Flashes => full(self.reduced_flashes).into(),
+            Row::Motion => full(self.reduced_motion).into(),
+            Row::Colours => self.scheme.name().into(),
+            Row::MasterVolume => return Value::Level(self.master),
+            Row::MusicVolume => return Value::Level(self.music),
+            Row::EffectsVolume => return Value::Level(self.sfx),
+            Row::OnBeat => on_off(self.on_beat).into(),
+            Row::FieldOfView => self.fov.to_string(),
+            Row::CameraRoll => if self.camera_roll { "FOLLOW" } else { "LEVEL" }.into(),
+            Row::AimAssist => ASSIST[usize::from(self.aim_assist.min(2))].into(),
+            Row::FullScreen => on_off(self.fullscreen).into(),
+        })
+    }
+
+    /// Step a row's value by `by`: a toggle flips on any step, a cycle wraps, the field of
+    /// view moves 5 degrees a step, and the rest are held at their ends.
+    pub fn adjust(&mut self, row: Row, by: i32) {
+        if row == Row::Colours {
+            self.scheme = self.scheme.step(by);
+        } else if let Some(flag) = self.flag(row) {
+            *flag = !*flag;
+        } else if let Some((n, lo, hi)) = self.number(row) {
+            let by = if row == Row::FieldOfView { 5 * by } else { by };
+            let next = i32::from(*n) + by;
+            *n = if row.kind() == RowKind::Cycle {
+                (next - i32::from(lo)).rem_euclid(i32::from(hi - lo) + 1) + i32::from(lo)
+            } else {
+                next.clamp(i32::from(lo), i32::from(hi))
+            } as u8;
         }
     }
 
@@ -189,23 +297,39 @@ impl Settings {
         [v(self.master) * v(self.sfx), v(self.master) * v(self.music)]
     }
 
-    /// The text form.
+    /// A row's value as the settings file keeps it.
+    fn stored(mut self, row: Row) -> String {
+        if row == Row::Colours {
+            self.scheme.name().into()
+        } else if let Some(flag) = self.flag(row) {
+            flag.to_string()
+        } else {
+            self.number(row)
+                .map_or(String::new(), |(n, ..)| n.to_string())
+        }
+    }
+
+    /// Set a row from the settings file's `text`; malformed text keeps the value, a number is
+    /// held in its range, and an unknown scheme is the standard one.
+    fn restore(&mut self, row: Row, text: &str) {
+        if row == Row::Colours {
+            self.scheme = Scheme::ALL
+                .into_iter()
+                .find(|x| x.name() == text)
+                .unwrap_or_default();
+        } else if let Some(flag) = self.flag(row) {
+            *flag = text == "true";
+        } else if let Some((n, lo, hi)) = self.number(row) {
+            *n = text.parse::<u8>().map_or(*n, |x| x.clamp(lo, hi));
+        }
+    }
+
+    /// The text form: a `key = value` line per row.
     pub fn to_text(self) -> String {
-        format!(
-            "shake = {}\nreduced_flashes = {}\nreduced_motion = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\non_beat = {}\nfov = {}\ncamera_roll = {}\naim_assist = {}\nfullscreen = {}\n",
-            self.shake,
-            self.reduced_flashes,
-            self.reduced_motion,
-            self.scheme.name(),
-            self.master,
-            self.music,
-            self.sfx,
-            self.on_beat,
-            self.fov,
-            self.camera_roll,
-            self.aim_assist,
-            self.fullscreen
-        )
+        Row::ALL
+            .iter()
+            .map(|&row| format!("{} = {}\n", row.key(), self.stored(row)))
+            .collect()
     }
 
     /// Read the text form; unknown or malformed lines keep their defaults.
@@ -215,27 +339,8 @@ impl Settings {
             let Some((k, v)) = line.split_once('=') else {
                 continue;
             };
-            let (k, v) = (k.trim(), v.trim());
-            let vol = |v: &str, d: u8| v.parse::<u8>().map_or(d, |x| x.min(10));
-            match k {
-                "shake" => s.shake = v.parse::<u8>().map_or(s.shake, |x| x.min(4)),
-                "reduced_flashes" => s.reduced_flashes = v == "true",
-                "reduced_motion" => s.reduced_motion = v == "true",
-                "aim_assist" => s.aim_assist = v.parse::<u8>().map_or(s.aim_assist, |x| x.min(2)),
-                "scheme" => {
-                    s.scheme = Scheme::ALL
-                        .into_iter()
-                        .find(|x| x.name() == v)
-                        .unwrap_or_default()
-                }
-                "master" => s.master = vol(v, s.master),
-                "music" => s.music = vol(v, s.music),
-                "sfx" => s.sfx = vol(v, s.sfx),
-                "on_beat" => s.on_beat = v == "true",
-                "fov" => s.fov = v.parse::<u8>().map_or(s.fov, |x| x.clamp(60, 110)),
-                "camera_roll" => s.camera_roll = v == "true",
-                "fullscreen" => s.fullscreen = v == "true",
-                _ => {}
+            if let Some(&row) = Row::ALL.iter().find(|r| r.key() == k.trim()) {
+                s.restore(row, v.trim());
             }
         }
         s
@@ -324,8 +429,18 @@ impl Store {
         Store::new(data_dir())
     }
 
-    fn read(&self, name: &str) -> Option<String> {
-        std::fs::read_to_string(self.dir.as_ref()?.join(name)).ok()
+    /// The text of `name`: `None` if there is no such file (or no directory), an error if
+    /// there is one that cannot be read.
+    fn read(&self, name: &str) -> Result<Option<String>, String> {
+        let Some(dir) = &self.dir else {
+            return Ok(None);
+        };
+        let path = dir.join(name);
+        match std::fs::read_to_string(&path) {
+            Ok(text) => Ok(Some(text)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(format!("{}: {e}", path.display())),
+        }
     }
 
     /// Write `bytes` to `name` (through a temporary file, so a crash never leaves half a file).
@@ -334,7 +449,7 @@ impl Store {
             return;
         };
         let path = dir.join(name);
-        let tmp = path.with_extension("tmp");
+        let tmp = temporary(&path);
         let ok = path
             .parent()
             .is_some_and(|p| std::fs::create_dir_all(p).is_ok())
@@ -347,9 +462,13 @@ impl Store {
 
     /// The settings (defaults if none are saved).
     pub fn settings(&self) -> Settings {
-        self.read("settings.txt")
-            .map(|t| Settings::from_text(&t))
-            .unwrap_or_default()
+        match self.read("settings.txt") {
+            Ok(text) => text.map(|t| Settings::from_text(&t)).unwrap_or_default(),
+            Err(e) => {
+                eprintln!("warp: {e}; using the default settings");
+                Settings::default()
+            }
+        }
     }
 
     /// Save the settings.
@@ -357,20 +476,34 @@ impl Store {
         self.write("settings.txt", s.to_text().as_bytes());
     }
 
-    /// The high-score table of the game whose replays are `I`.
+    /// The high-score table of the game whose replays are `I` (empty if it cannot be read,
+    /// which is logged).
     pub fn scores<I: Record>(&self) -> Scores {
-        self.read(I::TABLE)
+        self.table::<I>().unwrap_or_else(|e| {
+            eprintln!("warp: {e}");
+            Scores::default()
+        })
+    }
+
+    /// The high-score table of the game whose replays are `I`, or why it cannot be read.
+    fn table<I: Record>(&self) -> Result<Scores, String> {
+        Ok(self
+            .read(I::TABLE)?
             .map(|t| Scores::from_text(&t))
-            .unwrap_or_default()
+            .unwrap_or_default())
     }
 
     /// Record a finished run: always as `replays/last.<ext>`; if it makes the table, as an
-    /// entry named `name` with its own replay. Returns its rank.
+    /// entry named `name` with its own replay. Returns its rank. A table that is there but
+    /// cannot be read is left alone (rewriting it would lose its entries).
     pub fn finish<I: Record>(&self, replay: &Replay<I>, name: Option<&str>) -> Option<usize> {
         let bytes = replay.encode();
         self.write(&format!("replays/last.{}", I::EXT), &bytes);
         let name = name?;
-        let mut scores = self.scores::<I>();
+        let mut scores = self
+            .table::<I>()
+            .map_err(|e| eprintln!("warp: {e}; the run is not entered"))
+            .ok()?;
         let file = format!("{}-{}.{}", replay.score, replay.seed, I::EXT);
         let (rank, dropped) = scores.insert(Entry {
             score: replay.score,
@@ -394,6 +527,14 @@ impl Store {
         let dir = self.dir.as_ref()?;
         load_replay(&dir.join("replays").join(file)).ok()
     }
+}
+
+/// The temporary file a write to `path` goes through: `path` with `.tmp` appended (not its
+/// extension replaced, which would give `last.warp` and `last.tunnel` the same one).
+fn temporary(path: &Path) -> PathBuf {
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".tmp");
+    PathBuf::from(tmp)
 }
 
 /// Load a replay file.
@@ -434,6 +575,120 @@ mod tests {
         assert_eq!(g.shake, 4);
         assert_eq!(g.music, Settings::default().music);
         assert_eq!(g.scheme, Scheme::Standard);
+    }
+
+    /// The settings file keeps its format: a `key = value` line per row, in order.
+    #[test]
+    fn the_settings_file_format() {
+        let text = "shake = 4\nreduced_flashes = false\nreduced_motion = false\n\
+            scheme = STANDARD\nmaster = 8\nmusic = 8\nsfx = 8\non_beat = false\nfov = 85\n\
+            camera_roll = false\naim_assist = 1\nfullscreen = false\n";
+        assert_eq!(Settings::default().to_text(), text);
+    }
+
+    /// Every row shows its value and steps: toggles flip, cycles wrap, the rest are held at
+    /// their ends.
+    #[test]
+    fn every_row_shows_and_steps() {
+        let text = |s: &str| Value::Text(s.into());
+        let rows = [
+            (Row::Shake, text("100%"), text("100%"), text("75%")),
+            (Row::Flashes, text("FULL"), text("REDUCED"), text("REDUCED")),
+            (Row::Motion, text("FULL"), text("REDUCED"), text("REDUCED")),
+            (
+                Row::Colours,
+                text("STANDARD"),
+                text("RED-GREEN SAFE"),
+                text("BLUE-YELLOW SAFE"),
+            ),
+            (
+                Row::MasterVolume,
+                Value::Level(8),
+                Value::Level(9),
+                Value::Level(7),
+            ),
+            (
+                Row::MusicVolume,
+                Value::Level(8),
+                Value::Level(9),
+                Value::Level(7),
+            ),
+            (
+                Row::EffectsVolume,
+                Value::Level(8),
+                Value::Level(9),
+                Value::Level(7),
+            ),
+            (Row::OnBeat, text("OFF"), text("ON"), text("ON")),
+            (Row::FieldOfView, text("85"), text("90"), text("80")),
+            (
+                Row::CameraRoll,
+                text("LEVEL"),
+                text("FOLLOW"),
+                text("FOLLOW"),
+            ),
+            (Row::AimAssist, text("LOW"), text("HIGH"), text("OFF")),
+            (Row::FullScreen, text("OFF"), text("ON"), text("ON")),
+        ];
+        assert_eq!(rows.clone().map(|r| r.0), Row::ALL);
+        for (row, now, up, down) in rows {
+            let s = Settings::default();
+            assert_eq!(s.value(row), now, "{row:?}");
+            let (mut a, mut b) = (s, s);
+            a.adjust(row, 1);
+            b.adjust(row, -1);
+            assert_eq!((a.value(row), b.value(row)), (up, down), "{row:?}");
+            assert_eq!(
+                row.kind().steps_on_enter(),
+                matches!(row.kind(), RowKind::Toggle | RowKind::Cycle)
+            );
+            // Every row is kept by the file.
+            assert_eq!(Settings::from_text(&a.to_text()), a, "{row:?}");
+        }
+        // Held at the ends, and wrapping round.
+        let mut s = Settings::default();
+        for _ in 0..20 {
+            s.adjust(Row::Shake, -1);
+            s.adjust(Row::MasterVolume, 1);
+            s.adjust(Row::FieldOfView, 1);
+        }
+        assert_eq!(s.value(Row::Shake), text("OFF"));
+        assert_eq!(s.value(Row::MasterVolume), Value::Level(10));
+        assert_eq!(s.value(Row::FieldOfView), text("110"));
+        for _ in 0..3 {
+            s.adjust(Row::AimAssist, 1);
+            s.adjust(Row::Colours, 1);
+        }
+        assert_eq!(s.value(Row::AimAssist), text("LOW"));
+        assert_eq!(s.scheme, Scheme::Standard);
+    }
+
+    /// A table that is there but cannot be read is not overwritten (its entries and replays
+    /// would be lost); the run is still kept as the last one.
+    #[test]
+    fn an_unreadable_table_is_left_alone() {
+        let dir = temp("unreadable");
+        // A directory where the table's file should be: it exists, and cannot be read.
+        std::fs::create_dir_all(dir.join("scores.txt")).unwrap();
+        let store = Store::new(Some(dir.clone()));
+        let mut r: Replay = Replay::new(1);
+        r.score = 500;
+        assert_eq!(store.finish(&r, Some("ABC")), None);
+        assert!(dir.join("scores.txt").is_dir());
+        assert!(dir.join("replays/last.warp").is_file());
+        assert_eq!(store.scores::<Packed>().entries, []);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The two games' last runs go through temporary files of their own.
+    #[test]
+    fn temporaries_are_per_file() {
+        let (a, b) = (
+            Path::new("replays/last.warp"),
+            Path::new("replays/last.tunnel"),
+        );
+        assert_ne!(temporary(a), temporary(b));
+        assert_eq!(temporary(a), Path::new("replays/last.warp.tmp"));
     }
 
     #[test]

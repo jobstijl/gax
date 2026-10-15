@@ -90,7 +90,7 @@ impl Packed {
         let (mx, my) = pack_stick(i.movement.e20(), i.movement.e01());
         // The aim's angle: of the rotation from the x axis to it.
         let aiming = i.aim.ideal_norm() > 0.2;
-        let angle = super::body::angle_of(i.aim);
+        let angle = Point::direction(1.0, 0.0).angle_to(i.aim);
         let turn = (angle / core::f32::consts::TAU).rem_euclid(1.0);
         Packed {
             mx,
@@ -110,7 +110,7 @@ impl Packed {
     pub fn unpack(self) -> Input {
         let (mx, my) = (f32::from(self.mx) / 127.0, f32::from(self.my) / 127.0);
         let aim = if self.flags & AIMING != 0 {
-            super::body::heading(f32::from(self.aim) / 65536.0 * core::f32::consts::TAU, 1.0)
+            Point::direction_from_angle(f32::from(self.aim) / 65536.0 * core::f32::consts::TAU)
         } else {
             Point::direction(0.0, 0.0)
         };
@@ -136,11 +136,14 @@ pub fn hash(w: &World) -> u64 {
     h.u(w.tick);
     h.fs(&[w.time]);
     h.u(w.rng.state());
-    h.u(w.score);
-    h.u(u64::from(w.mult) << 32 | u64::from(w.lives) << 16 | u64::from(w.bombs));
+    h.u(w.ledger.score);
+    h.u(u64::from(w.ledger.mult) << 32
+        | u64::from(w.ledger.lives) << 16
+        | u64::from(w.ledger.bombs));
     h.u(u64::from(w.next_id));
-    h.u(w.next_life);
-    h.u(w.next_bomb);
+    let [next_life, next_bomb] = w.ledger.thresholds();
+    h.u(next_life);
+    h.u(next_bomb);
     h.u(match w.phase {
         Phase::Playing => 1,
         Phase::Dead(t) => 2 ^ u64::from(t.to_bits()) << 8,
@@ -231,7 +234,7 @@ pub enum Desync {
 impl Replay<Packed> {
     /// After a recorded tick: keep a hash every second, and the score.
     pub fn after(&mut self, w: &World) {
-        self.keep(w.tick, w.score, || hash(w));
+        self.keep(w.tick, w.ledger.score, || hash(w));
     }
 
     /// Check a world being played back from this replay against the recorded hash, if one
@@ -247,7 +250,7 @@ impl Replay<Packed> {
             w.tick(&i.unpack());
             self.check(&w)?;
         }
-        self.final_score(w.score)?;
+        self.final_score(w.ledger.score)?;
         Ok(w)
     }
 }
@@ -402,8 +405,8 @@ mod tests {
     fn wander(t: u64) -> Input {
         let a = t as f32 * 0.011;
         Input {
-            movement: super::super::body::heading(a * 1.7, 0.9),
-            aim: super::super::body::heading(a * 3.1, 4.0),
+            movement: Point::direction_from_angle(a * 1.7) * 0.9,
+            aim: Point::direction_from_angle(a * 3.1) * 4.0,
             fire: (t / 90) % 4 != 3,
             bomb: t % 2400 == 2000,
         }
@@ -453,8 +456,8 @@ mod tests {
                 .verify()
                 .unwrap_or_else(|d| panic!("seed {seed}: {d:?}"));
             assert_eq!(hash(&w), hash(&live));
-            assert_eq!(w.score, live.score);
-            assert!(live.score > 0, "seed {seed}: the run did nothing");
+            assert_eq!(w.ledger.score, live.ledger.score);
+            assert!(live.ledger.score > 0, "seed {seed}: the run did nothing");
         }
     }
 

@@ -172,9 +172,9 @@ impl View {
     /// screen's half height over the tangent of half the angle.
     pub fn focal_for(fov_degrees: f32) -> f32 {
         let half = fov_degrees.to_radians() * 0.5;
-        // tan = sin / cos: the phasor at the half angle, height over width.
-        let d = crate::geom::phasor(half);
-        18.0 * d.e20() / d.e01()
+        // tan = sin / cos: the direction at the half angle, height over width.
+        let d = Point2::direction_from_angle(half);
+        scene::HUD_HALF_HEIGHT * d.e20() / d.e01()
     }
 
     /// The camera the view wants: just behind the ship, a little above and close to the

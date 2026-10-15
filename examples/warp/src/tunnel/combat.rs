@@ -72,10 +72,9 @@ impl World {
     /// A bomb: every enemy within reach ahead dies unscored, bolts and near spawns vanish, and
     /// blasts run down the wall.
     pub(super) fn bomb(&mut self) {
-        if self.bombs == 0 {
+        if !self.ledger.take_bomb() {
             return;
         }
-        self.bombs -= 1;
         let s = self.ship.s();
         for i in (0..self.enemies.len()).rev() {
             if arc(self.enemies[i].pos) - s < BOMB_REACH {
@@ -181,8 +180,8 @@ impl World {
         segments.sort_unstable();
         for &(i, j) in segments.iter().rev() {
             let s = self.enemies[i].body.remove(j);
-            let points = (50.0 * self.mult as f32 * self.speed_bonus()).round() as u64;
-            self.score += points;
+            let points = (50.0 * self.ledger.mult as f32 * self.speed_bonus()).round() as u64;
+            self.ledger.award(points);
             self.events.push(Event::Kill {
                 pos: s.pos,
                 foe: Foe::Serpent,
@@ -237,16 +236,15 @@ impl World {
         let pos = self.ship.pos;
         self.events.push(Event::Death { pos });
         self.blast(pos, 2500.0, 10.0, 0.3);
-        self.mult = 1;
         self.chain = 0;
-        self.lives = self.lives.saturating_sub(1);
+        let left = self.ledger.lose_life();
         self.ship.roll = None;
         self.shots.clear();
-        if self.lives == 0 {
+        if left {
+            self.phase = Phase::Dead(2.0);
+        } else {
             self.phase = Phase::Over;
             self.events.push(Event::GameOver);
-        } else {
-            self.phase = Phase::Dead(2.0);
         }
     }
 
@@ -360,7 +358,7 @@ mod tests {
         w.bolts
             .push(Shot::new(at(0.0, 0.0, s + 20.0), dir(0.0, 0.0, -5.0), 8.0));
         w.bomb();
-        assert_eq!(w.bombs, 2);
+        assert_eq!(w.ledger.bombs, 2);
         let kills: Vec<u64> = w
             .events
             .iter()
@@ -370,7 +368,7 @@ mod tests {
             })
             .collect();
         assert_eq!(kills, [0, 0]);
-        assert_eq!(w.score, 0);
+        assert_eq!(w.ledger.score, 0);
         assert_eq!(w.enemies.len(), 1);
         assert_eq!(w.enemies[0].foe, Foe::Mine);
         assert_eq!(w.pending.len(), 1);
@@ -392,7 +390,7 @@ mod tests {
         ));
         w.tick(&Input::default());
         assert!(w.events.iter().any(|e| matches!(e, Event::Death { .. })));
-        assert_eq!(w.lives, 2);
+        assert_eq!(w.ledger.lives, 2);
         assert_eq!(w.phase, Phase::Dead(2.0));
     }
 
@@ -403,11 +401,11 @@ mod tests {
         let mut w = World::new(3);
         w.spawn_cooldown = 1e9;
         w.gate_timer = 1e9;
-        w.lives = 2;
-        w.mult = 5;
+        w.ledger.lives = 2;
+        w.ledger.mult = 5;
         w.die();
         assert_eq!(w.phase, Phase::Dead(2.0));
-        assert_eq!((w.lives, w.mult), (1, 1));
+        assert_eq!((w.ledger.lives, w.ledger.mult), (1, 1));
         let mut ticks = 0;
         while !w.events.contains(&Event::Respawn) {
             w.tick(&Input::default());
@@ -420,7 +418,7 @@ mod tests {
         w.die();
         assert_eq!(w.phase, Phase::Over);
         assert!(w.events.contains(&Event::GameOver));
-        assert_eq!(w.lives, 0);
+        assert_eq!(w.ledger.lives, 0);
         let s = w.ship.s();
         w.tick(&Input {
             fire: true,
@@ -453,7 +451,7 @@ mod tests {
         w.ship.invulnerable = 1e9;
         let head = around(4.0, 0.3, w.ship.s() + 30.0);
         let i = spawn(&mut w, Foe::Serpent, head);
-        w.mult = 3;
+        w.ledger.mult = 3;
         w.enemies[i].body[5].hp = 1.0;
         let at_segment = w.enemies[i].body[5].pos;
         for _ in 0..2 {
@@ -471,7 +469,7 @@ mod tests {
             .collect();
         assert_eq!(kills, [150]);
         assert!(!w.events.iter().any(|e| matches!(e, Event::Hit { .. })));
-        assert_eq!(w.score, 150);
+        assert_eq!(w.ledger.score, 150);
         assert_eq!(w.enemies[i].body.len(), SEGMENTS - 1);
     }
 }

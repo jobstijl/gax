@@ -13,8 +13,8 @@ pub(super) struct Factory<'a>(pub &'a wgpu::Device);
 pub(super) enum Target {
     /// The HDR scene (or a bloom level), in linear light.
     Hdr,
-    /// The display, in `format`: a shader writes linear light, encoded with sRGB's transfer
-    /// function (its `ENCODE_SRGB` override) when the format does not encode it.
+    /// The display, in an sRGB `format`: a shader writes linear light, which the hardware
+    /// encodes.
     Display(wgpu::TextureFormat),
 }
 
@@ -138,12 +138,9 @@ impl Factory<'_> {
         target: Target,
         blend: Blend,
     ) -> wgpu::RenderPipeline {
-        let (format, constants) = match target {
-            Target::Hdr => (HDR, Vec::new()),
-            Target::Display(format) => {
-                let encode = if format.is_srgb() { 0.0 } else { 1.0 };
-                (format, vec![("ENCODE_SRGB", encode)])
-            }
+        let format = match target {
+            Target::Hdr => HDR,
+            Target::Display(format) => format,
         };
         let blend = match blend {
             Blend::Add => Some(wgpu::BlendState {
@@ -156,10 +153,6 @@ impl Factory<'_> {
             }),
             Blend::Replace => None,
         };
-        let options = wgpu::PipelineCompilationOptions {
-            constants: &constants,
-            ..Default::default()
-        };
         self.0
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some(label),
@@ -167,7 +160,7 @@ impl Factory<'_> {
                 vertex: wgpu::VertexState {
                     module,
                     entry_point: Some(vs),
-                    compilation_options: options.clone(),
+                    compilation_options: Default::default(),
                     buffers,
                 },
                 primitive: wgpu::PrimitiveState {
@@ -179,7 +172,7 @@ impl Factory<'_> {
                 fragment: Some(wgpu::FragmentState {
                     module,
                     entry_point: Some(fs),
-                    compilation_options: options,
+                    compilation_options: Default::default(),
                     targets: &[Some(wgpu::ColorTargetState {
                         format,
                         blend,

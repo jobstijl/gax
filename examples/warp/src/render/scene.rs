@@ -548,9 +548,9 @@ mod tests {
     /// (warp-ins and enemies appearing at size zero included) have finite coefficients.
     #[test]
     fn the_games_lines_are_finite() {
-        let mut g = crate::Game::new(crate::store::Store::new(None));
-        let mut sound = crate::audio::Sound::silent();
-        g.start_seeded(4);
+        let mut g = crate::game::Game::new(crate::store::Store::new(None));
+        let mut sound = crate::audio::Sound::new();
+        g.start_seeded(crate::game::Mode::Plane, 4);
         let finite = |l: &LineInstance| {
             let (a, b): (Point<(), f32>, Point<(), f32>) = (l.a.into(), l.b.into());
             let m: gax::pga2d::Motor<(), f32> = l.motor.into();
@@ -565,8 +565,8 @@ mod tests {
         while t < 40.0 {
             t += 1.0 / 60.0;
             g.time = t;
-            let input = crate::headless::bot_input(&g, t);
-            crate::advance(
+            let (input, _) = crate::bot::input(&g.run, t);
+            crate::frame::advance(
                 &mut g,
                 input,
                 Default::default(),
@@ -574,8 +574,9 @@ mod tests {
                 16.0 / 9.0,
                 &mut sound,
             );
-            world_lines(&g.sim, g.alpha, g.time, &mut g.world_lines);
-            crate::hud(&mut g, [1600, 900], None);
+            let world = &g.run.plane().expect("a Plane run").world;
+            world_lines(world, g.alpha, g.time, &mut g.world_lines);
+            crate::hud::hud(&mut g, [1600, 900], None);
             for (k, l) in g.world_lines.iter().chain(&g.hud_lines).enumerate() {
                 assert!(finite(l), "at {t:.2} s, line {k}: {l:?}");
             }

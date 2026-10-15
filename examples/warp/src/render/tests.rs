@@ -14,7 +14,7 @@ use crate::sim::{self, body::identity, rng::Rng};
 const SRGB: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
 fn gpu() -> Option<(wgpu::Device, wgpu::Queue)> {
-    match crate::headless::try_device() {
+    match crate::gfx::try_headless_device() {
         Some((_, d, q)) => Some((d, q)),
         None if std::env::var_os("GAX_REQUIRE_GPU").is_some() => {
             panic!("no GPU adapter, and GAX_REQUIRE_GPU is set")
@@ -34,7 +34,7 @@ fn renderer(format: wgpu::TextureFormat, size: [u32; 2]) -> Option<Renderer> {
         queue,
         format,
         size,
-        crate::grid_spec(),
+        crate::gfx::grid_spec(),
     ))
 }
 
@@ -122,7 +122,7 @@ fn read_grid(r: &Renderer) -> Vec<Node> {
     read(
         r,
         r.lattice.current(),
-        crate::grid_spec().nodes() * size_of::<Node>(),
+        crate::gfx::grid_spec().nodes() * size_of::<Node>(),
     )
 }
 
@@ -199,7 +199,7 @@ fn grid_kernels_agree_between_cpu_and_gpu() {
         return;
     };
     let out = target(&r, SRGB, [64, 64]);
-    let spec = crate::grid_spec();
+    let spec = crate::gfx::grid_spec();
     let mut cpu = CpuGrid::new(spec);
     // A displaced, moving start; the border is pinned.
     let mut rng = Rng::new(5);
@@ -260,7 +260,7 @@ fn the_lattice_rests_after_the_tunnel() {
         4
     ]);
     r.render(&view(&out), &plane(&blast, &[], &[]));
-    let rest = CpuGrid::new(crate::grid_spec());
+    let rest = CpuGrid::new(crate::gfx::grid_spec());
     let moved = |r: &Renderer| {
         read_grid(r)
             .iter()
@@ -400,28 +400,39 @@ fn a_line_lights_its_pixels() {
     }
 }
 
-/// A target without sRGB encoding (a surface's fallback) shows the same scene: the composite
-/// encodes it itself. (The HUD, added onto the output, adds encoded values there: a little
-/// brighter where it overlaps the scene.)
+/// A target without sRGB encoding (a surface's fallback), drawn through its sRGB view, holds
+/// the same pixels as an sRGB target, the HUD's added light included.
 #[test]
-fn an_output_without_srgb_looks_the_same() {
+fn an_output_without_srgb_viewed_as_srgb_is_the_same() {
     let size = [96, 64];
-    let world = [line(0.0)];
+    let (world, hud) = ([line(0.0)], [line(0.5)]);
+    let Some(mut r) = renderer(SRGB, size) else {
+        return;
+    };
     let mut images = Vec::new();
     for format in [SRGB, wgpu::TextureFormat::Rgba8Unorm] {
-        let Some(mut r) = renderer(format, size) else {
-            return;
-        };
-        let out = target(&r, format, size);
-        r.render(&view(&out), &lines_frame(&world, &[], size));
+        let out = r.device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width: size[0],
+                height: size[1],
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[SRGB],
+        });
+        let srgb = out.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(SRGB),
+            ..Default::default()
+        });
+        r.render(&srgb, &lines_frame(&world, &hud, size));
         images.push(pixels(&r, &out));
     }
-    let worst = images[0]
-        .iter()
-        .zip(&images[1])
-        .flat_map(|(a, b)| (0..3).map(|k| a[k].abs_diff(b[k])))
-        .max();
-    assert!(worst.is_some_and(|d| d <= 2), "{worst:?}");
+    assert_eq!(images[0], images[1]);
 }
 
 /// Resized to the smallest outputs, every pass still draws (and wgpu's validation, on in the

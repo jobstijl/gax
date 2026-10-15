@@ -10,8 +10,8 @@
 //!
 //! where `L d` sums `neighbour - d` over each node's springs: the cylinder grid's graph
 //! Laplacian (negated), a sparse field map built once from the lattice's edges. The Plane's
-//! lattice is another model, springs with a rest length between points, with its own
-//! constants. The step is symplectic Euler, explicit: an implicit step would damp the ripples
+//! lattice has the same law (springs of rest length zero, linear in the positions), with its
+//! own constants, as a traced per-node kernel on the GPU (`kernels::grid_node`). The step is symplectic Euler, explicit: an implicit step would damp the ripples
 //! that are the look. The rings scroll with the ship: old ones are dropped behind, new ones
 //! start at rest ahead; scrolling moves the fields' data, never the map.
 
@@ -96,29 +96,23 @@ fn rest(j: usize, s: f32) -> Point<(), f32> {
 
 /// The springs of the cylinder grid as pairs of nodes: around each ring (which wraps), and
 /// along the track between neighbouring rings.
-fn springs() -> impl Iterator<Item = (usize, usize)> {
+fn springs() -> impl Iterator<Item = [usize; 2]> {
     (0..RINGS).flat_map(|r| {
         (0..AROUND).flat_map(move |j| {
             let i = r * AROUND + j;
-            let around = (i, r * AROUND + (j + 1) % AROUND);
-            let along = (r + 1 < RINGS).then_some((i, i + AROUND));
+            let around = [i, r * AROUND + (j + 1) % AROUND];
+            let along = (r + 1 < RINGS).then_some([i, i + AROUND]);
             core::iter::once(around).chain(along)
         })
     })
 }
 
 /// The springs' pull as a field map: `-~E E`, with `E` the map from the nodes to the springs
-/// that takes each spring's difference of its ends.
+/// that takes each spring's difference of its ends (its row couples to its two ends).
 fn laplacian() -> SparseMap<Scalar<(), f32>> {
-    let s = Scalar::<(), f32>::new;
-    let (mut cells, mut rows, mut cols) = (Vec::new(), Vec::new(), Vec::new());
-    for (k, (a, b)) in springs().enumerate() {
-        cells.extend([s(-1.0), s(1.0)]);
-        rows.extend([k, k]);
-        cols.extend([a, b]);
-    }
-    let springs = rows.len() / 2;
-    let ends = SparseMap::new(cells, rows, cols, (springs, RINGS * AROUND));
+    let ends: Vec<[usize; 2]> = springs().collect();
+    let sign = [-1.0, 1.0];
+    let ends = SparseMap::from_columns(&ends, RINGS * AROUND, |_, end| Scalar::new(sign[end]));
     (&ends.reverse() * &ends).map_cells(|c| -c)
 }
 

@@ -56,17 +56,6 @@ fn full_screen(k: u32) -> Full {
     return Full(vec4<f32>(uv * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0), uv);
 }
 
-// A linear colour for the display: as it is for an sRGB target (the hardware encodes it), or
-// encoded with sRGB's transfer function for a target that would show it raw (`encode`).
-fn display(c: vec3<f32>, encode: bool) -> vec3<f32> {
-    if (!encode) {
-        return c;
-    }
-    let lo = c * 12.92;
-    let hi = 1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055;
-    return select(hi, lo, c <= vec3<f32>(0.0031308));
-}
-
 struct LineVarying {
     @builtin(position) clip: vec4<f32>,
     @location(0) world: vec2<f32>,

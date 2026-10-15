@@ -244,12 +244,16 @@ impl World {
         let e = self.enemies.swap_remove(i);
         let sling = if bent { 2.0 } else { 1.0 };
         let points = if scored {
-            (e.foe.points() as f32 * (1.0 + e.mass) * self.mult as f32 * self.speed_bonus() * sling)
+            (e.foe.points() as f32
+                * (1.0 + e.mass)
+                * self.ledger.mult as f32
+                * self.speed_bonus()
+                * sling)
                 .round() as u64
         } else {
             0
         };
-        self.score += points;
+        self.ledger.award(points);
         self.events.push(Event::Kill {
             pos: e.pos,
             foe: e.foe,

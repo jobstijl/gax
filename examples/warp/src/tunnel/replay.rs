@@ -113,8 +113,12 @@ pub fn hash(w: &World) -> u64 {
     };
     u(w.tick);
     u(w.rng.state());
-    u(w.score);
-    u(u64::from(w.mult) << 32 | u64::from(w.lives) << 16 | u64::from(w.bombs));
+    u(w.ledger.score);
+    u(
+        u64::from(w.ledger.mult) << 32
+            | u64::from(w.ledger.lives) << 16
+            | u64::from(w.ledger.bombs),
+    );
     u(u64::from(w.chain));
     u(match w.phase {
         Phase::Playing => 1,
@@ -168,7 +172,7 @@ impl Replay<Packed> {
 
     /// After a recorded tick: keep a hash every second, and the score.
     pub fn after(&mut self, w: &World) {
-        self.keep(w.tick, w.score, || hash(w));
+        self.keep(w.tick, w.ledger.score, || hash(w));
     }
 
     /// Check a world being played back against the recorded hash, if one falls on its tick.
@@ -184,7 +188,7 @@ impl Replay<Packed> {
             w.tick(&i);
             self.check(&w)?;
         }
-        self.final_score(w.score)?;
+        self.final_score(w.ledger.score)?;
         Ok(w)
     }
 }
@@ -216,7 +220,7 @@ mod tests {
             w.tick(&i);
             rec.after(&w);
         }
-        assert!(w.score > 0 && rec.hashes.len() == 70);
+        assert!(w.ledger.score > 0 && rec.hashes.len() == 70);
         let back = Replay::<Packed>::decode(&rec.encode()).unwrap();
         assert_eq!(back, rec);
         let v = back.verify().unwrap_or_else(|d| panic!("{d:?}"));

@@ -35,8 +35,9 @@ cargo run --release
 | pause | Esc | Select / B |
 | start | Enter | Start / A |
 
-Menus take arrows, WASD, the D-pad or a flick of the left stick. F3 toggles the debug overlay
-(frame rate, simulation time, GPU time per pass, pose drift), and F11 toggles full screen.
+Menus take arrows, WASD, the D-pad or a flick of the left stick; on the title, Esc (or B) moves
+to QUIT, which Enter confirms. F3 toggles the debug overlay (frame rate, simulation time, the
+run's counts, GPU time per pass, and the Plane's pose drift), and F11 toggles full screen.
 
 **Settings** (from the title): screen shake in steps down to off, reduced flashes (softer
 full-screen flashes, bursts and shock ripples), reduced motion (no shake, shock ripples or
@@ -122,19 +123,25 @@ cargo test --release                             # the simulation, the audio, CP
 
 ## Rules for the code
 
-* **The simulation (`src/sim`) is pure.** It has no Bevy or wgpu types, runs a fixed 120 Hz step
-  from a seed, and a run replays from its seed and inputs. The simulation only ever sees
-  quantized inputs (the replay's own encoding), so playback is exact on the same build; a hash
-  of the world every second catches a divergence (`sim/replay.rs`, with tests, and one that
-  plays through the whole game loop at uneven frame rates and watches the result).
+* **The simulations (`src/sim`, the Plane, and `src/tunnel`) are pure.** They have no Bevy or
+  wgpu types, run a fixed 120 Hz step from a seed, and a run replays from its seed and inputs.
+  A simulation only ever sees quantized inputs (the replay's own encoding), so playback is exact
+  on the same build; a hash of the world every second catches a divergence (`sim/replay.rs`,
+  with tests, and flow tests in `frame/tests.rs` that play through the whole game loop at uneven
+  frame rates and watch the result).
+* **The app** is the command line (`cli.rs`), the game between frames (`game.rs`: screens, the
+  run, the tables), a frame of its logic (`frame.rs`, with the menus in `menus.rs`), and drawing
+  it (`gfx.rs`, with the HUD in `hud.rs`); `bot.rs` plays the demos, the smoke run and the tests,
+  and `shots.rs` takes the headless pictures.
 * **Bevy is plumbing only.** `scripts/check-deps.sh` fails if `bevy_render`, `bevy_audio`,
   `bevy_ui`, `bevy_text`, `bevy_sprite`, `bevy_pbr`, `bevy_camera`, `bevy_mesh` or any other
   linear-algebra crate is in the tree. `bevy_image` is allowed, since `bevy_window` needs it for
   cursors.
 * **Math goes through gax.** `clippy.toml` disallows glam's types and the methods that hand them
-  out, as well as Bevy's `Transform` and seedling's spatial audio. The exception is `src/input.rs`,
-  which turns stick and cursor vectors into gax types right away. It also disallows geometry by
-  hand: `sqrt`, `sin`, `cos`, `tan`, `atan2`, `asin`, `acos`, `sin_cos` and `hypot` on floats,
-  everywhere, the audio included.
+  out, as well as Bevy's `Transform` and seedling's spatial audio. The exceptions are the few
+  functions in `src/input.rs` that read stick and cursor vectors and turn them into gax types
+  right away. It also disallows geometry by hand: `sqrt`, `hypot`, `powf`, `sin`, `cos`,
+  `sin_cos`, `tan`, `atan2`, `atan`, `asin` and `acos` on `f32` and `f64` (and Bevy's `ops`
+  versions), everywhere, the audio included.
 * **The audio thread does not allocate.** A test runs every synthesizer for 4000 blocks under a
   counting allocator.

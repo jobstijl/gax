@@ -15,6 +15,7 @@ pub mod collide;
 pub mod director;
 pub mod enemy;
 pub mod kind;
+pub mod ledger;
 pub mod replay;
 pub mod rng;
 pub mod ship;
@@ -24,6 +25,7 @@ pub mod wells;
 pub use director::Pending;
 pub use enemy::Enemy;
 pub use kind::Kind;
+pub use ledger::Ledger;
 pub use ship::{Shard, Ship};
 pub use shots::{Bullet, Wreck};
 pub use wells::Well;
@@ -135,8 +137,6 @@ pub enum Phase {
 
 /// The whole simulation state.
 pub struct World {
-    /// The seed of the run.
-    pub seed: u64,
     /// The generator.
     pub rng: Rng,
     /// Ticks since the start.
@@ -155,14 +155,8 @@ pub struct World {
     pub pending: Vec<Pending>,
     /// The gravity wells, as they stood at the start of the last tick.
     pub wells: Vec<Well>,
-    /// Score.
-    pub score: u64,
-    /// Multiplier.
-    pub mult: u32,
-    /// Lives left (including the current one).
-    pub lives: u32,
-    /// Bombs left.
-    pub bombs: u32,
+    /// The score, multiplier, lives and bombs.
+    pub ledger: Ledger,
     /// Where the run is.
     pub phase: Phase,
     /// The spawn director.
@@ -173,8 +167,6 @@ pub struct World {
     /// serpents' segments').
     pub worst_drift: f32,
     next_id: u32,
-    next_life: u64,
-    next_bomb: u64,
     hash: SpatialHash,
     scratch: Vec<u32>,
 }
@@ -183,7 +175,6 @@ impl World {
     /// A new run.
     pub fn new(seed: u64) -> World {
         World {
-            seed,
             rng: Rng::new(seed),
             tick: 0,
             time: 0.0,
@@ -193,17 +184,12 @@ impl World {
             shards: Vec::new(),
             pending: Vec::new(),
             wells: Vec::new(),
-            score: 0,
-            mult: 1,
-            lives: 3,
-            bombs: 3,
+            ledger: Ledger::new(),
             phase: Phase::Playing,
             director: Director::new(),
             events: Vec::new(),
             worst_drift: 0.0,
             next_id: 1,
-            next_life: 100_000,
-            next_bomb: 150_000,
             hash: SpatialHash::new(ARENA[0], ARENA[1], 2.0),
             scratch: Vec::new(),
         }
@@ -282,7 +268,6 @@ impl World {
 
 #[cfg(test)]
 mod tests {
-    use super::body::heading;
     use super::*;
 
     #[test]
@@ -293,16 +278,18 @@ mod tests {
             for t in 0..120 * 60 {
                 let a = t as f32 * 0.01;
                 w.tick(&Input {
-                    movement: heading(a, 0.8),
-                    aim: heading(a * 2.0, 1.0),
+                    movement: P::direction_from_angle(a) * 0.8,
+                    aim: P::direction_from_angle(a * 2.0),
                     fire: true,
                     bomb: t % 2000 == 1999,
                 });
                 h = h.wrapping_mul(31).wrapping_add(
-                    w.score ^ w.enemies.len() as u64 ^ u64::from(w.ship.body.pos().e20().to_bits()),
+                    w.ledger.score
+                        ^ w.enemies.len() as u64
+                        ^ u64::from(w.ship.body.pos().e20().to_bits()),
                 );
             }
-            (h, w.score)
+            (h, w.ledger.score)
         };
         assert_eq!(run(42), run(42));
         assert_ne!(run(42).0, run(43).0);
