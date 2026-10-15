@@ -2,7 +2,7 @@
 //! FM pair, filtered noise, pitch and filter envelopes). Every event family has a recipe and a
 //! voice limit; a full family steals its oldest-quietest voice.
 
-use super::dsp::{Env, Noise, Osc, Svf, db, mtof, pan, soft};
+use super::dsp::{Env, Noise, Osc, Svf, db, mtof, soft};
 
 /// Sound families.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -34,16 +34,18 @@ pub enum Family {
     Wall,
 }
 
-const FAMILIES: usize = 12;
-
 impl Family {
-    fn from_u8(x: u8) -> Option<Family> {
+    /// Every family, in the order of their numbers.
+    pub const ALL: [Family; 12] = {
         use Family::*;
         [
             Shot, Hit, Kill, KillBig, Death, Bomb, Pickup, Warn, Spawn, Absorb, Extra, Wall,
         ]
-        .get(x as usize)
-        .copied()
+    };
+
+    /// The family numbered `x`.
+    pub fn from_u8(x: u8) -> Option<Family> {
+        Family::ALL.get(usize::from(x)).copied()
     }
 
     /// Voices this family may hold at once.
@@ -61,44 +63,21 @@ impl Family {
     }
 }
 
-/// A trigger: what to play, where and how loud. Fits in a Firewheel `CustomBytes` event.
+/// A trigger: what to play, where and how loud (sent to the audio thread as an
+/// `msg::SfxMsg`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Trigger {
     /// The family.
     pub family: Family,
     /// The pitch, as a MIDI note (fractional allowed).
     pub note: f32,
-    /// Stereo position in `[-1, 1]`.
-    pub pan: f32,
+    /// Equal-power gains `(left, right)`, from a direction (`dsp::toward`) or a pan
+    /// (`dsp::pan`).
+    pub gains: (f32, f32),
     /// Gain (linear, on top of the family's level).
     pub gain: f32,
     /// A free parameter per family (size, brightness).
     pub variant: f32,
-}
-
-impl Trigger {
-    /// Encode into the 36 bytes of a `CustomBytes` event.
-    pub fn to_bytes(self) -> [u8; 36] {
-        let mut b = [0u8; 36];
-        b[0] = self.family as u8;
-        b[4..8].copy_from_slice(&self.note.to_le_bytes());
-        b[8..12].copy_from_slice(&self.pan.to_le_bytes());
-        b[12..16].copy_from_slice(&self.gain.to_le_bytes());
-        b[16..20].copy_from_slice(&self.variant.to_le_bytes());
-        b
-    }
-
-    /// Decode.
-    pub fn from_bytes(b: &[u8; 36]) -> Option<Trigger> {
-        let f = |i: usize| f32::from_le_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]);
-        Some(Trigger {
-            family: Family::from_u8(b[0])?,
-            note: f(4),
-            pan: f(8),
-            gain: f(12),
-            variant: f(16),
-        })
-    }
 }
 
 /// The waveform of a voice's tone.
@@ -153,7 +132,7 @@ struct Voice {
     filt: Env,
     svf: Svf,
     tone_svf: Svf,
-    pan: (f32, f32),
+    gains: (f32, f32),
 }
 
 /// The sound-effect engine.
@@ -484,7 +463,7 @@ impl Sfx {
             filt: Env::default(),
             svf: Svf::default(),
             tone_svf: Svf::default(),
-            pan: pan(t.pan),
+            gains: t.gains,
         };
         v.amp.start(patch.attack, patch.decay, sr);
         v.pitch.start(0.0, patch.sweep_time.max(1e-3), sr);
@@ -495,6 +474,12 @@ impl Sfx {
     #[cfg(test)]
     pub fn active(&self) -> usize {
         self.voices.iter().filter(|v| v.active).count()
+    }
+
+    /// The tempo of the beat grid, and samples into its current 32nd (on the beat).
+    #[cfg(test)]
+    pub fn grid(&self) -> (f32, Option<f32>) {
+        (self.tempo, self.grid)
     }
 
     /// Voices of a family sounding.
@@ -574,8 +559,8 @@ impl Sfx {
                     x += p.noise * if p.band { o.bp * 1.5 } else { o.lp };
                 }
                 let y = soft(x) * a * p.gain;
-                *ol += y * v.pan.0;
-                *or += y * v.pan.1;
+                *ol += y * v.gains.0;
+                *or += y * v.gains.1;
             }
             v.age = v.age.saturating_add(l.len() as u32);
             if v.amp.done() {
@@ -624,11 +609,10 @@ impl Scale {
     }
 }
 
-const _: () = assert!(FAMILIES == 12);
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audio::dsp::pan;
 
     /// On the beat, a shot waits for the next 32nd and starts exactly there; a death does not
     /// wait.
@@ -644,7 +628,7 @@ mod tests {
         let shot = Trigger {
             family: Family::Shot,
             note: 72.0,
-            pan: 0.0,
+            gains: pan(0.0),
             gain: 1.0,
             variant: 0.0,
         };
@@ -669,25 +653,13 @@ mod tests {
     }
 
     #[test]
-    fn triggers_round_trip_through_bytes() {
-        let t = Trigger {
-            family: Family::Pickup,
-            note: 79.5,
-            pan: -0.3,
-            gain: 0.8,
-            variant: 2.0,
-        };
-        assert_eq!(Trigger::from_bytes(&t.to_bytes()), Some(t));
-    }
-
-    #[test]
     fn families_keep_their_voice_limits_and_steal() {
         let mut s = Sfx::new(48000.0);
         for k in 0..20 {
             s.trigger(&Trigger {
                 family: Family::Shot,
                 note: 80.0 + k as f32,
-                pan: 0.0,
+                gains: pan(0.0),
                 gain: 1.0,
                 variant: 0.0,
             });
@@ -697,7 +669,7 @@ mod tests {
         s.trigger(&Trigger {
             family: Family::Bomb,
             note: 40.0,
-            pan: 0.0,
+            gains: pan(0.0),
             gain: 1.0,
             variant: 0.0,
         });

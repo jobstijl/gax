@@ -13,16 +13,19 @@ use core::f32::consts::TAU;
 use gax::Unit;
 use gax::pga2d::{Motor, Point};
 
-use crate::geom::{ORIGIN, phasor};
+use crate::geom::ORIGIN;
+use crate::signal::phasor;
 
-/// MIDI note number to frequency.
+/// MIDI note number to frequency: an octave per 12, from A4 at 440 Hz.
+#[inline]
 pub fn mtof(m: f32) -> f32 {
-    440.0 * (2.0f32).powf((m - 69.0) / 12.0)
+    440.0 * ((m - 69.0) / 12.0).exp2()
 }
 
-/// Decibels to linear gain.
+/// Decibels to linear gain: `10^(x/20)`, as `e^(x ln 10 / 20)`.
+#[inline]
 pub fn db(x: f32) -> f32 {
-    (10.0f32).powf(x / 20.0)
+    (x * (core::f32::consts::LN_10 / 20.0)).exp()
 }
 
 /// A cheap soft clipper.
@@ -281,70 +284,96 @@ pub struct Smooth {
 }
 
 impl Smooth {
+    /// The coefficient `k` for a time constant of `seconds` at sample rate `sr`.
+    pub fn coefficient(seconds: f32, sr: f32) -> f32 {
+        1.0 - (-1.0 / (seconds * sr)).exp()
+    }
+
     /// Move towards `target` with time constant `k` per sample (0..1).
     #[inline]
     pub fn to(&mut self, target: f32, k: f32) -> f32 {
         self.value += (target - self.value) * k;
         self.value
     }
+
+    /// Scale a stereo block by this value as it moves towards `target` sample by sample (a
+    /// volume change without a click). Once within a hair of `target` it lands there, and the
+    /// block is scaled by a constant.
+    #[inline]
+    pub fn scale(&mut self, l: &mut [f32], r: &mut [f32], target: f32, k: f32) {
+        if (target - self.value).abs() < 1e-5 {
+            self.value = target;
+            if target != 1.0 {
+                for x in l.iter_mut().chain(r.iter_mut()) {
+                    *x *= target;
+                }
+            }
+            return;
+        }
+        for (a, b) in l.iter_mut().zip(r.iter_mut()) {
+            let g = self.to(target, k);
+            *a *= g;
+            *b *= g;
+        }
+    }
 }
 
-/// A comb filter with damping (Freeverb).
-struct Comb<const N: usize> {
-    buf: [f32; N],
+/// A comb filter with damping (Freeverb), its delay line sized at construction.
+struct Comb {
+    buf: Box<[f32]>,
     i: usize,
-    len: usize,
     store: f32,
 }
 
-impl<const N: usize> Comb<N> {
-    fn new(len: usize) -> Self {
+impl Comb {
+    fn new(len: usize) -> Comb {
         Comb {
-            buf: [0.0; N],
+            buf: vec![0.0; len.max(1)].into_boxed_slice(),
             i: 0,
-            len: len.min(N),
             store: 0.0,
         }
     }
+
     #[inline]
     fn tick(&mut self, x: f32, feedback: f32, damp: f32) -> f32 {
         let y = self.buf[self.i];
         self.store = y * (1.0 - damp) + self.store * damp;
         self.buf[self.i] = x + self.store * feedback;
-        self.i = (self.i + 1) % self.len;
+        self.i = (self.i + 1) % self.buf.len();
         y
     }
 }
 
-struct Allpass<const N: usize> {
-    buf: [f32; N],
+/// Freeverb's allpass, its delay line sized at construction.
+struct Allpass {
+    buf: Box<[f32]>,
     i: usize,
-    len: usize,
 }
 
-impl<const N: usize> Allpass<N> {
-    fn new(len: usize) -> Self {
+impl Allpass {
+    fn new(len: usize) -> Allpass {
         Allpass {
-            buf: [0.0; N],
+            buf: vec![0.0; len.max(1)].into_boxed_slice(),
             i: 0,
-            len: len.min(N),
         }
     }
+
     #[inline]
     fn tick(&mut self, x: f32) -> f32 {
         let b = self.buf[self.i];
         let y = -x + b;
         self.buf[self.i] = x + b * 0.5;
-        self.i = (self.i + 1) % self.len;
+        self.i = (self.i + 1) % self.buf.len();
         y
     }
 }
 
 /// A Freeverb-style stereo reverb (used by the offline renders; the game routes to Firewheel's
-/// `FreeverbNode`, the same design).
+/// `FreeverbNode`, the same design). Its delay lines are Freeverb's tuning at 44.1 kHz, scaled
+/// to the sample rate and allocated once, so the tuning holds at any rate.
 pub struct Reverb {
-    combs: [[Comb<2048>; 8]; 2],
-    alls: [[Allpass<1024>; 4]; 2],
+    combs: [[Comb; 8]; 2],
+    alls: [[Allpass; 4]; 2],
     /// Room size (0..1).
     pub room: f32,
     /// Damping (0..1).
@@ -352,19 +381,20 @@ pub struct Reverb {
 }
 
 impl Reverb {
-    /// A reverb for sample rate `sr` (boxed: the buffers are large).
-    pub fn new(sr: f32) -> Box<Reverb> {
+    /// A reverb for sample rate `sr` (allocates its delay lines).
+    pub fn new(sr: f32) -> Reverb {
         let k = sr / 44100.0;
         let c = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
         let a = [556, 441, 341, 225];
+        // The right channel's lines are 23 samples longer (Freeverb's stereo spread).
         let comb = |n: usize, s: usize| Comb::new(((n + s) as f32 * k) as usize);
         let all = |n: usize, s: usize| Allpass::new(((n + s) as f32 * k) as usize);
-        Box::new(Reverb {
+        Reverb {
             combs: [0, 23].map(|s| c.map(|n| comb(n, s))),
             alls: [0, 23].map(|s| a.map(|n| all(n, s))),
             room: 0.85,
             damp: 0.4,
-        })
+        }
     }
 
     /// One stereo sample in, the wet signal out.
@@ -412,15 +442,16 @@ mod tests {
     /// The phasor's height is the sine, and stays on it over a minute of samples (the turns
     /// are exact rotations; rounding is renormalized away).
     #[test]
-    #[allow(clippy::disallowed_methods)] // the reference it is checked against
     fn a_turning_phasor_is_a_sine() {
         let mut o = Osc::default();
         let inc = 440.0 / 48000.0;
         let mut worst = 0.0f32;
         for n in 0..48000 * 60 {
             let y = o.sine(inc);
+            // The reference: the direction at that angle, made afresh in double precision.
             let t = (f64::from(n) * f64::from(inc)).fract() * core::f64::consts::TAU;
-            worst = worst.max((y - t.sin() as f32).abs());
+            let sine = Point::<(), f64>::direction_from_angle(t).e01();
+            worst = worst.max((y - sine as f32).abs());
         }
         assert!(worst < 2e-3, "{worst}");
         // Phase modulation by a quarter cycle turns sine into cosine.

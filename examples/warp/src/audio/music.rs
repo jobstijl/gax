@@ -17,7 +17,7 @@
 //!   8 bars), a bomb (a filter sweep and a duck), a nearby singularity (pitch drifts down, the
 //!   tone darkens). The tempo never changes.
 
-use super::dsp::{Env, Noise, Osc, Resonator, Smooth, Svf, db, mtof, soft};
+use super::dsp::{Env, Noise, Osc, Resonator, Smooth, Svf, db, mtof, pan, soft};
 use super::sfx::Scale;
 
 const PAD_VOICES: usize = 5;
@@ -34,23 +34,33 @@ pub fn sixteenth(sr: f32, tempo: f32) -> f32 {
 
 const BELLS: usize = 4;
 const MOTIF: usize = 6;
-const ECHO_LEN: usize = 1 << 16;
+/// The echo's length at 48 kHz (a power of two, about 1.4 s); at other rates it scales.
+const ECHO_LEN_48K: usize = 1 << 16;
 
-/// A stereo ping-pong echo with a damped feedback path. Its buffers are allocated once and
-/// kept across reseeds (`Music::reseed`), so the audio thread never allocates.
+/// A stereo ping-pong echo with a damped feedback path. Its buffers are allocated once for the
+/// sample rate and kept across reseeds (`Music::reseed`), so the audio thread never allocates.
 pub struct Echo {
     l: Box<[f32]>,
     r: Box<[f32]>,
     pos: usize,
+    /// The length minus one (the length is a power of two).
+    mask: usize,
     damp: [f32; 2],
 }
 
 impl Echo {
-    fn new() -> Box<Echo> {
+    /// The length for sample rate `sr`: the same time at any rate, as a power of two.
+    fn len_for(sr: f32) -> usize {
+        ((ECHO_LEN_48K as f32 * sr / 48000.0) as usize).next_power_of_two()
+    }
+
+    fn new(sr: f32) -> Box<Echo> {
+        let len = Echo::len_for(sr);
         Box::new(Echo {
-            l: vec![0.0; ECHO_LEN].into_boxed_slice(),
-            r: vec![0.0; ECHO_LEN].into_boxed_slice(),
+            l: vec![0.0; len].into_boxed_slice(),
+            r: vec![0.0; len].into_boxed_slice(),
             pos: 0,
+            mask: len - 1,
             damp: [0.0; 2],
         })
     }
@@ -61,9 +71,14 @@ impl Echo {
         self.damp = [0.0; 2];
     }
 
-    /// One sample in, the echoes out; `delay` in samples (below `ECHO_LEN`).
+    /// The longest delay it holds, in samples.
+    fn max_delay(&self) -> usize {
+        self.mask
+    }
+
+    /// One sample in, the echoes out; `delay` in samples (at most `max_delay`).
     fn tick(&mut self, xl: f32, xr: f32, delay: usize, feedback: f32) -> (f32, f32) {
-        let read = (self.pos + ECHO_LEN - delay) & (ECHO_LEN - 1);
+        let read = (self.pos + self.mask + 1 - delay) & self.mask;
         let (dl, dr) = (self.l[read], self.r[read]);
         // One-pole low-passes in the loop: each repeat is darker.
         self.damp[0] += 0.35 * (dl - self.damp[0]);
@@ -71,7 +86,7 @@ impl Echo {
         // Ping-pong: each side feeds the other.
         self.l[self.pos] = xl + self.damp[1] * feedback;
         self.r[self.pos] = xr + self.damp[0] * feedback;
-        self.pos = (self.pos + 1) & (ECHO_LEN - 1);
+        self.pos = (self.pos + 1) & self.mask;
         (dl, dr)
     }
 }
@@ -84,7 +99,8 @@ struct Bell {
     env: Env,
     index: Env,
     note: f32,
-    pan: f32,
+    /// Its pan's equal-power gains, set when it is struck.
+    gains: (f32, f32),
     gain: f32,
 }
 
@@ -94,7 +110,8 @@ struct PadVoice {
     note: Smooth,
     target: f32,
     gain: Smooth,
-    on: f32,
+    /// Its place in the field's middle (equal-power gains), set when the music is built.
+    gains: (f32, f32),
 }
 
 /// Control input from the game.
@@ -200,7 +217,7 @@ impl Music {
                 e.clear();
                 e
             }
-            None => Echo::new(),
+            None => Echo::new(sr),
         };
         let scale = Scale::from_seed(seed);
         let mut m = Music {
@@ -257,16 +274,25 @@ impl Music {
         };
         m.new_motif();
         let voicing = m.voicing(0, 0.3);
-        for (v, n) in m.pad.iter_mut().zip(voicing) {
+        for (k, (v, n)) in m.pad.iter_mut().zip(voicing).enumerate() {
             v.note.value = n;
             v.target = n;
+            // Spread from left to right over the middle of the field.
+            let spread = (k as f32 / (PAD_VOICES - 1) as f32) * 2.0 - 1.0;
+            v.gains = pan(spread * 0.6);
         }
         m
     }
 
-    /// Set the sample rate (a new stream).
+    /// Set the sample rate (a new stream). Firewheel calls this off the audio thread, so the
+    /// echo may grow here when the new rate needs a longer one.
     pub fn set_sample_rate(&mut self, sr: f32) {
         self.sr = sr;
+        if let Some(echo) = self.echo.as_mut()
+            && echo.mask + 1 < Echo::len_for(sr)
+        {
+            *echo = Echo::new(sr);
+        }
     }
 
     /// Steer the music.
@@ -284,6 +310,12 @@ impl Music {
     pub fn bomb(&mut self) {
         self.sweep = 1.0;
         self.duck.value = 0.35;
+    }
+
+    /// How far the music has rebuilt since a death (`0..1`), and its duck (for tests).
+    #[cfg(test)]
+    pub fn recovery(&self) -> (f32, f32) {
+        (self.rebuild, self.duck.value)
     }
 
     /// The chord on scale degree `root` as pad notes: root, fifth, seventh, ninth, and the
@@ -373,12 +405,12 @@ impl Music {
         }
     }
 
-    fn ring_bell(&mut self, note: f32, pan: f32, gain: f32) {
+    fn ring_bell(&mut self, note: f32, at: f32, gain: f32) {
         let sr = self.sr;
         let b = &mut self.bells[self.next_bell];
         self.next_bell = (self.next_bell + 1) % BELLS;
         b.note = note;
-        b.pan = pan;
+        b.gains = pan(at);
         b.gain = gain;
         b.env.start(0.002, 1.1, sr);
         b.index.start(0.0, 0.18, sr);
@@ -453,11 +485,11 @@ impl Music {
                 let (p, d) = self.motif[k];
                 if p == pos {
                     let note = self.scale.note(self.chord_root + i32::from(d) + 7) + 12.0;
-                    let pan = if k % 2 == 0 { -0.35 } else { 0.35 };
+                    let at = if k % 2 == 0 { -0.35 } else { 0.35 };
                     let g = 0.8 + 0.2 * self.layer_rng.unit();
-                    self.ring_bell(note, pan, g);
+                    self.ring_bell(note, at, g);
                     if self.octave_gain.value > 0.05 && k % 2 == 1 {
-                        self.ring_bell(note + 12.0, -pan, 0.45 * self.octave_gain.value);
+                        self.ring_bell(note + 12.0, -at, 0.45 * self.octave_gain.value);
                     }
                 }
             }
@@ -468,7 +500,7 @@ impl Music {
             let sr = self.sr;
             let s = &mut self.sparkle;
             s.note = self.scale.note(self.chord_root + d + 14) + 12.0;
-            s.pan = self.layer_rng.unit() * 1.4 - 0.7;
+            s.gains = pan(self.layer_rng.unit() * 1.4 - 0.7);
             s.gain = 0.5 + 0.5 * self.layer_rng.unit();
             s.env.start(0.001, 0.09, sr);
             s.index.start(0.0, 0.03, sr);
@@ -489,10 +521,20 @@ impl Music {
         let sr = self.sr;
         let inv = 1.0 / sr;
         let samples_per_step = sixteenth(sr, self.tempo);
-        let k_slow = 1.0 - (-1.0 / (0.8 * sr)).exp();
-        let k_glide = 1.0 - (-1.0 / (1.2 * sr)).exp();
+        let k_slow = Smooth::coefficient(0.8, sr);
+        let k_glide = Smooth::coefficient(1.2, sr);
         let playing = self.controls.playing;
-        let echo_delay = ((3.0 * samples_per_step) as usize).min(ECHO_LEN - 1);
+        let echo_delay = self.echo.as_ref().map_or(0, |e| {
+            ((3.0 * samples_per_step) as usize).min(e.max_delay())
+        });
+        // The levels, constant per block.
+        let pad_gain = db(-24.0);
+        let bass_gain = db(-16.0);
+        let kick_gain = db(-15.0);
+        let air_gain = db(-33.0);
+        let echo_gain = db(-20.0);
+        let hat_gain = db(-30.0);
+        let click_gain = db(-34.0);
         let h = if playing { self.controls.heat } else { 0.0 };
         // The layers the multiplier unlocks (a faint cell also plays on the title).
         let frag_target = if playing {
@@ -522,7 +564,8 @@ impl Music {
             let bend = -0.5 * dark;
             let lfo = self.lfo.sine(0.05 * inv);
             // Pad.
-            let cutoff = (220.0 + 2600.0 * int.powf(1.4) * self.rebuild.max(0.3))
+            // `int^1.4` (zero at zero: the logarithm's minus infinity).
+            let cutoff = (220.0 + 2600.0 * (1.4 * int.ln()).exp() * self.rebuild.max(0.3))
                 * (1.0 + 0.25 * lfo)
                 * (1.0 - 0.55 * dark)
                 * (1.0 + 1.5 * self.sweep).max(0.15);
@@ -539,16 +582,12 @@ impl Music {
                 let a = v.osc[0].saw(f * inv);
                 let b = v.osc[1].saw(f * 1.0035 * inv);
                 let c = v.osc[2].saw(f * 0.9968 * inv);
-                let spread = (k as f32 / (PAD_VOICES - 1) as f32) * 2.0 - 1.0;
-                let (gl, gr) = super::dsp::pan(spread * 0.6);
                 let s = (a + b * 0.8 + c * 0.8) * g;
-                pl += s * gl;
-                pr += s * gr;
-                v.on = on;
+                pl += s * v.gains.0;
+                pr += s * v.gains.1;
             }
             let pl = self.pad_filter[0].tick(pl, cutoff, 0.9, sr).lp;
             let pr = self.pad_filter[1].tick(pr, cutoff * 1.03, 0.9, sr).lp;
-            let pad_gain = db(-24.0);
             let mut mix_l = pl * pad_gain;
             let mut mix_r = pr * pad_gain;
             // Bass.
@@ -560,7 +599,7 @@ impl Music {
                 let sub = self.bass_sub.sine(f * 0.5 * inv);
                 let fc = (90.0 + 900.0 * fe * (0.4 + int)) * (1.0 - 0.4 * dark);
                 let x = self.bass_svf.tick(saw, fc, 1.3, sr).lp * 0.6 + sub * 0.8;
-                let y = soft(x * 1.5) * be * db(-16.0);
+                let y = soft(x * 1.5) * be * bass_gain;
                 mix_l += y;
                 mix_r += y;
             }
@@ -569,7 +608,7 @@ impl Music {
             if ke > 1e-5 {
                 let kp = self.kick_pitch.tick();
                 let f = 46.0 * (1.0 + 3.0 * kp);
-                let y = soft(self.kick_osc.sine(f * inv) * 1.4) * ke * db(-15.0);
+                let y = soft(self.kick_osc.sine(f * inv) * 1.4) * ke * kick_gain;
                 mix_l += y;
                 mix_r += y;
             }
@@ -588,7 +627,7 @@ impl Music {
                     let idx = b.index.tick() * 2.2 + 0.25;
                     let m = b.modu.sine(2.0 * f * inv);
                     let y = b.car.sine(f * (1.0 + idx * m * 0.5) * inv) * e * b.gain * fg;
-                    let (gl, gr) = super::dsp::pan(b.pan);
+                    let (gl, gr) = b.gains;
                     el += y * gl;
                     er += y * gr;
                 }
@@ -600,7 +639,7 @@ impl Music {
                     let f = mtof(s.note);
                     let m = s.modu.sine(3.0 * f * inv);
                     let y = s.car.sine(f * (1.0 + 0.3 * m * s.index.tick()) * inv) * e * s.gain;
-                    let (gl, gr) = super::dsp::pan(s.pan);
+                    let (gl, gr) = s.gains;
                     el += y * gl * tg * 0.6;
                     er += y * gr * tg * 0.6;
                 }
@@ -612,13 +651,13 @@ impl Music {
                 // The band-pass's peak was `q`: the same level.
                 let al = self.air[0].tick(nl, fc, 5.0, sr) * 5.0;
                 let ar = self.air[1].tick(nr, fc * 1.25, 5.0, sr) * 5.0;
-                mix_l += al * tg * db(-33.0);
-                mix_r += ar * tg * db(-33.0);
+                mix_l += al * tg * air_gain;
+                mix_r += ar * tg * air_gain;
             }
             if let Some(echo) = self.echo.as_mut() {
                 let (dl, dr) = echo.tick(el * 0.6, er * 0.6, echo_delay, 0.42);
-                mix_l += (el + dl * 0.7) * db(-20.0);
-                mix_r += (er + dr * 0.7) * db(-20.0);
+                mix_l += (el + dl * 0.7) * echo_gain;
+                mix_r += (er + dr * 0.7) * echo_gain;
             }
             // Hats and clicks.
             let he = self.hat_env.tick();
@@ -629,7 +668,7 @@ impl Music {
                     .hat_svf
                     .tick(n, 7500.0 * (1.0 - 0.3 * dark), 1.2, sr)
                     .hp;
-                let y = h * he * db(-30.0) + n * ce * db(-34.0);
+                let y = h * he * hat_gain + n * ce * click_gain;
                 mix_l += y * 0.8;
                 mix_r += y;
             }

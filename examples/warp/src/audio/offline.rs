@@ -2,7 +2,7 @@
 //! high intensity, and a run's arc with a death and a bomb, to WAV. The same engine as in the
 //! game, without an audio device; the reverb is the same design as Firewheel's `FreeverbNode`.
 
-use super::dsp::Reverb;
+use super::dsp::{Reverb, pan};
 use super::music::{Controls, Music};
 use super::sfx::{Family, Sfx, Trigger};
 use std::path::Path;
@@ -35,7 +35,7 @@ pub fn render(
                     sfx.trigger(&Trigger {
                         family: Family::Death,
                         note: music.scale.note(7),
-                        pan: 0.0,
+                        gains: pan(0.0),
                         gain: 1.0,
                         variant: 0.0,
                     });
@@ -45,7 +45,7 @@ pub fn render(
                     sfx.trigger(&Trigger {
                         family: Family::Bomb,
                         note: music.scale.note(0),
-                        pan: 0.0,
+                        gains: pan(0.0),
                         gain: 1.0,
                         variant: 0.0,
                     });
@@ -139,7 +139,7 @@ pub fn run(args: &[String]) {
             Event::Sfx(Trigger {
                 family: Family::Shot,
                 note: scale.note(21 + pattern[k % 8]),
-                pan: 0.1,
+                gains: pan(0.1),
                 gain: 1.0,
                 variant: 0.0,
             }),
@@ -150,7 +150,7 @@ pub fn run(args: &[String]) {
                 Event::Sfx(Trigger {
                     family: Family::Kill,
                     note: scale.note(14),
-                    pan: -0.4,
+                    gains: pan(-0.4),
                     gain: 1.0,
                     variant: 1.0,
                 }),
@@ -160,7 +160,7 @@ pub fn run(args: &[String]) {
                 Event::Sfx(Trigger {
                     family: Family::Pickup,
                     note: scale.note(21 + (k as i32 / 9) % 14),
-                    pan: 0.0,
+                    gains: pan(0.0),
                     gain: 1.0,
                     variant: 0.0,
                 }),
@@ -183,6 +183,7 @@ pub fn run(args: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audio::music::TEMPO;
     use std::alloc::{GlobalAlloc, Layout, System};
     use std::cell::Cell;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -213,26 +214,24 @@ mod tests {
     #[global_allocator]
     static COUNTING: Counting = Counting;
 
-    /// The audio thread's rules: processing never allocates, however busy it gets.
+    /// The audio thread's rules: processing never allocates, however busy it gets. Everything
+    /// reaches the engines as the nodes receive it, through the messages' bytes; for a stretch
+    /// the effects wait for the beat (held, then released at the grid and when it is switched
+    /// off); a new seed rebuilds the music in place; the volume glides.
     #[test]
     fn processing_does_not_allocate() {
+        use crate::audio::dsp::Smooth;
+        use crate::audio::msg::{MusicMsg, SfxMsg};
         let mut music = Music::new(5, SR);
         let mut sfx = Sfx::new(SR);
         let (mut l, mut r) = (vec![0.0f32; BLOCK], vec![0.0f32; BLOCK]);
-        let families = [
-            Family::Shot,
-            Family::Hit,
-            Family::Kill,
-            Family::KillBig,
-            Family::Death,
-            Family::Bomb,
-            Family::Pickup,
-            Family::Warn,
-            Family::Spawn,
-            Family::Absorb,
-            Family::Extra,
-            Family::Wall,
-        ];
+        let mut volume = Smooth { value: 1.0 };
+        let glide = Smooth::coefficient(0.02, SR);
+        let to_sfx =
+            |m: SfxMsg, sfx: &mut Sfx| SfxMsg::from_bytes(&m.to_bytes()).unwrap().apply(sfx);
+        let to_music = |m: MusicMsg, music: &mut Music| {
+            MusicMsg::from_bytes(&m.to_bytes()).unwrap().apply(music)
+        };
         ARMED.with(|a| a.set(true));
         let before = ALLOCATIONS.load(Ordering::Relaxed);
         for block in 0..4000u32 {
@@ -243,36 +242,48 @@ mod tests {
                 heat: block as f32 / 4000.0,
             });
             if block % 500 == 250 {
-                music.death();
+                to_music(MusicMsg::Death, &mut music);
             }
             if block % 900 == 450 {
-                music.bomb();
+                to_music(MusicMsg::Bomb, &mut music);
             }
-            for (i, f) in families.iter().enumerate() {
+            // On the beat from block 1000 to 3000.
+            sfx.set_on_beat((1000..3000).contains(&block));
+            if block % 1000 == 0 {
+                to_sfx(SfxMsg::Sync { tempo: TEMPO }, &mut sfx);
+            }
+            for (i, f) in Family::ALL.into_iter().enumerate() {
                 if block % (3 + i as u32 * 7) == 0 {
-                    sfx.trigger(&Trigger {
-                        family: *f,
+                    let t = Trigger {
+                        family: f,
                         note: 60.0 + i as f32,
-                        pan: 0.0,
+                        gains: pan(0.0),
                         gain: 1.0,
                         variant: 1.0,
-                    });
+                    };
+                    to_sfx(SfxMsg::Trigger(t), &mut sfx);
                 }
             }
             music.render(&mut l, &mut r);
             sfx.render(&mut l, &mut r);
+            volume.scale(
+                &mut l,
+                &mut r,
+                if block % 200 < 100 { 1.0 } else { 0.3 },
+                glide,
+            );
         }
-        if block_music_reseed() {
-            music.reseed(9, crate::audio::music::TEMPO);
-            music.render(&mut l, &mut r);
-        }
+        to_music(
+            MusicMsg::Seed {
+                seed: 9,
+                tempo: TEMPO,
+            },
+            &mut music,
+        );
+        music.render(&mut l, &mut r);
         let after = ALLOCATIONS.load(Ordering::Relaxed);
         ARMED.with(|a| a.set(false));
         assert_eq!(after - before, 0, "allocations while processing");
-    }
-
-    fn block_music_reseed() -> bool {
-        true
     }
 
     /// A seeded render is the same every time (replays reproduce the music).
