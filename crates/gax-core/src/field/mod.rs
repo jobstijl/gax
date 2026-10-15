@@ -53,7 +53,6 @@ mod sparse;
 
 pub use derivative::{gradient, hessian};
 pub use direct::{Singular, SparseLu};
-pub use eigen::EighOptions;
 #[cfg(feature = "batch")]
 pub use packed::PackedSparseMap;
 pub use solve::Solved;

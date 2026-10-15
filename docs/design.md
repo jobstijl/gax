@@ -1552,8 +1552,27 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       interlacing, it then stays indefinite), the pairs are chosen on the inverted operator
       `Qᵀ M (A − σM)⁻¹ M Q`, assembled from the images the Lanczos steps take anyway, where the
       wanted values are the largest. Rayleigh–Ritz with `A` on the chosen vectors' span then
-      gives the values. Semidefinite pencils keep the plain Rayleigh–Ritz with `A`, so their
-      precision is unchanged.
+      gives the values.
+    * A pencil with a null space (a free mesh's rigid motions, a field's constants) is chosen on
+      the inverted operator too, as ARPACK's shift-invert mode does. Rayleigh–Ritz with `A` sees
+      a vector through its Rayleigh quotient, which is quadratic in the error: a null vector
+      polluted at `10⁻⁸` has a quotient near `10⁻¹⁶`, rounding's own size, so `A` cannot tell
+      it from an exact one, and the search stalls there. On the inverted operator a null vector
+      stands out by `1/σ`. The spin-transformations port measured it: its constant field (an
+      exact null space, 4-fold, with the next eigenvalue only `2.5·10⁻⁵` of the energy's scale
+      above it) came back `3·10⁻⁹` off with `A`'s choice, `2·10⁻¹⁴` with the inverted operator's;
+      numga asks for `10⁻¹¹`. The switch is made once the space shows a Ritz value zero to
+      rounding (within `√ε` of the largest).
+    * On the inverted operator each candidate's eigenvalue is estimated as `σ + 1/θ`, and the
+      candidates nearest zero are chosen. Choosing the largest `θ` instead chooses the nearest to
+      the *shift*, which is the same only while the shift is at zero: past a re-shift on a
+      spectrum that seemed to start above zero, it picked the bulk modes just above the shift
+      over the Kitaev wire's Majorana pairs at `10⁻¹⁴` below it.
+    * Tried and dropped: a tolerance option for the backward error (`EighOptions`). Its only
+      motivation was the spin-transformations gap, which was the choice of vectors above, not
+      the stopping test; with the choice fixed, even a loose tolerance gives eigenvectors to
+      `10⁻¹³` on a free chain. Iteratively refined solves in the last inverse-iteration step did
+      not help either: the solves were not what limited the vectors.
     * The shift is scaled by the pencil's ∞-norms (the largest absolute row sums, which bound
       the spectral radii), not by its diagonals: a Hamiltonian of hops alone has none, and its
       shift was zero, on a singular pencil.

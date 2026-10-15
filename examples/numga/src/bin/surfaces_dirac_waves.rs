@@ -41,7 +41,7 @@ use std::sync::OnceLock;
 use surfaces_spin::{Hit, render};
 
 mod waves {
-    use gax::field::{EighOptions, Field, SparseMap};
+    use gax::field::{Field, SparseMap};
     use gax::vga3d::{Odd, Rotor};
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
     use gax_numga_examples::signal::phasor;
@@ -110,11 +110,7 @@ mod waves {
         } = dirac(mesh);
         let wave = &(&(&operator.reverse() * &face_areas) * &operator) * Quaternion::slot();
         let metric = &SparseMap::from_diagonal(&vertex_areas) * Quaternion::slot();
-        let options = EighOptions {
-            block: Some(block),
-            ..EighOptions::default()
-        };
-        wave.eigh_with(&metric, count, options)
+        wave.eigh_with_block(&metric, count, block)
     }
 
     /// A standing wave at a phase of its period: the vertex field a cosine, and the face field,

@@ -460,12 +460,7 @@ mod tests {
             rho,
             deformed,
         } = dipole();
-        // No change in curvature leaves the sphere as it is, centred. numga asks this to 1e-11;
-        // here it holds to about 3e-9. The constant fields are an exact null space of the
-        // energy (to 1e-14), but its gap to the next eigenvalue, 1 against the area metric, is
-        // only 2.5e-5 of the energy's scale, so the mode's residuals (whose floor of rounding is
-        // near 1e4 ε) leave it about 1e-8 off the null space; from the exact constant field the
-        // sphere comes back to 1e-14.
+        // No change in curvature leaves the sphere as it is, centred (numga's 1e-11).
         let still = spin_transform_deform(&sphere, &rho.map(|r| r * 0.0));
         let centre = sphere.vertices.mean();
         let off = still
@@ -474,7 +469,7 @@ mod tests {
             .zip(sphere.vertices.iter())
             .map(|(a, b)| (a - (b - centre)).norm())
             .fold(0.0, f64::max);
-        assert!(off < 1e-8, "{off:e}");
+        assert!(off < 1e-11, "{off:e}");
         // The deformation keeps every corner's angle, up to the mesh's resolution.
         assert!(largest(&cosine_changes(&sphere, &deformed)) < 0.05);
         // Mean curvature rises where it was asked to rise.

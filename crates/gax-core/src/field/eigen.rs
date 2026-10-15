@@ -12,32 +12,6 @@ use core::ops::Add;
 use std::vec;
 use std::vec::Vec;
 
-/// How [`SparseMap::eigh_with`] searches; [`Default`] is what [`SparseMap::eigh`] uses.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct EighOptions<T> {
-    /// Vectors per Lanczos block (`None`: `2 K::N + 2`). A block finds an eigenvalue with up to
-    /// `block` copies at once; the default covers a value repeated on every coefficient of the
-    /// kind and doubled by a symmetry of the sites (a square grid's modes along its two axes).
-    /// Use a larger block for more symmetric meshes.
-    pub block: Option<usize>,
-    /// The backward error each pair must reach, `‖A x − λ M x‖ / (‖A‖ + |λ| ‖M‖)` (`None`:
-    /// `ε^¾`). An eigenvector's error is about its backward error over the gap to the next
-    /// eigenvalue (both relative to the pencil's scale), so a mesh whose gaps are a small part
-    /// of the scale may ask for less; a looser tolerance stops sooner. The residuals have a floor
-    /// of rounding (near `10⁴ ε` to `10⁵ ε`): past it, the search stops where they stop
-    /// improving.
-    pub tolerance: Option<T>,
-}
-
-impl<T> Default for EighOptions<T> {
-    fn default() -> Self {
-        EighOptions {
-            block: None,
-            tolerance: None,
-        }
-    }
-}
-
 impl<C, K, T> SparseMap<C>
 where
     C: Extensor<Kind = K, Slots = (K,), Coef = T> + Add<Output = C>,
@@ -56,8 +30,8 @@ where
     /// inverted about a shift `σ` just below zero (`−√ε` relative to the pencil's scale), so that
     /// the eigenvectors nearest zero dominate it; each step solves with one sparse LU of
     /// `self − σ metric`. The eigenpairs are then taken from the pencil itself on that space
-    /// (Rayleigh–Ritz with `self` and `metric`, which need no solves; for an indefinite pencil,
-    /// chosen first on the inverted operator, where the wanted values are the largest), and the space grows until
+    /// (Rayleigh–Ritz with `self` and `metric`, which need no solves; for an indefinite pencil
+    /// or one with a null space, chosen first on the inverted operator, as ARPACK does), and the space grows until
     /// each pair's backward error, its true residual `‖self(x) − λ metric(x)‖` relative to
     /// `‖self‖ + |λ| ‖metric‖`, is within `ε^¾`.
     /// So the solves near the shift, which lose half their digits where the null space is
@@ -69,7 +43,7 @@ where
     /// The blocks have `2 K::N + 2` vectors, so an eigenvalue repeated on every coefficient of
     /// the kind (a field map of isotropic cells repeats each one `K::N` times), and doubled by a
     /// symmetry of the sites, is found with its whole eigenspace
-    /// ([`eigh_with`](Self::eigh_with) for another block or tolerance).
+    /// ([`eigh_with_block`](Self::eigh_with_block) for more).
     ///
     /// ```
     /// use gax::field::{Field, SparseMap};
@@ -102,43 +76,25 @@ where
     #[track_caller]
     #[allow(clippy::type_complexity)]
     pub fn eigh(&self, metric: &SparseMap<C>, count: usize) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
-        self.eigh_with(metric, count, EighOptions::default())
+        self.eigh_with_block(metric, count, 2 * K::N + 2)
     }
 
-    /// [`eigh`](Self::eigh) with the search's [`EighOptions`]: the Lanczos block's size, the
-    /// backward error to reach.
-    ///
-    /// ```
-    /// use gax::field::{EighOptions, Field, SparseMap};
-    /// use gax::pga3d::Scalar;
-    /// let s = Scalar::<(), f64>::new;
-    /// let k = SparseMap::new(vec![s(2.0), s(-1.0), s(-1.0), s(2.0)], vec![0, 0, 1, 1], vec![0, 1, 0, 1], (2, 2));
-    /// let k = &k * Scalar::slot(); // map cells
-    /// let mass = SparseMap::from_diagonal(&Field::from_fn(2, |_| Scalar::<(), f64>::slot()));
-    /// let options = EighOptions { block: Some(2), tolerance: Some(64.0 * f64::EPSILON) };
-    /// let (values, _) = k.eigh_with(&mass, 2, options);
-    /// assert!((values[0] - 1.0).abs() < 1e-14 && (values[1] - 3.0).abs() < 1e-14);
-    /// ```
+    /// [`eigh`](Self::eigh) with Lanczos blocks of `block` vectors. A block finds an eigenvalue
+    /// with up to `block` copies at once; the default, `2 K::N + 2`, covers a value repeated on
+    /// every coefficient of the kind and doubled by a symmetry of the sites (a square grid's
+    /// modes along its two axes). Use a larger block for more symmetric meshes.
     ///
     /// # Panics
-    /// As [`eigh`](Self::eigh), and if the block is zero vectors or the tolerance not positive.
+    /// As [`eigh`](Self::eigh), and if `block` is zero.
     #[must_use]
     #[track_caller]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(
+    pub fn eigh_with_block(
         &self,
         metric: &SparseMap<C>,
         count: usize,
-        options: EighOptions<T>,
+        block: usize,
     ) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
-        let block = options.block.unwrap_or(2 * K::N + 2);
-        let tolerance = options
-            .tolerance
-            .unwrap_or_else(Progress::default_tolerance);
-        assert!(
-            T::all_lt(T::zero(), tolerance),
-            "eigh: the tolerance must be positive"
-        );
         assert!(block > 0, "eigh: a Lanczos block of zero vectors");
         assert!(
             self.shape.0 == self.shape.1 && metric.shape == self.shape,
@@ -160,11 +116,12 @@ where
         let p = block.min(n);
         let mut space = Space::new(
             n,
+            sigma,
             |x: &[T], y: &mut [T]| metric.apply_flat(x, y),
             |x: &[T], y: &mut [T]| self.apply_flat(x, y),
         );
         space.extend_random(p);
-        let mut progress = Progress::new(tolerance);
+        let mut progress = Progress::new();
         let mut reshifts = 0;
         // The space is checked when it has grown by a quarter since the last check: each check
         // costs a dense eigenproblem of the space's size, so the checks then cost a fixed
@@ -207,6 +164,7 @@ where
                 {
                     sigma = target;
                     lu = factor_shifted(self, metric, sigma);
+                    space.shift = sigma;
                     space.images_stale = true;
                     reshifts += 1;
                 }
@@ -265,8 +223,8 @@ where
 }
 
 /// When to stop growing the space: the worst backward error, `‖A x − λ M x‖ / (‖A‖ + |λ| ‖M‖)`
-/// in ∞-norms, within the tolerance (by default `ε^¾`), or within `√ε` once it has stopped
-/// improving (no halving over two checks). The measure is the residual relative to the pencil
+/// in ∞-norms, within `ε^¾`, or within `√ε` once it has stopped improving (no halving over two
+/// checks). The measure is the residual relative to the pencil
 /// at `λ`, so it does not change when the pencil is scaled (a stiffness of `10¹¹`). The
 /// residuals have a floor of rounding, near `10⁴ ε` to `10⁵ ε`; past it, the space would grow
 /// to the whole space for nothing.
@@ -278,17 +236,11 @@ struct Progress<T> {
 }
 
 impl<T: Real> Progress<T> {
-    /// `ε^¾`.
-    fn default_tolerance() -> T {
+    fn new() -> Self {
         let eps = T::epsilon();
-        eps.sqrt() * eps.sqrt().sqrt()
-    }
-
-    /// Stop at `tolerance`, or at `√ε` (or the tolerance, if looser) once stalled.
-    fn new(tolerance: T) -> Self {
         Progress {
-            strict: tolerance,
-            loose: T::epsilon().sqrt().max(tolerance),
+            strict: eps.sqrt() * eps.sqrt().sqrt(),
+            loose: eps.sqrt(),
             best: T::from_f64(f64::MAX),
             stalled: 0,
         }
@@ -337,11 +289,14 @@ struct Space<T, M, A> {
     /// taken: `inverted[j][i] = M qᵢ · wⱼ`, `wⱼ` the image of `qⱼ`, for the `qᵢ` in the basis
     /// when it was taken.
     inverted: Vec<Vec<T>>,
-    /// Whether the shift has moved since `inverted` was taken.
+    /// The shift `σ` of the images; whether it has moved since `inverted` was taken.
+    shift: T,
     images_stale: bool,
-    /// Whether the pencil has shown a negative value on the space. A growing space only lowers
-    /// its lowest Ritz value (by interlacing), so once indefinite it stays so.
-    indefinite: bool,
+    /// Whether the pairs are chosen on the inverted operator: the pencil has shown a negative
+    /// value on the space, or one that is zero to rounding (a null space). A growing space only
+    /// moves its Ritz values outwards to the spectrum's ends (by interlacing), so once either
+    /// shows it stays.
+    choose_inverted: bool,
     /// The directions that start the next block.
     remainder: Vec<Vec<T>>,
     /// The first vector of the last block.
@@ -350,7 +305,7 @@ struct Space<T, M, A> {
 }
 
 impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A> {
-    fn new(n: usize, metric: M, operator: A) -> Self {
+    fn new(n: usize, shift: T, metric: M, operator: A) -> Self {
         Space {
             n,
             metric,
@@ -360,8 +315,9 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             operator_images: Vec::new(),
             projected: Vec::new(),
             inverted: Vec::new(),
+            shift,
             images_stale: false,
-            indefinite: false,
+            choose_inverted: false,
             remainder: Vec::new(),
             block_start: 0,
             seed: 0,
@@ -483,14 +439,21 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
     /// The `count` Ritz pairs nearest zero of the pencil on the space, as `(λ, x)` with `x`
     /// the coefficients on the basis, nearest first.
     ///
-    /// Where the pencil is semidefinite on the space, the values nearest zero are its lowest,
-    /// and Rayleigh–Ritz with `A` (the basis is orthonormal in the metric, so `Qᵀ M Q = I`)
-    /// finds them best. Inside an indefinite spectrum (a Hamiltonian's levels around its gap)
-    /// it does not: it finds spurious values near zero, mixtures of eigenvectors on both sides.
-    /// There the pairs are chosen on the inverted operator, where the wanted eigenvalues are the
-    /// largest, and the `count + extra` vectors of its largest values are rotated by
-    /// Rayleigh–Ritz with `A` on their span, whose values are exact to rounding however the
-    /// images were rounded.
+    /// Where the pencil is definite on the space, the values nearest zero are its lowest, and
+    /// Rayleigh–Ritz with `A` (the basis is orthonormal in the metric, so `Qᵀ M Q = I`) finds
+    /// them best. It does not in two cases, where the pairs are chosen on the inverted operator
+    /// instead, as ARPACK's shift-invert mode does:
+    /// * inside an indefinite spectrum (a Hamiltonian's levels around its gap), where it finds
+    ///   spurious values near zero, mixtures of eigenvectors on both sides;
+    /// * next to a null space (a free mesh's rigid motions, a constant field), where its values
+    ///   are zero to rounding: a Rayleigh quotient is quadratic in the error, so a null vector
+    ///   polluted to `√ε` looks exact to it, while on the inverted operator a null vector stands
+    ///   out by the shift's inverse.
+    ///
+    /// There each vector of the inverted operator has its eigenvalue estimate `σ + 1/θ`; the
+    /// `count + extra` estimates nearest zero (for any shift: past a re-shift the wanted values
+    /// lie below it) are rotated by Rayleigh–Ritz with `A` on their span, whose values are exact
+    /// to rounding however the images were rounded.
     fn ritz(
         &mut self,
         count: usize,
@@ -499,12 +462,15 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
     ) -> Vec<(T, Vec<T>)> {
         let m = self.basis.len();
         let projected = self.projected_matrix();
-        if !self.indefinite {
+        if !self.choose_inverted {
             let (values, vectors) = symmetric_eigen(&projected, m);
             let largest = values.iter().fold(T::zero(), |l, v| l.max(v.abs()));
             let lowest = values.iter().fold(T::zero(), |l, v| l.min(*v));
-            self.indefinite = T::all_lt(lowest, -(T::epsilon().sqrt() * largest));
-            if !self.indefinite {
+            let nearest_zero = values.iter().fold(largest, |l, v| l.min(v.abs()));
+            let rounding = T::epsilon().sqrt() * largest;
+            self.choose_inverted =
+                T::all_lt(lowest, -rounding) || T::all_lt(nearest_zero, rounding);
+            if !self.choose_inverted {
                 let mut nearest: Vec<usize> = (0..m).collect();
                 nearest.sort_by(|&i, &j| order(values[i].abs(), values[j].abs()));
                 return nearest
@@ -518,9 +484,18 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             self.reimage(solve);
         }
         let (inverted, vectors) = symmetric_eigen(&self.inverted_matrix(), m);
-        let mut largest: Vec<usize> = (0..m).collect();
-        largest.sort_by(|&i, &j| order(inverted[j].abs(), inverted[i].abs()));
-        let chosen: Vec<&Vec<T>> = largest
+        // The eigenvalue each vector of the inverted operator estimates; a zero there is no
+        // estimate (an infinite one).
+        let estimate = |theta: T| {
+            if theta == T::zero() {
+                T::from_f64(f64::MAX)
+            } else {
+                (self.shift + theta.recip()).abs()
+            }
+        };
+        let mut nearest: Vec<usize> = (0..m).collect();
+        nearest.sort_by(|&i, &j| order(estimate(inverted[i]), estimate(inverted[j])));
+        let chosen: Vec<&Vec<T>> = nearest
             .iter()
             .take((count + extra).min(m))
             .map(|&i| &vectors[i])
