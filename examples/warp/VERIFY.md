@@ -122,11 +122,12 @@ The only exception is a test that checks a phasor against `sin`.
   1600×900, the mean of the last second before each shot):
   * CPU per frame: simulation 0.05 to 0.06 ms; building and submitting the frame (every
     point through its camera map, the pinhole and the lenses, the lines, the HUD, the
-    submission) 1.3 ms at 15 s and 2.2 ms from 45 s on, with the densest lattice view;
+    submission) about 1.2 ms at 15 s and 2.1 to 2.9 ms from 45 s on, with the densest lattice
+    view (it varies from run to run by the submission's wait; re-measured on 2026-10-15);
   * the drawing alone (`View::draw`): a heavy frame (a singularity collapsing as the ship
-    dies, under a storm of sparks) 0.32 ms, from 0.67 ms before a per-frame table of camera
-    maps served the sparks, dust and shots; a normal frame 0.31 to 0.34 ms (from 0.36 to
-    0.39);
+    dies, under a storm of sparks) 0.17 to 0.21 ms (the median of 60 frames), from 0.67 ms
+    before a per-frame table of camera maps served the sparks, dust and shots and the lenses
+    were built once a frame; a calm frame of a test flight 0.11 ms;
   * GPU per frame: scene 0.05 ms, bloom 0.08 to 0.09 ms, post 0.03 to 0.04 ms (the Tunnel has
     no compute pass).
 
@@ -135,7 +136,8 @@ The only exception is a test that checks a phasor against `sin`.
 * **The Tunnel's wall on fields**: the lattice's step through a `SparseMap` and `mul_into` costs
   about 6 µs a tick more than the hand-written loop over neighbours it replaced.
 * **Frame rate:** the startup test (`--smoke`, a bot playing for 8 s) held vsync, 60 Hz on this
-  display, with a lattice of 9 417 nodes and a pool of 262 144 particles.
+  display (479 frames in 8 s, 2026-10-15), with a lattice of 9 417 nodes and a pool of
+  262 144 particles.
 
 ## Friction log
 
