@@ -14,9 +14,10 @@
 //! 70 states.
 //!
 //! These maps keep the spin, so each is a pair: a map on the spin-up orbitals and one on the
-//! spin-down ones, two kinds of four vectors. (numga's one-electron maps are on all eight;
-//! declaring all eight vectors as one kind would also make gax derive the outermorphism to the
-//! 4-vectors, 4900 minors, which takes the build past its memory.)
+//! spin-down ones, two kinds of four vectors. (numga's one-electron maps are on all eight. When
+//! this port was written, a kind of all eight vectors made gax derive its outermorphism to the
+//! 4-vectors, 4900 minors, past the build's memory; that extension is now over gax-gen's size
+//! limit and not generated.)
 //!
 //! At a strong repulsion one electron sits on each site, and the sixteen lowest levels are
 //! those of the Heisenberg ring of four spins, coupled by the exchange `4 t² / U`: one, two and

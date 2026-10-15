@@ -1,5 +1,5 @@
 //! Outermorphisms: the extension of a linear map on vectors (by `∧`) or antivectors (by `∨`)
-//! to every homogeneous kind, derived symbolically as minors of the map's matrix.
+//! to the kinds of one grade, derived symbolically as minors of the map's matrix, up to a size.
 
 use crate::cse;
 use crate::poly::{Poly, Rational, Var};
@@ -9,27 +9,44 @@ use crate::symbolic::{self, SymMv};
 use crate::table::{BinOp, UnOp, blade_unop};
 use std::collections::BTreeSet;
 
-fn single_grade(k: &KindSpec) -> Option<u32> {
-    let g: BTreeSet<u32> = k.layout.grades();
-    (g.len() == 1).then(|| *g.iter().next().expect("one"))
+/// The largest outermorphism derived, in terms of its minors ([`terms`]). Every outermorphism
+/// of the standard algebras and of the algebras gax's tests and examples declare is at most
+/// 7350 terms (7D trivectors), and none of up to 9 dimensions lies between that and 18 816
+/// (8D trivectors, which add 2 GB to a build); 8D's 4-vectors, 117 600 terms, ran a build out
+/// of 10 GB (ADR-034). Larger extensions are not emitted: such a map is built from its images
+/// instead (`from_images`).
+pub const OUTER_MAX_TERMS: usize = 1 << 14;
+
+/// The terms of the outermorphism of a map on `n` (anti)vectors to the blades of `k` factors:
+/// `C(n, k)²` entries, each a minor of size `k` with `k!` terms.
+#[must_use]
+pub fn terms(n: u32, k: u32) -> usize {
+    let blades = (0..k).fold(1, |c, i| c * (n - i) as usize / (i + 1) as usize);
+    let minor: usize = (1..=k as usize).product();
+    blades * blades * minor
 }
 
-/// Emit `Outermorphism<B>` impls for maps on the grade-1 and grade-(n-1) kinds, and list
-/// them as `(base kind, extended kind, whether the extended kind is the top)`. The pairs are
-/// independent, so they are derived in parallel and written in order.
+/// The grade of a kind holding every blade of one grade (in any order and orientation).
+fn full_grade(spec: &AlgebraSpec, k: &KindSpec) -> Option<u32> {
+    let g: BTreeSet<u32> = k.layout.grades();
+    let &g = g.iter().next().filter(|_| g.len() == 1)?;
+    let all = (0..spec.algebra.blade_count() as u32)
+        .filter(|m| m.count_ones() == g)
+        .count();
+    (k.layout.len() == all).then_some(g)
+}
+
+/// Emit `Outermorphism<B>` impls for maps on the grade-1 and grade-(n-1) kinds, up to
+/// [`OUTER_MAX_TERMS`], and list them as `(base kind, extended kind, whether the extended kind
+/// is the top)`. The pairs are independent, so they are derived in parallel and written in
+/// order.
 pub fn outermorphisms(spec: &AlgebraSpec) -> (String, Vec<(String, String, bool)>) {
-    let alg = &spec.algebra;
-    let n = alg.dim() as u32;
-    let bases = spec.kinds.iter().filter(|v| {
-        let Some(gv) = single_grade(v) else {
-            return false;
-        };
-        // Only kinds holding *all* blades of their grade can be the base of an outermorphism.
-        let all = (0..alg.blade_count() as u32)
-            .filter(|m| m.count_ones() == gv)
-            .count();
-        v.layout.len() == all && (gv == 1 || (gv + 1 == n && n > 2))
-    });
+    let n = spec.algebra.dim() as u32;
+    // Only kinds holding *all* blades of their grade can be the base of an outermorphism.
+    let bases = spec
+        .kinds
+        .iter()
+        .filter(|v| full_grade(spec, v).is_some_and(|gv| gv == 1 || (gv + 1 == n && n > 2)));
     let jobs: Vec<(&KindSpec, &KindSpec)> = bases
         .flat_map(|v| spec.kinds.iter().map(move |b| (v, b)))
         .collect();
@@ -46,7 +63,9 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> (String, Vec<(String, String, bool)
     done.into_iter().flatten().unzip()
 }
 
-/// The outermorphism from maps on the base kind `v` to the kind `b`, if `b` extends it.
+/// The outermorphism from maps on the base kind `v` to the kind `b`, if `b` extends it (holds
+/// every blade of its grade, as every extension of a general map fills it) within
+/// [`OUTER_MAX_TERMS`].
 #[allow(clippy::too_many_lines)]
 fn outermorphism(
     spec: &AlgebraSpec,
@@ -55,7 +74,7 @@ fn outermorphism(
 ) -> Option<(String, (String, String, bool))> {
     let alg = &spec.algebra;
     let n = alg.dim() as u32;
-    let gv = single_grade(v)?;
+    let gv = full_grade(spec, v)?;
     let wedge = gv == 1;
     let nv = v.layout.len();
     // The map's entries t[o][i] as variables o * nv + i.
@@ -75,14 +94,14 @@ fn outermorphism(
                 .collect(),
         )
     };
-    let gb = single_grade(b)?;
+    let gb = full_grade(spec, b)?;
     if b.name == v.name || (wedge && gb < 1) {
         return None;
     }
     // The number of vector factors of a blade of B.
     let k = if wedge { gb } else { n - gb };
     // One factor: B is another kind of V's grade, not an extension.
-    if k == 1 {
+    if k == 1 || terms(n, k) > OUTER_MAX_TERMS {
         return None;
     }
     let mut columns: Vec<Vec<Poly>> = Vec::new();
@@ -144,4 +163,26 @@ fn outermorphism(
         rows.join(", ")
     );
     Some((code, (vn.clone(), bn.clone(), k == n)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{OUTER_MAX_TERMS, terms};
+
+    #[test]
+    fn the_limit_falls_between_the_extensions_declared_and_the_next() {
+        // 7D trivectors, the largest declared; 8D trivectors and 4-vectors, the next and the
+        // Hubbard ring's.
+        assert_eq!(terms(7, 3), 7350);
+        assert_eq!(terms(8, 3), 18_816);
+        assert_eq!(terms(8, 4), 117_600);
+        // Every extension of up to 9 dimensions is on one side of the gap.
+        for n in 2..=9 {
+            for k in 2..=n {
+                let t = terms(n, k);
+                assert!(t <= 7350 || t >= 18_816, "{n}D, {k} factors: {t}");
+            }
+        }
+        assert!((7350..18_816).contains(&OUTER_MAX_TERMS));
+    }
 }

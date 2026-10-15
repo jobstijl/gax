@@ -489,6 +489,15 @@ gax::algebra! {
   are loops over tables, and compiling takes 30 to 60 s and 2.5 to 4.5 GB (ADR-034). The full
   even kind of a 6D to 9D algebra has its `log`, and its bivector its `exp`, in closed form
   ([log6d.md](log6d.md)).
+* **Outermorphisms, up to a size.** A kind holding every vector (or every antivector) gets
+  `t.outermorphism::<B>()` to each kind `B` holding every blade of one grade, whose matrix is
+  derived as minors: for blades of `k` factors in `n` dimensions, `C(n, k)²` minors of `k!`
+  terms. It is generated up to 16 384 terms: every extension up to 6 dimensions; in 7, those to
+  2, 3 and 7 factors (bivectors, trivectors and the determinant, for a map on vectors); in 8
+  and 9, to 2. Larger ones are left out (the 4-vectors of an 8D algebra, 117 600 terms, take
+  gigabytes to compile; ADR-034). Build such a map from its images instead: the image of a
+  basis blade `e_a ∧ e_b ∧ …` of `B` is `t.of(e_a) ^ t.of(e_b) ^ …`, cast to `B`, and
+  `B::<(B,), f64>::from_images` takes them in `B`'s layout order.
 * **Shaders.** With gax's `wgsl` feature, the algebra also has WGSL modules, `WGSL_MODULE` and
   `WGSL_MODULE_F16`, and kernels traced over its kinds link against them (section 11).
 

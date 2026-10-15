@@ -1,0 +1,22 @@
+error[E0277]: no outermorphism from maps on `Orbital<(Orbital,), f64>` to `FourElectrons`
+  --> tests/compile_fail/outermorphism_over_limit.rs:22:15
+   |
+22 |     let _ = t.outermorphism::<r8::FourElectrons>();
+   |               ^^^^^^^^^^^^^ unsatisfied trait bound
+   |
+   = note: outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions)
+   = note: for larger kinds, build the extended map from its images: `B::<(B,), T>::from_images`, the image of a blade `e_a ∧ e_b ∧ …` being `t.of(e_a) ^ t.of(e_b) ^ …`
+help: the trait `Outermorphism<FourElectrons>` is not implemented for `Orbital<(Orbital,), f64>`
+      but trait `Outermorphism<TwoElectrons>` is implemented for it
+  --> tests/compile_fail/outermorphism_over_limit.rs:5:1
+   |
+ 5 | / gax::algebra! {
+ 6 | |     algebra r8 "Euclidean 8D, R(8,0): orbitals, and states of two and four electrons.";
+ 7 | |     basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, e5 = 1, e6 = 1, e7 = 1, e8 = 1;
+ 8 | |     kind Orbital = [e1, e2, e3, e4, e5, e6, e7, e8];
+...  |
+16 | |         e3568, e3578, e3678, e4567, e4568, e4578, e4678, e5678];
+17 | | }
+   | |_^
+   = help: for that trait implementation, expected `TwoElectrons`, found `FourElectrons`
+   = note: this error originates in the macro `gax::algebra` (in Nightly builds, run with -Z macro-backtrace for more info)

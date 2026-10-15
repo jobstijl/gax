@@ -226,7 +226,16 @@ pub trait Log<Out> {
 /// The outermorphism of a linear map on vectors (or antivectors): its extension to the kind
 /// `B` of higher (or lower) grade, `M(a ∧ b) = T(a) ∧ T(b)` (for antivectors, with `∨`).
 /// On the top grade it is the determinant. Implemented by the generated algebras for maps
-/// `V <- V` on grade-1 and grade-(n-1) kinds.
+/// `V <- V` on a kind holding every vector (or every antivector), to each kind `B` holding
+/// every blade of one grade.
+///
+/// The extension to blades of `k` factors in `n` dimensions has `C(n, k)²` entries, each a
+/// minor of `k!` terms, so it is generated only up to 16 384 terms (`gax_gen`'s
+/// `OUTER_MAX_TERMS`): every extension up to 6 dimensions; in 7, those to 2, 3 and 7 factors
+/// (bivectors, trivectors and the determinant, for a map on vectors); in 8 and 9, to 2. Larger
+/// ones (the 4-vectors of an 8D algebra: 117 600 terms) take gigabytes to compile. For those,
+/// build the extended map from its images with `B::<(B,), T>::from_images`: the image of a
+/// basis blade `e_a ∧ e_b ∧ …` of `B` is `(t.of(e_a) ^ t.of(e_b) ^ …).cast::<B>()`.
 ///
 /// ```
 /// use gax::Outermorphism;
@@ -243,6 +252,11 @@ pub trait Log<Out> {
 /// // The extension maps a wedge to the wedge of the images.
 /// assert_eq!(t2.of(a ^ b), t.of(a) ^ t.of(b));
 /// ```
+#[diagnostic::on_unimplemented(
+    message = "no outermorphism from maps on `{Self}` to `{B}`",
+    note = "outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions)",
+    note = "for larger kinds, build the extended map from its images: `B::<(B,), T>::from_images`, the image of a blade `e_a ∧ e_b ∧ …` being `t.of(e_a) ^ t.of(e_b) ^ …`"
+)]
 pub trait Outermorphism<B> {
     /// The extended map `B <- B`.
     type Output;

@@ -336,7 +336,8 @@ highlight. `gax-regen --check` also reports part files no longer generated.
 * **Outermorphisms:** `t.outermorphism::<B>()` extends a map on vectors by `∧`, or a map on antivectors
   (PGA points) by `∨`, to every homogeneous kind `B`. The generator derives the extended matrices
   symbolically, as minors; on the top grade the result is the determinant. This is numga's extension
-  operator, after Fernández, Moya & Rodrigues.
+  operator, after Fernández, Moya & Rodrigues. It is derived up to a size (ADR-034); above it, the
+  map is built from its images.
 * **Values:** `inverse`, `normalized` (returns `Unit<K>`), `norm`, `exp`, `Unit<K>::log` and `sqrt`.
   Each is emitted only where the kind has the structure its closed form needs (ADR-019).
 
@@ -947,7 +948,8 @@ invariant planes, `{log_coeffs_8d, log_turn_8d}` for four; derivation in log6d.m
 
 ## ADR-034: Algebras of 7 to 9 dimensions
 *Status: accepted, implemented (`gax_gen::emit`: `FUSED_MAX`, `PLAIN_MAX_TERMS`, `MAP_MAX`,
-`UNROLL_MAX`, `INLINE_MAX`; `gax_gen::slp::LETS_MAX`; `algebra::MAX_DIM` = 9).*
+`UNROLL_MAX`, `INLINE_MAX`; `gax_gen::slp::LETS_MAX`; `gax_gen::emit_outer::OUTER_MAX_TERMS`;
+`algebra::MAX_DIM` = 9).*
 
 The generator's approach (every product unrolled, every sandwich simplified symbolically) was
 built for the standard algebras, whose largest kinds have 64 coefficients. A 7D algebra's even
@@ -982,6 +984,40 @@ algebras' kernels are unchanged:
   reassembles the coefficients. The choice is an `if const` on the slot sizes, so values and
   small maps compile only the unrolled code. A probe with three such maps in CSTA went from
   128 s to 4 s in a release build (5 s with the same products on values).
+* **Outermorphisms up to 16 384 terms** (added after porting numga's Hubbard ring, whose 8D
+  algebra with a kind of 4-vectors ran out of memory). The extension of a map on `n` vectors
+  (or antivectors) to blades of `k` factors has `C(n, k)²` entries, each a minor of `k!`
+  terms; it was derived from every kind holding all vectors (or antivectors) to every kind
+  of one grade. Measured in those terms, with the generator's time and code for the pair
+  alone, and a debug build of a crate declaring the algebra's vectors and that grade, with the
+  extension and without:
+
+  | Extension | Terms | Generator | Code | Build with / without |
+  |---|---|---|---|---|
+  | 7D trivectors (numga's octonions; the largest anywhere in the repository) | 7 350 | 0.7 s | 0.4 MB | 4.0 s, 0.9 GB / 2.7 s, 0.6 GB |
+  | 8D trivectors | 18 816 | 2.8 s | 1.1 MB | 10.7 s, 2.9 GB / 5.1 s, 1.0 GB |
+  | 7D 4-vectors | 29 400 | 91 s | 1.7 MB | 78 s, 1.8 GB / 2.6 s, 0.6 GB |
+  | 9D trivectors | 42 336 | 12 s | 2.7 MB | not built |
+  | 8D 4-vectors (the Hubbard ring's states) | 117 600 | 436 s, 2.2 GB | 7.8 MB | killed at 10 GB after 6.5 min / 4.7 s, 1.0 GB |
+
+  After the octonions' trivectors, the largest in the standard algebras, the tests and the
+  examples are CSTA's 4-vectors and 5-vectors (6D: 5400 and 4320) and 9D's bivectors (2592). No
+  extension of up to 9 dimensions lies between 7350 and 18 816, so every limit in that gap
+  admits the same ones; `OUTER_MAX_TERMS` = 2¹⁴ admits every extension declared today
+  (generated code unchanged): every one up to 6D; in 7D, those to 2, 3 and 7 factors; in 8D
+  and 9D, to 2. Larger ones are not emitted. The `Outermorphism`
+  trait's `on_unimplemented` note says so, and names what to do instead: build the map with
+  `B::<(B,), T>::from_images`, the image of each basis blade the wedge of its factors' images
+  (the Hubbard ring port builds its maps on 4-vectors from images too). The 8D test algebra in
+  `macro_algebras.rs` checks that construction against the generated bivector extension.
+  The extension to a kind missing some blades of its grade is now skipped before it is derived:
+  a general map's extension fills the grade, so it never had an impl (CSTA's
+  `Quintvector -> Twist`, 3600 terms, was derived and dropped).
+
+  No switch to raise the limit: the next extension above it already costs two gigabytes, and
+  `from_images` builds the same map at run time from `C(n, k)` wedges. No switch to turn
+  outermorphisms off either: below the limit they cost seconds (CSTA's, the most, 12 s of
+  generator time, beside its sandwiches).
 
 Compiling a 7D, 8D or 9D algebra takes 30 to 60 s and 2.5 to 4.5 GB in a release build. `exp`
 there was scaling and squaring (0.24 ms in 8D, 0.95 ms in 9D) until ADR-035.
