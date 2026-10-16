@@ -1,7 +1,7 @@
 # numga's examples in gax
 
 The examples of [numga](https://github.com/EelcoHoogendoorn/numga) (Eelco Hoogendoorn's Python
-geometric algebra library), ported to gax: all of them, 104 binaries, each a small animation, each with
+geometric algebra library), ported to gax: all of them, 105 binaries, each a small animation, each with
 numga's tests and the numeric checks of its scenarios. The math of each example is a module that does not
 touch the drawing code (numga checks the same of its own).
 
@@ -22,7 +22,7 @@ cameras posed by gax motors.
 
 | area | examples |
 |---|---|
-| mechanics | `area_transport`, `bending`, `composite_strip`, `crystal_waves`, `earthquake`, `foucault`, `hanging_chain`, `inertia` (with `simplex`), `jeffery`, `kepler`, `manipulability`, `modal_xpbd`, `modes`, `riccati`, `robot_arm`, `rolling_ball`, `slip_systems`, `spinning_top`, `stress`, `symmetry`, `tennis_racket`, `tides`, `tricycle`, `vortices`, `wing`, `xpbd` (the Lie-group steppers are `src/shared/mechanics_lie.rs`) |
+| mechanics | `area_transport`, `bending`, `composite_strip`, `crystal_waves`, `earthquake`, `elastica`, `foucault`, `hanging_chain`, `inertia` (with `simplex`), `jeffery`, `kepler`, `manipulability`, `modal_xpbd`, `modes`, `riccati`, `robot_arm`, `rolling_ball`, `slip_systems`, `spinning_top`, `stress`, `symmetry`, `tennis_racket`, `tides`, `tricycle`, `vortices`, `wing`, `xpbd` (the Lie-group steppers are `src/shared/mechanics_lie.rs`) |
 | optics | `coating`, `crystal_diffraction`, `lens_camera`, `photoelasticity`, `thin_lens` |
 | geometry | `bezier`, `camera_fit`, `cyclides`, `epipolar`, `fitting`, `kalman`, `multiview`, `odometry`, `origami`, `pose_diffusion`, `projection`, `qem`, `registration`, `rubiks_cube`, `scenegraph`, `skinning`, `sundial`, `surface_curvature`, `three_point_pose` |
 | quadrics | `cayley_klein`, `cga_spherical_quadrics`, `conformal_elliptical`, `elliptic_physics`, `gaussian`, `quadric_collision`, `quadrics`, `s3_raytracer`, `spherical_quadrics` |

@@ -34,8 +34,9 @@ pub fn section_plane() -> pga3d::Plane<(), f64> {
     pga3d::Plane::new(0.0, 0.0, 1.0, 0.0)
 }
 
-/// The pure stretch: the section's line at infinity, under which every fibre stretches by one.
-pub fn slide() -> Strain {
+/// The shift along the beam: the section's line at infinity, under which every fibre stretches
+/// by one, and which, lifted into space, carries a section along the beam.
+pub fn shift_along_beam() -> Strain {
     Strain::new(0.0, 0.0, 1.0)
 }
 
@@ -122,17 +123,17 @@ pub fn principal_axes(stiffness: Stiffness) -> [Strain; 2] {
 /// station's cross-section, met with its plane, in the section's chart. A load across the beam
 /// meets it at infinity, a couple; a push along the beam meets it at its point.
 pub fn carried(load: L3, station: f64) -> Resultant {
-    let shift = (in_space_line(slide()) * (station / 2.0)).exp();
+    let shift = (in_space_line(shift_along_beam()) * (station / 2.0)).exp();
     chart().of((shift << load) ^ section_plane())
 }
 
 /// The frames of the cross-sections from the clamp to the tip: each piece's twist is the
-/// slide plus its strain, and acts in the frame of the cross-section before it.
+/// shift along the beam plus its strain, and acts in the frame of the cross-section before it.
 pub fn bend(strains: &[Strain], step: f64) -> Vec<Frame> {
     // The clamp's frame: no twist at all.
     let mut frames = vec![L3::zero().exp()];
     for strain in strains {
-        let twist = (in_space_line(slide() + *strain) * (step / 2.0)).exp();
+        let twist = (in_space_line(shift_along_beam() + *strain) * (step / 2.0)).exp();
         let last = *frames.last().expect("the clamp");
         frames.push(last * twist);
     }
@@ -158,19 +159,18 @@ pub fn body(section: Section) -> Body {
     }
 }
 
-/// A cantilever under a tip load: the strain of each piece, the frames of the cross-sections and
-/// their centres.
+/// A cantilever under a tip load: the strain of each piece `[PIECES]` and the frame of each
+/// cross-section `[PIECES + 1]` (numga's `cantilever` returns these with the principal axes and
+/// the stress at the clamp, which here are the body's and [`stress`]).
 #[derive(Clone, Debug)]
 pub struct Beam {
-    pub load: P3,
     pub strains: Vec<Strain>,
     pub frames: Vec<Frame>,
-    pub centres: Vec<P3>,
 }
 
 /// The tip of the straight beam, over the centroid.
 pub fn tip(body: &Body) -> P3 {
-    (in_space_line(slide()) * (LENGTH / 2.0)).exp() >> in_space(body.centroid)
+    (in_space_line(shift_along_beam()) * (LENGTH / 2.0)).exp() >> in_space(body.centroid)
 }
 
 /// A cantilever with its tip load (a direction of space, as long as the force) through the
@@ -183,18 +183,23 @@ pub fn cantilever(body: &Body, load: P3) -> Beam {
         .map(|k| body.stiffness.solve(carried(line, (k as f64 + 0.5) * step)))
         .collect();
     let frames = bend(&strains, step);
+    Beam { strains, frames }
+}
+
+/// The centres of a cantilever's cross-sections: its frames carrying the centroid.
+pub fn centres(body: &Body, beam: &Beam) -> Vec<P3> {
     let centre = in_space(body.centroid);
-    Beam {
-        load,
-        centres: frames.iter().map(|f| *f >> centre).collect(),
-        strains,
-        frames,
-    }
+    beam.frames.iter().map(|f| *f >> centre).collect()
+}
+
+/// The point at infinity up the section.
+pub fn up_direction() -> P3 {
+    P3::direction(0.0, 1.0, 0.0)
 }
 
 /// A tip load straight down.
 pub fn downward() -> P3 {
-    P3::direction(0.0, -LOAD, 0.0)
+    up_direction() * -LOAD
 }
 
 /// The load turned by `angle` from straight down, in the plane of the section.
@@ -209,7 +214,8 @@ pub fn flat(p: P3) -> [f64; 2] {
 
 /// The tip's displacement across the beam, seen along it.
 pub fn deflection(body: &Body, beam: &Beam) -> [f64; 2] {
-    let [x, y] = flat(*beam.centres.last().expect("the tip"));
+    let tip = *beam.frames.last().expect("the tip") >> in_space(body.centroid);
+    let [x, y] = flat(tip);
     let [cx, cy] = body.centroid.to_euclidean();
     [x - cx, y - cy]
 }

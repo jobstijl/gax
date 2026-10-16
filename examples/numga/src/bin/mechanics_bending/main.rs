@@ -1,5 +1,5 @@
-//! numga's `mechanics/bending`: unsymmetric bending. A cantilever loaded away from its principal
-//! bending directions bends sideways as well as along the load.
+//! numga's `mechanics/bending`: Euler-Bernoulli beam bending. A cantilever loaded away from its
+//! principal bending directions bends sideways as well as along the load.
 //!
 //! The beam runs along `z` from its clamp at `z = 0`, and a cross-section is a plane of PGA2D
 //! (numga works in PGA3D with the lines of the section's plane as a kind of their own; gax's
@@ -121,7 +121,7 @@ fn corner_stresses(body: &Body, strain: Strain) -> impl Iterator<Item = f64> + '
 
 /// The direction of a line of the section: its meet with the line at infinity.
 fn heading(line: Strain) -> P2 {
-    line ^ beam::slide()
+    line ^ beam::shift_along_beam()
 }
 
 /// The point `reach` from `from` towards a direction.
@@ -136,9 +136,9 @@ fn through(line: Strain, centre: P2, reach: f64) -> [P2; 2] {
     [towards(foot, d, -reach), towards(foot, d, reach)]
 }
 
-/// One section at the clamp: its stress, kern, principal and neutral axes, the load's direction
-/// and the way the tip moves.
-fn draw_section(c: &mut Canvas, rect: Rect, k: usize, beam: &Beam) {
+/// One section at the clamp under a load: its stress, kern, principal and neutral axes, the
+/// load's direction and the way the tip moves.
+fn draw_section(c: &mut Canvas, rect: Rect, k: usize, load: P3, beam: &Beam) {
     let sc = scene();
     let body = &sc.bodies[k];
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), SECTION_REACH);
@@ -174,7 +174,7 @@ fn draw_section(c: &mut Canvas, rect: Rect, k: usize, beam: &Beam) {
         2.0,
         palette::green(),
     );
-    let load = beam::chart().of(beam.load);
+    let load = beam::chart().of(load);
     let [dx, dy] = beam::deflection(body, beam);
     let tip = P2::direction(dx, dy);
     for (direction, colour) in [(load, palette::orange()), (tip, palette::sky())] {
@@ -206,10 +206,10 @@ fn view() -> gax::pga3d::Point<(gax::pga3d::Point,), f64> {
     ])
 }
 
-/// The four cantilevers in space side by side, each the straight beam faintly, the bent one by
-/// a few cross-sections and the edges along it, and the load at its tip; their names at their
-/// clamps.
-fn draw_beams(c: &mut Canvas, rect: Rect, beams: &[Beam]) {
+/// The four cantilevers in space side by side under a load, each the straight beam faintly, the
+/// bent one by a few cross-sections and the edges along it, and the load at its tip; their names
+/// at their clamps.
+fn draw_beams(c: &mut Canvas, rect: Rect, load: P3, beams: &[Beam]) {
     let view = view();
     // Each beam's place across the view, and its clamp's centre there.
     let offset = |k: usize| P3::direction(0.0, BEAM_SPACING * k as f64, 0.0);
@@ -219,7 +219,7 @@ fn draw_beams(c: &mut Canvas, rect: Rect, beams: &[Beam]) {
     let cam = Camera::orbit(rect, middle, 30.0, BEAM_AZIMUTH, BEAM_ELEVATION, lens);
     let cam = panel3(c, rect, cam, |s| {
         for (k, (body, beam)) in scene().bodies.iter().zip(beams).enumerate() {
-            draw_beam(s, body, beam, |p| view.of(p) + offset(k));
+            draw_beam(s, body, load, beam, |p| view.of(p) + offset(k));
         }
     });
     c.clip(rect);
@@ -231,8 +231,8 @@ fn draw_beams(c: &mut Canvas, rect: Rect, beams: &[Beam]) {
     c.unclip();
 }
 
-/// One cantilever, its points placed in the view by `place`.
-fn draw_beam(s: &mut Scene3, body: &Body, beam: &Beam, place: impl Fn(P3) -> P3) {
+/// One cantilever under its load, its points placed in the view by `place`.
+fn draw_beam(s: &mut Scene3, body: &Body, load: P3, beam: &Beam, place: impl Fn(P3) -> P3) {
     let boundary = &body.section.boundary;
     let edges: Vec<usize> = (0..boundary.len())
         .step_by(boundary.len().div_ceil(EDGES))
@@ -254,8 +254,8 @@ fn draw_beam(s: &mut Scene3, body: &Body, beam: &Beam, place: impl Fn(P3) -> P3)
             s.polyline(&edge, 0.8, colour.faded(0.6));
         }
     }
-    let tip = *beam.centres.last().expect("the tip");
-    let head = tip + beam.load * (TIP_ARROW / beam::LOAD);
+    let tip = *beam::centres(body, beam).last().expect("the tip");
+    let head = tip + load * (TIP_ARROW / beam::LOAD);
     s.arrow(
         place(tip),
         place(head) - place(tip),
@@ -284,12 +284,12 @@ fn draw(c: &mut Canvas, t: f32) {
             0.25 * (column + 1.0),
             0.5 * (row + 1.0),
         );
-        draw_section(c, cell.inset(6.0, 18.0, 6.0, 4.0), k, bent);
+        draw_section(c, cell.inset(6.0, 18.0, 6.0, 4.0), k, load, bent);
     }
-    draw_beams(c, below.part(0.5, 0.0, 1.0, 1.0), &beams);
+    draw_beams(c, below.part(0.5, 0.0, 1.0, 1.0), load, &beams);
     caption(
         c,
-        "UNSYMMETRIC BENDING: A TIP LOAD TURNING ONCE AROUND",
+        "EULER-BERNOULLI BEAM BENDING: A TIP LOAD TURNING ONCE AROUND",
         "STRESS AT THE CLAMP (BLUE SQUEEZED, RED STRETCHED), NEUTRAL AXIS (GREEN), KERN (PURPLE), \
          LOAD (ORANGE), TIP MOTION (CYAN)",
     );
@@ -361,7 +361,7 @@ mod tests {
     fn stiffness_holds_the_area_and_the_second_moments() {
         let area = 2.0 * FLANGE * THICKNESS + (HEIGHT - 2.0 * THICKNESS) * THICKNESS;
         for (body, spread) in bodies().iter().zip(second_moments()) {
-            assert!(relative(energy(body, slide()), MODULUS * area) < 1e-12);
+            assert!(relative(energy(body, shift_along_beam()), MODULUS * area) < 1e-12);
             let [about_x, about_y] = turns(body).map(|l| energy(body, l));
             assert!(relative(about_x, MODULUS * entry(spread, 1, 1)) < 1e-12);
             assert!(relative(about_y, MODULUS * entry(spread, 0, 0)) < 1e-12);
@@ -411,7 +411,6 @@ mod tests {
     #[test]
     fn neutral_axes_and_principal_bending_directions() {
         let quarter = gax::pga2d::Motor::rotation(P2::xy(0.0, 0.0), core::f64::consts::FRAC_PI_2);
-        let mut deflections = Vec::new();
         for body in &bodies() {
             let beam = cantilever(body, downward());
             assert!((body.centroid & beam.strains[0]).s().abs() < 1e-12);
@@ -422,30 +421,26 @@ mod tests {
             // stays in the plane of the beam's axis and the load.
             let weakest = body.principal[0].normalized().into_inner();
             let load = in_space(quarter >> super::heading(weakest)) * LOAD;
-            let along_load = cantilever(body, load);
+            let along_principal = cantilever(body, load);
             let along = P3::direction(0.0, 0.0, 1.0);
             let plane = (in_space(body.centroid) & along) & load;
-            let tip = along_load.centres.last().expect("the tip").unitized();
+            let tip = centres(body, &along_principal)
+                .last()
+                .expect("the tip")
+                .unitized();
             assert!((tip & plane).s().abs() < 1e-12, "{}", (tip & plane).s());
-            deflections.push(deflection(body, &beam));
         }
-        let [sideways, down]: [Vec<f64>; 2] =
-            [0, 1].map(|i| deflections.iter().map(|d| d[i]).collect());
-        assert!(sideways[0].abs() < 1e-12);
-        assert!(down.iter().all(|d| *d < 0.0));
-        assert!(sideways[1].abs() > 0.1 * down[1].abs() && sideways[2].abs() > down[2].abs());
     }
 
-    /// numga's `test_kern_and_reciprocity`, with the exact kern: the first push point is in it,
-    /// the second not.
+    /// numga's `test_kern_and_reciprocity`, with the exact kern: a pull through the centroid
+    /// does not bend; the push inside the kern squeezes every fibre, the one outside stretches
+    /// some; and the first push point is in the kern, the second not.
     #[test]
     fn kern_and_reciprocity() {
         let scene = scene();
         for (body, kern) in scene.bodies.iter().zip(&scene.kerns) {
             assert!(pull(body.stiffness, body.centroid).norm() < 1e-12);
             let [(p0, push0), (p1, push1)] = pushes(body);
-            let (first, second) = (pull(body.stiffness, p0), pull(body.stiffness, p1));
-            assert!(relative((first & p1).s(), (second & p0).s()) < 1e-10);
             assert!(super::corner_stresses(body, push0).all(|s| s < 0.0));
             assert!(super::corner_stresses(body, push1).any(|s| s > 0.0));
             let contains = |p: P2| {
@@ -453,6 +448,32 @@ mod tests {
                 (0..n).all(|k| orientation(kern[k], kern[(k + 1) % n], p) >= 0.0)
             };
             assert!(contains(p0) && !contains(p1));
+        }
+    }
+
+    /// The checks of numga's scenario: every tip under the downward load moves down; the
+    /// I-section's and the slotted tube's, mirror-symmetric about the load, straight down; the
+    /// turned I-section's and the Z-section's sideways as well, by more than half the most
+    /// either moves down. For each section the push inside the kern squeezes every fibre and the
+    /// one outside stretches some, and a pull through one push point stretches the fibre through
+    /// the other as much as the exchanged pull.
+    #[test]
+    fn scenes_pass_their_checks() {
+        let tips: Vec<[f64; 2]> = bodies()
+            .iter()
+            .map(|body| deflection(body, &cantilever(body, downward())))
+            .collect();
+        let [sideways, down]: [Vec<f64>; 2] = [0, 1].map(|i| tips.iter().map(|d| d[i]).collect());
+        assert!(down.iter().all(|d| *d < 0.0));
+        assert!(sideways[0].abs() < 1e-12 && sideways[3].abs() < 1e-12);
+        let most_down = down[1].abs().max(down[2].abs());
+        assert!(sideways[1].abs().min(sideways[2].abs()) > 0.5 * most_down);
+        for body in &bodies() {
+            let [(p0, push0), (p1, push1)] = pushes(body);
+            assert!(super::corner_stresses(body, push0).all(|s| s < 0.0));
+            assert!(super::corner_stresses(body, push1).any(|s| s > 0.0));
+            let (first, second) = (pull(body.stiffness, p0), pull(body.stiffness, p1));
+            assert!(((first & p1).s() - (second & p0).s()).abs() < 1e-12);
         }
     }
 

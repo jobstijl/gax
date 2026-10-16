@@ -26,7 +26,8 @@
 //! The picture: four kinds of fault side by side (strike-slip, normal, thrust and oblique), and a
 //! fault whose rake turns once around, in space with the slip of each side and the lobes of its P
 //! waves (each direction drawn as far as its first motion, pushes warm and pulls cool), and its
-//! beachball.
+//! beachball. The lobes are drawn over a sphere of directions turned with the fault, so that its
+//! nodal planes lie along the grid lines and each cell is a push or a pull throughout.
 
 use gax::pga2d;
 use gax::vga3d::Vector;
@@ -66,7 +67,8 @@ mod earthquake {
     /// The sweep: one fault's strike and dip, in degrees; its rake turns once around.
     pub const SWEEP_STRIKE: f64 = 30.0;
     pub const SWEEP_DIP: f64 = 50.0;
-    /// The grids of directions: rings from straight down, spokes around the vertical.
+    /// The grids of directions: the hemisphere's rings from straight down, and the spokes
+    /// around the vertical.
     pub const RINGS: usize = 60;
     pub const SPOKES: usize = 120;
 
@@ -102,17 +104,24 @@ mod earthquake {
         (turn(NORTH ^ EAST, azimuth) * turn(DOWN ^ NORTH, polar)) >> DOWN
     }
 
-    /// Directions on the sphere from straight down to `reach` away from it: `RINGS` rings of
+    /// Directions on the sphere from straight down to `reach` away from it: `rings` rings of
     /// `SPOKES + 1` spokes, the last spoke closing the first.
     #[derive(Clone, Copy, Debug)]
     pub struct Grid {
         pub reach: f64,
+        pub rings: usize,
     }
 
     /// The lower half of the sphere of directions, where seismologists draw the beachball.
-    pub const HEMISPHERE: Grid = Grid { reach: FRAC_PI_2 };
-    /// The whole sphere of directions.
-    pub const SPHERE: Grid = Grid { reach: PI };
+    pub const HEMISPHERE: Grid = Grid {
+        reach: FRAC_PI_2,
+        rings: RINGS,
+    };
+    /// The whole sphere of directions, with the hemisphere's spacing and a ring on its equator.
+    pub const SPHERE: Grid = Grid {
+        reach: PI,
+        rings: 2 * RINGS - 1,
+    };
 
     impl Grid {
         /// The direction a fraction `u` of the way from straight down to the reach, and a
@@ -121,23 +130,25 @@ mod earthquake {
             direction(u * self.reach, v * TAU)
         }
 
-        /// The grid's directions `[RINGS][SPOKES + 1]`.
+        /// The grid's directions `[rings][SPOKES + 1]`.
         pub fn directions(self) -> Vec<Vec<V>> {
             let fraction = |k: usize, n: usize| k as f64 / n as f64;
-            (0..RINGS)
+            (0..self.rings)
                 .map(|i| {
                     (0..=SPOKES)
-                        .map(|j| self.at(fraction(i, RINGS - 1), fraction(j, SPOKES)))
+                        .map(|j| self.at(fraction(i, self.rings - 1), fraction(j, SPOKES)))
                         .collect()
                 })
                 .collect()
         }
     }
 
-    /// A fault: its normal and slip, its moment with its principal axes (pressure, null,
-    /// tension), and the P wave's first motion over the lower hemisphere `[RINGS][SPOKES + 1]`.
+    /// A fault: its orientation, its normal and slip, its moment with its principal axes
+    /// (pressure, null, tension), and the P wave's first motion over the lower hemisphere
+    /// `[RINGS][SPOKES + 1]`.
     #[derive(Clone, Debug)]
     pub struct Mechanism {
+        pub frame: Frame,
         pub normal: V,
         pub slip: V,
         pub moment: Moment,
@@ -156,6 +167,7 @@ mod earthquake {
             .map(|ring| ring.iter().map(|d| radiation(moment, *d).0).collect())
             .collect();
         Mechanism {
+            frame,
             normal,
             slip,
             moment,
@@ -262,10 +274,10 @@ fn beachball(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
     let samples: Vec<f32> = fault.push.iter().flatten().map(|p| *p as f32).collect();
     let on_grid = |q: Point2| {
         let [spoke, ring] = q.to_euclidean().map(f64::from);
-        let d = HEMISPHERE.at(ring / (RINGS - 1) as f64, spoke / SPOKES as f64);
+        let d = HEMISPHERE.at(ring / (HEMISPHERE.rings - 1) as f64, spoke / SPOKES as f64);
         ax.px(lambert(d))
     };
-    let nodal: Vec<[Point2; 2]> = contour::segments(&samples, SPOKES + 1, RINGS, 0.0)
+    let nodal: Vec<[Point2; 2]> = contour::segments(&samples, SPOKES + 1, HEMISPHERE.rings, 0.0)
         .into_iter()
         .map(|seg| seg.map(on_grid))
         .collect();
@@ -294,22 +306,25 @@ fn beachball(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
     );
 }
 
-/// The lobes of the P waves: each direction drawn as far as its first motion.
-fn lobes(s: &mut Scene3, moment: Moment) {
+/// The lobes of the P waves: each direction drawn as far as its first motion, over the sphere
+/// of directions turned with the fault, so that its nodal planes lie along the grid lines; each
+/// cell coloured by the first motion at its middle.
+fn lobes(s: &mut Scene3, fault: &Mechanism) {
+    let along = |u: f32, v: f32| fault.frame >> SPHERE.at(f64::from(u), f64::from(v));
     let tip = |u: f32, v: f32| {
-        let d = SPHERE.at(f64::from(u), f64::from(v));
-        let (push, _) = radiation(moment, d);
+        let d = along(u, v);
+        let (push, _) = radiation(fault.moment, d);
         reach3(upright(d * push.abs()))
     };
     let shade = |u: f32, v: f32| {
-        let (push, _) = radiation(moment, SPHERE.at(f64::from(u), f64::from(v)));
+        let (push, _) = radiation(fault.moment, along(u, v));
         if push > 0.0 {
             palette::orange().faded(0.8)
         } else {
             palette::sky().faded(0.35)
         }
     };
-    s.surface(tip, RINGS - 1, SPOKES, shade, 0.6, None);
+    s.surface(tip, SPHERE.rings - 1, SPOKES, shade, 0.6, None);
 }
 
 /// The fault patch, a disc across the normal, and the slip of each side across it.
@@ -366,7 +381,7 @@ fn fault_in_space(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
     let cam = Camera::orbit(rect, ORIGIN3, 7.0, azimuth, elevation, lens);
     let cam = panel3(c, rect, cam, |s| {
         compass(s);
-        lobes(s, fault.moment);
+        lobes(s, fault);
     });
     panel3(c, rect, cam, |s| patch(s, fault));
     if let Some(at) = cam.px(reach3(upright(NORTH * (COMPASS + 0.15)))) {

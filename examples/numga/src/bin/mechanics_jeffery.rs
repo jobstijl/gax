@@ -143,9 +143,8 @@ fn bodies() -> &'static Vec<Vec<Vec<Turn>>> {
 
 /// The length of the loop in seconds: the two periods of the rod's orbit.
 const LOOP: f32 = 14.0;
-/// The start the lower row shows, and the steps a tip's trail lasts.
+/// The start the lower row shows.
 const SHOWN: usize = 2;
-const TRAIL: usize = 75;
 /// The heights at which the flow is drawn, below and above the body.
 const HEIGHTS: [f64; 6] = [-3.0, -2.0, -1.0, 1.0, 2.0, 3.0];
 /// The view, as numga's: turned from the vorticity axis towards the flow by 28 degrees, and
@@ -235,7 +234,7 @@ fn draw_orbits(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
 }
 
 /// One body at one step: its surface checkered by its octants and lit, the stubs of its long
-/// axis, the recent trail of the axis's tips, and the shear flow's velocity around it.
+/// axis, the paths of the axis's tips from the start, and the shear flow's velocity around it.
 fn draw_body(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
     let [x, y, _] = AXES;
     let turns = &bodies()[body][SHOWN];
@@ -266,15 +265,12 @@ fn draw_body(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
         let surface =
             |u: f32, v: f32| position(turn >> shape.of(on_sphere(f64::from(u), f64::from(v))));
         s.surface(surface, LONGITUDES, LATITUDES, checker, 0.96, None);
-        let tips: Vec<V> = turns[now.saturating_sub(TRAIL)..=now]
-            .iter()
-            .map(|t| *t >> (x * long))
-            .collect();
+        let tips: Vec<V> = turns[..=now].iter().map(|t| *t >> (x * long)).collect();
         for end in [1.0, -1.0] {
             let tip = tips[tips.len() - 1] * end;
             s.seg(position(tip), position(tip * 1.15), 2.2, palette::orange());
-            let trail: Vec<Point3> = tips.iter().map(|t| position(*t * end)).collect();
-            s.polyline(&trail, 1.6, palette::orange().faded(0.8));
+            let path: Vec<Point3> = tips.iter().map(|t| position(*t * end)).collect();
+            s.polyline(&path, 1.0, palette::orange().faded(0.8));
         }
     });
 }

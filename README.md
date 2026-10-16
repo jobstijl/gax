@@ -58,7 +58,7 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 | [`examples/traced`](examples/traced) | build-time traced kernels, end to end, with batch forms |
 | [`examples/wgpu`](examples/wgpu) | PGA2D motors on the GPU with plain wgpu: instanced shapes and a traced particle kernel shared with the CPU (its own crate) |
 | [`examples/warp`](examples/warp) | a neon twin-stick shooter on warping space: gax motors, traced kernels on CPU and GPU, the WGSL modules, synthesized audio (its own crate) |
-| [`examples/numga`](examples/numga) | all of numga's examples ported to gax: 104 animations (window, GIF or PNG), each with numga's tests (its own crate) |
+| [`examples/numga`](examples/numga) | all of numga's examples ported to gax: 105 animations (window, GIF or PNG), each with numga's tests (its own crate) |
 | [`examples/asteroids`](examples/asteroids) | a small windowed game on PGA2D motors (its own crate, outside the workspace) |
 | [`fuzz`](fuzz) | fuzzing of the algebra declaration parser |
 
