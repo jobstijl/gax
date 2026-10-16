@@ -468,7 +468,8 @@ gax::algebra! {
 ```
 
 * **The basis.** Basis vectors are `e` plus one character, given with their squares. `metric eo ei = -1;`
-  sets an off-diagonal entry, for null bases.
+  sets an off-diagonal entry, for null bases. `basis;` with no vectors declares Cl(0,0), the
+  real numbers.
 * **Kinds.** A `kind` lists its blades in the order and orientation you want (`e31` is `−e13`).
   `versor` also generates fused sandwiches with that kind as the versor. A `part` is a kind
   that operations never take as their result type: it is reached only by name, through casts,

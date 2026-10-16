@@ -205,6 +205,7 @@ impl AlgebraSpec {
         let mut name = None;
         let mut doc = String::new();
         let mut basis: Vec<(char, i64)> = Vec::new();
+        let mut basis_declared = false;
         let mut off_diagonal: Vec<(char, char, i64)> = Vec::new();
         let mut raw_kinds: Vec<(String, Vec<String>, bool, bool, String)> = Vec::new();
         let mut aliases = Vec::new();
@@ -224,8 +225,14 @@ impl AlgebraSpec {
                     p.expect_punct(';')?;
                 }
                 "basis" => {
-                    if !basis.is_empty() {
+                    if basis_declared {
                         return Err(AlgebraError("duplicate `basis` declaration".into()));
+                    }
+                    basis_declared = true;
+                    // `basis;`: no vectors, the algebra of the scalars alone, Cl(0,0).
+                    if p.peek() == Some(&Tok::Punct(';')) {
+                        p.next();
+                        continue;
                     }
                     loop {
                         let v = p.ident()?;
@@ -293,7 +300,7 @@ impl AlgebraSpec {
             }
         }
         let name = name.ok_or_else(|| AlgebraError("missing `algebra` declaration".into()))?;
-        if basis.is_empty() {
+        if !basis_declared {
             return Err(AlgebraError("missing `basis` declaration".into()));
         }
         let n = basis.len();
@@ -470,6 +477,16 @@ mod tests {
         assert!(s.kinds[3].versor);
         assert_eq!(s.kinds[2].layout.blades[0].1, -1); // e20 = -e02
         assert_eq!(s.aliases, vec![("Twist".to_string(), "Point".to_string())]);
+    }
+
+    /// `basis;` declares Cl(0,0), whose one blade is the scalar; leaving `basis` out is an error.
+    #[test]
+    fn parses_an_empty_basis() {
+        let s = AlgebraSpec::parse(r#"algebra r "R"; basis; kind Scalar = [1];"#).unwrap();
+        assert_eq!(s.algebra.dim(), 0);
+        assert_eq!(s.kinds.len(), 1);
+        assert!(AlgebraSpec::parse("algebra r; kind Scalar = [1];").is_err());
+        assert!(AlgebraSpec::parse("algebra r; basis; basis; kind Scalar = [1];").is_err());
     }
 
     #[test]

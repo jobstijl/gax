@@ -314,7 +314,7 @@ macro_rules! check {
 }
 
 signatures! {
-    (cl00 = cl10, 0, 0, Scalar, Scalar, 1),
+    (cl00 = cl00, 0, 0, Scalar, Scalar, 1),
     (cl10 = cl10, 1, 0, Multivector, Multivector, 2),
     (cl01 = cl01, 0, 1, Multivector, Multivector, 2),
     (cl20 = cl20, 2, 0, Multivector, Spinor, 2),

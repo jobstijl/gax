@@ -2,8 +2,13 @@
 //! algebra's kinds at compile time): the scalars, the full multivector (added by the macro), and
 //! the states, numga's choice of representatives (`spinor_layout`), where they are fewer than
 //! the blades. The state kinds were read off numga's layout; the tests check that the port of the
-//! layout chooses the same. Cl(0,0) has no directions to declare: its row is the scalars of
-//! Cl(1,0).
+//! layout chooses the same. Cl(0,0) has no directions: its scalars are all of it.
+
+gax::algebra! {
+    algebra cl00 "Cl(0,0), the real numbers.";
+    basis;
+    kind Scalar = [1];
+}
 
 gax::algebra! {
     algebra cl10 "Cl(1,0).";
