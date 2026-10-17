@@ -179,5 +179,14 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] An algebra with an empty basis, Cl(0,0): `basis;` declares it, and the extensor-representations port uses it
 - [ ] Proven rounding bounds from gax-bend: parked (its kernels' term order and fusion differ from gax's; gax-gen would have to export its trees)
 
+## Phase 10: geometric calculus (ADR-047 to ADR-050)
+- [x] M0: design. ADR-047 (multivector derivative), ADR-048 (simplex integration), ADR-049 (complexes and meshes), ADR-050 (discrete exterior calculus); Hirani's PyDEC as an outside reference (`target/pydec-venv`, from GitHub: the `pydec` on PyPI is an unrelated package)
+- [ ] M1: `Reciprocal` frames generated for every kind with an invertible Gram matrix, an explaining compile error elsewhere; `nabla`, `divergence`, `curl`, `laplacian`; `jacobian`, `gradient`, `hessian` relaxed from `Real` to `Coef`; the ∇ laws on `Fp`, an STA plane wave; guide section
+- [ ] M2: `Simplex<P, N>` and the `Positions` trait (VGA, PGA, CGA models); Grundmann–Möller rules to degree 15, the `dyads` rule; `mean`, `directed`, `integral`; `Moments` rebuilt on it, bit for bit; the monomial and fundamental-theorem laws on `Fp`; rule errors in numerics.md
+- [ ] M3: `Complex<N>` and `Mesh<V, N>` in `gax_core::mesh`; construction errors, manifold and orientation queries, boundary, Euler characteristic, Betti numbers over `Fp`; `d∘d = 0`; `Moments::of_mesh(&Mesh)`; the 19 numga ports on `gax::mesh` with unchanged output; a fuzz target
+- [ ] M4: circumcentres, barycentric gradients; diagonal and Galerkin (Whitney) Hodge stars; de Rham and Whitney maps; Stokes on `Fp`, `R ∘ W = id`, both stars' cotangent Laplacian; PyDEC fixtures in 2D and 3D
+- [ ] M5: `δ`, `Δ`, the Dirac operator `d + δ` on all degrees; Galerkin stiffness pencils; `D² = Δ`, Hodge decomposition, harmonic dimensions as Betti numbers, sphere spectra; the mesh ports on the library operators
+- [ ] M6: `docs/calculus.md`; examples (heat flow on tetrahedra, Hodge decomposition on a torus, Maxwell through DEC against `∇`); benchmarks of assembly and solves; kernel costs; miri, MSRV, docs.rs
+
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.

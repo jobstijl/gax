@@ -1659,6 +1659,192 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * Batch products for multivector cells. Through `&cells * K::slot()` they become map cells,
     which `packed()` takes.
 
+## ADR-047: The multivector derivative, through reciprocal frames
+*Status: proposed (2026-10-17). Phase 10, M1.*
+
+* **The problem.** Geometric calculus differentiates with respect to a multivector:
+  `∂_X F = Σ_J e^J ∂_J F` over the blades `e_J` of `X`'s kind, with `e^J` the reciprocal blades
+  (`e^J ∗ e_K = δ^J_K`, `∗` the scalar product). For a vector `x` it is the vector derivative
+  `∇F = ∇·F + ∇∧F`, which holds the divergence and the curl and writes Maxwell's equations as
+  `∇F = J`. gax's derivatives (ADR-043) are forms, `Scalar <- (A,)`, never elements of `A`, as in
+  numga. Turning a form into an element takes the metric, so it must be explicit, and it is
+  impossible where the metric is degenerate.
+* **Reciprocal frames, generated.**
+  * gax-gen computes, for each kind, the Gram matrix of its blades under the scalar product and
+    inverts it exactly, in rationals. Off-diagonal metrics (CGA's `eo`, `ei`) and the metrics of
+    `algebra!` declarations are covered the same way.
+  * Where the matrix is invertible, the kind implements `Reciprocal`, whose `reciprocal(i)` is
+    the value `e^i`. Where it is singular, there is no impl, and `#[diagnostic::on_unimplemented]`
+    says why: the kind holds a null direction (PGA's `e0`), so it has no reciprocal frame, and
+    `gradient` gives the derivative as the form it is.
+  * Every kind of VGA and STA has a reciprocal frame, and so does every kind of CGA and CSTA
+    that holds `eo` and `e∞` together (one with only one of them has none). In PGA, no kind
+    with `e0` in a blade has one (`Plane`, `Line`, `Point`), and `Rotor` does; STAP likewise.
+* **The functions** (`gax_core::dual`, beside `jacobian`).
+  * `nabla(f, x)` returns `f(x)` and `∂_X f = Σ_J e^J ∂_J f`, with `e^J` on the left (Hestenes).
+    It is `jacobian` contracted with the frame. Its kind is that of `X * F`, which the products
+    already give. Called on a vector kind it is `∇`; on any other kind with a frame it is the
+    multivector derivative.
+  * `divergence(f, x)` and `curl(f, x)`: the same contraction with `⌋` and with `^`. They are the
+    two grade parts of `nabla` for vector `x`, and that is a law.
+  * `laplacian(f, x)`: `∇·∇f`, from the nested Jacobian (jets of jets, as `hessian`).
+  * The functions are generic over the coefficient, so `f` runs on jets of `f32`, `f64` or the
+    prime field.
+* **Bounds relaxed.** `variables`, `jacobian`, `gradient` and `hessian` are bounded by
+  `Real` today, though they never take a root or a transcendental. They are relaxed to `Coef`,
+  so the laws below are proved on `Fp` (law L) and not only sampled in `f64`.
+* **Laws.** [sample] on `Fp`, for polynomial fields, and [prop] in `f64` for transcendental ones:
+  * `∇x = n` and `∇·x = n`, `∇∧x = 0` (the identity field), `∇(x²) = 2x`;
+  * `∂_X (X ∗ A) = P(A)`, the projection of `A` onto `X`'s kind (Hestenes and Sobczyk, ch. 2);
+  * `∇∧(∇∧F) = 0` and `∇·(∇·F) = 0` for every grade;
+  * `nabla == divergence + curl` for vector `x`;
+  * covariance under a unit versor `R`: the derivative of `x ↦ R F(~R x R) ~R` at `R x ~R` is
+    `R (∂F)(x) ~R`;
+  * STA: the field of a plane wave satisfies `∇F = 0`, and a point charge's field satisfies it
+    away from the charge.
+* **Not covered.** PGA and STAP (degenerate). The Euclidean `∇` inside CGA, where a position is a
+  conformal point, not a vector: differentiate with respect to VGA coordinates there. numga has
+  no `∇`, so the checks are the laws and central differences (as in ADR-043).
+
+## ADR-048: Integration over simplices
+*Status: proposed (2026-10-17). Phase 10, M2.*
+
+* **The problem.** Geometric calculus integrates over oriented chains, with a directed measure
+  `dX`, a blade, and its fundamental theorem `∫ dX ∇F = ∮ dS F` contains Stokes, Gauss and
+  Green. A mesh is a chain of simplices. gax integrates over simplices only inside `moments`:
+  one rule, exact for products of two linear functions.
+* **Simplices.** `Simplex<P, N>` holds `N` vertices of a position kind `P` (`N = k + 1` for a
+  `k`-simplex; stable Rust has no `[P; K + 1]`). What a position is depends on the model of space,
+  so a trait, `Positions` (in `gax-core`, implemented in `gax` for each standard model, the way
+  `Motions` is), gives each model's operations:
+  * VGA: positions are vectors, and the directed measure is `(v₁−v₀)∧…∧(v_k−v₀)/k!`.
+  * PGA: positions are points, and the directed measure is the join of the normalized points
+    over `k!`: an edge's line, whose norm is its length; a triangle's plane, whose norm is twice
+    its area.
+  * CGA: positions are conformal points, and the measure is `P₀∧…∧P_k∧e∞` over `k!`, whose
+    norm is the `k`-volume (a law, with the model's sign convention fixed by the test).
+  * An `algebra!` declaration implements `Positions` itself, or uses the vector model's
+    helper.
+* **Rules.** Grundmann–Möller rules, of any odd degree `2s + 1` in any dimension.
+  * Their nodes are rational barycentric points and their weights rationals, so a rule runs on
+    any `Coef` and is exact on `Fp`. Gauss–Jacobi (Stroud) rules have positive weights but
+    irrational nodes, which would put every law about integrals out of reach of law L.
+  * The weights alternate in sign from `s = 1`. Rounding grows with the degree; the rules are
+    offered up to degree 15, with a measured error bound in numerics.md.
+  * The rule in `moments` stays, as the named rule `dyads`: exact for products of two linear
+    forms of homogeneous points, with `k + 2` evaluations (the vertices and their sum, which is
+    a point only in a homogeneous model, so the rule is offered where positions are homogeneous,
+    PGA and CGA). `Moments` is rebuilt on `Simplex` with that rule, and
+    its results are bit for bit what they are now.
+* **The integrals.** For an integrand `f: Fn(P) -> F`, with `F` any value or map that adds and
+  scales:
+  * `mean(rule, f)`, the mean of `f` over the simplex;
+  * `directed(rule, f)`, `∫ dX F`, which on a flat simplex is the measure blade times the mean;
+  * `integral(rule, f)`, `∫ F dV`, which takes the measure's norm and so needs `Real`.
+* **Laws.**
+  * Every rule is exact on the barycentric monomials up to its degree: `∫ λ^α dV` is
+    `k! α! / (|α| + k)!` times the volume, proved on `Fp`.
+  * The fundamental theorem on one simplex: `∫_σ dX ∇F = Σᵢ ∫_{∂ᵢσ} dS F`, with the faces
+    oriented by the boundary map of ADR-049, exact for polynomial `F` and a rule of its degree,
+    on `Fp`, in VGA2D, VGA3D and STA.
+  * Covariance: integrating over a moved simplex is moving the integral (unit motors).
+
+## ADR-049: Simplicial complexes and meshes
+*Status: proposed (2026-10-17). Phase 10, M3.*
+
+* **The problem.** The numga ports carry an oriented triangle mesh (`examples/numga/src/mesh.rs`,
+  numga's `mesh.py`). It derives edges from faces, and its incidence operators `d0` and `d1`
+  are field maps: the discrete exterior derivative. 19 ports use it, 6 its `d0` and `d1`, so its
+  API has been tried. It handles triangles only, `f64` only, and lives outside the library.
+  `Moments` takes raw vertex and face slices.
+* **Two types** (`gax_core::mesh`, feature `std`).
+  * `Complex<N>`: topology alone, built from top simplices `[usize; N]`.
+    * Every `k`-face is derived. Faces below the top are stored with their vertices sorted,
+      in lexicographic order. That is numga's edge order, and it is canonical.
+    * Top simplices keep the order they were given, which is their orientation.
+    * `d(k)`, from `k`-cochains to `(k+1)`-cochains, is a `SparseMap` of `±1` cells of any
+      scalar kind. `d∘d = 0` holds by construction, and it is a law.
+    * The cells of a row keep numga's order, so the 19 ports keep their bits: an edge lists its
+      lower end, then its higher; a simplex of two or more dimensions lists the face opposite
+      each of its vertices in turn.
+  * `Mesh<V, N>`: a complex with its vertices, a `Field<V>` of any kind (VGA vectors, PGA
+    points), generic over the coefficient type. It carries what needs only vertex arithmetic:
+    the means over faces, edge vectors and face centres. Metric quantities are ADR-050's.
+* **Checks.**
+  * Construction returns an error, not a panic, for a vertex index out of range, a simplex that
+    repeats a vertex, and a top simplex given twice.
+  * Queries, since non-manifold complexes are valid inputs: `is_manifold` (each `(N−2)`-face in
+    at most two top simplices), `is_oriented` (neighbours induce opposite orientations on the
+    face they share), `boundary()` (the complex of the faces with one coface), the Euler
+    characteristic, and the Betti numbers.
+  * The Betti numbers are `dim ker d − dim im d`, from exact ranks of `d` on `Fp`. Over ℤ/p
+    they equal those over ℚ unless the complex has torsion of order `p`, impossible for
+    `p = 2⁶¹ − 1` at any mesh size this library handles.
+* **Moments.** `Moments::of_mesh` takes a `&Mesh<Point, 3>` (and `of_polygon` a
+  `&Mesh<Point, 2>`), with the slice forms kept beside them.
+* **What stays in the examples.** Loop subdivision, the disks, the Delaunay triangulation: mesh
+  making and processing, not calculus. gax has no mesh generation, and the tests use
+  structured meshes (a cube cut into six tetrahedra, subdivided icosahedra, a torus grid).
+* **Laws and checks.**
+  * `d(k+1) ∘ d(k) = 0` [sample] on random complexes, `N` up to 5.
+  * The Betti numbers of a disk (1,0,0), a sphere (1,0,1), a torus (1,2,1), a cube of
+    tetrahedra (1,0,0,0); a Möbius strip is not oriented.
+  * The 19 ports move to `gax::mesh` with their outputs unchanged, bit for bit.
+  * A fuzz target builds complexes from arbitrary input: an error, or a complex with
+    `d∘d = 0`, never a panic.
+
+## ADR-050: Discrete exterior calculus
+*Status: proposed (2026-10-17). Phase 10, M4 and M5.*
+
+* **The problem.** The metric half of calculus on meshes: Hodge stars, the codifferential, the
+  Laplace–de Rham operator and the Dirac operator. The numga ports carry a triangle-only
+  version (cotangent Laplacian, hat gradients, Whitney reconstruction, the spin Dirac
+  operator of `surfaces_dirac_waves`) assembled by hand in each port.
+* **Measures, through `Positions` (ADR-048).**
+  * Primal: the norm of a simplex's directed measure.
+  * Circumcentres: in VGA, `c = v₀ + ½ Σᵢ |aᵢ|² aⁱ` with `aᵢ = vᵢ − v₀` and `aⁱ` their
+    reciprocal frame in the simplex's own span; in PGA, the meet of the bisector planes with the
+    simplex's own flat. Law: the centre is equidistant from every vertex [sample].
+  * Barycentric gradients: the covectors `dλᵢ`, reciprocal edge vectors in VGA and in PGA the
+    plane through the face opposite vertex `i`, scaled to pair to 1 with it. Their inner
+    product is the metric's: in PGA the planes' dot product, which is their normals'.
+  * So the geometry works in PGA as well as in VGA, though `∇` does not (ADR-047).
+* **Two Hodge stars.**
+  * Diagonal (circumcentric): `⋆_k` is the dual cell's signed volume over the primal cell's
+    (Hirani 2003). It needs well-centred meshes to be positive, Delaunay ones on 0-forms;
+    `is_well_centered` and `is_delaunay` report it, and the star stays defined (signed) where
+    they fail.
+  * Galerkin (Whitney): the mass matrices `M_k = ∫ Wᵢ · Wⱼ dV` of the Whitney forms
+    `W = k! Σ (−1)ⁱ λᵢ dλ₀∧…∧dλ̂ᵢ∧…∧dλ_k`. Their products are quadratic in the barycentric
+    coordinates with constant covector parts, so the entries come exactly from the closed form
+    `∫ λᵢλⱼ dV = (1 + δᵢⱼ) V / ((k+1)(k+2))` (ADR-048's monomial law), no quadrature.
+    Symmetric positive definite on any mesh.
+* **Operators.**
+  * With the diagonal star: `δ_k = ⋆_{k−1}⁻¹ d_{k−1}ᵀ ⋆_k`, `Δ_k = d δ + δ d` (positive
+    semidefinite), and the Dirac operator `D = d + δ` on the cochains of every degree at once,
+    one field over all simplices. All are `SparseMap`s. Eigenproblems take the symmetric pencil
+    `(⋆Δ, ⋆)` to `eigh`.
+  * With the Galerkin star: the stiffness `d_kᵀ M_{k+1} d_k` against the mass `M_k`, a
+    symmetric pencil for `eigh` and `solve`. The mixed Hodge Laplacian of finite element exterior
+    calculus needs `M⁻¹` (a saddle-point system) and is left out until an example needs it.
+  * The de Rham map `R_k` integrates a `k`-vector field over each `k`-simplex (ADR-048), and the
+    Whitney map `W_k` interpolates a cochain back to a field on each top simplex.
+* **Laws and checks.**
+  * Stokes: `R_{k+1}(∇∧F) = d_k R_k(F)` for polynomial `F`, exact on `Fp`. It joins ADR-047, 048
+    and 049.
+  * `R ∘ W = id` on cochains [sample].
+  * On 0-forms both stars give the same stiffness `d₀ᵀ ⋆₁ d₀ = d₀ᵀ M₁ d₀`, the cotangent
+    Laplacian [prop]. The cotangents take roots, so this is in `f64`, at `1e-12`.
+  * `D² = Δ`; the Hodge decomposition is orthogonal; the dimensions of the harmonic spaces are
+    the Betti numbers of ADR-049.
+  * On subdivided spheres the spectrum converges to `ℓ(ℓ+1)` at the expected order.
+  * Outside references: numga's numbers through the ported examples (1e-10, as now), and
+    Hirani's PyDEC for `d`, both stars and `Δ` on random 2D and 3D meshes, as fixtures
+    (`docs/research/experiments/pydec_fixtures.py`, its own venv).
+* **Scope.** Euclidean models only: VGA2D, VGA3D, PGA2D, PGA3D, CGA2D, CGA3D. Meshes in
+  spacetime, whose stars are indefinite, are left out. The spin Dirac operator stays an example,
+  built from these pieces.
+
 ## Hypotheses
 
 | # | hypothesis | verdict | evidence / decision |
