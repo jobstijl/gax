@@ -291,6 +291,10 @@ mod tests {
     /// field; and its weights sum to one. Every monomial is checked: up to tetrahedra and
     /// 4-simplices for the rules to degree 9, on edges and triangles for the higher ones.
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "arithmetic only, no unsafe code: millions of operations, hours under miri"
+    )]
     fn rules_are_exact_on_monomials() {
         let rules = (0..=7)
             .map(|s| Rule::GrundmannMoller { s })
@@ -314,6 +318,10 @@ mod tests {
     /// One degree past it, a rule is wrong on some monomial: the degree claimed is the true one.
     /// (On an edge the vertices and the centroid are Simpson's rule, exact on cubics.)
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "arithmetic only, no unsafe code: millions of operations, hours under miri"
+    )]
     fn rules_are_not_exact_beyond_their_degree() {
         let rules = (0..=7)
             .map(|s| Rule::GrundmannMoller { s })
@@ -349,6 +357,10 @@ mod tests {
     /// relative on every monomial of their degree, up to degree 15 and 4-simplices (numerics.md
     /// has the table).
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "arithmetic only, no unsafe code: millions of operations, hours under miri"
+    )]
     fn rounding_stays_within_the_documented_bound() {
         fn fact(n: usize) -> f64 {
             (1..=n).map(|j| j as f64).product()
