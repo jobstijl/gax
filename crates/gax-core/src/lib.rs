@@ -37,6 +37,7 @@
 #[cfg(feature = "batch")]
 pub mod batch;
 pub mod bind;
+pub mod calculus;
 pub mod cast;
 pub mod coef;
 pub mod complex;
@@ -64,6 +65,7 @@ pub mod trace;
 pub mod unit;
 
 pub use bind::Of;
+pub use calculus::Reciprocal;
 pub use cast::{Cast, GradePart, SubKind};
 pub use coef::{Coef, Elem, Real};
 pub use complex::Complex;

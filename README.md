@@ -27,6 +27,8 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 * [Fields](docs/fields.md): one object over many sites (a mesh, a string of beads), sparse field
   maps that couple the sites, their solves and derivatives (feature `std`); with a fixed site
   count, a field is a kind of its own (`Sites<K, N>`) that fills slots.
+* [Geometric calculus](docs/calculus.md): the derivative with respect to a multivector, `∇` with
+  its divergence, curl and Laplacian, wherever the metric gives a reciprocal frame.
 * [Batch kernels](docs/batch.md): SIMD over slices, with the CPU's best instruction set chosen at
   run time (feature `batch`).
 * [Laws](docs/laws.md): the algebraic laws the library satisfies, each proved by a test on

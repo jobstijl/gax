@@ -1660,7 +1660,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     which `packed()` takes.
 
 ## ADR-047: The multivector derivative, through reciprocal frames
-*Status: proposed (2026-10-17). Phase 10, M1.*
+*Status: accepted, implemented (`gax_core::calculus`, `docs/calculus.md`). Phase 10, M1.*
 
 * **The problem.** Geometric calculus differentiates with respect to a multivector:
   `∂_X F = Σ_J e^J ∂_J F` over the blades `e_J` of `X`'s kind, with `e^J` the reciprocal blades
@@ -1673,14 +1673,17 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * gax-gen computes, for each kind, the Gram matrix of its blades under the scalar product and
     inverts it exactly, in rationals. Off-diagonal metrics (CGA's `eo`, `ei`) and the metrics of
     `algebra!` declarations are covered the same way.
-  * Where the matrix is invertible, the kind implements `Reciprocal`, whose `reciprocal(i)` is
-    the value `e^i`. Where it is singular, there is no impl, and `#[diagnostic::on_unimplemented]`
+  * Where the matrix is invertible, the kind implements `Reciprocal`: a table `FRAME` of
+    `(coefficient, numerator, denominator)` terms per reciprocal blade, which `reciprocal(i)`
+    turns into the value `e^i` with `Coef::from_ratio` (exact on `Fp`). The impls carry
+    `#[diagnostic::do_not_recommend]`, so the error does not list them: the list would depend
+    on which algebras are enabled. Where it is singular, there is no impl, and `#[diagnostic::on_unimplemented]`
     says why: the kind holds a null direction (PGA's `e0`), so it has no reciprocal frame, and
     `gradient` gives the derivative as the form it is.
   * Every kind of VGA and STA has a reciprocal frame, and so does every kind of CGA and CSTA
     that holds `eo` and `e∞` together (one with only one of them has none). In PGA, no kind
     with `e0` in a blade has one (`Plane`, `Line`, `Point`), and `Rotor` does; STAP likewise.
-* **The functions** (`gax_core::dual`, beside `jacobian`).
+* **The functions** (`gax_core::calculus`; they read the derivative off the jets, as `jacobian` does).
   * `nabla(f, x)` returns `f(x)` and `∂_X f = Σ_J e^J ∂_J f`, with `e^J` on the left (Hestenes).
     It is `jacobian` contracted with the frame. Its kind is that of `X * F`, which the products
     already give. Called on a vector kind it is `∇`; on any other kind with a frame it is the
@@ -1695,13 +1698,15 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   so the laws below are proved on `Fp` (law L) and not only sampled in `f64`.
 * **Laws.** [sample] on `Fp`, for polynomial fields, and [prop] in `f64` for transcendental ones:
   * `∇x = n` and `∇·x = n`, `∇∧x = 0` (the identity field), `∇(x²) = 2x`;
-  * `∂_X (X ∗ A) = P(A)`, the projection of `A` onto `X`'s kind (Hestenes and Sobczyk, ch. 2);
-  * `∇∧(∇∧F) = 0` and `∇·(∇·F) = 0` for every grade;
+  * `∂_X (X ∗ A) = A` for `A` of `X`'s kind (Hestenes and Sobczyk, ch. 2);
+  * `∇∧(∇∧f) = 0` for a scalar field, `∇·(∇·B) = 0` for a bivector field;
   * `nabla == divergence + curl` for vector `x`;
   * covariance under a unit versor `R`: the derivative of `x ↦ R F(~R x R) ~R` at `R x ~R` is
     `R (∂F)(x) ~R`;
-  * STA: the field of a plane wave satisfies `∇F = 0`, and a point charge's field satisfies it
-    away from the charge.
+  * STA: a plane wave `(k ∧ a) φ(k · x)` satisfies `∇F = 0`; VGA3D: a point charge's field is
+    free of divergence and curl away from the charge [prop];
+  * the frames of an `algebra!` declaration with an off-diagonal metric;
+  * in laws.md, section O.
 * **Not covered.** PGA and STAP (degenerate). The Euclidean `∇` inside CGA, where a position is a
   conformal point, not a vector: differentiate with respect to VGA coordinates there. numga has
   no `∇`, so the checks are the laws and central differences (as in ADR-043).

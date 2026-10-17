@@ -310,6 +310,7 @@ pub const RESERVED: &[&str] = &[
     "Prepared",
     "TraceFirst",
     "Outermorphism",
+    "Reciprocal",
     "SplitLast",
     "Gp",
     "Wedge",
@@ -2434,8 +2435,88 @@ fn render_shared(shared: &[(usize, usize, bool)]) -> String {
 
 /// `Cast` for every pair of kinds sharing a blade, `SubKind` where one's blades all lie in
 /// the other's, and `GradePart` for every grade of every kind (`gax_core::cast`).
+/// The reciprocal frame of a kind (ADR-047): row `i` holds `e^i` in the kind's layout, the
+/// `i`-th row of the inverse of the Gram matrix `G_ij = e_i ∗ e_j` of its oriented blades.
+/// `None` when the Gram matrix is singular (a null direction, such as PGA's `e0`).
+pub fn reciprocal_frame(spec: &AlgebraSpec, kind: &KindSpec) -> Option<Vec<Vec<Rational>>> {
+    let blades = &kind.layout.blades;
+    let n = blades.len();
+    let scalar = |a: u32, b: u32| -> i64 {
+        spec.algebra
+            .blade_product(a, b)
+            .iter()
+            .filter(|(m, _)| *m == 0)
+            .map(|(_, v)| *v)
+            .sum()
+    };
+    // [G | I], reduced to [I | G⁻¹] by Gauss–Jordan elimination in exact rationals.
+    let mut rows: Vec<Vec<Rational>> = blades
+        .iter()
+        .enumerate()
+        .map(|(i, &(mi, si))| {
+            let gram = blades
+                .iter()
+                .map(|&(mj, sj)| Rational::int(i128::from(si * sj * scalar(mi, mj))));
+            let unit = (0..n).map(|j| {
+                if i == j {
+                    Rational::ONE
+                } else {
+                    Rational::ZERO
+                }
+            });
+            gram.chain(unit).collect()
+        })
+        .collect();
+    for col in 0..n {
+        let pivot = (col..n).find(|&r| !rows[r][col].is_zero())?;
+        rows.swap(col, pivot);
+        let scale = rows[col][col].recip();
+        for x in &mut rows[col] {
+            *x = *x * scale;
+        }
+        let pivot_row = rows[col].clone();
+        for (r, row) in rows.iter_mut().enumerate() {
+            let factor = row[col];
+            if r != col && !factor.is_zero() {
+                for (x, &p) in row.iter_mut().zip(&pivot_row) {
+                    *x = *x - p * factor;
+                }
+            }
+        }
+    }
+    Some(rows.into_iter().map(|row| row[n..].to_vec()).collect())
+}
+
+/// `impl Reciprocal` for a kind with a reciprocal frame: its rows as sparse
+/// `(index, numerator, denominator)` terms.
+fn reciprocal_impl(spec: &AlgebraSpec, kind: &KindSpec, out: &mut String) {
+    let Some(frame) = reciprocal_frame(spec, kind) else {
+        return;
+    };
+    let small = |x: i128| i64::try_from(x).expect("a reciprocal frame entry fits in i64");
+    let rows: Vec<String> = frame
+        .iter()
+        .map(|row| {
+            let terms: Vec<String> = row
+                .iter()
+                .enumerate()
+                .filter(|(_, x)| !x.is_zero())
+                .map(|(k, x)| format!("({k}, {}, {})", small(x.num()), small(x.den())))
+                .collect();
+            format!("&[{}]", terms.join(", "))
+        })
+        .collect();
+    let _ = writeln!(
+        out,
+        "#[diagnostic::do_not_recommend]\nimpl gx::Reciprocal for {} {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n}}\n",
+        kind.name,
+        rows.join(", ")
+    );
+}
+
 fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
     for a in &spec.kinds {
+        reciprocal_impl(spec, a, out);
         for b in &spec.kinds {
             let shared = shared_blades(a, b, |_| true);
             if shared.is_empty() {
@@ -2512,5 +2593,48 @@ fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, out: &mut S
             out,
             "impl<T: gx::Real> gx::Sqrt for {name}<(), T> {{\n    type Output = gx::Unit<Self>;\n    #[inline(always)]\n    fn sqrt(self) -> Self::Output {{\n        Self::sqrt(self)\n    }}\n}}\n"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reciprocal_frame;
+    use crate::poly::Rational;
+    use crate::spec::AlgebraSpec;
+
+    fn frames(src: &str) -> Vec<(String, Option<Vec<Vec<Rational>>>)> {
+        let spec = AlgebraSpec::parse(src).expect("a valid spec");
+        spec.kinds
+            .iter()
+            .map(|k| (k.name.clone(), reciprocal_frame(&spec, k)))
+            .collect()
+    }
+
+    /// In PGA every kind with `e0` in a blade has a singular Gram matrix; the rotors do not.
+    #[test]
+    fn pga_frames_exist_only_without_the_null_direction() {
+        for (name, frame) in frames(include_str!("../../gax/specs/pga3d.gax")) {
+            assert_eq!(
+                frame.is_some(),
+                name == "Scalar" || name == "Rotor",
+                "{name}"
+            );
+        }
+    }
+
+    /// CGA's null pair `eo · e∞ = −1`: the reciprocal of `eo` is `−e∞`, and of `e∞` is `−eo`.
+    #[test]
+    fn cga_null_pair_is_its_own_reciprocal_negated() {
+        let all = frames(include_str!("../../gax/specs/cga3d.gax"));
+        let (_, vector) = all
+            .iter()
+            .find(|(n, _)| n == "Vector")
+            .expect("a vector kind");
+        let vector = vector.as_ref().expect("a frame");
+        let (o, i) = (3, 4); // [e1, e2, e3, eo, ei]
+        let minus = -Rational::ONE;
+        assert_eq!(vector[o][i], minus);
+        assert_eq!(vector[i][o], minus);
+        assert!(vector[o][o].is_zero() && vector[i][i].is_zero());
     }
 }

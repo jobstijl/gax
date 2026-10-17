@@ -106,6 +106,11 @@ algebras! {
 #[doc = include_str!("../guide.md")]
 pub struct GuideDoctests;
 
+/// The code blocks of `docs/calculus.md`, compiled and run as doctests.
+#[cfg(all(doctest, feature = "vga3d", feature = "sta"))]
+#[doc = include_str!("../calculus.md")]
+pub struct CalculusDoctests;
+
 /// The code blocks of `docs/fields.md`, compiled and run as doctests.
 #[cfg(all(doctest, feature = "std", feature = "vga3d"))]
 #[doc = include_str!("../fields.md")]

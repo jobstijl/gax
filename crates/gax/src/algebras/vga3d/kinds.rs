@@ -7270,6 +7270,11 @@ impl gx::KindEq<Multivector> for Multivector {
     type Out = gx::True;
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Scalar {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
+}
+
 impl gx::Cast<Scalar> for Scalar {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
@@ -7297,6 +7302,11 @@ impl gx::SubKind<Multivector> for Scalar {}
 impl gx::GradePart<0> for Scalar {
     type Out = Scalar;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Vector {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)]];
 }
 
 impl gx::Cast<Vector> for Vector {
@@ -7328,6 +7338,11 @@ impl gx::GradePart<1> for Vector {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Bivector {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)], &[(1, -1, 1)], &[(2, -1, 1)]];
+}
+
 impl gx::Cast<Bivector> for Bivector {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
@@ -7351,6 +7366,11 @@ impl gx::GradePart<2> for Bivector {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Pseudoscalar {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)]];
+}
+
 impl gx::Cast<Pseudoscalar> for Pseudoscalar {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
@@ -7372,6 +7392,11 @@ impl gx::SubKind<Multivector> for Pseudoscalar {}
 impl gx::GradePart<3> for Pseudoscalar {
     type Out = Pseudoscalar;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Paravector {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(3, 1, 1)]];
 }
 
 impl gx::Cast<Scalar> for Paravector {
@@ -7412,6 +7437,11 @@ impl gx::GradePart<1> for Paravector {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false)];
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Rotor {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, -1, 1)], &[(2, -1, 1)], &[(3, -1, 1)]];
+}
+
 impl gx::Cast<Scalar> for Rotor {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
@@ -7446,6 +7476,11 @@ impl gx::GradePart<2> for Rotor {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false)];
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Odd {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(3, -1, 1)]];
+}
+
 impl gx::Cast<Vector> for Odd {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
@@ -7478,6 +7513,11 @@ impl gx::GradePart<1> for Odd {
 impl gx::GradePart<3> for Odd {
     type Out = Pseudoscalar;
     const SHARED: &'static [(usize, usize, bool)] = &[(3, 0, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Multivector {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(3, 1, 1)], &[(4, -1, 1)], &[(5, -1, 1)], &[(6, -1, 1)], &[(7, -1, 1)]];
 }
 
 impl gx::Cast<Scalar> for Multivector {

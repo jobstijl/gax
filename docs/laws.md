@@ -277,6 +277,27 @@ characteristic polynomial of the wrong degree, or a null direction handled wrong
 `x x⁻¹ − 1` of order one. The 7D to 9D algebras of `gax-highdim-tests` check the same on their
 even kinds (`general_inverse`).
 
+### O. The multivector derivative (`tests/calculus.rs`)
+
+For VGA2D, VGA3D, STA and CGA3D, on cubic fields with random integer coefficients at random points
+of the prime field (law L), exactly (ADR-047):
+
+* [sample] `∇x = n`: the divergence of the identity field is the dimension, its curl zero.
+* [sample] `∇(x ∗ x) = 2x`, and `∂_X (X ∗ A) = A` for vector and bivector `X`.
+* [sample] `∇∧(∇∧f) = 0` for a scalar field and `∇·(∇·B) = 0` for a bivector field.
+* [sample] For a vector field, the grade-0 and grade-2 parts of `∇F` are `∇·F` and `∇∧F`.
+* [sample] `∇²f = ∇·(∇f)` (one evaluation on jets of jets against two nested ones).
+* [sample] Covariance under the rational unit rotor `(3 + 4 e12)/5` in VGA3D: the derivative of
+  `y ↦ R F(~R y R) ~R` at `R x ~R` is `R (∇F)(x) ~R`.
+* [sample] STA: a plane wave `(k ∧ a) φ(k · x)`, `k` null and `a ⟂ k`, satisfies `∇F = 0`.
+* [sample] An `algebra!` declaration with an off-diagonal metric: `e^i ∗ e_k = δ_ik` for every
+  blade of its kinds.
+* [prop] VGA3D: the point charge's field `x / |x|³` is free of divergence and curl away from the
+  charge, within `10⁻¹²`.
+* [gen] gax-gen's own tests: in PGA3D only `Scalar` and `Rotor` have a frame, and in CGA3D the
+  reciprocal of `eo` is `−e∞`. A kind without a frame gives the compile error of
+  `tests/compile_fail/nabla_degenerate.rs`.
+
 ## 4. Licensed rewrites
 
 Each law licenses a transformation:

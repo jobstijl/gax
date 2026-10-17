@@ -415,7 +415,7 @@ pub fn jacobian_array<T: Real, const N: usize, const M: usize>(
 #[inline]
 pub fn variables<X>(x: X) -> Retype<X, (), Jet<X::Coef, X::Kind>>
 where
-    X: Extensor<Slots = (), Coef: Real>,
+    X: Extensor<Slots = ()>,
 {
     let c = x.coeffs().as_ref();
     Extensor::from_coeffs(<X::Kind as Kind>::arr_from_fn(|i| Jet::variable(c[i], i)))
@@ -466,7 +466,7 @@ pub fn jacobian<X, Y>(
     Retype<Y, Cat<Y::Slots, (X::Kind,)>, X::Coef>,
 )
 where
-    X: Extensor<Slots = (), Coef: Real>,
+    X: Extensor<Slots = ()>,
     Y: Extensor<Coef = J1<X>>,
 {
     let y = f(variables(x));
@@ -523,7 +523,7 @@ where
 #[inline]
 pub fn gradient<X, Y>(f: impl FnOnce(At<X, J1<X>>) -> Y, x: X) -> (X::Coef, ScalarOf<X, (X::Kind,)>)
 where
-    X: Extensor<Slots = (), Coef: Real>,
+    X: Extensor<Slots = ()>,
     Y: IntoScalar<J1<X>>,
 {
     let y = f(variables(x)).into_scalar();
@@ -567,7 +567,7 @@ pub fn hessian<X, Y>(
     ScalarOf<X, (X::Kind, X::Kind)>,
 )
 where
-    X: Extensor<Slots = (), Coef: Real>,
+    X: Extensor<Slots = ()>,
     Y: IntoScalar<J2<X>>,
 {
     let c = x.coeffs().as_ref();

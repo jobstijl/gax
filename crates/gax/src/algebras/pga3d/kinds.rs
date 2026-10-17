@@ -10453,6 +10453,11 @@ impl gx::KindEq<Multivector> for Multivector {
     type Out = gx::True;
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Scalar {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
+}
+
 impl gx::Cast<Scalar> for Scalar {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
@@ -10619,6 +10624,11 @@ impl gx::SubKind<Multivector> for Pseudoscalar {}
 impl gx::GradePart<4> for Pseudoscalar {
     type Out = Pseudoscalar;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Rotor {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, -1, 1)], &[(2, -1, 1)], &[(3, -1, 1)]];
 }
 
 impl gx::Cast<Scalar> for Rotor {

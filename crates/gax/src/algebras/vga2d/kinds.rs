@@ -4410,6 +4410,11 @@ impl gx::KindEq<Multivector> for Multivector {
     type Out = gx::True;
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Scalar {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
+}
+
 impl gx::Cast<Scalar> for Scalar {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
@@ -4433,6 +4438,11 @@ impl gx::GradePart<0> for Scalar {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Vector {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)]];
+}
+
 impl gx::Cast<Vector> for Vector {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }
@@ -4448,6 +4458,11 @@ impl gx::SubKind<Multivector> for Vector {}
 impl gx::GradePart<1> for Vector {
     type Out = Vector;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Pseudoscalar {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)]];
 }
 
 impl gx::Cast<Pseudoscalar> for Pseudoscalar {
@@ -4471,6 +4486,11 @@ impl gx::SubKind<Multivector> for Pseudoscalar {}
 impl gx::GradePart<2> for Pseudoscalar {
     type Out = Pseudoscalar;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Rotor {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, -1, 1)]];
 }
 
 impl gx::Cast<Scalar> for Rotor {
@@ -4501,6 +4521,11 @@ impl gx::GradePart<0> for Rotor {
 impl gx::GradePart<2> for Rotor {
     type Out = Pseudoscalar;
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Multivector {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(3, -1, 1)]];
 }
 
 impl gx::Cast<Scalar> for Multivector {

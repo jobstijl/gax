@@ -10630,6 +10630,11 @@ impl gx::KindEq<Multivector> for Multivector {
     type Out = gx::True;
 }
 
+#[diagnostic::do_not_recommend]
+impl gx::Reciprocal for Scalar {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
+}
+
 impl gx::Cast<Scalar> for Scalar {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }

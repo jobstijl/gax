@@ -853,6 +853,12 @@ at once; over `gax::fp::Fp` the derivatives of polynomial kernels are exact. The
 `1 + N` times the arithmetic for `N` directions, and `(1 + N)²` for the Hessian (49 numbers per
 coefficient for a twist).
 
+**Derivatives as elements.** The gradient is a form because turning it into an element of `A`
+takes the metric. Where the metric allows it, `gax::calculus` does that: `nabla` is the
+derivative with respect to a multivector, `∂_X F = Σ e^J ∂_J F` (for a vector the `∇` of geometric
+calculus), with `divergence`, `curl` and `laplacian` beside it. A kind holding PGA's null `e0`
+has no such derivative. See [calculus.md](calculus.md).
+
 ## 16. Other math libraries
 
 Engines and physics libraries speak quaternions and matrices. gax converts to and from plain
