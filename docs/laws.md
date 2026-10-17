@@ -353,6 +353,14 @@ On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
 * [sample] Stokes for the de Rham map, `R(∇∧F) = d R(F)`, exactly on `ℤ/p`, for cubic fields: the
   gradient theorem (scalars), Green's and Stokes's (vectors), Gauss's (bivectors in 3D).
 * [prop] The Whitney map inverts the de Rham map on edges, `R ∘ W = id`, and `W₁ d₀ = ∇ W₀`.
+* [prop] `δ` is the adjoint of `d` in the stars' inner products, `⟨d a, b⟩_⋆ = ⟨a, δ b⟩_⋆`, on a
+  sphere (so the Hodge decomposition is orthogonal); `D² = Δ` degree by degree.
+* [prop] The harmonic cochains, the null space of `Δ_k` found by `eigh` on `(⋆Δ, ⋆)`, have the
+  Betti numbers' dimensions on a sphere (1, 0, 1) and a torus (1, 2, 1), both well-centred.
+* [prop] On subdivided icosahedra the first 16 eigenvalues of the Laplacian on vertices converge to
+  the unit sphere's `ℓ(ℓ+1)` at second order, the error falling more than threefold per
+  subdivision, for both stars (16th eigenvalue off by 2.7, 0.87, 0.23 with the diagonal star and
+  4.2, 1.0, 0.25 with the Galerkin one, at 1, 2 and 3 subdivisions).
 * [prop] The numga ports' hand-built metric: their edge ratios are `⋆₁`, their vertex areas the
   row sums of `M₀`, their reconstruction `W₁` at the centroids, within `10⁻¹²`
   (`examples/numga/src/mesh.rs`, `gax_dec_gives_the_metric`).

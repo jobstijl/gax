@@ -1838,8 +1838,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     octahedron, a cube of six tetrahedra, the boundary of a 4-simplex, and two pieces.
 
 ## ADR-050: Discrete exterior calculus
-*Status: accepted; the metric, the stars and the de Rham and Whitney maps implemented
-(`gax_core::dec`, Phase 10, M4); the operators are M5's.*
+*Status: accepted, implemented (`gax_core::dec`, `docs/calculus.md`). Phase 10, M4 and M5.*
 
 * **The problem.** The metric half of calculus on meshes: Hodge stars, the codifferential, the
   Laplace–de Rham operator and the Dirac operator. The numga ports carried a triangle-only
@@ -1886,7 +1885,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     simplex, the gradients the reciprocal frame of its edges in the model
     (`∇λᵢ = Σⱼ (G⁻¹)ᵢⱼ (vⱼ − v₀)`, vectors in VGA, directions in PGA). Higher degrees need wedges
     of gradients typed by degree, and wait for a use.
-* **Operators** (M5, not yet implemented).
+* **Operators** (M5).
   * With the diagonal star: `δ_k = ⋆_{k−1}⁻¹ d_{k−1}ᵀ ⋆_k`, `Δ_k = d δ + δ d` (positive
     semidefinite), and the Dirac operator `D = d + δ` on the cochains of every degree at once,
     one field over all simplices. All are `SparseMap`s. Eigenproblems take the symmetric pencil
@@ -1894,6 +1893,11 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * With the Galerkin star: the stiffness `d_kᵀ M_{k+1} d_k` against the mass `M_k`, a
     symmetric pencil for `eigh` and `solve`. The mixed Hodge Laplacian of finite element exterior
     calculus needs `M⁻¹` (a saddle-point system) and is left out until an example needs it.
+  * The inverse diagonal star panics on a zero dual volume (a circumcentre on a face: a right
+    triangle's hypotenuse), naming the dimension, rather than producing infinities.
+  * `Geometry::from_parts(&complex, &vertices)` builds the metric without a `Mesh`: the numga
+    ports keep their vertices in their own mesh type, which the ports may change.
+  * The ports' `edge_ratio` and `laplacian` are now the library's `⋆₁` and `⋆₀Δ₀`.
 * **Laws and checks** (laws.md, section R).
   * Hirani's PyDEC, as fixtures (`docs/research/experiments/pydec_fixtures.py`, its own venv from
     GitHub; the `pydec` on PyPI is another package): every volume, dual volume and star of every
@@ -1901,8 +1905,9 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * The three models agree; the Galerkin stiffness is linear finite elements (gradients from
     GA reciprocal frames, independently); Stokes for the de Rham map exactly on `Fp`;
     `R ∘ W = id` and `W₁ d₀ = ∇ W₀`; the numga ports' hand-built metric is the library's.
-  * M5 adds `D² = Δ`, the orthogonality of the Hodge decomposition, the harmonic dimensions as
-    Betti numbers, and sphere spectra converging to `ℓ(ℓ+1)`.
+  * `δ` adjoint to `d`, so the Hodge decomposition is orthogonal; `D² = Δ`; the harmonic
+    dimensions are the Betti numbers on a sphere and a torus; on subdivided icosahedra the
+    vertex Laplacian's spectrum converges to `ℓ(ℓ+1)` at second order with both stars.
 * **Scope.** Euclidean models only: VGA2D, VGA3D, PGA2D, PGA3D, CGA2D, CGA3D. Meshes in
   spacetime, whose stars are indefinite, are left out. The spin Dirac operator stays an example,
   built from these pieces.

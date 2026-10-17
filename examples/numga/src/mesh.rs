@@ -23,6 +23,7 @@ mod delaunay;
 mod disks;
 
 use core::ops::{Add, Mul, Sub};
+use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
 use gax::mesh::Complex;
 use gax::vga3d::{Bivector, Scalar, Vector};
@@ -358,26 +359,28 @@ impl Mesh<Vector3> {
         face_bivectors(&self.triangle_edges()).map(|b| Scalar3::new(b.norm() / 2.0))
     }
 
-    /// `[E]`: dual over primal edge length, half the cotangents of the angles facing each edge.
+    /// The mesh's metric (`gax::dec`): volumes, circumcentric duals, Hodge stars.
+    #[must_use]
+    pub fn geometry(&self) -> Geometry<f64, 3> {
+        Geometry::from_parts(&self.complex, &self.vertices)
+    }
+
+    /// `[E]`: dual over primal edge length, half the cotangents of the angles facing each edge:
+    /// the diagonal Hodge star on edges.
     #[must_use]
     pub fn edge_ratio(&self) -> Field<Scalar3> {
-        let edges = self.triangle_edges();
-        // Half the cotangent at each corner: its sides' inner product over their wedge.
-        let half_cotangents = [0, 1, 2].map(|k| {
-            let (after, before) = sides_at(&edges, k);
-            after.zip_with(before, |a, b| -(a | b) * (0.5 / (a ^ b).norm()))
-        });
-        let ones = Field::from_fn(self.faces.len(), |_| Scalar3::new(1.0));
-        &self.by_corner(&half_cotangents).reverse() * &ones
+        self.geometry()
+            .star::<Scalar3>(1)
+            .couplings()
+            .map(|(_, _, c)| c)
+            .collect()
     }
 
     /// `[V, V]`: the cotangent Laplacian `~d0 H d0`, `H` the edge ratios on the diagonal. For a
     /// field `x` linear on each face, `x · L x` is its squared gradient integrated over the faces.
     #[must_use]
     pub fn laplacian(&self) -> SparseMap<Scalar3> {
-        let d0 = self.d0();
-        let hodge = SparseMap::from_diagonal(&self.edge_ratio());
-        &(&d0.reverse() * &hodge) * &d0
+        self.geometry().laplacian_form(0)
     }
 
     /// `[V]`: the unit normal at each vertex, the mean of its faces' normals weighted by their
@@ -524,9 +527,9 @@ mod tests {
         }
     }
 
-    /// The library's metric of meshes (`gax::dec`) gives these functions' numbers: the edge
-    /// ratios are the diagonal Hodge star on edges, the vertex areas the row sums of the Galerkin
-    /// mass on vertices, and the reconstruction the Whitney map at the face centroids.
+    /// The library's metric of meshes (`gax::dec`) gives the numbers this module built by hand:
+    /// the half cotangents are the diagonal Hodge star on edges, the vertex areas the row sums of
+    /// the Galerkin mass on vertices, and the reconstruction the Whitney map at the centroids.
     #[test]
     fn gax_dec_gives_the_metric() {
         use gax::dec::Geometry;
@@ -539,7 +542,16 @@ mod tests {
                 .couplings()
                 .map(|(_, _, c)| c.s())
                 .collect();
-            for (h, x) in mesh.edge_ratio().sites().iter().zip(&star) {
+            // The edge ratios as this module built them by hand: half the cotangent at each
+            // corner, its sides' inner product over their wedge, summed onto the edge it faces.
+            let edges = mesh.triangle_edges();
+            let half_cotangents = [0, 1, 2].map(|k| {
+                let (after, before) = sides_at(&edges, k);
+                after.zip_with(before, |a, b| -(a | b) * (0.5 / (a ^ b).norm()))
+            });
+            let ones = Field::from_fn(mesh.faces.len(), |_| Scalar3::new(1.0));
+            let by_hand = &mesh.by_corner(&half_cotangents).reverse() * &ones;
+            for (h, x) in by_hand.sites().iter().zip(&star) {
                 assert!(close(h.s(), *x), "{} {x}", h.s());
             }
             let mut lumped = vec![0.0; mesh.vertices.len()];

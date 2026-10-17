@@ -271,3 +271,47 @@ assert!(image.sites().iter().all(|x| x.s().abs() < 1e-14));
 the stiffness of linear finite elements. On tetrahedra only the Galerkin one does: the circumcentric
 star agrees there only on symmetric meshes (a regular tetrahedron), and differs by tens of percent
 on a jittered grid. Use `mass` where finite-element accuracy matters, `star` where a diagonal matters.
+
+## Operators
+
+With the stars, `Geometry` gives the operators of calculus on cochains (ADR-050):
+
+* `codifferential(k)`: `δ_k = ⋆⁻¹ dᵀ ⋆`, from `k`- to `(k−1)`-cochains, the adjoint of `d` in
+  the stars' inner products. The images of `d` and `δ` are orthogonal, which makes the Hodge
+  decomposition `ω = dα + δβ + h` orthogonal.
+* `laplacian(k)`: the Laplace–de Rham operator `Δ_k = dδ + δd`. Its null space holds the harmonic
+  cochains, as many as the `k`-th Betti number.
+* `laplacian_form(k)`: the symmetric form `⋆_k Δ_k`, which with `star(k)` makes the pencil whose
+  eigenpairs are `Δ`'s (`SparseMap::eigh`, on a well-centred mesh, whose stars are positive). On
+  vertices it is the cotangent Laplacian.
+* `dirac()`: the Dirac operator `D = d + δ` on cochains of every degree at once, one field over all
+  the simplices (`offsets()` says where each degree starts). `D² = Δ` degree by degree: it is
+  the discrete counterpart of `∇ = ∇∧ + ∇⌋`.
+* `stiffness(k)`: the Galerkin `d_kᵀ M_{k+1} d_k`, which with `mass(k)` is the finite-element pencil
+  of the Whitney forms. Its mass is positive definite on any mesh.
+
+The diagonal-star operators need nonzero dual volumes (`codifferential` panics on a circumcentre
+that falls on a face, a right triangle's hypotenuse).
+
+```rust
+use gax::dec::Geometry;
+use gax::field::Field;
+use gax::mesh::Mesh;
+use gax::vga3d::{Scalar, Vector};
+
+// The octahedron: equilateral faces, so well-centred.
+let p = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]];
+let v: Field<_> = p.iter().map(|p| Vector::<(), f64>::new(p[0], p[1], p[2])).collect();
+let faces = [[0, 2, 4], [2, 1, 4], [1, 3, 4], [3, 0, 4], [2, 0, 5], [1, 2, 5], [3, 1, 5], [0, 3, 5]];
+let octahedron = Mesh::new(v, &faces).unwrap();
+let g = Geometry::new(&octahedron);
+assert!(g.is_well_centered());
+// The Laplacian on vertices has one zero eigenvalue: the surface is one piece.
+let form = &g.laplacian_form::<Scalar<(), f64>>(0) * Scalar::<(), f64>::slot();
+let star = &g.star::<Scalar<(), f64>>(0) * Scalar::<(), f64>::slot();
+let (values, _) = form.eigh(&star, 3);
+assert!(values[0].abs() < 1e-12 && values[1] > 0.5);
+// The Dirac operator acts on the cochains of all 26 simplices at once (D² = Δ, laws.md §R).
+assert_eq!(g.offsets(), [0, 6, 18, 26]);
+assert_eq!(g.dirac::<Scalar<(), f64>>().shape(), (26, 26));
+```

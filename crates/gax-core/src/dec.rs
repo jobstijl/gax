@@ -202,8 +202,11 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     /// The geometry of a mesh, from the squared distances of its model.
     #[must_use]
     pub fn new<V: Distance<Coef = T> + Extensor<Slots = ()>>(mesh: &Mesh<V, N>) -> Self {
-        let complex = mesh.complex().clone();
-        let v = mesh.vertices.sites();
+        Self::build(mesh.complex().clone(), mesh.vertices.sites())
+    }
+
+    /// The geometry of a complex with the vertices `v`.
+    fn build<V: Distance<Coef = T>>(complex: Complex<N>, v: &[V]) -> Self {
         let distances_of = |s: &[usize]| -> Vec<T> {
             s.iter()
                 .flat_map(|&a| s.iter().map(move |&b| V::distance_squared(&v[a], &v[b])))
@@ -450,6 +453,178 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             }
         }
         out.expect("a simplex has an edge")
+    }
+}
+
+/// The operators of discrete exterior calculus on a mesh (ADR-050, M5): with the diagonal stars,
+/// the codifferential `δ`, the Laplace–de Rham operator `Δ = dδ + δd` and the Dirac operator
+/// `d + δ`; with the Galerkin star, the stiffness `dᵀ M d`.
+impl<T: Real, const N: usize> Geometry<T, N> {
+    /// The geometry of a complex with these vertices (as [`Geometry::new`] of their mesh).
+    ///
+    /// # Panics
+    /// If there is not one vertex for each of the complex's.
+    #[must_use]
+    pub fn from_parts<V: Distance<Coef = T> + Extensor<Slots = ()>>(
+        complex: &Complex<N>,
+        vertices: &Field<V>,
+    ) -> Self {
+        assert_eq!(vertices.len(), complex.len(0), "one vertex for each");
+        Self::build(complex.clone(), vertices.sites())
+    }
+
+    /// The diagonal map of `x`, as scalar cells.
+    fn diagonal<C: Extensor<Slots = (), Coef = T>>(
+        x: impl ExactSizeIterator<Item = T>,
+    ) -> SparseMap<C> {
+        let n = x.len();
+        let cell = |x: T| C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| x));
+        SparseMap::new(
+            x.map(cell).collect(),
+            (0..n).collect(),
+            (0..n).collect(),
+            (n, n),
+        )
+    }
+
+    /// The inverse of the diagonal star on `k`-cochains.
+    ///
+    /// # Panics
+    /// If a dual volume is zero (a circumcentre on a face: a right triangle's hypotenuse, say).
+    #[track_caller]
+    fn star_inverse<C: Extensor<Slots = (), Coef = T>>(&self, k: usize) -> SparseMap<C> {
+        let ratios = self.dual_volumes[k].iter().zip(&self.volumes[k]).map(|(&d, &p)| {
+            assert!(d != T::zero(), "a {k}-simplex has a dual volume of zero: the diagonal star on {k}-cochains has no inverse");
+            p * d.recip()
+        });
+        Self::diagonal(ratios.collect::<Vec<_>>().into_iter())
+    }
+
+    /// The codifferential `δ_k = ⋆_{k−1}⁻¹ d_{k−1}ᵀ ⋆_k`, from `k`-cochains to `(k−1)`-cochains
+    /// (`k ≥ 1`): the adjoint of `d_{k−1}` in the inner products the diagonal stars define,
+    /// `⟨d a, b⟩_⋆ = ⟨a, δ b⟩_⋆`.
+    ///
+    /// # Panics
+    /// If a `(k−1)`-simplex has a dual volume of zero.
+    #[must_use]
+    #[track_caller]
+    pub fn codifferential<C>(&self, k: usize) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
+    {
+        assert!(k >= 1 && k < N, "δ_{k} is defined for 1 ≤ k < {N}");
+        let dt = self.complex.d::<C>(k - 1).transpose_with(|c| c);
+        &self.star_inverse::<C>(k - 1) * &(&dt * &self.star::<C>(k))
+    }
+
+    /// The Laplace–de Rham operator `Δ_k = d_{k−1} δ_k + δ_{k+1} d_k` on `k`-cochains, with the
+    /// diagonal stars: on 0-cochains `δ₁ d₀`, the cotangent Laplacian over the dual areas. It is
+    /// self-adjoint and positive semidefinite in the star's inner product, and its null space is
+    /// the harmonic cochains, of the dimension of the `k`-th Betti number.
+    ///
+    /// # Panics
+    /// If a simplex of dimension `k − 1` or `k` has a dual volume of zero.
+    #[must_use]
+    #[track_caller]
+    pub fn laplacian<C>(&self, k: usize) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
+    {
+        let up = (k + 1 < N).then(|| &self.codifferential::<C>(k + 1) * &self.complex.d::<C>(k));
+        let down = (k >= 1).then(|| &self.complex.d::<C>(k - 1) * &self.codifferential::<C>(k));
+        match (up, down) {
+            (Some(u), Some(d)) => &u + &d,
+            (Some(u), None) => u,
+            (None, Some(d)) => d,
+            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.complex.len(k))),
+        }
+    }
+
+    /// The symmetric form of the Laplacian, `⋆_k Δ_k = d_kᵀ ⋆_{k+1} d_k + ⋆_k d_{k−1} ⋆_{k−1}⁻¹
+    /// d_{k−1}ᵀ ⋆_k`: with the star it makes the pencil `(⋆Δ, ⋆)` whose eigenpairs are those of
+    /// `Δ`, for [`SparseMap::eigh`] (a positive star, on a well-centred mesh). On 0-cochains it is
+    /// the cotangent Laplacian `d₀ᵀ ⋆₁ d₀`.
+    ///
+    /// # Panics
+    /// If a `(k−1)`-simplex has a dual volume of zero.
+    #[must_use]
+    #[track_caller]
+    pub fn laplacian_form<C>(&self, k: usize) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
+    {
+        let up = (k + 1 < N).then(|| {
+            let d = self.complex.d::<C>(k);
+            &d.transpose_with(|c| c) * &(&self.star::<C>(k + 1) * &d)
+        });
+        let down = (k >= 1).then(|| {
+            &self.star::<C>(k) * &(&self.complex.d::<C>(k - 1) * &self.codifferential::<C>(k))
+        });
+        match (up, down) {
+            (Some(u), Some(d)) => &u + &d,
+            (Some(u), None) => u,
+            (None, Some(d)) => d,
+            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.complex.len(k))),
+        }
+    }
+
+    /// The Galerkin stiffness on `k`-cochains, `d_kᵀ M_{k+1} d_k` (`k + 1 < N`): with the mass
+    /// `M_k` the pencil of the finite elements of Whitney forms, symmetric, the mass positive
+    /// definite on any mesh. On 0-cochains, linear finite elements.
+    #[must_use]
+    pub fn stiffness<C>(&self, k: usize) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
+    {
+        assert!(
+            k + 1 < N,
+            "the stiffness on {k}-cochains needs {}-simplices",
+            k + 1
+        );
+        let d = self.complex.d::<C>(k);
+        &d.transpose_with(|c| c) * &(&self.mass::<C>(k + 1) * &d)
+    }
+
+    /// Where the cochains of each degree start in a field over all the simplices, vertices first,
+    /// then edges, and so on: `offsets()[k]`, with the total at the end.
+    #[must_use]
+    pub fn offsets(&self) -> Vec<usize> {
+        let mut out = std::vec![0];
+        for k in 0..N {
+            out.push(out[k] + self.complex.len(k));
+        }
+        out
+    }
+
+    /// The Dirac operator `D = d + δ` on cochains of every degree at once, one field over all the
+    /// simplices laid out by [`offsets`](Self::offsets): it raises each degree by `d` and lowers
+    /// it by `δ`, and `D² = Δ` degree by degree (`dd = 0`, `δδ = 0`). Discretely the `∇ = ∇∧ + ∇⌋` of
+    /// geometric calculus.
+    ///
+    /// # Panics
+    /// If a simplex below the top has a dual volume of zero.
+    #[must_use]
+    #[track_caller]
+    pub fn dirac<C>(&self) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
+    {
+        let at = self.offsets();
+        let mut cells = Vec::new();
+        let mut rows = Vec::new();
+        let mut cols = Vec::new();
+        let mut push = |m: SparseMap<C>, row: usize, col: usize| {
+            for (r, c, x) in m.couplings() {
+                cells.push(x);
+                rows.push(row + r);
+                cols.push(col + c);
+            }
+        };
+        for k in 0..N - 1 {
+            push(self.complex.d::<C>(k), at[k + 1], at[k]);
+            push(self.codifferential::<C>(k + 1), at[k], at[k + 1]);
+        }
+        SparseMap::new(cells, rows, cols, (at[N], at[N]))
     }
 }
 

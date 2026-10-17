@@ -455,3 +455,211 @@ fn whitney_inverts_de_rham() {
         }
     }
 }
+
+/// The icosahedron's faces subdivided `level` times at their edges' midpoints, projected to the
+/// unit sphere: well-centred, its triangles near equilateral.
+fn icosphere(level: usize) -> Mesh<gax::vga3d::Vector<(), f64>, 3> {
+    use gax::vga3d::Vector;
+    let t = f64::midpoint(1.0, 5f64.sqrt());
+    let mut points: Vec<[f64; 3]> = vec![
+        [-1.0, t, 0.0],
+        [1.0, t, 0.0],
+        [-1.0, -t, 0.0],
+        [1.0, -t, 0.0],
+        [0.0, -1.0, t],
+        [0.0, 1.0, t],
+        [0.0, -1.0, -t],
+        [0.0, 1.0, -t],
+        [t, 0.0, -1.0],
+        [t, 0.0, 1.0],
+        [-t, 0.0, -1.0],
+        [-t, 0.0, 1.0],
+    ];
+    let mut faces: Vec<[usize; 3]> = vec![
+        [0, 11, 5],
+        [0, 5, 1],
+        [0, 1, 7],
+        [0, 7, 10],
+        [0, 10, 11],
+        [1, 5, 9],
+        [5, 11, 4],
+        [11, 10, 2],
+        [10, 7, 6],
+        [7, 1, 8],
+        [3, 9, 4],
+        [3, 4, 2],
+        [3, 2, 6],
+        [3, 6, 8],
+        [3, 8, 9],
+        [4, 9, 5],
+        [2, 4, 11],
+        [6, 2, 10],
+        [8, 6, 7],
+        [9, 8, 1],
+    ];
+    for _ in 0..level {
+        let mut midpoints = BTreeMap::new();
+        let mut mid = |a: usize, b: usize, points: &mut Vec<[f64; 3]>| -> usize {
+            *midpoints.entry((a.min(b), a.max(b))).or_insert_with(|| {
+                points.push(core::array::from_fn(|i| {
+                    f64::midpoint(points[a][i], points[b][i])
+                }));
+                points.len() - 1
+            })
+        };
+        faces = faces
+            .iter()
+            .flat_map(|&[a, b, c]| {
+                let (ab, bc, ca) = (
+                    mid(a, b, &mut points),
+                    mid(b, c, &mut points),
+                    mid(c, a, &mut points),
+                );
+                [[a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]]
+            })
+            .collect();
+    }
+    let vertices: Field<_> = points
+        .iter()
+        .map(|p| {
+            let r = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
+            Vector::<(), f64>::new(p[0] / r, p[1] / r, p[2] / r)
+        })
+        .collect();
+    Mesh::new(vertices, &faces).unwrap()
+}
+
+/// A torus of revolution, radii `big` and `small`, as a lattice of `n × m` vertices skewed by
+/// half a step per ring, so that its triangles are near equilateral.
+fn torus(n: usize, m: usize, big: f64, small: f64) -> Mesh<gax::vga3d::Vector<(), f64>, 3> {
+    use gax::vga3d::Vector;
+    use std::f64::consts::TAU;
+    assert!(
+        m.is_multiple_of(2),
+        "the skew closes up after an even number of rings"
+    );
+    // Row j sits half a step on per ring, so after m rings the lattice has moved m/2 steps:
+    // row m is row 0 shifted, and the seam joins i to i + m/2.
+    let id = |i: usize, j: usize| (j % m) * n + (i + (j / m) * (m / 2)) % n;
+    let vertices: Field<_> = (0..m)
+        .flat_map(|j| (0..n).map(move |i| (i, j)))
+        .map(|(i, j)| {
+            let (u, v) = (
+                TAU * (i as f64 + 0.5 * j as f64) / n as f64,
+                TAU * j as f64 / m as f64,
+            );
+            let r = big + small * v.cos();
+            Vector::<(), f64>::new(r * u.cos(), r * u.sin(), small * v.sin())
+        })
+        .collect();
+    let faces: Vec<[usize; 3]> = (0..m)
+        .flat_map(|j| {
+            (0..n).flat_map(move |i| {
+                [
+                    [id(i, j), id(i + 1, j), id(i, j + 1)],
+                    [id(i + 1, j), id(i + 1, j + 1), id(i, j + 1)],
+                ]
+            })
+        })
+        .collect();
+    Mesh::new(vertices, &faces).unwrap()
+}
+
+type S3 = gax::vga3d::Scalar<(), f64>;
+
+/// `δ` is the adjoint of `d` in the stars' inner products, `⟨d a, b⟩_⋆ = ⟨a, δ b⟩_⋆`, so the
+/// images of `d` and `δ` are orthogonal and the Hodge decomposition `ω = dα + δβ + h` is
+/// orthogonal; and `D² = Δ` degree by degree. On a sphere and on the 3D fixtures (whose stars
+/// are signed but not zero).
+#[test]
+fn codifferential_is_the_adjoint_and_dirac_squares_to_the_laplacian() {
+    let sphere = icosphere(2);
+    let g = Geometry::new(&sphere);
+    assert!(g.is_well_centered());
+    let field = |n: usize, seed: f64| -> Field<S3> {
+        (0..n).map(|i| S3::new((i as f64 * seed).sin())).collect()
+    };
+    let c = sphere.complex();
+    for k in 0..2 {
+        let (a, b) = (field(c.len(k), 0.37), field(c.len(k + 1), 0.53));
+        let da = &c.d::<S3>(k) * &a;
+        let lhs = da.dot(&(&g.star::<S3>(k + 1) * &b));
+        let rhs = a.dot(&(&g.star::<S3>(k) * &(&g.codifferential::<S3>(k + 1) * &b)));
+        assert!(
+            (lhs - rhs).abs() < 1e-12 * (1.0 + lhs.abs()),
+            "k = {k}: {lhs} {rhs}"
+        );
+    }
+    // D² is block diagonal, its blocks the Laplacians.
+    let d = g.dirac::<S3>();
+    let at = g.offsets();
+    let squared = &d * &d;
+    let mut dense = BTreeMap::new();
+    for (r, col, x) in squared.couplings() {
+        *dense.entry((r, col)).or_insert(0.0) += x.s();
+    }
+    let mut want = BTreeMap::new();
+    for (k, &start) in at.iter().enumerate().take(3) {
+        for (r, col, x) in g.laplacian::<S3>(k).couplings() {
+            *want.entry((start + r, start + col)).or_insert(0.0) += x.s();
+        }
+    }
+    assert_same(&dense, &want, "D² = Δ");
+}
+
+/// The smallest eigenvalues of the pencil `(⋆Δ_k, ⋆_k)`.
+fn spectrum(g: &Geometry<f64, 3>, k: usize, count: usize) -> Vec<f64> {
+    let form = &g.laplacian_form::<S3>(k) * S3::slot();
+    let star = &g.star::<S3>(k) * S3::slot();
+    form.eigh(&star, count).0
+}
+
+/// The harmonic cochains, the null space of `Δ_k`, have the Betti numbers' dimensions: a sphere
+/// (1, 0, 1) and a torus (1, 2, 1).
+#[test]
+fn harmonic_cochains_count_the_holes() {
+    for (mesh, betti) in [
+        (icosphere(2), [1, 0, 1]),
+        (torus(35, 10, 4.0, 1.0), [1, 2, 1]),
+    ] {
+        let g = Geometry::new(&mesh);
+        assert!(g.is_well_centered());
+        assert_eq!(mesh.complex().betti_numbers(), betti);
+        for (k, &b) in betti.iter().enumerate() {
+            let values = spectrum(&g, k, b + 3);
+            let zeros = values.iter().filter(|v| v.abs() < 1e-8).count();
+            assert_eq!(zeros, b, "k = {k}: {values:?}");
+        }
+    }
+}
+
+/// On the unit sphere the eigenvalues of the Laplacian are `ℓ(ℓ + 1)`, each `2ℓ + 1` times. Both
+/// discretizations converge at second order: the error falls about fourfold per subdivision.
+#[test]
+fn the_sphere_spectrum_converges() {
+    let exact: Vec<f64> = (0..4)
+        .flat_map(|l: usize| std::iter::repeat_n((l * (l + 1)) as f64, 2 * l + 1))
+        .collect();
+    let error = |values: &[f64]| {
+        values
+            .iter()
+            .zip(&exact)
+            .map(|(v, e)| (v - e).abs())
+            .fold(0.0, f64::max)
+    };
+    let mut diagonal = Vec::new();
+    let mut galerkin = Vec::new();
+    for level in 1..4 {
+        let sphere = icosphere(level);
+        let g = Geometry::new(&sphere);
+        diagonal.push(error(&spectrum(&g, 0, 16)));
+        let stiffness = &g.stiffness::<S3>(0) * S3::slot();
+        let mass = &g.mass::<S3>(0) * S3::slot();
+        galerkin.push(error(&stiffness.eigh(&mass, 16).0));
+    }
+    for errors in [&diagonal, &galerkin] {
+        for w in errors.windows(2) {
+            assert!(w[1] < w[0] / 3.0, "{errors:?}");
+        }
+    }
+}
