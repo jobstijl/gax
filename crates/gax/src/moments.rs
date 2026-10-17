@@ -16,6 +16,7 @@
 //! exact from its vertices, `V/((k+1)(k+2)) (Σᵢ f(vᵢ) g(vᵢ) + f(Σᵢ vᵢ) g(Σᵢ vᵢ))`. A mesh cut by a
 //! plane (the paper's fuel tank) is closed by that plane alone: put the apex on it.
 
+#[cfg(feature = "pga3d")]
 use crate::Real;
 use crate::simplex::dyads as simplex_dyads;
 

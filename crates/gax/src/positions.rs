@@ -14,13 +14,19 @@
 
 use crate::Coef;
 use crate::simplex::{Measure, Position};
-use core::ops::{Add, Mul};
 
 /// `Σ wᵢ pᵢ`.
+#[cfg(any(
+    feature = "vga2d",
+    feature = "vga3d",
+    feature = "sta",
+    feature = "pga2d",
+    feature = "pga3d"
+))]
 #[inline]
 fn combination<P, T>(points: &[P], weights: &[T]) -> P
 where
-    P: Copy + Add<Output = P> + Mul<T, Output = P>,
+    P: Copy + core::ops::Add<Output = P> + core::ops::Mul<T, Output = P>,
     T: Copy,
 {
     points

@@ -10,6 +10,15 @@ mod interop;
 #[cfg(any(feature = "pga2d", feature = "pga3d"))]
 mod moments;
 pub mod motions;
+#[cfg(any(
+    feature = "vga2d",
+    feature = "vga3d",
+    feature = "sta",
+    feature = "pga2d",
+    feature = "pga3d",
+    feature = "cga2d",
+    feature = "cga3d"
+))]
 mod positions;
 
 /// The homomorphisms between the standard algebras, as `From` impls (generated from
