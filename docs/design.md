@@ -1712,47 +1712,68 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   no `∇`, so the checks are the laws and central differences (as in ADR-043).
 
 ## ADR-048: Integration over simplices
-*Status: proposed (2026-10-17). Phase 10, M2.*
+*Status: accepted, implemented (`gax_core::simplex`, `gax/src/positions.rs`,
+`docs/calculus.md`). Phase 10, M2.*
 
 * **The problem.** Geometric calculus integrates over oriented chains, with a directed measure
   `dX`, a blade, and its fundamental theorem `∫ dX ∇F = ∮ dS F` contains Stokes, Gauss and
-  Green. A mesh is a chain of simplices. gax integrates over simplices only inside `moments`:
-  one rule, exact for products of two linear functions.
+  Green. A mesh is a chain of simplices. gax integrated over simplices only inside `moments`:
+  one rule, exact for products of two linear forms.
 * **Simplices.** `Simplex<P, N>` holds `N` vertices of a position kind `P` (`N = k + 1` for a
   `k`-simplex; stable Rust has no `[P; K + 1]`). What a position is depends on the model of space,
-  so a trait, `Positions` (in `gax-core`, implemented in `gax` for each standard model, the way
-  `Motions` is), gives each model's operations:
-  * VGA: positions are vectors, and the directed measure is `(v₁−v₀)∧…∧(v_k−v₀)/k!`.
-  * PGA: positions are points, and the directed measure is the join of the normalized points
-    over `k!`: an edge's line, whose norm is its length; a triangle's plane, whose norm is twice
-    its area.
-  * CGA: positions are conformal points, and the measure is `P₀∧…∧P_k∧e∞` over `k!`, whose
-    norm is the `k`-volume (a law, with the model's sign convention fixed by the test).
-  * An `algebra!` declaration implements `Positions` itself, or uses the vector model's
-    helper.
-* **Rules.** Grundmann–Möller rules, of any odd degree `2s + 1` in any dimension.
+  so two traits in `gax-core` give each model's operations, implemented in `gax` for the
+  standard models (`positions.rs`, the way `Motions` is):
+  * `Position`: the affine combination of positions, which forms the rules' nodes. In CGA it
+    combines the Euclidean parts and lifts the result, since a combination of null vectors is
+    not null.
+  * `Measure<N>`: the directed measure of `N` vertices, a blade whose norm is the volume.
+    * VGA2D, VGA3D, STA: `(v₁−v₀)∧…∧(v_k−v₀)/k!`.
+    * PGA2D, PGA3D: the join of the points of weight one over `k!`: an edge's line, whose norm
+      is its length; a triangle's plane in 3D; a scalar for the full dimension.
+    * CGA2D, CGA3D: `P₀∧…∧P_k∧e∞` over `k!`.
+    * A single vertex measures the scalar one.
+    * The full-dimensional measures are signed as VGA's pseudoscalar coefficient in every model
+      (which took a minus on CGA3D's tetrahedra, none elsewhere), a law below.
+  * An `algebra!` declaration implements the two traits for its own position kind.
+* **Rules.** `Rule::GrundmannMoller { s }`, of degree `2s + 1` in any dimension, and
+  `Rule::degree(d)`, the cheapest exact on degree `d`.
   * Their nodes are rational barycentric points and their weights rationals, so a rule runs on
     any `Coef` and is exact on `Fp`. Gauss–Jacobi (Stroud) rules have positive weights but
     irrational nodes, which would put every law about integrals out of reach of law L.
-  * The weights alternate in sign from `s = 1`. Rounding grows with the degree; the rules are
-    offered up to degree 15, with a measured error bound in numerics.md.
-  * The rule in `moments` stays, as the named rule `dyads`: exact for products of two linear
-    forms of homogeneous points, with `k + 2` evaluations (the vertices and their sum, which is
-    a point only in a homogeneous model, so the rule is offered where positions are homogeneous,
-    PGA and CGA). `Moments` is rebuilt on `Simplex` with that rule, and
-    its results are bit for bit what they are now.
+  * A weight is built as a product of small factors (`mᵈ`, then `1/j` over the factorials, `4⁻ˢ`),
+    each exact in every coefficient type. (The first version folded `mᵈ` into the loop over
+    `(d+k−i)!`, which has fewer than `d` factors once `i > k`: the monomial law caught it.)
+  * The nodes are visited by a callback over fixed buffers (`for_each_node`, up to
+    `MAX_VERTICES = 9`), so the module needs no allocation and stays in `no_std`.
+  * The weights alternate in sign from `s = 1`, and rounding grows with `Σ |w|`. The rules are
+    offered to degree 15, about `10⁻¹²` relative; numerics.md has the measured table.
+  * `Rule::VerticesAndCentroid` has positive weights and is exact to degree 2 (on an edge it is
+    Simpson's rule, exact to degree 3).
+  * `simplex::dyads` is the same rule in the homogeneous form `moments` uses, the centroid's
+    weight folded into a quadratic form's homogeneity (`dyad(Σ vᵢ) = (k+1)² dyad(c)`). `moments`
+    calls it, so its results are bit for bit what they were.
 * **The integrals.** For an integrand `f: Fn(P) -> F`, with `F` any value or map that adds and
   scales:
   * `mean(rule, f)`, the mean of `f` over the simplex;
-  * `directed(rule, f)`, `∫ dX F`, which on a flat simplex is the measure blade times the mean;
+  * `measure()`, the directed measure;
+  * `directed(rule, f)`, `∫ dX F`, which on a flat simplex is the measure times the mean;
   * `integral(rule, f)`, `∫ F dV`, which takes the measure's norm and so needs `Real`.
-* **Laws.**
+* **The fundamental theorem's form.** The operator that pairs with the boundary map
+  `∂σ = Σ (−1)ⁱ ∂ᵢσ` is the measure contracted by the derivative from the left,
+  `(∇ ⌋ dX) F = Σⱼ (eʲ ⌋ dX) ∂ⱼ F`. With the right contraction `dX ⌊ ∇` the sign alternates
+  with the dimension, as `dX ⌊ v = (−1)^{k−1} v ⌋ dX`; the exact test found it on the first
+  triangle. `gax::calculus::contract` (now public) computes it: the derivative combined with
+  the reciprocal blades by any product.
+* **Laws** (laws.md, section P).
   * Every rule is exact on the barycentric monomials up to its degree: `∫ λ^α dV` is
-    `k! α! / (|α| + k)!` times the volume, proved on `Fp`.
-  * The fundamental theorem on one simplex: `∫_σ dX ∇F = Σᵢ ∫_{∂ᵢσ} dS F`, with the faces
-    oriented by the boundary map of ADR-049, exact for polynomial `F` and a rule of its degree,
-    on `Fp`, in VGA2D, VGA3D and STA.
-  * Covariance: integrating over a moved simplex is moving the integral (unit motors).
+    `k! α! / (|α| + k)!` times the volume, on `Fp`, for every monomial; one degree higher
+    each fails.
+  * The fundamental theorem on one simplex, `∫_σ (∇ ⌋ dX) F = Σᵢ (−1)ⁱ ∫_{∂ᵢσ} dS F`, exact
+    for cubic `F` on `Fp`, in VGA2D, VGA3D and STA.
+  * Covariance: the measure and the mean position of a simplex moved by a rational motor are
+    the moved ones (PGA3D, on `Fp`).
+  * The models agree: VGA, PGA and CGA give the same volumes, and the same signed volumes at
+    the full dimension.
 
 ## ADR-049: Simplicial complexes and meshes
 *Status: proposed (2026-10-17). Phase 10, M3.*

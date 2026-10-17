@@ -104,8 +104,25 @@ where
     (value, (0..<X::Kind as Kind>::N).map(column))
 }
 
-/// `Σ_k e^k ∘ ∂_k f`, for the product `∘` given by `product`.
-fn contract<X, Y, O>(
+/// `(f(x), Σ_J product(e^J, ∂_J f(x)))`: the derivative combined with the reciprocal blades by
+/// any product. [`nabla`], [`divergence`] and [`curl`] are it with `*`, `⌋` and `∧`; others give
+/// the derivative projected on a subspace, such as `(dX · ∇) f = Σ (dX ⌊ e^J) ∂_J f` along a
+/// simplex's measure `dX`, the operator of the fundamental theorem
+/// (`gax::simplex`).
+///
+/// ```
+/// use gax::calculus::contract;
+/// use gax::vga3d::{Bivector, Scalar, Vector};
+/// // The derivative of x² along the plane e12 only: its x and y parts, 2x and 2y (rotated
+/// // into the plane, B ⌊ e^k ∂_k f).
+/// let b = Bivector::<(), f64>::new(0.0, 0.0, 1.0);
+/// let x = Vector::<(), f64>::new(1.0, 2.0, 3.0);
+/// let (_, d) = contract(|x: Vector<(), _>| x.scalar_product(x), x, |up, column| b.rc(up) * column);
+/// assert_eq!(d, Vector::new(4.0, -2.0, 0.0));
+/// ```
+#[inline]
+#[allow(clippy::type_complexity)]
+pub fn contract<X, Y, O>(
     f: impl FnOnce(At<X, J1<X>>) -> Y,
     x: X,
     product: impl Fn(X, ValueOf<Y, X>) -> O,

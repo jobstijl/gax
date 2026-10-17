@@ -298,6 +298,26 @@ of the prime field (law L), exactly (ADR-047):
   reciprocal of `eo` is `−e∞`. A kind without a frame gives the compile error of
   `tests/compile_fail/nabla_degenerate.rs`.
 
+### P. Integration over simplices (`gax-core` `simplex::tests`, `tests/simplices.rs`)
+
+Exactly, on the prime field (law L), unless marked (ADR-048):
+
+* [sample] Every Grundmann–Möller rule to degree 15, and the vertices-and-centroid rule, is exact
+  on every barycentric monomial of its degree: the mean of `λ^α` over a `k`-simplex is
+  `k! α! / (|α| + k)!`. Checked for every monomial, on simplices of dimension 1 to 4 (1 and 2
+  above degree 9); the weights sum to one. One degree higher, every rule fails on some monomial,
+  so the degrees claimed are the true ones.
+* [sample] The fundamental theorem of geometric calculus on one simplex,
+  `∫_σ (∇ ⌋ dX) F = Σᵢ (−1)ⁱ ∫_{∂ᵢσ} dS F` (the derivative contracting the measure from the left,
+  the faces oriented by the boundary map), for cubic fields of scalars, vectors and bivectors,
+  on edges, triangles and tetrahedra in VGA2D and VGA3D and up to 4-simplices in STA.
+* [sample] PGA3D: the measure of a simplex moved by a motor of rational coefficients is the moved
+  measure (lines and planes; the volume unchanged), and the mean position moves with it.
+* [prop] The same Euclidean simplex in VGA, PGA and CGA (2D and 3D): the norms of the measures of
+  its edges and triangles agree, and so do the signed volumes of the full-dimensional simplices,
+  within `10⁻¹²`.
+* [prop] In `f64`, every rule stays within the rounding bounds of numerics.md.
+
 ## 4. Licensed rewrites
 
 Each law licenses a transformation:

@@ -273,6 +273,30 @@ between a series and a direct formula, the derivative switches with it (both app
 same derivative to the method's accuracy). A derivative that is exactly zero stays zero through a
 function singular at the value (`√x` at `0`), which plain forward mode turns into `NaN`.
 
+## Quadrature on simplices
+
+`gax::simplex` integrates with Grundmann–Möller rules (ADR-048). Their nodes and weights are
+rational and exact on the prime field, but from degree 3 the weights alternate in sign, so in
+floating point the rules cancel. The cancellation grows with `Σ |w|`, the sum of the absolute
+weights. Measured in `f64`, on every barycentric monomial of a rule's degree over simplices of
+dimension 1 to 4:
+
+| degree | worst relative error | in ulps | `Σ |w|` on tetrahedra |
+|---|---|---|---|
+| 1 | 0 | 0 | 1.0 |
+| 3 | 1.1·10⁻¹⁵ | 5 | 2.6 |
+| 5 | 1.6·10⁻¹⁵ | 7 | 5.6 |
+| 7 | 1.2·10⁻¹⁴ | 56 | 11.9 |
+| 9 | 5.8·10⁻¹⁴ | 260 | 25.4 |
+| 11 | 1.4·10⁻¹³ | 608 | 54.1 |
+| 13 | 3.1·10⁻¹³ | 1409 | 116 |
+| 15 | 9.7·10⁻¹³ | 4374 | 251 |
+
+The rules stop at degree 15 (`Rule::MAX_DEGREE`), where the error is near `10⁻¹²`. The test
+`rounding_stays_within_the_documented_bound` keeps them under these figures (with a factor of
+about two of headroom). `Rule::VerticesAndCentroid` has positive weights and does not cancel; it
+is exact to degree 2 (Simpson's rule, degree 3, on an edge).
+
 ## Documented, not fixed
 
 **`f32` with large coordinates.** A point's error grows with its distance from the origin,

@@ -10,6 +10,7 @@ mod interop;
 #[cfg(any(feature = "pga2d", feature = "pga3d"))]
 mod moments;
 pub mod motions;
+mod positions;
 
 /// The homomorphisms between the standard algebras, as `From` impls (generated from
 /// `gax_gen::emit_homs::HOMS`; see the guide, "Between algebras").
@@ -107,7 +108,7 @@ algebras! {
 pub struct GuideDoctests;
 
 /// The code blocks of `docs/calculus.md`, compiled and run as doctests.
-#[cfg(all(doctest, feature = "vga3d", feature = "sta"))]
+#[cfg(all(doctest, feature = "vga3d", feature = "sta", feature = "pga3d"))]
 #[doc = include_str!("../calculus.md")]
 pub struct CalculusDoctests;
 

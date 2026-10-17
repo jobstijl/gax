@@ -57,6 +57,7 @@ pub mod permute;
 pub mod prepared;
 #[cfg(feature = "wide")]
 pub mod simd;
+pub mod simplex;
 pub mod sites;
 pub mod slots;
 pub mod strict;

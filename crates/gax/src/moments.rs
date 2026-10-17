@@ -16,24 +16,8 @@
 //! exact from its vertices, `V/((k+1)(k+2)) (Σᵢ f(vᵢ) g(vᵢ) + f(Σᵢ vᵢ) g(Σᵢ vᵢ))`. A mesh cut by a
 //! plane (the paper's fuel tank) is closed by that plane alone: put the apex on it.
 
-use crate::{Gp, Real};
-use core::ops::Add;
-
-/// `∫ f g dV` over a simplex with vertices `vs` and signed size `size`, for the dyad
-/// `dyad(x) = f(x) g(x)`: `size / ((k+1)(k+2)) (Σ dyad(vᵢ) + dyad(Σ vᵢ))` with `k + 1 = vs.len()`.
-/// Written once for every dimension: the dyad is a form on planes (3D) or lines (2D).
-#[inline]
-fn simplex_dyads<P, F, T>(vs: &[P], size: T, dyad: impl Fn(P) -> F) -> F
-where
-    P: Copy + Add<Output = P>,
-    F: Add<Output = F> + Gp<T, Output = F>,
-    T: Real,
-{
-    let n = vs.len() as i64;
-    let sum = vs[1..].iter().fold(vs[0], |a, &b| a + b);
-    let all = vs.iter().fold(dyad(sum), |acc, &v| acc + dyad(v));
-    all.gp(size * T::from_i64(n * (n + 1)).recip())
-}
+use crate::Real;
+use crate::simplex::dyads as simplex_dyads;
 
 /// What the moments in 2D and 3D share, on the form's slot kind `$P` (lines or planes): the
 /// sum of two bodies, the dyad of a point and `moved`.
