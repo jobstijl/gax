@@ -189,6 +189,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [ ] M6: `docs/calculus.md`; examples (heat flow on tetrahedra, Hodge decomposition on a torus, Maxwell through DEC against `∇`); benchmarks of assembly and solves; kernel costs; miri, MSRV, docs.rs
 
 ## Phase 11: orientation types (after Phase 10)
+- [ ] Research first: pull numga upstream and read its `docs/why_orientation.md` (input, not a spec; our own decisions)
 - [ ] ADR: intrinsic twins of kinds (Dorst 2024, MMA §5–6; Hamish Todd's elements-as-transformations): extrinsic kinds are transformations and move by the twisted sandwich; intrinsic ones (`Forque`, `Position`, joined lines) pick up `det V`. Tags add under `∧` and `*`, flip under the complement, add plus one under `&`. Decide: twins declared in the specs, which algebras, compile-time budget
 - [ ] PGA3D end to end: twin kinds in gax-gen, the sandwich per tag, `Motions` with `Forque` a type of its own, every versor law factor `‖m‖²` (the `−‖m‖²` of `&` gone), `tests/reflections.rs` without hand-written signs
 - [ ] The other algebras, warp, asteroids and the numga ports; raise it with numga's author
