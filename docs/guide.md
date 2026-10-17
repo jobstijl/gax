@@ -521,8 +521,17 @@ Every rule below is proved exactly for every standard algebra, on symbolic coeff
   composition of the two matrices.
 * **Versors respect products, up to a known scale.** `(m >> a) * (m >> b)` equals
   `m >> (a * b)` times `‖m‖²` (the scalar part of `m ~m`). For a `Unit` versor that factor is 1.
-  Products that go through the complement (`&`) can pick up a sign under reflections.
   [law-factors.md](law-factors.md) has the factor for every versor and product.
+* **Reflections and the join.** Under an odd versor the join picks up the determinant: in
+  PGA3D (and every algebra of even dimension) `(m >> a) & (m >> b)` is `−(m >> (a & b))` for a
+  unit plane `m` (any unit odd versor). In PGA2D there is no sign. So in PGA3D, reflect a
+  quantity built with one join, such as a momentum `p & v`, a forque or an inertia's output, as
+  `−(m >> f)`, or rebuild it from the reflected parts. A plane too: `m >> plane` reverses its
+  orientation, so use `−(m >> plane)`. `Plane::reflect` keeps a point's weight positive, and
+  with both, the side test `plane & point` survives the mirror. This is Dorst's rule
+  (*Projective duality encodes complementary orientations in geometric algebras*, 2024, §6.3
+  and §8), checked in `tests/reflections.rs`. Poses in `Motions` and `Moments::moved` are unit
+  motors, so it never arises there.
 * **Moving a map** (its input and its output) by a versor is `(m >> f).of(m << K::slot())`,
   which is how you would move an inertia tensor with a body. For a `Unit` versor it satisfies
   `moved.of(m >> x) == m >> f.of(x)`.
