@@ -202,3 +202,43 @@ conformal_model!(cga3d, "cga3d", 3,
     3: Quadvector = |v, ei| v[0] ^ v[1] ^ v[2] ^ ei;
     4: Pseudoscalar = |v, ei| -(v[0] ^ v[1] ^ v[2] ^ v[3] ^ ei);
 );
+
+/// Squared distances, for the metric of meshes (`gax::dec`): VGA's `|a − b|²`, PGA's squared norm
+/// of the direction between two points of weight one, CGA's `−2 A ∗ B` between round points of
+/// weight one.
+macro_rules! distance {
+    ($alg:ident, $feature:literal, $P:ident, |$a:ident, $b:ident| $d2:expr) => {
+        #[cfg(feature = $feature)]
+        impl<T: Coef> crate::dec::Distance for crate::$alg::$P<(), T> {
+            #[inline]
+            fn distance_squared($a: &Self, $b: &Self) -> T {
+                $d2
+            }
+        }
+    };
+}
+
+distance!(vga2d, "vga2d", Vector, |a, b| {
+    let d = *a - *b;
+    d.c[0] * d.c[0] + d.c[1] * d.c[1]
+});
+distance!(vga3d, "vga3d", Vector, |a, b| {
+    let d = *a - *b;
+    d.c[0] * d.c[0] + d.c[1] * d.c[1] + d.c[2] * d.c[2]
+});
+distance!(pga2d, "pga2d", Point, |a, b| {
+    let d = *a - *b; // a direction: its weight is zero
+    d.c[0] * d.c[0] + d.c[1] * d.c[1]
+});
+distance!(pga3d, "pga3d", Point, |a, b| {
+    let d = *a - *b;
+    d.c[0] * d.c[0] + d.c[1] * d.c[1] + d.c[2] * d.c[2]
+});
+distance!(cga2d, "cga2d", Vector, |a, b| {
+    let s = a.scalar_product(*b).c[0];
+    -(s + s)
+});
+distance!(cga3d, "cga3d", Vector, |a, b| {
+    let s = a.scalar_product(*b).c[0];
+    -(s + s)
+});

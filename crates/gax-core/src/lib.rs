@@ -41,6 +41,8 @@ pub mod calculus;
 pub mod cast;
 pub mod coef;
 pub mod complex;
+#[cfg(feature = "std")]
+pub mod dec;
 pub mod dual;
 pub mod extensor;
 #[cfg(feature = "std")]

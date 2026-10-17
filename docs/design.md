@@ -1838,32 +1838,55 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     octahedron, a cube of six tetrahedra, the boundary of a 4-simplex, and two pieces.
 
 ## ADR-050: Discrete exterior calculus
-*Status: proposed (2026-10-17). Phase 10, M4 and M5.*
+*Status: accepted; the metric, the stars and the de Rham and Whitney maps implemented
+(`gax_core::dec`, Phase 10, M4); the operators are M5's.*
 
 * **The problem.** The metric half of calculus on meshes: Hodge stars, the codifferential, the
-  Laplace–de Rham operator and the Dirac operator. The numga ports carry a triangle-only
-  version (cotangent Laplacian, hat gradients, Whitney reconstruction, the spin Dirac
-  operator of `surfaces_dirac_waves`) assembled by hand in each port.
-* **Measures, through `Positions` (ADR-048).**
-  * Primal: the norm of a simplex's directed measure.
-  * Circumcentres: in VGA, `c = v₀ + ½ Σᵢ |aᵢ|² aⁱ` with `aᵢ = vᵢ − v₀` and `aⁱ` their
-    reciprocal frame in the simplex's own span; in PGA, the meet of the bisector planes with the
-    simplex's own flat. Law: the centre is equidistant from every vertex [sample].
-  * Barycentric gradients: the covectors `dλᵢ`, reciprocal edge vectors in VGA and in PGA the
-    plane through the face opposite vertex `i`, scaled to pair to 1 with it. Their inner
-    product is the metric's: in PGA the planes' dot product, which is their normals'.
-  * So the geometry works in PGA as well as in VGA, though `∇` does not (ADR-047).
-* **Two Hodge stars.**
-  * Diagonal (circumcentric): `⋆_k` is the dual cell's signed volume over the primal cell's
-    (Hirani 2003). It needs well-centred meshes to be positive, Delaunay ones on 0-forms;
-    `is_well_centered` and `is_delaunay` report it, and the star stays defined (signed) where
-    they fail.
-  * Galerkin (Whitney): the mass matrices `M_k = ∫ Wᵢ · Wⱼ dV` of the Whitney forms
-    `W = k! Σ (−1)ⁱ λᵢ dλ₀∧…∧dλ̂ᵢ∧…∧dλ_k`. Their products are quadratic in the barycentric
-    coordinates with constant covector parts, so the entries come exactly from the closed form
-    `∫ λᵢλⱼ dV = (1 + δᵢⱼ) V / ((k+1)(k+2))` (ADR-048's monomial law), no quadrature.
-    Symmetric positive definite on any mesh.
-* **Operators.**
+  Laplace–de Rham operator and the Dirac operator. The numga ports carried a triangle-only
+  version (cotangent weights, hat gradients, the Whitney reconstruction, the spin Dirac
+  operator of `surfaces_dirac_waves`) assembled by hand.
+* **The metric is intrinsic** (changed from the design, which gave each model circumcentres and
+  barycentric-gradient covectors of its own).
+  * A model gives one thing, the squared distance between two positions (`Distance`): VGA's
+    `|a − b|²`, PGA's squared norm of the direction between two points of weight one, CGA's
+    `−2 A ∗ B`. STA is left out (its distances are not Euclidean).
+  * Everything else follows simplex by simplex from the Gram matrix of its edges from the first
+    vertex, `Gᵢⱼ = ½(d₀ᵢ + d₀ⱼ − dᵢⱼ)` in squared distances:
+    * volumes, `√det G / k!`;
+    * circumcentres in barycentric coordinates, `G x = ½ diag G`, `λ = (1 − Σx, x)`;
+    * distances between barycentric points, `|Σ wᵢ vᵢ|² = −½ Σ wᵢ wⱼ dᵢⱼ` for `Σ w = 0`;
+    * the inner products of the barycentric gradients, `G⁻¹` (and `dλ₀ = −Σ dλᵢ`).
+  * So one implementation serves every model, and a user algebra needs only `Distance`; the
+    three models give the same numbers (a law). It is how DEC is usually stated (the metric as
+    edge lengths).
+* **Two Hodge stars** (`Geometry::new(&mesh)` computes the volumes once).
+  * Diagonal (circumcentric): `⋆_k = |σ*| / |σ|`. The dual volumes follow PyDEC's algorithm
+    intrinsically: in each top simplex, along every flag of faces down to `σ`, the volume of the
+    simplex of the flag's circumcentres, signed by the side of each face its parent's
+    circumcentre falls on (the parent's barycentric coordinate at the opposite vertex; PyDEC's
+    fix of June 2025). Positive on well-centred meshes (`is_well_centered`); signed elsewhere.
+    The top simplices' primal volumes are unsigned (PyDEC signs them by orientation when they
+    fill their space).
+  * Galerkin (Whitney): `M_k = ∫ Wᵢ · Wⱼ dV`, `W = k! Σ (−1)ⁱ λᵢ dλ₀∧…∧dλ̂ᵢ∧…∧dλ_k` in each
+    face's own vertex order (sorted below the top, as given at the top). The products are
+    quadratic in the barycentric coordinates with constant gradient parts, so the entries come
+    exactly from `∫ λₐ λ_b dV = (1 + δₐ_b) V / ((n+1)(n+2))` and determinants of the gradients'
+    inner products.
+  * **A finding.** The design claimed both stars give the same stiffness on 0-forms in any
+    dimension. On triangles they do (`d₀ᵀ ⋆₁ d₀ = d₀ᵀ M₁ d₀`, the cotangent formula, for any
+    triangle). On tetrahedra the circumcentric one agrees with linear finite elements only on
+    symmetric ones: `2·10⁻¹⁶` off on a regular tetrahedron, 0.02 on a near-regular one, 0.17 on
+    a random one, about 25 % on a jittered grid (PyDEC gives the same circumcentric numbers). The
+    Galerkin stiffness is the finite-element one in every dimension, which is the law kept.
+* **The maps.**
+  * The de Rham map `de_rham(&mesh, rule, F)`: the integral of a `k`-vector field over each
+    `k`-simplex against its measure, `∫_σ F ∗ ~dX`, by `gax::simplex`'s rules. It needs no metric,
+    so it runs on any `Coef`, and Stokes's theorem is exact on `Fp`.
+  * The Whitney map on edges, `Geometry::whitney_1`: `Σ c_e (λₐ ∇λ_b − λ_b ∇λₐ)` in a top
+    simplex, the gradients the reciprocal frame of its edges in the model
+    (`∇λᵢ = Σⱼ (G⁻¹)ᵢⱼ (vⱼ − v₀)`, vectors in VGA, directions in PGA). Higher degrees need wedges
+    of gradients typed by degree, and wait for a use.
+* **Operators** (M5, not yet implemented).
   * With the diagonal star: `δ_k = ⋆_{k−1}⁻¹ d_{k−1}ᵀ ⋆_k`, `Δ_k = d δ + δ d` (positive
     semidefinite), and the Dirac operator `D = d + δ` on the cochains of every degree at once,
     one field over all simplices. All are `SparseMap`s. Eigenproblems take the symmetric pencil
@@ -1871,20 +1894,15 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * With the Galerkin star: the stiffness `d_kᵀ M_{k+1} d_k` against the mass `M_k`, a
     symmetric pencil for `eigh` and `solve`. The mixed Hodge Laplacian of finite element exterior
     calculus needs `M⁻¹` (a saddle-point system) and is left out until an example needs it.
-  * The de Rham map `R_k` integrates a `k`-vector field over each `k`-simplex (ADR-048), and the
-    Whitney map `W_k` interpolates a cochain back to a field on each top simplex.
-* **Laws and checks.**
-  * Stokes: `R_{k+1}(∇∧F) = d_k R_k(F)` for polynomial `F`, exact on `Fp`. It joins ADR-047, 048
-    and 049.
-  * `R ∘ W = id` on cochains [sample].
-  * On 0-forms both stars give the same stiffness `d₀ᵀ ⋆₁ d₀ = d₀ᵀ M₁ d₀`, the cotangent
-    Laplacian [prop]. The cotangents take roots, so this is in `f64`, at `1e-12`.
-  * `D² = Δ`; the Hodge decomposition is orthogonal; the dimensions of the harmonic spaces are
-    the Betti numbers of ADR-049.
-  * On subdivided spheres the spectrum converges to `ℓ(ℓ+1)` at the expected order.
-  * Outside references: numga's numbers through the ported examples (1e-10, as now), and
-    Hirani's PyDEC for `d`, both stars and `Δ` on random 2D and 3D meshes, as fixtures
-    (`docs/research/experiments/pydec_fixtures.py`, its own venv).
+* **Laws and checks** (laws.md, section R).
+  * Hirani's PyDEC, as fixtures (`docs/research/experiments/pydec_fixtures.py`, its own venv from
+    GitHub; the `pydec` on PyPI is another package): every volume, dual volume and star of every
+    dimension on jittered 2D and 3D grids, within `10⁻¹²`.
+  * The three models agree; the Galerkin stiffness is linear finite elements (gradients from
+    GA reciprocal frames, independently); Stokes for the de Rham map exactly on `Fp`;
+    `R ∘ W = id` and `W₁ d₀ = ∇ W₀`; the numga ports' hand-built metric is the library's.
+  * M5 adds `D² = Δ`, the orthogonality of the Hodge decomposition, the harmonic dimensions as
+    Betti numbers, and sphere spectra converging to `ℓ(ℓ+1)`.
 * **Scope.** Euclidean models only: VGA2D, VGA3D, PGA2D, PGA3D, CGA2D, CGA3D. Meshes in
   spacetime, whose stars are indefinite, are left out. The spin Dirac operator stays an example,
   built from these pieces.

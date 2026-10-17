@@ -218,3 +218,56 @@ assert!(torus.is_oriented() && torus.boundary().is_empty());
 
 `pga3d::Moments::of_mesh` takes a closed surface as a `Mesh<Point, 3>`, and `pga2d::Moments::of_mesh`
 a closed curve as a `Mesh<Point, 2>`; `of_faces` and `of_polygon` take slices.
+
+## Discrete exterior calculus
+
+`gax::dec` (feature `std`) adds the metric to a mesh: volumes, Hodge stars, and the maps between
+fields and cochains (ADR-050).
+
+**The metric is intrinsic.** A model of space gives the squared distance between two positions
+(`dec::Distance`: VGA's `|a − b|²`, PGA's between points of weight one, CGA's `−2 A ∗ B`). Everything
+else follows simplex by simplex from the Gram matrix of its edges, `Gᵢⱼ = ½(d₀ᵢ² + d₀ⱼ² − dᵢⱼ²)`:
+volumes, circumcentres, the inner products of the barycentric gradients. VGA, PGA and CGA give the
+same numbers for the same mesh.
+
+`Geometry::new(&mesh)` computes the primal volumes and the circumcentric dual volumes of every
+simplex, and gives:
+
+* `star(k)`, the diagonal Hodge star `⋆ₖ = |σ*| / |σ|` (Hirani 2003). The dual volumes are signed:
+  a piece of a dual cell counts negative where a circumcentre falls outside its face, so the star
+  can be negative off a well-centred mesh (`is_well_centered`). It matches Hirani's PyDEC to
+  `10⁻¹²`.
+* `mass(k)`, the Galerkin Hodge star: the mass matrix of the Whitney forms, exact, symmetric and
+  positive definite on any mesh.
+* `whitney_1(&mesh, cochain, top, at)`, the Whitney map on edges: the vector field of a 1-cochain
+  inside a top simplex. It inverts the de Rham map.
+
+`dec::de_rham(&mesh, rule, f)` integrates a `k`-vector field over each `k`-simplex against its
+measure, `∫_σ F ∗ ~dX`: a cochain. It commutes with the derivative, `R(∇∧F) = d R(F)`, which is
+Stokes's theorem.
+
+```rust
+use gax::dec::Geometry;
+use gax::field::Field;
+use gax::mesh::Mesh;
+use gax::vga3d::{Scalar, Vector};
+
+// A regular tetrahedron: one solid, its four faces, six edges.
+let corners = [[1.0, 1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0]];
+let v: Field<_> = corners.iter().map(|p| Vector::<(), f64>::new(p[0], p[1], p[2])).collect();
+let tet = Mesh::new(v, &[[0, 1, 2, 3]]).unwrap();
+let g = Geometry::new(&tet);
+assert!((g.volumes(3)[0] - 8.0 / 3.0).abs() < 1e-14);
+assert!(g.is_well_centered());
+// On 0-forms the Galerkin stiffness d₀ᵀ M₁ d₀ is the stiffness of linear finite elements.
+let d0 = tet.d(0);
+let stiffness = &d0.transpose_with(|c| c) * &(&g.mass::<Scalar<(), f64>>(1) * &d0);
+let ones: Field<_> = (0..4).map(|_| Scalar::<(), f64>::new(1.0)).collect();
+let image: Field<Scalar<(), f64>> = &stiffness * &ones;
+assert!(image.sites().iter().all(|x| x.s().abs() < 1e-14));
+```
+
+**The two stars on 0-forms.** On triangles both give the cotangent Laplacian `d₀ᵀ ⋆₁ d₀ = d₀ᵀ M₁ d₀`,
+the stiffness of linear finite elements. On tetrahedra only the Galerkin one does: the circumcentric
+star agrees there only on symmetric meshes (a regular tetrahedron), and differs by tens of percent
+on a jittered grid. Use `mass` where finite-element accuracy matters, `star` where a diagonal matters.

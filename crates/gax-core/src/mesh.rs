@@ -228,6 +228,32 @@ impl<const N: usize> Complex<N> {
         self.simplices[k].chunks_exact(k + 1)
     }
 
+    /// The index of the `k`-simplex with these vertices, sorted (below the top), or in the order
+    /// given (a top simplex, found by its sorted vertices too).
+    #[must_use]
+    pub fn index_of(&self, k: usize, vertices: &[usize]) -> Option<usize> {
+        if k + 1 == N {
+            let mut key = vertices.to_vec();
+            key.sort_unstable();
+            return self.simplices(k).position(|s| {
+                let mut t = s.to_vec();
+                t.sort_unstable();
+                t == key
+            });
+        }
+        let n = self.len(k);
+        let (mut lo, mut hi) = (0, n);
+        while lo < hi {
+            let mid = usize::midpoint(lo, hi);
+            match self.simplex(k, mid).cmp(vertices) {
+                core::cmp::Ordering::Less => lo = mid + 1,
+                core::cmp::Ordering::Greater => hi = mid,
+                core::cmp::Ordering::Equal => return Some(mid),
+            }
+        }
+        None
+    }
+
     /// The faces of the `i`-th `k`-simplex (`k ≥ 1`): the `(k−1)`-simplex opposite each of its
     /// vertices in turn, with the orientation it induces there (`±1`), so that its boundary is
     /// `Σ sign · face`.

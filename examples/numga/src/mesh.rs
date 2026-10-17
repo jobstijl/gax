@@ -524,6 +524,46 @@ mod tests {
         }
     }
 
+    /// The library's metric of meshes (`gax::dec`) gives these functions' numbers: the edge
+    /// ratios are the diagonal Hodge star on edges, the vertex areas the row sums of the Galerkin
+    /// mass on vertices, and the reconstruction the Whitney map at the face centroids.
+    #[test]
+    fn gax_dec_gives_the_metric() {
+        use gax::dec::Geometry;
+        for mesh in disks(1.0) {
+            let lib = gax::mesh::Mesh::new(mesh.vertices.clone(), &mesh.faces).unwrap();
+            let g = Geometry::new(&lib);
+            let close = |a: f64, b: f64| (a - b).abs() < 1e-12 * (1.0 + a.abs());
+            let star: Vec<f64> = g
+                .star::<Scalar3>(1)
+                .couplings()
+                .map(|(_, _, c)| c.s())
+                .collect();
+            for (h, x) in mesh.edge_ratio().sites().iter().zip(&star) {
+                assert!(close(h.s(), *x), "{} {x}", h.s());
+            }
+            let mut lumped = vec![0.0; mesh.vertices.len()];
+            for (r, _, c) in g.mass::<Scalar3>(0).couplings() {
+                lumped[r] += c.s();
+            }
+            for (a, x) in mesh.vertex_areas().sites().iter().zip(&lumped) {
+                assert!(close(a.s(), *x), "{} {x}", a.s());
+            }
+            let cochain: Field<Scalar3> = (0..mesh.edges.len())
+                .map(|e| Scalar3::new(((e * 37) % 11) as f64 * 0.2 - 1.0))
+                .collect();
+            let reconstructed = mesh.reconstruction().apply(&cochain);
+            for f in 0..mesh.faces.len() {
+                let w = g.whitney_1(&lib, &cochain, f, &[1.0 / 3.0; 3]);
+                let r = reconstructed.site(f);
+                assert!(
+                    (w - r).c.iter().all(|d| d.abs() < 1e-12),
+                    "face {f}: {w:?} {r:?}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn affine_field_reconstruction_and_energy_follow_a_turned_mesh() {
         // numga's `mv.xz * 0.31`: `e13 = -e31`.

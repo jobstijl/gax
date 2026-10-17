@@ -336,6 +336,27 @@ On complexes of edges, triangles, tetrahedra and 4-simplices (ADR-049):
   and couplings of `d0`, `d1` and the means as before, bit for bit
   (`examples/numga/src/mesh.rs`, `gax_mesh_keeps_every_number`).
 
+### R. Discrete exterior calculus (`tests/dec.rs`)
+
+On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
+
+* [prop] Hirani's PyDEC (`tests/fixtures/pydec.txt`, `docs/research/experiments/pydec_fixtures.py`):
+  every primal volume, signed circumcentric dual volume and diagonal Hodge star, of every
+  dimension, within `10⁻¹²` (PyDEC signs top volumes by orientation; gax's metric is
+  orientation-free, so those are compared in absolute value).
+* [prop] VGA3D, PGA3D and CGA3D give the same volumes and dual volumes for the same mesh.
+* [prop] The Galerkin stiffness `d₀ᵀ M₁ d₀` is the stiffness of linear finite elements
+  `Σ V ∇λₐ · ∇λ_b`, the gradients computed independently as reciprocal frames of the edges
+  (`(e₂ ∧ e₃)(e₁ ∧ e₂ ∧ e₃)⁻¹`), in 2D and 3D. On triangles `d₀ᵀ ⋆₁ d₀` is the same (the
+  cotangent formula); on tetrahedra only for a regular one, which is checked. The top mass is
+  `1/V`.
+* [sample] Stokes for the de Rham map, `R(∇∧F) = d R(F)`, exactly on `ℤ/p`, for cubic fields: the
+  gradient theorem (scalars), Green's and Stokes's (vectors), Gauss's (bivectors in 3D).
+* [prop] The Whitney map inverts the de Rham map on edges, `R ∘ W = id`, and `W₁ d₀ = ∇ W₀`.
+* [prop] The numga ports' hand-built metric: their edge ratios are `⋆₁`, their vertex areas the
+  row sums of `M₀`, their reconstruction `W₁` at the centroids, within `10⁻¹²`
+  (`examples/numga/src/mesh.rs`, `gax_dec_gives_the_metric`).
+
 ## 4. Licensed rewrites
 
 Each law licenses a transformation:
