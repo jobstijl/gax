@@ -285,7 +285,7 @@ jobs:
           RUSTFLAGS: ""
 
   fuzz:
-    name: fuzz the spec parser, the solvers and the tracer (short)
+    name: fuzz the spec parser, the solvers, the tracer and the mesh complexes (short)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -298,6 +298,9 @@ jobs:
         env:
           RUSTFLAGS: ""
       - run: cd fuzz && cargo fuzz run trace_programs -- -max_total_time=180 -max_len=40
+        env:
+          RUSTFLAGS: ""
+      - run: cd fuzz && cargo fuzz run mesh_complex -- -max_total_time=120 -max_len=321
         env:
           RUSTFLAGS: ""
       # A crashing input as an annotation, which the GitHub API shows without a token, and as an

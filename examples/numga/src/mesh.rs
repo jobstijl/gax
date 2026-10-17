@@ -24,6 +24,7 @@ mod disks;
 
 use core::ops::{Add, Mul, Sub};
 use gax::field::{Field, SparseMap};
+use gax::mesh::Complex;
 use gax::vga3d::{Bivector, Scalar, Vector};
 use gax::{Extensor, Kind};
 
@@ -64,11 +65,8 @@ pub struct Mesh<V = Vector3> {
     /// Whether the face runs along that edge (`1`), from its lower vertex to its higher, or
     /// against it (`-1`).
     pub face_edge_orientation: Vec<[f64; 3]>,
-}
-
-/// The ends of the edge facing each corner of the face, counter-clockwise.
-fn facing([a, b, c]: [usize; 3]) -> [[usize; 2]; 3] {
-    [[b, c], [c, a], [a, b]]
+    /// The topology, from which the edges and the incidence maps come.
+    complex: Complex<3>,
 }
 
 impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
@@ -78,25 +76,13 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// If a face names a vertex that is not there.
     #[must_use]
     pub fn new(vertices: Field<V>, faces: Vec<[usize; 3]>) -> Self {
-        assert!(
-            faces.iter().flatten().all(|&v| v < vertices.len()),
-            "a face names a vertex outside the {} vertices",
-            vertices.len()
-        );
-        let sorted = |[a, b]: [usize; 2]| [a.min(b), a.max(b)];
-        let mut edges: Vec<[usize; 2]> =
-            faces.iter().flat_map(|&f| facing(f).map(sorted)).collect();
-        edges.sort_unstable();
-        edges.dedup();
-        let index = |ends: [usize; 2]| {
-            edges
-                .binary_search(&sorted(ends))
-                .expect("an edge of the faces")
-        };
-        let face_edges = faces.iter().map(|&f| facing(f).map(index)).collect();
-        let face_edge_orientation = faces
-            .iter()
-            .map(|&f| facing(f).map(|[a, b]| if a < b { 1.0 } else { -1.0 }))
+        let complex = Complex::new(vertices.len(), &faces).unwrap_or_else(|e| panic!("{e}"));
+        let edges = complex.simplices(1).map(|e| [e[0], e[1]]).collect();
+        let face_edges = (0..faces.len())
+            .map(|f| core::array::from_fn(|k| complex.faces(2, f)[k].0))
+            .collect();
+        let face_edge_orientation = (0..faces.len())
+            .map(|f| core::array::from_fn(|k| f64::from(complex.faces(2, f)[k].1)))
             .collect();
         Mesh {
             vertices,
@@ -104,6 +90,7 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
             edges,
             face_edges,
             face_edge_orientation,
+            complex,
         }
     }
 
@@ -123,37 +110,32 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
             edges: self.edges.clone(),
             face_edges: self.face_edges.clone(),
             face_edge_orientation: self.face_edge_orientation.clone(),
+            complex: self.complex.clone(),
         }
     }
 
     /// `[E, V]`: the difference along each edge, its higher vertex less its lower.
     #[must_use]
     pub fn d0(&self) -> SparseMap<ScalarOf<V>> {
-        SparseMap::from_columns(&self.edges, self.vertices.len(), |_, end| {
-            scalar::<V>([-1.0, 1.0][end])
-        })
+        self.complex.d(0)
     }
 
     /// `[F, E]`: the oriented circulation around each face.
     #[must_use]
     pub fn d1(&self) -> SparseMap<ScalarOf<V>> {
-        SparseMap::from_columns(&self.face_edges, self.edges.len(), |f, k| {
-            scalar::<V>(self.face_edge_orientation[f][k])
-        })
+        self.complex.d(1)
     }
 
     /// `[E, V]`: the mean of each edge's two vertices.
     #[must_use]
     pub fn edge_means(&self) -> SparseMap<ScalarOf<V>> {
-        SparseMap::from_columns(&self.edges, self.vertices.len(), |_, _| scalar::<V>(0.5))
+        self.complex.means(1)
     }
 
     /// `[F, V]`: the mean of each face's three corners.
     #[must_use]
     pub fn face_means(&self) -> SparseMap<ScalarOf<V>> {
-        SparseMap::from_columns(&self.faces, self.vertices.len(), |_, _| {
-            scalar::<V>(1.0 / 3.0)
-        })
+        self.complex.means(2)
     }
 
     /// The edges of only one face, in order.
@@ -468,6 +450,78 @@ mod tests {
     /// The squared size of a field: the sum of its squared coefficients.
     fn squared_size<M: Extensor<Coef = f64>>(field: &Field<M>) -> f64 {
         field.dot(field)
+    }
+
+    /// The topology and the incidence maps as this module built them before `gax::mesh`
+    /// (numga's `mesh.py`), kept to check that the move changed no number: the edges, each
+    /// face's edges and their orientations, and the couplings of `d0`, `d1` and the means, bit
+    /// for bit.
+    #[test]
+    fn gax_mesh_keeps_every_number() {
+        type Couplings = Vec<(usize, usize, u64)>;
+        fn couplings(m: &SparseMap<Scalar3>) -> Couplings {
+            m.couplings()
+                .map(|(r, c, x)| (r, c, x.s().to_bits()))
+                .collect()
+        }
+        /// The ends of the edge facing each corner of the face, counter-clockwise.
+        fn facing([a, b, c]: [usize; 3]) -> [[usize; 2]; 3] {
+            [[b, c], [c, a], [a, b]]
+        }
+        type Reference = (
+            Vec<[usize; 2]>,
+            Vec<[usize; 3]>,
+            Vec<[f64; 3]>,
+            [Couplings; 4],
+        );
+        fn reference(mesh: &Mesh) -> Reference {
+            let sorted = |[a, b]: [usize; 2]| [a.min(b), a.max(b)];
+            let mut edges: Vec<[usize; 2]> = mesh
+                .faces
+                .iter()
+                .flat_map(|&f| facing(f).map(sorted))
+                .collect();
+            edges.sort_unstable();
+            edges.dedup();
+            let index = |ends: [usize; 2]| edges.binary_search(&sorted(ends)).unwrap();
+            let face_edges: Vec<[usize; 3]> =
+                mesh.faces.iter().map(|&f| facing(f).map(index)).collect();
+            let orientation: Vec<[f64; 3]> = mesh
+                .faces
+                .iter()
+                .map(|&f| facing(f).map(|[a, b]| if a < b { 1.0 } else { -1.0 }))
+                .collect();
+            let n = mesh.vertices.len();
+            let d0 =
+                SparseMap::from_columns(&edges, n, |_, end| scalar::<Vector3>([-1.0, 1.0][end]));
+            let d1 = SparseMap::from_columns(&face_edges, edges.len(), |f, k| {
+                scalar::<Vector3>(orientation[f][k])
+            });
+            let em = SparseMap::from_columns(&edges, n, |_, _| scalar::<Vector3>(0.5));
+            let fm = SparseMap::from_columns(&mesh.faces, n, |_, _| scalar::<Vector3>(1.0 / 3.0));
+            let maps = [
+                couplings(&d0),
+                couplings(&d1),
+                couplings(&em),
+                couplings(&fm),
+            ];
+            (edges, face_edges, orientation, maps)
+        }
+        let coarse = Mesh::disk(1.0, 3, 9);
+        let finer = coarse.subdivide_loop(&vec![false; coarse.vertices.len()]);
+        for mesh in disks(1.0).into_iter().chain([finer]) {
+            let (edges, face_edges, orientation, maps) = reference(&mesh);
+            assert_eq!(mesh.edges, edges);
+            assert_eq!(mesh.face_edges, face_edges);
+            assert_eq!(mesh.face_edge_orientation, orientation);
+            let now = [
+                couplings(&mesh.d0()),
+                couplings(&mesh.d1()),
+                couplings(&mesh.edge_means()),
+                couplings(&mesh.face_means()),
+            ];
+            assert_eq!(now, maps);
+        }
     }
 
     #[test]

@@ -1776,48 +1776,66 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     the full dimension.
 
 ## ADR-049: Simplicial complexes and meshes
-*Status: proposed (2026-10-17). Phase 10, M3.*
+*Status: accepted, implemented (`gax_core::mesh`, `docs/calculus.md`). Phase 10, M3.*
 
 * **The problem.** The numga ports carry an oriented triangle mesh (`examples/numga/src/mesh.rs`,
   numga's `mesh.py`). It derives edges from faces, and its incidence operators `d0` and `d1`
   are field maps: the discrete exterior derivative. 19 ports use it, 6 its `d0` and `d1`, so its
-  API has been tried. It handles triangles only, `f64` only, and lives outside the library.
-  `Moments` takes raw vertex and face slices.
+  API has been tried. It handled triangles only, `f64` only, and lived outside the library.
+  `Moments` took raw vertex and face slices.
 * **Two types** (`gax_core::mesh`, feature `std`).
-  * `Complex<N>`: topology alone, built from top simplices `[usize; N]`.
-    * Every `k`-face is derived. Faces below the top are stored with their vertices sorted,
-      in lexicographic order. That is numga's edge order, and it is canonical.
+  * `Complex<N>`: topology alone, built from top simplices `[usize; N]` over a number of
+    vertices (some may be in no simplex).
+    * Every `k`-face is derived. Faces below the top are stored with their vertices sorted, in
+      lexicographic order. That is numga's edge order, and it is canonical.
     * Top simplices keep the order they were given, which is their orientation.
-    * `d(k)`, from `k`-cochains to `(k+1)`-cochains, is a `SparseMap` of `±1` cells of any
-      scalar kind. `d∘d = 0` holds by construction, and it is a law.
-    * The cells of a row keep numga's order, so the 19 ports keep their bits: an edge lists its
-      lower end, then its higher; a simplex of two or more dimensions lists the face opposite
-      each of its vertices in turn.
+    * Each simplex stores its faces, opposite each vertex in turn, with the orientation it
+      induces on them: `(−1)ⁱ` times the sign of the permutation that sorts the face.
+    * `d(k)`, from `k`-cochains to `(k+1)`-cochains, is a `SparseMap` of `±1` cells of a scalar
+      kind. A bound `Kind<Scalar = Self>` would say "scalar", but generic code over a vertex
+      kind `V` cannot prove it of `V`'s scalar kind, so it is a compile-time
+      `const { assert!(N == 1) }` on the cell kind instead (the examples' generic `Mesh<V>`
+      needed this).
+    * `d∘d = 0` holds by construction, and it is a law.
+    * The cells of a row keep numga's order, so the ports keep their bits: an edge lists its
+      ends in its order (the first `−1`), a simplex of two or more dimensions the face opposite
+      each vertex in turn.
+    * `means(k)`: the mean over each `k`-simplex's vertices, in its order.
   * `Mesh<V, N>`: a complex with its vertices, a `Field<V>` of any kind (VGA vectors, PGA
-    points), generic over the coefficient type. It carries what needs only vertex arithmetic:
-    the means over faces, edge vectors and face centres. Metric quantities are ADR-050's.
+    points), generic over the coefficient type, with `d`, `means` and `with_vertices`. Metric
+    quantities are ADR-050's.
 * **Checks.**
-  * Construction returns an error, not a panic, for a vertex index out of range, a simplex that
-    repeats a vertex, and a top simplex given twice.
-  * Queries, since non-manifold complexes are valid inputs: `is_manifold` (each `(N−2)`-face in
-    at most two top simplices), `is_oriented` (neighbours induce opposite orientations on the
-    face they share), `boundary()` (the complex of the faces with one coface), the Euler
-    characteristic, and the Betti numbers.
-  * The Betti numbers are `dim ker d − dim im d`, from exact ranks of `d` on `Fp`. Over ℤ/p
-    they equal those over ℚ unless the complex has torsion of order `p`, impossible for
-    `p = 2⁶¹ − 1` at any mesh size this library handles.
-* **Moments.** `Moments::of_mesh` takes a `&Mesh<Point, 3>` (and `of_polygon` a
-  `&Mesh<Point, 2>`), with the slice forms kept beside them.
-* **What stays in the examples.** Loop subdivision, the disks, the Delaunay triangulation: mesh
-  making and processing, not calculus. gax has no mesh generation, and the tests use
-  structured meshes (a cube cut into six tetrahedra, subdivided icosahedra, a torus grid).
-* **Laws and checks.**
-  * `d(k+1) ∘ d(k) = 0` [sample] on random complexes, `N` up to 5.
-  * The Betti numbers of a disk (1,0,0), a sphere (1,0,1), a torus (1,2,1), a cube of
-    tetrahedra (1,0,0,0); a Möbius strip is not oriented.
-  * The 19 ports move to `gax::mesh` with their outputs unchanged, bit for bit.
-  * A fuzz target builds complexes from arbitrary input: an error, or a complex with
-    `d∘d = 0`, never a panic.
+  * Construction returns a `MeshError`, not a panic: a vertex index out of range, a simplex
+    that repeats a vertex, a top simplex given twice (as a set of vertices).
+  * Queries, since non-manifold complexes are valid inputs:
+    * `is_pseudomanifold`: each `(N−2)`-face in at most two top simplices. The name is the
+      precise one: two surfaces meeting at a vertex pass, since it checks faces, not the stars
+      of vertices (the design said `is_manifold`);
+    * `is_oriented`: neighbours induce opposite orientations on the face they share;
+    * `boundary()`: the `(N−2)`-faces of one top simplex, by index;
+    * `coface_counts(k)`: the valences, for `k = 0`;
+    * the Euler characteristic, and the Betti numbers.
+  * The Betti numbers are `dim C_k − rank d(k) − rank d(k−1)`, the ranks exact on `Fp` by sparse
+    elimination of the rows. Over ℤ/p they equal those over ℚ unless the homology has torsion of
+    order `p`, impossible for `p = 2⁶¹ − 1` at any mesh size this library handles. (A Klein
+    bottle's `ℤ/2` torsion is invisible, as over ℚ.)
+* **Moments.** `pga3d::Moments::of_mesh` takes a closed surface as a `&Mesh<Point, 3>`, and
+  `pga2d::Moments::of_mesh` a closed curve as a `&Mesh<Point, 2>`. The slice form of 3D is
+  renamed `of_faces`; `of_polygon` stays. The mesh forms give the slice forms' numbers bit for
+  bit.
+* **The numga ports.** The examples' `Mesh` keeps its public fields (19 ports read `edges` and
+  `faces` directly) and derives them, and `d0`, `d1` and the means, from a `Complex<3>`. A test
+  keeps the old construction as a reference and checks every edge, orientation and coupling bit
+  for bit on the three disks and a Loop-refined mesh.
+* **What stays in the examples.** Loop subdivision, the disks, the Delaunay triangulation, the
+  per-corner couplings: mesh making and processing, not calculus. gax has no mesh generation,
+  and the tests use structured meshes.
+* **Laws and checks** (laws.md, section Q).
+  * `d(k+1) ∘ d(k) = 0` and Euler–Poincaré on random complexes of 2 to 5 vertices per simplex,
+    and in the fuzz target `mesh_complex` on arbitrary input (shared checks,
+    `tests/support/complex_checks.rs`).
+  * The Betti numbers of a disk, a cylinder, a Möbius strip, a torus, a Klein bottle, the
+    octahedron, a cube of six tetrahedra, the boundary of a 4-simplex, and two pieces.
 
 ## ADR-050: Discrete exterior calculus
 *Status: proposed (2026-10-17). Phase 10, M4 and M5.*

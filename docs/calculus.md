@@ -173,3 +173,48 @@ let around = Simplex([v[1], v[2]]).directed(Rule::degree(3), f)
     + Simplex([v[0], v[1]]).directed(Rule::degree(3), f);
 assert!((inside - around).c.iter().all(|c| c.abs() < 1e-15));
 ```
+
+## Meshes
+
+A mesh is a chain of simplices that share faces. `gax::mesh` (feature `std`) holds the topology of
+one of any dimension and its boundary maps, the discrete exterior derivative (ADR-049).
+
+* `Complex<N>` is built from its top simplices, `N` vertex indices each (triangles for a surface,
+  tetrahedra for a solid). It derives every face: the `k`-simplices for `k` from 0 (the vertices)
+  to `N − 1`. The top simplices keep their order, which orients them; below the top a simplex's
+  vertices are sorted, and each dimension is in lexicographic order.
+* `d(k)` maps fields on the `k`-simplices to fields on the `(k+1)`-simplices, a `SparseMap` with
+  cells `±1`: the difference along each edge for `k = 0`, the circulation around each triangle for
+  `k = 1`. Each row lists a simplex's faces with the orientations they get from it, so
+  `d(k+1) ∘ d(k) = 0`.
+* `means(k)` takes the mean over each `k`-simplex's vertices.
+* `Mesh<V, N>` is a complex with its vertices, a `Field` of any kind: VGA vectors, PGA points.
+
+The construction returns an error, not a panic, for a vertex index out of range, a simplex that
+repeats a vertex, or a top simplex given twice. Non-manifold complexes are valid, and queries tell
+them apart:
+* `is_pseudomanifold`: no face in more than two top simplices.
+* `is_oriented`: neighbours induce opposite orientations on each face they share.
+* `boundary`: the faces of one top simplex.
+* `euler_characteristic`.
+* `betti_numbers`: the dimensions of the homology, from exact ranks of the boundary maps over the
+  prime field.
+
+```rust
+use gax::mesh::Complex;
+
+// A torus: a 4 × 4 grid of squares, two triangles each, with opposite sides glued.
+let id = |i: usize, j: usize| (i % 4) * 4 + j % 4;
+let faces: Vec<[usize; 3]> = (0..4)
+    .flat_map(|i| (0..4).flat_map(move |j| {
+        [[id(i, j), id(i + 1, j), id(i + 1, j + 1)], [id(i, j), id(i + 1, j + 1), id(i, j + 1)]]
+    }))
+    .collect();
+let torus = Complex::new(16, &faces).unwrap();
+assert_eq!(torus.betti_numbers(), [1, 2, 1]); // one piece, two loops, one cavity
+assert_eq!(torus.euler_characteristic(), 0);
+assert!(torus.is_oriented() && torus.boundary().is_empty());
+```
+
+`pga3d::Moments::of_mesh` takes a closed surface as a `Mesh<Point, 3>`, and `pga2d::Moments::of_mesh`
+a closed curve as a `Mesh<Point, 2>`; `of_faces` and `of_polygon` take slices.

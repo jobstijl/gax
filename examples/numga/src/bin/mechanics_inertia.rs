@@ -341,7 +341,7 @@ fn scene() -> &'static Scene {
         }
         // gax's mesh moments of the same tetrahedron, per unit volume.
         let faces = [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]];
-        let mesh = gax::pga3d::Moments::of_mesh(&tetra, &faces);
+        let mesh = gax::pga3d::Moments::of_faces(&tetra, &faces);
         let moment = e3::second_moment(exact);
         let planes: Vec<e3::Pl> = (0..4).map(e3::plane_blade).collect();
         let mut worst: f64 = 0.0;

@@ -52,6 +52,8 @@ pub mod kind;
 pub mod linalg;
 pub mod map;
 pub mod math;
+#[cfg(feature = "std")]
+pub mod mesh;
 pub mod ops;
 pub mod permute;
 pub mod prepared;

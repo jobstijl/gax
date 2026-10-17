@@ -86,7 +86,7 @@ mod pga3d_moments {
     ///     .collect();
     /// let faces = [[0, 2, 1], [1, 2, 3], [4, 5, 6], [5, 7, 6], [0, 1, 4], [1, 5, 4],
     ///              [2, 6, 3], [3, 6, 7], [0, 4, 2], [2, 4, 6], [1, 3, 5], [3, 7, 5]];
-    /// let m = Moments::of_mesh(&v, &faces);
+    /// let m = Moments::of_faces(&v, &faces);
     /// assert!((m.volume() - 1.0).abs() < 1e-12);
     /// assert!((m.centroid().to_euclidean()[2] - 0.5).abs() < 1e-12);
     /// let (inertia, _frame) = m.inertia(1.0); // principal moments 1/6 each
@@ -119,9 +119,22 @@ mod pga3d_moments {
     }
 
     impl<T: Real> Moments<T> {
-        /// The moments of the solid bounded by a closed, consistently oriented triangle mesh:
-        /// `faces` index `vertices`, each counterclockwise seen from outside.
-        pub fn of_mesh(vertices: &[Point<(), T>], faces: &[[usize; 3]]) -> Self {
+        /// The moments of the solid bounded by a closed, consistently oriented surface: the
+        /// mesh's triangles, each counterclockwise seen from outside (`gax::mesh`).
+        #[cfg(feature = "std")]
+        pub fn of_mesh(mesh: &crate::mesh::Mesh<Point<(), T>, 3>) -> Self {
+            let v = mesh.vertices.sites();
+            Self::of_triangles(
+                mesh.complex()
+                    .simplices(2)
+                    .map(|t| [v[t[0]], v[t[1]], v[t[2]]]),
+                Point::xyz(T::zero(), T::zero(), T::zero()),
+            )
+        }
+
+        /// The moments of the solid bounded by a closed, consistently oriented triangle mesh
+        /// given as slices: `faces` index `vertices`, each counterclockwise seen from outside.
+        pub fn of_faces(vertices: &[Point<(), T>], faces: &[[usize; 3]]) -> Self {
             Self::of_triangles(
                 faces
                     .iter()
@@ -335,6 +348,20 @@ mod pga2d_moments {
     }
 
     impl<T: Real> Moments<T> {
+        /// The moments of the region inside a closed curve: the mesh's edges, running
+        /// counterclockwise around the region (`gax::mesh`; a polygon's edges, or several
+        /// loops, holes running clockwise).
+        #[cfg(feature = "std")]
+        pub fn of_mesh(mesh: &crate::mesh::Mesh<Point<(), T>, 2>) -> Self {
+            let v = mesh.vertices.sites();
+            let o = Point::xy(T::zero(), T::zero());
+            let mut m = Self::default();
+            for e in mesh.complex().simplices(1) {
+                m.add_edge([v[e[0]], v[e[1]]], o);
+            }
+            m
+        }
+
         /// The moments of the region inside a closed polygon, its vertices counterclockwise.
         pub fn of_polygon(vertices: &[Point<(), T>]) -> Self {
             let o = Point::xy(T::zero(), T::zero());

@@ -713,15 +713,15 @@ body's moments are one form on planes, `M(P, Q) = ∫ (P & x)(Q & x) dV`, summed
 the cones from an apex to the boundary triangles:
 
 ```rust
+use gax::mesh::Mesh;
 use gax::pga3d::{Moments, Point};
 
 // A unit cube as twelve outward-facing triangles.
-let v: Vec<Point<(), f64>> = (0..8)
-    .map(|i| Point::xyz(f64::from(i & 1), f64::from(i >> 1 & 1), f64::from(i >> 2 & 1)))
-    .collect();
+let v = (0..8).map(|i| Point::<(), f64>::xyz(f64::from(i & 1), f64::from(i >> 1 & 1), f64::from(i >> 2 & 1)));
 let faces = [[0, 2, 1], [1, 2, 3], [4, 5, 6], [5, 7, 6], [0, 1, 4], [1, 5, 4],
              [2, 6, 3], [3, 6, 7], [0, 4, 2], [2, 4, 6], [1, 3, 5], [3, 7, 5]];
-let m = Moments::of_mesh(&v, &faces);
+let cube = Mesh::new(v.collect(), &faces).unwrap();
+let m = Moments::of_mesh(&cube); // or Moments::of_faces(&vertices, &faces) from slices
 assert!((m.volume() - 1.0).abs() < 1e-12);
 let (inertia, frame) = m.inertia(1.0); // a PrincipalInertia, and the motor to its axes
 # let _ = (inertia, frame);

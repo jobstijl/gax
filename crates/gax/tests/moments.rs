@@ -43,7 +43,7 @@ fn cuboid(a: f64, b: f64, c: f64) -> (Vec<pga3d::Point<(), f64>>, Vec<[usize; 3]
 fn a_box() {
     let (a, b, c) = (2.0, 3.0, 5.0);
     let (v, f) = cuboid(a, b, c);
-    let m = pga3d::Moments::of_mesh(&v, &f);
+    let m = pga3d::Moments::of_faces(&v, &f);
     assert!(close(m.volume(), a * b * c, 1e-12));
     let [x, y, z] = m.centroid().to_euclidean();
     assert!(close(x, a / 2.0, 1e-12) && close(y, b / 2.0, 1e-12) && close(z, c / 2.0, 1e-12));
@@ -87,7 +87,7 @@ fn a_tetrahedron() {
         p(0.0, 0.0, 1.0),
     ];
     let f = [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]];
-    let m = pga3d::Moments::of_mesh(&v, &f);
+    let m = pga3d::Moments::of_faces(&v, &f);
     assert!(close(m.volume(), 1.0 / 6.0, 1e-12));
     for c in m.centroid().to_euclidean() {
         assert!(close(c, 0.25, 1e-12));
@@ -119,9 +119,9 @@ fn apex_and_additivity() {
         .iter()
         .map(|p| pga3d::Motor::translation(1.0, 0.0, 0.0) >> *p)
         .collect();
-    let two = pga3d::Moments::of_mesh(&w, &g) + pga3d::Moments::of_mesh(&shifted, &g);
+    let two = pga3d::Moments::of_faces(&w, &g) + pga3d::Moments::of_faces(&shifted, &g);
     let (u, h) = cuboid(2.0, 2.0, 3.0);
-    let one = pga3d::Moments::of_mesh(&u, &h);
+    let one = pga3d::Moments::of_faces(&u, &h);
     for (x, y) in two.form.c[0]
         .iter()
         .flatten()
@@ -138,8 +138,8 @@ fn equivariance() {
     let m = pga3d::Motor::translation(0.3, -1.0, 2.0)
         * pga3d::Motor::rotation_about(1.0, 2.0, 0.5, 0.7);
     let moved_mesh: Vec<_> = v.iter().map(|p| m >> *p).collect();
-    let direct = pga3d::Moments::of_mesh(&moved_mesh, &f);
-    let moved = pga3d::Moments::of_mesh(&v, &f).moved(m);
+    let direct = pga3d::Moments::of_faces(&moved_mesh, &f);
+    let moved = pga3d::Moments::of_faces(&v, &f).moved(m);
     for (x, y) in direct.form.c[0]
         .iter()
         .flatten()
@@ -148,7 +148,7 @@ fn equivariance() {
         assert!(close(*x, *y, 1e-10), "{x} vs {y}");
     }
     // The principal moments do not depend on the pose.
-    let (a, _) = pga3d::Moments::of_mesh(&v, &f).inertia(1.0);
+    let (a, _) = pga3d::Moments::of_faces(&v, &f).inertia(1.0);
     let (b, frame) = direct.inertia(1.0);
     for k in 0..3 {
         assert!(close(a.moments[k], b.moments[k], 1e-10));
@@ -277,7 +277,7 @@ fn the_frame_diagonalizes_the_inertia() {
         pga3d::Motor::rotation_about(0.0, 0.0, 1.0, 0.0),
     ] {
         let moved: Vec<_> = v.iter().map(|p| m >> *p).collect();
-        let body = pga3d::Moments::of_mesh(&moved, &f);
+        let body = pga3d::Moments::of_faces(&moved, &f);
         let c = body.central_second_moments();
         let tr = c[0][0] + c[1][1] + c[2][2];
         let (inertia, frame) = body.inertia(1.0);
@@ -313,8 +313,30 @@ fn single_precision() {
         p(0.0, 0.0, 1.0),
     ];
     let f = [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]];
-    let m = pga3d::Moments::<f32>::of_mesh(&v, &f);
+    let m = pga3d::Moments::<f32>::of_faces(&v, &f);
     assert!((m.volume() - 1.0 / 6.0).abs() < 1e-6);
     let (inertia, _) = m.inertia(1.0);
     assert!(inertia.moments.iter().all(|x| x.is_finite() && *x > 0.0));
+}
+
+/// The moments of a `gax::mesh::Mesh` are those of its vertices and faces given as slices, bit
+/// for bit: a box in 3D, and a polygon's edges in 2D.
+#[test]
+fn of_a_mesh() {
+    let (v, f) = cuboid(1.0, 2.0, 3.0);
+    let mesh = gax::mesh::Mesh::new(v.iter().copied().collect(), &f).unwrap();
+    assert_eq!(
+        pga3d::Moments::of_mesh(&mesh),
+        pga3d::Moments::of_faces(&v, &f)
+    );
+    let p = |x: f64, y: f64| pga2d::Point::<(), f64>::xy(x, y);
+    let hex: Vec<_> = (0..6)
+        .map(|i| p((f64::from(i) * 1.1).cos(), (f64::from(i) * 1.1).sin() * 0.7))
+        .collect();
+    let edges: Vec<[usize; 2]> = (0..6).map(|i| [i, (i + 1) % 6]).collect();
+    let loop_ = gax::mesh::Mesh::new(hex.iter().copied().collect(), &edges).unwrap();
+    assert_eq!(
+        pga2d::Moments::of_mesh(&loop_),
+        pga2d::Moments::of_polygon(&hex)
+    );
 }

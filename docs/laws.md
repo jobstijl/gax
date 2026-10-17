@@ -318,6 +318,24 @@ Exactly, on the prime field (law L), unless marked (ADR-048):
   within `10⁻¹²`.
 * [prop] In `f64`, every rule stays within the rounding bounds of numerics.md.
 
+### Q. Simplicial complexes (`tests/meshes.rs`, the fuzz target `mesh_complex`)
+
+On complexes of edges, triangles, tetrahedra and 4-simplices (ADR-049):
+
+* [sample] `d(k+1) ∘ d(k) = 0`, and each face listed for a simplex holds its other vertices, on
+  200 random lists of simplices per dimension and on every fuzzed input. Errors are reported for
+  the right reason (the index out of range, the vertex repeated, the two simplices equal as sets).
+* [sample] Euler–Poincaré: `Σ (−1)ᵏ bₖ = χ`, from the exact ranks over `ℤ/p` against the counts of
+  simplices.
+* [doc] The Betti numbers of known spaces: a disk (1, 0, 0), a cylinder and a Möbius strip
+  (1, 1, 0), a torus (1, 2, 1), a Klein bottle (1, 1, 0), the octahedron (1, 0, 1), a cube of six
+  tetrahedra (1, 0, 0, 0), the boundary of a 4-simplex (1, 0, 0, 1), two disjoint triangles
+  (2, 0, 0). The Möbius strip and the Klein bottle are not oriented; one face of the octahedron
+  turned over breaks its orientation and not its topology.
+* [doc] numga's mesh: the examples' `Mesh` on `gax::mesh` gives the same edges, face orientations
+  and couplings of `d0`, `d1` and the means as before, bit for bit
+  (`examples/numga/src/mesh.rs`, `gax_mesh_keeps_every_number`).
+
 ## 4. Licensed rewrites
 
 Each law licenses a transformation:
