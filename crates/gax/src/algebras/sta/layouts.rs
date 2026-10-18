@@ -97,7 +97,9 @@ impl<O: gx::Orientation> From<gx::Unit<Scalar<(), f32, O>>> for ScalarGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<ScalarGpu> for Scalar<(), f32> {
+impl<O: gx::Orientation> From<ScalarGpu> for Scalar<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: ScalarGpu) -> Self {
         Scalar::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -142,7 +144,7 @@ impl<O: gx::Orientation> From<Scalar<(), f32, O>> for ScalarGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<ScalarGpu16> for Scalar<(), f32> {
+impl<O: gx::Orientation> From<ScalarGpu16> for Scalar<(), f32, O> {
     #[inline]
     fn from(g: ScalarGpu16) -> Self {
         Scalar::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -196,7 +198,9 @@ impl<O: gx::Orientation> From<gx::Unit<Vector<(), f32, O>>> for VectorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<VectorGpu> for Vector<(), f32> {
+impl<O: gx::Orientation> From<VectorGpu> for Vector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: VectorGpu) -> Self {
         Vector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -241,7 +245,7 @@ impl<O: gx::Orientation> From<Vector<(), f32, O>> for VectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<VectorGpu16> for Vector<(), f32> {
+impl<O: gx::Orientation> From<VectorGpu16> for Vector<(), f32, O> {
     #[inline]
     fn from(g: VectorGpu16) -> Self {
         Vector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -295,7 +299,9 @@ impl<O: gx::Orientation> From<gx::Unit<Bivector<(), f32, O>>> for BivectorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<BivectorGpu> for Bivector<(), f32> {
+impl<O: gx::Orientation> From<BivectorGpu> for Bivector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: BivectorGpu) -> Self {
         Bivector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -340,7 +346,7 @@ impl<O: gx::Orientation> From<Bivector<(), f32, O>> for BivectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<BivectorGpu16> for Bivector<(), f32> {
+impl<O: gx::Orientation> From<BivectorGpu16> for Bivector<(), f32, O> {
     #[inline]
     fn from(g: BivectorGpu16) -> Self {
         Bivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -394,7 +400,9 @@ impl<O: gx::Orientation> From<gx::Unit<Trivector<(), f32, O>>> for TrivectorGpu 
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<TrivectorGpu> for Trivector<(), f32> {
+impl<O: gx::Orientation> From<TrivectorGpu> for Trivector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: TrivectorGpu) -> Self {
         Trivector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -439,7 +447,7 @@ impl<O: gx::Orientation> From<Trivector<(), f32, O>> for TrivectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<TrivectorGpu16> for Trivector<(), f32> {
+impl<O: gx::Orientation> From<TrivectorGpu16> for Trivector<(), f32, O> {
     #[inline]
     fn from(g: TrivectorGpu16) -> Self {
         Trivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -493,7 +501,9 @@ impl<O: gx::Orientation> From<gx::Unit<Pseudoscalar<(), f32, O>>> for Pseudoscal
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<PseudoscalarGpu> for Pseudoscalar<(), f32> {
+impl<O: gx::Orientation> From<PseudoscalarGpu> for Pseudoscalar<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: PseudoscalarGpu) -> Self {
         Pseudoscalar::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -538,7 +548,7 @@ impl<O: gx::Orientation> From<Pseudoscalar<(), f32, O>> for PseudoscalarGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<PseudoscalarGpu16> for Pseudoscalar<(), f32> {
+impl<O: gx::Orientation> From<PseudoscalarGpu16> for Pseudoscalar<(), f32, O> {
     #[inline]
     fn from(g: PseudoscalarGpu16) -> Self {
         Pseudoscalar::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -592,7 +602,9 @@ impl<O: gx::Orientation> From<gx::Unit<Phasor<(), f32, O>>> for PhasorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<PhasorGpu> for Phasor<(), f32> {
+impl<O: gx::Orientation> From<PhasorGpu> for Phasor<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: PhasorGpu) -> Self {
         Phasor::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -637,7 +649,7 @@ impl<O: gx::Orientation> From<Phasor<(), f32, O>> for PhasorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<PhasorGpu16> for Phasor<(), f32> {
+impl<O: gx::Orientation> From<PhasorGpu16> for Phasor<(), f32, O> {
     #[inline]
     fn from(g: PhasorGpu16) -> Self {
         Phasor::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -691,7 +703,9 @@ impl<O: gx::Orientation> From<gx::Unit<Even<(), f32, O>>> for EvenGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<EvenGpu> for Even<(), f32> {
+impl<O: gx::Orientation> From<EvenGpu> for Even<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: EvenGpu) -> Self {
         Even::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -736,7 +750,7 @@ impl<O: gx::Orientation> From<Even<(), f32, O>> for EvenGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<EvenGpu16> for Even<(), f32> {
+impl<O: gx::Orientation> From<EvenGpu16> for Even<(), f32, O> {
     #[inline]
     fn from(g: EvenGpu16) -> Self {
         Even::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -790,7 +804,9 @@ impl<O: gx::Orientation> From<gx::Unit<Odd<(), f32, O>>> for OddGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<OddGpu> for Odd<(), f32> {
+impl<O: gx::Orientation> From<OddGpu> for Odd<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: OddGpu) -> Self {
         Odd::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -835,7 +851,7 @@ impl<O: gx::Orientation> From<Odd<(), f32, O>> for OddGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<OddGpu16> for Odd<(), f32> {
+impl<O: gx::Orientation> From<OddGpu16> for Odd<(), f32, O> {
     #[inline]
     fn from(g: OddGpu16) -> Self {
         Odd::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -889,7 +905,9 @@ impl<O: gx::Orientation> From<gx::Unit<Multivector<(), f32, O>>> for Multivector
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<MultivectorGpu> for Multivector<(), f32> {
+impl<O: gx::Orientation> From<MultivectorGpu> for Multivector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: MultivectorGpu) -> Self {
         Multivector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -934,7 +952,7 @@ impl<O: gx::Orientation> From<Multivector<(), f32, O>> for MultivectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<MultivectorGpu16> for Multivector<(), f32> {
+impl<O: gx::Orientation> From<MultivectorGpu16> for Multivector<(), f32, O> {
     #[inline]
     fn from(g: MultivectorGpu16) -> Self {
         Multivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -988,9 +1006,9 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Vector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Vector<(Vector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Vector<(Vector,), f32>) -> Self {
+    fn from(m: Vector<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1013,9 +1031,9 @@ impl From<gx::GpuMat<4>> for Vector<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Trivector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Vector<(Trivector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Vector<(Trivector,), f32>) -> Self {
+    fn from(m: Vector<(Trivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1038,9 +1056,9 @@ impl From<gx::GpuMat<4>> for Vector<(Trivector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Trivector<(Vector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Trivector<(Vector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Trivector<(Vector,), f32>) -> Self {
+    fn from(m: Trivector<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1063,9 +1081,9 @@ impl From<gx::GpuMat<4>> for Trivector<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Trivector<(Trivector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Trivector<(Trivector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Trivector<(Trivector,), f32>) -> Self {
+    fn from(m: Trivector<(Trivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {

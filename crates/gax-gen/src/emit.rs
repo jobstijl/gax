@@ -2049,7 +2049,9 @@ impl<O: gx::Orientation> From<gx::Unit<{name}<(), f32, O>>> for {name}Gpu {{
 }}
 
 {gate}
-impl From<{name}Gpu> for {name}<(), f32> {{
+impl<O: gx::Orientation> From<{name}Gpu> for {name}<(), f32, O> {{
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: {name}Gpu) -> Self {{
         {name}::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -2094,7 +2096,7 @@ impl<O: gx::Orientation> From<{name}<(), f32, O>> for {name}Gpu16 {{
 }}
 
 {gate}
-impl From<{name}Gpu16> for {name}<(), f32> {{
+impl<O: gx::Orientation> From<{name}Gpu16> for {name}<(), f32, O> {{
     #[inline]
     fn from(g: {name}Gpu16) -> Self {{
         {name}::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -2171,9 +2173,9 @@ pub type {alias}Gpu16 = {kind}Gpu16;
                     self.out,
                     "{gate}
 /// The map as a WGSL `mat{c}x{r}<f32>` (columns are inputs; transposes the output-first layout).
-impl From<{xn}<({yn},), f32>> for gx::GpuMat<{c}> {{
+impl<O: gx::Orientation> From<{xn}<({yn},), f32, O>> for gx::GpuMat<{c}> {{
     #[inline]
-    fn from(m: {xn}<({yn},), f32>) -> Self {{
+    fn from(m: {xn}<({yn},), f32, O>) -> Self {{
         let mut cols = [[0.0; 4]; {c}];
         for (o, row) in m.c.iter().enumerate() {{
             for (i, col) in cols.iter_mut().enumerate() {{

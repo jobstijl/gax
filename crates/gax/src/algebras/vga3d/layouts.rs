@@ -86,7 +86,9 @@ impl<O: gx::Orientation> From<gx::Unit<Scalar<(), f32, O>>> for ScalarGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<ScalarGpu> for Scalar<(), f32> {
+impl<O: gx::Orientation> From<ScalarGpu> for Scalar<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: ScalarGpu) -> Self {
         Scalar::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -131,7 +133,7 @@ impl<O: gx::Orientation> From<Scalar<(), f32, O>> for ScalarGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<ScalarGpu16> for Scalar<(), f32> {
+impl<O: gx::Orientation> From<ScalarGpu16> for Scalar<(), f32, O> {
     #[inline]
     fn from(g: ScalarGpu16) -> Self {
         Scalar::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -185,7 +187,9 @@ impl<O: gx::Orientation> From<gx::Unit<Vector<(), f32, O>>> for VectorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<VectorGpu> for Vector<(), f32> {
+impl<O: gx::Orientation> From<VectorGpu> for Vector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: VectorGpu) -> Self {
         Vector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -230,7 +234,7 @@ impl<O: gx::Orientation> From<Vector<(), f32, O>> for VectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<VectorGpu16> for Vector<(), f32> {
+impl<O: gx::Orientation> From<VectorGpu16> for Vector<(), f32, O> {
     #[inline]
     fn from(g: VectorGpu16) -> Self {
         Vector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -284,7 +288,9 @@ impl<O: gx::Orientation> From<gx::Unit<Bivector<(), f32, O>>> for BivectorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<BivectorGpu> for Bivector<(), f32> {
+impl<O: gx::Orientation> From<BivectorGpu> for Bivector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: BivectorGpu) -> Self {
         Bivector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -329,7 +335,7 @@ impl<O: gx::Orientation> From<Bivector<(), f32, O>> for BivectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<BivectorGpu16> for Bivector<(), f32> {
+impl<O: gx::Orientation> From<BivectorGpu16> for Bivector<(), f32, O> {
     #[inline]
     fn from(g: BivectorGpu16) -> Self {
         Bivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -383,7 +389,9 @@ impl<O: gx::Orientation> From<gx::Unit<Pseudoscalar<(), f32, O>>> for Pseudoscal
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<PseudoscalarGpu> for Pseudoscalar<(), f32> {
+impl<O: gx::Orientation> From<PseudoscalarGpu> for Pseudoscalar<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: PseudoscalarGpu) -> Self {
         Pseudoscalar::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -428,7 +436,7 @@ impl<O: gx::Orientation> From<Pseudoscalar<(), f32, O>> for PseudoscalarGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<PseudoscalarGpu16> for Pseudoscalar<(), f32> {
+impl<O: gx::Orientation> From<PseudoscalarGpu16> for Pseudoscalar<(), f32, O> {
     #[inline]
     fn from(g: PseudoscalarGpu16) -> Self {
         Pseudoscalar::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -482,7 +490,9 @@ impl<O: gx::Orientation> From<gx::Unit<Paravector<(), f32, O>>> for ParavectorGp
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<ParavectorGpu> for Paravector<(), f32> {
+impl<O: gx::Orientation> From<ParavectorGpu> for Paravector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: ParavectorGpu) -> Self {
         Paravector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -527,7 +537,7 @@ impl<O: gx::Orientation> From<Paravector<(), f32, O>> for ParavectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<ParavectorGpu16> for Paravector<(), f32> {
+impl<O: gx::Orientation> From<ParavectorGpu16> for Paravector<(), f32, O> {
     #[inline]
     fn from(g: ParavectorGpu16) -> Self {
         Paravector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -581,7 +591,9 @@ impl<O: gx::Orientation> From<gx::Unit<Rotor<(), f32, O>>> for RotorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<RotorGpu> for Rotor<(), f32> {
+impl<O: gx::Orientation> From<RotorGpu> for Rotor<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: RotorGpu) -> Self {
         Rotor::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -626,7 +638,7 @@ impl<O: gx::Orientation> From<Rotor<(), f32, O>> for RotorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<RotorGpu16> for Rotor<(), f32> {
+impl<O: gx::Orientation> From<RotorGpu16> for Rotor<(), f32, O> {
     #[inline]
     fn from(g: RotorGpu16) -> Self {
         Rotor::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -680,7 +692,9 @@ impl<O: gx::Orientation> From<gx::Unit<Odd<(), f32, O>>> for OddGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<OddGpu> for Odd<(), f32> {
+impl<O: gx::Orientation> From<OddGpu> for Odd<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: OddGpu) -> Self {
         Odd::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -725,7 +739,7 @@ impl<O: gx::Orientation> From<Odd<(), f32, O>> for OddGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<OddGpu16> for Odd<(), f32> {
+impl<O: gx::Orientation> From<OddGpu16> for Odd<(), f32, O> {
     #[inline]
     fn from(g: OddGpu16) -> Self {
         Odd::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -779,7 +793,9 @@ impl<O: gx::Orientation> From<gx::Unit<Multivector<(), f32, O>>> for Multivector
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<MultivectorGpu> for Multivector<(), f32> {
+impl<O: gx::Orientation> From<MultivectorGpu> for Multivector<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
     #[inline]
     fn from(g: MultivectorGpu) -> Self {
         Multivector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
@@ -824,7 +840,7 @@ impl<O: gx::Orientation> From<Multivector<(), f32, O>> for MultivectorGpu16 {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<MultivectorGpu16> for Multivector<(), f32> {
+impl<O: gx::Orientation> From<MultivectorGpu16> for Multivector<(), f32, O> {
     #[inline]
     fn from(g: MultivectorGpu16) -> Self {
         Multivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
@@ -868,9 +884,9 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Vector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Vector<(Vector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Vector<(Vector,), f32>) -> Self {
+    fn from(m: Vector<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -893,9 +909,9 @@ impl From<gx::GpuMat<3>> for Vector<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Bivector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Vector<(Bivector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Vector<(Bivector,), f32>) -> Self {
+    fn from(m: Vector<(Bivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -918,9 +934,9 @@ impl From<gx::GpuMat<3>> for Vector<(Bivector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Paravector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Vector<(Paravector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Vector<(Paravector,), f32>) -> Self {
+    fn from(m: Vector<(Paravector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -943,9 +959,9 @@ impl From<gx::GpuMat<4>> for Vector<(Paravector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Rotor,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Vector<(Rotor,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Vector<(Rotor,), f32>) -> Self {
+    fn from(m: Vector<(Rotor,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -968,9 +984,9 @@ impl From<gx::GpuMat<4>> for Vector<(Rotor,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Vector<(Odd,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Vector<(Odd,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Vector<(Odd,), f32>) -> Self {
+    fn from(m: Vector<(Odd,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -993,9 +1009,9 @@ impl From<gx::GpuMat<4>> for Vector<(Odd,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Bivector<(Vector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Bivector<(Vector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Bivector<(Vector,), f32>) -> Self {
+    fn from(m: Bivector<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1018,9 +1034,9 @@ impl From<gx::GpuMat<3>> for Bivector<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Bivector<(Bivector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Bivector<(Bivector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Bivector<(Bivector,), f32>) -> Self {
+    fn from(m: Bivector<(Bivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1043,9 +1059,9 @@ impl From<gx::GpuMat<3>> for Bivector<(Bivector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Bivector<(Paravector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Bivector<(Paravector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Bivector<(Paravector,), f32>) -> Self {
+    fn from(m: Bivector<(Paravector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1068,9 +1084,9 @@ impl From<gx::GpuMat<4>> for Bivector<(Paravector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Bivector<(Rotor,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Bivector<(Rotor,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Bivector<(Rotor,), f32>) -> Self {
+    fn from(m: Bivector<(Rotor,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1093,9 +1109,9 @@ impl From<gx::GpuMat<4>> for Bivector<(Rotor,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Bivector<(Odd,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Bivector<(Odd,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Bivector<(Odd,), f32>) -> Self {
+    fn from(m: Bivector<(Odd,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1118,9 +1134,9 @@ impl From<gx::GpuMat<4>> for Bivector<(Odd,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Paravector<(Vector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Paravector<(Vector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Paravector<(Vector,), f32>) -> Self {
+    fn from(m: Paravector<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1143,9 +1159,9 @@ impl From<gx::GpuMat<3>> for Paravector<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Paravector<(Bivector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Paravector<(Bivector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Paravector<(Bivector,), f32>) -> Self {
+    fn from(m: Paravector<(Bivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1168,9 +1184,9 @@ impl From<gx::GpuMat<3>> for Paravector<(Bivector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Paravector<(Paravector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Paravector<(Paravector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Paravector<(Paravector,), f32>) -> Self {
+    fn from(m: Paravector<(Paravector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1193,9 +1209,9 @@ impl From<gx::GpuMat<4>> for Paravector<(Paravector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Paravector<(Rotor,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Paravector<(Rotor,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Paravector<(Rotor,), f32>) -> Self {
+    fn from(m: Paravector<(Rotor,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1218,9 +1234,9 @@ impl From<gx::GpuMat<4>> for Paravector<(Rotor,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Paravector<(Odd,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Paravector<(Odd,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Paravector<(Odd,), f32>) -> Self {
+    fn from(m: Paravector<(Odd,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1243,9 +1259,9 @@ impl From<gx::GpuMat<4>> for Paravector<(Odd,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Rotor<(Vector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Rotor<(Vector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Rotor<(Vector,), f32>) -> Self {
+    fn from(m: Rotor<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1268,9 +1284,9 @@ impl From<gx::GpuMat<3>> for Rotor<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Rotor<(Bivector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Rotor<(Bivector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Rotor<(Bivector,), f32>) -> Self {
+    fn from(m: Rotor<(Bivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1293,9 +1309,9 @@ impl From<gx::GpuMat<3>> for Rotor<(Bivector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Rotor<(Paravector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Rotor<(Paravector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Rotor<(Paravector,), f32>) -> Self {
+    fn from(m: Rotor<(Paravector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1318,9 +1334,9 @@ impl From<gx::GpuMat<4>> for Rotor<(Paravector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Rotor<(Rotor,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Rotor<(Rotor,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Rotor<(Rotor,), f32>) -> Self {
+    fn from(m: Rotor<(Rotor,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1343,9 +1359,9 @@ impl From<gx::GpuMat<4>> for Rotor<(Rotor,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Rotor<(Odd,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Rotor<(Odd,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Rotor<(Odd,), f32>) -> Self {
+    fn from(m: Rotor<(Odd,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1368,9 +1384,9 @@ impl From<gx::GpuMat<4>> for Rotor<(Odd,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Odd<(Vector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Odd<(Vector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Odd<(Vector,), f32>) -> Self {
+    fn from(m: Odd<(Vector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1393,9 +1409,9 @@ impl From<gx::GpuMat<3>> for Odd<(Vector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Odd<(Bivector,), f32>> for gx::GpuMat<3> {
+impl<O: gx::Orientation> From<Odd<(Bivector,), f32, O>> for gx::GpuMat<3> {
     #[inline]
-    fn from(m: Odd<(Bivector,), f32>) -> Self {
+    fn from(m: Odd<(Bivector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 3];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1418,9 +1434,9 @@ impl From<gx::GpuMat<3>> for Odd<(Bivector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Odd<(Paravector,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Odd<(Paravector,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Odd<(Paravector,), f32>) -> Self {
+    fn from(m: Odd<(Paravector,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1443,9 +1459,9 @@ impl From<gx::GpuMat<4>> for Odd<(Paravector,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Odd<(Rotor,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Odd<(Rotor,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Odd<(Rotor,), f32>) -> Self {
+    fn from(m: Odd<(Rotor,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
@@ -1468,9 +1484,9 @@ impl From<gx::GpuMat<4>> for Odd<(Rotor,), f32> {
 
 #[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
-impl From<Odd<(Odd,), f32>> for gx::GpuMat<4> {
+impl<O: gx::Orientation> From<Odd<(Odd,), f32, O>> for gx::GpuMat<4> {
     #[inline]
-    fn from(m: Odd<(Odd,), f32>) -> Self {
+    fn from(m: Odd<(Odd,), f32, O>) -> Self {
         let mut cols = [[0.0; 4]; 4];
         for (o, row) in m.c.iter().enumerate() {
             for (i, col) in cols.iter_mut().enumerate() {
