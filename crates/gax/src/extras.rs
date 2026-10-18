@@ -116,6 +116,17 @@ mod pga3d_extras {
     use crate::{Of, Real, Slots, Unit};
 
     impl<T: Real> Point<(), T> {
+        /// The origin, `e123`: the point `(0, 0, 0)` with weight 1.
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// assert_eq!(Point::<(), f64>::origin(), Point::xyz(0.0, 0.0, 0.0));
+        /// ```
+        #[inline]
+        pub fn origin() -> Self {
+            Point::new(T::zero(), T::zero(), T::zero(), T::one())
+        }
+
         /// The Euclidean point `(x, y, z)`, with weight 1: `x e032 + y e013 + z e021 + e123`.
         ///
         /// ```
@@ -246,6 +257,20 @@ mod pga3d_extras {
     }
 
     impl<T: Real> Plane<(), T> {
+        /// The plane at infinity, `e0`: it contains every direction, and its join with a point is
+        /// the point's weight.
+        ///
+        /// ```
+        /// use gax::pga3d::{Plane, Point};
+        /// let p = Point::<(), f64>::new(2.0, 4.0, 6.0, 2.0);
+        /// assert_eq!((Plane::infinity() & p).s(), 2.0);
+        /// assert_eq!((Plane::infinity() & Point::direction(1.0, 0.0, 0.0)).s(), 0.0);
+        /// ```
+        #[inline]
+        pub fn infinity() -> Self {
+            Plane::new(T::zero(), T::zero(), T::zero(), T::one())
+        }
+
         /// The plane `n · x = d` with normal `n`, a direction of either orientation (not
         /// necessarily of unit length; its weight is ignored). The inverse of
         /// [`normal`](oriented::Plane::normal).
@@ -837,6 +862,17 @@ mod pga2d_extras {
     use crate::{Real, Unit};
 
     impl<T: Real> Point<(), T> {
+        /// The origin, `e12`: the point `(0, 0)` with weight 1.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// assert_eq!(Point::<(), f64>::origin(), Point::xy(0.0, 0.0));
+        /// ```
+        #[inline]
+        pub fn origin() -> Self {
+            Point::new(T::zero(), T::zero(), T::one())
+        }
+
         /// The Euclidean point `(x, y)`, with weight 1: `x e20 + y e01 + e12`.
         ///
         /// ```
@@ -1039,6 +1075,20 @@ mod pga2d_extras {
     }
 
     impl<T: Real> Line<(), T> {
+        /// The line at infinity, `e0`: it contains every direction, and its join with a point is
+        /// the point's weight.
+        ///
+        /// ```
+        /// use gax::pga2d::{Line, Point};
+        /// let p = Point::<(), f64>::new(2.0, 4.0, 2.0);
+        /// assert_eq!((Line::infinity() & p).s(), 2.0);
+        /// assert_eq!((Line::infinity() & Point::direction(1.0, 0.0)).s(), 0.0);
+        /// ```
+        #[inline]
+        pub fn infinity() -> Self {
+            Line::new(T::zero(), T::zero(), T::one())
+        }
+
         /// The line `n · x = d` with normal `n`, a direction of either orientation (not
         /// necessarily of unit length; its weight is ignored). The inverse of
         /// [`normal`](oriented::Line::normal).
