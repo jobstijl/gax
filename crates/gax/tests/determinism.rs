@@ -61,7 +61,8 @@ fn every_level_gives_the_scalar_bits() {
         .collect();
 
     let want_map: Vec<Line<(), f32>> = lines.iter().map(|&b| Pipeline.call(b)).collect();
-    let want_each: Vec<Point<(), f32>> = motors.iter().zip(&points).map(|(&m, &p)| m >> p).collect();
+    let want_each: Vec<Point<(), f32>> =
+        motors.iter().zip(&points).map(|(&m, &p)| m >> p).collect();
     let prepared = motors[0].prepare::<Point>();
     let want_slice: Vec<Point<(), f32>> = points.iter().map(|&p| prepared >> p).collect();
 
