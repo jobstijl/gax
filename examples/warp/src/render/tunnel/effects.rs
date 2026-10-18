@@ -5,7 +5,7 @@ use super::super::scene::{self, palette};
 use super::{BOLT, GATE_LIGHT, View};
 use crate::light::{self, Light};
 use crate::tunnel::{Event, Foe, P, dir, foot};
-use gax::pga3d::Motor;
+use gax::pga3d::{Motor, Point};
 
 /// The most sparks alive at once (the oldest go first).
 const SPARKS: usize = 6000;
@@ -46,9 +46,11 @@ impl View {
     fn burst(&mut self, pos: P, light: Light, n: usize, speed: f32, life: f32) {
         for _ in 0..n {
             let turn = Motor::rotation_about(
-                self.rng.range(-1.0, 1.0),
-                self.rng.range(-1.0, 1.0),
-                self.rng.range(-1.0, 1.0),
+                Point::direction(
+                    self.rng.range(-1.0, 1.0),
+                    self.rng.range(-1.0, 1.0),
+                    self.rng.range(-1.0, 1.0),
+                ),
                 self.rng.angle(),
             );
             let v = turn >> dir(0.0, 0.0, self.rng.range(0.3, 1.0) * speed);

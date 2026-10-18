@@ -209,7 +209,8 @@ pub fn pulled() -> Vec<Vec<Frame>> {
         for tick in 0..STEPS_PER_FRAME {
             let out = reach((index * STEPS_PER_FRAME + tick) as f64 * TIME_STEP);
             frames[CORD_PIECES + 1] =
-                Motor::translation(out * axis.e20(), 0.0, out * axis.e01()) * handset;
+                Motor::translation(Point::direction(out * axis.e20(), 0.0, out * axis.e01()))
+                    * handset;
             rod::moving(
                 &mut frames,
                 &mut rates,

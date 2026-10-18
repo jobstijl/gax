@@ -4,7 +4,7 @@
 use super::space::{P, arc, axis, dir};
 use crate::sim::Kind;
 use gax::Unit;
-use gax::pga3d::{Motor, Plane};
+use gax::pga3d::{Motor, Plane, Point};
 
 /// The tunnel's enemies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -158,7 +158,7 @@ impl Enemy {
             timer: 0.0,
             flight: Flight::Approach,
             mass: 0.0,
-            swim: Motor::translation(0.0, 0.0, 0.0),
+            swim: Motor::translation(Point::direction(0.0, 0.0, 0.0)),
             body: Vec::new(),
             anchor: None,
         }

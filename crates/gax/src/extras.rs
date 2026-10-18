@@ -2,22 +2,30 @@
 //! and the geometry built on them.
 //!
 //! These are inherent functions on the generated types. Constructors such as
-//! `Point::xyz(x, y, z)` and `Motor::translation(dx, dy, dz)` fix the sign conventions in one
-//! place; on top of them come motors between flats ([`Between`]), `look_at`, `interpolate`,
-//! `angle`, reflections, principal frames of inertia, and conformal points and spheres.
+//! `Point::xyz(x, y, z)` and `Motor::translation(d)` fix the sign conventions in one place;
+//! coordinates enter only through the plain ones (`xyz`, `direction`, `new`, CGA's `up`), and
+//! the rest take gax values. On top of them come motors between flats ([`Between`]),
+//! `look_at`, `interpolate`, `angle`, reflections, principal frames of inertia, and conformal
+//! points and spheres.
 
 #[cfg(feature = "pga3d")]
 pub use pga3d_extras::{PrincipalInertia, PrincipalMobility};
 
-#[cfg(any(feature = "pga2d", feature = "pga3d"))]
-/// The elements a motor carries onto one another, for `Motor::between`: planes, lines and
-/// points in PGA3D, lines and points in PGA2D.
+#[cfg(any(
+    feature = "pga2d",
+    feature = "pga3d",
+    feature = "vga2d",
+    feature = "vga3d"
+))]
+/// The elements a motor (or a rotor) carries onto one another, for `Motor::between` and
+/// `Rotor::between`: planes, lines and points in PGA3D, lines and points in PGA2D, vectors and
+/// bivectors in VGA3D, vectors in VGA2D.
 ///
 /// ```
 /// use gax::ApproxEq;
-/// use gax::pga3d::{Motor, Plane};
-/// let a = Plane::<(), f64>::from_normal([1.0, 0.0, 0.0], 0.0);
-/// let b = Plane::from_normal([0.0, 1.0, 0.0], 2.0);
+/// use gax::pga3d::{Motor, Plane, Point};
+/// let a = Plane::<(), f64>::with_normal(Point::direction(1.0, 0.0, 0.0), 0.0);
+/// let b = Plane::with_normal(Point::direction(0.0, 1.0, 0.0), 2.0);
 /// let m = Motor::between(a, b);
 /// let moved = (m >> a).normalized();
 /// assert!(moved.approx_eq(&b.normalized(), 1e-12));
@@ -27,18 +35,23 @@ pub trait Between<M>: Sized {
     fn between(a: Self, b: Self) -> crate::Unit<M>;
 }
 
-#[cfg(any(feature = "pga2d", feature = "pga3d"))]
+#[cfg(any(
+    feature = "pga2d",
+    feature = "pga3d",
+    feature = "vga2d",
+    feature = "vga3d"
+))]
 /// `exp(log(b / a) / 2)`, the square root of the ratio: the motion that carries `a` onto `b`.
 /// The ratio is normalized first, so `a` and `b` need not be. A kind listed with a method
 /// passes both through it first: points are unitized, as no motor carries a point onto its
 /// negative (motors keep the sign of the weight).
 macro_rules! between {
-    ($alg:ident: $($k:ident $(.$prep:ident())?),* => $biv:ident) => {$(
+    ($alg:ident: $($k:ident $(.$prep:ident())?),* => $versor:ident, $biv:ident) => {$(
         // Of either orientation (ADR-051): the ratio of two elements of the same one is
         // extrinsic, a motion.
-        impl<T: crate::Real, O: crate::Orientation> Between<crate::$alg::Motor<(), T>> for crate::$alg::oriented::$k<(), T, O> {
+        impl<T: crate::Real, O: crate::Orientation> Between<crate::$alg::$versor<(), T>> for crate::$alg::oriented::$k<(), T, O> {
             #[inline]
-            fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::Motor<(), T>> {
+            fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::$versor<(), T>> {
                 // `O · O` is extrinsic for either orientation (ADR-052): the ratio is a motion.
                 let ratio = b$(.$prep())? / a$(.$prep())?;
                 let half: crate::$alg::$biv<(), T> = ratio.unit().log();
@@ -48,20 +61,31 @@ macro_rules! between {
     )*};
 }
 #[cfg(feature = "pga3d")]
-between!(pga3d: Plane, Line, Point.unitized() => Line);
+between!(pga3d: Plane, Line, Point.unitized() => Motor, Line);
 #[cfg(feature = "pga2d")]
-between!(pga2d: Line, Point.unitized() => Twist);
+between!(pga2d: Line, Point.unitized() => Motor, Twist);
+#[cfg(feature = "vga3d")]
+between!(vga3d: Vector, Bivector => Rotor, Bivector);
+#[cfg(feature = "vga2d")]
+between!(vga2d: Vector => Rotor, Bivector);
 
-/// Written once for PGA2D and PGA3D through the value traits: their kinds differ (a rotation is
-/// about a point in 2D and about a line in 3D), the expressions do not.
-#[cfg(any(feature = "pga2d", feature = "pga3d"))]
+/// Written once for PGA2D, PGA3D and VGA3D through the value traits: their kinds differ (a
+/// rotation is about a point in 2D, about a line in 3D, in a plane in VGA), the expressions do
+/// not.
+#[cfg(any(
+    feature = "pga2d",
+    feature = "pga3d",
+    feature = "vga2d",
+    feature = "vga3d"
+))]
 mod shared {
-    use crate::{Exp, Extensor, Gp, GradePart, Log, Normalize, Real, Reverse, Unit};
+    use crate::{Exp, Extensor, Gp, GradePart, Log, Real, Reverse, Unit};
 
     /// `−(rate/2) x̂`: the twist of a rotation at `rate` about the flat `x` (a line in PGA3D, a
-    /// point in PGA2D), normalized first.
+    /// point in PGA2D, a plane through the origin in VGA3D), normalized first.
+    #[cfg(any(feature = "pga2d", feature = "pga3d", feature = "vga3d"))]
     #[inline]
-    pub fn rotation_twist<X: Normalize + Gp<T, Output = X>, T: Real>(x: X, rate: T) -> X {
+    pub fn rotation_twist<X: crate::Normalize + Gp<T, Output = X>, T: Real>(x: X, rate: T) -> X {
         x.normalized().gp(rate * T::from_f64(-0.5))
     }
 
@@ -206,23 +230,40 @@ mod pga3d_extras {
             let (x, y, z) = (self.e032(), self.e013(), self.e021());
             x * x + y * y + z * z
         }
+
+        /// The distance between this point and `q`, both finite (of any non-zero weight, either
+        /// orientation): the ideal norm of the difference of their positions.
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// let (p, q) = (Point::<(), f64>::xyz(1.0, 2.0, 3.0), Point::new(6.0, 6.0, 10.0, 2.0));
+        /// assert_eq!(p.distance(q), 3.0); // q is (3, 3, 5)
+        /// ```
+        #[inline]
+        pub fn distance<Q: crate::Orientation>(self, q: oriented::Point<(), T, Q>) -> T {
+            (q.position() - self.position()).ideal_norm()
+        }
     }
 
     impl<T: Real> Plane<(), T> {
-        /// The plane `n · x = d` with normal `n` (not necessarily unit length).
+        /// The plane `n · x = d` with normal `n`, a direction of either orientation (not
+        /// necessarily of unit length; its weight is ignored). The inverse of
+        /// [`normal`](oriented::Plane::normal).
         ///
         /// ```
         /// use gax::pga3d::{Plane, Point};
-        /// let floor = Plane::<(), f64>::from_normal([0.0, 0.0, 1.0], 2.0); // z = 2
+        /// let floor = Plane::<(), f64>::with_normal(Point::direction(0.0, 0.0, 1.0), 2.0); // z = 2
         /// // The join with a point is its signed distance, positive along the normal.
         /// assert_eq!((floor & Point::xyz(1.0, 1.0, 5.0)).s(), 3.0);
+        /// assert_eq!(floor.normal(), Point::direction(0.0, 0.0, 1.0));
         /// ```
         #[inline]
-        pub fn from_normal(n: [T; 3], d: T) -> Self {
-            Plane::new(n[0], n[1], n[2], -d)
+        pub fn with_normal<O: crate::Orientation>(n: oriented::Point<(), T, O>, d: T) -> Self {
+            Plane::new(n.e032(), n.e013(), n.e021(), -d)
         }
 
-        /// The plane through the origin perpendicular to the direction `d`.
+        /// The plane through the origin perpendicular to the direction `d` (of either
+        /// orientation), with normal `d`.
         ///
         /// ```
         /// use gax::pga3d::{Plane, Point};
@@ -231,19 +272,37 @@ mod pga3d_extras {
         /// assert_eq!((p & Point::xyz(3.0, 4.0, 1.0)).s(), 2.0);
         /// ```
         #[inline]
-        pub fn orthogonal_to(d: Point<(), T>) -> Self {
-            Plane::new(d.e032(), d.e013(), d.e021(), T::zero())
+        pub fn orthogonal_to<O: crate::Orientation>(d: oriented::Point<(), T, O>) -> Self {
+            Self::with_normal(d, T::zero())
         }
     }
 
     impl<T: Real, M: crate::Orientation> oriented::Plane<(), T, M> {
+        /// The normal `(a, b, c)` of the plane `a x + b y + c z + d = 0`, as a direction: it
+        /// points to the side where `plane & x` is positive, and its length is the plane's
+        /// norm. For a join of three points `p & q & r` it is the normal of their winding,
+        /// `(q − p) × (r − p)` for points of weight one, so that the points turn
+        /// counterclockwise seen from where it points.
+        ///
+        /// ```
+        /// use gax::pga3d::{Plane, Point};
+        /// let tilted = Plane::<(), f64>::new(1.0, 2.0, 2.0, -3.0);
+        /// assert_eq!(tilted.normal(), Point::direction(1.0, 2.0, 2.0));
+        /// let (p, q, r) = (Point::xyz(1.0, 0.0, 0.0), Point::xyz(2.0, 0.0, 0.0), Point::xyz(1.0, 1.0, 0.0));
+        /// assert_eq!((p & q & r).normal(), Point::direction(0.0, 0.0, 1.0));
+        /// ```
+        #[inline]
+        pub fn normal(self) -> Point<(), T> {
+            Point::direction(self.e1(), self.e2(), self.e3())
+        }
+
         /// Reflect a point (or a direction) in this plane: `>>` with the normalized plane, whose
         /// sign the point's orientation picks (ADR-051). The plane's own orientation, a meet's
         /// or a join's, does not matter: it enters twice.
         ///
         /// ```
         /// use gax::pga3d::{Plane, Point};
-        /// let wall = Plane::from_normal([1.0, 0.0, 0.0], 0.0);
+        /// let wall = Plane::with_normal(Point::direction(1.0, 0.0, 0.0), 0.0);
         /// let v = wall.reflect(Point::direction(1.0, 0.5, 0.0));
         /// assert_eq!([v.e032(), v.e013(), v.e021()], [-1.0, 0.5, 0.0]);
         /// // The same wall as the join of three of its points.
@@ -530,19 +589,23 @@ mod pga3d_extras {
             X::between(a, b)
         }
 
-        /// The translation by `(dx, dy, dz)`.
+        /// The translation by the direction `d` (a point at infinity, of either orientation:
+        /// `Point::direction(x, y, z)`, or the difference `q - p` of two points of weight one,
+        /// the translation from `p` to `q`). Only its ideal part is read.
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
-        /// let t = Motor::translation(1.0, 2.0, 3.0);
+        /// let t = Motor::translation(Point::direction(1.0, 2.0, 3.0));
         /// let p = t >> Point::xyz(0.0, 0.0, 0.0);
         /// assert_eq!(p.to_euclidean(), [1.0, 2.0, 3.0]);
+        /// let (a, b) = (Point::xyz(1.0, 1.0, 1.0), Point::xyz(2.0, 3.0, 4.0));
+        /// assert_eq!(Motor::translation(b - a) >> a, b);
         /// ```
         #[inline]
-        pub fn translation(dx: T, dy: T, dz: T) -> Unit<Self> {
+        pub fn translation<O: crate::Orientation>(d: oriented::Point<(), T, O>) -> Unit<Self> {
             let h = T::from_f64(-0.5);
             // A translator `1 − (d/2) e0`, as a motor.
-            let t = Translator::new(T::one(), dx * h, dy * h, dz * h);
+            let t = Translator::new(T::one(), d.e032() * h, d.e013() * h, d.e021() * h);
             Unit::new_unchecked(t.cast::<Motor>())
         }
 
@@ -573,17 +636,24 @@ mod pga3d_extras {
             .exp()
         }
 
-        /// The rotation by `angle` about the axis through the origin with direction `(x, y, z)`.
+        /// The rotation by `angle` about the axis through the origin along the direction `d` (a
+        /// point at infinity of either orientation, of any length; its weight is ignored),
+        /// right-handed about `d`: [`Motor::rotation`] about the join of the origin and `d`.
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
-        /// let r = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, std::f64::consts::FRAC_PI_2);
+        /// let up = Point::<(), f64>::direction(0.0, 0.0, 1.0);
+        /// let r = Motor::rotation_about(up, std::f64::consts::FRAC_PI_2);
         /// let [x, y, z] = (r >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
         /// assert!(x.abs() < 1e-12 && (y - 1.0).abs() < 1e-12 && z.abs() < 1e-12);
         /// ```
         #[inline]
-        pub fn rotation_about(x: T, y: T, z: T, angle: T) -> Unit<Self> {
-            let axis = Point::xyz(T::zero(), T::zero(), T::zero()) & Point::direction(x, y, z);
+        pub fn rotation_about<O: crate::Orientation>(
+            d: oriented::Point<(), T, O>,
+            angle: T,
+        ) -> Unit<Self> {
+            let o = T::zero();
+            let axis = Point::xyz(o, o, o) & Point::direction(d.e032(), d.e013(), d.e021());
             Self::rotation(axis, angle)
         }
 
@@ -594,7 +664,7 @@ mod pga3d_extras {
         /// cosine, scaled alike, so no normalization is needed and the angle is well conditioned
         /// everywhere, a half turn included (a formula like `normalize(1 + B A)` loses the small
         /// scalar part to cancellation there). Opposite directions get a half turn about an
-        /// axis perpendicular to both.
+        /// axis perpendicular to both. The directions may have either orientation.
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
@@ -603,7 +673,10 @@ mod pga3d_extras {
         /// let d = r >> Point::direction(0.0, 0.0, 1.0);
         /// assert!((d.e013() - 1.0).abs() < 1e-12 && d.e021().abs() < 1e-12);
         /// ```
-        pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
+        pub fn rotation_between<A: crate::Orientation, B: crate::Orientation>(
+            from: oriented::Point<(), T, A>,
+            to: oriented::Point<(), T, B>,
+        ) -> Unit<Self> {
             let (o, zero) = (T::one(), T::zero());
             let a = Plane::orthogonal_to(from);
             let b = Plane::orthogonal_to(to);
@@ -629,8 +702,8 @@ mod pga3d_extras {
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
-        /// let a = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.1);
-        /// let b = Motor::rotation_about(0.0, 0.0, 1.0, 0.3);
+        /// let z = Point::<(), f64>::direction(0.0, 0.0, 1.0);
+        /// let (a, b) = (Motor::rotation_about(z, 0.1), Motor::rotation_about(z, 0.3));
         /// // The same motion as `b`, the other sign: still halfway is 0.2 rad, not a long turn.
         /// let b = gax::Unit::new_unchecked(b.into_inner() * -1.0);
         /// let d = Motor::interpolate(a, b, 0.5) >> Point::direction(1.0, 0.0, 0.0);
@@ -643,6 +716,7 @@ mod pga3d_extras {
         /// The motor of a camera (or any frame) at `eye` whose forward axis `+z` points at
         /// `target` and whose `+y` axis is as close to `up` as it can be (no roll): the
         /// rotation between the axes, then a roll about the forward axis, then the translation.
+        /// `up` is a direction of either orientation.
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
@@ -656,7 +730,11 @@ mod pga3d_extras {
         /// assert!((f.e021() - 1.0).abs() < 1e-12 && (u.e013() - 1.0).abs() < 1e-12);
         /// assert_eq!((m >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean(), [1.0, 2.0, 3.0]);
         /// ```
-        pub fn look_at(eye: Point<(), T>, target: Point<(), T>, up: Point<(), T>) -> Unit<Self> {
+        pub fn look_at<U: crate::Orientation>(
+            eye: Point<(), T>,
+            target: Point<(), T>,
+            up: oriented::Point<(), T, U>,
+        ) -> Unit<Self> {
             let (o, zero) = (T::one(), T::zero());
             let [ex, ey, ez] = eye.to_euclidean();
             let [tx, ty, tz] = target.to_euclidean();
@@ -683,26 +761,28 @@ mod pga3d_extras {
                 T::select_lt(norm2(x), tiny, fallback[i], x[i])
             }));
             let y = cross(z, x);
-            Self::translation(ex, ey, ez) * crate::moments::rotor_from_frame([x, y, z])
+            Self::translation(Point::direction(ex, ey, ez))
+                * crate::moments::rotor_from_frame([x, y, z])
         }
     }
 
+    // Twists: lines, extrinsic (a turn about a line; ADR-051), named `Twist`.
     impl<T: Real> Line<(), T> {
-        /// The twist (a bivector: a line) of a translation at velocity `(vx, vy, vz)`:
-        /// `(B * t).exp()` is `Motor::translation(t vx, t vy, t vz)`. Twists add.
+        /// The twist (a bivector: a line) of a translation at the velocity `v`, a direction of
+        /// either orientation: `(B * t).exp()` is `Motor::translation(v * t)`. Twists add.
         ///
         /// ```
-        /// use gax::pga3d::{Line, Motor, Point};
-        /// let twist = Line::<(), f64>::translation_twist(1.0, 2.0, 0.0);
+        /// use gax::pga3d::{Motor, Point, Twist};
+        /// let twist = Twist::<(), f64>::translation(Point::direction(1.0, 2.0, 0.0));
         /// // Two seconds at that velocity.
         /// let p = (twist.gp(2.0).exp() >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean();
         /// assert!((p[0] - 2.0).abs() < 1e-12 && (p[1] - 4.0).abs() < 1e-12);
         /// ```
         #[inline]
-        pub fn translation_twist(vx: T, vy: T, vz: T) -> Self {
+        pub fn translation<O: crate::Orientation>(v: oriented::Point<(), T, O>) -> Self {
             let h = T::from_f64(-0.5);
             let z = T::zero();
-            Line::new(z, z, z, vx * h, vy * h, vz * h)
+            Line::new(z, z, z, v.e032() * h, v.e013() * h, v.e021() * h)
         }
 
         /// The twist of a rotation at `omega` radians per unit time about the line `axis`
@@ -710,9 +790,9 @@ mod pga3d_extras {
         /// `Motor::rotation(axis, t omega)`.
         ///
         /// ```
-        /// use gax::pga3d::{Line, Motor, Point};
+        /// use gax::pga3d::{Motor, Point, Twist};
         /// let z_axis = Point::<(), f64>::xyz(0.0, 0.0, 0.0) & Point::xyz(0.0, 0.0, 1.0);
-        /// let spin = Line::rotation_twist(z_axis, 0.5); // half a radian per second
+        /// let spin = Twist::rotation(z_axis, 0.5); // half a radian per second
         /// let after = spin.gp(3.0).exp(); // after three seconds
         /// let direct = Motor::rotation(z_axis, 1.5);
         /// assert!(after.c.iter().zip(direct.c).all(|(a, b)| (a - b).abs() < 1e-12));
@@ -721,14 +801,32 @@ mod pga3d_extras {
         /// The axis may be a turn about the line or an arrow along it (ADR-051), as for
         /// [`Motor::rotation`].
         #[inline]
-        pub fn rotation_twist<O: crate::Orientation>(
-            axis: oriented::Line<(), T, O>,
-            omega: T,
-        ) -> Self {
+        pub fn rotation<O: crate::Orientation>(axis: oriented::Line<(), T, O>, omega: T) -> Self {
             crate::extras::shared::rotation_twist(
                 axis.with_orientation::<crate::Extrinsic>(),
                 omega,
             )
+        }
+    }
+
+    // Methods of lines of either orientation: joins (intrinsic) and meets (extrinsic) agree on
+    // the lines they share (ADR-009).
+    impl<T: Real, O: crate::Orientation> oriented::Line<(), T, O> {
+        /// The direction along this line, a point at infinity: its Euclidean part
+        /// `(e23, e31, e12)`, whose length is the line's norm. For the join `p & q` of two
+        /// points of weight one it is `q - p`; for the meet `a ^ b` of two planes, the cross
+        /// product of their normals, the way a right-handed turn about the line advances.
+        ///
+        /// ```
+        /// use gax::pga3d::{Plane, Point};
+        /// let (p, q) = (Point::<(), f64>::xyz(1.0, 2.0, 3.0), Point::xyz(2.0, 4.0, 3.0));
+        /// assert_eq!((p & q).direction(), q - p);
+        /// let (y0, z0) = (Plane::new(0.0, 1.0, 0.0, 0.0), Plane::new(0.0, 0.0, 1.0, 0.0));
+        /// assert_eq!((y0 ^ z0).direction(), Point::direction(1.0, 0.0, 0.0));
+        /// ```
+        #[inline]
+        pub fn direction(self) -> Point<(), T> {
+            Point::direction(self.e23(), self.e31(), self.e12())
         }
     }
 }
@@ -880,25 +978,39 @@ mod pga2d_extras {
             let (x, y) = (self.e20(), self.e01());
             x * x + y * y
         }
+
+        /// The distance between this point and `q`, both finite (of any non-zero weight, either
+        /// orientation): the ideal norm of the difference of their positions.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let (p, q) = (Point::<(), f64>::xy(1.0, 2.0), Point::new(8.0, 12.0, 2.0));
+        /// assert_eq!(p.distance(q), 5.0); // q is (4, 6)
+        /// ```
+        #[inline]
+        pub fn distance<Q: crate::Orientation>(self, q: oriented::Point<(), T, Q>) -> T {
+            (q.position() - self.position()).ideal_norm()
+        }
     }
 
     // Twists: in PGA2D bivectors, the blades of points, extrinsic (ADR-051): a turn about a
-    // pivot, where a position is intrinsic. `Point::translation_twist` and `Twist::...` alike.
+    // pivot, where a position is intrinsic. Named `Twist`.
     impl<T: Real> extrinsic::Point<(), T> {
-        /// The twist (a bivector: in PGA2D, a point) of a translation at velocity `(vx, vy)`:
-        /// `(B * t).exp()` is `Motor::translation(t vx, t vy)`. Twists add, so a moving,
-        /// turning body's twist is the sum of a translation and a rotation twist.
+        /// The twist (a bivector: in PGA2D, a point) of a translation at the velocity `v`, a
+        /// direction of either orientation: `(B * t).exp()` is `Motor::translation(v * t)`.
+        /// Twists add, so a moving, turning body's twist is the sum of a translation and a
+        /// rotation twist.
         ///
         /// ```
         /// use gax::pga2d::{Point, Twist};
-        /// let b = Twist::<(), f64>::translation_twist(3.0, -1.0);
+        /// let b = Twist::<(), f64>::translation(Point::direction(3.0, -1.0));
         /// let p = (b.gp(2.0).exp() >> Point::xy(0.0, 0.0)).to_euclidean();
         /// assert!((p[0] - 6.0).abs() < 1e-12 && (p[1] + 2.0).abs() < 1e-12);
         /// ```
         #[inline]
-        pub fn translation_twist(vx: T, vy: T) -> Self {
+        pub fn translation<O: crate::Orientation>(v: oriented::Point<(), T, O>) -> Self {
             let h = T::from_f64(0.5);
-            Point::new(vy * h, -vx * h, T::zero()).with_orientation()
+            Point::new(v.e01() * h, -v.e20() * h, T::zero()).with_orientation()
         }
 
         /// The twist of a rotation at `omega` radians per unit time, counterclockwise, about
@@ -907,7 +1019,7 @@ mod pga2d_extras {
         /// ```
         /// use gax::pga2d::{Motor, Point, Twist};
         /// let c = Point::<(), f64>::xy(1.0, 1.0);
-        /// let after = Twist::rotation_twist(c, 0.25).gp(2.0).exp(); // two seconds at 1/4 rad/s
+        /// let after = Twist::rotation(c, 0.25).gp(2.0).exp(); // two seconds at 1/4 rad/s
         /// let direct = Motor::rotation(c, 0.5);
         /// assert!(after.c.iter().zip(direct.c).all(|(a, b)| (a - b).abs() < 1e-12));
         /// ```
@@ -915,7 +1027,7 @@ mod pga2d_extras {
         /// The twist is the extrinsic point, a turn about `center` (ADR-051): a pivot, where the
         /// point itself is intrinsic, a position.
         #[inline]
-        pub fn rotation_twist<O: crate::Orientation>(
+        pub fn rotation<O: crate::Orientation>(
             center: oriented::Point<(), T, O>,
             omega: T,
         ) -> Self {
@@ -923,6 +1035,76 @@ mod pga2d_extras {
                 center.with_orientation::<crate::Extrinsic>(),
                 omega,
             )
+        }
+    }
+
+    impl<T: Real> Line<(), T> {
+        /// The line `n · x = d` with normal `n`, a direction of either orientation (not
+        /// necessarily of unit length; its weight is ignored). The inverse of
+        /// [`normal`](oriented::Line::normal).
+        ///
+        /// ```
+        /// use gax::pga2d::{Line, Point};
+        /// let floor = Line::<(), f64>::with_normal(Point::direction(0.0, 1.0), 2.0); // y = 2
+        /// // The join with a point is its signed distance, positive along the normal.
+        /// assert_eq!((floor & Point::xy(1.0, 5.0)).s(), 3.0);
+        /// assert_eq!(floor.normal(), Point::direction(0.0, 1.0));
+        /// ```
+        #[inline]
+        pub fn with_normal<O: crate::Orientation>(n: oriented::Point<(), T, O>, d: T) -> Self {
+            Line::new(n.e20(), n.e01(), -d)
+        }
+
+        /// The line through the point `p` (finite, of any weight) along the direction `d`,
+        /// both of either orientation: the join of `p` and `d` (of `p` and `p + d`), as an
+        /// extrinsic line, so that its [`direction`](oriented::Line::direction) is `d` and its
+        /// normal `d` turned a quarter counterclockwise.
+        ///
+        /// ```
+        /// use gax::pga2d::{Line, Point};
+        /// let l = Line::<(), f64>::through(Point::xy(1.0, 2.0), Point::direction(1.0, 0.0));
+        /// assert_eq!(l, Line::with_normal(Point::direction(0.0, 1.0), 2.0)); // y = 2
+        /// assert_eq!(l.direction(), Point::direction(1.0, 0.0));
+        /// ```
+        #[inline]
+        pub fn through<P: crate::Orientation, D: crate::Orientation>(
+            p: oriented::Point<(), T, P>,
+            d: oriented::Point<(), T, D>,
+        ) -> Self {
+            (p.position() & Point::direction(d.e20(), d.e01())).with_orientation()
+        }
+    }
+
+    // Methods of lines of either orientation: a join's coefficients and an extrinsic line's
+    // agree on the line they describe.
+    impl<T: Real, O: crate::Orientation> oriented::Line<(), T, O> {
+        /// The normal `(a, b)` of the line `a x + b y + c = 0`, as a direction: it points to the
+        /// side where `line & x` is positive, and its length is the line's norm. For a join
+        /// `p & q` it points to the left of `q - p`.
+        ///
+        /// ```
+        /// use gax::pga2d::{Line, Point};
+        /// assert_eq!(Line::<(), f64>::new(3.0, 4.0, -1.0).normal(), Point::direction(3.0, 4.0));
+        /// let along_x = Point::xy(0.0, 0.0) & Point::xy(2.0, 0.0);
+        /// assert_eq!(along_x.normal(), Point::direction(0.0, 2.0));
+        /// ```
+        #[inline]
+        pub fn normal(self) -> Point<(), T> {
+            Point::direction(self.e1(), self.e2())
+        }
+
+        /// The direction along this line, a point at infinity: its normal turned a quarter
+        /// clockwise, `(b, −a)`, whose length is the line's norm. For the join `p & q` of two
+        /// points of weight one it is `q - p`.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let (p, q) = (Point::<(), f64>::xy(1.0, 2.0), Point::xy(4.0, 6.0));
+        /// assert_eq!((p & q).direction(), q - p);
+        /// ```
+        #[inline]
+        pub fn direction(self) -> Point<(), T> {
+            Point::direction(self.e2(), -self.e1())
         }
     }
 
@@ -965,18 +1147,22 @@ mod pga2d_extras {
             X::between(a, b)
         }
 
-        /// The translation by `(dx, dy)`.
+        /// The translation by the direction `d` (a point at infinity, of either orientation:
+        /// `Point::direction(x, y)`, or the difference `q - p` of two points of weight one, the
+        /// translation from `p` to `q`). Only its ideal part is read.
         ///
         /// ```
         /// use gax::pga2d::{Motor, Point};
-        /// let t = Motor::<(), f64>::translation(3.0, -1.0);
+        /// let t = Motor::<(), f64>::translation(Point::direction(3.0, -1.0));
         /// assert_eq!((t >> Point::xy(1.0, 1.0)).to_euclidean(), [4.0, 0.0]);
+        /// let (a, b) = (Point::xy(1.0, 1.0), Point::xy(2.0, 3.0));
+        /// assert_eq!(Motor::translation(b - a) >> a, b);
         /// ```
         #[inline]
-        pub fn translation(dx: T, dy: T) -> Unit<Self> {
+        pub fn translation<O: crate::Orientation>(d: oriented::Point<(), T, O>) -> Unit<Self> {
             let h = T::from_f64(0.5);
             // A translator, as a motor.
-            let t = Translator::new(T::one(), dy * h, -dx * h);
+            let t = Translator::new(T::one(), d.e01() * h, -d.e20() * h);
             Unit::new_unchecked(t.cast::<Motor>())
         }
 
@@ -1004,16 +1190,19 @@ mod pga2d_extras {
         /// The shortest rotation about the origin that turns the direction `from` into the
         /// direction `to`: by their signed angle, [`Point::angle_to`] (no normalization needed,
         /// well conditioned everywhere, a half turn included), which is also its
-        /// [`Motor::angle`].
+        /// [`Motor::angle`]. The directions may have either orientation.
         ///
         /// ```
         /// use gax::pga2d::{Motor, Point};
         /// let r = Motor::rotation_between(Point::<(), f64>::direction(1.0, 0.0), Point::direction(0.0, 2.0));
         /// assert!((r.angle() - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
         /// ```
-        pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
+        pub fn rotation_between<A: crate::Orientation, B: crate::Orientation>(
+            from: oriented::Point<(), T, A>,
+            to: oriented::Point<(), T, B>,
+        ) -> Unit<Self> {
             let zero = T::zero();
-            Self::rotation(Point::xy(zero, zero), from.angle_to(to))
+            Self::rotation(Point::xy(zero, zero), from.angle_to(to.with_orientation()))
         }
 
         /// The rigid motion from `a` to `b`, at `t`: `a exp(t log(~a b))`, the shorter way (the
@@ -1022,7 +1211,7 @@ mod pga2d_extras {
         ///
         /// ```
         /// use gax::pga2d::{Motor, Point};
-        /// let (a, b) = (Motor::<(), f64>::translation(0.0, 0.0), Motor::translation(4.0, 2.0));
+        /// let (a, b) = (gax::Unit::<Motor<(), f64>>::identity(), Motor::translation(Point::direction(4.0, 2.0)));
         /// let halfway = Motor::interpolate(a, b, 0.5);
         /// let [x, y] = (halfway >> Point::xy(0.0, 0.0)).to_euclidean();
         /// assert!((x - 2.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
@@ -1047,11 +1236,71 @@ mod pga2d_extras {
 
 /// Angles of Euclidean vectors, from their outer and inner products: `angle_between`, unsigned,
 /// in every dimension; `angle_to`, signed, in the plane, where an orientation is given; and the
-/// unit vector `from_angle`, the inverse of `angle_to` from `e1`.
+/// unit vector `from_angle`, the inverse of `angle_to` from `e1`. Rotors: a rotation by an
+/// angle, its angle, and the interpolation between two.
 #[cfg(feature = "vga2d")]
 mod vga2d_extras {
-    use crate::Real;
-    use crate::vga2d::Vector;
+    use crate::vga2d::{Bivector, Rotor, Vector};
+    use crate::{Real, Unit};
+
+    impl<T: Real> Rotor<(), T> {
+        /// The rotation by `angle`, counterclockwise (from `e1` towards `e2`):
+        /// `exp(−e12 angle / 2)`, `cos(angle/2) − sin(angle/2) e12`.
+        ///
+        /// ```
+        /// use gax::vga2d::{Rotor, Vector};
+        /// let r = Rotor::<(), f64>::rotation(std::f64::consts::FRAC_PI_2);
+        /// let v = r >> Vector::new(1.0, 0.0);
+        /// assert!(v.e1().abs() < 1e-15 && (v.e2() - 1.0).abs() < 1e-15);
+        /// ```
+        #[inline]
+        pub fn rotation(angle: T) -> Unit<Self> {
+            Bivector::new(angle * T::from_f64(-0.5)).exp()
+        }
+
+        /// The angle of this rotation, counterclockwise, in `[-π, π]`: `atan2` of the sine and
+        /// cosine of the full angle, `−2ab` and `a² − b²` for the rotor `a + b e12`, so `r` and
+        /// `−r` (the same rotation) agree and any scale cancels.
+        ///
+        /// ```
+        /// use gax::vga2d::Rotor;
+        /// let r = Rotor::<(), f64>::rotation(-2.5);
+        /// assert!((r.angle() + 2.5).abs() < 1e-15);
+        /// assert_eq!(Rotor::<(), f64>::new(-2.0, 0.0).angle(), 0.0); // −2: no turn
+        /// ```
+        #[inline]
+        pub fn angle(self) -> T {
+            let (a, b) = (self.s(), self.e12());
+            let sine = -(a * b + a * b);
+            sine.atan2(a * a - b * b)
+        }
+
+        /// The rotation from `a` to `b` at `t` (`0` is `a`, `1` is `b`), the shorter way:
+        /// `a exp(t log(~a b))` with the relative rotor's scalar part non-negative, as for
+        /// motors (`gax::pga3d::Motor::interpolate`).
+        ///
+        /// ```
+        /// use gax::vga2d::Rotor;
+        /// let (a, b) = (Rotor::<(), f64>::rotation(0.25), Rotor::rotation(-0.75));
+        /// assert!((Rotor::interpolate(a, b, 0.5).angle() + 0.25).abs() < 1e-15);
+        /// ```
+        pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
+            crate::extras::shared::interpolate::<Self, Bivector<(), T>, T>(a, b, t)
+        }
+
+        /// The rotor that carries the vector `a` onto the direction of `b`, `sqrt(b / a)`: the
+        /// rotation by their signed angle ([`Between`](crate::vga2d::Between)).
+        ///
+        /// ```
+        /// use gax::vga2d::{Rotor, Vector};
+        /// let r = Rotor::between(Vector::<(), f64>::new(2.0, 0.0), Vector::new(-1.0, 1.0));
+        /// assert!((r.angle() - 3.0 * std::f64::consts::FRAC_PI_4).abs() < 1e-15);
+        /// ```
+        #[inline]
+        pub fn between<X: crate::extras::Between<Self>>(a: X, b: X) -> Unit<Self> {
+            X::between(a, b)
+        }
+    }
 
     impl<T: Real> Vector<(), T> {
         /// The unit vector at `angle` counterclockwise from `e1`: its `e1` coordinate is the
@@ -1096,11 +1345,64 @@ mod vga2d_extras {
     }
 }
 
-/// Angles of Euclidean vectors, from their outer and inner products (see the 2D module).
+/// Angles of Euclidean vectors, from their outer and inner products (see the 2D module), and
+/// rotors: about an axis, between two vectors or planes, and interpolated.
 #[cfg(feature = "vga3d")]
 mod vga3d_extras {
-    use crate::Real;
-    use crate::vga3d::Vector;
+    use crate::vga3d::{Bivector, Rotor, Vector, oriented};
+    use crate::{Real, Unit};
+
+    impl<T: Real> Rotor<(), T> {
+        /// The rotation by `angle` about the axis `axis` (a vector of either orientation, of
+        /// any length), right-handed: `exp(−B angle / 2)` with `B` the unit bivector of the plane
+        /// orthogonal to the axis (`e12` for `e3`), as `gax::pga3d::Motor::rotation_about`.
+        ///
+        /// ```
+        /// use gax::vga3d::{Rotor, Vector};
+        /// let r = Rotor::<(), f64>::rotation(Vector::new(0.0, 0.0, 2.0), std::f64::consts::FRAC_PI_2);
+        /// let v = r >> Vector::new(1.0, 0.0, 0.0);
+        /// assert!(v.e1().abs() < 1e-15 && (v.e2() - 1.0).abs() < 1e-15 && v.e3().abs() < 1e-15);
+        /// ```
+        #[inline]
+        pub fn rotation<O: crate::Orientation>(
+            axis: oriented::Vector<(), T, O>,
+            angle: T,
+        ) -> Unit<Self> {
+            let plane = Bivector::new(axis.e1(), axis.e2(), axis.e3());
+            crate::extras::shared::rotation_twist(plane, angle).exp()
+        }
+
+        /// The rotation from `a` to `b` at `t` (`0` is `a`, `1` is `b`), the shorter way:
+        /// `a exp(t log(~a b))` with the relative rotor's scalar part non-negative, as for
+        /// motors (`gax::pga3d::Motor::interpolate`).
+        ///
+        /// ```
+        /// use gax::vga3d::{Rotor, Vector};
+        /// let z = Vector::<(), f64>::new(0.0, 0.0, 1.0);
+        /// let (a, b) = (Rotor::rotation(z, 0.1), Rotor::rotation(z, 0.3));
+        /// let v = Rotor::interpolate(a, b, 0.5) >> Vector::new(1.0, 0.0, 0.0);
+        /// assert!((v.e2() - 0.2f64.sin()).abs() < 1e-15);
+        /// ```
+        pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
+            crate::extras::shared::interpolate::<Self, Bivector<(), T>, T>(a, b, t)
+        }
+
+        /// The rotor that carries `a` onto `b`, vectors (onto its direction) or bivectors
+        /// (planes through the origin): `sqrt(b / a)`, the shortest rotation, about the axis
+        /// orthogonal to both vectors or along the line where the planes meet
+        /// ([`Between`](crate::vga3d::Between)). Not defined for `b` opposite to `a`.
+        ///
+        /// ```
+        /// use gax::vga3d::{Rotor, Vector};
+        /// let (a, b) = (Vector::<(), f64>::new(1.0, 0.0, 0.0), Vector::new(0.0, 3.0, 4.0));
+        /// let v = Rotor::between(a, b) >> a;
+        /// assert!(v.e1().abs() < 1e-15 && (v.e2() - 0.6).abs() < 1e-15 && (v.e3() - 0.8).abs() < 1e-15);
+        /// ```
+        #[inline]
+        pub fn between<X: crate::extras::Between<Self>>(a: X, b: X) -> Unit<Self> {
+            X::between(a, b)
+        }
+    }
 
     impl<T: Real> Vector<(), T> {
         /// The angle between this vector and `other`, in `[0, π]`: `atan2` of the norm of their
@@ -1142,24 +1444,22 @@ macro_rules! cga_points {
                 core::array::from_fn(|i| self.c[i] * r)
             }
 
-            /// The sphere (or circle) with this centre and radius: `up(c) - ½r² ei`, in the
-            /// dual representation (a point `X` lies on it when `X · s = 0`).
+            /// The sphere (or circle) about the round point `centre` (of any weight) with the
+            /// given radius: `C - ½r² ei` for the centre `C` of weight one, in the dual
+            /// representation (a point `X` lies on it when `X · s = 0`).
             #[inline]
-            pub fn sphere(centre: [T; $n], radius: T) -> Self {
-                let mut s = Self::from_coeffs(core::array::from_fn(|i| {
-                    if i < $n { centre[i] } else if i == $n { T::one() } else { T::zero() }
-                }));
-                let sq = centre.iter().fold(T::zero(), |a, &x| a + x * x);
-                s.c[$n + 1] = T::from_f64(0.5) * (sq - radius * radius);
+            pub fn sphere(centre: Self, radius: T) -> Self {
+                let mut s = centre.gp(centre.c[$n].recip());
+                s.c[$n + 1] = s.c[$n + 1] - T::from_f64(0.5) * radius * radius;
                 s
             }
         }
 
         #[cfg(feature = $pga_feature)]
         impl<T: crate::Real> crate::$alg::Vector<(), T> {
-            /// The round point of a PGA point (of weight `w`): `w up(p / w)`.
+            /// The round point of a PGA point (of weight `w`, either orientation): `w up(p / w)`.
             #[inline]
-            pub fn from_point(p: crate::$pga::Point<(), T>) -> Self {
+            pub fn from_point<O: crate::Orientation>(p: crate::$pga::oriented::Point<(), T, O>) -> Self {
                 let [$($x),+] = p.to_euclidean();
                 Self::up($($x),+).gp(p.c[$n])
             }
@@ -1386,12 +1686,15 @@ mod tests {
     fn pga3d_conventions() {
         use crate::pga3d::{Motor, Plane, Point};
         let close = |a: [f64; 3], b: [f64; 3]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-12);
-        let t = Motor::translation(1.0, -2.0, 0.5);
+        let t = Motor::translation(Point::direction(1.0, -2.0, 0.5));
         assert!(close(
             (t >> Point::xyz(1.0, 1.0, 1.0)).to_euclidean(),
             [2.0, -1.0, 1.5]
         ));
-        let r = Motor::rotation_about(0.0, 0.0, 1.0, core::f64::consts::FRAC_PI_2);
+        let r = Motor::rotation_about(
+            Point::direction(0.0, 0.0, 1.0),
+            core::f64::consts::FRAC_PI_2,
+        );
         assert!(close(
             (r >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean(),
             [0.0, 1.0, 0.0]
@@ -1405,7 +1708,7 @@ mod tests {
             [1.0, -1.0, 0.0]
         ));
         // Signed distance of a point above a plane.
-        let floor = Plane::<(), f64>::from_normal([0.0, 0.0, 1.0], 1.0);
+        let floor = Plane::<(), f64>::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0);
         assert!(((floor & Point::xyz(3.0, 4.0, 3.0)).s() - 2.0).abs() < 1e-12);
     }
 
@@ -1414,7 +1717,7 @@ mod tests {
     fn pga2d_conventions() {
         use crate::pga2d::{Motor, Point};
         let close = |a: [f64; 2], b: [f64; 2]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-12);
-        let t = Motor::translation(1.0, -2.0);
+        let t = Motor::translation(Point::direction(1.0, -2.0));
         assert!(close(
             (t >> Point::xy(1.0, 1.0)).to_euclidean(),
             [2.0, -1.0]
@@ -1429,17 +1732,17 @@ mod tests {
         // Twists: exp(t B) is the motor of the motion for time t.
         let c = Point::xy(0.5, -1.5);
         for t in [0.3, 1.0, 2.5] {
-            let tr = crate::pga2d::Twist::translation_twist(3.0, -1.0)
+            let tr = crate::pga2d::Twist::translation(crate::pga2d::Point::direction(3.0, -1.0))
                 .gp(t)
                 .exp()
                 .into_inner();
-            let want = Motor::translation(3.0 * t, -t).into_inner();
+            let want = Motor::translation(Point::direction(3.0 * t, -t)).into_inner();
             assert!(
                 tr.c.iter()
                     .zip(want.c)
                     .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
             );
-            let ro = crate::pga2d::Twist::rotation_twist(c, 0.7)
+            let ro = crate::pga2d::Twist::rotation(c, 0.7)
                 .gp(t)
                 .exp()
                 .into_inner();
@@ -1465,12 +1768,12 @@ mod tests {
         assert_eq!(x.down(), [1.0, 2.0, 3.0]);
         let y = cga3d::Vector::up(4.0, 6.0, 3.0);
         assert!(((x | y).s() + 12.5).abs() < 1e-12); // -½ |(3, 4, 0)|²
-        let s = cga3d::Vector::sphere([1.0, 2.0, 3.0], 5.0);
+        let s = cga3d::Vector::sphere(cga3d::Vector::up(1.0, 2.0, 3.0), 5.0);
         assert!((y | s).s().abs() < 1e-12); // (4, 6, 3) is 5 from the centre
         let p = pga3d::Point::xyz(1.0, 2.0, 3.0);
         assert_eq!(cga3d::Vector::from_point(p).down(), [1.0, 2.0, 3.0]);
         assert_eq!(cga3d::Vector::from_point(p).to_point(), p);
-        let plane = pga3d::Plane::from_normal([0.0, 0.0, 1.0], 1.0); // z = 1
+        let plane = pga3d::Plane::with_normal(pga3d::Point::direction(0.0, 0.0, 1.0), 1.0); // z = 1
         let dual: cga3d::Vector<(), f64> = plane.into();
         assert!(((x | dual).s() - (plane & p).s()).abs() < 1e-12);
         assert!(((x | dual).s() - 2.0).abs() < 1e-12);
@@ -1479,20 +1782,20 @@ mod tests {
     #[cfg(feature = "pga3d")]
     #[test]
     fn pga3d_twists() {
-        use crate::pga3d::{Line, Motor, Point};
+        use crate::pga3d::{Motor, Point, Twist};
         let axis = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.5, 2.0);
         for t in [0.3, 1.0, 2.5] {
-            let tr = Line::translation_twist(3.0, -1.0, 0.5)
+            let tr = Twist::translation(Point::direction(3.0, -1.0, 0.5))
                 .gp(t)
                 .exp()
                 .into_inner();
-            let want = Motor::translation(3.0 * t, -t, 0.5 * t).into_inner();
+            let want = Motor::translation(Point::direction(3.0 * t, -t, 0.5 * t)).into_inner();
             assert!(
                 tr.c.iter()
                     .zip(want.c)
                     .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
             );
-            let ro = Line::rotation_twist(axis, 0.7).gp(t).exp().into_inner();
+            let ro = Twist::rotation(axis, 0.7).gp(t).exp().into_inner();
             let want = Motor::rotation(axis, 0.7 * t).into_inner();
             assert!(
                 ro.c.iter()

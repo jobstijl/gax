@@ -14,8 +14,8 @@
 //! All three act on maps and forms as on values: on the output, keeping the slots.
 //!
 //! ```
-//! use gax::pga3d::{Line, Motor, Rotor, Scalar};
-//! let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5).into_inner();
+//! use gax::pga3d::{Line, Motor, Point, Rotor, Scalar};
+//! let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.5).into_inner();
 //! let r: Rotor<(), f64> = m.cast::<Rotor>();    // the rotation part
 //! let b: Line<(), f64> = m.grade::<2>();       // the bivector part
 //! let s: Scalar<(), f64> = m.grade::<0>();

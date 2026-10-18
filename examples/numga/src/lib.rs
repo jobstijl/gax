@@ -288,7 +288,8 @@ mod tests {
         // The ray through a point's pixel meets the ground plane `z = 0` at the point.
         let (origin, dir) = cam.ray(x);
         let ray = origin & (origin + dir);
-        let hit = ray ^ gax::pga3d::Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+        let hit =
+            ray ^ gax::pga3d::Plane::with_normal(gax::pga3d::Point::direction(0.0, 0.0, 1.0), 0.0);
         assert!(
             (hit & Point3::xyz(1.0, 0.0, 0.0)).norm() < 1e-3 * hit.e123().abs(),
             "{hit:?}"

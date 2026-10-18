@@ -52,8 +52,8 @@ mod curvature {
     /// infinity's: `Σ wᵢ Aᵢ (Aᵢ & X) - e0 (e0 & X)`.
     pub fn quadric(weights: [f64; 3]) -> Quadric {
         let x = Point::slot();
-        let axes =
-            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]].map(|n| Plane::from_normal(n, 0.0));
+        let axes = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+            .map(|n| Plane::with_normal(Point::direction(n[0], n[1], n[2]), 0.0));
         let w = infinity();
         let dyads: Quadric = axes
             .iter()
@@ -179,7 +179,7 @@ struct Seen {
 /// Where the light comes from for a view along `heading`: from behind the viewer's right
 /// shoulder, the heading reversed, turned 22 degrees about the vertical and raised.
 fn lamp(heading: P) -> P {
-    let back = Motor::rotation_about(0.0, 0.0, 1.0, -0.38) >> -heading;
+    let back = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), -0.38) >> -heading;
     back + Point::direction(0.0, 0.0, 0.6 * heading.ideal_norm())
 }
 
@@ -230,7 +230,8 @@ fn scene() -> &'static Scene {
         let tau = core::f64::consts::TAU;
         // Points of the unit sphere and of the unit hyperboloid `x² + y² - z² = 1`, turned
         // about z by the longitude `v`, then stretched along the axes.
-        let turned = |v: f64, p: P| Motor::rotation_about(0.0, 0.0, 1.0, v * tau) >> p;
+        let turned =
+            |v: f64, p: P| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), v * tau) >> p;
         // The stretch by `k` along x, y and z, as a map on points (the weight kept).
         let stretch = |[a, b, c]: [f64; 3]| {
             Point::<(Point,), f64>::from_coeffs([
@@ -242,7 +243,8 @@ fn scene() -> &'static Scene {
         };
         let (to_ellipsoid, to_hyperboloid) = (stretch(SEMI_AXES), stretch([1.6, 1.0, 1.0]));
         let on_ellipsoid = move |u: f64, v: f64| {
-            let latitude = Motor::rotation_about(0.0, -1.0, 0.0, (u - 0.5) * tau / 2.0);
+            let latitude =
+                Motor::rotation_about(Point::direction(0.0, -1.0, 0.0), (u - 0.5) * tau / 2.0);
             to_ellipsoid.of(turned(v, latitude >> Point::xyz(1.0, 0.0, 0.0)))
         };
         let on_hyperboloid = move |u: f64, v: f64| {
@@ -430,7 +432,8 @@ mod tests {
     fn curvature_and_confocal_parameters_do_not_depend_on_placement() {
         let s = Surface::new(ellipsoid());
         let points = surface_points(&s);
-        let m = Motor::rotation_about(0.6, 0.0, 0.8, 0.5) * Motor::translation(1.5, 0.0, -0.7);
+        let m = Motor::rotation_about(Point::direction(0.6, 0.0, 0.8), 0.5)
+            * Motor::translation(Point::direction(1.5, 0.0, -0.7));
         let moved = Surface::new(placed(ellipsoid(), m));
         for p in points {
             let q = m >> p;

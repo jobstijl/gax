@@ -7,7 +7,7 @@ use super::space::{P, about_axis, around, at, axis, dir};
 use super::{CRUISE, SHIP_RADIUS, SPAWN_AHEAD, World};
 use crate::sim::DT;
 use gax::Unit;
-use gax::pga3d::{Line, Motor};
+use gax::pga3d::{Motor, Point, Twist};
 
 /// A serpent's segments, and the seconds between them along its screw.
 pub(super) const SEGMENTS: usize = 14;
@@ -138,7 +138,7 @@ impl World {
         let off = r.range(1.4, 2.4 + 1.2 * i);
         let side = if r.unit() < 0.5 { -1.0 } else { 1.0 };
         let turn = side * r.range(0.5, 0.9 + 0.5 * i);
-        let screw = about_axis(turn) * Motor::translation(0.0, 0.0, GATE_GAP);
+        let screw = about_axis(turn) * Motor::translation(Point::direction(0.0, 0.0, GATE_GAP));
         let mut c = around(off, r.angle(), s0);
         self.gates.clear();
         for _ in 0..GATES {
@@ -175,7 +175,10 @@ impl World {
             let (swim, body) = if p.foe == Foe::Serpent {
                 self.serpent(p.pos)
             } else {
-                (Motor::translation(0.0, 0.0, 0.0), Vec::new())
+                (
+                    Motor::translation(Point::direction(0.0, 0.0, 0.0)),
+                    Vec::new(),
+                )
             };
             if p.foe == Foe::Singularity {
                 well = Some(id);
@@ -204,8 +207,8 @@ impl World {
     /// back along the screw by `k SEGMENT_LAG` seconds, `exp(-lag T)`.
     pub(super) fn serpent(&mut self, head: P) -> (Unit<Motor<(), f32>>, Vec<Segment>) {
         let side = if self.rng.unit() < 0.5 { -1.0 } else { 1.0 };
-        let twist = Line::rotation_twist(axis(), side * self.rng.range(1.3, 1.8))
-            + Line::translation_twist(0.0, 0.0, 0.55 * CRUISE);
+        let twist = Twist::rotation(axis(), side * self.rng.range(1.3, 1.8))
+            + Twist::translation(Point::direction(0.0, 0.0, 0.55 * CRUISE));
         let body = (1..=SEGMENTS)
             .map(|k| {
                 let behind = (twist * -(k as f32 * SEGMENT_LAG)).exp();

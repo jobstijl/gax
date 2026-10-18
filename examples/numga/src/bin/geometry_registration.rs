@@ -109,11 +109,11 @@ mod registration {
         points
             .iter()
             .map(|p| {
-                let t = Motor::translation(
+                let t = Motor::translation(Point::direction(
                     sigma * rng.normal(),
                     sigma * rng.normal(),
                     sigma * rng.normal(),
-                );
+                ));
                 t >> *p
             })
             .collect()
@@ -162,7 +162,7 @@ fn panel(
 ) {
     let centre = (mean(source) + mean(target)).gp(0.5);
     let cam = Camera::orbit(rect, centre, 15.0, az, 0.5, Lens::Perspective(0.6));
-    let identity = Motor::<(), f64>::translation(0.0, 0.0, 0.0);
+    let identity = Motor::<(), f64>::translation(Point::direction(0.0, 0.0, 0.0));
     let along = Motor::interpolate(identity, estimate, s);
     let moving: Vec<P> = source.iter().map(|p| along >> *p).collect();
     panel3(c, rect, cam, |scene| {
@@ -220,7 +220,7 @@ fn main() {
 mod tests {
     use super::registration::*;
     use gax::ApproxEq;
-    use gax::pga3d::Motor;
+    use gax::pga3d::{Motor, Point};
     use gax_numga_examples::rng::rng;
 
     fn close(a: &[P], b: &[P], tol: f64) -> bool {
@@ -276,7 +276,7 @@ mod tests {
         let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
         let estimate = fit_motor(&source, &target).into_inner();
         let one = estimate * estimate.reverse();
-        let identity = Motor::<(), f64>::translation(0.0, 0.0, 0.0).into_inner();
+        let identity = Motor::<(), f64>::translation(Point::direction(0.0, 0.0, 0.0)).into_inner();
         assert!(one.approx_eq(&identity, 1e-12));
     }
 

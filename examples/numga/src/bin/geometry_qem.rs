@@ -142,8 +142,8 @@ fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
     let pt = |i: usize, j: usize| {
         let theta = core::f64::consts::PI * i as f64 / (n_theta - 1) as f64;
         let phi = core::f64::consts::TAU * j as f64 / (n_phi - 1) as f64;
-        let turn =
-            Motor::rotation_about(0.0, 0.0, 1.0, phi) * Motor::rotation_about(0.0, 1.0, 0.0, theta);
+        let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), phi)
+            * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), theta);
         let d = turn >> Point::direction(0.0, 0.0, 1.0);
         centre + d.gp(ellipsoid_radius(q, d, 0.12, 0.4))
     };

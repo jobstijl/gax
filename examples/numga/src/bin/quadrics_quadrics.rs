@@ -76,14 +76,17 @@ mod quadrics {
     /// numga's motor `exp(0.5 xw + yw + 1.5 zw) exp(-π/12 xy)`: the translation by `(1, 2, 3)`
     /// after a turn of `π/6` about z.
     pub fn motor() -> M {
-        Motor::translation(1.0, 2.0, 3.0)
-            * Motor::rotation_about(0.0, 0.0, 1.0, core::f64::consts::FRAC_PI_6)
+        Motor::translation(Point::direction(1.0, 2.0, 3.0))
+            * Motor::rotation_about(
+                Point::direction(0.0, 0.0, 1.0),
+                core::f64::consts::FRAC_PI_6,
+            )
     }
 
     /// The tangent's normal: `(1, 2, 3)` swept around by the phase `t` (radians).
     pub fn normal(t: f64) -> Pl {
-        let turn = Motor::rotation_about(0.0, 0.0, 1.0, t)
-            * Motor::rotation_about(1.0, 0.0, 0.0, 0.6 * wave(2.0 * t));
+        let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), t)
+            * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.6 * wave(2.0 * t));
         turn >> Plane::new(1.0, 2.0, 3.0, 0.0)
     }
 
@@ -114,11 +117,13 @@ mod quadrics {
         (0..=rows)
             .map(|i| {
                 let polar = core::f64::consts::PI * i as f64 / rows as f64;
-                let tilt = Motor::rotation_about(0.0, 1.0, 0.0, polar);
+                let tilt = Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), polar);
                 (0..=cols)
                     .map(|j| {
                         let longitude = core::f64::consts::TAU * j as f64 / cols as f64;
-                        let n = (Motor::rotation_about(0.0, 0.0, 1.0, longitude) * tilt) >> pole;
+                        let n = (Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), longitude)
+                            * tilt)
+                            >> pole;
                         quadric.of(support_plane(quadric, n))
                     })
                     .collect()
@@ -203,7 +208,11 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The world frame, on the right: the screw from the identity to numga's motor and back.
     let s = haversine(phase);
-    let m = Motor::interpolate(Motor::translation(0.0, 0.0, 0.0), motor(), s);
+    let m = Motor::interpolate(
+        Motor::translation(Point::direction(0.0, 0.0, 0.0)),
+        motor(),
+        s,
+    );
     let (world, world_tangent, world_contact, moved) = transport(m, normal);
     let mut right = c.sub(Rect::new(half, 0.0, w, h));
     backdrop(&mut right);
@@ -275,7 +284,7 @@ fn main() {
 mod tests {
     use super::quadrics::*;
     use gax::ApproxEq;
-    use gax::pga3d::{Line, Motor, Plane};
+    use gax::pga3d::{Line, Motor, Plane, Point};
 
     /// The motor is numga's product of exponentials (`xw = e1 e0 = -e01`; numga's `xy` is
     /// gax's `e12`).
@@ -326,7 +335,11 @@ mod tests {
         let joined = world_contact & moved;
         assert!((joined | joined).s().abs() < 1e-20);
         for k in 0..=8 {
-            let m = Motor::interpolate(Motor::translation(0.0, 0.0, 0.0), motor(), k as f64 / 8.0);
+            let m = Motor::interpolate(
+                Motor::translation(Point::direction(0.0, 0.0, 0.0)),
+                motor(),
+                k as f64 / 8.0,
+            );
             let (_, _, world_contact, moved) = transport(m, normal(0.7 * k as f64));
             let joined = world_contact & moved;
             assert!((joined | joined).s().abs() < 1e-20, "{joined:?}");

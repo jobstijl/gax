@@ -40,8 +40,8 @@ impl<M> Unit<M> {
     /// The underlying versor.
     ///
     /// ```
-    /// use gax::pga3d::Motor;
-    /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5);
+    /// use gax::pga3d::{Motor, Point};
+    /// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.5);
     /// let plain: Motor<(), f64> = m.into_inner();
     /// assert!((plain.norm_squared() - 1.0).abs() < 1e-12);
     /// ```
@@ -115,8 +115,8 @@ pub trait Widen<N> {}
 ///
 /// ```
 /// use gax::__private::NewtonStep;
-/// use gax::pga3d::Motor;
-/// let drifted = Motor::<(), f64>::rotation_about(1.0, 2.0, 3.0, 0.9).into_inner().gp(1.001);
+/// use gax::pga3d::{Motor, Point};
+/// let drifted = Motor::<(), f64>::rotation_about(Point::direction(1.0, 2.0, 3.0), 0.9).into_inner().gp(1.001);
 /// let fixed = drifted.newton_step();
 /// // The drift e = 0.002 in the norm becomes about 3/4 e².
 /// assert!((drifted.norm_squared() - 1.0).abs() > 1e-3);
@@ -163,8 +163,8 @@ impl<M: NewtonStep + core::ops::Mul<Output = M>> Unit<M> {
     /// renormalizing, like nalgebra and glam; use this in long chains of compositions.
     ///
     /// ```
-    /// use gax::pga3d::Motor;
-    /// let step = Motor::<(), f64>::rotation_about(0.3, 0.4, 0.5, 0.01);
+    /// use gax::pga3d::{Motor, Point};
+    /// let step = Motor::<(), f64>::rotation_about(Point::direction(0.3, 0.4, 0.5), 0.01);
     /// let mut m = step;
     /// for _ in 0..10_000 {
     ///     m = m.mul_renormalized(step);
@@ -176,6 +176,50 @@ impl<M: NewtonStep + core::ops::Mul<Output = M>> Unit<M> {
     pub fn mul_renormalized(self, other: Self) -> Self {
         M::note_renormalize();
         Unit((self.0 * other.0).newton_step())
+    }
+}
+
+impl<M> Unit<M>
+where
+    M: crate::kind::Extensor<Slots = ()>,
+    M::Kind: crate::cast::GradePart<0>,
+{
+    /// The identity, the versor `1`: it moves nothing, and `m * identity` is `m`. For every
+    /// kind with a scalar part (motors, rotors, translators, even versors).
+    ///
+    /// ```
+    /// use gax::pga3d::{Motor, Point};
+    /// use gax::Unit;
+    /// let id = Unit::<Motor<(), f64>>::identity();
+    /// assert_eq!(id >> Point::xyz(1.0, 2.0, 3.0), Point::xyz(1.0, 2.0, 3.0));
+    /// assert_eq!(id, Unit::default());
+    /// ```
+    #[inline]
+    pub fn identity() -> Self {
+        use crate::coef::Coef;
+        use crate::kind::Kind;
+        use crate::slots::Slots;
+        let scalar = <M::Kind as crate::cast::GradePart<0>>::SHARED[0].0;
+        let value = |x: M::Coef| <M::Slots as Slots>::from_flat(&mut |_| x, 0);
+        Unit(M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|i| {
+            value(if i == scalar {
+                M::Coef::one()
+            } else {
+                M::Coef::zero()
+            })
+        })))
+    }
+}
+
+/// The identity ([`Unit::identity`]).
+impl<M> Default for Unit<M>
+where
+    M: crate::kind::Extensor<Slots = ()>,
+    M::Kind: crate::cast::GradePart<0>,
+{
+    #[inline]
+    fn default() -> Self {
+        Self::identity()
     }
 }
 
@@ -213,7 +257,7 @@ impl<M: crate::ops::Reverse<Output = M>> Unit<M> {
     ///
     /// ```
     /// use gax::pga3d::{Motor, Point};
-    /// let m = Motor::<(), f64>::rotation_about(0.0, 1.0, 0.0, 0.8);
+    /// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.8);
     /// let p = Point::xyz(1.0, 2.0, 3.0);
     /// let back = (m.inverse() >> (m >> p)).to_euclidean();
     /// assert!(back.iter().zip([1.0, 2.0, 3.0]).all(|(a, b)| (a - b).abs() < 1e-12));

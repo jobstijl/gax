@@ -122,7 +122,7 @@ fn drifted_unit_rotors_scale_vectors_uniformly() {
 fn drifted_unit_motors_in_the_plane() {
     use gax::pga2d::{Motor, Point};
     let u = Motor::<(), f64>::rotation(Point::xy(0.5, -0.2), 0.9).into_inner()
-        * Motor::translation(1.0, 2.0).into_inner();
+        * Motor::translation(Point::direction(1.0, 2.0)).into_inner();
     let u = u.unit();
     let pts = [[0.3, -1.2, 0.0], [1.5, 0.2, 0.0], [-0.8, 0.9, 0.0]];
     for delta in DRIFTS {

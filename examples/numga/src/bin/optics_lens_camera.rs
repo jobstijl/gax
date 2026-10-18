@@ -64,7 +64,7 @@ mod lens {
         let infinity = Plane::new(0.0, 0.0, 0.0, 1.0);
         let mut q = (infinity * (infinity & x)).gp(-radius * radius);
         for normal in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] {
-            let e = Plane::from_normal(normal, 0.0);
+            let e = Plane::with_normal(Point::direction(normal[0], normal[1], normal[2]), 0.0);
             q += e * (e & x);
         }
         q
@@ -171,7 +171,7 @@ mod lens {
             .map(|k| {
                 let theta = core::f64::consts::TAU * k as f64 / (samples - 1) as f64;
                 // The direction `+y` turned by theta about `x`, in the sensor.
-                let turn = Motor::rotation_about(1.0, 0.0, 0.0, theta);
+                let turn = Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), theta);
                 let across = frame >> (turn >> Point::direction(0.0, 1.0, 0.0));
                 let (a, b, c) = (
                     (across & cone.of(across)).s(),
@@ -218,10 +218,11 @@ mod scenes {
     /// Expose the scene with the rear lens at `rear_at`, focused on the axis at `focus_at`, the
     /// sensor tilted by `tilt` radians, and an aperture of the given radius.
     pub fn setting(rear_at: f64, focus_at: f64, tilt: f64, radius: f64) -> Exposure {
-        let placements = [FRONT_AT, rear_at].map(|x| Motor::translation(x, 0.0, 0.0));
+        let placements =
+            [FRONT_AT, rear_at].map(|x| Motor::translation(Point::direction(x, 0.0, 0.0)));
         let focus = Point::xyz(focus_at, 0.0, 0.0);
         // The sensor tilts clockwise about the vertical through the focus point's image.
-        let turn = Motor::rotation_about(0.0, 0.0, 1.0, -tilt);
+        let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), -tilt);
         let rim = [radius, 0.0, -radius].map(|y| Point::xyz(0.0, y, 0.0));
         expose(
             &scene(),
@@ -493,9 +494,9 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         ax.line(c, top, bottom, 2.5, colour);
         // The sensor's name below it, clear of the rear lens's.
         let label = if name == "SENSOR" {
-            pga2d::Motor::translation(0.0, -0.24) >> bottom
+            pga2d::Motor::translation(pga2d::Point::direction(0.0, -0.24)) >> bottom
         } else {
-            pga2d::Motor::translation(0.0, 0.12) >> top
+            pga2d::Motor::translation(pga2d::Point::direction(0.0, 0.12)) >> top
         };
         ax.text(c, label, name, 7.0, palette::grid(), Align::Center);
     }
@@ -646,7 +647,8 @@ mod tests {
             cones,
             ..
         } = &tilted;
-        let place_front = gax::pga3d::Motor::translation(FRONT_AT, 0.0, 0.0);
+        let place_front =
+            gax::pga3d::Motor::translation(gax::pga3d::Point::direction(FRONT_AT, 0.0, 0.0));
         let (sensor, centre) = (*frame >> home(), place_front >> origin());
         // The train on lines is the join of the collineation's images: the lens is a
         // collineation.

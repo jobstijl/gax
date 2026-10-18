@@ -6,6 +6,12 @@ pub type Field<S = (), T = f64> = Bivector<S, T>;
 /// Alias of [`Even`].
 pub type Rotor<S = (), T = f64> = Even<S, T>;
 
+/// Alias of [`Bivector`].
+pub type Twist<S = (), T = f64> = Bivector<S, T>;
+
+/// Alias of [`Bivector`], intrinsic.
+pub type Forque<S = (), T = f64> = Bivector<S, T, gx::Intrinsic>;
+
 #[cfg(feature = "batch")]
 /// [`Scalar`] values in struct-of-arrays form, for the batch kernels.
 pub type ScalarSoa<E = f32> = gx::batch::Soa<Scalar, E>;
@@ -49,6 +55,14 @@ pub type FieldSoa<E = f32> = gx::batch::Soa<Bivector, E>;
 #[cfg(feature = "batch")]
 /// [`Even`] values in struct-of-arrays form, for the batch kernels.
 pub type RotorSoa<E = f32> = gx::batch::Soa<Even, E>;
+
+#[cfg(feature = "batch")]
+/// [`Bivector`] values in struct-of-arrays form, for the batch kernels.
+pub type TwistSoa<E = f32> = gx::batch::Soa<Bivector, E>;
+
+#[cfg(feature = "batch")]
+/// [`Bivector`] values in struct-of-arrays form, for the batch kernels.
+pub type ForqueSoa<E = f32> = gx::batch::Soa<Bivector<(), f64, gx::Intrinsic>, E>;
 
 #[cfg(feature = "bytemuck")]
 /// [`Scalar`] in the GPU layout of the `gax::wgsl` modules: its 1 coefficients in blade
@@ -974,6 +988,22 @@ pub type RotorGpu = EvenGpu;
 #[cfg(feature = "bytemuck")]
 /// Alias of [`EvenGpu16`].
 pub type RotorGpu16 = EvenGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`BivectorGpu`].
+pub type TwistGpu = BivectorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`BivectorGpu16`].
+pub type TwistGpu16 = BivectorGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`BivectorGpu`].
+pub type ForqueGpu = BivectorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`BivectorGpu16`].
+pub type ForqueGpu16 = BivectorGpu16;
 
 #[cfg(feature = "bytemuck")]
 /// The Rust layout of each `{gx::Kind}Gpu`: `(kind, size, align, offset of c, stride of c)`,

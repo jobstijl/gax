@@ -81,11 +81,15 @@ algebras! {
 
     /// Vector geometric algebra of the Euclidean plane, `R(2,0,0)`.
     #[cfg(feature = "vga2d")]
-    vga2d {}
+    vga2d {
+        pub use crate::extras::Between;
+    }
 
     /// Vector geometric algebra of Euclidean space, `R(3,0,0)`.
     #[cfg(feature = "vga3d")]
-    vga3d {}
+    vga3d {
+        pub use crate::extras::Between;
+    }
 
     /// Spacetime algebra, `R(1,3,0)`.
     #[cfg(feature = "sta")]

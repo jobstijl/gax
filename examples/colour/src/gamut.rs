@@ -8,7 +8,7 @@ use gax::pga3d::{Plane, Point};
 /// The six faces of the sRGB gamut in linear sRGB, each facing inwards: `r ≥ 0`, `r ≤ 1`, and so
 /// on.
 fn faces() -> [Plane<(), f32>; 6] {
-    let face = |n: [f32; 3], d: f32| Plane::from_normal(n, d);
+    let face = |n: [f32; 3], d: f32| Plane::with_normal(Point::direction(n[0], n[1], n[2]), d);
     [
         face([1.0, 0.0, 0.0], 0.0),
         face([-1.0, 0.0, 0.0], -1.0),

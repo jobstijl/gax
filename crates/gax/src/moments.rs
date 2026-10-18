@@ -21,7 +21,7 @@ use crate::Real;
 use crate::simplex::dyads as simplex_dyads;
 
 /// What the moments in 2D and 3D share, on the form's slot kind `$P` (lines or planes): the
-/// sum of two bodies, the dyad of a point and `moved`.
+/// sum of two bodies, the dyad of a point and the action of motors (`m >> moments`).
 macro_rules! scaffolding {
     ($P:ident, $ps:literal, $body:literal, $bodies:literal) => {
         impl<T: Real> Default for Moments<T> {
@@ -54,15 +54,26 @@ macro_rules! scaffolding {
             ($P::slot() & x) * ($P::slot() & x)
         }
 
-        impl<T: Real> Moments<T> {
-            #[doc = concat!("The moments after moving the ", $body, " by `m`.")]
-            pub fn moved(&self, m: Unit<Motor<(), T>>) -> Self {
+        #[doc = concat!("`m >> moments`: the moments after moving the ", $body, " by `m`.")]
+        impl<T: Real> crate::Transform<Moments<T>> for Unit<Motor<(), T>> {
+            type Output = Moments<T>;
+            #[inline]
+            fn transform(self, moments: Moments<T>) -> Moments<T> {
                 // ∫ over the moved body of (P & x)(Q & x) is ∫ over this one of
                 // ((m << P) & x)((m << Q) & x): compose both slots with the map of `~m`.
-                let back = m << $P::<(), T>::slot();
+                let back = self << $P::<(), T>::slot();
                 Moments {
-                    form: self.form.of(back).at::<1>().of(back),
+                    form: moments.form.of(back).at::<1>().of(back),
                 }
+            }
+        }
+
+        #[doc = concat!("`m << moments`: the moments after moving the ", $body, " by `~m`.")]
+        impl<T: Real> crate::TransformInv<Moments<T>> for Unit<Motor<(), T>> {
+            type Output = Moments<T>;
+            #[inline]
+            fn transform_inv(self, moments: Moments<T>) -> Moments<T> {
+                self.reverse() >> moments
             }
         }
     };
@@ -216,7 +227,7 @@ mod pga3d_moments {
             let c = super::cross3(a, b);
             let rotation = super::rotor_from_frame([a, b, c]);
             let [x, y, z] = self.centroid().to_euclidean();
-            let frame = Motor::translation(x, y, z) * rotation;
+            let frame = Motor::translation(Point::direction(x, y, z)) * rotation;
             let mass = self.volume() * density;
             (PrincipalInertia::new(mass, values), frame)
         }
@@ -302,7 +313,7 @@ pub(crate) fn rotor_from_frame<T: Real>(
         T::select_lt(n, tiny, T::zero(), y / safe),
         T::select_lt(n, tiny, one, z / safe),
     );
-    crate::pga3d::Motor::rotation_about(ax, ay, az, angle)
+    crate::pga3d::Motor::rotation_about(crate::pga3d::Point::direction(ax, ay, az), angle)
 }
 
 #[cfg(feature = "pga2d")]
@@ -323,6 +334,10 @@ mod pga2d_moments {
     /// assert_eq!(m.centroid().to_euclidean(), [1.0, 0.5]);
     /// // The polar moment about the centre, (a² + b²) A / 12 at density 1.
     /// assert!((m.polar_moment(1.0) - 5.0 / 6.0).abs() < 1e-12);
+    /// // A motor moves the moments as it moves the region (`m >> moments`).
+    /// let turn = gax::pga2d::Motor::rotation(Point::xy(0.0, 0.0), std::f64::consts::FRAC_PI_2);
+    /// let [x, y] = (turn >> m).centroid().to_euclidean();
+    /// assert!((x + 0.5).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
     /// ```
     #[derive(Clone, Copy, Debug, PartialEq)]
     pub struct Moments<T: Real = f64> {

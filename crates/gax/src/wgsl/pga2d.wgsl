@@ -67,6 +67,10 @@ alias Twist = Point;
 
 alias Forque = Line;
 
+alias Even = Motor;
+
+alias Odd = Flector;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f32) -> Scalar {
     return Scalar(vec4<f32>(s, 0.0, 0.0, 0.0));

@@ -78,7 +78,8 @@ pub fn glam_quat_quat(a: glam::Quat, b: glam::Quat) -> glam::Quat {
 /// A motor for a rotation by `angle` about the axis `(ax, ay, az)` (through the origin),
 /// followed by a translation `(tx, ty, tz)`.
 pub fn motor(angle: f32, axis: [f32; 3], t: [f32; 3]) -> Unit<Motor<(), f32>> {
-    Motor::translation(t[0], t[1], t[2]) * Motor::rotation_about(axis[0], axis[1], axis[2], angle)
+    Motor::translation(Point::direction(t[0], t[1], t[2]))
+        * Motor::rotation_about(Point::direction(axis[0], axis[1], axis[2]), angle)
 }
 
 /// Probe: the rigid-body step, generic code with constants inlined.

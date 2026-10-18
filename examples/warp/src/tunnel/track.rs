@@ -9,7 +9,7 @@
 
 use crate::sim::rng::Rng;
 use gax::Unit;
-use gax::pga3d::{Line, Motor, Point};
+use gax::pga3d::{Line, Motor, Point, Twist};
 
 /// A rigid frame in 3D.
 pub type Frame = Unit<Motor<(), f32>>;
@@ -50,7 +50,7 @@ impl Track {
         let mut t = Track {
             rng: Rng::new(seed ^ 0x7ac0),
             segments: Vec::new(),
-            end: Motor::translation(0.0, 0.0, 0.0),
+            end: Motor::translation(Point::direction(0.0, 0.0, 0.0)),
             first: 0,
             pitch: 0.0,
             yaw: 0.0,
@@ -67,10 +67,10 @@ impl Track {
     /// frame's own axes (the body frame, so it multiplies on the right).
     pub fn twist(pitch: f32, yaw: f32, roll: f32) -> Line<(), f32> {
         let o = Point::xyz(0.0, 0.0, 0.0);
-        Line::translation_twist(0.0, 0.0, 1.0)
-            + Line::rotation_twist(o & Point::direction(1.0, 0.0, 0.0), pitch)
-            + Line::rotation_twist(o & Point::direction(0.0, 1.0, 0.0), yaw)
-            + Line::rotation_twist(o & Point::direction(0.0, 0.0, 1.0), roll)
+        Twist::translation(Point::direction(0.0, 0.0, 1.0))
+            + Twist::rotation(o & Point::direction(1.0, 0.0, 0.0), pitch)
+            + Twist::rotation(o & Point::direction(0.0, 1.0, 0.0), yaw)
+            + Twist::rotation(o & Point::direction(0.0, 0.0, 1.0), roll)
     }
 
     /// A new segment at the end, with the given rotation rates.
@@ -83,7 +83,7 @@ impl Track {
         let (ux, uy, uz) = (up.e032(), up.e013(), up.e021());
         let across = Point::direction(ux, uy, 0.0).ideal_norm().max(1e-3);
         let o = Point::xyz(0.0, 0.0, 0.0);
-        let level = Line::rotation_twist(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
+        let level = Twist::rotation(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
         let twist = Track::twist(pitch, yaw, roll) + level;
         self.segments.push(Segment { start: last, twist });
         self.end = last.mul_renormalized((twist * SEG).exp());
@@ -125,7 +125,7 @@ impl Track {
     /// the track by `s`, then the frame at `s`. Exact for points at `s`; for points near it, the
     /// track's bend over their distance is ignored, which is what a rigid object wants.
     pub fn placement(&self, s: f32) -> Frame {
-        self.frame(s) * Motor::translation(0.0, 0.0, -s)
+        self.frame(s) * Motor::translation(Point::direction(0.0, 0.0, -s))
     }
 
     /// The world point of a straightened point `(x, y, s)`: the frame at `s` applied to

@@ -265,7 +265,7 @@ macro_rules! motions {
 
                 #[inline]
                 fn identity() -> Self::Motor {
-                    $Twist::<(), T>::zero().exp()
+                    $crate::Unit::identity()
                 }
                 #[inline]
                 fn exp(b: Self::Twist) -> Self::Motor {

@@ -470,7 +470,8 @@ mod plane {
                 let twice = phasor(2.0 * phase);
                 let turn = (1.0 + 0.4 * twice.e01()) * core::f64::consts::TAU / STEPS as f64;
                 let slip = -0.1 * twice.e20();
-                (Twist::translation_twist(0.7, slip) + Twist::rotation_twist(origin(), turn)).exp()
+                (Twist::translation(Point::direction(0.7, slip)) + Twist::rotation(origin(), turn))
+                    .exp()
             })
             .collect()
     }
@@ -516,7 +517,7 @@ mod plane {
 /// The short lap in space.
 mod space {
     odometry_core!(pga3d);
-    use gax::pga3d::{Line, Point};
+    use gax::pga3d::Point;
     use gax_numga_examples::signal::phasor;
 
     /// The steps of the lap in space.
@@ -539,11 +540,15 @@ mod space {
                 let turn = core::f64::consts::TAU / STEPS as f64;
                 // The angular velocity leans 0.1 off the vertical, the lean turned round the
                 // vertical with the phase; the sideways and vertical slips swing twice a lap.
-                let lean = Motor::rotation_about(0.0, 0.0, 1.0, phase);
+                let lean = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), phase);
                 let spin = lean >> Point::direction(0.0, -0.1, turn);
                 let twice = phasor(2.0 * phase);
-                let velocity = Line::translation_twist(0.7, -0.1 * twice.e20(), 0.05 * twice.e01());
-                (velocity + Line::rotation_twist(origin & spin, spin.ideal_norm())).exp()
+                let velocity = Twist::translation(Point::direction(
+                    0.7,
+                    -0.1 * twice.e20(),
+                    0.05 * twice.e01(),
+                ));
+                (velocity + Twist::rotation(origin & spin, spin.ideal_norm())).exp()
             })
             .collect()
     }

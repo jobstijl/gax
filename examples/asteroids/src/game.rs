@@ -77,7 +77,7 @@ impl Body {
     pub fn step(&mut self, dt: f32) {
         // The twists (bivectors: in PGA2D, points) of the velocities; exp(t B) moves for time t.
         let travel = self.translation_twist().gp(dt).exp();
-        let turn = Twist::rotation_twist(ORIGIN, self.spin).gp(dt).exp();
+        let turn = Twist::rotation(ORIGIN, self.spin).gp(dt).exp();
         self.pose = travel * self.pose * turn;
         // Across an edge: carried to the other side, a world's width or height away.
         let p = self.position();
@@ -96,13 +96,13 @@ impl Body {
 
     /// The twist of a translation at `vel`.
     fn translation_twist(&self) -> Twist<(), f32> {
-        Twist::translation_twist(self.vel.e20(), self.vel.e01())
+        Twist::translation(Point::direction(self.vel.e20(), self.vel.e01()))
     }
 
     /// The world twist of its motion: a translation at `vel` plus a turn at `spin` about its
     /// origin. Twists add.
     pub fn twist(&self) -> Twist<(), f32> {
-        self.translation_twist() + Twist::rotation_twist(self.position(), self.spin)
+        self.translation_twist() + Twist::rotation(self.position(), self.spin)
     }
 
     /// The world velocity of the body's point at `p` (a unit point): the rate of `exp(t B) p
@@ -566,7 +566,7 @@ mod tests {
     fn placed_shapes_follow_the_pose() {
         let shape = Shape::new(vec![Point::xy(1.0, 0.0), Point::xy(0.0, 1.0)]);
         let mut out = Vec::new();
-        let pose = Motor::translation(2.0, 3.0)
+        let pose = Motor::translation(Point::direction(2.0, 3.0))
             * Motor::rotation(Point::xy(0.0, 0.0), std::f32::consts::FRAC_PI_2);
         shape.placed(pose, &mut out);
         assert!(close(out[0], Point::xy(2.0, 4.0)));

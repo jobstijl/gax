@@ -56,12 +56,12 @@ mod projection {
 
     /// The rig's screen `z = 1`, ahead of its centre at the origin.
     pub fn screen() -> Pl {
-        Plane::from_normal([0.0, 0.0, 1.0], 1.0)
+        Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0)
     }
 
     /// The ground `z = 0`.
     pub fn ground() -> Pl {
-        Plane::from_normal([0.0, 0.0, 1.0], 0.0)
+        Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0)
     }
 
     /// `n` points round the unit circle in the `xy` plane, centred on the origin: `(1, 0, 0)`
@@ -70,7 +70,8 @@ mod projection {
         (0..n)
             .map(|k| {
                 let t = core::f64::consts::TAU * k as f64 / n as f64;
-                Motor::rotation_about(0.0, 0.0, 1.0, t) >> Point::xyz(1.0, 0.0, 0.0)
+                Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), t)
+                    >> Point::xyz(1.0, 0.0, 0.0)
             })
             .collect()
     }
@@ -173,8 +174,9 @@ mod projection {
     /// with the two planes.
     pub fn screen_line(rig: M, line: L, half_width: f64) -> [pga2d::Point<(), f64>; 2] {
         let on_screen = screen_map(rig);
-        [-half_width, half_width]
-            .map(|x| on_screen.of(line ^ (rig >> Plane::from_normal([1.0, 0.0, 0.0], x))))
+        [-half_width, half_width].map(|x| {
+            on_screen.of(line ^ (rig >> Plane::with_normal(Point::direction(1.0, 0.0, 0.0), x)))
+        })
     }
 
     /// The scene at phase `t` (radians): at 0 it is numga's figure.
@@ -190,21 +192,24 @@ mod projection {
     }
 
     pub fn scene(t: f64) -> Scene {
-        let body = cube(1.0).map(|p| Motor::translation(0.0, 0.0, 1.5) >> p);
+        let body = cube(1.0).map(|p| Motor::translation(Point::direction(0.0, 0.0, 1.5)) >> p);
         let sun = Point::direction(-1.0, 0.6, -2.5);
         // The light's path: the unit circle carried to (0, -1, 4), 64 lights along it; the
         // light moves round it, starting at numga's (1, -1, 4).
-        let lift = Motor::translation(0.0, -1.0, 4.0);
+        let lift = Motor::translation(Point::direction(0.0, -1.0, 4.0));
         let path: Vec<P> = circle(64).into_iter().map(|p| lift >> p).collect();
-        let light = (lift * Motor::rotation_about(0.0, 0.0, 1.0, t)) >> Point::xyz(1.0, 0.0, 0.0);
+        let light = (lift * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), t))
+            >> Point::xyz(1.0, 0.0, 0.0);
         // Two copies of the rig, 0.6 either side of the origin along x and turned 0.12 rad
         // about y so that they converge, looking along +z at the screen z = 1.
-        let rig_1 = Motor::translation(-0.6, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, 0.12);
-        let rig_2 = Motor::translation(0.6, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, -0.12);
+        let rig_1 = Motor::translation(Point::direction(-0.6, 0.0, 0.0))
+            * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.12);
+        let rig_2 = Motor::translation(Point::direction(0.6, 0.0, 0.0))
+            * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), -0.12);
         // The subject, 5 ahead, turning about its vertical (the screen's y) and nodding.
-        let pose = Motor::translation(0.0, 0.0, 5.0)
-            * Motor::rotation_about(0.0, 1.0, 0.0, t)
-            * Motor::rotation_about(1.0, 0.0, 0.0, 0.25 * wave(t));
+        let pose = Motor::translation(Point::direction(0.0, 0.0, 5.0))
+            * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), t)
+            * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.25 * wave(t));
         let subject = cube(1.6).map(|p| pose >> p);
         let cast = shadows(&body, ground(), light, sun, body[7], &path);
         let views = stereo(&subject, origin(), screen(), rig_1, rig_2);
@@ -536,7 +541,8 @@ mod tests {
     /// Moving the camera map by a motor equals building it from the moved centre and screen.
     #[test]
     fn moving_the_rig_equals_moving_centre_and_screen() {
-        let motor = Motor::translation(0.4, -0.3, 2.0) * Motor::rotation_about(0.0, 1.0, 0.0, 0.7);
+        let motor = Motor::translation(Point::direction(0.4, -0.3, 2.0))
+            * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.7);
         let camera = camera(origin(), screen());
         let moved = motor >> camera.of(motor << Point::slot());
         let rebuilt = ((motor >> origin()) & Point::slot()) ^ (motor >> screen());

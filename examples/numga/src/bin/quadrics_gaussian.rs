@@ -80,8 +80,10 @@ mod gaussian {
             Point::new(0.0, 0.0, 1.0),
         ]);
         let round = phasor(t);
-        let placement = Motor::translation(0.6 + 0.8 * round.e20(), -0.4 + 0.6 * round.e01())
-            * Motor::rotation(Point::xy(0.0, 0.0), 0.6 + t);
+        let placement = Motor::translation(Point::direction(
+            0.6 + 0.8 * round.e20(),
+            -0.4 + 0.6 * round.e01(),
+        )) * Motor::rotation(Point::xy(0.0, 0.0), 0.6 + t);
         let map = (placement >> Point::slot()).of(stretch);
         base.iter().map(|p| map.of(*p)).collect()
     }
@@ -208,7 +210,7 @@ mod tests {
     /// distance (from the biased covariance) less one.
     #[test]
     fn density_peaks_at_the_mean_and_level_matches_the_covariance() {
-        let shift = Motor::translation(1.0, -1.0);
+        let shift = Motor::translation(Point::direction(1.0, -1.0));
         let points: Vec<P> = cloud(1, 500, [2.0, 0.5])
             .into_iter()
             .map(|p| shift >> p)

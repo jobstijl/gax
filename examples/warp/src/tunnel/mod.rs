@@ -435,7 +435,10 @@ pub(crate) mod tests {
         let (swim, body) = if foe == Foe::Serpent {
             w.serpent(pos)
         } else {
-            (gax::pga3d::Motor::translation(0.0, 0.0, 0.0), Vec::new())
+            (
+                gax::pga3d::Motor::translation(gax::pga3d::Point::direction(0.0, 0.0, 0.0)),
+                Vec::new(),
+            )
         };
         w.enemies.push(Enemy {
             age: 1.0,

@@ -15,7 +15,7 @@ pub type Rng = rand::rngs::StdRng;
 /// A rate `B` with `exp(dt B)` moving forward (along the local x axis) at `speed` and turning
 /// at `spin` radians per second: twists add.
 pub fn rate(speed: f32, spin: f32) -> Twist<(), f32> {
-    Twist::translation_twist(speed, 0.0) + Twist::rotation_twist(ORIGIN, spin)
+    Twist::translation(Point::direction(speed, 0.0)) + Twist::rotation(ORIGIN, spin)
 }
 
 struct Ship {
@@ -61,8 +61,10 @@ impl Scene {
             .map(|k| {
                 let hue = k as f32 / ships as f32;
                 let start =
-                    (Motor::translation(rng.random_range(-8.0..8.0), rng.random_range(-5.0..5.0))
-                        * Motor::rotation(ORIGIN, rng.random_range(0.0..std::f32::consts::TAU)))
+                    (Motor::translation(Point::direction(
+                        rng.random_range(-8.0..8.0),
+                        rng.random_range(-5.0..5.0),
+                    )) * Motor::rotation(ORIGIN, rng.random_range(0.0..std::f32::consts::TAU)))
                     .into_inner();
                 let c = hsv(hue);
                 Ship {
@@ -101,7 +103,7 @@ impl Scene {
             let (w, h) = (HALF_WIDTH + 1.0, HALF_WIDTH * 0.6 + 1.0);
             let (dx, dy) = (wrap(p[0], w) - p[0], wrap(p[1], h) - p[1]);
             if dx != 0.0 || dy != 0.0 {
-                s.motor = Motor::translation(dx, dy).into_inner() * s.motor;
+                s.motor = Motor::translation(Point::direction(dx, dy)).into_inner() * s.motor;
             }
         }
         let instances: Vec<Instance> = self

@@ -52,8 +52,8 @@ pub fn shatter(hull: &[P], wreck: &Wreck, kick: f32) -> Vec<(Body, [P; 3])> {
             let tri = [g, pts[i], pts[(i + 1) % pts.len()]];
             let c = Moments::of_polygon(&tri).centroid();
             let [cx, cy] = c.to_euclidean();
-            let local = Motor::translation(-cx, -cy);
-            let pose = wreck.body.pose * Motor::translation(cx, cy);
+            let local = Motor::translation(Point::direction(-cx, -cy));
+            let pose = wreck.body.pose * Motor::translation(Point::direction(cx, cy));
             // The body's velocity at the piece's centroid, then the kick, along the offset from
             // the centre of area.
             let mut body = Body::new(pose);
@@ -400,10 +400,10 @@ impl Fx {
         // Follow the ship, but keep the view inside the arena (with a small margin).
         let (hw, hh) = (self.half_height * self.aspect, self.half_height);
         let room = |arena: f32, half: f32| (arena + 2.0 - half).max(0.0);
-        let target = Motor::translation(
+        let target = Motor::translation(Point::direction(
             (sx * 0.9).clamp(-room(ARENA[0], hw), room(ARENA[0], hw)),
             (sy * 0.9).clamp(-room(ARENA[1], hh), room(ARENA[1], hh)),
-        );
+        ));
         // Critically damped spring on the twist error log(target ~cam).
         let omega = 5.0;
         let err: Twist<(), f32> = (target * self.cam.reverse()).log();
@@ -411,10 +411,10 @@ impl Fx {
         self.cam = (self.cam_vel * dt).exp().mul_renormalized(self.cam);
         let a = self.shake * self.shake * self.shake_scale;
         if a > 1e-4 {
-            let jitter = Twist::translation_twist(
+            let jitter = Twist::translation(Point::direction(
                 self.rng.range(-1.0, 1.0) * a,
                 self.rng.range(-1.0, 1.0) * a,
-            ) + Twist::rotation_twist(
+            )) + Twist::rotation(
                 self.cam >> Point::xy(0.0, 0.0),
                 self.rng.range(-0.02, 0.02) * a,
             );
@@ -519,7 +519,7 @@ mod tests {
                 .iter()
                 .map(|&p| scene::scaled(p, wreck.radius))
                 .collect();
-            let whole = Moments::of_polygon(&pts).moved(wreck.body.pose);
+            let whole = wreck.body.pose >> Moments::of_polygon(&pts);
             let (area, g) = (whole.area(), whole.centroid());
             let v_g = wreck.velocity_at(g);
             let (mut p, mut l, mut a) = (Point::direction(0.0, 0.0), 0.0, 0.0);

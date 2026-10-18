@@ -192,8 +192,8 @@ impl Scene3 {
         // The direction `r` along x, raised by the latitude (about -y) and turned by the
         // longitude (about z), from the centre.
         let pt = |lon: f32, lat: f32| {
-            let turn = Motor::rotation_about(0.0, 0.0, 1.0, lon)
-                * Motor::rotation_about(0.0, -1.0, 0.0, lat);
+            let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), lon)
+                * Motor::rotation_about(Point::direction(0.0, -1.0, 0.0), lat);
             centre + (turn >> Point::direction(r, 0.0, 0.0))
         };
         let tau = core::f32::consts::TAU;

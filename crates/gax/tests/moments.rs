@@ -117,7 +117,7 @@ fn apex_and_additivity() {
     let (w, g) = cuboid(1.0, 2.0, 3.0);
     let shifted: Vec<_> = w
         .iter()
-        .map(|p| pga3d::Motor::translation(1.0, 0.0, 0.0) >> *p)
+        .map(|p| pga3d::Motor::translation(pga3d::Point::direction(1.0, 0.0, 0.0)) >> *p)
         .collect();
     let two = pga3d::Moments::of_faces(&w, &g) + pga3d::Moments::of_faces(&shifted, &g);
     let (u, h) = cuboid(2.0, 2.0, 3.0);
@@ -135,11 +135,11 @@ fn apex_and_additivity() {
 #[test]
 fn equivariance() {
     let (v, f) = cuboid(1.0, 2.0, 3.0);
-    let m = pga3d::Motor::translation(0.3, -1.0, 2.0)
-        * pga3d::Motor::rotation_about(1.0, 2.0, 0.5, 0.7);
+    let m = pga3d::Motor::translation(pga3d::Point::direction(0.3, -1.0, 2.0))
+        * pga3d::Motor::rotation_about(pga3d::Point::direction(1.0, 2.0, 0.5), 0.7);
     let moved_mesh: Vec<_> = v.iter().map(|p| m >> *p).collect();
     let direct = pga3d::Moments::of_faces(&moved_mesh, &f);
-    let moved = pga3d::Moments::of_faces(&v, &f).moved(m);
+    let moved = m >> pga3d::Moments::of_faces(&v, &f);
     for (x, y) in direct.form.c[0]
         .iter()
         .flatten()
@@ -246,13 +246,14 @@ fn polygons() {
     assert!(close(h.area(), 1.5 * 3f64.sqrt(), 1e-12));
     assert!(close(h.polar_moment(1.0), 5.0 * 3f64.sqrt() / 8.0, 1e-12));
     // Moved polygons: the same polar moment, the centroid moved.
-    let m = pga2d::Motor::translation(2.0, -1.0) * pga2d::Motor::rotation(p(0.0, 0.0), 0.4);
+    let m = pga2d::Motor::translation(pga2d::Point::direction(2.0, -1.0))
+        * pga2d::Motor::rotation(p(0.0, 0.0), 0.4);
     let moved: Vec<_> = hex.iter().map(|&q| m >> q).collect();
     let g = pga2d::Moments::of_polygon(&moved);
     assert!(close(g.polar_moment(1.0), h.polar_moment(1.0), 1e-12));
     let c = g.centroid().to_euclidean();
     assert!(close(c[0], 2.0, 1e-12) && close(c[1], -1.0, 1e-12));
-    let mm = h.moved(m);
+    let mm = m >> h;
     for (x, y) in g.form.c[0]
         .iter()
         .flatten()
@@ -269,12 +270,12 @@ fn the_frame_diagonalizes_the_inertia() {
     let (v, f) = cuboid(1.0, 2.0, 3.0);
     let pi = std::f64::consts::PI;
     for m in [
-        pga3d::Motor::rotation_about(0.0, 0.0, 1.0, pi),
-        pga3d::Motor::rotation_about(1.0, 0.0, 0.0, pi),
-        pga3d::Motor::rotation_about(0.0, 1.0, 0.0, pi),
-        pga3d::Motor::rotation_about(1.0, 1.0, 0.0, pi),
-        pga3d::Motor::rotation_about(0.3, -0.5, 0.8, 2.0),
-        pga3d::Motor::rotation_about(0.0, 0.0, 1.0, 0.0),
+        pga3d::Motor::rotation_about(pga3d::Point::direction(0.0, 0.0, 1.0), pi),
+        pga3d::Motor::rotation_about(pga3d::Point::direction(1.0, 0.0, 0.0), pi),
+        pga3d::Motor::rotation_about(pga3d::Point::direction(0.0, 1.0, 0.0), pi),
+        pga3d::Motor::rotation_about(pga3d::Point::direction(1.0, 1.0, 0.0), pi),
+        pga3d::Motor::rotation_about(pga3d::Point::direction(0.3, -0.5, 0.8), 2.0),
+        pga3d::Motor::rotation_about(pga3d::Point::direction(0.0, 0.0, 1.0), 0.0),
     ] {
         let moved: Vec<_> = v.iter().map(|p| m >> *p).collect();
         let body = pga3d::Moments::of_faces(&moved, &f);

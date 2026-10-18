@@ -320,7 +320,8 @@ pub fn draw_enemy(
             // Cargo circling inside: each piece a turn about the centre, then out.
             for k in 0..3 {
                 let a = t * 2.0 + k as f32 * core::f32::consts::TAU / 3.0;
-                let q = Motor::rotation(ORIGIN, a) * Motor::translation(0.35 * radius, 0.0);
+                let q = Motor::rotation(ORIGIN, a)
+                    * Motor::translation(Point::direction(0.35 * radius, 0.0));
                 outline(out, &CARGO, 1.0, palette::MOTE, THIN, m * q);
             }
         }

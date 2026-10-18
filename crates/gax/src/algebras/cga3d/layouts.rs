@@ -6,6 +6,9 @@ pub type Point<S = (), T = f64> = Vector<S, T>;
 /// Alias of [`Vector`].
 pub type Sphere<S = (), T = f64> = Vector<S, T>;
 
+/// Alias of [`Trivector`], intrinsic.
+pub type Forque<S = (), T = f64> = Trivector<S, T, gx::Intrinsic>;
+
 #[cfg(feature = "batch")]
 /// [`Scalar`] values in struct-of-arrays form, for the batch kernels.
 pub type ScalarSoa<E = f32> = gx::batch::Soa<Scalar, E>;
@@ -57,6 +60,10 @@ pub type PointSoa<E = f32> = gx::batch::Soa<Vector, E>;
 #[cfg(feature = "batch")]
 /// [`Vector`] values in struct-of-arrays form, for the batch kernels.
 pub type SphereSoa<E = f32> = gx::batch::Soa<Vector, E>;
+
+#[cfg(feature = "batch")]
+/// [`Trivector`] values in struct-of-arrays form, for the batch kernels.
+pub type ForqueSoa<E = f32> = gx::batch::Soa<Trivector<(), f64, gx::Intrinsic>, E>;
 
 #[cfg(feature = "bytemuck")]
 /// [`Scalar`] in the GPU layout of the `gax::wgsl` modules: its 1 coefficients in blade
@@ -1184,6 +1191,14 @@ pub type SphereGpu = VectorGpu;
 #[cfg(feature = "bytemuck")]
 /// Alias of [`VectorGpu16`].
 pub type SphereGpu16 = VectorGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`TrivectorGpu`].
+pub type ForqueGpu = TrivectorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`TrivectorGpu16`].
+pub type ForqueGpu16 = TrivectorGpu16;
 
 #[cfg(feature = "bytemuck")]
 /// The Rust layout of each `{gx::Kind}Gpu`: `(kind, size, align, offset of c, stride of c)`,

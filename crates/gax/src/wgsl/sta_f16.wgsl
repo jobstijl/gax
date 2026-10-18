@@ -70,6 +70,10 @@ alias Field = Bivector;
 
 alias Rotor = Even;
 
+alias Twist = Bivector;
+
+alias Forque = Bivector;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f16) -> Scalar {
     return Scalar(vec4<f16>(s, 0.0, 0.0, 0.0));

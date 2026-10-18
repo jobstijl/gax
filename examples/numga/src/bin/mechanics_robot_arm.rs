@@ -122,8 +122,8 @@ mod arm {
         );
         let below = turn >> Point::xyz(1.0, 1.5, 0.0);
         // `(x - 1) (y - 1)`: its signed distances from the planes x = 1 and y = 1, its joins.
-        let across = Plane::from_normal([1.0, 0.0, 0.0], 1.0) & below;
-        let along = Plane::from_normal([0.0, 1.0, 0.0], 1.0) & below;
+        let across = Plane::with_normal(Point::direction(1.0, 0.0, 0.0), 1.0) & below;
+        let along = Plane::with_normal(Point::direction(0.0, 1.0, 0.0), 1.0) & below;
         let height = 1.2 + 2.4 * across.s() * along.s();
         below + Point::direction(0.0, 0.0, height)
     }

@@ -189,13 +189,14 @@ mod klein {
     /// meet of the planes `x = 1` and `y = z`, turned about z.
     pub fn waist_lines(angles: [f64; 3]) -> [L; 3] {
         let line = Plane::new(1.0, 0.0, 0.0, -1.0) ^ Plane::new(0.0, 1.0, -1.0, 0.0);
-        angles.map(|a| Motor::rotation_about(0.0, 0.0, 1.0, a) >> line)
+        angles.map(|a| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), a) >> line)
     }
 
     /// A steep line crossing the plane `z = 0` at an offset along x, beside the x axis: the
     /// meet of the two planes through it along x and along y.
     pub fn steep(offset: f64) -> L {
-        let base = Motor::translation(offset, 0.0, 0.0) >> Point::xyz(0.0, 0.4, 0.0);
+        let base =
+            Motor::translation(Point::direction(offset, 0.0, 0.0)) >> Point::xyz(0.0, 0.4, 0.0);
         let along = base & Point::direction(0.3, -0.2, 1.0);
         (along & Point::direction(1.0, 0.0, 0.0)) ^ (along & Point::direction(0.0, 1.0, 0.0))
     }

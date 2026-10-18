@@ -72,6 +72,8 @@ alias Point = Vector;
 
 alias Circle = Trivector;
 
+alias Forque = Bivector;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f32) -> Scalar {
     return Scalar(vec4<f32>(s, 0.0, 0.0, 0.0));

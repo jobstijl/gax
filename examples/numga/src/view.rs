@@ -102,8 +102,8 @@ impl Camera {
         let target = target.point3().unitized();
         // The eye: `distance` along x, raised by the elevation, then turned by the azimuth
         // (rotations about the y and z axes), from the target.
-        let turn = Motor::rotation_about(0.0, 0.0, 1.0, azimuth)
-            * Motor::rotation_about(0.0, -1.0, 0.0, elevation);
+        let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), azimuth)
+            * Motor::rotation_about(Point::direction(0.0, -1.0, 0.0), elevation);
         let eye = target + (turn >> Point::direction(distance, 0.0, 0.0));
         Camera::looking(viewport, eye, target, lens)
     }
@@ -177,7 +177,7 @@ impl Camera {
         match self.lens {
             Lens::Perspective(_) if local.unitized().e021() <= 1e-3 => None,
             Lens::Perspective(_) => {
-                let screen = Plane::from_normal([0.0, 0.0, 1.0], 1.0);
+                let screen = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0);
                 Some(from_above((ORIGIN3 & local) ^ screen))
             }
             Lens::Parallel(_) => Some(from_above(local)),

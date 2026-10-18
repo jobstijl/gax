@@ -6,6 +6,15 @@ pub type Bivector<S = (), T = f64> = Pseudoscalar<S, T>;
 /// Alias of [`Rotor`].
 pub type Even<S = (), T = f64> = Rotor<S, T>;
 
+/// Alias of [`Vector`].
+pub type Odd<S = (), T = f64> = Vector<S, T>;
+
+/// Alias of [`Pseudoscalar`].
+pub type Twist<S = (), T = f64> = Pseudoscalar<S, T>;
+
+/// Alias of [`Scalar`], intrinsic.
+pub type Forque<S = (), T = f64> = Scalar<S, T, gx::Intrinsic>;
+
 #[cfg(feature = "batch")]
 /// [`Scalar`] values in struct-of-arrays form, for the batch kernels.
 pub type ScalarSoa<E = f32> = gx::batch::Soa<Scalar, E>;
@@ -33,6 +42,18 @@ pub type BivectorSoa<E = f32> = gx::batch::Soa<Pseudoscalar, E>;
 #[cfg(feature = "batch")]
 /// [`Rotor`] values in struct-of-arrays form, for the batch kernels.
 pub type EvenSoa<E = f32> = gx::batch::Soa<Rotor, E>;
+
+#[cfg(feature = "batch")]
+/// [`Vector`] values in struct-of-arrays form, for the batch kernels.
+pub type OddSoa<E = f32> = gx::batch::Soa<Vector, E>;
+
+#[cfg(feature = "batch")]
+/// [`Pseudoscalar`] values in struct-of-arrays form, for the batch kernels.
+pub type TwistSoa<E = f32> = gx::batch::Soa<Pseudoscalar, E>;
+
+#[cfg(feature = "batch")]
+/// [`Scalar`] values in struct-of-arrays form, for the batch kernels.
+pub type ForqueSoa<E = f32> = gx::batch::Soa<Scalar<(), f64, gx::Intrinsic>, E>;
 
 #[cfg(feature = "bytemuck")]
 /// [`Scalar`] in the GPU layout of the `gax::wgsl` modules: its 1 coefficients in blade
@@ -554,6 +575,30 @@ pub type EvenGpu = RotorGpu;
 #[cfg(feature = "bytemuck")]
 /// Alias of [`RotorGpu16`].
 pub type EvenGpu16 = RotorGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`VectorGpu`].
+pub type OddGpu = VectorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`VectorGpu16`].
+pub type OddGpu16 = VectorGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`PseudoscalarGpu`].
+pub type TwistGpu = PseudoscalarGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`PseudoscalarGpu16`].
+pub type TwistGpu16 = PseudoscalarGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`ScalarGpu`].
+pub type ForqueGpu = ScalarGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`ScalarGpu16`].
+pub type ForqueGpu16 = ScalarGpu16;
 
 #[cfg(feature = "bytemuck")]
 /// The Rust layout of each `{gx::Kind}Gpu`: `(kind, size, align, offset of c, stride of c)`,

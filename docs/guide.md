@@ -57,7 +57,7 @@ fn shadow<S: Slots>(light: Point, ground: Plane, p: Point<S>) -> Point<S> {
     (light & p) ^ ground
 }
 
-let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
+let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0));
 let s: Point = shadow(light, ground, Point::xyz(1.0, 2.0, 3.0)); // evaluate
 let map: Point<(Point,)> = shadow(light, ground, Point::slot()); // or build the map
 ```
@@ -103,7 +103,7 @@ Composition is filling a slot with a map:
 ```rust
 use gax::pga3d::{Motor, Point};
 
-let t = Motor::translation(1.0, 0.0, 0.0);
+let t = Motor::translation(Point::direction(1.0, 0.0, 0.0));
 let axis = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 1.0); // a vertical line through (1, 0, 0)
 let r = Motor::rotation(axis, 0.3);
 let move_then_turn: Point<(Point,)> = (r >> Point::slot()).of(t >> Point::slot());
@@ -126,7 +126,7 @@ let r = Rotor::<(), f64>::from_coeffs([0.9, 0.1, 0.2, 0.3]);
 assert_eq!(act.of(r), act.of(r.cast::<Motor>())); // a rotor fills a motor slot
 let on_rotors: intrinsic::Flector<(Rotor,), f64> = act.of(Rotor::slot()); // the slot, narrowed
 assert_eq!(on_rotors.of(r), act.of(r));
-let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5).into_inner();
+let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.5).into_inner();
 let (s, b): (Scalar<(), f64>, Line<(), f64>) = (m.grade::<0>(), m.grade::<2>());
 assert_eq!(s.cast::<Motor>() + b.cast::<Motor>() + m.grade::<4>().cast::<Motor>(), m);
 ```
@@ -145,7 +145,7 @@ use gax::pga3d::{Flector, Motor, Point, intrinsic};
 
 let p: Point<(), f64> = Point::xyz(1.0, 0.0, 0.0);
 let open: intrinsic::Flector<(Motor, Motor), f64> = (Motor::slot() * p) * Motor::slot().reverse();
-let m = Motor::<(), f64>::translation(0.0, 2.0, 0.0).into_inner();
+let m = Motor::<(), f64>::translation(Point::direction(0.0, 2.0, 0.0)).into_inner();
 let moved = open.fill(m); // the same as m >> p, as a flector whose plane part is zero
 ```
 
@@ -270,12 +270,43 @@ let (x, y) = (pga3d::Point::<(), f64>::direction(1.0, 0.0, 0.0), pga3d::Point::d
 assert!((x.angle_between(y) - std::f64::consts::FRAC_PI_2).abs() < 1e-15);
 ```
 
+**Constructors take gax values.** Coordinates enter through the plain constructors
+(`Point::xyz`, `Point::direction`, `new`, CGA's `up`); everything with a geometric meaning takes
+points, directions and lines, of either orientation. A translation is by a direction (the
+difference of two points is one), a rotation about a line or, through the origin, along a
+direction, a plane has a normal, and a twist (the rate of a motion) is named `Twist` in every
+algebra, as `Forque`, `Even` and `Odd` are:
+
+```rust
+use gax::pga3d::{Motor, Plane, Point, Twist};
+use gax::Unit;
+
+let (p, q) = (Point::<(), f64>::xyz(1.0, 2.0, 3.0), Point::xyz(1.0, 2.0, 5.0));
+let up = Point::direction(0.0, 0.0, 1.0);
+let lift = Motor::translation(q - p);            // from p to q
+let turn = Motor::rotation_about(up, 0.5);       // about the z axis
+let floor = Plane::with_normal(up, 0.0);         // z = 0, its normal `up`
+assert_eq!(lift >> p, q);
+assert_eq!(floor.normal(), up);
+assert_eq!((p & q).direction(), q - p);          // a join points from p to q
+assert_eq!(p.distance(q), 2.0);
+let rate = Twist::translation(up) + Twist::rotation(p & q, 0.5); // a screw, per second
+let _ = (turn, rate.exp(), Unit::<Motor>::identity());
+```
+
+The plane has the same helpers (`Line::with_normal`, `Line::normal`, `Line::direction`,
+`Line::through(p, d)` for the line through a point along a direction), and the vector algebras
+their rotors: `vga3d::Rotor::rotation(axis, angle)`, `vga2d::Rotor::rotation(angle)` and
+`angle()`, `Rotor::interpolate`, and `Rotor::between` for vectors (and VGA3D's planes), as
+`Motor::between` for flats. `Unit::identity()` (also `Default`) is the identity of any versor
+kind with a scalar part.
+
 The matrix of a motor is not a separate concept. It is the motor applied to an open slot:
 
 ```rust
 use gax::pga3d::{Motor, Point};
 
-let m = Motor::rotation_about(1.0, 0.0, 0.0, 0.7);
+let m = Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.7);
 let matrix: Point<(Point,)> = m >> Point::slot(); // built once
 let p = Point::xyz(1.0, 2.0, 3.0);
 let _ = matrix.of(p); // applied as often as needed
@@ -317,9 +348,9 @@ coefficient type to another:
 
 ```rust
 use gax::Complex;
-use gax::pga3d::{Motor, Plane};
+use gax::pga3d::{Motor, Plane, Point};
 
-let r = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.7); // a rotation by 0.7 about z
+let r = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.7); // a rotation by 0.7 about z
 let m = r >> Plane::slot();
 let (values, vectors) = m.eig(); // e^{-0.7i}, 1, 1, e^{0.7i}
 let complex = m.map_coefs(Complex::real);
@@ -390,7 +421,7 @@ projection:
 use gax::pga3d::{Plane, Point, Scalar};
 
 let eye = Point::<(), f64>::xyz(0.0, 0.0, 5.0);
-let screen = Plane::<(), f64>::from_normal([0.0, 0.0, 1.0], 0.0);
+let screen = Plane::<(), f64>::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
 let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
 let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
 let on_planes: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & projection);
@@ -660,7 +691,7 @@ let drop_z = pga2d::Point::<(pga3d::Point,), f64>::from_images([
     pga2d::Point::new(0.0, 0.0, 0.0), // e021 (z) to nothing
     pga2d::Point::new(0.0, 0.0, 1.0), // e123 (the weight) to the weight
 ]);
-let m = pga3d::Motor::<(), f64>::translation(1.0, 2.0, 3.0);
+let m = pga3d::Motor::<(), f64>::translation(pga3d::Point::direction(1.0, 2.0, 3.0));
 let view: pga2d::Point<(pga3d::Point,), f64> = drop_z.of(m >> pga3d::Point::slot());
 let [x, y] = view.of(pga3d::Point::xyz(0.5, 0.5, 9.0)).to_euclidean();
 assert!((x - 1.5).abs() < 1e-12 && (y - 2.5).abs() < 1e-12);
@@ -690,7 +721,7 @@ where
     light.vee(x).wedge(ground)
 }
 
-let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
+let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0));
 let pole = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 5.0);
 let p: Point<(), f64> = shadow(light, ground, Point::xyz(1.0, 2.0, 5.0)); // a point's: a point
 // The pole is a join, so intrinsic, and so is its shadow; the map takes intrinsic lines.
@@ -714,7 +745,9 @@ rigid motion, a marker type per algebra: rigid motions in `Pga2d`, `Pga3d`, `Cga
 `Cga3d`, rotations in `Vga2d` and `Vga3d`, the Lorentz group in `Sta` and the Poincaré group in
 `Stap` and `Csta` (a spacetime's motions, with an indefinite metric). The roles are the `Motor`
 (a unit even versor), its Lie algebra the `Twist`, their dual the `Forque`, the `Point`, and
-the maps `Inertia`, `Mobility` and `TwistMap`. The operations come with them, as operators on
+the maps `Inertia`, `Mobility` and `TwistMap`. Each algebra module names the roles as types
+too, `Twist`, `Forque`, `Even` and `Odd` (`vga3d::Twist` is the `Bivector`, `vga3d::Forque` the
+intrinsic `Vector`, `pga3d::Even` the `Motor`). The operations come with them, as operators on
 the associated types (composition, `>>` and `<<`, `+`, `-`, scaling, `.of`) which a generic
 function uses without writing a bound, and as the trait's functions (`exp`, `log`,
 `commutator`, `pair`, `point_inertia`, `mobility`, `point`, …). `Linear` gives `zero()`:
@@ -772,7 +805,7 @@ let (inertia, frame) = m.inertia(1.0); // a PrincipalInertia, and the motor to i
 # let _ = (inertia, frame);
 ```
 
-Because the moments are one extensor, those of parts add (`+`), and `m.moved(motor)` moves them
+Because the moments are one extensor, those of parts add (`+`), and `motor >> m` moves them
 with the body by composing the form's slots, with no new sum over the mesh. A mesh cut by a plane
 needs no cap: put the apex on the plane (`Moments::of_triangles(triangles_below, apex)`), as for
 the remaining fuel in a tank. In 2D, `Moments::of_polygon` gives the area, the centroid and the
@@ -881,8 +914,8 @@ let c = D::constant;
 // parameters: an angle about z, and a shift along x.
 let (d2, grad) = gradient_array(
     |[a, tx]: [D; 2]| {
-        let m = Motor::translation(tx, c(0.0), c(0.0))
-            * Motor::rotation_about(c(0.0), c(0.0), c(1.0), a);
+        let m = Motor::translation(Point::direction(tx, c(0.0), c(0.0)))
+            * Motor::rotation_about(Point::direction(c(0.0), c(0.0), c(1.0)), a);
         let [x, y, z] = (m >> Point::xyz(c(1.0), c(0.0), c(0.0))).to_euclidean();
         (x - c(1.0)) * (x - c(1.0)) + (y - c(1.0)) * (y - c(1.0)) + z * z
     },
@@ -941,6 +974,12 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);
   * a plane is `a e1 + b e2 + c e3 + d e0`, meaning `ax + by + cz + d = 0`.
 * **Signed distance:** `plane & point` is the signed distance of a unit point from a unit plane.
+* **Directions and normals.** A plane's `normal()` points to the side where `plane & x` is
+  positive; for a join `p & q & r` that is the side from which the points turn
+  counterclockwise. A line's `direction()` is `q - p` for the join `p & q` of points of weight
+  one, and `a × b` (of the normals) for the meet `a ^ b`; in PGA2D a line's normal points to the
+  left of its direction. Rotations are right-handed about their axis (counterclockwise seen
+  from where it points), counterclockwise in the plane.
 * **The regressive product** is `J⁻¹(J a ∧ J b)`, with `J` the right complement. The join and
   the meet agree on the lines they share: the join of the origin and a point on `+x` is `+e23`,
   the meet of the planes `y = 0` and `z = 0`, and a positive rotation about it is right handed

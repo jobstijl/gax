@@ -20,7 +20,7 @@ fn shadow<S: Slots>(light: Point, ground: Plane, p: Point<S>) -> Point<S> {
 }
 
 let light = Point::xyz(0.0, 0.0, 10.0);
-let ground = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+let ground = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
 let p = Point::xyz(1.0, 2.0, 3.0);
 
 // Given a point, it returns a point...
@@ -33,7 +33,7 @@ let [sx, sy, sz] = s.to_euclidean();
 assert!((x - sx).abs() < 1e-5 && (y - sy).abs() < 1e-5 && (z - sz).abs() < 1e-5);
 
 // Maps compose. Spin the scene about the z axis before casting the shadow:
-let spin = Motor::rotation_about(0.0, 0.0, 1.0, 0.5);
+let spin = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.5);
 let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 ```
 

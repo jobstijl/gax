@@ -11,4 +11,8 @@ versor Rotor = [1, e23, e31, e12] "A rotor: the even subalgebra, isomorphic to t
 versor Odd = [e1, e2, e3, e123] "The odd subalgebra: rotoreflections.";
 kind Multivector = [1, e1, e2, e3, e23, e31, e12, e123] "A general multivector.";
 
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
 alias Even = Rotor;
+alias Twist = Bivector;
+alias Forque = Vector intrinsic;

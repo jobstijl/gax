@@ -320,13 +320,16 @@ fn draw_plane(c: &mut Canvas, rect: Rect, drive: &Drive<Pga2d>, k: usize) {
 fn hub<O: gax::Orientation>(
     p: pga3d::oriented::Point<(), f64, O>,
 ) -> pga3d::oriented::Point<(), f64, O> {
-    pga3d::Motor::translation(0.0, 0.0, WHEEL_RADIUS) >> p
+    pga3d::Motor::translation(pga3d::Point::direction(0.0, 0.0, WHEEL_RADIUS)) >> p
 }
 
 /// A wheel in space: its contact turned about its axle, the line through its hub across the
 /// way it rolls (the heading turned a quarter turn about the vertical).
 fn wheel(s: &mut Scene3, contact: pga3d::Point<(), f64>, ahead: pga3d::Point<(), f64>) {
-    let quarter = pga3d::Motor::rotation_about(0.0, 0.0, 1.0, core::f64::consts::FRAC_PI_2);
+    let quarter = pga3d::Motor::rotation_about(
+        pga3d::Point::direction(0.0, 0.0, 1.0),
+        core::f64::consts::FRAC_PI_2,
+    );
     let across = quarter >> (ahead.unitized() - contact.unitized());
     let centre = hub(contact);
     let axle = centre & (centre + across);
@@ -372,7 +375,11 @@ fn draw_space(c: &mut Canvas, rect: Rect, drive: &Drive<Pga3d>, k: usize) {
         let ground = pga3d::Plane::new(0.0, 0.0, 1.0, 0.0);
         let foot = centre ^ ground;
         if foot.e123() != 0.0 {
-            let up = pga3d::Motor::translation(0.0, 0.0, CENTRE_HEIGHT * WHEEL_RADIUS);
+            let up = pga3d::Motor::translation(pga3d::Point::direction(
+                0.0,
+                0.0,
+                CENTRE_HEIGHT * WHEEL_RADIUS,
+            ));
             s.seg(foot.point3(), (up >> foot).point3(), 2.0, palette::red());
             for w in wheels {
                 s.seg(hub(w).point3(), hub(foot).point3(), 1.0, axle_light());

@@ -24,18 +24,18 @@ fn project<S: Slots>(
 
 fn main() {
     // The scene graph: each joint is a motor relative to its parent.
-    let base: Unit<Motor<(), f64>> = Motor::translation(0.0, 0.0, 0.5);
-    let shoulder = base * Motor::rotation_about(0.0, 1.0, 0.0, 0.6);
-    let upper_arm = shoulder * Motor::translation(0.0, 0.0, 1.0);
-    let elbow = upper_arm * Motor::rotation_about(0.0, 1.0, 0.0, -1.1);
-    let forearm = elbow * Motor::translation(0.0, 0.0, 0.4);
+    let base: Unit<Motor<(), f64>> = Motor::translation(Point::direction(0.0, 0.0, 0.5));
+    let shoulder = base * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.6);
+    let upper_arm = shoulder * Motor::translation(Point::direction(0.0, 0.0, 1.0));
+    let elbow = upper_arm * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), -1.1);
+    let forearm = elbow * Motor::translation(Point::direction(0.0, 0.0, 0.4));
 
     // The camera: 6 units back along -y, looking along +y. In its own frame the eye is at the
     // origin and the sensor is the plane z = 1 (focal length 1).
-    let camera_pose =
-        Motor::translation(0.0, -6.0, 1.0) * Motor::rotation_about(1.0, 0.0, 0.0, -FRAC_PI_2);
+    let camera_pose = Motor::translation(Point::direction(0.0, -6.0, 1.0))
+        * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), -FRAC_PI_2);
     let eye = Point::xyz(0.0, 0.0, 0.0);
-    let sensor = Plane::from_normal([0.0, 0.0, 1.0], 1.0);
+    let sensor = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0);
 
     // Maps, built once: camera coordinates -> image, world -> camera, world -> image.
     let lens: Point<(Point,), f64> = project(eye, sensor, Point::slot());

@@ -10,12 +10,12 @@ pub type Pose = Unit<Motor<(), f32>>;
 
 /// The identity pose.
 pub fn identity() -> Pose {
-    Motor::translation(0.0, 0.0)
+    Motor::translation(Point::direction(0.0, 0.0))
 }
 
 /// The pose at `(x, y)` turned by `angle` (counterclockwise from the x axis).
 pub fn pose_at(x: f32, y: f32, angle: f32) -> Pose {
-    Motor::translation(x, y) * Motor::rotation(ORIGIN, angle)
+    Motor::translation(Point::direction(x, y)) * Motor::rotation(ORIGIN, angle)
 }
 
 /// A moving rigid body.
@@ -56,7 +56,7 @@ impl Body {
     /// about its centre. Twists add.
     pub fn twist(&self) -> Twist<(), f32> {
         let [vx, vy] = [self.vel.e20(), self.vel.e01()];
-        Twist::translation_twist(vx, vy) + Twist::rotation_twist(self.pos(), self.spin)
+        Twist::translation(Point::direction(vx, vy)) + Twist::rotation(self.pos(), self.spin)
     }
 
     /// Advance by `dt`: `pose ← exp(dt B) pose`, then one Newton step towards `m ~m = 1`.
@@ -67,7 +67,7 @@ impl Body {
 
     /// Move by the direction `d` in world coordinates.
     pub fn shift(&mut self, d: Point<(), f32>) {
-        self.pose = Motor::translation(d.e20(), d.e01()) * self.pose;
+        self.pose = Motor::translation(Point::direction(d.e20(), d.e01())) * self.pose;
     }
 
     /// Move its position to the point `p`, keeping its orientation (a wall bounce).
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn a_twist_moves_a_point_with_its_velocity_and_spin() {
         // v + ω × r, with r the arm from the centre: the formula the commutator replaces.
-        let mut b = Body::new(Motor::translation(1.0, 2.0));
+        let mut b = Body::new(Motor::translation(Point::direction(1.0, 2.0)));
         b.vel = Point::direction(3.0, -1.0);
         b.spin = 0.5;
         let p = Point::xy(4.0, 6.0);

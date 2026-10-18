@@ -5,7 +5,7 @@
 //! use gax::pga3d::{Line, Plane, Point, intrinsic};
 //! let (p, q) = (Point::<(), f64>::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 1.0, 0.0));
 //! let l: intrinsic::Line<(), f64> = p & q; // join (regressive product): intrinsic
-//! let floor = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+//! let floor = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
 //! let _meet: Point<(), f64> = l ^ floor;    // meet (outer product): intrinsic too
 //! assert!((floor & p).s().abs() < 1e-12); // incidence: the origin lies on the floor
 //! ```
@@ -99,8 +99,8 @@ binary_trait!(
 ///
 /// ```
 /// use gax::pga3d::{Plane, Point};
-/// let a = Plane::<(), f64>::from_normal([1.0, 0.0, 0.0], 0.0);
-/// let b = Plane::from_normal([0.0, 1.0, 0.0], 0.0);
+/// let a = Plane::<(), f64>::with_normal(Point::direction(1.0, 0.0, 0.0), 0.0);
+/// let b = Plane::with_normal(Point::direction(0.0, 1.0, 0.0), 0.0);
 /// let r = (b / a).normalized(); // a quarter turn, twice: a half turn about z
 /// let q = (r >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
 /// assert!((q[0] + 1.0).abs() < 1e-12 && q[1].abs() < 1e-12);
@@ -220,8 +220,8 @@ pub trait Sqrt {
 /// versor kinds `K`, so that `Unit<K>` has it; call it as `unit.log()`).
 ///
 /// ```
-/// use gax::pga3d::{Line, Motor};
-/// let m = Motor::rotation_about(0.0, 0.0, 1.0, 1.2f64);
+/// use gax::pga3d::{Line, Motor, Point};
+/// let m = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 1.2f64);
 /// let b = m.log(); // a `Line`
 /// // Half the angle, about the z axis (the line through the origin along z).
 /// assert!((b.norm() - 0.6).abs() < 1e-12);

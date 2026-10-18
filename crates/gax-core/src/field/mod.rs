@@ -76,7 +76,7 @@ pub(crate) use crate::kind::{scale, zero};
 /// use gax::field::Field;
 /// use gax::pga3d::{Motor, Point};
 /// let beads = Field::from_fn(4, |i| Point::<(), f64>::xyz(i as f64, 0.0, 0.0));
-/// let turn = Motor::rotation_about(0.0, 0.0, 1.0, 0.5);
+/// let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.5);
 /// let turned = beads.map(|p| turn >> p); // the whole string, turned
 /// assert_eq!(turned.len(), 4);
 /// assert_eq!(beads.mean().to_euclidean(), [1.5, 0.0, 0.0]);

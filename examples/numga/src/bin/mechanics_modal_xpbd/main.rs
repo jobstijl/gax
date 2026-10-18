@@ -246,7 +246,7 @@ mod tests {
     use super::{derived, xpbd};
     use gax::Extensor;
     use gax::field::{Field, SparseMap};
-    use gax::pga2d::{Direction, Motor};
+    use gax::pga2d::{Direction, Motor, Point};
 
     /// The largest coordinate difference between the points of two sets of bodies.
     fn farthest(a: &[Field<P>], b: &[Field<P>]) -> f64 {
@@ -410,7 +410,7 @@ mod tests {
         // buckle grows within a few steps rather than from round-off.
         let middle = BEAM_GIRDERS / 2;
         for motor in &mut bodies.motor[middle..middle + 2] {
-            *motor = *motor * Motor::translation(0.0, 1e-6);
+            *motor = *motor * Motor::translation(Point::direction(0.0, 1e-6));
         }
         let (frames, substeps, dt) = (24, 4, 0.02);
         let displacements = displacements(frames);

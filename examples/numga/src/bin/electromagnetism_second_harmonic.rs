@@ -352,7 +352,7 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
         let ring: Vec<Spot> = pumps.iter().map(|p| screen(p.gp(k as f64 / 4.0))).collect();
         ax.polyline(c, &ring, 1.0, faint);
     }
-    let below = gax::pga2d::Motor::translation(0.0, -0.04);
+    let below = gax::pga2d::Motor::translation(gax::pga2d::Point::direction(0.0, -0.04));
     for (k, p) in pumps.iter().step_by(pumps.len() / 8).take(8).enumerate() {
         ax.line(c, centre(), screen(*p), 1.0, faint);
         ax.text(

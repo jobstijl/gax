@@ -2,6 +2,7 @@
 //! `from_matrix`) against glam and nalgebra themselves: the same rotations, translations and
 //! matrices, on random inputs.
 
+use gax::Unit;
 use gax::pga2d;
 use gax::pga3d::{Motor, Point, Rotor};
 
@@ -63,7 +64,8 @@ fn rotations_and_translations_match_glam() {
         let r = Rotor::<(), f64>::from_quaternion(q);
         let v = glam::DVec3::from_array(p);
         let want = (gq * v).to_array();
-        let got = (Motor::from_rotor(r) >> Point::xyz(p[0], p[1], p[2])).to_euclidean();
+        let m: Unit<Motor> = r.widen();
+        let got = (m >> Point::xyz(p[0], p[1], p[2])).to_euclidean();
         assert!(close(&got, &want, 1e-12));
     }
 }

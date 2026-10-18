@@ -27,7 +27,7 @@ mod pga3d_interop {
         /// use gax::pga3d::{Motor, Point, Rotor};
         /// let h = std::f64::consts::FRAC_PI_4; // half of a quarter turn about z
         /// let r = Rotor::from_quaternion([0.0, 0.0, h.sin(), h.cos()]);
-        /// let m = Motor::from_rotor(r);
+        /// let m: gax::Unit<Motor> = r.widen();
         /// let [x, y, _] = (m >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
         /// assert!(x.abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
         /// ```
@@ -55,12 +55,6 @@ mod pga3d_interop {
     }
 
     impl<T: Real> Motor<(), T> {
-        /// A rotor as a motor (a rotation about a line through the origin).
-        #[inline]
-        pub fn from_rotor(r: Unit<Rotor<(), T>>) -> Unit<Self> {
-            Unit::new_unchecked(r.into_inner().cast::<Motor>())
-        }
-
         /// The rigid motion that rotates by the unit quaternion `q = [x, y, z, w]` and then
         /// translates by `t`: `x ↦ q x q⁻¹ + t`, as glam's `Affine3A::from_rotation_translation`
         /// and nalgebra's `Isometry3::from_parts` (the quaternion is normalized).
@@ -74,7 +68,7 @@ mod pga3d_interop {
         /// ```
         #[inline]
         pub fn from_rotation_translation(q: [T; 4], t: [T; 3]) -> Unit<Self> {
-            Self::translation(t[0], t[1], t[2]) * Self::from_rotor(Rotor::from_quaternion(q))
+            Self::translation(Point::direction(t[0], t[1], t[2])) * Rotor::from_quaternion(q)
         }
 
         /// The unit quaternion `[x, y, z, w]` and the translation `[x, y, z]` of this motion
@@ -102,8 +96,8 @@ mod pga3d_interop {
         /// motor of non-zero norm: the scale is divided out.
         ///
         /// ```
-        /// use gax::pga3d::Motor;
-        /// let cols = Motor::<(), f64>::translation(1.0, 2.0, 3.0).to_matrix();
+        /// use gax::pga3d::{Motor, Point};
+        /// let cols = Motor::<(), f64>::translation(Point::direction(1.0, 2.0, 3.0)).to_matrix();
         /// assert_eq!(cols[3], [1.0, 2.0, 3.0, 1.0]);
         /// assert_eq!(cols[0], [1.0, 0.0, 0.0, 0.0]);
         /// ```
@@ -127,7 +121,7 @@ mod pga3d_interop {
         pub fn from_matrix(cols: [[T; 4]; 4]) -> Unit<Self> {
             let frame = core::array::from_fn(|k| [cols[k][0], cols[k][1], cols[k][2]]);
             let r = crate::moments::rotor_from_frame(frame);
-            Self::translation(cols[3][0], cols[3][1], cols[3][2]) * r
+            Self::translation(Point::direction(cols[3][0], cols[3][1], cols[3][2])) * r
         }
     }
 }
@@ -166,7 +160,8 @@ mod pga2d_interop {
         pub fn from_matrix(cols: [[T; 3]; 3]) -> Unit<Self> {
             let angle = cols[0][1].atan2(cols[0][0]);
             let o = T::zero();
-            Self::translation(cols[2][0], cols[2][1]) * Self::rotation(Point::xy(o, o), angle)
+            Self::translation(Point::direction(cols[2][0], cols[2][1]))
+                * Self::rotation(Point::xy(o, o), angle)
         }
     }
 }

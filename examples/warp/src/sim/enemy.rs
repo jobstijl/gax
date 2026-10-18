@@ -6,7 +6,7 @@ use super::kind::{Kind, SERPENT_GAP, SERPENT_LEN};
 use super::shots::Wreck;
 use super::wells::{Well, pull};
 use super::{DT, Event, P, Phase, World, dir};
-use gax::pga2d::{Motor, intrinsic};
+use gax::pga2d::{Motor, Point, intrinsic};
 
 /// An enemy.
 #[derive(Clone, Debug)]
@@ -78,7 +78,12 @@ impl World {
         body.spin = if lo < hi { self.rng.range(lo, hi) } else { lo };
         let chain = if kind == Kind::Serpent {
             (1..=SERPENT_LEN)
-                .map(|k| Body::new(body.pose * Motor::translation(-SERPENT_GAP * k as f32, 0.0)))
+                .map(|k| {
+                    Body::new(
+                        body.pose
+                            * Motor::translation(Point::direction(-SERPENT_GAP * k as f32, 0.0)),
+                    )
+                })
                 .collect()
         } else {
             Vec::new()
@@ -352,7 +357,7 @@ impl Enemy {
         let k = 1.0 - (-30.0 * DT).exp();
         let mut ahead = self.body.pose;
         for seg in &mut self.chain {
-            let target = ahead * Motor::translation(-SERPENT_GAP, 0.0);
+            let target = ahead * Motor::translation(Point::direction(-SERPENT_GAP, 0.0));
             seg.prev = seg.pose;
             seg.pose = interpolate(seg.pose, target, k);
             ahead = seg.pose;

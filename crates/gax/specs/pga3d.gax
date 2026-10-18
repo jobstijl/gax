@@ -16,5 +16,9 @@ versor Motor = [1, e23, e31, e12, e01, e02, e03, e0123] "A rigid motion: the eve
 versor Flector = [e1, e2, e3, e0, e032, e013, e021, e123] "An improper rigid motion: the odd subalgebra.";
 kind Multivector = [1, e0, e1, e2, e3, e01, e02, e03, e12, e31, e23, e021, e013, e032, e123, e0123] "A general multivector, in the bivector.net order.";
 
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
 alias Twist = Line;
 alias Forque = Line intrinsic;
+alias Even = Motor;
+alias Odd = Flector;

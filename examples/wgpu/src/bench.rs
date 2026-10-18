@@ -24,11 +24,13 @@ pub fn run(gfx: &mut Gfx) {
     let motors: Vec<Motor<(), f32>> = (0..n)
         .map(|_| {
             // A product of unit motors is a unit motor.
-            (Motor::translation(rng.random_range(-10.0..10.0), rng.random_range(-6.0..6.0))
-                * Motor::rotation(
-                    Point::xy(0.0, 0.0),
-                    rng.random_range(0.0..std::f32::consts::TAU),
-                ))
+            (Motor::translation(Point::direction(
+                rng.random_range(-10.0..10.0),
+                rng.random_range(-6.0..6.0),
+            )) * Motor::rotation(
+                Point::xy(0.0, 0.0),
+                rng.random_range(0.0..std::f32::consts::TAU),
+            ))
             .into_inner()
         })
         .collect();

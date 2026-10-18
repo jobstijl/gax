@@ -527,7 +527,7 @@ mod tests {
             .expect("the pedestal");
         assert!((t - 4.75).abs() < 1e-12);
         // The face hit is horizontal: it meets the floor at infinity only.
-        let floor = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+        let floor = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
         assert!(face.norm() > 0.1 && (face ^ floor).norm() < 1e-12);
     }
 

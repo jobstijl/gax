@@ -15,7 +15,7 @@ use core::marker::PhantomData;
 ///
 /// ```
 /// use gax::pga3d::{Motor, Point};
-/// let m = Motor::<(), f64>::rotation_about(1.0, 0.0, 0.0, 0.5);
+/// let m = Motor::<(), f64>::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.5);
 /// let t = m.prepare::<Point>();            // 12 entries: the zeros are in the type
 /// let p = Point::xyz(1.0, 2.0, 3.0);
 /// let (a, b) = ((t >> p).to_euclidean(), (m >> p).to_euclidean());
@@ -53,7 +53,7 @@ impl<V, X, T, const N: usize> Prepared<V, X, T, N> {
     /// ```
     /// use gax::ApproxEq;
     /// use gax::pga3d::{Motor, Point};
-    /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.3);
+    /// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.3);
     /// let map = m.prepare::<Point>().to_dense();
     /// assert!(map.approx_eq(&(m >> Point::slot()), 1e-12));
     /// ```
@@ -121,7 +121,7 @@ impl<M> crate::unit::Unit<M> {
     /// ```
     /// use gax::ApproxEq;
     /// use gax::pga3d::{Motor, Point};
-    /// let m = Motor::<(), f64>::rotation_about(1.0, 1.0, 0.0, 0.7);
+    /// let m = Motor::<(), f64>::rotation_about(Point::direction(1.0, 1.0, 0.0), 0.7);
     /// let t = m.prepare::<Point>();
     /// for p in [Point::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, -1.0)] {
     ///     assert!((t >> p).approx_eq(&(m >> p), 1e-12));

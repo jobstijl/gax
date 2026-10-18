@@ -58,6 +58,10 @@ struct Multivector {
 
 alias Even = Rotor;
 
+alias Twist = Bivector;
+
+alias Forque = Vector;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f16) -> Scalar {
     return Scalar(vec4<f16>(s, 0.0, 0.0, 0.0));

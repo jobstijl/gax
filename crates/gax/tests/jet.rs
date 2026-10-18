@@ -77,7 +77,8 @@ fn log_of_exp() {
 #[test]
 fn gradient_through_motions() {
     let cost = |x: [f64; 3]| {
-        let m = Motor::translation(x[0], x[1], 0.0) * Motor::rotation_about(0.0, 0.0, 1.0, x[2]);
+        let m = Motor::translation(Point::direction(x[0], x[1], 0.0))
+            * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), x[2]);
         let [a, b, c] = (m >> Point::xyz(1.0, 2.0, 0.5)).to_euclidean();
         (a - 0.3).powi(2) + (b + 1.0).powi(2) + c * c
     };
@@ -87,8 +88,8 @@ fn gradient_through_motions() {
         let (v, g) = gradient_array(
             |[x, y, a]: [Dual<f64, 3>; 3]| {
                 let c = Dual::constant;
-                let m = Motor::translation(x, y, c(0.0))
-                    * Motor::rotation_about(c(0.0), c(0.0), c(1.0), a);
+                let m = Motor::translation(Point::direction(x, y, c(0.0)))
+                    * Motor::rotation_about(Point::direction(c(0.0), c(0.0), c(1.0)), a);
                 let [p, q, r] = (m >> Point::xyz(c(1.0), c(2.0), c(0.5))).to_euclidean();
                 let (dp, dq) = (p - c(0.3), q + c(1.0));
                 dp * dp + dq * dq + r * r

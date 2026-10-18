@@ -274,8 +274,8 @@ fn apply_rows<Y: Kind, X: Kind, L: Coef>(m: &Y::Arr<X::Arr<L>>, x: &Mv<X, L>) ->
 /// ```
 /// use gax::batch::{BatchOf, Soa};
 /// use gax::pga3d::{Motor, Plane, Point};
-/// let m = Motor::<(), f32>::translation(0.0, 0.0, 5.0) * Motor::rotation_about(0.0, 1.0, 0.0, 0.3);
-/// let floor = Plane::<(), f32>::from_normal([0.0, 1.0, 0.0], 0.0);
+/// let m = Motor::<(), f32>::translation(Point::direction(0.0, 0.0, 5.0)) * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.3);
+/// let floor = Plane::<(), f32>::with_normal(Point::direction(0.0, 1.0, 0.0), 0.0);
 /// // Move, then drop onto the floor from a light: one map.
 /// let light = Point::<(), f32>::xyz(0.0, 10.0, 0.0);
 /// let shadow: Point<(Point,), f32> = (light & (m >> Point::slot())) ^ floor;

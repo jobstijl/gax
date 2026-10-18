@@ -117,7 +117,7 @@ fn a_form_as_a_map() {
 /// maps, slots in order.
 #[test]
 fn of_both_is_the_chain() {
-    use gax::pga3d::Motor;
+    use gax::pga3d::{Motor, Point};
     let mut rng = rng(0x00b0_7400);
     let form = Scalar::<(Line, Line), f64>::from_coeffs([core::array::from_fn(|_| {
         core::array::from_fn(|_| rng.next_f64())
@@ -135,7 +135,7 @@ fn of_both_is_the_chain() {
     }
     let (x, m) = (
         Point::<(), f64>::xyz(1.0, -2.0, 0.5),
-        Motor::<(), f64>::translation(0.3, 0.1, 2.0).into_inner(),
+        Motor::<(), f64>::translation(Point::direction(0.3, 0.1, 2.0)).into_inner(),
     );
     assert!((both.of(x).of(m).s() - form.of(p.of(x)).of(q.of(m)).s()).abs() < 1e-12);
 }

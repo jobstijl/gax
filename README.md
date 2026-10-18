@@ -16,7 +16,7 @@ fn shadow<S: Slots>(light: Point, ground: Plane, p: Point<S>) -> Point<S> {
 }
 
 let light = Point::xyz(0.0, 0.0, 10.0);
-let ground = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+let ground = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
 let s: Point = shadow(light, ground, Point::xyz(1.0, 2.0, 3.0)); // a value
 let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the map
 ```

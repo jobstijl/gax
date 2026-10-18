@@ -29,7 +29,7 @@ use surfaces_loop::{Point64, framing, net, separation, surface};
 mod motors {
     use super::surfaces_loop::{Point64, refine};
     use gax::field::{Field, SparseMap};
-    use gax::pga3d::{Motor, Scalar};
+    use gax::pga3d::{Motor, Point, Scalar};
     use gax_numga_examples::mesh::{Mesh, Vector3};
 
     /// A motor with `f64` coefficients.
@@ -48,13 +48,13 @@ mod motors {
 
     /// The turn by an angle about an axis through the origin along a direction.
     pub fn turn(axis: Vector3, angle: f64) -> Motor64 {
-        Motor::rotation_about(axis.e1(), axis.e2(), axis.e3(), angle).into_inner()
+        Motor::rotation_about(Point::direction(axis.e1(), axis.e2(), axis.e3()), angle).into_inner()
     }
 
     /// The frame on a ribbon down the `z` axis: slid along it and out across it along `x`, then
     /// turned about the axis by an angle.
     pub fn ribbon(along: f64, across: f64, angle: f64) -> Motor64 {
-        let slide = |x, z| Motor::translation(x, 0.0, z).into_inner();
+        let slide = |x, z| Motor::translation(Point::direction(x, 0.0, z)).into_inner();
         turn(Vector3::new(0.0, 0.0, 1.0), angle) * slide(0.0, along) * slide(across, 0.0)
     }
 

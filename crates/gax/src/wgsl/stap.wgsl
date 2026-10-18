@@ -86,6 +86,10 @@ alias Point = Quadvector;
 
 alias Even = Motor;
 
+alias Twist = Bivector;
+
+alias Forque = Trivector;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f32) -> Scalar {
     return Scalar(vec4<f32>(s, 0.0, 0.0, 0.0));

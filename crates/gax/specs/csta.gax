@@ -19,3 +19,6 @@ kind Multivector = [1, e1, e2, e3, e4, eo, ei, e23, e31, e12, e41, e42, e43, e1o
 
 alias Point = Vector;
 alias Event = Vector;
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
+alias Forque = Quadvector intrinsic;

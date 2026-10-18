@@ -51,9 +51,12 @@ fn directions_are_ideal_points() {
     let ideal: Point<(), f64> = d.cast::<Point>();
     assert_eq!(ideal.c, [1.0, 2.0, 3.0, 0.0]);
     // Translations leave directions alone; rotations turn them.
-    let t = Motor::<(), f64>::translation(5.0, -1.0, 2.0);
+    let t = Motor::<(), f64>::translation(Point::direction(5.0, -1.0, 2.0));
     assert!(close(&(t >> ideal).c, &ideal.c, 1e-15));
-    let r = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, core::f64::consts::FRAC_PI_2);
+    let r = Motor::<(), f64>::rotation_about(
+        Point::direction(0.0, 0.0, 1.0),
+        core::f64::consts::FRAC_PI_2,
+    );
     assert!(close(
         &(r >> ideal).cast::<Direction>().c,
         &[-2.0, 1.0, 3.0],

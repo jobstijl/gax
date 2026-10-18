@@ -19,3 +19,6 @@ kind Multivector = [1, e1, e2, e3, eo, ei, e23, e31, e12, e1o, e2o, e3o, e1i, e2
 
 alias Point = Vector;
 alias Sphere = Vector;
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
+alias Forque = Trivector intrinsic;

@@ -14,3 +14,7 @@ kind Multivector = [1, e0, e1, e2, e3, e10, e20, e30, e23, e31, e12, e123, e032,
 
 alias Field = Bivector;
 alias Rotor = Even;
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
+alias Twist = Bivector;
+alias Forque = Bivector intrinsic;

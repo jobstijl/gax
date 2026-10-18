@@ -44,7 +44,7 @@ use crate::slots::{Cat, SlotArr, SplitFirst};
 /// use gax::Of;
 /// use gax::ApproxEq;
 /// use gax::pga3d::{Motor, Point};
-/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.4);
+/// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.4);
 /// // The motor's action as a map with an open `Point` slot, filled later.
 /// let map = m >> Point::slot();
 /// let p = Point::xyz(1.0, 2.0, 3.0);

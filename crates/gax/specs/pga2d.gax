@@ -15,5 +15,9 @@ versor Motor = [1, e12, e20, e01] "A rigid motion: the even subalgebra (scalar p
 versor Flector = [e1, e2, e0, e012] "An improper rigid motion (a glide reflection): the odd subalgebra.";
 kind Multivector = [1, e0, e1, e2, e01, e20, e12, e012] "A general multivector, in the bivector.net order.";
 
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
 alias Twist = Point extrinsic;
 alias Forque = Line intrinsic;
+alias Even = Motor;
+alias Odd = Flector;

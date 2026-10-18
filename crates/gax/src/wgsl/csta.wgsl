@@ -122,6 +122,8 @@ alias Point = Vector;
 
 alias Event = Vector;
 
+alias Forque = Quadvector;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f32) -> Scalar {
     return Scalar(vec4<f32>(s, 0.0, 0.0, 0.0));

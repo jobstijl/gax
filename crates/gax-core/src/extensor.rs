@@ -18,7 +18,7 @@ use crate::slots::{Slots, SplitFirst, fold_all_pairs};
 ///
 /// ```
 /// use gax::pga3d::{Motor, Point};
-/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.4);
+/// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.4);
 /// let t: Point<(Point,), f64> = m >> Point::slot();
 /// let p = Point::xyz(1.0, 2.0, 3.0);
 /// let back = t.solve(t.of(p));
@@ -328,7 +328,7 @@ where
 ///
 /// ```
 /// use gax::pga3d::{Motor, Plane, Point, Scalar};
-/// let m = Motor::<(), f64>::translation(1.0, 0.0, 0.0);
+/// let m = Motor::<(), f64>::translation(Point::direction(1.0, 0.0, 0.0));
 /// let t: Point<(Point,), f64> = m >> Point::slot();
 /// let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
 /// let on_planes: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & t);

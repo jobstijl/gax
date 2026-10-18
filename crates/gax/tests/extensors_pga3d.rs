@@ -90,7 +90,7 @@ fn outermorphisms_extend_maps_factor_by_factor() {
     );
     // A map on points (a singular camera projection too) extends by the vee: M(p & q) = T(p) & T(q).
     let eye: Point<(), f64> = Point::xyz(0.0, 0.0, 5.0);
-    let screen: Plane<(), f64> = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+    let screen: Plane<(), f64> = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
     let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
     for tp in [projection, random_map(&mut rng)] {
         let (p, q, r): (Point<(), f64>, Point<(), f64>, Point<(), f64>) =

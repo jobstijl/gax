@@ -258,7 +258,7 @@ mod xpbd {
         let first_moment = points.iter().copied().sum();
         let state = Chain {
             motor: (0..bodies)
-                .map(|i| Motor::translation(i as f64 * distance, 0.0, 0.0))
+                .map(|i| Motor::translation(Point::direction(i as f64 * distance, 0.0, 0.0)))
                 .collect(),
             rate: vec![Line::zero(); bodies],
             first_moment,
@@ -458,7 +458,7 @@ mod tests {
         assert!(joint_gaps(&chain.motor, &partitions)[0] < 1e-12);
         // Displace link 1 by (2, -1, 3) mm.
         let mut motor = chain.motor.clone();
-        motor[1] = motor[1] * Motor::translation(0.002, -0.001, 0.003);
+        motor[1] = motor[1] * Motor::translation(Point::direction(0.002, -0.001, 0.003));
         assert!(joint_gaps(&motor, &partitions)[0] > 0.003);
         // The anchor does not respond parallel to the gap, so each projection removes a
         // fraction of it.

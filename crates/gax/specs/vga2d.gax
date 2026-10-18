@@ -9,4 +9,9 @@ versor Rotor = [1, e12] "A rotor: the even subalgebra, isomorphic to the complex
 kind Multivector = [1, e1, e2, e12] "A general multivector.";
 
 alias Bivector = Pseudoscalar;
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
 alias Even = Rotor;
+alias Odd = Vector;
+alias Twist = Pseudoscalar;
+alias Forque = Scalar intrinsic;

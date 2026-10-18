@@ -419,9 +419,9 @@ mod scenarios {
         let up = Point::direction(0.0, 0.0, 1.0);
         // Tilt, then lift the centre of mass so that the tip, `height` below it, clears the
         // ground by 2 mm.
-        let tilt = Motor::rotation_about(0.0, 1.0, 0.0, 0.15);
+        let tilt = Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.15);
         let [_, _, tip] = (tilt >> Point::xyz(0.0, 0.0, -body.height)).to_euclidean();
-        let mut motor = Motor::translation(0.0, 0.0, 0.002 - tip) * tilt;
+        let mut motor = Motor::translation(Point::direction(0.0, 0.0, 0.002 - tip)) * tilt;
         let mut rate = Line::new(0.0, 0.0, setup.spin_rate, 0.0, 0.0, 0.0);
         // The weight, a force line down through the centre of mass, and the air's drag,
         // opposing the momentum; in the body frame.

@@ -6,6 +6,12 @@ pub type Twist<S = (), T = f64> = Line<S, T>;
 /// Alias of [`Line`], intrinsic.
 pub type Forque<S = (), T = f64> = Line<S, T, gx::Intrinsic>;
 
+/// Alias of [`Motor`].
+pub type Even<S = (), T = f64> = Motor<S, T>;
+
+/// Alias of [`Flector`].
+pub type Odd<S = (), T = f64> = Flector<S, T>;
+
 #[cfg(feature = "batch")]
 /// [`Scalar`] values in struct-of-arrays form, for the batch kernels.
 pub type ScalarSoa<E = f32> = gx::batch::Soa<Scalar, E>;
@@ -57,6 +63,14 @@ pub type TwistSoa<E = f32> = gx::batch::Soa<Line, E>;
 #[cfg(feature = "batch")]
 /// [`Line`] values in struct-of-arrays form, for the batch kernels.
 pub type ForqueSoa<E = f32> = gx::batch::Soa<Line<(), f64, gx::Intrinsic>, E>;
+
+#[cfg(feature = "batch")]
+/// [`Motor`] values in struct-of-arrays form, for the batch kernels.
+pub type EvenSoa<E = f32> = gx::batch::Soa<Motor, E>;
+
+#[cfg(feature = "batch")]
+/// [`Flector`] values in struct-of-arrays form, for the batch kernels.
+pub type OddSoa<E = f32> = gx::batch::Soa<Flector, E>;
 
 #[cfg(feature = "bytemuck")]
 /// [`Scalar`] in the GPU layout of the `gax::wgsl` modules: its 1 coefficients in blade
@@ -1184,6 +1198,22 @@ pub type ForqueGpu = LineGpu;
 #[cfg(feature = "bytemuck")]
 /// Alias of [`LineGpu16`].
 pub type ForqueGpu16 = LineGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`MotorGpu`].
+pub type EvenGpu = MotorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`MotorGpu16`].
+pub type EvenGpu16 = MotorGpu16;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`FlectorGpu`].
+pub type OddGpu = FlectorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`FlectorGpu16`].
+pub type OddGpu16 = FlectorGpu16;
 
 #[cfg(feature = "bytemuck")]
 /// The Rust layout of each `{gx::Kind}Gpu`: `(kind, size, align, offset of c, stride of c)`,

@@ -276,7 +276,8 @@ mod tests {
     #[test]
     fn images_lie_on_the_screen() {
         let world = world();
-        let screen = gax::pga3d::Plane::from_normal([0.0, 0.0, 1.0], 1.0);
+        let screen =
+            gax::pga3d::Plane::with_normal(gax::pga3d::Point::direction(0.0, 0.0, 1.0), 1.0);
         for p in image(truth(), &world) {
             assert!((screen & p).s().abs() < 1e-12);
         }

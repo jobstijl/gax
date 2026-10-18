@@ -18,4 +18,8 @@ alias Hyperplane = Vector;
 alias Line = Trivector;
 alias Event = Quadvector;
 alias Point = Quadvector;
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
 alias Even = Motor;
+alias Twist = Bivector;
+alias Forque = Trivector intrinsic;

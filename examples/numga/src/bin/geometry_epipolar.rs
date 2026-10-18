@@ -39,7 +39,7 @@ mod epipolar {
 
     /// The screen `z = 1`.
     pub fn screen() -> Plane<(), f64> {
-        Plane::from_normal([0.0, 0.0, 1.0], 1.0)
+        Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0)
     }
 
     /// The pinhole camera, a projective map on points: the join with the centre, then the meet
@@ -91,8 +91,8 @@ mod epipolar {
     /// The second camera's true pose: turned 14 degrees about `y` towards the house, moved
     /// along `(0.65, 0.08, 0.18)`; and the translation alone, the starting guess.
     pub fn true_motors() -> (M, M) {
-        let rotation = Motor::rotation_about(0.0, 1.0, 0.0, -14f64.to_radians());
-        let translation = Motor::translation(0.65, 0.08, 0.18);
+        let rotation = Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), -14f64.to_radians());
+        let translation = Motor::translation(Point::direction(0.65, 0.08, 0.18));
         (translation * rotation, translation)
     }
 
@@ -169,7 +169,7 @@ mod epipolar {
 
     /// The points of a screen line at `x = -half` and `x = half`.
     pub fn ends(line: L, half: f64) -> [P; 2] {
-        [-half, half].map(|x| line ^ Plane::from_normal([1.0, 0.0, 0.0], x))
+        [-half, half].map(|x| line ^ Plane::with_normal(Point::direction(1.0, 0.0, 0.0), x))
     }
 
     /// The scene, its noisy images and the recovery.
@@ -227,7 +227,7 @@ mod epipolar {
     pub fn rotation_error(est: M, truth: M) -> f64 {
         [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
             .map(|n| {
-                let plane = Plane::from_normal(n, 0.0);
+                let plane = Plane::with_normal(Point::direction(n[0], n[1], n[2]), 0.0);
                 normal(est >> plane).angle_between(normal(truth >> plane))
             })
             .into_iter()
@@ -388,7 +388,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     frustum(
         &mut scene,
-        Motor::translation(0.0, 0.0, 0.0),
+        Motor::translation(Point::direction(0.0, 0.0, 0.0)),
         0.4,
         palette::sky(),
         1.6,

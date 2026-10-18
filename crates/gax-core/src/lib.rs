@@ -24,7 +24,7 @@
 //!
 //! // Written once, generic over the open slots.
 //! fn lift<S: Slots>(p: Point<S, f64>) -> Point<S, f64> {
-//!     Motor::translation(0.0, 0.0, 1.0) >> p
+//!     Motor::translation(Point::direction(0.0, 0.0, 1.0)) >> p
 //! }
 //! let value = lift(Point::xyz(1.0, 2.0, 3.0));
 //! let map: Point<(Point,), f64> = lift(Point::slot());

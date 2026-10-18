@@ -206,7 +206,7 @@ pub fn downward() -> P3 {
 
 /// The load turned by `angle` from straight down, in the plane of the section.
 pub fn turned_load(angle: f64) -> P3 {
-    pga3d::Motor::rotation_about(0.0, 0.0, 1.0, angle) >> downward()
+    pga3d::Motor::rotation_about(pga3d::Point::direction(0.0, 0.0, 1.0), angle) >> downward()
 }
 
 /// Where a point of space is seen along the beam, across and up.

@@ -219,8 +219,9 @@ mod kalman {
                         let k = (r * STEPS_PER_READING + s) as f64;
                         let turn = 0.9 * wave(0.2 * k * DT);
                         // The twist whose half exponential is the step.
-                        (Twist::translation_twist(1.0, 0.0) + Twist::rotation_twist(origin(), turn))
-                            .gp(2.0 * DT)
+                        (Twist::translation(Point::direction(1.0, 0.0))
+                            + Twist::rotation(origin(), turn))
+                        .gp(2.0 * DT)
                     })
                     .collect()
             })
@@ -229,7 +230,7 @@ mod kalman {
         #[allow(clippy::disallowed_methods)] // a random walk's deviation, not geometry
         let motion_noise = covariance(0.05 * DT.sqrt(), 0.12 * DT.sqrt());
         let measurement_noise = covariance(0.3, 0.1);
-        let initial = Motor::translation(0.0, 0.0);
+        let initial = Motor::translation(Point::direction(0.0, 0.0));
         let (truth, dead, measurements) = simulate_motion(
             initial,
             &increments,
@@ -433,8 +434,8 @@ mod tests {
                 // A unit line through the estimate, the line `x = 0` carried there and turned
                 // (the form reads no offset).
                 let [x, y] = here.to_euclidean();
-                let carried =
-                    gax::pga2d::Motor::translation(x, y) >> gax::pga2d::Line::new(1.0, 0.0, 0.0);
+                let carried = gax::pga2d::Motor::translation(gax::pga2d::Point::direction(x, y))
+                    >> gax::pga2d::Line::new(1.0, 0.0, 0.0);
                 let line = turn >> carried;
                 let reach = ring
                     .iter()
@@ -464,7 +465,7 @@ mod tests {
         assert!((along(0.0, 1.0, 0.0) - 0.09).abs() < 1e-12);
         assert!((along(0.0, 0.0, 1.0) - 0.01).abs() < 1e-12);
         // At the start the position ellipse is a circle of the translation variance.
-        let start = gax::pga2d::Motor::translation(0.0, 0.0);
+        let start = gax::pga2d::Motor::translation(gax::pga2d::Point::direction(0.0, 0.0));
         let (here, values, _) = position_ellipse(start, cov);
         assert!(here.to_euclidean().iter().all(|v| v.abs() < 1e-12));
         assert!(

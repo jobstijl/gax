@@ -70,7 +70,10 @@ mod skinning {
             for j in 0..around {
                 let turn = core::f64::consts::TAU * j as f64 / around as f64;
                 // The skin at y = 1, turned about the x axis.
-                skin.push(Motor::rotation_about(1.0, 0.0, 0.0, turn) >> Point::xyz(x, 1.0, 0.0));
+                skin.push(
+                    Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), turn)
+                        >> Point::xyz(x, 1.0, 0.0),
+                );
                 weights.push(x);
             }
         }
@@ -79,7 +82,7 @@ mod skinning {
 
     /// The second bone, turned by `angle` about the shared axis.
     pub fn twist(angle: f64) -> M {
-        Motor::rotation_about(1.0, 0.0, 0.0, angle)
+        Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), angle)
     }
 
     pub const RINGS: usize = 12;
@@ -88,7 +91,7 @@ mod skinning {
     /// The scene: the cylinder skinned three ways with the tip bone turned by `angle`.
     pub fn skinning(angle: f64) -> [Vec<P>; 3] {
         let (skin, weights) = cylinder(RINGS, AROUND);
-        let root = Motor::<(), f64>::translation(0.0, 0.0, 0.0);
+        let root = Motor::<(), f64>::translation(Point::direction(0.0, 0.0, 0.0));
         let (motor, slerp, matrix) = blend_skin(&skin, &weights, root, twist(angle));
         [motor, slerp, matrix]
     }

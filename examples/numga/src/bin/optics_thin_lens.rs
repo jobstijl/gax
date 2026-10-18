@@ -108,12 +108,13 @@ mod optics {
         let o = origin();
         let motors = [
             // The first lens slides and tilts.
-            Motor::translation(1.0 + 0.3 * wave(t), 0.0) * Motor::rotation(o, 0.3 * wave(2.0 * t)),
+            Motor::translation(Point::direction(1.0 + 0.3 * wave(t), 0.0))
+                * Motor::rotation(o, 0.3 * wave(2.0 * t)),
             // The prism and the second lens are fixed.
-            Motor::translation(1.9, 0.0),
-            Motor::translation(2.2, 0.0),
+            Motor::translation(Point::direction(1.9, 0.0)),
+            Motor::translation(Point::direction(2.2, 0.0)),
             // The mirror rocks about its pivot, turned clockwise so that it sends the bundle up.
-            Motor::translation(3.2, 0.0)
+            Motor::translation(Point::direction(3.2, 0.0))
                 * Motor::rotation(o, -(core::f64::consts::FRAC_PI_4 + 0.1 * phasor(t).e20())),
         ];
         let (planes, legs, composed) = trace(&fan, &motors, &elements());
@@ -163,7 +164,9 @@ mod optics {
         let focused: Vec<L> = parallel.iter().map(|r| system.of(*r)).collect();
         let focus = focused[0] ^ focused[1];
         // The bundles stop a little past the point they meet in.
-        let after = |p: Crossing| Motor::translation(0.25, 0.0) >> (p & Point::direction(0.0, 1.0));
+        let after = |p: Crossing| {
+            Motor::translation(Point::direction(0.25, 0.0)) >> (p & Point::direction(0.0, 1.0))
+        };
         let leg = |rays: Vec<L>, start: Pl, stop: Pl| Leg { rays, start, stop };
         let through_1 = parallel.iter().map(|r| lens_1.of(*r)).collect();
         Bench {

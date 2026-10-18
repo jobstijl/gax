@@ -46,7 +46,7 @@ mod scene {
         // The pupil point on the entrance aperture, off the optical centre so that rays bend.
         let pupil = Point::xyz(0.04, 0.0, 0.0);
         // The sensor plane `z = -1.25`.
-        let sensor = Plane::from_normal([0.0, 0.0, 1.0], -1.25);
+        let sensor = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), -1.25);
         let camera = lens_camera(pose, front, rear, pupil, sensor);
         // The 1.6 x 1.2 chip onto 640 x 480 pixels.
         let world_to_pixel = viewport(PIXELS[0], PIXELS[1], CHIP[0], CHIP[1]).of(camera);
@@ -354,7 +354,7 @@ mod tests {
         let pose = look_at(Point::xyz(0.0, -4.0, 1.5), Point::xyz(0.0, 0.0, 1.0));
         let (front, rear, _) = lens_train(1.0, 0.8, -0.3);
         let pupil = Point::xyz(0.04, 0.0, 0.0);
-        let sensor = Plane::from_normal([0.0, 0.0, 1.0], -1.25);
+        let sensor = Plane::with_normal(Point::direction(0.0, 0.0, 1.0), -1.25);
         let camera = lens_camera(pose, front, rear, pupil, sensor);
         let hit = camera.of(Point::xyz(0.1, 0.2, 1.0)).unitized();
         assert!((sensor & hit).s().abs() < 1e-10);
@@ -367,7 +367,7 @@ mod tests {
         // from straight ahead (4 along y) to the target (down 0.5).
         let level = gax::vga2d::Vector::new(4.0, 0.0);
         let pitch = level.angle_to(gax::vga2d::Vector::new(4.0, 1.0 - 1.5));
-        let numga = Motor::translation(0.0, -4.0, 1.5)
+        let numga = Motor::translation(Point::direction(0.0, -4.0, 1.5))
             * Motor::rotation(axis(1.0, 0.0, 0.0), pitch - core::f64::consts::FRAC_PI_2);
         let p = Point::xyz(0.3, -0.2, 0.7);
         assert!((pose >> p).approx_eq(&(numga >> p), 1e-12));

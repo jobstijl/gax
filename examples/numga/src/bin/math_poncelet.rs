@@ -139,7 +139,7 @@ mod poncelet {
 
     /// Where the ellipse sits: its centre at (0.4, -0.2), its first axis turned from x by 0.5.
     pub fn placement() -> Unit<Motor<(), f64>> {
-        Motor::translation(0.4, -0.2) * Motor::rotation(Point::xy(0.0, 0.0), 0.5)
+        Motor::translation(Point::direction(0.4, -0.2)) * Motor::rotation(Point::xy(0.0, 0.0), 0.5)
     }
 
     /// The ellipse: the lines through its centre across each of its axes (the joins of the

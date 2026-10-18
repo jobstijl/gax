@@ -47,7 +47,7 @@ fn midpoint(a: P, b: P) -> P {
 pub fn kabuto() -> (Paper, [Pl; 11]) {
     let corner = Point::xyz(-SIDE, SIDE, 0.0);
     let corners: [P; 4] = core::array::from_fn(|k| {
-        Motor::rotation_about(0.0, 0.0, 1.0, PI / 2.0 * k as f64) >> corner
+        Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), PI / 2.0 * k as f64) >> corner
     });
     let [upper_left, lower_left, lower_right, upper_right] = corners;
     let centre = corners

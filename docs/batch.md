@@ -29,7 +29,7 @@ use gax::batch::{BatchTransform, Soa};
 use gax::pga3d::{Motor, Point};
 use gax::Unit;
 
-let m = Motor::<(), f32>::rotation_about(0.0, 0.0, 1.0, 0.5);
+let m = Motor::<(), f32>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.5);
 let points: Vec<Point<(), f32>> = (0..100).map(|i| Point::xyz(i as f32, 1.0, 0.0)).collect();
 
 // Array of structs: the motor's action is prepared once, then applied 8 points at a time.
@@ -47,7 +47,7 @@ assert!((out.get(7).to_euclidean()[0] - moved[7].to_euclidean()[0]).abs() < 1e-6
 
 // One motor per point.
 let motors: Vec<Unit<Motor<(), f32>>> = (0..100)
-    .map(|i| Motor::rotation_about(0.0, 0.0, 1.0, 0.01 * i as f32))
+    .map(|i| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.01 * i as f32))
     .collect();
 Unit::transform_each(&motors, &points, &mut moved);
 ```
@@ -71,8 +71,8 @@ values with `BatchOf`. It is the batch form of `m.of(x)`, for any extensor with 
 use gax::batch::BatchOf;
 use gax::pga3d::{Motor, Plane, Point};
 
-let cam = Motor::<(), f32>::translation(0.0, 1.0, -5.0);
-let screen = Plane::<(), f32>::from_normal([0.0, 0.0, 1.0], 1.0);
+let cam = Motor::<(), f32>::translation(Point::direction(0.0, 1.0, -5.0));
+let screen = Plane::<(), f32>::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0);
 let eye = Point::<(), f32>::xyz(0.0, 0.0, 0.0);
 // World to camera, then the central projection onto the screen: one 4x4.
 let view: Point<(Point,), f32> = (eye & (cam << Point::slot())) ^ screen;

@@ -341,7 +341,9 @@ mod plane {
         offsets
             .iter()
             .zip(gazes)
-            .map(|(o, g)| Motor::translation(*o, 0.0) * Motor::rotation(origin(), -g))
+            .map(|(o, g)| {
+                Motor::translation(Point::direction(*o, 0.0)) * Motor::rotation(origin(), -g)
+            })
             .collect()
     }
 
@@ -822,7 +824,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{plane, space};
-    use gax::pga3d::Motor;
+    use gax::pga3d::{Motor, Point};
     use gax::{ApproxEq, Extensor};
     use gax_numga_examples::rng::{Draw, rng};
 
@@ -968,7 +970,8 @@ mod tests {
 
     /// The right camera of the rig in space, panned left by `pan` about its vertical.
     fn right_camera(pan: f64) -> space::M {
-        Motor::translation(0.75, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, -pan)
+        Motor::translation(Point::direction(0.75, 0.0, 0.0))
+            * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), -pan)
     }
 
     /// Three convergent cameras and eight landmarks in space with their sight cones: left
@@ -977,10 +980,11 @@ mod tests {
     fn rig_3d() -> (Vec<space::M>, Vec<Vec<space::Quadric>>) {
         let theta = 18f64.to_radians();
         let truth = vec![
-            Motor::translation(-0.75, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, theta),
+            Motor::translation(Point::direction(-0.75, 0.0, 0.0))
+                * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), theta),
             right_camera(theta),
-            Motor::translation(0.0, 0.35, 0.0)
-                * Motor::rotation_about(1.0, 0.0, 0.0, 12f64.to_radians()),
+            Motor::translation(Point::direction(0.0, 0.35, 0.0))
+                * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 12f64.to_radians()),
         ];
         let camera = space::pinhole();
         // 2D transverse uncertainty on the sensor plane z = 1 around the principal point.
@@ -1017,11 +1021,9 @@ mod tests {
             let spin =
                 gax::pga3d::Point::<(), f64>::direction(rotation[0], rotation[1], rotation[2]);
             let [tx, ty, tz] = translation;
-            let perturbation = Motor::translation(tx, ty, tz)
+            let perturbation = Motor::translation(Point::direction(tx, ty, tz))
                 * Motor::rotation_about(
-                    rotation[0],
-                    rotation[1],
-                    rotation[2],
+                    Point::direction(rotation[0], rotation[1], rotation[2]),
                     spin.ideal_norm().to_radians(),
                 );
             let motors = vec![truth[0], perturbation * truth[1], truth[2]];

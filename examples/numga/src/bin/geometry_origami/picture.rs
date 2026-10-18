@@ -57,9 +57,12 @@ impl View {
     /// about `y` to put it on `z`, and a quarter turn about `z` to stand the view up.
     pub fn new(elevation: f64, azimuth: f64, points: &[P]) -> View {
         let quarter = core::f64::consts::FRAC_PI_2;
-        let turn = Motor::rotation_about(0.0, 0.0, 1.0, -quarter)
-            * Motor::rotation_about(0.0, 1.0, 0.0, elevation.to_radians() - quarter)
-            * Motor::rotation_about(0.0, 0.0, 1.0, -azimuth.to_radians());
+        let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), -quarter)
+            * Motor::rotation_about(
+                Point::direction(0.0, 1.0, 0.0),
+                elevation.to_radians() - quarter,
+            )
+            * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), -azimuth.to_radians());
         let seen: Vec<[f64; 3]> = points.iter().map(|p| (turn >> *p).to_euclidean()).collect();
         let range = |k: usize| {
             let values = seen.iter().map(|v| v[k]);

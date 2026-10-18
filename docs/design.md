@@ -2068,10 +2068,35 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   public ones are `#[doc(hidden)]`, and `trace::write_kind_path` is private. Methods are emitted
   only where their bounds can hold.
 * **Geometry in gax types, evenly across algebras.** Constructors take gax values, not float
-  tuples (`Motor::translation(d: Direction)`, `Plane::with_normal(n, d)`); every algebra gets the
-  same roles (`Twist`, `Forque`, `Even`, `Odd`) and the same helper set where it has the geometry
-  (rotation, between, interpolate, `Line::direction`, `Plane::normal`, `Point::distance`, the
-  identity motor); redundant helpers (`Motor::from_rotor`, `rotation_between` beside `Between`) go.
+  tuples; coordinates enter only through the plain constructors (`Point::xyz`,
+  `Point::direction`, `new`, CGA's `up`), the boundary to floats, as `to_euclidean` and the
+  interop arrays are the way out.
+  * Translations take a direction of either orientation, of which only the ideal part is read
+    (`Motor::translation(q - p)` in PGA2D and PGA3D); PGA3D's `Motor::rotation_about(d, angle)`
+    turns about the axis through the origin along `d`; `Plane::with_normal(n, d)` and its
+    inverse `Plane::normal()`, and in PGA2D `Line::with_normal`, `Line::normal` and
+    `Line::through(p, d)`; the twist constructors are `Twist::translation(v)` and
+    `Twist::rotation(axis, ω)` in both PGAs (on `Line` in PGA3D, on `extrinsic::Point` in
+    PGA2D, the kinds `Twist` names); CGA's `sphere(centre, r)` takes a round point.
+  * New helpers, each with a doctest that pins its sign: `Line::direction()` (intrinsic, read
+    from the Euclidean part: `q - p` for a join `p & q`, `a × b` for a meet `a ^ b`; in PGA2D the
+    normal turned a quarter clockwise), `Point::distance(q)`, `Unit::identity()` and `Default`
+    for every versor kind with a scalar part (in gax-core, generic: an inherent impl on
+    `Unit<pga3d::Motor>` would be one on a foreign type), VGA3D `Rotor::rotation(axis, angle)`,
+    VGA2D `Rotor::rotation(angle)` and `angle()`, `Rotor::interpolate` in both, and `Between`
+    for VGA vectors (and VGA3D bivectors, planes through the origin), giving `Rotor::between`.
+    `Plane::orthogonal_to`, `Motor::rotation_between` (both PGAs), `look_at`'s `up` and CGA's
+    `from_point` take either orientation.
+  * PGA3D's `Line::moment` was left out: the moment has no gax kind of its own as a vector (it
+    is neither a position nor a direction), and the plane through the line and the origin, a
+    join, says the same in gax terms.
+  * Redundant helpers went: `Motor::from_rotor` (`r.widen()`, or `Motor::from` for a plain
+    rotor), `Moments::moved(m)` (now `m >> moments`, an impl of `Transform` for
+    `Unit<Motor>`, and `m << moments`). `Motor::rotation_between` stays: it turns one direction
+    into another, where `Between` on points translates.
+  * Every standard spec names the roles (`Twist`, the rate of a motion, extrinsic; `Forque`, its
+    dual, intrinsic; `Even` and `Odd`, the versors) where they are not kinds already, so generic
+    code and documents can rely on the names; they are the kinds `Motions` uses.
 * **Plan.** Three batches, each merged when CI is green: (1) the generator and types (orientation
   by name, the arithmetic, `f64`, `Slot`, `Log`, `normalized`/`unit`); (2) names and linear
   algebra; (3) geometry helpers and uniform roles. Internal cleanups of the generator (output

@@ -141,7 +141,7 @@ impl View {
             })
             .collect();
         let focal = View::focal_for(fov_degrees);
-        let cam = Motor::translation(0.0, 0.0, 0.0);
+        let cam = Motor::translation(Point::direction(0.0, 0.0, 0.0));
         View {
             cam,
             settings: ViewSettings {
@@ -243,11 +243,12 @@ impl View {
             return None;
         }
         let r = &mut self.rng;
-        let jitter = Motor::translation(
-            r.range(-1.0, 1.0) * a * 0.3,
-            r.range(-1.0, 1.0) * a * 0.3,
-            0.0,
-        ) * Motor::rotation_about(0.0, 0.0, 1.0, r.range(-0.015, 0.015) * a);
+        let jitter =
+            Motor::translation(Point::direction(
+                r.range(-1.0, 1.0) * a * 0.3,
+                r.range(-1.0, 1.0) * a * 0.3,
+                0.0,
+            )) * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), r.range(-0.015, 0.015) * a);
         Some(self.cam * jitter)
     }
 
@@ -486,8 +487,8 @@ impl<'a> Sight<'a> {
                 tint(c, self.shift(q))
             };
             let spin = e.age * 2.0 + e.id as f32;
-            let tumble = Motor::rotation_about(0.0, 0.0, 1.0, spin)
-                * Motor::rotation_about(1.0, 0.0, 0.0, 0.7 * spin);
+            let tumble = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), spin)
+                * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.7 * spin);
             match e.foe {
                 Foe::Drone => p.solid(out, &self.object(q, tumble), &OCTAHEDRON, 0.7, c),
                 Foe::Mine => {
@@ -520,7 +521,10 @@ impl<'a> Sight<'a> {
         for (k, seg) in e.body.iter().enumerate() {
             let sq = lerp(seg.prev, seg.pos, self.alpha);
             let sc = tint(base.faded(1.0 - 0.45 * k as f32 / n), self.shift(sq));
-            let spin = Motor::rotation_about(0.0, 0.0, 1.0, e.age * 3.0 + k as f32 * 0.5);
+            let spin = Motor::rotation_about(
+                Point::direction(0.0, 0.0, 1.0),
+                e.age * 3.0 + k as f32 * 0.5,
+            );
             p.solid(out, &self.object(sq, spin), &OCTAHEDRON, 0.5, sc);
             let (a, b) = (self.place(last), self.place(sq));
             p.line(out, a, b, sc.faded(0.5), 0.03, Fog::Objects);
@@ -539,15 +543,22 @@ impl<'a> Sight<'a> {
         let view = self.near(q);
         let eye = eye(self.ship);
         let grow = 1.0 + 0.1 * e.mass;
-        let tilt = Motor::rotation_about(0.0, 0.0, 1.0, 0.15 * time)
-            * Motor::rotation_about(1.0, 0.0, 0.0, 1.25);
-        let quarter = Motor::rotation_about(0.0, 0.0, 1.0, core::f32::consts::FRAC_PI_2);
-        let step = Motor::rotation_about(0.0, 0.0, 1.0, core::f32::consts::TAU / N as f32);
+        let tilt = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.15 * time)
+            * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 1.25);
+        let quarter = Motor::rotation_about(
+            Point::direction(0.0, 0.0, 1.0),
+            core::f32::consts::FRAC_PI_2,
+        );
+        let step = Motor::rotation_about(
+            Point::direction(0.0, 0.0, 1.0),
+            core::f32::consts::TAU / N as f32,
+        );
         for (k, r) in [1.9f32, 2.5, 3.2].into_iter().enumerate() {
             let heat = 1.0 - 0.3 * k as f32;
             let base = (c.whitened(0.55 * heat)).faded(heat);
             let spin = time * (2.4 - 0.6 * k as f32);
-            let mut radial = Motor::rotation_about(0.0, 0.0, 1.0, spin) >> dir(r * grow, 0.0, 0.0);
+            let mut radial = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), spin)
+                >> dir(r * grow, 0.0, 0.0);
             for _ in 0..N {
                 let next = step >> radial;
                 let a = q + (tilt >> radial);
@@ -568,7 +579,7 @@ impl<'a> Sight<'a> {
     fn draw_bolts_shards_shots(&self, out: &mut Vec<LineInstance>) {
         let (p, w, time) = (self.p, self.w, self.time);
         let s_ship = arc(self.ship);
-        let spin = Motor::rotation_about(0.0, 0.0, 1.0, time * 9.0);
+        let spin = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), time * 9.0);
         for b in &w.bolts {
             let q = lerp(b.prev, b.pos, self.alpha);
             let bolt = tint(BOLT, self.shift(q));
@@ -576,7 +587,7 @@ impl<'a> Sight<'a> {
             let c = bolt.faded(1.0 + 2.5 * near);
             p.solid(out, &self.object(q, spin), &OCTAHEDRON, 0.32, c);
         }
-        let spin = Motor::rotation_about(0.0, 1.0, 0.0, time * 4.0);
+        let spin = Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), time * 4.0);
         for sh in &w.shards {
             p.solid(
                 out,
@@ -633,7 +644,7 @@ impl<'a> Sight<'a> {
         });
         // Banking into the movement across the tunnel.
         let sideways = (ship.pos - ship.prev).e032() / DT / 12.0;
-        let pose = Motor::rotation_about(0.0, 0.0, 1.0, roll - 0.25 * sideways);
+        let pose = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), roll - 0.25 * sideways);
         p.solid(out, &self.object(q, pose), &SHIP, 0.7, c);
         self.draw_shadow(q, out);
     }

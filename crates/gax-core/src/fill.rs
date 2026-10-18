@@ -31,7 +31,7 @@ pub trait KindEq<K: Kind>: Kind {
 /// use gax::pga3d::{Flector, Motor, Point, intrinsic};
 /// let p = Point::<(), f64>::xyz(1.0, 0.0, 0.0);
 /// let open: intrinsic::Flector<(Motor, Motor), f64> = (Motor::slot() * p) * Motor::slot().reverse();
-/// let m = Motor::<(), f64>::translation(0.0, 1.0, 0.0).into_inner();
+/// let m = Motor::<(), f64>::translation(Point::direction(0.0, 1.0, 0.0)).into_inner();
 /// let filled: intrinsic::Flector<(), f64> = open.fill(m); // both motor slots receive m
 /// # let _ = filled;
 /// ```

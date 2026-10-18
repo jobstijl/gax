@@ -276,8 +276,12 @@ fn shell(s: &mut Scene3) {
             core::f32::consts::PI * (u - 0.5),
             core::f32::consts::TAU * v,
         );
-        let turn = gax::pga3d::Motor::rotation_about(0.0, 0.0, 1.0, lon)
-            * gax::pga3d::Motor::rotation_about(0.0, -1.0, 0.0, lat);
+        let turn =
+            gax::pga3d::Motor::rotation_about(gax::pga3d::Point::direction(0.0, 0.0, 1.0), lon)
+                * gax::pga3d::Motor::rotation_about(
+                    gax::pga3d::Point::direction(0.0, -1.0, 0.0),
+                    lat,
+                );
         ORIGIN3 + (turn >> gax::pga3d::Point::direction(RADIUS as f32, 0.0, 0.0))
     };
     let [latitudes, longitudes] = SHELL;

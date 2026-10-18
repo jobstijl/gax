@@ -227,7 +227,12 @@ mod symmetry {
     pub fn flywheel() -> (Vec<Vec<P3>>, Inertia, Inertia) {
         let arm = arm_samples();
         let rotations: Vec<_> = (0..3)
-            .map(|k| pga3d::Motor::rotation_about(0.0, 0.0, 1.0, 2.0 * PI * k as f64 / 3.0))
+            .map(|k| {
+                pga3d::Motor::rotation_about(
+                    pga3d::Point::direction(0.0, 0.0, 1.0),
+                    2.0 * PI * k as f64 / 3.0,
+                )
+            })
             .collect();
         let (arm_inertia, inertia) = flywheel_inertia(&arm, &rotations);
         let arms = rotations
@@ -253,7 +258,7 @@ mod symmetry {
     pub fn probe(angle: f64) -> L3 {
         // The x axis, where the planes y = 0 and z = 0 meet.
         let x_axis = pga3d::Plane::new(0.0, 1.0, 0.0, 0.0) ^ pga3d::Plane::new(0.0, 0.0, 1.0, 0.0);
-        pga3d::Motor::rotation_about(0.0, 0.0, 1.0, angle) >> x_axis
+        pga3d::Motor::rotation_about(pga3d::Point::direction(0.0, 0.0, 1.0), angle) >> x_axis
     }
 
     /// The wheel's axis, where the planes x = 0 and y = 0 meet.

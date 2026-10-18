@@ -20,8 +20,8 @@ fn main() {
         })
         .collect();
     // A little screw motion per frame.
-    let step: Unit<Motor<(), f32>> =
-        Motor::translation(0.0, 0.0, 0.01) * Motor::rotation_about(0.0, 0.0, 1.0, 0.02);
+    let step: Unit<Motor<(), f32>> = Motor::translation(Point::direction(0.0, 0.0, 0.01))
+        * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.02);
     println!(
         "{n} points, {frames} frames, SIMD level: {}",
         batch::level_name(batch::level())

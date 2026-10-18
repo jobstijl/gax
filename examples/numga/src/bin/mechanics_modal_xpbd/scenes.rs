@@ -73,7 +73,7 @@ pub fn girders(shape: &Shape, fixed: &[bool], damping: f64) -> Bodies {
     let inverse = shape.inertia.inverse();
     Bodies {
         motor: (0..count)
-            .map(|b| Motor::translation((b as f64 - 0.5) * length, 0.0))
+            .map(|b| Motor::translation(Point::direction((b as f64 - 0.5) * length, 0.0)))
             .collect(),
         rate: vec![R::zero(); count],
         amplitudes: still(),
@@ -189,7 +189,7 @@ pub fn displacements(frames: usize) -> Vec<f64> {
 pub fn displaced(bodies: &Bodies, rest: &[M], displacement: f64) -> Bodies {
     let last = rest.len() - 1;
     let mut moved = bodies.clone();
-    moved.motor[last] = rest[last] * Motor::translation(-displacement, 0.0);
+    moved.motor[last] = rest[last] * Motor::translation(Point::direction(-displacement, 0.0));
     moved
 }
 

@@ -41,6 +41,12 @@ alias Bivector = Pseudoscalar;
 
 alias Even = Rotor;
 
+alias Odd = Vector;
+
+alias Twist = Pseudoscalar;
+
+alias Forque = Scalar;
+
 // A `Scalar` from its coefficients.
 fn scalar_new(s: f32) -> Scalar {
     return Scalar(vec4<f32>(s, 0.0, 0.0, 0.0));

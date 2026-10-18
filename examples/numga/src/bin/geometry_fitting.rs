@@ -126,11 +126,11 @@ mod fitting {
         points
             .iter()
             .map(|p| {
-                Motor::translation(
+                Motor::translation(Point::direction(
                     sigma * rng.normal(),
                     sigma * rng.normal(),
                     sigma * rng.normal(),
-                ) >> *p
+                )) >> *p
             })
             .collect()
     }

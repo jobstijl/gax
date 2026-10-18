@@ -249,7 +249,7 @@ mod riccati {
     /// The twist whose pose is the translation carrying the dock's centre to `to`.
     pub fn offset(to: P) -> E {
         let d = to.unitized() - centre();
-        Twist::translation_twist(d.e20(), d.e01()).gp(-2.0)
+        Twist::translation(Point::direction(d.e20(), d.e01())).gp(-2.0)
     }
 }
 

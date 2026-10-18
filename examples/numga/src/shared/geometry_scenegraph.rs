@@ -47,7 +47,7 @@ pub fn joint(axis: L, angle: f64) -> M {
 
 /// The translation by `d` along `z`: numga's `exp(zw d / 2)`, with `zw = e3 e0 = -e03`.
 pub fn up(d: f64) -> M {
-    Motor::translation(0.0, 0.0, d)
+    Motor::translation(Point::direction(0.0, 0.0, d))
 }
 
 // --- geometry primitives ------------------------------------------------------------------
@@ -187,7 +187,7 @@ pub fn look_at(position: P, target: P) -> M {
 /// `sensor_width` x `sensor_height` chip onto `width` x `height` pixels, rows growing downward.
 pub fn viewport(width: f64, height: f64, sensor_width: f64, sensor_height: f64) -> PointMap {
     let scale = anisotropic_scale(width / sensor_width, -height / sensor_height, 1.0);
-    Motor::translation(width / 2.0, height / 2.0, 0.0) >> scale
+    Motor::translation(Point::direction(width / 2.0, height / 2.0, 0.0)) >> scale
 }
 
 /// A projected point with unit weight: the perspective division.

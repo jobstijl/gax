@@ -96,7 +96,7 @@ impl Proj {
     /// own frame, through the track's frame at `q`, into the camera.
     pub(super) fn object(&self, track: &Track, q: P, turn: Frame) -> CamMap {
         let [x, y, s] = q.to_euclidean();
-        self.to_camera(track.frame(s) * Motor::translation(x, y, 0.0) * turn)
+        self.to_camera(track.frame(s) * Motor::translation(Point::direction(x, y, 0.0)) * turn)
     }
 
     /// A world point in the camera's frame (`cam << p`), or `None` behind the near plane.
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn a_projection_is_a_weight() {
-        let p = Proj::new(Motor::translation(0.0, 0.0, 0.0), 10.0);
+        let p = Proj::new(Motor::translation(Point::direction(0.0, 0.0, 0.0)), 10.0);
         let s = p
             .screen(p.camera(at(2.0, 1.0, 4.0)).unwrap())
             .to_euclidean();
@@ -324,7 +324,7 @@ mod tests {
     /// lens, the outer root of `θ² - βθ - θ_E² = 0`; a point in front of the lens is not moved.
     #[test]
     fn a_singularity_lenses_what_lies_behind_it() {
-        let mut p = Proj::new(Motor::translation(0.0, 0.0, 0.0), 10.0);
+        let mut p = Proj::new(Motor::translation(Point::direction(0.0, 0.0, 0.0)), 10.0);
         let centre = Point2::xy(1.0, -0.5);
         let lens = Lens {
             centre,

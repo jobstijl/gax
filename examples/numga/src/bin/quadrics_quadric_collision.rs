@@ -48,7 +48,7 @@ mod collision {
 
     /// The rigid motion rotating by `angle` about the origin, then translating by `(tx, ty)`.
     pub fn motor(tx: f64, ty: f64, angle: f64) -> M {
-        Motor::translation(tx, ty) * Motor::rotation(origin(), angle)
+        Motor::translation(Point::direction(tx, ty)) * Motor::rotation(origin(), angle)
     }
 
     /// A quadric moved by a motor: its input pulled back, its output pushed forward.
@@ -144,7 +144,7 @@ mod collision {
         pub fn second(&self, offset: f64) -> Quadric {
             let n = self.normal;
             moved(
-                Motor::translation(n.e1() * offset, n.e2() * offset) * self.touch,
+                Motor::translation(Point::direction(n.e1() * offset, n.e2() * offset)) * self.touch,
                 self.shape,
             )
         }

@@ -103,7 +103,7 @@ mod pascal {
             Point::new(0.0, 0.0, 1.0),
         ]);
         let on_circle = Motor::rotation(origin(), angle) >> Point::xy(1.0, 0.0);
-        Motor::translation(0.3, -0.1) >> stretch.of(on_circle)
+        Motor::translation(Point::direction(0.3, -0.1)) >> stretch.of(on_circle)
     }
 
     /// The five fixed points.
