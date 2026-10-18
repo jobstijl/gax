@@ -24,8 +24,12 @@ use gax_numga_examples::{
 };
 
 mod manipulability {
-    use super::scenegraph::{self as arm, L, P, Pl, PointMap};
-    use gax::pga3d::{Plane, Point};
+    use super::scenegraph::{self as arm, P, Pl, PointMap};
+    use gax::pga3d::{Line, Plane, Point};
+
+    /// A joint's twist per unit rate: a rotation generator, a line oriented by the turn about
+    /// it (extrinsic), as the meet of two planes through it is.
+    pub type Twist = Line<(), f64>;
 
     /// A point quadric takes each point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
@@ -49,11 +53,13 @@ mod manipulability {
     /// The arm's body maps, its gripper tip, and each joint's axis in the world: the base yaws
     /// about `z`, the shoulder, elbow and wrist pitch about `y`, each axis carried into the
     /// world by its pivot.
-    pub fn arm_axes(angles: [f64; 4]) -> ([PointMap; 5], P, [L; 4]) {
+    pub fn arm_axes(angles: [f64; 4]) -> ([PointMap; 5], P, [Twist; 4]) {
         let (bodies, pivots) = arm::robot_arm(angles);
         // The top face of the gripper, on the wrist.
         let tip = pivots[3] >> Point::xyz(0.0, 0.0, 0.3);
-        let (yaw, pitch) = (arm::axis(0.0, 0.0, 1.0), arm::axis(0.0, 1.0, 0.0));
+        // The `z` and `y` axes as meets of the coordinate planes: numga's `xy` and `zx`.
+        let [x, y, z] = coordinate_planes();
+        let (yaw, pitch) = (x ^ y, z ^ x);
         let axes = [
             pivots[0] >> yaw,
             pivots[1] >> pitch,
@@ -65,7 +71,7 @@ mod manipulability {
 
     /// The tip velocities reachable with unit joint rates: the dyads of the velocities about the
     /// tip, `Σ v (Plane & v) - tip (Plane & tip)`. Any frame, the same one for tip and axes.
-    pub fn velocity_ellipsoid(tip: P, axes: &[L]) -> DualQuadric {
+    pub fn velocity_ellipsoid(tip: P, axes: &[Twist]) -> DualQuadric {
         let plane = Plane::slot();
         let mut q = (tip * (plane & tip)).gp(-1.0);
         for a in axes {
@@ -78,7 +84,7 @@ mod manipulability {
 
     /// The tip forces resisted with unit joint torques: the dyads of the planes through each
     /// joint's axis and the tip, a point quadric, `Σ T (T & Point) - w (w & Point)`.
-    pub fn force_ellipsoid(tip: P, axes: &[L]) -> Quadric {
+    pub fn force_ellipsoid(tip: P, axes: &[Twist]) -> Quadric {
         let x = Point::slot();
         let mut q = (w() * (w() & x)).gp(-1.0);
         for a in axes {

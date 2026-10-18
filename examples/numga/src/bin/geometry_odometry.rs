@@ -51,10 +51,10 @@ macro_rules! odometry_core {
 
         /// The open twist and the open forque.
         pub fn twists() -> Twist<(Twist,), f64> {
-            Twist::<(), f64>::slot()
+            Tw::oriented_slot()
         }
         pub fn forques() -> Forque<(Forque,), f64> {
-            Forque::<(), f64>::slot()
+            Fq::oriented_slot()
         }
 
         /// The basis twist `i`.
@@ -482,13 +482,13 @@ mod plane {
 
     /// The quadric `SIGMAS` standard deviations out within which a pose carries the origin. A
     /// twist moves the carried point by its commutator with it; reading that motion with a line
-    /// is reading the twist with another line, solved from the incidence pairing. So the
+    /// is reading the twist with a forque, solved from their pairing, the join. So the
     /// twist's uncertainty gives the point's; its second moment's inverse, paired twice with a
     /// point of unit weight, is one plus the squared number of standard deviations to it.
     pub fn ellipse(pose: M, uncertainty: Covariance) -> Quadric {
         let here = position(pose);
         let shift = twists().commutator(here).of(pose >> twists());
-        let readout = (Line::slot() & Point::slot()).solve(Line::slot() & shift);
+        let readout = (forques() & twists()).solve(Line::slot() & shift);
         let moment = here * (Line::slot() & here) + shift.of(uncertainty.of(readout));
         let w = Line::new(0.0, 0.0, 1.0);
         moment.inverse() - (w * (w & Point::slot())).gp(1.0 + SIGMAS * SIGMAS)

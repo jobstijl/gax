@@ -29,9 +29,13 @@ use gax_numga_examples::{
 
 mod pascal {
     use super::*;
+    use gax::{Extrinsic, Intrinsic};
 
-    pub type L = Line<(), f64>;
+    /// A side: the join of two points, so intrinsic (ADR-051).
+    pub type L = Line<(), f64, Intrinsic>;
     pub type P = Point<(), f64>;
+    /// A crossing of two sides: their meet, so extrinsic.
+    pub type X = Point<(), f64, Extrinsic>;
     /// A conic: a map from points to their polar lines.
     pub type Conic = Line<(Point,), f64>;
     /// A form with a point open in two places.
@@ -70,7 +74,7 @@ mod pascal {
     }
 
     /// The three points where opposite sides of a hexagon meet.
-    pub fn crossings(hexagon: &[P; 6]) -> [P; 3] {
+    pub fn crossings(hexagon: &[P; 6]) -> [X; 3] {
         let sides: Vec<L> = (0..6).map(|i| hexagon[i] & hexagon[NEXT[i]]).collect();
         [0, 1, 2].map(|i| sides[i] ^ sides[i + 3])
     }
@@ -111,7 +115,7 @@ mod pascal {
     /// The conic through the five points, and for the line through the first at an angle the
     /// hexagon of the five and the line's second crossing with the conic, with the crossings of
     /// its opposite sides.
-    pub fn scene(angle: f64) -> (Conic, [P; 6], [P; 3]) {
+    pub fn scene(angle: f64) -> (Conic, [P; 6], [X; 3]) {
         let five = five();
         let shape = conic(five);
         let sixth = second_crossing(shape, five[0], Point::direction_from_angle(angle));
@@ -124,7 +128,7 @@ mod pascal {
     /// one line, measured against their size since nearly parallel opposite sides meet far out.
     /// A crossing's size is the length of its coordinates read as a vector of space (the ray of
     /// space that is the point of the projective plane).
-    pub fn collinearity(crossing: &[P; 3]) -> f64 {
+    pub fn collinearity(crossing: &[X; 3]) -> f64 {
         let join = (crossing[0] & crossing[1] & crossing[2]).s();
         let size: f64 = crossing
             .iter()

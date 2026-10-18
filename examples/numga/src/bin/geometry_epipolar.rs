@@ -13,7 +13,7 @@
 //! triangulated house settling onto the true one, seen from a camera circling the scene.
 
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
-use gax::{Unit, pga2d, vga3d};
+use gax::{Intrinsic, Unit, pga2d, vga3d};
 
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::{smoothstep, wave};
@@ -27,7 +27,9 @@ mod epipolar {
     use super::*;
 
     pub type P = Point<(), f64>;
-    pub type L = Line<(), f64>;
+    /// A sight ray, the join of the centre and an image point: a line oriented along itself
+    /// (intrinsic).
+    pub type L = Line<(), f64, Intrinsic>;
     pub type M = Unit<Motor<(), f64>>;
 
     /// The cameras' centre, the world origin (camera 1 is at it, looking along `+z`).
@@ -119,12 +121,12 @@ mod epipolar {
         let mut rhs: Scalar<(Line,), f64> = Scalar::zero();
         for (r1, r2) in rays_1.iter().zip(rays_2) {
             let moved = motor >> *r2;
-            let res: Scalar<(), f64> = (*r1 ^ moved).dual();
-            let j: Scalar<(Line,), f64> = (*r1 ^ Line::slot().commutator(moved)).dual();
+            let res: Scalar<(), f64, Intrinsic> = (*r1 ^ moved).dual();
+            let j: Scalar<(Line,), f64, Intrinsic> = (*r1 ^ Line::slot().commutator(moved)).dual();
             h += j * j;
             rhs -= res * j;
         }
-        let step: L = h.lstsq_with(rhs, 1e-4);
+        let step: Line<(), f64> = h.lstsq_with(rhs, 1e-4);
         step.gp(0.5).exp() * motor
     }
 
@@ -161,7 +163,7 @@ mod epipolar {
     /// The epipolar lines on camera 2's screen: the images of camera 1's rays, by the same
     /// join-then-meet with a line in the open slot.
     pub fn epipolar_lines(rays_1: &[L], motor: M) -> Vec<L> {
-        let line_camera = (origin() & Line::slot()) ^ screen();
+        let line_camera = (origin() & L::oriented_slot()) ^ screen();
         rays_1.iter().map(|r| line_camera.of(motor << *r)).collect()
     }
 

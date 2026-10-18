@@ -23,7 +23,7 @@
 //!     G::pair(inertia.of(rate), rate) * 0.5
 //! }
 //!
-//! let spin2 = gax::pga2d::Point::<(), f64>::new(0.0, 0.0, 1.0); // a turn about the origin
+//! let spin2 = gax::pga2d::Twist::<(), f64>::from_coeffs([0.0, 0.0, 1.0]); // a turn about the origin
 //! let spin3 = gax::pga3d::Line::<(), f64>::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0); // about z
 //! let e2 = energy::<Pga2d>(&[[1.0, 0.0], [0.0, 2.0]], spin2);
 //! let e3 = energy::<Pga3d>(&[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]], spin3);
@@ -187,7 +187,7 @@ macro_rules! motions {
             $Motor $Twist $Forque $Point $n $c $point $p $coords [$($mi = $mob)?]
             commutator(a, b) = a.commutator(b);
             coadjoint(f, b) = f.commutator(b);
-            ad(h) = h.commutator($Twist::slot());
+            ad(h) = h.commutator($Twist::oriented_slot());
         }
     };
     (
@@ -232,11 +232,13 @@ macro_rules! motions {
 
             impl<T: $crate::Real> $crate::motions::Motions<T> for $name {
                 type Motor = $crate::Unit<$Motor<(), T>>;
+                // Twists are extrinsic, a turn; forques, the duals of twists, and points, the duals
+                // of vectors (PGA's positions), are intrinsic (ADR-051).
                 type Twist = $Twist<(), T>;
-                type Forque = $Forque<(), T>;
-                type Point = $Point<(), T>;
-                type Inertia = $Forque<($Twist,), T>;
-                type Mobility = $Twist<($Forque,), T>;
+                type Forque = $Forque<(), T, $crate::Intrinsic>;
+                type Point = $Point<(), T, $crate::Intrinsic>;
+                type Inertia = $Forque<($Twist,), T, $crate::Intrinsic>;
+                type Mobility = $Twist<($Forque<(), f32, $crate::Intrinsic>,), T>;
                 type TwistMap = $Twist<($Twist,), T>;
                 type Coords = [T; $n];
                 const DIM: usize = $n;
@@ -279,11 +281,11 @@ macro_rules! motions {
                 }
                 #[inline]
                 fn identity_map() -> Self::TwistMap {
-                    $Twist::slot()
+                    $Twist::oriented_slot()
                 }
                 #[inline]
                 fn point_inertia(p: Self::Point) -> Self::Inertia {
-                    p & p.commutator($Twist::slot())
+                    p & p.commutator($Twist::oriented_slot())
                 }
                 #[inline]
                 fn mobility(inertia: Self::Inertia) -> Self::Mobility {
@@ -310,7 +312,7 @@ macro_rules! motions {
 motions! {
     /// The rigid motions of the plane, in PGA2D: motors, twists (points), forques (lines).
     pub struct Pga2d in crate::pga2d {
-        Motor = Motor, Twist = Point, Forque = Line, Point = Point,
+        Motor = Motor, Twist = Twist, Forque = Line, Point = Point,
         Coords = [T; 2],
         point(c) = Point::xy(c[0], c[1]),
         coords(p) = p.to_euclidean(),
@@ -321,7 +323,7 @@ motions! {
 motions! {
     /// The rigid motions of space, in PGA3D: motors, twists and forques (lines), points.
     pub struct Pga3d in crate::pga3d {
-        Motor = Motor, Twist = Line, Forque = Line, Point = Point,
+        Motor = Motor, Twist = Twist, Forque = Line, Point = Point,
         Coords = [T; 3],
         point(c) = Point::xyz(c[0], c[1], c[2]),
         coords(p) = p.to_euclidean(),
@@ -394,7 +396,9 @@ motions! {
         coords(p) = p.undual().down(),
         mobility(i) = {
             // Dualized, the forques proper are the twists; the rest leaves the twist kind.
-            let proper: Twist<(Bivector,), T> = Bivector::slot().dual().cast::<Twist>();
+            // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
+            let proper: Twist<(Bivector<(), f32, crate::Intrinsic>,), T> =
+                Bivector::<(), T, crate::Intrinsic>::oriented_slot().dual().cast::<Twist>();
             i.dual().cast::<Twist>().inverse().of(proper)
         },
     }
@@ -417,7 +421,9 @@ motions! {
         coords(p) = p.undual().down(),
         mobility(i) = {
             // Dualized, the forques proper are the twists; the rest leaves the twist kind.
-            let proper: Twist<(Trivector,), T> = Trivector::slot().dual().cast::<Twist>();
+            // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
+            let proper: Twist<(Trivector<(), f32, crate::Intrinsic>,), T> =
+                Trivector::<(), T, crate::Intrinsic>::oriented_slot().dual().cast::<Twist>();
             i.dual().cast::<Twist>().inverse().of(proper)
         },
     }
@@ -443,7 +449,9 @@ motions! {
         },
         mobility(i) = {
             // Dualized, the forques proper are the twists; the rest leaves the twist kind.
-            let proper: Twist<(Quadvector,), T> = Quadvector::slot().dual().cast::<Twist>();
+            // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
+            let proper: Twist<(Quadvector<(), f32, crate::Intrinsic>,), T> =
+                Quadvector::<(), T, crate::Intrinsic>::oriented_slot().dual().cast::<Twist>();
             i.dual().cast::<Twist>().inverse().of(proper)
         },
     }

@@ -13,7 +13,7 @@
 //! modes first.
 
 use gax::pga3d::{Line, Motor, Plane, Point};
-use gax::{Form, Kind, Reverse, ScalarProduct};
+use gax::{Form, Intrinsic, Kind, Reverse, ScalarProduct};
 
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
@@ -25,7 +25,9 @@ mod fitting {
     use super::*;
 
     pub type P = Point<(), f64>;
-    pub type L = Line<(), f64>;
+    /// A line through points, oriented along itself (intrinsic), as a join of points is: the
+    /// sampled rays and the line fitted to points.
+    pub type L = Line<(), f64, Intrinsic>;
     pub type Pl = Plane<(), f64>;
     pub type M = gax::Unit<Motor<(), f64>>;
 
@@ -56,7 +58,7 @@ mod fitting {
     /// unit form leaves out the condition to be a line (`L ^ L = 0`); the fitted moment is the
     /// centroid's about the fitted direction, which meets it.
     pub fn line_to_points(samples: &[P]) -> L {
-        let x = Line::slot();
+        let x = L::oriented_slot();
         let misfit = samples.iter().map(|s| squared(s.unitized() & x)).sum();
         least_mode(misfit, squared(x))
     }
@@ -159,8 +161,8 @@ mod fitting {
         ]
     }
 
-    /// The four edge lines of a square of the plane `z = 0`.
-    pub fn patch_edges(half_width: f64) -> [L; 4] {
+    /// The four edge lines of a square of the plane `z = 0`: meets of planes.
+    pub fn patch_edges(half_width: f64) -> [Line<(), f64>; 4] {
         let s = [1.0, 1.0, -1.0, -1.0];
         let t = [1.0, -1.0, -1.0, 1.0];
         core::array::from_fn(|i| {

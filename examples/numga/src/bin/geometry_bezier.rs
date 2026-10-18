@@ -30,9 +30,13 @@ use gax_numga_examples::{
 };
 
 mod bezier {
+    use gax::Intrinsic;
     use gax::vga3d::Vector;
 
     pub type V = Vector<(), f64>;
+    /// The normal of a plane through the origin: the dual of a bivector, of the other
+    /// orientation (intrinsic).
+    pub type Normal = Vector<(), f64, Intrinsic>;
     /// A quadratic form on vectors, as the map from a vector to the vector it pairs with.
     pub type Conic = Vector<(Vector,), f64>;
     /// The weights of a quadratic curve's three control points.
@@ -77,7 +81,7 @@ mod bezier {
 
     /// The normals of two planes through the origin as one form: on a vector, the product of
     /// its inner products with the two.
-    pub fn pair(first: V, second: V) -> Conic {
+    pub fn pair(first: Normal, second: Normal) -> Conic {
         let v = Vector::slot();
         (first * (second | v) + second * (first | v)).gp(0.5)
     }

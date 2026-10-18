@@ -129,6 +129,27 @@ pub fn write_kind_path<K: Kind>(w: &mut dyn Write) -> fmt::Result {
     write!(w, "::{}", K::NAME)
 }
 
+/// The orientation argument of a kind's type where it is not the kind's default (ADR-051):
+/// `""`, `", ::gax::Intrinsic"` or `", ::gax::Extrinsic"`.
+fn orientation_arg<K: Kind>() -> &'static str {
+    let intrinsic = <K::Orientation as crate::Orientation>::SIGN < 0;
+    match (intrinsic == K::DEFAULT_INTRINSIC, intrinsic) {
+        (true, _) => "",
+        (false, true) => ", ::gax::Intrinsic",
+        (false, false) => ", ::gax::Extrinsic",
+    }
+}
+
+/// A kind as a type, for slot lists and kind parameters: its path, with the orientation
+/// spelled out where it is not the default (`::gax::pga3d::Line<(), f32, ::gax::Intrinsic>`).
+fn write_kind_type<K: Kind>(w: &mut dyn Write) -> fmt::Result {
+    write_kind_path::<K>(w)?;
+    match orientation_arg::<K>() {
+        "" => Ok(()),
+        o => write!(w, "<(), f32{o}>"),
+    }
+}
+
 fn write_array(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
     w.write_str("[")?;
     for (i, p) in parts.iter().enumerate() {
@@ -151,19 +172,22 @@ impl<M: Extensor<Slots = ()>> Traceable for M {
     }
     fn write_type(w: &mut dyn Write, coef: &str) -> fmt::Result {
         write_kind_path::<M::Kind>(w)?;
-        write!(w, "<(), {coef}>")
+        write!(w, "<(), {coef}{}>", orientation_arg::<M::Kind>())
     }
     fn write_coeffs(w: &mut dyn Write, name: &str) -> fmt::Result {
         write!(w, "{name}.c")
     }
     fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
         write_kind_path::<M::Kind>(w)?;
-        w.write_str("::from_coeffs(")?;
+        match orientation_arg::<M::Kind>() {
+            "" => w.write_str("::from_coeffs(")?,
+            o => write!(w, "::<(), _{o}>::from_coeffs(")?,
+        }
         write_array(w, parts)?;
         w.write_str(")")
     }
     fn write_kind(w: &mut dyn Write) -> Option<bool> {
-        write_kind_path::<M::Kind>(w).ok()?;
+        write_kind_type::<M::Kind>(w).ok()?;
         Some(false)
     }
     fn write_wgsl_type(w: &mut dyn Write, _decls: &mut dyn Write, _hint: &str) -> fmt::Result {
@@ -193,7 +217,7 @@ where
     fn write_type(w: &mut dyn Write, coef: &str) -> fmt::Result {
         w.write_str("::gax::Unit<")?;
         write_kind_path::<M::Kind>(w)?;
-        write!(w, "<(), {coef}>>")
+        write!(w, "<(), {coef}{}>>", orientation_arg::<M::Kind>())
     }
     fn write_coeffs(w: &mut dyn Write, name: &str) -> fmt::Result {
         write!(w, "{name}.into_inner().c")
@@ -201,12 +225,15 @@ where
     fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
         w.write_str("::gax::Unit::new_unchecked(")?;
         write_kind_path::<M::Kind>(w)?;
-        w.write_str("::from_coeffs(")?;
+        match orientation_arg::<M::Kind>() {
+            "" => w.write_str("::from_coeffs(")?,
+            o => write!(w, "::<(), _{o}>::from_coeffs(")?,
+        }
         write_array(w, parts)?;
         w.write_str("))")
     }
     fn write_kind(w: &mut dyn Write) -> Option<bool> {
-        write_kind_path::<M::Kind>(w).ok()?;
+        write_kind_type::<M::Kind>(w).ok()?;
         Some(true)
     }
     fn write_wgsl_type(w: &mut dyn Write, _decls: &mut dyn Write, _hint: &str) -> fmt::Result {

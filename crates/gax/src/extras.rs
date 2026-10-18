@@ -34,11 +34,15 @@ pub trait Between<M>: Sized {
 /// negative (motors keep the sign of the weight).
 macro_rules! between {
     ($alg:ident: $($k:ident $(.$prep:ident())?),* => $biv:ident) => {$(
-        impl<T: crate::Real> Between<crate::$alg::Motor<(), T>> for crate::$alg::$k<(), T> {
+        // Of either orientation (ADR-051): the ratio of two elements of the same one is
+        // extrinsic, a motion.
+        impl<T: crate::Real, O: crate::Orientation> Between<crate::$alg::Motor<(), T>> for crate::$alg::$k<(), T, O> {
             #[inline]
             fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::Motor<(), T>> {
-                let half: crate::$alg::$biv<(), T> =
-                    (b$(.$prep())? / a$(.$prep())?).normalized().log();
+                // `O · O` is extrinsic for either orientation; the types cannot see it for a
+                // generic `O`, so the ratio says it.
+                let ratio = (b$(.$prep())? / a$(.$prep())?).with_orientation::<crate::Extrinsic>();
+                let half: crate::$alg::$biv<(), T> = ratio.normalized().log();
                 half.gp(T::from_f64(0.5)).exp()
             }
         }
@@ -47,7 +51,7 @@ macro_rules! between {
 #[cfg(feature = "pga3d")]
 between!(pga3d: Plane, Line, Point.unitized() => Line);
 #[cfg(feature = "pga2d")]
-between!(pga2d: Line, Point.unitized() => Point);
+between!(pga2d: Line, Point.unitized() => Twist);
 
 /// Written once for PGA2D and PGA3D through the value traits: their kinds differ (a rotation is
 /// about a point in 2D and about a line in 3D), the expressions do not.
@@ -85,7 +89,7 @@ mod shared {
 #[cfg(feature = "pga3d")]
 mod pga3d_extras {
     use crate::map::{Dense, LinearMap, SquareLinearMap};
-    use crate::pga3d::{Line, Motor, Plane, Point, Translator};
+    use crate::pga3d::{Forque, Line, Motor, Plane, Point, Translator};
     use crate::{Of, Real, Slots, Unit};
 
     impl<T: Real> Point<(), T> {
@@ -114,7 +118,11 @@ mod pga3d_extras {
         pub fn direction(x: T, y: T, z: T) -> Self {
             Point::new(x, y, z, T::zero())
         }
+    }
 
+    // Methods of points of either orientation (ADR-051): positions are intrinsic, meets of
+    // three planes extrinsic.
+    impl<T: Real, O: crate::Orientation> Point<(), T, O> {
         /// The angle between this direction and `other` (points at infinity), in `[0, π]`: with
         /// `A` and `B` the planes through the origin orthogonal to them, `atan2` of the norm of
         /// their meet (a line through the origin, its norm the sine) and their inner product (the
@@ -159,6 +167,21 @@ mod pga3d_extras {
         #[inline]
         pub fn unitized(self) -> Self {
             self.gp(self.e123().recip())
+        }
+
+        /// The position of this point: the intrinsic point of weight `+1` at the same place
+        /// (ADR-051). A meet of planes, or of a joined line with a plane, is a point of either
+        /// orientation, its sign a handedness; as a place to be it is this.
+        ///
+        /// ```
+        /// use gax::pga3d::{Plane, Point};
+        /// let (x, y, z) = (Plane::new(1.0, 0.0, 0.0, -1.0), Plane::new(0.0, 1.0, 0.0, -2.0), Plane::new(0.0, 0.0, 1.0, -3.0));
+        /// let corner = x ^ y ^ z; // extrinsic
+        /// assert_eq!(corner.position(), Point::<(), f64>::xyz(1.0, 2.0, 3.0));
+        /// ```
+        #[inline]
+        pub fn position(self) -> Point<(), T, crate::Intrinsic> {
+            self.unitized().with_orientation()
         }
 
         /// The ideal norm `sqrt(x² + y² + z²)`: the length of a direction (a velocity, a
@@ -212,18 +235,24 @@ mod pga3d_extras {
         pub fn orthogonal_to(d: Point<(), T>) -> Self {
             Plane::new(d.e032(), d.e013(), d.e021(), T::zero())
         }
+    }
 
-        /// Reflect a point (or a direction) in this plane: the sandwich with the normalized
-        /// plane, which in PGA3D needs no sign correction for points or directions.
+    impl<T: Real, M: crate::Orientation> Plane<(), T, M> {
+        /// Reflect a point (or a direction) in this plane: `>>` with the normalized plane, whose
+        /// sign the point's orientation picks (ADR-051). The plane's own orientation, a meet's
+        /// or a join's, does not matter: it enters twice.
         ///
         /// ```
         /// use gax::pga3d::{Plane, Point};
         /// let wall = Plane::from_normal([1.0, 0.0, 0.0], 0.0);
         /// let v = wall.reflect(Point::direction(1.0, 0.5, 0.0));
         /// assert_eq!([v.e032(), v.e013(), v.e021()], [-1.0, 0.5, 0.0]);
+        /// // The same wall as the join of three of its points.
+        /// let joined = Point::xyz(0.0, 0.0, 0.0) & Point::xyz(0.0, 1.0, 0.0) & Point::xyz(0.0, 0.0, 1.0);
+        /// assert_eq!(joined.reflect(Point::direction(1.0, 0.5, 0.0)), v);
         /// ```
         #[inline]
-        pub fn reflect(self, x: Point<(), T>) -> Point<(), T> {
+        pub fn reflect<O: crate::Orientation>(self, x: Point<(), T, O>) -> Point<(), T, O> {
             self.normalized() >> x
         }
     }
@@ -279,12 +308,13 @@ mod pga3d_extras {
         /// ```
         ///
         /// A map with open slots is composed: `body.of(m)` is `body ∘ m`, scaled column by
-        /// column, without building the dense map (ADR-044).
+        /// column, without building the dense map (ADR-044). A twist is extrinsic (a turn about
+        /// a line), a momentum intrinsic (a line oriented along itself, ADR-051).
         #[inline]
-        pub fn of<S: Slots>(self, b: Line<S, T>) -> Line<S, T> {
+        pub fn of<S: Slots>(self, b: Line<S, T>) -> Forque<S, T> {
             let (m, i) = (self.mass, self.moments);
             let c = &b.c;
-            Line::from_coeffs([
+            Forque::from_coeffs([
                 scale::<S, T>(m, &c[3]),
                 scale::<S, T>(m, &c[4]),
                 scale::<S, T>(m, &c[5]),
@@ -303,7 +333,7 @@ mod pga3d_extras {
         /// assert_eq!(body.inverse_of(body.of(b)), b);
         /// ```
         #[inline]
-        pub fn inverse_of<S: Slots>(self, f: Line<S, T>) -> Line<S, T> {
+        pub fn inverse_of<S: Slots>(self, f: Forque<S, T>) -> Line<S, T> {
             self.inverse().of(f)
         }
 
@@ -324,7 +354,7 @@ mod pga3d_extras {
             }
         }
 
-        /// The dense map `Line <- Line`.
+        /// The dense map `Forque <- Line`, from twists to momenta.
         ///
         /// ```
         /// use gax::pga3d::{Line, PrincipalInertia};
@@ -333,10 +363,10 @@ mod pga3d_extras {
         /// assert_eq!(body.to_map().of(b), body.of(b));
         /// ```
         #[inline]
-        pub fn to_map(self) -> Line<(Line,), T> {
+        pub fn to_map(self) -> Forque<(Line,), T> {
             let z = T::zero();
             let (m, i) = (self.mass, self.moments);
-            Line::from_coeffs([
+            Forque::from_coeffs([
                 [z, z, z, m, z, z],
                 [z, z, z, z, m, z],
                 [z, z, z, z, z, m],
@@ -346,7 +376,8 @@ mod pga3d_extras {
             ])
         }
 
-        /// The kinetic energy form `B & I[B]` on twists (twice the kinetic energy).
+        /// The kinetic energy form `B & I[B]` on twists (twice the kinetic energy): a twist joined
+        /// with a momentum, an extrinsic scalar, unchanged by mirrors.
         ///
         /// ```
         /// use gax::pga3d::{Line, PrincipalInertia};
@@ -373,7 +404,7 @@ mod pga3d_extras {
     /// ```
     /// use gax::pga3d::{Line, PrincipalInertia};
     /// let mobility = PrincipalInertia::new(2.0, [0.5, 0.75, 0.25]).inverse();
-    /// let f = Line::new(2.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    /// let f = Line::new(2.0, 0.0, 0.0, 0.0, 0.0, 1.0).with_orientation::<gax::Intrinsic>();
     /// let b = mobility.of(f);
     /// // The angular part of the momentum through the mass, the linear part through the moments.
     /// assert_eq!((b.e01(), b.e12()), (1.0, 4.0));
@@ -390,7 +421,7 @@ mod pga3d_extras {
         /// The twist of a momentum: six products. A map is composed, as for
         /// [`PrincipalInertia::of`].
         #[inline]
-        pub fn of<S: Slots>(self, f: Line<S, T>) -> Line<S, T> {
+        pub fn of<S: Slots>(self, f: Forque<S, T>) -> Line<S, T> {
             let (r, i) = (self.inverse_mass, self.inverse_moments);
             let c = &f.c;
             Line::from_coeffs([
@@ -412,10 +443,10 @@ mod pga3d_extras {
             }
         }
 
-        /// The dense map `Line <- Line`.
+        /// The dense map `Line <- Forque`, from momenta to twists.
         #[inline]
-        pub fn to_map(self) -> Line<(Line,), T> {
-            self.of(Line::slot())
+        pub fn to_map(self) -> Line<(Forque,), T> {
+            self.of(Forque::oriented_slot())
         }
     }
 
@@ -423,7 +454,7 @@ mod pga3d_extras {
     // paths for applying, solving and inverting, and for composing as the outer map.
 
     impl<T: Real> LinearMap for PrincipalInertia<T> {
-        type Kind = Line;
+        type Kind = Forque;
         type Slots = (Line,);
         type Coef = T;
         #[inline]
@@ -434,7 +465,7 @@ mod pga3d_extras {
 
     impl<T: Real> LinearMap for PrincipalMobility<T> {
         type Kind = Line;
-        type Slots = (Line,);
+        type Slots = (Forque,);
         type Coef = T;
         #[inline]
         fn to_dense(self) -> Dense<Self> {
@@ -446,11 +477,11 @@ mod pga3d_extras {
         type Input = Line;
         type Inverse = PrincipalMobility<T>;
         #[inline]
-        fn apply(self, x: Line<(), T>) -> Line<(), T> {
+        fn apply(self, x: Line<(), T>) -> Forque<(), T> {
             self.of(x)
         }
         #[inline]
-        fn solve(self, b: Line<(), T>) -> Line<(), T> {
+        fn solve(self, b: Forque<(), T>) -> Line<(), T> {
             self.inverse().of(b)
         }
         #[inline]
@@ -460,14 +491,14 @@ mod pga3d_extras {
     }
 
     impl<T: Real> SquareLinearMap for PrincipalMobility<T> {
-        type Input = Line;
+        type Input = Forque;
         type Inverse = PrincipalInertia<T>;
         #[inline]
-        fn apply(self, x: Line<(), T>) -> Line<(), T> {
+        fn apply(self, x: Forque<(), T>) -> Line<(), T> {
             self.of(x)
         }
         #[inline]
-        fn solve(self, b: Line<(), T>) -> Line<(), T> {
+        fn solve(self, b: Line<(), T>) -> Forque<(), T> {
             self.inverse().of(b)
         }
         #[inline]
@@ -477,17 +508,17 @@ mod pga3d_extras {
     }
 
     impl<S: Slots, T: Real> Of<Line<S, T>> for PrincipalInertia<T> {
-        type Output = Line<S, T>;
+        type Output = Forque<S, T>;
         #[inline]
-        fn of(self, b: Line<S, T>) -> Line<S, T> {
+        fn of(self, b: Line<S, T>) -> Forque<S, T> {
             PrincipalInertia::of(self, b)
         }
     }
 
-    impl<S: Slots, T: Real> Of<Line<S, T>> for PrincipalMobility<T> {
+    impl<S: Slots, T: Real> Of<Forque<S, T>> for PrincipalMobility<T> {
         type Output = Line<S, T>;
         #[inline]
-        fn of(self, f: Line<S, T>) -> Line<S, T> {
+        fn of(self, f: Forque<S, T>) -> Line<S, T> {
             PrincipalMobility::of(self, f)
         }
     }
@@ -548,9 +579,17 @@ mod pga3d_extras {
         /// let p = (r >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
         /// assert!(p[0].abs() < 1e-12 && (p[1] - 1.0).abs() < 1e-12);
         /// ```
+        ///
+        /// The axis may have either orientation (ADR-051): a turn about it (a meet of planes,
+        /// extrinsic) or an arrow along it (a join of points, intrinsic), which turns by the
+        /// right-hand rule; the coefficients are the same.
         #[inline]
-        pub fn rotation(axis: Line<(), T>, angle: T) -> Unit<Self> {
-            crate::extras::shared::rotation_twist(axis, angle).exp()
+        pub fn rotation<O: crate::Orientation>(axis: Line<(), T, O>, angle: T) -> Unit<Self> {
+            crate::extras::shared::rotation_twist(
+                axis.with_orientation::<crate::Extrinsic>(),
+                angle,
+            )
+            .exp()
         }
 
         /// The rotation by `angle` about the axis through the origin with direction `(x, y, z)`.
@@ -697,9 +736,15 @@ mod pga3d_extras {
         /// let direct = Motor::rotation(z_axis, 1.5);
         /// assert!(after.c.iter().zip(direct.c).all(|(a, b)| (a - b).abs() < 1e-12));
         /// ```
+        ///
+        /// The axis may be a turn about the line or an arrow along it (ADR-051), as for
+        /// [`Motor::rotation`].
         #[inline]
-        pub fn rotation_twist(axis: Line<(), T>, omega: T) -> Self {
-            crate::extras::shared::rotation_twist(axis, omega)
+        pub fn rotation_twist<O: crate::Orientation>(axis: Line<(), T, O>, omega: T) -> Self {
+            crate::extras::shared::rotation_twist(
+                axis.with_orientation::<crate::Extrinsic>(),
+                omega,
+            )
         }
     }
 }
@@ -748,7 +793,10 @@ mod pga2d_extras {
             let (sine, cosine) = angle.sin_cos();
             Point::direction(cosine, sine)
         }
+    }
 
+    // Methods of points of either orientation (ADR-051).
+    impl<T: Real, O: crate::Orientation> Point<(), T, O> {
         /// The signed angle from this direction to `other`, counterclockwise, in `[-π, π]`. With
         /// `A` and `B` the lines through the origin orthogonal to them, it is `atan2` of the
         /// weight of their meet (the origin) and their inner product: the sine and cosine, scaled
@@ -796,8 +844,7 @@ mod pga2d_extras {
         }
 
         /// The same point with weight exactly `+1` (unitized): divided by its signed weight.
-        /// A meet or a reflection can return a point with any weight, even a negative one (the
-        /// sandwich of a line with a point comes out negated in PGA2D), and `normalized()`
+        /// A meet can return a point with any weight, even a negative one, and `normalized()`
         /// keeps the sign; differences of unitized points are directions. Not for directions
         /// (weight 0).
         ///
@@ -809,6 +856,21 @@ mod pga2d_extras {
         #[inline]
         pub fn unitized(self) -> Self {
             self.gp(self.e12().recip())
+        }
+
+        /// The position of this point: the intrinsic point of weight `+1` at the same place
+        /// (ADR-051). The meet of two joined lines is an extrinsic point, its sign the lines'
+        /// handedness; as a place to be it is this.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let across = Point::<(), f64>::xy(-1.0, 1.0) & Point::xy(1.0, 1.0);
+        /// let up = Point::xy(0.5, -1.0) & Point::xy(0.5, 3.0);
+        /// assert_eq!((across ^ up).position(), Point::xy(0.5, 1.0));
+        /// ```
+        #[inline]
+        pub fn position(self) -> Point<(), T, crate::Intrinsic> {
+            self.unitized().with_orientation()
         }
 
         /// The ideal norm `sqrt(x² + y²)`: the length of a direction (a velocity, a
@@ -834,21 +896,25 @@ mod pga2d_extras {
             let (x, y) = (self.e20(), self.e01());
             x * x + y * y
         }
+    }
 
+    // Twists: in PGA2D bivectors, the blades of points, extrinsic (ADR-051): a turn about a
+    // pivot, where a position is intrinsic. `Point::translation_twist` and `Twist::...` alike.
+    impl<T: Real> Point<(), T, crate::Extrinsic> {
         /// The twist (a bivector: in PGA2D, a point) of a translation at velocity `(vx, vy)`:
         /// `(B * t).exp()` is `Motor::translation(t vx, t vy)`. Twists add, so a moving,
         /// turning body's twist is the sum of a translation and a rotation twist.
         ///
         /// ```
-        /// use gax::pga2d::{Motor, Point};
-        /// let b = Point::<(), f64>::translation_twist(3.0, -1.0);
+        /// use gax::pga2d::{Point, Twist};
+        /// let b = Twist::<(), f64>::translation_twist(3.0, -1.0);
         /// let p = (b.gp(2.0).exp() >> Point::xy(0.0, 0.0)).to_euclidean();
         /// assert!((p[0] - 6.0).abs() < 1e-12 && (p[1] + 2.0).abs() < 1e-12);
         /// ```
         #[inline]
         pub fn translation_twist(vx: T, vy: T) -> Self {
             let h = T::from_f64(0.5);
-            Point::new(vy * h, -vx * h, T::zero())
+            Point::new(vy * h, -vx * h, T::zero()).with_orientation()
         }
 
         /// The twist of a rotation at `omega` radians per unit time, counterclockwise, about
@@ -861,17 +927,23 @@ mod pga2d_extras {
         /// let direct = Motor::rotation(c, 0.5);
         /// assert!(after.c.iter().zip(direct.c).all(|(a, b)| (a - b).abs() < 1e-12));
         /// ```
+        ///
+        /// The twist is the extrinsic point, a turn about `center` (ADR-051): a pivot, where the
+        /// point itself is intrinsic, a position.
         #[inline]
-        pub fn rotation_twist(center: Point<(), T>, omega: T) -> Self {
-            crate::extras::shared::rotation_twist(center, omega)
+        pub fn rotation_twist<O: crate::Orientation>(center: Point<(), T, O>, omega: T) -> Self {
+            crate::extras::shared::rotation_twist(
+                center.with_orientation::<crate::Extrinsic>(),
+                omega,
+            )
         }
     }
 
-    impl<T: Real> Line<(), T> {
-        /// Reflect a point (or a direction) in this line. In PGA2D the sandwich of a line, an
-        /// odd versor, with a point, an even element, comes out negated: harmless for a point
-        /// (`-p` is the same point), but for a direction it is the opposite velocity. This
-        /// applies the sign.
+    impl<T: Real, M: crate::Orientation> Line<(), T, M> {
+        /// Reflect a point (or a direction) in this line: `>>` with the normalized line, whose sign
+        /// the point's orientation picks (ADR-051), so a position keeps its weight and a direction
+        /// is mirrored. The line's own orientation, a join's or a meet's, does not matter: it
+        /// enters twice.
         ///
         /// ```
         /// use gax::pga2d::Point;
@@ -880,8 +952,8 @@ mod pga2d_extras {
         /// assert_eq!([v.e20(), v.e01(), v.e12()], [-1.0, 0.5, 0.0]);
         /// ```
         #[inline]
-        pub fn reflect(self, x: Point<(), T>) -> Point<(), T> {
-            -(self.normalized() >> x)
+        pub fn reflect<O: crate::Orientation>(self, x: Point<(), T, O>) -> Point<(), T, O> {
+            self.normalized() >> x
         }
     }
 
@@ -928,8 +1000,12 @@ mod pga2d_extras {
         /// assert!((x - 1.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
         /// ```
         #[inline]
-        pub fn rotation(center: Point<(), T>, angle: T) -> Unit<Self> {
-            crate::extras::shared::rotation_twist(center, angle).exp()
+        pub fn rotation<O: crate::Orientation>(center: Point<(), T, O>, angle: T) -> Unit<Self> {
+            crate::extras::shared::rotation_twist(
+                center.with_orientation::<crate::Extrinsic>(),
+                angle,
+            )
+            .exp()
         }
 
         /// The shortest rotation about the origin that turns the direction `from` into the
@@ -959,7 +1035,7 @@ mod pga2d_extras {
         /// assert!((x - 2.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
         /// ```
         pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
-            crate::extras::shared::interpolate::<Self, Point<(), T>, T>(a, b, t)
+            crate::extras::shared::interpolate::<Self, crate::pga2d::Twist<(), T>, T>(a, b, t)
         }
         /// The angle of a rotation (a unit motor), counterclockwise, in `[-π, π]`: from its
         /// logarithm, whose point part is `-angle/2` times the (unit) centre.
@@ -970,7 +1046,7 @@ mod pga2d_extras {
         /// assert!((r.angle() + 0.4).abs() < 1e-12);
         /// ```
         pub fn angle(self) -> T {
-            let log: Point<(), T> = Unit::new_unchecked(self).log();
+            let log: crate::pga2d::Twist<(), T> = Unit::new_unchecked(self).log();
             log.e12() * T::from_f64(-2.0)
         }
     }
@@ -1139,7 +1215,8 @@ mod tests {
             (0.0, 0.0, 3.0),
             (0.0, 0.0, -3.0),
         ];
-        let mut dense: Line<(Line,), f64> = Line::zero();
+        // Twists to momenta: extrinsic in, intrinsic out (ADR-051).
+        let mut dense: crate::pga3d::Forque<(Line,), f64> = crate::pga3d::Forque::zero();
         for (x, y, z) in pts {
             let p = Point::xyz(x, y, z);
             dense += p & p.commutator(Line::slot()); // Σ m X ∨ (X × B), in extensor form

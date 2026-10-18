@@ -1,16 +1,16 @@
 //! numga's `mechanics/modes`: the normal modes of a plate on springs, from stiffness and inertia
 //! assembled with an open twist (PGA2D). A spring's normalized line is both its line of action
-//! and a measurement: paired with a small rigid motion (a twist, a point in PGA2D) it gives the
-//! spring's extension. Multiplying that by the line and the spring constant and summing gives the
-//! stiffness, a map from twists to forques (lines); the inertia is the same kind of map, from the
-//! momenta of the plate's mass points. Paired with another open twist both are energy forms, and
-//! their generalized eigenvectors are the modes, as twists. The animation releases every mode
-//! from rest at once: two vertical springs (a free slide, a bounce and a rocking), then the same
-//! with an off-centre angled spring that couples them. Springs are orange when stretched and
-//! blue when compressed (the linear change in length).
+//! and a measurement: paired with a small rigid motion (a twist, an extrinsic point in PGA2D) it
+//! gives the spring's extension. Multiplying that by the line and the spring constant and summing
+//! gives the stiffness, a map from twists to forques (intrinsic lines); the inertia is the same
+//! kind of map, from the momenta of the plate's mass points. Paired with another open twist both
+//! are energy forms, and their generalized eigenvectors are the modes, as twists. The animation
+//! releases every mode from rest at once: two vertical springs (a free slide, a bounce and a
+//! rocking), then the same with an off-centre angled spring that couples them. Springs are orange
+//! when stretched and blue when compressed (the linear change in length).
 
 use gax::motions::{Motions, Pga2d};
-use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax::pga2d::{Forque, Motor, Point, Scalar, Twist};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, font, palette, run,
@@ -22,13 +22,16 @@ mod modes {
     use super::*;
 
     pub type P = Point<(), f64>;
-    pub type L = Line<(), f64>;
+    /// A small rigid motion: a turn about a point, the extrinsic point.
+    pub type Q = Twist<(), f64>;
+    /// A spring's line of action: the join of its anchor and attachment, a forque line.
+    pub type L = Forque<(), f64>;
     /// A map from twists to forques: a stiffness or an inertia.
-    pub type Response = Line<(Point,), f64>;
+    pub type Response = Forque<(Twist,), f64>;
     /// A linear form on twists: a spring's extension.
-    pub type Extension = Scalar<(Point,), f64>;
+    pub type Extension = Scalar<(Twist,), f64>;
     /// A bilinear form on twists: an energy.
-    pub type Energy = Scalar<(Point, Point), f64>;
+    pub type Energy = Scalar<(Twist, Twist), f64>;
 
     /// One suspension: the plate's corners, the springs' attachments and anchors, their
     /// constants, and the mass points with their masses.
@@ -48,7 +51,7 @@ mod modes {
     pub struct ModeCase {
         pub system: Suspension,
         pub frequencies: [f64; 3],
-        pub modes: [P; 3],
+        pub modes: [Q; 3],
         pub body_offsets: [Vec<P>; 3],
         pub attachment_offsets: [Vec<P>; 3],
         pub extensions: [Vec<f64>; 3],
@@ -92,7 +95,7 @@ mod modes {
     /// The stiffness and each spring's extension form, from the springs' lines: pairing an open
     /// twist with a line measures the stretch, and Hooke's law scales the line by it.
     pub fn spring_stiffness(lines: &[L], constants: &[f64]) -> (Response, Vec<Extension>) {
-        let extension: Vec<Extension> = lines.iter().map(|l| Point::slot() & *l).collect();
+        let extension: Vec<Extension> = lines.iter().map(|l| Twist::oriented_slot() & *l).collect();
         let stiffness: Response = lines
             .iter()
             .zip(&extension)
@@ -116,9 +119,9 @@ mod modes {
     /// The generalized eigenproblem between the energy forms: the modes as twists (normalized
     /// to unit kinetic energy form) and the frequencies in Hz.
     #[allow(clippy::disallowed_methods)] // an oscillator's law, the frequency sqrt(k / m) / 2π
-    pub fn normal_modes(stiffness: Response, inertia: Response) -> ([P; 3], [f64; 3]) {
-        let pe: Energy = Point::slot() & stiffness;
-        let ke: Energy = Point::slot() & inertia;
+    pub fn normal_modes(stiffness: Response, inertia: Response) -> ([Q; 3], [f64; 3]) {
+        let pe: Energy = Twist::oriented_slot() & stiffness;
+        let ke: Energy = Twist::oriented_slot() & inertia;
         let (values, modes) = pe.eigh_with(ke);
         let frequencies = values.map(|v| v.max(0.0).sqrt() / core::f64::consts::TAU);
         (modes, frequencies)
@@ -130,7 +133,7 @@ mod modes {
         let inertia = body_inertia(&system.mass_points, &system.masses);
         let (modes, frequencies) = normal_modes(stiffness, inertia);
         // The displacement of a point under a twist is their commutator (a direction).
-        let offsets = |pts: &[P], m: P| pts.iter().map(|p| p.commutator(m)).collect::<Vec<P>>();
+        let offsets = |pts: &[P], m: Q| pts.iter().map(|p| p.commutator(m)).collect::<Vec<P>>();
         ModeCase {
             body_offsets: modes.map(|m| offsets(&system.body, m)),
             attachment_offsets: modes.map(|m| offsets(&system.attachments, m)),
@@ -313,7 +316,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::modes::*;
-    use gax::pga2d::Point;
 
     /// numga's `test_scenario_has_analytic_modes_and_renders` and
     /// `test_two_springs_have_analytic_slide_bounce_and_rock_frequencies`: mass 1, polar
@@ -335,7 +337,7 @@ mod tests {
     fn spring_extension_and_energy_match_finite_rigid_displacements() {
         let s = suspension(3);
         let (stiffness, extension) = spring_stiffness(&lines(&s), &s.spring_constants);
-        let q: P = Point::new(0.3, -0.4, 0.25);
+        let q = Q::from_coeffs([0.3, -0.4, 0.25]);
         let h = 1e-4;
         // The distance between two (unit) points: the norm of their join.
         let dist = |a: P, b: P| (a & b).norm();
@@ -389,7 +391,7 @@ mod tests {
     fn modes_do_not_depend_on_world_pose() {
         let s = suspension(3);
         // numga's `exp(-0.9 xw + 0.3 yw) exp(0.37 xy)`: with `w = e0`, `xw = -e01`, `yw = e20`.
-        let m = Point::new(0.3, 0.9, 0.0).exp() * Point::new(0.0, 0.0, 0.37).exp();
+        let m = Q::from_coeffs([0.3, 0.9, 0.0]).exp() * Q::from_coeffs([0.0, 0.0, 0.37]).exp();
         let lines = lines(&s);
         let moved_lines: Vec<L> = lines.iter().map(|l| m >> *l).collect();
         let moved_points: Vec<P> = s.mass_points.iter().map(|p| m >> *p).collect();

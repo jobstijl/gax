@@ -68,6 +68,8 @@ pub fn ellipse_mesh(
     n_r: usize,
 ) -> (Vec<s2::P>, Vec<f64>) {
     let (tx, ty) = (tangent(half_angles[0]), tangent(half_angles[1]));
+    // The chart's point `(x, y)` is the basis point `yz` times x, `zx` times y, plus the pole.
+    let [ex, ey, pole] = s2::basis();
     let (mut points, mut masses) = (Vec::new(), Vec::new());
     for i in 0..=n_phi {
         let phi = core::f64::consts::TAU * i as f64 / n_phi as f64;
@@ -83,7 +85,7 @@ pub fn ellipse_mesh(
             // a uniform mass over the ellipse. The omitted node at r = 0 has zero area element.
             let area = tx * ty * r / (1.0 + x * x + y * y).powf(1.5);
             masses.push(area * w_phi * w_r);
-            points.push(s2::Point::new(x, y, 1.0).normalized().into_inner());
+            points.push((ex.gp(x) + ey.gp(y) + pole).normalized().into_inner());
         }
     }
     let total: f64 = masses.iter().sum();

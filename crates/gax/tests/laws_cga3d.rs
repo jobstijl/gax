@@ -411,7 +411,7 @@ law_suite::law_suite! {
         (Quadvector, Scalar),
     ],
     unit_det: [
-        (Vector, Vector, Pseudoscalar, true),
+        (Vector, Vector, Pseudoscalar, false),
         (Motor, Vector, Pseudoscalar, true),
         (Vector, Quadvector, Scalar, true),
         (Motor, Quadvector, Scalar, true),

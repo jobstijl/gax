@@ -24,27 +24,31 @@ macro_rules! engine {
     () => {
         use gax_numga_examples::rng::{Draw, Rng};
 
-        /// A point of the sphere.
-        pub type P = Point<(), f64>;
+        /// A point of the sphere: the pole of a plane, its dual, so intrinsic (ADR-051).
+        pub type P = Point<(), f64, gax::Intrinsic>;
         /// A rate: a bivector, in the body frame.
         pub type B = Rate<(), f64>;
-        /// A momentum: an antibivector, in the body frame.
-        pub type Mom = Momentum<(), f64>;
+        /// A momentum: an antibivector, the join of a point with its motion, so intrinsic, in
+        /// the body frame.
+        pub type Mom = Momentum<(), f64, gax::Intrinsic>;
         /// A rotation of the ambient space.
         pub type M = gax::Unit<Rotor<(), f64>>;
+        /// The kinds of the slots of points and of momenta.
+        pub type PointSlot = Point<(), f32, gax::Intrinsic>;
+        pub type MomentumSlot = Momentum<(), f32, gax::Intrinsic>;
         /// The primal quadric: a point to its polar plane, negative inside.
-        pub type Quadric = Plane<(Point,), f64>;
+        pub type Quadric = Plane<(PointSlot,), f64>;
         /// The dual quadric: a plane to its pole.
-        pub type DualQuadric = Point<(Plane,), f64>;
+        pub type DualQuadric = Point<(Plane,), f64, gax::Intrinsic>;
         /// The inertia: a rate to its momentum.
-        pub type Inertia = Momentum<(Rate,), f64>;
+        pub type Inertia = Momentum<(Rate,), f64, gax::Intrinsic>;
         /// The inverse inertia: a momentum to its rate.
-        pub type InverseInertia = Rate<(Momentum,), f64>;
+        pub type InverseInertia = Rate<(MomentumSlot,), f64>;
 
         /// The poles of the basis planes.
         pub fn basis() -> [P; DIM] {
             core::array::from_fn(|i| {
-                Point::from_coeffs(core::array::from_fn(|j| if i == j { 1.0 } else { 0.0 }))
+                P::from_coeffs(core::array::from_fn(|j| if i == j { 1.0 } else { 0.0 }))
             })
         }
 
@@ -90,7 +94,7 @@ macro_rules! engine {
 
             /// The primal form placed in the world.
             pub fn world(&self) -> Quadric {
-                self.motor >> self.c.of(self.motor << Point::slot())
+                self.motor >> self.c.of(self.motor << P::oriented_slot())
             }
         }
 
@@ -181,8 +185,8 @@ macro_rules! engine {
         }
 
         /// The symmetric form `P ∨ Q⁻¹(P)` of a dual quadric, on points.
-        pub fn form(q: DualQuadric) -> Scalar<(Point, Point), f64> {
-            Point::slot() & q.solve(Point::slot())
+        pub fn form(q: DualQuadric) -> Scalar<(PointSlot, PointSlot), f64> {
+            P::oriented_slot() & q.solve(P::oriented_slot())
         }
 
         /// A point uniform on the unit sphere of the span of orthonormal `axes`: normal draws on
@@ -248,7 +252,8 @@ macro_rules! engine {
         fn least(a: Quadric, b: Quadric, phi: f64) -> (f64, P) {
             let turned = gax_numga_examples::signal::phasor(phi);
             let blend = a + b.gp(turned.e01() / turned.e20());
-            let (values, points) = (Point::slot() & blend.of(Point::slot())).eigh();
+            let p = P::oriented_slot();
+            let (values, points) = (p & blend.of(p)).eigh();
             (values[0], points[0])
         }
 
@@ -300,7 +305,7 @@ macro_rules! engine {
             let relative = motors[i].inverse() * motors[j];
             let (m, deepest) = overlap(
                 bodies[i].c,
-                relative >> bodies[j].c.of(relative << Point::slot()),
+                relative >> bodies[j].c.of(relative << P::oriented_slot()),
                 12,
             );
             (m, deepest, relative)

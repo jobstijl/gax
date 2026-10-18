@@ -1,0 +1,7 @@
+error[E0599]: no method named `exp` found for struct `gax::pga3d::Line<(), {float}, Intrinsic>` in the current scope
+ --> tests/compile_fail/exp_intrinsic.rs:7:18
+  |
+7 |     let _ = axis.exp();
+  |                  ^^^ method not found in `gax::pga3d::Line<(), {float}, Intrinsic>`
+  |
+  = note: the method was found for `gax::pga3d::Line<(), T>`

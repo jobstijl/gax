@@ -75,10 +75,11 @@ pub type RateMap<G> = <G as Motions<f64>>::TwistMap;
 pub type Step<G> =
     fn(M<G>, R<G>, Inertia<G>, InertiaInv<G>, f64, &dyn Fn(M<G>, R<G>) -> F<G>) -> (M<G>, R<G>);
 
-/// The rigid bodies of space, in PGA3D: the algebra and its kinds by role. Rates and forques
-/// are both lines, and an inertia and its inverse both maps of lines.
+/// The rigid bodies of space, in PGA3D: the algebra and its kinds by role. Rates are
+/// extrinsic lines (a turn about an axis) and forques intrinsic ones (the joins of points with
+/// their velocities); an inertia maps the first to the second and its inverse back.
 pub mod rigid {
-    use gax::pga3d::{Line, Motor, Point};
+    use gax::pga3d::{Forque, Line, Motor, Point};
 
     /// The algebra.
     pub type G = gax::motions::Pga3d;
@@ -87,13 +88,13 @@ pub mod rigid {
     /// A rate, in the body frame.
     pub type R = Line<(), f64>;
     /// A forque.
-    pub type F = Line<(), f64>;
+    pub type F = Forque<(), f64>;
     /// A mass point.
     pub type P = Point<(), f64>;
     /// Rate to momentum.
-    pub type Inertia = Line<(Line,), f64>;
+    pub type Inertia = Forque<(Line,), f64>;
     /// Momentum to rate.
-    pub type InertiaInv = Line<(Line,), f64>;
+    pub type InertiaInv = Line<(Forque,), f64>;
 }
 
 /// The Lie-group steppers, for every algebra's [`Motions`].

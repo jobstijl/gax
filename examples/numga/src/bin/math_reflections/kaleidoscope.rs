@@ -32,7 +32,7 @@ pub fn mirrors(n: usize) -> [V; 2] {
 /// A point folded into the wedge of the mirrors.
 pub fn folded(mirrors: &[V; 2], point: V) -> V {
     let side = |m: V, p: V| (m | p).s();
-    fold(point, mirrors, ROUNDS, side, |m, p| -(m >> p)).0
+    fold(point, mirrors, ROUNDS, side, |m, p| m >> p).0
 }
 
 /// A bead tumbling round the kaleidoscope: where it starts (a radius and an angle), how many

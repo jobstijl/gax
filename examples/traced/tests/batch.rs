@@ -94,7 +94,11 @@ fn batch_forms_match_the_fused_kernels() {
                 between_points_fused_batch(&ps, &qs, &mut motors);
                 let want: Vec<Motor> = (0..n).map(|i| between_points_fused(ps[i], qs[i])).collect();
                 assert_close(&motors, &want, &format!("between_points n={n}"));
-                let cs: Vec<Line> = (0..n).map(|_| rng.line()).collect();
+                // `between_lines` takes joins, intrinsic lines (ADR-051).
+                let bs: Vec<Line<(), f32, gax::Intrinsic>> =
+                    bs.iter().map(|l| l.with_orientation()).collect();
+                let cs: Vec<Line<(), f32, gax::Intrinsic>> =
+                    (0..n).map(|_| rng.line().with_orientation()).collect();
                 between_lines_fused_batch(&bs, &cs, &mut motors);
                 let want: Vec<Motor> = (0..n).map(|i| between_lines_fused(bs[i], cs[i])).collect();
                 assert_close(&motors, &want, &format!("between_lines n={n}"));

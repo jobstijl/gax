@@ -5,16 +5,16 @@ use crate::girder::{D, DMap, Inertia, P, S, Shape, origin, work};
 use crate::lie::{self, Lie};
 use gax::field::{Field, SparseMap};
 use gax::motions::Pga2d;
-use gax::pga2d::{Direction, Line, Point, Scalar};
+use gax::pga2d::{Direction, Forque, Point, Scalar, Twist};
 
 /// A pose.
 pub type M = lie::M<Pga2d>;
-/// A rate in the body frame, or a twist: a point of the plane.
+/// A rate in the body frame, or a twist: an extrinsic point of the plane (a turn about it).
 pub type R = lie::R<Pga2d>;
 /// Forque to twist.
 pub type Mobility = lie::InertiaInv<Pga2d>;
 /// How a gap changes with a body's twist.
-pub type RigidCell = Direction<(Point,), f64>;
+pub type RigidCell = Direction<(Twist,), f64>;
 /// How a gap changes with a body's amplitude of one mode.
 pub type ModalCell = Direction<(Scalar,), f64>;
 
@@ -127,7 +127,7 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
     let motor = |c: usize, side: usize| bodies.motor[constraints.bodies[c][side]];
     let rigid = per_side(constraints, count, |c, side| {
         let anchor = constraints.local_anchor(bodies, c, side);
-        let motion = motor(c, side) >> anchor.commutator(Point::slot());
+        let motion = motor(c, side) >> anchor.commutator(Twist::oriented_slot());
         motion.cast::<Direction>() * SIDES[side]
     });
     let modal = (0..constraints.modes.len())
@@ -149,8 +149,8 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
 /// The forque a force exerts through a rigid coupling (the coupling's adjugate under the work
 /// pairing): the line whose pairing with any twist is the work the force does along the
 /// displacement that twist causes. A pairing solve.
-fn forque_of(cell: RigidCell) -> Line<(Direction,), f64> {
-    let pairing = Line::slot() & Point::slot();
+fn forque_of(cell: RigidCell) -> Forque<(Direction,), f64> {
+    let pairing = Forque::oriented_slot() & Twist::oriented_slot();
     pairing.solve(work().of_both(Direction::slot(), cell))
 }
 
@@ -236,7 +236,7 @@ fn times(a: &Field<S>, b: &Field<S>) -> Field<S> {
 /// compliance over the step squared.
 fn system(
     coupling: &Coupling,
-    forques: &SparseMap<Line<(Direction,), f64>>,
+    forques: &SparseMap<Forque<(Direction,), f64>>,
     loads: &[SparseMap<Scalar<(Direction,), f64>>],
     inverse: &SparseMap<Mobility>,
     mobility: &[Field<S>],

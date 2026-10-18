@@ -116,6 +116,8 @@ impl<K: FlatKind, const N: usize> Kind for Sites<K, N> {
     type Arr<X: Elem> = SiteArr<K, X, N>;
     type Mv<S: Slots, T: Coef> = SiteField<K, N, S, T>;
     type Scalar = K::Scalar;
+    type Orientation = K::Orientation;
+    const DEFAULT_INTRINSIC: bool = K::DEFAULT_INTRINSIC;
 
     #[inline(always)]
     fn arr_from_fn<X: Elem>(mut f: impl FnMut(usize) -> X) -> SiteArr<K, X, N> {
@@ -595,6 +597,8 @@ mod tests {
         type Arr<X: Elem> = [X; 3];
         type Mv<S: Slots, T: Coef> = Value<S, T>;
         type Scalar = Three;
+        type Orientation = crate::Extrinsic;
+        const DEFAULT_INTRINSIC: bool = false;
         fn arr_from_fn<X: Elem>(f: impl FnMut(usize) -> X) -> [X; 3] {
             core::array::from_fn(f)
         }

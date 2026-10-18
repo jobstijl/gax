@@ -4,7 +4,7 @@
 use crate::lie::Lie;
 use gax::field::{Field, SparseMap};
 use gax::motions::Pga2d;
-use gax::pga2d::{Direction, Line, Motor, Point, Scalar};
+use gax::pga2d::{Direction, Forque, Motor, Point, Scalar, Twist};
 
 pub type P = Point<(), f64>;
 /// A displacement, or a force (held as the direction it pulls in).
@@ -12,8 +12,8 @@ pub type D = Direction<(), f64>;
 pub type S = Scalar<(), f64>;
 /// A map on displacements: a bar's stiffness, a vertex's mass.
 pub type DMap = Direction<(Direction,), f64>;
-/// Rate to momentum: twist to forque.
-pub type Inertia = Line<(Point,), f64>;
+/// Rate to momentum: twist (an extrinsic point) to forque (an intrinsic line).
+pub type Inertia = Forque<(Twist,), f64>;
 
 /// The work a force does along a displacement: the force's polar, numga's force (a line through
 /// the origin, the undual of the direction it pulls in), joined with the displacement. On the

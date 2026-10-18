@@ -25,9 +25,10 @@ let p: Point = Point::xyz(1.0, 2.0, 3.0); // a point
 let open: Point<(Point,)> = Point::slot(); // a hole where a point goes: the identity map
 let q: Point = Point::xyz(0.0, 0.0, 5.0);
 
-let line_through_q_and_p: Line = q & p; // a value
-let lines_through_q: Line<(Point,)> = q & open; // a map: point -> the line through q and it
+let line_through_q_and_p = q & p; // a value: a line
+let lines_through_q = q & open; // a map: point -> the line through q and it
 assert_eq!(lines_through_q.of(p), line_through_q_and_p);
+let _: Line<(Point,), f32, gax::Intrinsic> = lines_through_q; // a join is intrinsic (§5)
 ```
 
 Read `Line<(Point,)>` as "a `Line` that is still waiting for a `Point`". Types with open slots are
@@ -116,12 +117,14 @@ Binding a smaller kind embeds it, and composing a smaller kind's slot into a lar
 the slot:
 
 ```rust
+use gax::Intrinsic;
 use gax::pga3d::{Flector, Line, Motor, Point, Rotor, Scalar};
 
-let act: Flector<(Motor,), f64> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
+// A point is intrinsic (§5), and so is its product with a motor.
+let act: Flector<(Motor,), f64, Intrinsic> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
 let r = Rotor::<(), f64>::from_coeffs([0.9, 0.1, 0.2, 0.3]);
 assert_eq!(act.of(r), act.of(r.cast::<Motor>())); // a rotor fills a motor slot
-let on_rotors: Flector<(Rotor,), f64> = act.of(Rotor::slot()); // the slot, narrowed
+let on_rotors: Flector<(Rotor,), f64, Intrinsic> = act.of(Rotor::slot()); // the slot, narrowed
 assert_eq!(on_rotors.of(r), act.of(r));
 let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5).into_inner();
 let (s, b): (Scalar<(), f64>, Line<(), f64>) = (m.grade::<0>(), m.grade::<2>());
@@ -141,7 +144,7 @@ the motor left open has two motor slots, and filling them gives the transformed 
 use gax::pga3d::{Flector, Motor, Point};
 
 let p: Point<(), f64> = Point::xyz(1.0, 0.0, 0.0);
-let open: Flector<(Motor, Motor), f64> = (Motor::slot() * p) * Motor::slot().reverse();
+let open: Flector<(Motor, Motor), f64, gax::Intrinsic> = (Motor::slot() * p) * Motor::slot().reverse();
 let m = Motor::<(), f64>::translation(0.0, 2.0, 0.0).into_inner();
 let moved = open.fill(m); // the same as m >> p, as a flector whose plane part is zero
 ```
@@ -186,6 +189,41 @@ uniformly. In PGA that cancels: shapes stay rigid. Still, renormalize now and th
 * the `check-units` feature asserts, in debug runs, that certified kernels only see units.
 
 See [numerics.md](numerics.md).
+
+**Orientation.** Every value and map carries one of two orientations as its last type
+parameter, `Extrinsic` or `Intrinsic` (ADR-051). An extrinsic element is oriented by the space
+around it: a plane by its positive side, a line by a turn about it. An intrinsic one is oriented
+within itself: a point by its weight, a line by a direction along it. Vectors and their products
+are extrinsic; PGA's points and directions are intrinsic, and so is a join of them. A product
+multiplies the orientations as signs (extrinsic `+`, intrinsic `−`), `&` flips the result once
+more, and `dual()` flips. So `p & q` is an intrinsic line, the meet of two planes an extrinsic one,
+and `Forque` names PGA's intrinsic line, the kind of a momentum, as `Twist` names the extrinsic
+one in PGA2D.
+
+A mirror reverses what surrounds an element and keeps what lies in it, and `>>` follows: an odd
+versor gives extrinsic and intrinsic elements opposite signs. With that, every versor commutes
+with every product, the join included, so a reflected momentum keeps its energy and a point keeps
+its side of a reflected plane, with no sign to write:
+
+```rust
+use gax::pga3d::{Plane, Point};
+
+let mirror = Plane::<(), f64>::new(1.0, 0.0, 0.0, -0.5);
+let water = Plane::new(0.0, 0.0, 1.0, 0.0);
+let (duck, peer) = (Point::xyz(2.0, 1.0, 1.0), Point::xyz(2.0, 3.0, 2.0));
+assert_eq!(mirror >> duck, Point::xyz(-1.0, 1.0, 1.0));
+assert_eq!((mirror >> water) & (mirror >> duck), water & duck); // still above the water
+assert_eq!((mirror >> duck) & (mirror >> peer), mirror >> (duck & peer));
+```
+
+The two orientations are different types: a twist and a momentum cannot be added, and a map on
+twists does not take a join. Where coefficients mean the other orientation, say so with
+`x.with_orientation::<Intrinsic>()`; a slot of either is `K::<(), T, O>::oriented_slot()`. A meet
+of joins (two joined lines in PGA2D) is an extrinsic point, its sign a handedness; where it is used
+as a place, `p.position()` is the intrinsic point of weight one there. A mirror's own orientation
+does not matter (it enters twice), so `wall.reflect(p)` takes a joined wall too. Exponentials,
+logarithms and square roots are of extrinsic elements only. Constructors (`new`, `slot`,
+`from_images`) make the kind's default orientation.
 
 **The motor between two elements.** Two planes make a rotation about the line where they meet
 (or a translation, if they are parallel), by twice the angle between them: the ratio `b / a` is
@@ -246,7 +284,10 @@ map once and apply it: for 1024 points that is about 25% faster, see
 
 Maps between kinds of the same size have `inverse`, `det`, `solve`, `svd` and, for maps from a kind
 to itself, `trace`. A map between kinds of different sizes has no `inverse`, and the compiler says
-so. Right-hand sides keep their slots: solving against a map returns a map.
+so. Right-hand sides keep their slots: solving against a map returns a map. The right-hand side
+has the map's output kind, orientation included (§5): an inertia, from twists to momenta, solves
+against a momentum, and a pairing `forques & twists` (an extrinsic scalar) against an extrinsic
+reading.
 
 Maps of any shape have their singular values: `svdvals` (descending) and `svd_thin`, which adds
 the right singular vectors (values of the input kind; those of zero singular values span the
@@ -314,7 +355,7 @@ use gax::pga3d::{Line, Point};
 
 // A dyad on points whose joins sum to a given line: the least-norm one is antisymmetric.
 let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
-let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
+let join: Line<(Point, Point), f64, gax::Intrinsic> = Point::slot() & Point::slot();
 let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
 assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
 ```
@@ -522,16 +563,12 @@ Every rule below is proved exactly for every standard algebra, on symbolic coeff
 * **Versors respect products, up to a known scale.** `(m >> a) * (m >> b)` equals
   `m >> (a * b)` times `‖m‖²` (the scalar part of `m ~m`). For a `Unit` versor that factor is 1.
   [law-factors.md](law-factors.md) has the factor for every versor and product.
-* **Reflections and the join.** Under an odd versor the join picks up the determinant: in
-  PGA3D (and every algebra of even dimension) `(m >> a) & (m >> b)` is `−(m >> (a & b))` for a
-  unit plane `m` (any unit odd versor). In PGA2D there is no sign. So in PGA3D, reflect a
-  quantity built with one join, such as a momentum `p & v`, a forque or an inertia's output, as
-  `−(m >> f)`, or rebuild it from the reflected parts. A plane too: `m >> plane` reverses its
-  orientation, so use `−(m >> plane)`. `Plane::reflect` keeps a point's weight positive, and
-  with both, the side test `plane & point` survives the mirror. This is Dorst's rule
-  (*Projective duality encodes complementary orientations in geometric algebras*, 2024, §6.3
-  and §8), checked in `tests/reflections.rs`. Poses in `Motions` and `Moments::moved` are unit
-  motors, so it never arises there.
+* **Versors respect every product, the join included.** The factor is `‖m‖²` for every versor
+  and product, because `>>` takes its sign from the orientation (§5): the join of reflected
+  points is the reflected join, a reflected momentum `p & v` keeps its energy, and the side test
+  `plane & point` survives a mirror. This is Dorst's rule (*Projective duality encodes
+  complementary orientations in geometric algebras*, 2024, §6.3 and §8), checked in
+  `tests/reflections.rs`.
 * **Moving a map** (its input and its output) by a versor is `(m >> f).of(m << K::slot())`,
   which is how you would move an inertia tensor with a body. For a `Unit` versor it satisfies
   `moved.of(m >> x) == m >> f.of(x)`.
@@ -596,8 +633,9 @@ use gax::Unit;
 let m2 = pga2d::Motor::<(), f64>::rotation(pga2d::Point::xy(1.0, 0.0), 0.5);
 let m3: Unit<pga3d::Motor<(), f64>> = m2.widen(); // a turn about the vertical line through (1, 0)
 let p = pga2d::Point::xy(0.0, 2.0);
-// Move, then convert; or convert, then move: the same vertical line.
-let a: pga3d::Line<(), f64> = (m2 >> p).into();
+// Move, then convert; or convert, then move: the same vertical line, a join (intrinsic) as the
+// point is.
+let a: pga3d::Line<(), f64, gax::Intrinsic> = (m2 >> p).into();
 let b = m3 >> pga3d::Line::from(p);
 assert!(a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-12));
 ```
@@ -635,7 +673,7 @@ meet with the ground, for points and lines alike:
 
 ```rust
 use gax::pga3d::{Line, Plane, Point};
-use gax::{Vee, Wedge};
+use gax::{Intrinsic, Vee, Wedge};
 
 fn shadow<X>(light: Point<(), f64>, ground: Plane<(), f64>, x: X)
     -> <<Point<(), f64> as Vee<X>>::Output as Wedge<Plane<(), f64>>>::Output
@@ -649,8 +687,9 @@ where
 let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
 let pole = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 5.0);
 let p: Point<(), f64> = shadow(light, ground, Point::xyz(1.0, 2.0, 5.0)); // a point's: a point
-let l: Line<(), f64> = shadow(light, ground, pole);                       // a line's: a line
-let on_lines: Line<(Line,), f64> = shadow(light, ground, Line::slot());   // and maps, still
+// The pole is a join, so intrinsic, and so is its shadow; the map takes intrinsic lines.
+let l: Line<(), f64, Intrinsic> = shadow(light, ground, pole);           // a line's: a line
+let on_lines = shadow(light, ground, Line::<(), f64, Intrinsic>::oriented_slot()); // and maps, still
 assert_eq!(on_lines.of(pole), l);
 assert_eq!(p.to_euclidean(), [2.0, 4.0, 0.0]);
 ```
@@ -687,7 +726,7 @@ fn energy<G: Motions<f64>>(points: &[G::Coords], rate: G::Twist) -> f64 {
     G::pair(inertia.of(rate), rate) * 0.5
 }
 
-let spin2 = gax::pga2d::Point::<(), f64>::new(0.0, 0.0, 1.0); // a turn about the origin
+let spin2 = gax::pga2d::Twist::<(), f64>::from_coeffs([0.0, 0.0, 1.0]); // a turn about the origin
 let spin3 = gax::pga3d::Line::<(), f64>::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0); // about z
 let e2 = energy::<Pga2d>(&[[1.0, 0.0], [0.0, 2.0]], spin2);
 let e3 = energy::<Pga3d>(&[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]], spin3);
@@ -742,16 +781,17 @@ dense form, `to_dense()`. Code written against `gax::SquareLinearMap` takes eith
 representation and uses the fast path where there is one (ADR-044):
 
 ```rust
-use gax::pga3d::{Line, PrincipalInertia};
+use gax::pga3d::{Forque, Line, PrincipalInertia};
 use gax::{LinearMap, SquareLinearMap};
 
-/// The twist a momentum gives the body, for any representation of its inertia.
-fn twist<I: SquareLinearMap<Kind = Line, Input = Line, Coef = f64>>(i: I, f: Line<(), f64>) -> Line<(), f64> {
+/// The twist a momentum gives the body, for any representation of its inertia: from momenta
+/// (intrinsic lines, `Forque`) to twists (extrinsic, `Line`).
+fn twist<I: SquareLinearMap<Kind = Forque, Input = Line, Coef = f64>>(i: I, f: Forque<(), f64>) -> Line<(), f64> {
     i.solve(f)
 }
 
 let body = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
-let f = Line::new(1.0, 0.0, -1.0, 0.5, 0.25, 2.0);
+let f = Forque::from_coeffs([1.0, 0.0, -1.0, 0.5, 0.25, 2.0]);
 let fast = twist(body, f); // four reciprocals and six products
 let dense = twist(body.to_dense(), f); // LU on the 6 × 6
 assert!((fast - dense).c.iter().all(|x| x.abs() < 1e-15));
@@ -915,6 +955,11 @@ themselves (`crates/gax-bench/tests/interop.rs`).
 * **Clippy and the operators.** `clippy::eq_op` reads `a | a` and `b ^ b` as bitwise operations
   on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.
+* **Orientation and inference.** `from_coeffs` and `zero` are generic over the orientation, so
+  without an annotation Rust may not know which one is meant: write
+  `Line::<(), f64>::from_coeffs(c)` (the default) or annotate the binding. A mismatch reads
+  ``expected `Line<…, Extrinsic>`, found `Line<…, Intrinsic>` ``: a join where a turn was
+  expected, see §5.
 * **Float literals.** Type parameter defaults do not drive inference in Rust. `Point::xyz(1.0, 2.0, 3.0)`
   alone is `f64` by the literal fallback; annotate (`let p: Point = …`) for the `f32` default.
 * **Floating point.** See [numerics.md](numerics.md) for the details:

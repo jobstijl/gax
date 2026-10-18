@@ -19,19 +19,20 @@ use gax_numga_examples::{
 
 mod conic {
     use super::*;
+    use gax::Intrinsic;
     use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
     /// A point of the sphere: the pole of a plane, on `e23`, `e31`, `e12`, the poles of the
     /// planes x, y and z. It is the dual of the vector of its coordinates, which `undual`
-    /// recovers.
-    pub type P = Bivector<(), f64>;
+    /// recovers, and so intrinsic (ADR-051).
+    pub type P = Bivector<(), f64, Intrinsic>;
     /// A plane through the origin: a great circle.
     pub type Plane = Vector<(), f64>;
     /// A polarity: a point to its polar plane.
-    pub type Polarity = Vector<(Bivector,), f64>;
+    pub type Polarity = Vector<(Bivector<(), f32, Intrinsic>,), f64>;
     /// A dual polarity: a plane to its pole.
-    pub type DualPolarity = Bivector<(Vector,), f64>;
+    pub type DualPolarity = Bivector<(Vector,), f64, Intrinsic>;
     pub type R = gax::Unit<gax::vga3d::Rotor<(), f64>>;
 
     /// The basis planes x, y and z.
@@ -46,19 +47,19 @@ mod conic {
     /// The polarity with the given eigenvalues on the basis planes: each plane paired with an
     /// open point, weighted.
     pub fn polarity(eigenvalues: [f64; 3]) -> Polarity {
-        let p = Bivector::slot();
+        let p = P::oriented_slot();
         let [a, b, c] = planes();
         (a & p) * a.gp(eigenvalues[0])
             + (b & p) * b.gp(eigenvalues[1])
             + (c & p) * c.gp(eigenvalues[2])
     }
 
-    /// The point at longitude `phi` and polar angle `theta`: the pole `e12` turned toward x by
-    /// the polar angle, then about z by the longitude.
+    /// The point at longitude `phi` and polar angle `theta`: the pole `e12` (the dual of z)
+    /// turned toward x by the polar angle, then about z by the longitude.
     pub fn sphere(phi: f64, theta: f64) -> P {
         let turn =
             Bivector::new(0.0, 0.0, -phi / 2.0).exp() * Bivector::new(0.0, -theta / 2.0, 0.0).exp();
-        turn >> Bivector::new(0.0, 0.0, 1.0)
+        turn >> Vector::new(0.0, 0.0, 1.0).dual()
     }
 
     /// The semi-axes of the cone's ellipse: the cone of a diagonal polarity with eigenvalues
@@ -101,9 +102,12 @@ mod conic {
     }
 
     /// The great circle of a plane, swept from a point on it by the rotation about the plane's
-    /// normal, its dual.
+    /// pole, its dual. The angle of a turn about a point is a sense of turning, intrinsic as
+    /// the pole is (numga's `Turn`, the scalar of flipped orientation), so their product is the
+    /// turn's generator, extrinsic.
     pub fn great_circle(plane: Plane, through: P, angle: f64) -> P {
-        plane.dual().gp(angle / 2.0).exp() >> through
+        let turn = gax::vga3d::Scalar::<(), f64>::new(angle / 2.0).with_orientation::<Intrinsic>();
+        (plane.dual() * turn).exp() >> through
     }
 
     /// The spherical distance between unit points: the angle of the turn between them.
@@ -129,7 +133,7 @@ mod conic {
     pub fn spherical_conic(n: usize) -> Conic {
         let eigenvalues = [1.0, 0.4, -0.8];
         let rotor = Bivector::new(0.15, 0.0, 0.25).exp();
-        let c = rotor >> polarity(eigenvalues).of(rotor << Bivector::slot());
+        let c = rotor >> polarity(eigenvalues).of(rotor << P::oriented_slot());
         let q = rotor >> polarity(eigenvalues).solve(rotor << Vector::slot());
         // The semi-axes as arcs, the semi-minor along x and the semi-major along y, and the focal
         // arc along the major axis.
@@ -360,14 +364,14 @@ fn main() {
 mod tests {
     use super::conic::*;
     use gax::ApproxEq;
-    use gax::vga3d::{Bivector, Vector};
+    use gax::vga3d::Vector;
 
     /// A point of the sphere is the dual of the vector of its coordinates.
     #[test]
     fn points_are_duals_of_their_coordinates() {
-        let p = Bivector::new(0.36, 0.48, 0.8);
+        let p: P = Vector::new(0.36, 0.48, 0.8).dual();
+        assert_eq!(p.c, [0.36, 0.48, 0.8]);
         assert_eq!(p.undual(), Vector::new(0.36, 0.48, 0.8));
-        assert_eq!(Vector::new(0.36, 0.48, 0.8).dual(), p);
     }
 
     /// The polarity maps each basis point to its polar basis plane, scaled by its eigenvalue.
@@ -379,7 +383,7 @@ mod tests {
             let mut e = [0.0; 3];
             e[i] = 1.0;
             for (j, plane) in planes().iter().enumerate() {
-                let g = (c.of(Bivector::<(), f64>::from_coeffs(e)) | *plane).s();
+                let g = (c.of(P::from_coeffs(e)) | *plane).s();
                 let want = if i == j { eigenvalues[i] } else { 0.0 };
                 assert!((g - want).abs() < 1e-14);
             }
@@ -388,7 +392,10 @@ mod tests {
 
     #[test]
     fn geodesics_and_great_circles_stay_on_the_sphere() {
-        let (a, b) = (Bivector::new(1.0, 0.0, 0.0), Bivector::new(0.0, 0.6, 0.8));
+        let (a, b) = (
+            Vector::new(1.0, 0.0, 0.0).dual(),
+            Vector::new(0.0, 0.6, 0.8).dual(),
+        );
         for k in 0..7 {
             let p = geodesic(a, b, k as f64 / 6.0);
             assert!((-(p | p).s() - 1.0).abs() < 1e-12);
@@ -440,7 +447,7 @@ mod tests {
         }
         // The rotor is numga's: it carries the pole e12 to the same place. (numga's exponential
         // is good to a few 1e-12, so these compare to 1e-10.)
-        let moved = conic.rotor >> Bivector::new(0.0, 0.0, 1.0);
+        let moved = conic.rotor >> Vector::new(0.0, 0.0, 1.0).dual();
         let numga = Vector::new(0.072898937662932, 0.283286671487454, 0.956260637399548);
         assert!(moved.undual().max_abs_diff(&numga) < 1e-10);
     }

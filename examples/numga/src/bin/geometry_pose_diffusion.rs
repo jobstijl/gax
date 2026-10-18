@@ -12,7 +12,7 @@
 //! settled one (dashed). The gusts hit the side much harder than the bow; turning spreads them
 //! over every direction.
 
-use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax::pga2d::{self, Forque, Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
 
 use gax_numga_examples::rng::{Draw, rng};
@@ -24,27 +24,32 @@ use std::sync::OnceLock;
 mod station {
     use super::*;
 
-    /// A position error: the small motion from the set point to the pose, a bivector.
-    pub type Twist = Point<(), f64>;
-    /// A line reads out a twist, `line & twist`.
-    pub type Readout = Line<(), f64>;
+    /// A position error: the small motion from the set point to the pose, a bivector, a turn
+    /// about a point (extrinsic).
+    pub type Twist = pga2d::Twist<(), f64>;
+    /// A line reads out a twist, `line & twist`: an intrinsic line, numga's `antibivector`.
+    pub type Readout = Forque<(), f64>;
     /// A measurement line to the correlated twist.
-    pub type Covariance = Point<(Line,), f64>;
+    pub type Covariance = pga2d::Twist<(Forque,), f64>;
     /// The rate of change of a position error.
-    pub type Dynamics = Point<(Point,), f64>;
+    pub type Dynamics = pga2d::Twist<(pga2d::Twist,), f64>;
     /// The same rate of change, acting on measurement lines.
-    pub type Readouts = Line<(Line,), f64>;
-    /// The covariance of two position measurements.
+    pub type Readouts = Forque<(Forque,), f64>;
+    /// The covariance of two position measurements, by lines that read a position (extrinsic:
+    /// their pairing with the moved point matches the twist readouts' with the twist).
     pub type Spread = Scalar<(Line, Line), f64>;
     /// White noise to a gust's push on the vessel.
-    pub type Kicks = Point<(Line,), f64>;
+    pub type Kicks = pga2d::Twist<(Forque,), f64>;
+    /// A position.
+    pub type P = Point<(), f64>;
     pub type M = Unit<Motor<(), f64>>;
 
     /// The controller gain, per second.
     pub const RELAXATION: f64 = 0.6;
 
-    /// The set point; in PGA2D a point is a bivector, like a twist.
-    pub fn origin() -> Twist {
+    /// The set point; in PGA2D a point is a bivector, like a twist, but intrinsic: a position,
+    /// where a twist turns about it.
+    pub fn origin() -> P {
         Point::xy(0.0, 0.0)
     }
 
@@ -52,13 +57,13 @@ mod station {
     /// `Point` coefficients in order. A `yw` twist slides the set point along `y`, sideways; a
     /// `wx` twist along `x`, along the bow; `xy` turns it.
     pub fn yw(a: f64) -> Twist {
-        Point::new(a, 0.0, 0.0)
+        Twist::from_coeffs([a, 0.0, 0.0])
     }
     pub fn wx(a: f64) -> Twist {
-        Point::new(0.0, a, 0.0)
+        Twist::from_coeffs([0.0, a, 0.0])
     }
     pub fn xy(a: f64) -> Twist {
-        Point::new(0.0, 0.0, a)
+        Twist::from_coeffs([0.0, 0.0, a])
     }
 
     /// The turning rate of each scene: still, and turning at two radians per second.
@@ -70,7 +75,7 @@ mod station {
     /// the commutator with the turning rate; the controller removes the relaxation's share of
     /// the error per second.
     pub fn drift(rate: Twist, relaxation: f64) -> Dynamics {
-        let t = Point::slot();
+        let t = Twist::oriented_slot();
         t.commutator(rate) - t.gp(relaxation)
     }
 
@@ -78,7 +83,8 @@ mod station {
     /// reading the error itself with `on_readouts(l)`. Solved from the incidence pairing against
     /// `Line & dynamics`; in matrix notation, the transpose.
     pub fn on_readouts(dynamics: Dynamics) -> Readouts {
-        (Line::slot() & Point::slot()).solve(Line::slot() & dynamics)
+        (Readout::oriented_slot() & Twist::oriented_slot())
+            .solve(Readout::oriented_slot() & dynamics)
     }
 
     /// The rate of change of the covariance: the dynamics on its twists, on its lines, and the
@@ -90,9 +96,9 @@ mod station {
     /// The basis lines.
     pub fn basis() -> [Readout; 3] {
         [
-            Line::new(1.0, 0.0, 0.0),
-            Line::new(0.0, 1.0, 0.0),
-            Line::new(0.0, 0.0, 1.0),
+            Readout::from_coeffs([1.0, 0.0, 0.0]),
+            Readout::from_coeffs([0.0, 1.0, 0.0]),
+            Readout::from_coeffs([0.0, 0.0, 1.0]),
         ]
     }
 
@@ -101,14 +107,14 @@ mod station {
     pub fn covariance(kicks: Kicks) -> Covariance {
         basis()
             .iter()
-            .map(|b| kicks.of(*b) * (kicks.of(*b) & Line::slot()))
+            .map(|b| kicks.of(*b) * (kicks.of(*b) & Readout::oriented_slot()))
             .sum()
     }
 
     /// The map from white noise to gust twists, from the standard deviations per square root of
     /// a second of the sideways, forward and turning gusts, in the body frame.
     pub fn shaping(sideways: f64, forward: f64, turning: f64) -> Kicks {
-        let l = Line::slot();
+        let l = Readout::oriented_slot();
         yw(sideways) * (yw(1.0) & l) + wx(forward) * (wx(1.0) & l) + xy(turning) * (xy(1.0) & l)
     }
 
@@ -142,11 +148,11 @@ mod station {
     /// dyad coefficients `x` with `lyapunov.of_pair(x) = −noise`, put back together by the map
     /// that builds the dyads.
     pub fn settled(dynamics: Dynamics, noise: Covariance) -> Covariance {
-        let t = Point::slot();
+        let (t, l) = (Twist::oriented_slot(), Readout::oriented_slot());
         // Twist <- (Twist, Twist, Line): the dynamics applied to t, and applied to s.
-        let lyapunov = dynamics.of(t) * (t & Line::slot()) + t * (dynamics.of(t) & Line::slot());
-        let x: Point<(Point,), f64> = lyapunov.lstsq_pair(-noise);
-        let dyads = Point::slot() * (Point::slot() & Line::slot());
+        let lyapunov = dynamics.of(t) * (t & l) + t * (dynamics.of(t) & l);
+        let x: Dynamics = lyapunov.lstsq_pair(-noise);
+        let dyads = t * (t & l);
         dyads.of_pair(x)
     }
 
@@ -155,8 +161,9 @@ mod station {
     /// another line, solved from the incidence pairing. Pairing two such readings through the
     /// covariance gives a symmetric form on lines, whose eigenpairs are the ellipse's axes.
     pub fn position_spread(covariance: Covariance) -> Spread {
-        let shift = Point::slot().commutator(origin());
-        let readout = (Line::slot() & Point::slot()).solve(Line::slot() & shift);
+        let shift = Twist::oriented_slot().commutator(origin());
+        let readout =
+            (Readout::oriented_slot() & Twist::oriented_slot()).solve(Line::slot() & shift);
         readout & covariance.of(readout)
     }
 
@@ -165,7 +172,7 @@ mod station {
     /// through the origin (VGA2D's vectors), where the line metric is the Euclidean one; its
     /// eigenpairs are the ellipse's axes. The ring is the unit circle, turned out step by step,
     /// through the map that stretches each axis to twice its deviation: a sum of dyads.
-    pub fn ellipse(spread: Spread, n: usize) -> Vec<Point<(), f64>> {
+    pub fn ellipse(spread: Spread, n: usize) -> Vec<P> {
         let through: Line<(vga2d::Vector,), f64> = Line::from(vga2d::Vector::slot());
         let (variances, axes) = spread.of(through).at::<1>().of(through).eigh();
         gax_numga_examples::plot::ellipse(origin(), variances, axes, n)
@@ -199,8 +206,8 @@ mod station {
         let (dynamics, noise) = (drift(rate, RELAXATION), covariance(kicks));
         let limit = settled(dynamics, noise);
         let mut rng = rng(seed);
-        let mut errors = vec![Point::zero(); bodies];
-        let mut predicted = Point::zero();
+        let mut errors = vec![Twist::zero(); bodies];
+        let mut predicted = Covariance::zero();
         let (mut snapshots, mut covariances) = (Vec::new(), Vec::new());
         // A kick over a step grows with the root of its duration, as a random walk's.
         #[allow(clippy::disallowed_methods)] // a random walk's deviation, not geometry
@@ -211,7 +218,8 @@ mod station {
                 covariances.push(predicted);
             }
             for e in &mut errors {
-                let white = Line::new(rng.normal(), rng.normal(), rng.normal()).gp(root);
+                let white = Readout::from_coeffs([rng.normal(), rng.normal(), rng.normal()]);
+                let white = white.gp(root);
                 *e = step_error(dynamics, *e, kicks.of(white), dt);
             }
             predicted = step_covariance(dynamics, noise, predicted, dt);
@@ -227,7 +235,10 @@ mod station {
 
     /// The sample covariance of the bodies' errors.
     pub fn empirical(errors: &[Twist]) -> Covariance {
-        let sum: Covariance = errors.iter().map(|e| *e * (*e & Line::slot())).sum();
+        let sum: Covariance = errors
+            .iter()
+            .map(|e| *e * (*e & Readout::oriented_slot()))
+            .sum();
         sum.gp(1.0 / errors.len() as f64)
     }
 }
@@ -277,7 +288,7 @@ fn draw(c: &mut Canvas, t: f32) {
         // and a point a little ahead of it, moved by the vessel's pose. The swarm is one
         // stroke, so where the vessels crowd it does not burn white.
         let ahead = Point::xy(0.08 * f64::from(EXTENT), 0.0);
-        let dashes: Vec<[Twist; 2]> = run.errors[index]
+        let dashes: Vec<[P; 2]> = run.errors[index]
             .iter()
             .map(|error| {
                 let pose = pose(*error);
@@ -325,7 +336,6 @@ fn main() {
 mod tests {
     use super::station::*;
     use gax::ApproxEq;
-    use gax::pga2d::Line;
 
     /// The largest coefficient of a covariance.
     fn max_abs(c: Covariance) -> f64 {
@@ -387,7 +397,7 @@ mod tests {
             let ring = ellipse(spread, 720);
             for k in 0..12 {
                 let turn = gax::pga2d::Motor::rotation(origin(), 0.5 * k as f64);
-                let line = turn >> Line::new(1.0, 0.0, 0.0);
+                let line = turn >> gax::pga2d::Line::new(1.0, 0.0, 0.0);
                 let reach = ring
                     .iter()
                     .fold(0.0f64, |m, p| m.max((line & *p).s().abs()));

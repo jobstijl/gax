@@ -9,7 +9,7 @@
 
 use gax::Unit;
 use gax::motions::{Motions, Pga3d};
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::pga3d::{Forque, Line, Motor, Plane, Point};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
@@ -20,7 +20,10 @@ use std::sync::OnceLock;
 mod arm {
     use super::*;
 
+    /// A joint axis, configuration or rate: a line to turn about, a meet of planes.
     pub type L = Line<(), f64>;
+    /// A force line: the join of a point with a weighted direction.
+    pub type F = Forque<(), f64>;
     pub type P = Point<(), f64>;
     pub type M = Unit<Motor<(), f64>>;
 
@@ -34,9 +37,9 @@ mod arm {
         let mut frames = [pose; 3];
         for (frame, joint) in frames.iter_mut().zip(joints) {
             *frame = pose;
-            // numga writes `exp(joint / 2)`; gax's join orients the axis lines the other way
-            // (the pseudoscalar's orientation, ADR-009), so the same right-handed turn is
-            // `exp(-joint / 2)`, as in `Motor::rotation`.
+            // numga writes `exp(joint / 2)` about its axes `y ^ x`, ...; gax's motors are
+            // `exp(-joint / 2)`, as in `Motor::rotation`, so the same right-handed turn is
+            // about the opposite axes, `x ^ y`, ... (see `arm`).
             pose = pose * joint.gp(-0.5).exp();
         }
         (pose, frames)
@@ -49,7 +52,7 @@ mod arm {
         axis: &[L; 3],
         rates: &[L; 3],
         tip_home: P,
-        forque: L,
+        forque: F,
     ) -> (P, [f64; 3]) {
         let (pose, frames) = forward_kinematics(joints);
         let tip = pose >> tip_home;
@@ -94,15 +97,12 @@ mod arm {
     /// The joint axes in the home pose (a yaw about `z` at the base, then two pitch joints about
     /// `y`), the tip in the home pose, and a rest configuration (axes times angles).
     pub fn arm() -> ([L; 3], P, [L; 3]) {
-        let origin = Point::xyz(0.0, 0.0, 0.0);
-        let elbow = Point::xyz(0.0, 0.0, 1.0);
-        let wrist = Point::xyz(0.0, 0.0, 2.0);
-        // Each axis is a line: the join of a point with a direction.
-        let axis = [
-            origin & Point::direction(0.0, 0.0, 1.0),
-            elbow & Point::direction(0.0, 1.0, 0.0),
-            wrist & Point::direction(0.0, 1.0, 0.0),
-        ];
+        // Each axis is a line to turn about: the meet of two planes, ordered for a right-handed
+        // turn under `exp(-joint / 2)` (numga's `y ^ x` and `x ^ (z - w)` under `exp(joint / 2)`).
+        // The pitch axes meet the planes `z = 1` and `z = 2`, through the elbow and the wrist.
+        let [x, y] = [Plane::new(1.0, 0.0, 0.0, 0.0), Plane::new(0.0, 1.0, 0.0, 0.0)];
+        let height = |h: f64| Plane::new(0.0, 0.0, 1.0, -h);
+        let axis = [x ^ y, height(1.0) ^ x, height(2.0) ^ x];
         let tip_home = Point::xyz(0.0, 0.0, 3.0);
         let rest = [axis[0].gp(0.3), axis[1].gp(0.5), axis[2].gp(0.8)];
         (axis, tip_home, rest)
@@ -367,9 +367,9 @@ mod tests {
     #[test]
     fn statics_and_homing() {
         let (_, torques) = statics();
-        // numga's values are `[-2.0, -2.1374, -1.1393]`: the joins of the axes and of the
-        // forque each flip with the pseudoscalar's orientation, and their pairing once more, so
-        // gax's torques are the negatives (and right-handed: the force's moment about +z is +2).
+        // numga's values are `[-2.0, -2.1374, -1.1393]`: its axes are the opposites of gax's
+        // (numga turns by `exp(joint / 2)`, gax by `exp(-joint / 2)`), so gax's torques are the
+        // negatives (and right-handed: the force's moment about +z is +2).
         let expected = [-2.0, -2.1374, -1.1393];
         for (a, b) in torques.iter().zip(expected) {
             assert!((a + b).abs() < 0.01, "{torques:?}");

@@ -125,7 +125,7 @@ fn jacobian_of_a_join() {
     let (v, j) = jacobian_array(
         |x: [Dual<f64, 3>; 3]| {
             let c = Dual::constant;
-            let p: Plane<(), Dual<f64, 3>> = Point::xyz(x[0], c(0.0), c(0.0))
+            let p: Plane<(), Dual<f64, 3>, gax::Intrinsic> = Point::xyz(x[0], c(0.0), c(0.0))
                 & Point::xyz(c(0.0), x[1], c(0.0))
                 & Point::xyz(c(0.0), c(0.0), x[2]);
             let n = (p.e1() * p.e1() + p.e2() * p.e2() + p.e3() * p.e3()).sqrt();

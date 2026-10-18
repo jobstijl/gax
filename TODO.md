@@ -191,11 +191,13 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 
 ## Phase 11: orientation types (ADR-051)
 - [x] Research: numga upstream `7dff347` (`docs/why_orientation.md`, `docs/orientation.md`, the four orientation notebooks), Dorst 2024, the Discord thread (Hamish Todd: CGA wedges of points reflect by the twisted sandwich); decision recorded in ADR-051
-- [ ] gax-core: the markers `Extrinsic`, `Intrinsic`, the `Orientation` trait (product, flip, sign), `with_orientation`
-- [ ] gax-gen: an orientation parameter on every kind with the spec's default (`intrinsic` keyword); products, unary operations, casts, kind tables, sandwiches (the odd-versor sign), batch, GPU conversions, tracer; regenerate
-- [ ] The library migrated: `Motions` (`Forque` intrinsic), `reflect` without hand-written signs, moments, calculus, simplex, mesh, dec; tests, examples, warp, asteroids
-- [ ] Laws: every versor law factor `‖m‖²`, the dual commuting with reflections, the issues' examples, compile-fail refusals; guide §10 and the docs
-- [ ] The numga ports synced to upstream `7dff347`, with its four orientation examples ported
+- [x] gax-core: the markers `Extrinsic`, `Intrinsic`, the `Orientation` trait (product, flip, sign), `Reorient`, `Kind::Orientation` and `Kind::DEFAULT_INTRINSIC`
+- [x] gax-gen: an orientation parameter on every kind with the spec's default (`intrinsic` keyword, also on aliases); products, unary operations, casts, kind tables, sandwiches (the odd-versor sign), batch, GPU conversions, tracer (the orientation printed where it is not the default); regenerated
+- [x] The library migrated: `Motions` (`Forque` intrinsic), `reflect` without hand-written signs (and for mirrors of either orientation), `Point::position()`; tests, examples, warp, asteroids, colour
+- [x] Laws: every versor law factor `‖m‖²` (derived with the oriented sandwich), the Hodge dual commuting with reflections, the issues' examples, compile-fail refusals (twist + momentum, `exp` of a join, a join into a twist slot); guide §5 and §10, laws.md, ADR-051 implemented
+- [x] The numga ports migrated to orientations (105 bins; reflections re-checked against upstream `7dff347`)
+- [ ] Ergonomics found in the migration: a short spelling for a slot kind of the other orientation (`Line<(Line<(), f32, Intrinsic>,), …>`); orientation arithmetic that reduces for generic `O` (`Times<Times<O, E>, E>` is `O`); an intrinsic line-direction helper; a PGA2D extrinsic line through a point along a direction; a VGA3D rotation about an axis of either orientation
+- [ ] The numga ports synced to upstream `7dff347` (its newer content), with its four orientation examples ported (normals, mechanical work, mirror energy, conformal circle)
 
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.

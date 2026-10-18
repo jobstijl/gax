@@ -23,9 +23,13 @@ pub fn segment_hits_circle(
     crate::kernels::segment_distance(a, b, c) <= r
 }
 
+/// A wall, the join of two corners: an intrinsic line, oriented along it (ADR-051), so that
+/// `>>` reflects in it and its side test survives a mirror.
+pub type Wall = Line<(), f32, gax::Intrinsic>;
+
 /// The walls of the box `[-hw, hw] x [-hh, hh]`, counterclockwise and normalized: each has
 /// the inside on its positive side, so `(wall & p).s()` is the signed distance inwards.
-pub fn walls(hw: f32, hh: f32) -> [Line<(), f32>; 4] {
+pub fn walls(hw: f32, hh: f32) -> [Wall; 4] {
     let c = [
         Point::xy(-hw, -hh),
         Point::xy(hw, -hh),
@@ -38,7 +42,7 @@ pub fn walls(hw: f32, hh: f32) -> [Line<(), f32>; 4] {
 /// The wall that a path from `from` to `to` (unit points) crossed out of the arena, `margin` in
 /// from its edge: of the walls `to` is outside of, the one met first along the path (at a
 /// corner, the one it really crossed). A path that starts outside a wall crossed it first.
-pub fn outside(from: Point<(), f32>, to: Point<(), f32>, margin: f32) -> Option<Line<(), f32>> {
+pub fn outside(from: Point<(), f32>, to: Point<(), f32>, margin: f32) -> Option<Wall> {
     walls(ARENA[0] - margin, ARENA[1] - margin)
         .into_iter()
         .filter_map(|w| {
@@ -53,7 +57,7 @@ pub fn outside(from: Point<(), f32>, to: Point<(), f32>, margin: f32) -> Option<
 
 /// The shield line of a body at `pose`: through its centre along its local y axis, across its
 /// heading.
-pub fn shield(pose: Pose) -> Line<(), f32> {
+pub fn shield(pose: Pose) -> Wall {
     (pose >> crate::geom::ORIGIN) & (pose >> Point::xy(0.0, 1.0))
 }
 

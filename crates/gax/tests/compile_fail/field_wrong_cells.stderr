@@ -2,23 +2,24 @@ error[E0277]: a `gax::pga3d::Line` does not fit a slot of kind `gax::pga3d::Poin
  --> tests/compile_fail/field_wrong_cells.rs:9:25
   |
 9 |     let _ = cells.apply(&lines);
-  |                   ----- ^^^^^^ some blade of `gax::pga3d::Line` is not a blade of `gax::pga3d::Point`
+  |                   ----- ^^^^^^ not a blade of `gax::pga3d::Point`, or not of its orientation
   |                   |
   |                   required by a bound introduced by this call
   |
   = help: the trait `SubKind<gax::pga3d::Point>` is not implemented for `gax::pga3d::Line`
   = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::Point>()` if dropping blades is intended
-help: `gax::pga3d::Line` implements trait `SubKind<K>`
+  = note: and of the slot's orientation (ADR-051): a join of points is intrinsic, a meet of planes extrinsic. Take a slot of the value's orientation (`Kind::<(), T, gax::Intrinsic>::oriented_slot()`), or declare the coefficients' orientation with `.with_orientation()` if they mean the other
+help: `gax::pga3d::Line<(), f32, O>` implements trait `SubKind<K>`
  --> src/algebras/pga3d/kinds.rs
   |
-  | impl gx::SubKind<Line> for Line {}
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Line>`
+  | impl<O: gx::Orientation> gx::SubKind<Line<(), f32, O>> for Line<(), f32, O> {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Line<(), f32, O>>`
 ...
-      | impl gx::SubKind<Motor> for Line {}
-      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Motor>`
+      | impl<O: gx::Orientation> gx::SubKind<Motor<(), f32, O>> for Line<(), f32, O> {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Motor<(), f32, O>>`
 ...
-      | impl gx::SubKind<Multivector> for Line {}
-      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector>`
+      | impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Line<(), f32, O> {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector<(), f32, O>>`
       = note: required for `gax::pga3d::Point<(gax::pga3d::Point,), f64>` to implement `Of<gax::pga3d::Line<(), f64>>`
 note: required by a bound in `SparseMap::<C>::apply`
  --> $WORKSPACE/crates/gax-core/src/field/sparse.rs

@@ -63,9 +63,10 @@ fn normal_equations() {
 /// least-norm solution is antisymmetric, and the default cutoff drops the kernel cleanly.
 #[test]
 fn least_norm_on_a_kernel() {
-    let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
+    let join: Line<(Point, Point), f64, gax::Intrinsic> = Point::slot() & Point::slot();
     let mut rng = rng(0x0bad_cafe);
     for _ in 0..20 {
+        // A line to reach by joins: intrinsic (ADR-051).
         let l = Line::<(), f64>::new(
             rng.next_f64(),
             rng.next_f64(),
@@ -73,7 +74,8 @@ fn least_norm_on_a_kernel() {
             rng.next_f64(),
             rng.next_f64(),
             rng.next_f64(),
-        );
+        )
+        .with_orientation::<gax::Intrinsic>();
         let x = join.lstsq_pair(l);
         let back = join.of_pair(x);
         assert!(back.approx_eq(&l, 1e-12));

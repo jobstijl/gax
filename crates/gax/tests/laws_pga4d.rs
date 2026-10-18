@@ -13,7 +13,7 @@ algebra pga4d "Plane-based PGA of 4D Euclidean space, R(4,0,1).";
 basis e0 = 0, e1 = 1, e2 = 1, e3 = 1, e4 = 1;
 kind Hyperplane = [e1, e2, e3, e4, e0];
 kind Bivector = [e12, e13, e14, e23, e24, e34, e01, e02, e03, e04];
-kind Point = [e0234, e0134, e0124, e0123, e1234];
+kind Point = [e0234, e0134, e0124, e0123, e1234] intrinsic;
 versor Motor = [1, e12, e13, e14, e23, e24, e34, e01, e02, e03, e04,
     e1234, e0123, e0124, e0134, e0234];
 }

@@ -1916,7 +1916,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   built from these pieces.
 
 ## ADR-051: Orientation types: intrinsic and extrinsic
-*Status: proposed (2026-10-18). Phase 11.*
+*Status: implemented (2026-10-18). Phase 11.*
 
 * **The problem.** gax's `>>` is the plain sandwich `v x ~v`. It commutes with the geometric,
   outer and inner products, but under an odd versor (a reflection) not with the join:
@@ -1985,11 +1985,16 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   * Batch kernels (`Soa<K, E>`): `K` includes `O`, and the sandwich kernels apply the sign.
   * GPU layouts and WGSL modules carry no orientation: the conversions accept either, and the WGSL
     odd-versor sandwiches stay the plain sandwich, documented, with the CPU's `>>` the reference.
-  * The tracer prints `O` where it is not the kind's default.
+  * The tracer prints `O` where it is not the kind's default (`Kind::DEFAULT_INTRINSIC` says
+    which that is): `Line<(), T, ::gax::Intrinsic>` in a fused kernel's signature, bare `Line`
+    otherwise, so traced code for default orientations reads as before.
 * **Laws.**
   * Every versor law factor becomes `‖m‖²` for every product, `&` included: the `−‖m‖²` entries of
     law-factors.md disappear, proved on symbolic coefficients as now.
-  * `m >> a.dual() == (m >> a).dual()` for odd and even versors in the non-degenerate algebras.
+  * `m >> a.hodge() == (m >> a).hodge()` for odd and even versors in the non-degenerate algebras
+    (`tests/reflections.rs`). The metric-free `dual()` commutes too where it equals the Hodge
+    dual up to sign, in an orthonormal Euclidean basis; in CGA's null basis it does not, as it
+    is not a metric operation.
   * The issues' examples: a reflected momentum keeps its kinetic energy, a mirrored duck stays on
     its side of the water, with no signs written by hand.
   * Compile-fail tests for each refusal.

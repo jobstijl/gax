@@ -78,6 +78,31 @@ fn sandwich(spec: &AlgebraSpec, v: &SymMv, x: &SymMv) -> SymMv {
     )
 }
 
+/// The library's `v >> x` (ADR-051): the plain sandwich, and for an odd versor each blade of grade
+/// `k` times `(−1)ᵏ` for an extrinsic `x` and `−(−1)ᵏ` for an intrinsic one.
+fn oriented(spec: &AlgebraSpec, vk: &KindSpec, intrinsic: bool, v: &SymMv, x: &SymMv) -> SymMv {
+    let mut y = sandwich(spec, v, x);
+    if vk
+        .layout
+        .blades
+        .iter()
+        .all(|(m, _)| m.count_ones() % 2 == 1)
+    {
+        for (m, p) in &mut y {
+            if (m.count_ones() % 2 == 1) != intrinsic {
+                *p = p.scale(-Rational::ONE);
+            }
+        }
+    }
+    y
+}
+
+/// Whether the product `op` of operands of the given orientations is intrinsic: the product of
+/// their signs, flipped once more for the regressive product.
+fn product_intrinsic(op: BinOp, a: bool, b: bool) -> bool {
+    (a != b) != (op == BinOp::Vee)
+}
+
 /// A versor's norm `N` and the Gröbner basis of its conditions.
 type Conditions = (Poly, Vec<Poly>);
 
@@ -148,7 +173,7 @@ fn signed_permutation_pairing(spec: &AlgebraSpec, op: BinOp, a: &KindSpec, b: &K
     (0..n).all(|i| ok(&mut m[i].iter().copied())) && (0..n).all(|j| ok(&mut m.iter().map(|r| r[j])))
 }
 
-/// The determinant of `x -> b x ~b` on kind `x` for a basis blade `b` of the versor kind with
+/// The determinant of `x -> b >> x` (oriented) on kind `x` for a basis blade `b` of the versor kind with
 /// `b ~b = 1`: the value the determinant of every unit versor of that kind's parity takes.
 fn unit_det_sign(spec: &AlgebraSpec, v: &KindSpec, x: &KindSpec) -> Option<i64> {
     let alg = &spec.algebra;
@@ -168,7 +193,13 @@ fn unit_det_sign(spec: &AlgebraSpec, v: &KindSpec, x: &KindSpec) -> Option<i64> 
     for i in 0..n {
         let mut e = vec![Poly::zero(); n];
         e[i] = Poly::constant(Rational::ONE);
-        let img = sandwich(spec, &bs, &symbolic::from_coeffs(&x.layout, &e));
+        let img = oriented(
+            spec,
+            v,
+            x.intrinsic,
+            &bs,
+            &symbolic::from_coeffs(&x.layout, &e),
+        );
         let c = symbolic::to_coeffs(&x.layout, &img)?;
         for (o, p) in c.iter().enumerate() {
             m[o][i] = p.as_constant().unwrap_or(Rational::ZERO);
@@ -317,10 +348,11 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
         let lhs = symbolic::binop(
             alg,
             *op,
-            &sandwich(spec, &vs, &av),
-            &sandwich(spec, &vs, &bv),
+            &oriented(spec, vk, ak.intrinsic, &vs, &av),
+            &oriented(spec, vk, bk.intrinsic, &vs, &bv),
         );
-        let rhs = sandwich(spec, &vs, &symbolic::binop(alg, *op, &av, &bv));
+        let ab = product_intrinsic(*op, ak.intrinsic, bk.intrinsic);
+        let rhs = oriented(spec, vk, ab, &vs, &symbolic::binop(alg, *op, &av, &bv));
         Equivariance {
             versor: v.name.clone(),
             op: *op,

@@ -212,10 +212,9 @@ mod pga2d_vga3d {
         fn pga2d_small_angles_and_boundaries(
             la in -12.0f64..0.0, x in -1.0f64..1.0, y in -1.0f64..1.0, which in 0usize..5,
         ) {
-            use gax::pga2d::Point;
             let a = if which == 4 { 10f64.powf(la) } else { [1e-4f64, 0.25, 1e-6, 0.04][which].sqrt() };
-            // The PGA2D bivector is a point; its e12 part is the rotation.
-            let b = Point::<(), f64>::from_coeffs([x, y, a]);
+            // The PGA2D bivector is a twist (an extrinsic point); its e12 part is the rotation.
+            let b = gax::pga2d::Twist::<(), f64>::from_coeffs([x, y, a]);
             let (e, s) = diff(&b.exp().log(), &b);
             prop_assert!(e <= 16.0 * EPS * s);
             let half = b.gp(0.5).exp().into_inner();

@@ -146,8 +146,8 @@ impl<S: Space> Colour<S> {
 
     // The cylindrical geometry: hue, chroma and lightness about the grey axis.
 
-    /// The grey axis, black to white, at unit length.
-    fn axis() -> Line {
+    /// The grey axis, black to white, at unit length: a join, so intrinsic (ADR-051).
+    fn axis() -> Line<(), f32, gax::Intrinsic> {
         let l = S::black() & S::white();
         l * l.norm().recip()
     }
@@ -220,7 +220,8 @@ impl<S: Space> Colour<S> {
     /// angle times the axis, signed by the way it turns. A grey has hue 0.
     pub fn hue(self) -> f32 {
         let axis = Self::axis();
-        let unit = |p: Plane| p * p.norm().recip();
+        // The half-planes are joins, so intrinsic; their product, a turn, is extrinsic.
+        let unit = |p: Plane<(), f32, gax::Intrinsic>| p * p.norm().recip();
         let (zero, here) = (axis & S::hue_zero(), axis & self.unit());
         if here.norm() < 1e-9 {
             return 0.0;

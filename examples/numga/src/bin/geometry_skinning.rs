@@ -51,7 +51,7 @@ mod skinning {
     }
 
     /// The bone axis, the x axis: the join of the origin and a point along x.
-    pub fn bone_axis() -> Line<(), f64> {
+    pub fn bone_axis() -> Line<(), f64, gax::Intrinsic> {
         Point::xyz(0.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 0.0)
     }
 

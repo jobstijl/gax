@@ -36,7 +36,7 @@ where
     }
 }
 
-/// `v x ~v` against the oracle; with `unit`, `v` is first normalized to `v ~v = 1`.
+/// `v >> x` against the oracle's oriented `v x ~v`; with `unit`, `v` is first normalized to `v ~v = 1`.
 fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R, prepared: impl Fn(V, X) -> R)
 where
     V: Extensor<Slots = (), Coef = f64>,
@@ -51,8 +51,7 @@ where
             v = u;
         }
         tested += 1;
-        let (dv, dx) = (o.dense(&v), o.dense(&x));
-        let want = o.binop(BinOp::Gp, &o.binop(BinOp::Gp, &dv, &dx), &o.unop(UnOp::Reverse, &dv));
+        let want = o.sandwich(&v, &x);
         assert_close(&o.dense(&f(v, x)), &want, &format!("sandwich {} {}", std::any::type_name::<V>(), std::any::type_name::<X>()));
         assert_close(&o.dense(&prepared(v, x)), &want, &format!("prepared {} {}", std::any::type_name::<V>(), std::any::type_name::<X>()));
     }
@@ -1257,9 +1256,9 @@ fn value_methods() {
     common::normalized::<Vector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::inverse::<Twist<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Twist<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
-    common::exp_log::<Twist<(), f64>, Motor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
+    common::exp_log::<Twist<(), f64, gax::Extrinsic>, Motor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
     common::inverse::<Bivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::exp_log::<Bivector<(), f64>, Even<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
+    common::exp_log::<Bivector<(), f64, gax::Extrinsic>, Even<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
     common::inverse::<Trivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Quadvector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Quintvector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
@@ -1268,7 +1267,7 @@ fn value_methods() {
     common::normalized::<Pseudoscalar<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::inverse::<Motor<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Motor<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
-    common::sqrt::<Motor<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
+    common::sqrt::<Motor<(), f64, gax::Extrinsic>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
     common::inverse::<Even<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Odd<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Multivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());

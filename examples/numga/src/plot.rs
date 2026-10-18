@@ -259,7 +259,7 @@ impl Axes {
         let (up, right) = (Point2::direction(0.0, -1.0), Point2::direction(1.0, 0.0));
         // A tick's foot: where the line through its pixel, across the edge, meets the edge.
         let foot_on = |edge: [Point2; 2], along: Point2| {
-            move |px: Point2| ((px & (px + along)) ^ (edge[0] & edge[1])).unitized()
+            move |px: Point2| ((px & (px + along)) ^ (edge[0] & edge[1])).position()
         };
         let bottom = foot_on([r.bottom_left(), r.hi], up);
         let left = foot_on([r.lo, r.bottom_left()], right);

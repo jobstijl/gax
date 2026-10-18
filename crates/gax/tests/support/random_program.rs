@@ -5,7 +5,9 @@
 //! lines and motors. It is generic over the coefficients, so the same bytes run as `Sym` (to
 //! be traced) and as `f64` (the reference). Every operation is one gax offers: sandwiches,
 //! products, joins and meets, `exp`, `log`, `Motor::between`, normalization, unitizing and a
-//! branch-free select.
+//! branch-free select. The line registers hold twists and joins alike, so joins (intrinsic)
+//! and meets of planes with them are relabelled to the registers' orientation (ADR-051): the
+//! programs test the tracer, not the geometry.
 
 use gax::pga3d::{Line, Motor, Point};
 use gax::{Log, Real};
@@ -22,7 +24,7 @@ pub fn run<T: Real>(
     l: Line<(), T>,
 ) -> Point<(), T> {
     let mut ps = [p, q];
-    let mut ls = [l, (p & q)];
+    let mut ls = [l, (p & q).with_orientation()];
     let mut ms = [m, m.reverse()];
     for c in ops.as_chunks::<3>().0 {
         let (i, j) = (usize::from(c[1] % 2), usize::from(c[2] % 2));
@@ -30,9 +32,9 @@ pub fn run<T: Real>(
             0 => ps[i] = ms[j] >> ps[i],
             1 => ls[i] = ms[j] >> ls[i],
             2 => ms[i] = ms[i] * ms[j],
-            3 => ls[i] = ps[i] & ps[1 - i],
+            3 => ls[i] = (ps[i] & ps[1 - i]).with_orientation(),
             // A plane through a point and a line, met with the other line.
-            4 => ps[i] = (ps[i] & ls[j]) ^ ls[1 - j],
+            4 => ps[i] = ((ps[i] & ls[j]) ^ ls[1 - j]).with_orientation(),
             5 => ms[i] = ls[j].gp(T::from_f64(0.25)).exp().into_inner(),
             6 => ms[i] = Motor::between(ps[i], ps[1 - i]).into_inner(),
             7 => ps[i] = ps[i].unitized(),

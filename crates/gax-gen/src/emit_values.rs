@@ -260,6 +260,9 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     let norm = symbolic::binop(alg, BinOp::Gp, &x, &rev);
     let xvar = |v: Var| format!("x[{v}]");
     let mut body = String::new();
+    // `exp`, the `log` hint and `sqrt` exist for extrinsic values only (ADR-051): a force has
+    // no exponential.
+    let mut body_ext = String::new();
     let mut traits = String::new();
 
     // norm_squared / norm: the scalar part of x ~x.
@@ -372,7 +375,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 let on = &out_kind.name;
                 meta.exp = Some(on.clone());
                 let _ = write!(
-                    body,
+                    body_ext,
                     "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B` with `B²` a Study number.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
                     outs.join(", ")
                 );
@@ -382,20 +385,20 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
 
     // exp in 5D: B² = λ + Q with a 4-vector Q (several blades) whose square is a scalar.
     if all_grade2 && meta.exp.is_none() {
-        meta.exp = emit_exp_general(spec, k, &x, &mut body, &mut meta.kernels);
+        meta.exp = emit_exp_general(spec, k, &x, &mut body_ext, &mut meta.kernels);
     }
     // exp in closed form from 6D to 9D (three or four invariant planes, docs/log6d.md §12).
     if all_grade2 && meta.exp.is_none() {
-        meta.exp = emit_exp_closed(spec, k, &mut body, &mut meta.kernels);
+        meta.exp = emit_exp_closed(spec, k, &mut body_ext, &mut meta.kernels);
     }
     // exp in any dimension: scaling and squaring in the product closure.
     if all_grade2 && meta.exp.is_none() {
-        meta.exp = emit_exp_fallback(spec, k, &mut body);
+        meta.exp = emit_exp_fallback(spec, k, &mut body_ext);
     }
 
     // exp of a scalar plus one blade whose square is a constant (STA's pseudoscalar, a phasor).
     if meta.exp.is_none() && !all_grade2 {
-        emit_exp_single_blade(spec, k, &mut body);
+        emit_exp_single_blade(spec, k, &mut body_ext);
     }
 
     // log: for unit versors whose parts are a Study number and a bivector.
@@ -410,8 +413,8 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     // named `log`" into `LogNeedsUnit`'s message, which says how to get a `Unit`.
     if let Some(on) = &meta.log {
         let _ = write!(
-            body,
-            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.normalized().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T>\n    where\n        Self: gx::LogNeedsUnit<{on}<(), T>>,\n    {{\n        gx::LogNeedsUnit::log(self)\n    }}\n\n"
+            body_ext,
+            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.normalized().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T, gx::Extrinsic>\n    where\n        Self: gx::LogNeedsUnit<{on}<(), T, gx::Extrinsic>>,\n    {{\n        gx::LogNeedsUnit::log(self)\n    }}\n\n"
         );
     }
 
@@ -420,7 +423,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if let (Some((si, ss)), true) = (scalar_idx, meta.normalized) {
         meta.sqrt = true;
         let _ = write!(
-            body,
+            body_ext,
             "    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).\n    #[inline(always)]\n    pub fn sqrt(self) -> gx::Unit<Self> {{\n        let mut c = self.c;\n        c[{si}] = c[{si}] {} T::one();\n        {name}::from_coeffs(c).normalized()\n    }}\n\n",
             if ss > 0 { "+" } else { "-" }
         );
@@ -428,7 +431,16 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
 
     let mut out = String::new();
     if !body.is_empty() {
-        let _ = write!(out, "impl<T: gx::Real> {name}<(), T> {{\n{body}}}\n\n");
+        let _ = write!(
+            out,
+            "impl<T: gx::Real, O: gx::Orientation> {name}<(), T, O> {{\n{body}}}\n\n"
+        );
+    }
+    if !body_ext.is_empty() {
+        let _ = write!(
+            out,
+            "impl<T: gx::Real> {name}<(), T, gx::Extrinsic> {{\n{body_ext}}}\n\n"
+        );
     }
     out.push_str(&traits);
     (out, meta)
@@ -487,7 +499,7 @@ fn emit_inverse_by(
     let on = &out_kind.name;
     let _ = write!(
         body,
-        "    /// The inverse under the geometric product, `~x (x ~x)⁻¹` ({}).\n    #[inline(always)]\n    pub fn inverse(self) -> {on}<(), T> {{\n        let x = self.c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n\n",
+        "    /// The inverse under the geometric product, `~x (x ~x)⁻¹` ({}).\n    #[inline(always)]\n    pub fn inverse(self) -> {on}<(), T, O> {{\n        let x = self.c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n\n",
         prog.cost(),
         outs.join(", ")
     );
@@ -577,7 +589,7 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
     };
     let _ = write!(
         body,
-        "    /// The inverse under the geometric product, by Shirokov's method in `{en}` (no closed form\n    /// for `{name}` here): the inverse as a polynomial of degree {d} whose coefficients come\n    /// from the scalar parts of powers (the Faddeev–LeVerrier recursion on left multiplication,\n    /// {d} products in `{en}`), {what} (docs/design.md, ADR-037). `x` is scaled to its largest\n    /// coefficient first. Not finite where `x` has no inverse.\n    #[inline]\n    pub fn inverse(self) -> {en}<(), T>\n    where\n        T: Real,\n    {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut size = T::zero();\n        for c in self.c {{\n            size = size.max(c.abs());\n        }}\n        let scale = size.recip();\n        let mut x = {en}::<(), T>::zero();\n{embed}{body_of}        // U₁ = a, Cₖ = (N/k) ⟨Uₖ⟩₀, Uₖ₊₁ = a (Uₖ − Cₖ); then a⁻¹ = (U_{{N−1}} − C_{{N−1}}) / C_N.\n        let mut prev = a;\n        let c = {get}a.c[{one}] * T::from_i64({n});\n        prev.c[{one}] = prev.c[{one}] {put} c;\n        for k in 2..{n}i64 {{\n            let u = a * prev;\n            let c = {get}u.c[{one}] * T::from_ratio({n}, k);\n            prev = u;\n            prev.c[{one}] = prev.c[{one}] {put} c;\n        }}\n        let det = {get}(a * prev).c[{one}];\n        let mut y = prev.gp(det.recip());\n{neumann}        // Newton–Schulz, y ← y (2 − x y), squares the residual: the recursion loses digits as\n        // its degree grows (to 10⁻⁴ at degree 32), and the step(s) restore them.\n        for _ in 0..{steps} {{\n            let mut t = -(x * y);\n            t.c[{one}] = t.c[{one}] {two};\n            y = y * t;\n        }}\n        y.gp(scale)\n        }})\n    }}\n\n",
+        "    /// The inverse under the geometric product, by Shirokov's method in `{en}` (no closed form\n    /// for `{name}` here): the inverse as a polynomial of degree {d} whose coefficients come\n    /// from the scalar parts of powers (the Faddeev–LeVerrier recursion on left multiplication,\n    /// {d} products in `{en}`), {what} (docs/design.md, ADR-037). `x` is scaled to its largest\n    /// coefficient first. Not finite where `x` has no inverse.\n    #[inline]\n    pub fn inverse(self) -> {en}<(), T, O>\n    where\n        T: Real,\n    {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut size = T::zero();\n        for c in self.c {{\n            size = size.max(c.abs());\n        }}\n        let scale = size.recip();\n        let mut x = {en}::<(), T>::zero();\n{embed}{body_of}        // U₁ = a, Cₖ = (N/k) ⟨Uₖ⟩₀, Uₖ₊₁ = a (Uₖ − Cₖ); then a⁻¹ = (U_{{N−1}} − C_{{N−1}}) / C_N.\n        let mut prev = a;\n        let c = {get}a.c[{one}] * T::from_i64({n});\n        prev.c[{one}] = prev.c[{one}] {put} c;\n        for k in 2..{n}i64 {{\n            let u = a * prev;\n            let c = {get}u.c[{one}] * T::from_ratio({n}, k);\n            prev = u;\n            prev.c[{one}] = prev.c[{one}] {put} c;\n        }}\n        let det = {get}(a * prev).c[{one}];\n        let mut y = prev.gp(det.recip());\n{neumann}        // Newton–Schulz, y ← y (2 − x y), squares the residual: the recursion loses digits as\n        // its degree grows (to 10⁻⁴ at degree 32), and the step(s) restore them.\n        for _ in 0..{steps} {{\n            let mut t = -(x * y);\n            t.c[{one}] = t.c[{one}] {two};\n            y = y * t;\n        }}\n        y.gp(scale).with_orientation()\n        }})\n    }}\n\n",
         d = degree - 1,
         n = degree,
     );
@@ -808,7 +820,7 @@ fn emit_newton_step(
     let name = &k.name;
     let _ = write!(
         traits,
-        "impl<T: gx::Coef> gx::NewtonStep for {name}<(), T> {{\n    /// `(3 − x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
+        "impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for {name}<(), T, O> {{\n    /// `(3 − x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
         outs.join(", ")
     );
 }
@@ -922,7 +934,7 @@ fn emit_log(
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
-        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
+        "impl<T: gx::Real> gx::Log<{on}<(), T, gx::Extrinsic>> for gx::Unit<{name}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
         outs.join(", ")
     );
     Some(on.clone())
@@ -1060,7 +1072,7 @@ fn emit_log_general(
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
-        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
+        "impl<T: gx::Real> gx::Log<{on}<(), T, gx::Extrinsic>> for gx::Unit<{name}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
         outs.join(", ")
     );
     Some(on.clone())
@@ -1133,7 +1145,7 @@ fn emit_log_fallback(
         })
         .collect();
     let head = format!(
-        "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T> {{"
+        "impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{"
     );
     let start = "self.into_inner()";
     let _ = write!(
@@ -1399,7 +1411,7 @@ fn emit_log_6d(
     }}
 }}
 
-impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
+impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{
     /// The logarithm of a unit versor, in closed form through the invariant decomposition
     /// (docs/log6d.md): `u_j = cosh²(μ_j)` of the three commuting planes are the roots of a
     /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
@@ -1412,7 +1424,7 @@ impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
     /// principal logarithm: rotations below a half turn in each invariant plane where
     /// `⟨R⟩₀ > 0`, boosts and dilations of any size.
     #[inline]
-    fn log(self) -> {bn}<(), T> {{
+    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{
         T::vectorize(#[inline(always)] move || {{
         let x = self.into_inner();
         let ([r0, p1, p2, p3], [g1, g2, g3]) = x.log_invariants();
@@ -1529,7 +1541,7 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     }}
 }}
 
-impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
+impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{
     /// The logarithm of a unit versor, in closed form through the invariant decomposition
     /// (docs/log6d.md §9): `u_j = cosh²(μ_j)` of the four commuting planes are the roots of a
     /// quartic in the scalar parts of `R`'s grade parts squared, and `log R` is
@@ -1541,7 +1553,7 @@ impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
     /// bivectors and `E = ∏(−b̂)`. The principal logarithm: rotations below a half turn in each
     /// invariant plane where `⟨R⟩₀ > 0`, boosts and dilations of any size.
     #[inline]
-    fn log(self) -> {bn}<(), T> {{
+    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{
         T::vectorize(#[inline(always)] move || {{
         let x = self.into_inner();
         let ([r0, p1, p2, p3, p4], g) = x.log_invariants();

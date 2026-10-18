@@ -15,9 +15,10 @@
 //! circulation is the one that lets the flow leave the wing's sharp trailing edge smoothly, the
 //! Kutta condition, `4 π (stream ^ edge)`.
 //!
-//! The Joukowski map, `p + (critical >> p⁻¹)`, adds to each point its inverse reflected in the
-//! critical direction. Its Jacobian `1 - (critical p⁻¹) >> ·` turns and scales every step,
-//! keeping angles, except at the two critical points, where it vanishes. The cylinder through
+//! The Joukowski map, `p + (critical.dual() >> p⁻¹)`, adds to each point its inverse reflected
+//! in the line along the critical direction, the mirror whose normal is its dual. Its Jacobian
+//! `1 - (critical p⁻¹) >> ·` turns and scales every step, keeping angles, except at the two
+//! critical points, where it vanishes. The cylinder through
 //! the critical point, the trailing edge, becomes the wing, its smooth edge folded there into a
 //! cusp. The potential and the stream function keep their values at a point's image, so the
 //! potential's gradient map composed with the inverse of the Jacobian is the wing's, and its
@@ -130,9 +131,10 @@ mod wing {
         (velocity, gradient, flux)
     }
 
-    /// Where the map with the given critical point sends a point.
+    /// Where the map with the given critical point sends a point: its inverse reflected in the
+    /// mirror along the critical direction, whose normal is the critical direction's dual.
     pub fn joukowski(critical: V, point: V) -> V {
-        point + (critical >> point.inverse())
+        point + (critical.dual() >> point.inverse())
     }
 
     /// The principal square root of an even element, as the complex number it is (`e12² = -1`).
@@ -407,7 +409,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::plane::turn;
     use super::wing::*;
+    use core::f64::consts::TAU;
 
     /// The rings and angles numga's checks sample, and how far out the rings reach.
     const RINGS: usize = 140;
@@ -429,12 +433,13 @@ mod tests {
     }
 
     /// The pressure on a closed surface, half the density times the squared speed along the
-    /// inward normal (each step turned a quarter turn), summed by the trapezoidal rule.
+    /// inward normal (each step turned a quarter turn back), summed by the trapezoidal rule.
     fn pressure_force(surface: &[Flow]) -> V {
+        let back = turn(-TAU / 4.0);
         steps(surface)
             .map(|(here, next)| {
                 let squared = here.velocity.norm_squared() + next.velocity.norm_squared();
-                -(next.point - here.point).dual() * (0.5 * DENSITY * squared / 2.0)
+                (back >> (next.point - here.point)) * (0.5 * DENSITY * squared / 2.0)
             })
             .sum()
     }

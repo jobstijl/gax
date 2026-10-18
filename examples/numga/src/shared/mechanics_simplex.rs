@@ -16,13 +16,13 @@
 use core::iter::Sum;
 use core::ops::{Div, Mul};
 use gax::motions::{Motions, Pga3d};
-use gax::pga3d::{Line, Point};
+use gax::pga3d::{Forque, Line, Point};
 use gax_numga_examples::rng::{Draw, Rng};
 
 /// A point of space.
 pub type P = Point<(), f64>;
-/// Rate to momentum.
-pub type Inertia = Line<(Line,), f64>;
+/// Rate to momentum: twists (extrinsic lines) to forques (intrinsic ones).
+pub type Inertia = Forque<(Line,), f64>;
 
 /// The barycentric weights mapping a uniform simplex to its equivalent lumped masses:
 /// `(1/n + (I - 1/n) sqrt(1 / (1 + n))) / n`, one row per lumped point.

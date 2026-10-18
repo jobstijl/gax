@@ -158,8 +158,16 @@ fn outermorphism(
         .collect();
     let (vn, bn) = (&v.name, &b.name);
     let how = if wedge { "∧" } else { "∨" };
+    // The orientation of `k` factors of orientation `O` (ADR-051): their wedge `O^k`; their
+    // join flips once per `&`, `O^k (−1)^(k−1)`. `B`'s own orientation in the trait is ignored,
+    // as a cast's is: `t.outermorphism::<Point>()` names the kind.
+    let oo = match (wedge, k % 2 == 0) {
+        (true, true) => "gx::Extrinsic",
+        (false, true) => "gx::Intrinsic",
+        (_, false) => "O",
+    };
     let code = format!(
-        "impl<T: gx::Coef> gx::Outermorphism<{bn}> for {vn}<({vn},), T> {{\n    type Output = {bn}<({bn},), T>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> {bn}<({bn},), T> {{\n        let t = self.c;\n{lets}        {bn} {{ c: [{}] }}\n    }}\n}}\n\n",
+        "impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<{bn}<(), f32, X>> for {vn}<({vn}<(), f32, O>,), T, O> {{\n    type Output = {bn}<({bn}<(), f32, {oo}>,), T, {oo}>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> Self::Output {{\n        let t = self.c;\n{lets}        {bn} {{ o: core::marker::PhantomData, c: [{}] }}\n    }}\n}}\n\n",
         rows.join(", ")
     );
     Some((code, (vn.clone(), bn.clone(), k == n)))

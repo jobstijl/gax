@@ -317,13 +317,13 @@ fn kind_impl(
     let (an, bn) = (&a.name, &b.name);
     let widen = if keeps_unit {
         format!(
-            "    impl<T: Coef> crate::Widen<crate::{tm}::{bn}<(), T>> for crate::{sm}::{an}<(), T> {{}}\n\n"
+            "    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::{tm}::{bn}<(), T, O>> for crate::{sm}::{an}<(), T, O> {{}}\n\n"
         )
     } else {
         String::new()
     };
     let code = format!(
-        "    impl<S: Slots, T: Coef> From<crate::{sm}::{an}<S, T>> for crate::{tm}::{bn}<S, T> {{\n        /// The image under the homomorphism from `{sm}` to `{tm}`.\n        #[inline(always)]\n        fn from(x: crate::{sm}::{an}<S, T>) -> Self {{\n            let a = x.c.map(SlotArr::<S, T>);\n            crate::{tm}::{bn}::from_coeffs([{}])\n        }}\n    }}\n\n",
+        "    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::{sm}::{an}<S, T, O>> for crate::{tm}::{bn}<S, T, O> {{\n        /// The image under the homomorphism from `{sm}` to `{tm}`, of the same orientation: a\n        /// homomorphism keeps products, and so the orientations they give (ADR-051).\n        #[inline(always)]\n        fn from(x: crate::{sm}::{an}<S, T, O>) -> Self {{\n            let a = x.c.map(SlotArr::<S, T>);\n            crate::{tm}::{bn}::from_coeffs([{}])\n        }}\n    }}\n\n",
         exprs.join(", ")
     ) + &widen;
     Some((code, bn.clone()))

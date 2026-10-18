@@ -39,7 +39,7 @@ mod spin {
     pub use super::surfaces_sphere::icosphere;
     pub use super::surfaces_spin::cube;
     use gax::field::{Field, SparseMap};
-    use gax::vga3d::{Odd, Rotor};
+    use gax::vga3d::{Odd, Pseudoscalar, Rotor};
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 
     /// A quaternion: an even multivector, a turn and a scale.
@@ -47,15 +47,19 @@ mod spin {
     /// A map on quaternions: the cells of the energy and of the area metric.
     pub type QuaternionMap = Rotor<(Rotor,), f64>;
 
+    /// The unit volume `e123`, the oriented volume no motion changes: an oriented volume read
+    /// against it is its signed size.
+    pub const UNIT_VOLUME: Pseudoscalar<(), f64> = Pseudoscalar::new(1.0);
+
     /// The Dirac operator less `ρ` (a number on each face), `[F, V]` with odd cells: each face
     /// takes each corner by the edge it faces over minus twice its area, less `ρ` times the
-    /// pseudoscalar of the mean of its corners. `ρ`'s pseudoscalar is its dual, gax's metric-free
-    /// one, which agrees with numga's Hodge dual where every basis vector squares to `+1`.
+    /// pseudoscalar of the mean of its corners: `ρ` times the unit volume.
     pub fn dirac_less(mesh: &Mesh, rho: &Field<Scalar3>) -> SparseMap<Odd<(), f64>> {
         let inverse_areas = mesh.triangle_areas().map(|a| a.inverse());
         let corners = mesh.at_corners(&mesh.triangle_edges());
         let dirac = &SparseMap::from_diagonal(&inverse_areas) * &corners;
-        let curvature = &SparseMap::from_diagonal(&rho.map(|r| r.dual())) * &mesh.face_means();
+        let curvature =
+            &SparseMap::from_diagonal(&rho.map(|r| r * UNIT_VOLUME)) * &mesh.face_means();
         &dirac.map_cells(|e| (e * -0.5).cast::<Odd>())
             + &curvature.map_cells(|p| (-p).cast::<Odd>())
     }
@@ -125,10 +129,13 @@ mod spin {
 
     /// The pointwise signed mean curvature on each face. The cotangent Laplacian of the
     /// positions is the area-integrated mean curvature normal, `L x = 2 A H n` at each vertex;
-    /// divided by twice the vertex area it is the pointwise `H`, averaged onto the faces.
+    /// its signed size is its volume with the vertex's plane (the normal's dual), read against
+    /// the unit volume. Divided by twice the vertex area it is the pointwise `H`, averaged onto
+    /// the faces.
     pub fn mean_curvature(mesh: &Mesh) -> Field<Scalar3> {
         let normal_curvature = &mesh.laplacian() * &mesh.vertices;
-        let integrated = normal_curvature.zip_with(&mesh.vertex_normals(), |h, n| h | n);
+        let integrated =
+            normal_curvature.zip_with(&mesh.vertex_normals(), |h, n| (h ^ n.dual()) / UNIT_VOLUME);
         let pointwise = integrated.zip_with(&mesh.vertex_areas(), |h, a| h * (0.5 / a.s()));
         &mesh.face_means() * &pointwise
     }

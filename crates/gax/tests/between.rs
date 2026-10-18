@@ -28,8 +28,9 @@ fn plane() -> impl Strategy<Value = Plane<(), f64>> {
         })
         .prop_map(Plane::from_coeffs)
 }
-/// A line through two points apart: a simple bivector, with any scale.
-fn line() -> impl Strategy<Value = Line<(), f64>> {
+/// A line through two points apart: a simple bivector, with any scale, intrinsic as a join
+/// (ADR-051).
+fn line() -> impl Strategy<Value = Line<(), f64, gax::Intrinsic>> {
     (point(), point())
         .prop_filter("apart", |(p, q)| {
             let (a, b) = (p.to_euclidean(), q.to_euclidean());
@@ -80,7 +81,7 @@ proptest! {
 
     #[test]
     fn between_in_the_plane(a in prop::array::uniform3(-1.0f64..1.0), b in prop::array::uniform3(-1.0f64..1.0)) {
-        let (a, b) = (pga2d::Line::from_coeffs(a), pga2d::Line::from_coeffs(b));
+        let (a, b) = (pga2d::Line::<(), f64>::from_coeffs(a), pga2d::Line::<(), f64>::from_coeffs(b));
         prop_assume!(a.e1().hypot(a.e2()) > 0.3 && b.e1().hypot(b.e2()) > 0.3);
         prop_assume!((b / a).normalized().s() > -0.9);
         let m = pga2d::Motor::between(a, b);
@@ -94,7 +95,7 @@ proptest! {
     #[test]
     fn division_undoes_the_product(a in line(), b in plane(), p in point()) {
         prop_assert!(((a * b) / b).approx_eq(&Motor::from(a), 1e-9));
-        let pb: Motor<(), f64> = p * b; // grades 2 and 4
+        let pb: Motor<(), f64, gax::Intrinsic> = p * b; // grades 2 and 4
         prop_assert!((pb / b).approx_eq(&gax::pga3d::Flector::from(p), 1e-9));
         let map: Motor<(Plane,), f64> = Plane::slot() / b;
         prop_assert!(map.of(b).approx_eq(&Motor::from(gax::pga3d::Scalar::new(1.0)), 1e-12));

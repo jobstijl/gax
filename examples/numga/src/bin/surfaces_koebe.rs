@@ -55,13 +55,16 @@ use surfaces_hull::{beside, camera, drawn, facing, ghost, near_side};
 mod koebe {
     use super::sphere::{Rotor, Scalar, Vector};
     use gax::field::{Field, SparseMap};
-    use gax::vga3d;
+    use gax::{Intrinsic, Orientation, vga3d};
     use gax_numga_examples::mesh::Vector3;
     use gax_numga_examples::signal::phasor;
 
     /// A circle on the sphere, a point of the sphere (null), or a point of space at unit weight
     /// along `w`: a vector of the algebra.
     pub type Circle = Vector<(), f64>;
+    /// A face's circle, orthogonal to its vertices' circles: the dual of their wedge, so
+    /// intrinsic where theirs are extrinsic.
+    pub type FaceCircle = Vector<(), f64, Intrinsic>;
     /// A boost or a turn: a rotor of the algebra.
     pub type Boost = Rotor<(), f64>;
     /// A linear form on circles, `c | Vector::slot()`: a row of the Jacobian.
@@ -76,7 +79,7 @@ mod koebe {
     }
 
     /// The spatial part of a point at unit weight along `w`: where it lies in space.
-    pub fn spatial(c: Circle) -> Vector3 {
+    pub fn spatial<O: Orientation>(c: Vector<(), f64, O>) -> Vector3 {
         Vector3::new(c.ex(), c.ey(), c.ez()) * (1.0 / c.ew())
     }
 
@@ -96,7 +99,7 @@ mod koebe {
 
     /// The circle of each face, through the points where its vertices' circles touch:
     /// orthogonal to all three, the Hodge dual of their wedge.
-    pub fn face_circles(circles: &Field<Circle>, faces: &[[usize; 3]]) -> Field<Circle> {
+    pub fn face_circles(circles: &Field<Circle>, faces: &[[usize; 3]]) -> Field<FaceCircle> {
         let circle =
             |&[a, b, c]: &[usize; 3]| (circles.site(a) ^ circles.site(b) ^ circles.site(c)).hodge();
         faces.iter().map(circle).collect()
@@ -104,7 +107,9 @@ mod koebe {
 
     /// The apex of the cone touching the sphere along each circle, as a point at unit weight
     /// along `w`.
-    pub fn apexes(circles: &Field<Circle>) -> Field<Circle> {
+    pub fn apexes<O: Orientation>(
+        circles: &Field<Vector<(), f64, O>>,
+    ) -> Field<Vector<(), f64, O>> {
         circles.map(|c| c * (-1.0 / (c | W).s()))
     }
 
@@ -329,7 +334,8 @@ fn polyhedra(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
         .collect();
     let corners = apexes(circles);
     let duals = apexes(&face_circles(circles, &s.mesh.faces));
-    let at = |points: &Field<Circle>, v: usize| drawn(spatial(points.site(v)));
+    let (corners, duals) = (corners.map(spatial), duals.map(spatial));
+    let at = |points: &Field<Vector3>, v: usize| drawn(points.site(v));
     panel3(c, rect, cam, |scene: &mut Scene3| {
         for (e, &[a, b]) in s.mesh.edges.iter().enumerate().filter(|(e, _)| near[*e]) {
             scene.seg(at(&corners, a), at(&corners, b), EDGE_WIDTH, primal());
@@ -344,7 +350,7 @@ fn polyhedra(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
 /// Points around a circle on the unit sphere: the plane `n · x = s` of the circle `n + s w`
 /// (squaring to one) cuts the sphere at the height `s / |n|` along `n`, in a circle of radius
 /// `1 / |n|`.
-fn circle_points(circle: Circle) -> Vec<Vector3> {
+fn circle_points<O: gax::Orientation>(circle: sphere::Vector<(), f64, O>) -> Vec<Vector3> {
     let n = Vector3::new(circle.ex(), circle.ey(), circle.ez());
     let (length, axis) = (n.norm(), n.normalized().into_inner());
     let centre = axis * (circle.ew() / length);
@@ -356,7 +362,8 @@ fn circle_points(circle: Circle) -> Vec<Vector3> {
         Vector3::new(0.0, 1.0, 0.0)
     };
     let across = ((axis ^ away) | axis).normalized().into_inner();
-    let other = (axis ^ across).dual();
+    // The third direction, across both: their plane times the unit volume.
+    let other = (across ^ axis) * gax::vga3d::Pseudoscalar::new(1.0);
     (0..=CIRCLE_SAMPLES)
         .map(|k| {
             let turn = phasor(core::f64::consts::TAU * k as f64 / CIRCLE_SAMPLES as f64);
@@ -373,12 +380,11 @@ fn pattern(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
     let toward = facing(&cam);
     let duals = face_circles(circles, &s.mesh.faces);
     panel3(c, rect, cam, |scene: &mut Scene3| {
-        for (field, light) in [(circles, primal()), (&duals, dual())] {
-            for circle in field.iter() {
-                let shown = circle_points(circle).into_iter();
-                let stroke: Vec<Point3> = shown.map(|p| near_side(p, toward)).collect();
-                scene.polyline(&stroke, CIRCLE_WIDTH, light);
-            }
+        let primals = circles.iter().map(|c| (circle_points(c), primal()));
+        let rings = primals.chain(duals.iter().map(|c| (circle_points(c), dual())));
+        for (ring, light) in rings {
+            let stroke: Vec<Point3> = ring.into_iter().map(|p| near_side(p, toward)).collect();
+            scene.polyline(&stroke, CIRCLE_WIDTH, light);
         }
     });
 }
@@ -430,7 +436,10 @@ mod tests {
 
     /// The distance from the centre to the line of each edge between apexes: the area of the
     /// parallelogram of its ends over its length.
-    fn edge_distances(apexes: &Field<Circle>, edges: &[[usize; 2]]) -> Vec<f64> {
+    fn edge_distances<O: gax::Orientation>(
+        apexes: &Field<super::sphere::Vector<(), f64, O>>,
+        edges: &[[usize; 2]],
+    ) -> Vec<f64> {
         let at = |v: usize| spatial(apexes.site(v));
         edges
             .iter()

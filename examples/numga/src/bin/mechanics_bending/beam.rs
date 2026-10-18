@@ -14,8 +14,10 @@ pub type Resultant = P2;
 pub type Stiffness = pga2d::Point<(pga2d::Line,), f64>;
 /// A point of space.
 pub type P3 = pga3d::Point<(), f64>;
-/// A line of space: a load, or a twist.
+/// A line of space as a twist: a meet of planes, extrinsic.
 pub type L3 = pga3d::Line<(), f64>;
+/// A load: a line of force, the join of a point with a direction (intrinsic, a forque).
+pub type Load = pga3d::Forque<(), f64>;
 /// A cross-section's frame along the beam.
 pub type Frame = Unit<pga3d::Motor<(), f64>>;
 
@@ -122,7 +124,7 @@ pub fn principal_axes(stiffness: Stiffness) -> [Strain; 2] {
 /// What the fibres at `station` along the beam carry of a load (a line): the load seen from the
 /// station's cross-section, met with its plane, in the section's chart. A load across the beam
 /// meets it at infinity, a couple; a push along the beam meets it at its point.
-pub fn carried(load: L3, station: f64) -> Resultant {
+pub fn carried(load: Load, station: f64) -> Resultant {
     let shift = (in_space_line(shift_along_beam()) * (station / 2.0)).exp();
     chart().of((shift << load) ^ section_plane())
 }

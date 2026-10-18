@@ -31,7 +31,7 @@ use gax::motions::{Pga2d, Pga3d};
 use gax::{pga2d, pga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Pos3, Rect, Scene3,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Pos2, Pos3, Rect, Scene3,
     backdrop, caption, palette, run,
 };
 use std::sync::OnceLock;
@@ -297,7 +297,8 @@ fn draw_plane(c: &mut Canvas, rect: Rect, drive: &Drive<Pga2d>, k: usize) {
     ax.polyline(c, &trail, 1.2, trail_light());
     let centre = drive.centres[k];
     if centre.e12() != 0.0 {
-        let at = flat(centre);
+        // The turning centre is a meet, an extrinsic point; drawn, it is where it is.
+        let at = centre.point2().unitized();
         for w in wheels {
             ax.dashed(c, &[w, at], 1.0, 5.0, axle_light());
         }
@@ -315,8 +316,8 @@ fn draw_plane(c: &mut Canvas, rect: Rect, drive: &Drive<Pga2d>, k: usize) {
     ax.frame(c, "THE PLANE (PGA2D)", "", "");
 }
 
-/// A point raised to the wheels' hubs.
-fn hub(p: pga3d::Point<(), f64>) -> pga3d::Point<(), f64> {
+/// A point raised to the wheels' hubs: a contact, or the foot of the turning centre (a meet).
+fn hub<O: gax::Orientation>(p: pga3d::Point<(), f64, O>) -> pga3d::Point<(), f64, O> {
     pga3d::Motor::translation(0.0, 0.0, WHEEL_RADIUS) >> p
 }
 
@@ -459,7 +460,7 @@ mod tests {
                 );
             }
             let [before, after] =
-                [k, k + 1].map(|j| Vector::from_coeffs(coordinates::<G>(drive.contacts[j][2])));
+                [k, k + 1].map(|j| Vector::<(), f64>::from_coeffs(coordinates::<G>(drive.contacts[j][2])));
             let length = (after - before).norm();
             assert!(
                 (length - STEP * WHEELBASE).abs() <= 1e-3 * STEP * WHEELBASE,

@@ -2,7 +2,7 @@
 //! pinned at both ends under end thrust, Kirchhoff's helices coiled by an oblique couple, a
 //! wire under a fixed couple with its tilt swept, and a telephone cord pulled out and let go.
 
-use crate::rod::{self, Frame, L, LineMap, P, Segment, W, X, Y, Z};
+use crate::rod::{self, F, Frame, L, P, Segment, Stiffness, X, Y, Z};
 use gax::pga3d::{Motor, Point};
 use gax_numga_examples::signal::{haversine, phasor, smoothstep};
 use std::f64::consts::{FRAC_PI_2, TAU};
@@ -68,15 +68,16 @@ pub fn turned(degrees: f64) -> Frame {
 }
 
 /// The rod of [`TURNING`] under a load from a start frame.
-fn bent(load: L, start: Frame) -> Vec<Frame> {
+fn bent(load: F, start: Frame) -> Vec<Frame> {
     let flex = rod::compliance(TURNING, SHIFTING);
     rod::rod(load, flex, start, LENGTH, PIECES)
 }
 
 /// The strip's frames under a couple about the axis across it that turns its end by `turns`
-/// whole turns: the couple whose rigidity over it is the strip's length over the turns.
+/// whole turns: the couple whose rigidity over it is the strip's length over the turns, the
+/// dual of the turn about that axis.
 pub fn curling(turns: f64) -> Vec<Frame> {
-    let couple = (W ^ X) * (TAU / (TURNING[0] * LENGTH) * turns);
+    let couple = (Y ^ Z).dual() * (TAU / (TURNING[0] * LENGTH) * turns);
     bent(couple, L::zero().exp())
 }
 
@@ -91,7 +92,7 @@ pub fn euler(degrees: f64) -> Vec<Frame> {
 /// `turns` whole turns: Kirchhoff's helices, and the uncoiling wire.
 pub fn coiled(tilt: f64, turns: f64) -> Vec<Frame> {
     bent(
-        (W ^ Z) * (TAU * turns / (TURNING[0] * LENGTH)),
+        (X ^ Y).dual() * (TAU * turns / (TURNING[0] * LENGTH)),
         turned(tilt),
     )
 }
@@ -168,7 +169,7 @@ pub fn reach(time: f64) -> f64 {
 /// The cord's joint at rest, its stiffness, the length of a segment, and a segment.
 pub struct Cord {
     pub joint: Frame,
-    pub stiff: LineMap,
+    pub stiff: Stiffness,
     pub step: f64,
     pub segment: Segment,
 }

@@ -1,6 +1,6 @@
-//! Structured maps as maps (ADR-044): `PrincipalInertia`, a `Line <- Line` stored as
-//! four numbers, composes, binds into other maps and forms, and solves without `to_map()`, with
-//! the results of its dense form.
+//! Structured maps as maps (ADR-044): `PrincipalInertia`, a `Forque <- Line` (twists to
+//! momenta, ADR-051) stored as four numbers, composes, binds into other maps and forms, and
+//! solves without `to_map()`, with the results of its dense form.
 
 #![cfg(feature = "pga3d")]
 
@@ -10,18 +10,20 @@ use rng::{Draw, rng};
 
 use gax::ApproxEq;
 use gax::map::{LinearMap, SquareLinearMap};
-use gax::pga3d::{Line, Point, PrincipalInertia, PrincipalMobility, Scalar};
+use gax::pga3d::{Forque, Line, Point, PrincipalInertia, PrincipalMobility, Scalar};
 
 fn random_body(rng: &mut impl Draw) -> PrincipalInertia<f64> {
     let mut positive = || 0.5 + rng.next_f64().abs();
     PrincipalInertia::new(positive(), [positive(), positive(), positive()])
 }
 
-fn random_line(rng: &mut impl Draw) -> Line<(), f64> {
-    Line::from_coeffs(core::array::from_fn(|_| rng.next_f64()))
+/// A momentum (intrinsic).
+fn random_momentum(rng: &mut impl Draw) -> Forque<(), f64> {
+    Forque::from_coeffs(core::array::from_fn(|_| rng.next_f64()))
 }
 
-fn random_map(rng: &mut impl Draw) -> Line<(Line,), f64> {
+/// A map from momenta to twists, which an inertia composes with on either side.
+fn random_map(rng: &mut impl Draw) -> Line<(Forque,), f64> {
     Line::from_coeffs(core::array::from_fn(|_| {
         core::array::from_fn(|_| rng.next_f64())
     }))
@@ -40,14 +42,16 @@ fn composes_and_binds() {
         let m = random_map(&mut rng);
         assert_eq!(m.of(body), m.of(dense)); // m ∘ body
         assert_eq!(body.of(m), dense.of(m)); // body ∘ m
-        // Into a form's first slot, and the kinetic energy form built from it.
-        let pairing: Scalar<(Line, Line), f64> = Line::slot() & Line::slot();
-        assert_eq!(pairing.of(body), pairing.of(dense));
+        // Into a form's first slot, the power of a momentum against a twist, and the kinetic
+        // energy form built from it.
+        let power: Scalar<(Forque, Line), f64> = Forque::oriented_slot() & Line::slot();
+        assert_eq!(power.of(body), power.of(dense));
         assert_eq!(Line::slot() & body.of(Line::slot()), body.energy_form());
-        // A point map composed into the twist slot of a map on points.
+        // A point's velocity, of a twist, composed with the mobility, momenta to twists.
         let p = Point::xyz(rng.next_f64(), rng.next_f64(), rng.next_f64());
         let velocity: Point<(Line,), f64> = Line::slot().commutator(p);
-        assert_eq!(velocity.of(body), velocity.of(dense));
+        let mobility = body.inverse();
+        assert_eq!(velocity.of(mobility), velocity.of(mobility.to_map()));
     }
 }
 
@@ -58,7 +62,7 @@ fn solves_and_inverts() {
     for _ in 0..100 {
         let body = random_body(&mut rng);
         let dense = body.to_map();
-        let f = random_line(&mut rng);
+        let f = random_momentum(&mut rng);
         assert!(SquareLinearMap::solve(body, f).approx_eq(&dense.solve(f), 1e-13));
         let mobility: PrincipalMobility<f64> = SquareLinearMap::inverse(body);
         assert!(mobility.to_dense().approx_eq(&dense.inverse(), 1e-13));
@@ -72,9 +76,9 @@ fn solves_and_inverts() {
 
 /// One function over any representation of an inertia: the kinetic energy of the twist that a
 /// momentum gives the body, `½ f & I⁻¹(f)`.
-fn energy_of_momentum<I>(inertia: I, momentum: Line<(), f64>) -> f64
+fn energy_of_momentum<I>(inertia: I, momentum: Forque<(), f64>) -> f64
 where
-    I: SquareLinearMap<Kind = Line, Input = Line, Coef = f64>,
+    I: SquareLinearMap<Kind = Forque, Input = Line, Coef = f64>,
 {
     0.5 * (momentum & inertia.solve(momentum)).s()
 }
@@ -84,7 +88,7 @@ fn generic_code_takes_either() {
     let mut rng = rng(0x6e1e);
     for _ in 0..100 {
         let body = random_body(&mut rng);
-        let f = random_line(&mut rng);
+        let f = random_momentum(&mut rng);
         let (compact, dense) = (
             energy_of_momentum(body, f),
             energy_of_momentum(body.to_map(), f),
@@ -99,7 +103,7 @@ fn dense_apply_is_of() {
     let mut rng = rng(0xa991);
     for _ in 0..100 {
         let m = random_map(&mut rng);
-        let b = random_line(&mut rng);
+        let b = random_momentum(&mut rng);
         assert_eq!(SquareLinearMap::apply(m, b), m.of(b));
     }
 }

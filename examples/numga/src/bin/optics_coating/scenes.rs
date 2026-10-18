@@ -5,7 +5,7 @@ use core::f64::consts::TAU;
 
 use crate::coating::{
     B, C, Constitutive, Medium, Polarization, Ports, Scattering, Spectrum, V, about_line, along_x,
-    circular, compose, dielectric, isotropic, optical_distance, scatter, t, x,
+    axion_response, circular, compose, dielectric, isotropic, optical_distance, scatter, t, x,
 };
 use crate::line::{Line, swept};
 use gax::field::Field;
@@ -140,7 +140,7 @@ pub fn axion(jumps: &[f64]) -> Vec<[f64; 3]> {
     jumps
         .iter()
         .map(|jump| {
-            let medium = Medium::from_chi(chi + Bivector::slot() * *jump, t());
+            let medium = Medium::from_chi(chi + axion_response(*jump), t());
             let substrate = Ports::from_medium(&medium, SURROUNDING_INDEX, t());
             let reflected = scatter(substrate.outgoing, &incident)
                 .reflection

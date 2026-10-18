@@ -105,7 +105,7 @@ fn between_fused_matches_generic() {
         let (moved, want) = ((m >> ga).normalized(), gb.normalized());
         close(&moved.c, &want.c);
         let m: Unit<Motor<(), f64>> = Unit::new_unchecked(between_lines_fused(la, lb));
-        let moved: Line<(), f64> = (m >> la).normalized().into_inner();
+        let moved: Line<(), f64, gax::Intrinsic> = (m >> la).normalized().into_inner();
         close(&moved.c, &lb.normalized().into_inner().c);
     }
 }

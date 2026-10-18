@@ -29,29 +29,44 @@ use gax_numga_examples::{
 
 mod poncelet {
     use super::*;
-    use gax::Unit;
+    use gax::{Extrinsic, Intrinsic, Unit};
 
-    pub type L = Line<(), f64>;
-    pub type P = Point<(), f64>;
+    // Every line here is the join of two points and every point the meet of two lines. A join
+    // is oriented along itself and a meet by what turns around it, so the lines are intrinsic
+    // and the points extrinsic (ADR-051).
+    pub type L = Line<(), f64, Intrinsic>;
+    pub type P = Point<(), f64, Extrinsic>;
+    /// The kinds of the slots of the maps below: a line and a point of the construction.
+    type LineSlot = Line<(), f32, Intrinsic>;
+    type PointSlot = Point<(), f32, Extrinsic>;
     /// A conic: points to their polar lines.
-    pub type Conic = Line<(Point,), f64>;
+    pub type Conic = Line<(PointSlot,), f64, Intrinsic>;
     /// A conic held by its tangents: lines to their poles.
-    pub type Envelope = Point<(Line,), f64>;
+    pub type Envelope = Point<(LineSlot,), f64, Extrinsic>;
 
-    /// The line at infinity.
-    pub fn infinity() -> L {
-        Line::new(0.0, 0.0, 1.0)
+    /// The point at `(x, y)`, made as the construction makes its points: the meet of the lines
+    /// `x = a` and `y = b`.
+    pub fn crossing(x: f64, y: f64) -> P {
+        Line::new(1.0, 0.0, -x) ^ Line::new(0.0, 1.0, -y)
     }
 
-    /// The points at infinity along x and along y.
+    /// The points at infinity along x and along y, where the lines `y = 0` and `x = 0` meet
+    /// the line at infinity.
     pub fn headings() -> [P; 2] {
-        [Point::direction(1.0, 0.0), Point::direction(0.0, 1.0)]
+        let w = Line::new(0.0, 0.0, 1.0);
+        [Line::new(0.0, 1.0, 0.0) ^ w, w ^ Line::new(1.0, 0.0, 0.0)]
+    }
+
+    /// The line at infinity, as the join of the two headings.
+    pub fn infinity() -> L {
+        let [x, y] = headings();
+        x & y
     }
 
     /// Two points as one envelope: zero on the lines through either, its pairing the product
     /// of the line's pairings with the two points.
     pub fn pair(first: P, second: P) -> Envelope {
-        let l = Line::slot();
+        let l = L::oriented_slot();
         (first * (second & l) + second * (first & l)).gp(0.5)
     }
 
@@ -132,35 +147,26 @@ mod poncelet {
         Motor::translation(0.4, -0.2) * Motor::rotation(Point::xy(0.0, 0.0), 0.5)
     }
 
-    /// The stretch of the unit circle onto the ellipse at the origin, as a map on points.
-    pub fn stretch() -> Point<(Point,), f64> {
-        Point::from_images([
-            Point::new(SEMI[0], 0.0, 0.0),
-            Point::new(0.0, SEMI[1], 0.0),
-            Point::new(0.0, 0.0, 1.0),
-        ])
-    }
-
-    /// The ellipse: the lines along its axes (the axes of the plane, placed), each weighted by
-    /// the inverse square of the semi-axis across it, less the line at infinity twice.
+    /// The ellipse: the lines through its centre across each of its axes (the joins of the
+    /// centre with the headings of the other axis, placed), each weighted by the inverse square
+    /// of the semi-axis, less the line at infinity twice.
     pub fn ellipse() -> Conic {
-        let p = Point::slot();
+        let p = P::oriented_slot();
         let mut conic = -(infinity() * (infinity() & p));
-        for (axis, semi) in [Line::new(1.0, 0.0, 0.0), Line::new(0.0, 1.0, 0.0)]
-            .into_iter()
-            .zip(SEMI)
-        {
-            let through = placement() >> axis;
+        let [along_x, along_y] = headings();
+        for (heading, semi) in [along_y, along_x].into_iter().zip(SEMI) {
+            let through = placement() >> (crossing(0.0, 0.0) & heading);
             conic += (through * (through & p)).gp(1.0 / (semi * semi));
         }
         conic
     }
 
     /// The point at an angle on the ellipse, drawn in towards its centre by the scale: the
-    /// point of the circle of that radius at the angle, stretched and placed.
+    /// point of the circle of that radius at the angle, stretched along the axes and placed.
     pub fn on_ellipse(angle: f64, scale: f64) -> P {
-        let on_circle = Motor::rotation(Point::xy(0.0, 0.0), angle) >> Point::xy(scale, 0.0);
-        placement() >> stretch().of(on_circle)
+        let phasor = Point::<(), f64>::direction_from_angle(angle);
+        let [x, y] = [phasor.e20(), phasor.e01()];
+        placement() >> crossing(scale * SEMI[0] * x, scale * SEMI[1] * y)
     }
 
     /// The two inner conics: touching the inscribed pentagon, and touching it shrunk.
@@ -200,7 +206,12 @@ fn draw(c: &mut Canvas, t: f32) {
         let rect = plot::panel(c, k, 2).inset(14.0, 90.0, 14.0, 14.0);
         let ax = Axes::equal(rect, Point2::xy(0.4, -0.25), 2.2);
         let conic = inner.inverse();
-        let level = |f: Conic| move |p: Point2| on(f, p.map_coefs(f64::from)) as f32;
+        let level = |f: Conic| {
+            move |p: Point2| {
+                let [x, y] = p.to_euclidean().map(f64::from);
+                on(f, crossing(x, y)) as f32
+            }
+        };
         ax.contour(c, level(outer), 260, 0.0, 2.0, palette::ink());
         ax.contour(c, level(conic), 260, 0.0, 1.8, palette::sky());
         ax.polyline(c, corners, 1.8, palette::red());

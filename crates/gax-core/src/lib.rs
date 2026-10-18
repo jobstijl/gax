@@ -57,6 +57,7 @@ pub mod math;
 #[cfg(feature = "std")]
 pub mod mesh;
 pub mod ops;
+pub mod orientation;
 pub mod permute;
 pub mod prepared;
 #[cfg(feature = "wide")]
@@ -87,6 +88,7 @@ pub use ops::{
     Norm, Normalize, Outermorphism, Rc, Reverse, ScalarProduct, Sqrt, Transform, TransformInv,
     Undual, Vee, Wedge,
 };
+pub use orientation::{Extrinsic, Intrinsic, Orientation, Reorient};
 pub use permute::MoveToFront;
 pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};

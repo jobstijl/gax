@@ -20,18 +20,28 @@ use gax_numga_examples::{
 
 mod cayley_klein {
     use gax::pga2d::{Line, Point};
+    use gax::{Extrinsic, Intrinsic};
     use gax_numga_examples::signal::phasor;
 
-    pub type P = Point<(), f64>;
-    pub type L = Line<(), f64>;
-    /// A polarity, points to lines (`Line <- Point`).
-    pub type Polarity = Line<(Point,), f64>;
+    // Every line here is the join of two points and every point the meet of two lines. A join
+    // is oriented along itself and a meet by what turns around it, so the lines are intrinsic
+    // and the points extrinsic (ADR-051).
+    pub type P = Point<(), f64, Extrinsic>;
+    pub type L = Line<(), f64, Intrinsic>;
+    /// A polarity, points to lines (`Line <- Point`), on points of the constructions.
+    pub type Polarity = Line<(Point<(), f32, Extrinsic>,), f64, Intrinsic>;
+
+    /// The point at `(x, y)`, made as the constructions make their points: the meet of the
+    /// lines `x = a` and `y = b`.
+    pub fn crossing(x: f64, y: f64) -> P {
+        Line::new(1.0, 0.0, -x) ^ Line::new(0.0, 1.0, -y)
+    }
 
     /// The absolute from three line dyads, `x (x ∨ P) + y (y ∨ P) ± w (w ∨ P)`: the conic
     /// `x² + y² ± w² = 0`. With `-` it is the unit circle (hyperbolic), with `+` a conic with no
     /// real points (elliptic).
     pub fn absolute(sign: f64) -> Polarity {
-        let dyad = |l: L| l * (l & Point::slot());
+        let dyad = |l: Line<(), f64>| l * (l & P::oriented_slot());
         dyad(Line::new(1.0, 0.0, 0.0))
             + dyad(Line::new(0.0, 1.0, 0.0))
             + dyad(Line::new(0.0, 0.0, 1.0)).gp(sign)
@@ -168,7 +178,7 @@ mod cayley_klein {
     /// invariant equation `(P ∨ C(c))² = cosh(r)² (c ∨ C(c)) (P ∨ C(P))` with the root cleared.
     pub fn circle(c: Polarity, centre: P, r: f64) -> Polarity {
         let polar = c.of(centre);
-        polar * (polar & Point::slot()) - c.gp((centre & polar).s() * r.cosh().powi(2))
+        polar * (polar & P::oriented_slot()) - c.gp((centre & polar).s() * r.cosh().powi(2))
     }
 
     /// The scene at phase `t` (radians).
@@ -191,12 +201,12 @@ mod cayley_klein {
         // The apex and P go round on turned directions, stretched into small loops.
         let (once, twice) = (phasor(t), phasor(2.0 * t));
         let vertices = [
-            Point::xy(0.0, 0.0),
-            Point::xy(0.65, 0.0),
-            Point::xy(0.2 + 0.25 * once.e01(), 0.55 + 0.2 * twice.e20()),
+            crossing(0.0, 0.0),
+            crossing(0.65, 0.0),
+            crossing(0.2 + 0.25 * once.e01(), 0.55 + 0.2 * twice.e20()),
         ];
         let triangle = triangle::<Hyperbolic>(vertices);
-        let p = Point::xy(-0.15 + 0.2 * once.e20(), 0.15 + 0.15 * once.e01());
+        let p = crossing(-0.15 + 0.2 * once.e20(), 0.15 + 0.15 * once.e01());
         let (pole, normal, foot, reflected) = perpendicular(c, triangle.sides[1], p);
         let grow = (t / core::f64::consts::TAU).rem_euclid(1.0);
         Scene {
@@ -208,7 +218,7 @@ mod cayley_klein {
             normal,
             foot,
             reflected,
-            centres: [Point::xy(0.0, 0.0), Point::xy(0.45, 0.25)],
+            centres: [crossing(0.0, 0.0), crossing(0.45, 0.25)],
             radii: [0.25, 0.55, 0.9, 1.3].map(|r| r + 0.4 * grow),
         }
     }
@@ -228,7 +238,8 @@ fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Li
     ax.contour(
         c,
         |p| {
-            let p: P = p.map_coefs(f64::from);
+            let [x, y] = p.to_euclidean().map(f64::from);
+            let p = crossing(x, y);
             (p & quadric.of(p)).s() as f32
         },
         260,
@@ -266,7 +277,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (v, angle) in s.vertices.iter().zip(s.triangle.angles) {
         ax.text(
             c,
-            *v + Point::direction(0.04, 0.06),
+            v.position() + Point::direction(0.04, 0.06),
             &format!("{:.1}", angle.to_degrees()),
             11.0,
             palette::ink(),
@@ -277,7 +288,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let midpoint = (s.vertices[i] + s.vertices[(i + 1) % 3]).gp(0.5);
         ax.text(
             c,
-            midpoint + Point::direction(0.03, -0.07),
+            midpoint.position() + Point::direction(0.03, -0.07),
             &format!("{:.2}", s.triangle.lengths[i]),
             10.0,
             palette::sky(),
@@ -347,12 +358,12 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::cayley_klein::*;
-    use gax::ApproxEq;
     use gax::pga2d::{Line, Point};
+    use gax::{ApproxEq, Extrinsic, Intrinsic};
     use gax_numga_examples::measure;
 
-    /// A pole map, lines to points (`Point <- Line`).
-    type Pole = Point<(Line,), f64>;
+    /// A pole map, lines to points (`Point <- Line`), on lines of the constructions.
+    type Pole = Point<(Line<(), f32, Intrinsic>,), f64, Extrinsic>;
 
     fn assert_close(a: f64, b: f64, tol: f64) {
         assert!((a - b).abs() <= tol, "{a} vs {b}");
@@ -415,9 +426,9 @@ mod tests {
 
     #[test]
     fn hyperbolic_distance_along_a_diameter_is_arctanh() {
-        let origin = Point::xy(0.0, 0.0);
+        let origin = crossing(0.0, 0.0);
         for x in [0.2, 0.5, 0.75] {
-            let d = Hyperbolic::distance(origin, Point::xy(x, 0.0));
+            let d = Hyperbolic::distance(origin, crossing(x, 0.0));
             assert_close(d, f64::atanh(x), 1e-12);
         }
     }
@@ -426,9 +437,9 @@ mod tests {
     /// the radius.
     #[test]
     fn elliptic_distance_along_a_diameter_is_arctan() {
-        let origin = Point::xy(0.0, 0.0);
+        let origin = crossing(0.0, 0.0);
         for x in [0.2, 0.5, 2.0] {
-            let d = Elliptic::distance(origin, Point::xy(x, 0.0));
+            let d = Elliptic::distance(origin, crossing(x, 0.0));
             assert_close(d, x.atan(), 1e-12);
         }
     }
@@ -437,8 +448,8 @@ mod tests {
     fn perpendicular_through_the_pole_and_reflection_in_both_geometries() {
         for c in [hyperbolic(), elliptic()] {
             let q: Pole = c.inverse();
-            let side = Point::xy(0.65, 0.0) & Point::xy(0.2, 0.55);
-            let p = Point::xy(-0.15, 0.15);
+            let side = crossing(0.65, 0.0) & crossing(0.2, 0.55);
+            let p = crossing(-0.15, 0.15);
             let pole = q.of(side);
             let perpendicular = p & pole;
             let foot = side ^ perpendicular;
@@ -462,11 +473,7 @@ mod tests {
 
     #[test]
     fn triangle_angle_sum_is_below_pi_hyperbolic_and_above_pi_elliptic() {
-        let vertices = [
-            Point::xy(0.0, 0.0),
-            Point::xy(0.65, 0.0),
-            Point::xy(0.2, 0.55),
-        ];
+        let vertices = [crossing(0.0, 0.0), crossing(0.65, 0.0), crossing(0.2, 0.55)];
         let hyperbolic = triangle::<Hyperbolic>(vertices).angles.iter().sum::<f64>();
         let elliptic = triangle::<Elliptic>(vertices).angles.iter().sum::<f64>();
         assert!(hyperbolic < core::f64::consts::PI);
@@ -476,10 +483,10 @@ mod tests {
     #[test]
     fn circle_quadric_contains_the_points_at_its_radius() {
         let c = hyperbolic();
-        let (centre, r) = (Point::xy(0.45, 0.25), 0.9);
+        let (centre, r) = (crossing(0.45, 0.25), 0.9);
         let ring = circle(c, centre, r);
-        let inside = |x| Hyperbolic::distance(centre, Point::xy(x, 0.25)) < r;
-        let on = Point::xy(measure::bisect(0.45, 0.999, 60, inside), 0.25);
+        let inside = |x| Hyperbolic::distance(centre, crossing(x, 0.25)) < r;
+        let on = crossing(measure::bisect(0.45, 0.999, 60, inside), 0.25);
         assert!((on & ring.of(on)).s().abs() < 1e-12);
     }
 

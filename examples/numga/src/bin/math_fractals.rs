@@ -26,7 +26,7 @@ use gax_numga_examples::{
 };
 
 mod fractals {
-    use gax::vga3d::{Bivector, Vector};
+    use gax::vga3d::Bivector;
     use gax::{Gp, Norm};
 
     /// An even multivector of the plane: a complex number.
@@ -64,11 +64,11 @@ mod fractals {
     }
 
     /// The unit bivector of the slice at an angle: the constant's own direction turned by the
-    /// rotor in the plane of its normal and `z`.
+    /// rotor in the plane of its normal and `z`, the commutator of `xy` with it.
     pub fn slice_direction(angle: f64) -> Bivector<(), f64> {
         let direction = julia().grade::<2>().normalized().into_inner();
-        let z = Vector::new(0.0, 0.0, 1.0);
-        let away = (direction.dual() ^ z).normalized().into_inner();
+        let xy = Bivector::new(0.0, 0.0, 1.0);
+        let away = xy.commutator(direction).normalized().into_inner();
         away.gp(-angle / 2.0).exp() >> direction
     }
 

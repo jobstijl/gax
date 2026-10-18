@@ -6,9 +6,11 @@
 //!
 //! The Hamiltonian is a bivector: the phase plane `xy` turned by twice the mixing angle in the
 //! `xz` plane, by a rotor. It turns states by its commutator, `-[H, rho]`, a map on states;
-//! the separation of the mass states' wave packets adds a Lindblad dissipator along the mass
-//! axis `l`, `l rho l - rho`. The transfer over a step is the exponential of the rates, to fifth
-//! order as a sum of powers of the map, and a journey is these maps applied one after another.
+//! the separation of the mass states' wave packets adds a Lindblad dissipator, the half turn `l`
+//! in the mass basis's phase plane, `l rho ~l - rho` (as numga; a vector `l` along the mass axis
+//! would reflect, which turns the state's vector part over). The transfer over a step is the
+//! exponential of the rates, to fifth order as a sum of powers of the map, and a journey is
+//! these maps applied one after another.
 //!
 //! The animation runs three journeys side by side: vacuum oscillations, where the isospin
 //! precesses about the Hamiltonian's axis; wave packet decoherence, where it spirals in onto
@@ -116,16 +118,18 @@ mod neutrino {
         -plane.commutator(open()).cast::<Paravector>()
     }
 
-    /// The Lindblad dissipator of a process `l`, `l rho l - {~l l, rho} / 2`. For a vector `~l l`
-    /// is its squared length, so the anticommutator is plain scaling. The sandwich of a state by
-    /// a vector is a state again; gax types it as a multivector, so the empty grades are dropped.
-    pub fn relaxation(process: V) -> Rates {
-        (process >> open()).cast::<Paravector>() - open() * process.norm_squared()
+    /// The Lindblad dissipator of a process `l`, `l rho ~l - {~l l, rho} / 2`. For a bivector
+    /// `~l l` is its squared norm, so the anticommutator is plain scaling. The sandwich is the
+    /// bivector's as a rotor (a half turn, for a unit one), and it keeps a state a state; gax
+    /// types it as a multivector, so the empty grades are dropped.
+    pub fn relaxation(process: Bi) -> Rates {
+        (Rotor::from(process) >> open()).cast::<Paravector>() - open() * process.norm_squared()
     }
 
-    /// The decoherence of the wave packets' separation: dephasing along the mass axis at `gamma`.
-    pub fn dephasing_generator(axis: V, gamma: f64) -> Rates {
-        relaxation(axis) * gamma
+    /// The decoherence of the wave packets' separation at `gamma`: dephasing by the half turn in
+    /// the given phase plane.
+    pub fn dephasing_generator(plane: Bi, gamma: f64) -> Rates {
+        relaxation(plane) * gamma
     }
 
     /// The transfer over `dx`: the exponential of the rates times dx, its powers by composition.
@@ -198,16 +202,17 @@ mod neutrino {
     ) -> (Journey, f64) {
         let theta = theta_deg.to_radians();
         let plane = vacuum_hamiltonian(omega, theta);
-        let mass_axis = mixing_rotor(theta) >> muon();
+        let mass_plane = mixing_rotor(theta) >> phase_plane();
         let (distances, dx) = distances(JOURNEY, steps);
-        let rates = coherent_generator(plane) + dephasing_generator(mass_axis, gamma);
+        let rates = coherent_generator(plane) + dephasing_generator(mass_plane, gamma);
         let transfer = evolution(rates, dx);
         let journey = Journey {
             distances,
             isospins: propagate(state(electron()), vec![transfer; steps]),
             planes: vec![plane; steps],
         };
-        let along = (mass_axis | electron()).s();
+        // The mass axis's part along the flavour axis: the volume the mass plane spans with it.
+        let along = (mass_plane ^ electron()).norm();
         (journey, 0.5 * (1.0 + along * along))
     }
 
@@ -532,9 +537,9 @@ mod tests {
     #[test]
     fn the_trace_is_kept() {
         let theta = 30f64.to_radians();
-        let mass_axis = mixing_rotor(theta) >> muon();
+        let mass_plane = mixing_rotor(theta) >> phase_plane();
         let rates = coherent_generator(vacuum_hamiltonian(1.0, theta))
-            + dephasing_generator(mass_axis, 0.1);
+            + dephasing_generator(mass_plane, 0.1);
         let step = evolution(rates, 0.05);
         let mut rho = state(electron());
         for _ in 0..50 {

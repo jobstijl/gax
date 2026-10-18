@@ -119,9 +119,10 @@ method (ADR-013).
   * The factor `f` depends on the operation and the algebra. The generator derives it per
     versor, product and pair of kinds, and the suite checks the library against it. The table is
     [law-factors.md](law-factors.md).
-  * **Pattern:** the product-like operations pick up `‖m‖²`. Operations that go through the
-    complement (the regressive product `&`) pick up a sign under odd versors (reflections): for
-    example `−‖m‖²` for a CGA vector versor.
+  * **Pattern:** every product picks up `‖m‖²`, the regressive product `&` included, under
+    even and odd versors alike: `>>` takes its sign from the passenger's orientation (ADR-051),
+    which is what makes reflections commute with the join. (With the plain sandwich, `&` picked
+    up `−‖m‖²` under odd versors in even dimensions.)
   * For `Unit` versors the factor is its sign alone.
 * [sym/ideal] **Conjugation** of maps, `conj_m(f) = (m >> f).of(m << K::slot())` (ADR-026):
   * `conj_m(f).of(m >> x) == ‖m‖⁴ · (m >> f.of(x))`, in `conjugation`. The factor is `‖m‖⁴`,
@@ -139,8 +140,8 @@ method (ADR-013).
 * [sym] The determinant, read from the top grade, is multiplicative.
 * [sym/ideal] The determinant of a unit versor's map on vectors (or on antivectors, such as PGA
   points) is `±1`, modulo `u ~u = 1`. The generator computes the sign for each versor kind:
-  `+1` for even versors, and for odd ones whatever `x ↦ b x ~b` gives, since `>>` has no
-  grade-involution sign.
+  `+1` for even versors, and for odd ones whatever the oriented `x ↦ b >> x` of a unit basis
+  blade `b` gives on that kind (ADR-051).
 
 ### F. Trace (`trace`)
 
@@ -181,7 +182,8 @@ generator finds.
   the traced polynomials modulo the type conditions (ADR-011, `gax-gen/tests/symbolic.rs`).
 * [sym] **The generated kernels on `Sym`** (`tiers`):
   * the sandwich value path equals the tier-1 products `(v * x) * ~v`, projected to the output
-    kind;
+    kind, with the orientation's sign for an odd versor (ADR-051: a blade of grade `k` times
+    `(−1)ᵏ` for an extrinsic `x`, `−(−1)ᵏ` for an intrinsic one);
   * the map path `(v >> X::slot()).of(x)` equals it;
   * the prepared action equals it, and its dense form equals `v >> X::slot()`.
 
@@ -233,7 +235,8 @@ by randomized identity testing:
   `w` and the passenger uniform in `ℤ/p`, eight samples per law. The generated code is generic
   over the coefficient ring, so it runs unchanged there, exactly.
 * [sample] **The laws:**
-  * the plain and `Unit` sandwich kernels equal the projection of `(v x) ~v`, the map path equals
+  * the plain and `Unit` sandwich kernels equal the projection of `(v x) ~v`, with the
+    orientation's sign for an odd versor, the map path equals
     them, and `u << (u >> x) == x`;
   * `Unit` versors compose: `(a b) >> x == a >> (b >> x)`;
   * the single-grade products are equivariant, up to the sign that a unit versor's factor can be.

@@ -155,7 +155,7 @@ mod pga3d {
                 let eye: Point = rng.value(1.0);
                 let screen: Plane = rng.value(1.0);
                 let square: Point<(Point,)> = (eye & (m >> Point::slot())) ^ screen;
-                let wide: Line<(Point,)> = eye & Point::slot();
+                let wide: Line<(Point,), f32, gax::Intrinsic> = eye & Point::slot();
                 let xs: Vec<Point> = rng.values(n, 1.0);
                 let want: Vec<Point> = xs.iter().map(|&x| square.of(x)).collect();
                 let mut got = vec![Point::zero(); n];
@@ -165,7 +165,8 @@ mod pga3d {
                 let mut out = Soa::new();
                 square.of_soa(&soa, &mut out);
                 assert_lanes(&out.to_vec(), &want, 2e-5, &format!("of_soa n={n}"));
-                let want: Vec<Line> = xs.iter().map(|&x| wide.of(x)).collect();
+                let want: Vec<Line<(), f32, gax::Intrinsic>> =
+                    xs.iter().map(|&x| wide.of(x)).collect();
                 let mut got = vec![Line::zero(); n];
                 wide.of_slice(&xs, &mut got);
                 assert_lanes(&got, &want, 2e-5, &format!("Line <- Point of_slice n={n}"));

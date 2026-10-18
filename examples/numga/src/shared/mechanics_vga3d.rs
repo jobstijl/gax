@@ -11,7 +11,7 @@
 
 use core::ops::BitXor;
 use gax::vga3d::{Bivector, Rotor, Vector};
-use gax::{Of, Slots, Unit};
+use gax::{Of, Orientation, Slots, Unit};
 
 /// A direction of space.
 pub type V = Vector<(), f64>;
@@ -36,9 +36,12 @@ pub fn turn(plane: B, angle: f64) -> Turn {
 }
 
 /// The adjoint through the metric: the map `A` with `A(a) | b == a | map(b)`, a pairing solve.
-pub fn adjoint(map: Map) -> Map {
-    let metric = Vector::slot() | Vector::slot();
-    metric.solve(Vector::slot() | map)
+/// A map on directions of either orientation: on area normals (duals of patches, intrinsic) as
+/// well as on edges.
+pub fn adjoint<O: Orientation>(map: Vector<(Vector<(), f32, O>,), f64, O>) -> Vector<(Vector<(), f32, O>,), f64, O> {
+    let open = Vector::<(), f64, O>::oriented_slot;
+    let metric = open() | open();
+    metric.solve(open() | map)
 }
 
 /// The curl of a map whose first slot takes a direction, `Σ e_i ^ map(e_i)`: the bivector whose

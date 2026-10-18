@@ -10,8 +10,8 @@ error[E0277]: the logarithm needs a certified unit versor, a `gax::Unit`, not a 
 note: required by a bound in `gax::pga3d::Motor::<(), T>::log`
  --> src/algebras/pga3d/kinds.rs
   |
-  |     pub fn log(self) -> Line<(), T>
+  |     pub fn log(self) -> Line<(), T, gx::Extrinsic>
   |            --- required by a bound in this associated function
   |     where
-  |         Self: gx::LogNeedsUnit<Line<(), T>>,
-  |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Motor::<(), T>::log`
+  |         Self: gx::LogNeedsUnit<Line<(), T, gx::Extrinsic>>,
+  |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Motor::<(), T>::log`

@@ -140,7 +140,7 @@ macro_rules! multiview_core {
         /// The motion of a camera-frame point per unit right step of its camera's pose: minus
         /// the commutator with the twist.
         pub fn motion(local: P) -> Point<(Twist,), f64> {
-            -Twist::<(), f64>::slot().commutator(local)
+            -Twist::<(), f64>::oriented_slot().commutator(local)
         }
 
         /// One Gauss-Newton step per camera on the cone value, its twist solved by least
@@ -314,7 +314,7 @@ macro_rules! multiview_core {
 /// The plane: numga's scenarios and the drawings.
 mod plane {
     multiview_core!(pga2d, Line);
-    use gax::pga2d::Line;
+    use gax::pga2d::Forque;
 
     /// Landmarks in front of the cameras, at depths from 0.85 to 2.55.
     pub const LANDMARKS: [[f64; 2]; 6] = [
@@ -477,8 +477,9 @@ mod plane {
 
     /// A pose's covariance from its information form: the form as a map from twists to
     /// forques (solved from the incidence pairing), pseudo-inverted with numga's cutoff.
-    pub fn pose_covariance(information: Information) -> Point<(Line,), f64> {
-        let map: Line<(Point,), f64> = (Line::slot() & Point::slot()).solve(information);
+    pub fn pose_covariance(information: Information) -> Twist<(Forque,), f64> {
+        let map: Forque<(Twist,), f64> =
+            (Forque::oriented_slot() & Twist::oriented_slot()).solve(information);
         map.pinv_with(1e-4)
     }
 }
@@ -639,14 +640,14 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
 /// Each moving camera's position ellipse (scaled for display) and turning fan, from its
 /// marginal information.
 fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[plane::Information]) {
-    use gax::pga2d::{Line, Motor, Point};
+    use gax::pga2d::{Forque, Line, Motor, Point, Twist};
     let origin = plane::origin();
     // The centre moves by the commutator of a local twist with the origin; reading that
-    // displacement with a line is reading the twist with another line.
-    let shift = Point::slot().commutator(origin);
-    let readout = (Line::slot() & Point::slot()).solve(Line::slot() & shift);
-    // The line at infinity reads a twist's rotation.
-    let w = Line::new(0.0, 0.0, 1.0);
+    // displacement with a line is reading the twist with a forque.
+    let shift = Twist::oriented_slot().commutator(origin);
+    let readout = (Forque::oriented_slot() & Twist::oriented_slot()).solve(Line::slot() & shift);
+    // The line at infinity, the join of two directions, reads a twist's rotation.
+    let w = Point::direction(1.0, 0.0) & Point::direction(0.0, 1.0);
     for (k, (m, info)) in motors.iter().zip(information).enumerate() {
         let cov = plane::pose_covariance(*info);
         if cov.max_abs_diff(&Linear::zero()) == 0.0 {
@@ -1081,8 +1082,8 @@ mod tests {
                 "{m:?} {n:?}"
             );
         }
-        let numga = gax::pga2d::Point::new(0.0, -0.375, 0.0).exp()
-            * gax::pga2d::Point::new(0.0, 0.0, theta / 2.0).exp();
+        let numga = plane::Tw::from_coeffs([0.0, -0.375, 0.0]).exp()
+            * plane::Tw::from_coeffs([0.0, 0.0, theta / 2.0]).exp();
         let m = plane::rig(&[0.75], &[theta])[0];
         assert!(m.into_inner().approx_eq(&numga.into_inner(), 1e-15));
     }

@@ -55,8 +55,9 @@ mod maxwell {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
-    /// The spatial part of a vector as the rest observer `t` reads it, a vector of space.
-    pub fn spatial(v: V) -> Space {
+    /// The spatial part of a vector as the rest observer `t` reads it, a vector of space (for
+    /// drawing, of either orientation).
+    pub fn spatial<O: gax::Orientation>(v: Vector<(), f64, O>) -> Space {
         Space::new(v.e1(), v.e2(), v.e3())
     }
 

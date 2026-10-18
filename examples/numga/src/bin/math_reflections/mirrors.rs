@@ -5,18 +5,18 @@
 //! out of the triangle and pair to `-cos(π/2)`. The third has a part in their plane, from its
 //! pairings `-cos(π/m)` with them through the plane's reciprocal vectors (`second | plane⁻¹`
 //! pairs to one with the first and to zero with the second, `plane⁻¹ | first` the other way
-//! round), and a part along the plane's normal, its dual. For the third to have unit length,
-//! the normal must square to plus one where the part in the plane is shorter than one, to zero
-//! where it has length one, and to minus one where it is longer: the sphere `x+y+z+` (VGA3D),
-//! the flat plane `x+y+w0`, the hyperbolic plane `x+y+t-`. On the flat plane the normal adds no
-//! length, and its part sets the size of the tiles.
+//! round), and a part along the plane's normal, the third basis vector. For the third to have
+//! unit length, the normal must square to plus one where the part in the plane is shorter than
+//! one, to zero where it has length one, and to minus one where it is longer: the sphere
+//! `x+y+z+` (VGA3D), the flat plane `x+y+w0`, the hyperbolic plane `x+y+t-`. On the flat plane
+//! the normal adds no length, and its part sets the size of the tiles.
 //!
 //! A point is a bivector, the dual of a direction. Its side of a mirror is the sign of its
 //! regressive product with the mirror vector, which needs no metric, and its reflection is the
-//! sandwich with the mirror vector, negated: the same in the three geometries. The view is the
-//! unit disk mapped conformally, stereographically onto the sphere, to scale onto the plane,
-//! and as the Poincaré disk onto the hyperbolic plane: three cases of one formula in the square
-//! of the normal. One rotor, in the plane of `x` and the normal, turns the sphere, shifts the
+//! sandwich with the mirror vector (a point, a dual, is intrinsic, and `>>` reflects it so):
+//! the same in the three geometries. The view is the unit disk mapped conformally,
+//! stereographically onto the sphere, to scale onto the plane, and as the Poincaré disk onto
+//! the hyperbolic plane: three cases of one formula in the square of the normal. One rotor, in the plane of `x` and the normal, turns the sphere, shifts the
 //! plane and boosts the hyperbolic plane. The code is written once and stamped out per algebra
 //! by a macro, as the kinds of the three algebras are different types.
 
@@ -84,7 +84,8 @@ macro_rules! geometry {
             use $algebra::{Bivector, Rotor, Vector};
 
             pub type V = Vector<(), f64>;
-            pub type B = Bivector<(), f64>;
+            /// A point: a dual of a direction, so intrinsic (ADR-051).
+            pub type B = Bivector<(), f64, gax::Intrinsic>;
             pub type R = Rotor<(), f64>;
             /// What the normal to the first two mirrors squares to.
             pub const CURVATURE: i32 = $curvature;
@@ -97,9 +98,9 @@ macro_rules! geometry {
                 Vector::new(0.0, 1.0, 0.0)
             }
 
-            /// The normal to the plane of `x` and `y`: their unit plane's dual.
+            /// The normal to the plane of `x` and `y`: the third basis vector.
             pub fn normal() -> V {
-                (x() ^ y()).normalized().into_inner().dual()
+                Vector::new(0.0, 0.0, 1.0)
             }
 
             /// The mirror vectors of the triangle whose second and third mirrors meet at a half
@@ -135,7 +136,7 @@ macro_rules! geometry {
 
             /// A point reflected in a mirror.
             pub fn reflect(mirror: V, point: B) -> B {
-                -(mirror >> point)
+                mirror >> point
             }
         }
     };

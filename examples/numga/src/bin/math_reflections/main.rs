@@ -1,8 +1,8 @@
 //! numga's `math/reflections` (four notebooks): what mirrors make when they reflect each other.
 //!
-//! A mirror through the origin is a unit vector normal to it, and reflecting in it is the
-//! sandwich with that vector, negated; the product of two mirror vectors is a rotor turning by
-//! twice the angle between the mirrors. Mirrors at a half turn divided by whole numbers fold
+//! A mirror through the origin is a unit vector normal to it, and reflecting in it is `>>`
+//! with that vector, the sandwich with the orientation's sign (ADR-051); the product of two
+//! mirror vectors is a rotor turning by twice the angle between the mirrors. Mirrors at a half turn divided by whole numbers fold
 //! all of space into the region between them: a point on the wrong side of a mirror (pairing
 //! negatively with it) is reflected, round after round, and the number of reflections it took
 //! tells which copy of the region it started in.

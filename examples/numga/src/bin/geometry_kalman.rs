@@ -14,7 +14,7 @@
 //! through the origin, the image of VGA2D's vectors in PGA2D, where the line metric is the
 //! Euclidean one: a symmetric eigenproblem (`eigh`), with no infinite mode to discard.
 
-use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax::pga2d::{Forque, Line, Motor, Point, Scalar, Twist};
 use gax::{Unit, vga2d};
 
 use gax_numga_examples::rng::{Draw, Rng, rng};
@@ -28,8 +28,13 @@ mod kalman {
 
     pub type P = Point<(), f64>;
     pub type M = Unit<Motor<(), f64>>;
+    /// A twist, a bivector: a turn about a point (extrinsic).
+    pub type B = Twist<(), f64>;
+    /// A linear readout of a twist: a line, paired with the twist by the join, oriented along
+    /// itself (intrinsic) as numga's `antibivector` readouts are.
+    pub type Readout = Forque<(), f64>;
     /// A covariance: each readout line to the twist correlated with it.
-    pub type Covariance = Point<(Line,), f64>;
+    pub type Covariance = Twist<(Forque,), f64>;
 
     /// One state of the filter: after a prediction step, or after an update at a reading.
     #[derive(Clone, Copy, Debug)]
@@ -60,7 +65,7 @@ mod kalman {
                 // `step << (… + motion_noise)`: the noise conjugated on one side only, and the
                 // covariance no longer symmetric.)
                 estimate = estimate * *step;
-                sigma = (*step << sigma.of(*step >> Line::slot())) + motion_noise;
+                sigma = (*step << sigma.of(*step >> Readout::oriented_slot())) + motion_noise;
                 states.push(State {
                     estimate,
                     sigma,
@@ -69,7 +74,7 @@ mod kalman {
             }
             // The innovation is the log of the relative motor, the gain a ratio of covariance
             // maps, and the correction is exponentiated.
-            let innovation: P = (estimate.inverse() * *measured).log();
+            let innovation: B = (estimate.inverse() * *measured).log();
             let innovation = innovation.gp(2.0);
             let gain = sigma.of((sigma + measurement_noise).inverse());
             estimate = estimate * gain.of(innovation).gp(0.5).exp();
@@ -90,13 +95,17 @@ mod kalman {
 
     /// The form of position readouts at the estimate: a readout of position along a line `l`,
     /// `l & shift(δ)`, is a readout of the twist through the incidence pairing; the covariance of
-    /// those readouts is a form on lines.
+    /// those readouts is a form on lines. These lines are extrinsic, as `Line::new` makes them:
+    /// the moved point is intrinsic, so their pairing with it is of the twist readouts' (forques)
+    /// orientation.
     pub fn position_form(estimate: M, sigma: Covariance) -> Scalar<(Line, Line), f64> {
         let here = estimate >> origin();
         // The velocity of `here` under a body-frame twist.
-        let shift = Point::slot().commutator(here).of(estimate >> Point::slot());
-        let pairing = Line::slot() & Point::slot();
-        let readout: Line<(Line,), f64> = pairing.solve(Line::slot() & shift);
+        let shift = B::oriented_slot()
+            .commutator(here)
+            .of(estimate >> B::oriented_slot());
+        let pairing = Readout::oriented_slot() & B::oriented_slot();
+        let readout = pairing.solve(Line::slot() & shift);
         readout & sigma.of(readout)
     }
 
@@ -126,16 +135,17 @@ mod kalman {
 
     /// Body-frame noise: isotropic translation, and rotation about the body origin.
     pub fn covariance(translation_std: f64, rotation_std: f64) -> Covariance {
-        let dyad = |b: P| b * (b & Line::slot());
-        (dyad(Point::new(1.0, 0.0, 0.0)) + dyad(Point::new(0.0, 1.0, 0.0)))
+        let dyad = |b: B| b * (b & Readout::oriented_slot());
+        let unit = |e20, e01, e12| B::from_coeffs([e20, e01, e12]);
+        (dyad(unit(1.0, 0.0, 0.0)) + dyad(unit(0.0, 1.0, 0.0)))
             .gp(translation_std * translation_std)
-            + dyad(Point::new(0.0, 0.0, 1.0)).gp(rotation_std * rotation_std)
+            + dyad(unit(0.0, 0.0, 1.0)).gp(rotation_std * rotation_std)
     }
 
     /// One bivector drawn from a covariance: readouts orthonormal in the covariance's own form
     /// carry independent unit normal draws, and the twists they select have covariance `cov`.
-    pub fn sample(cov: Covariance, rng: &mut Rng) -> P {
-        let readouts = Line::slot() & cov;
+    pub fn sample(cov: Covariance, rng: &mut Rng) -> B {
+        let readouts = Readout::oriented_slot() & cov;
         let (_, lines) = readouts.eigh_with(readouts);
         lines.iter().map(|l| cov.of(*l).gp(rng.normal())).sum()
     }
@@ -144,7 +154,7 @@ mod kalman {
     /// and dead-reckoned poses at every step, and the measurements.
     pub fn simulate_motion(
         initial: M,
-        increments: &[Vec<P>],
+        increments: &[Vec<B>],
         motion_noise: Covariance,
         measurement_noise: Covariance,
         rng: &mut Rng,
@@ -204,7 +214,7 @@ mod kalman {
     /// meanders; read the pose every 25 steps. The noise is drawn from `seed`.
     pub fn tracking(seed: u64) -> Tracking {
         let mut rng = rng(seed);
-        let increments: Vec<Vec<P>> = (0..READINGS)
+        let increments: Vec<Vec<B>> = (0..READINGS)
             .map(|r| {
                 (0..STEPS_PER_READING)
                     .map(|s| {
@@ -373,7 +383,6 @@ fn main() {
 mod tests {
     use super::kalman::*;
     use gax::ApproxEq;
-    use gax::pga2d::Line;
 
     /// numga's test: sparse noisy pose readings keep the filtered path far closer to the truth
     /// than the dead-reckoned one, and closer than the readings themselves. Pooled over a
@@ -402,9 +411,9 @@ mod tests {
     fn covariances_stay_symmetric_and_offsets_carry_no_variance() {
         let scene = tracking(SEED);
         for s in &scene.states {
-            let form = Line::slot() & s.sigma;
+            let form = Readout::oriented_slot() & s.sigma;
             assert!(form.approx_eq(&form.swap(), 1e-9), "{form:?}");
-            let offset = Line::new(0.0, 0.0, 1.0);
+            let offset = gax::pga2d::Line::new(0.0, 0.0, 1.0);
             let p = position_form(s.estimate, s.sigma).of(offset);
             assert!(p.max_abs_diff(&gax::pga2d::Scalar::zero()) < 1e-12);
             let (_, values, _) = position_ellipse(s.estimate, s.sigma);
@@ -423,9 +432,12 @@ mod tests {
             let form = position_form(s.estimate, s.sigma);
             for k in 0..12 {
                 let turn = gax::pga2d::Motor::rotation(here, 0.5 * k as f64);
-                // A unit line through the estimate, and the same direction through the origin
+                // A unit line through the estimate, the line `x = 0` carried there and turned
                 // (the form reads no offset).
-                let line = turn >> (here & (here + gax::pga2d::Point::direction(0.0, 1.0)));
+                let [x, y] = here.to_euclidean();
+                let carried =
+                    gax::pga2d::Motor::translation(x, y) >> gax::pga2d::Line::new(1.0, 0.0, 0.0);
+                let line = turn >> carried;
                 let reach = ring
                     .iter()
                     .fold(0.0f64, |m, p| m.max((line & *p).s().abs()));
@@ -445,11 +457,14 @@ mod tests {
     #[test]
     fn covariance_reads_back_its_variances() {
         let cov = covariance(0.3, 0.1);
-        let form = Line::slot() & cov;
-        let along = |l: Line<(), f64>| form.of(l).of(l).s();
-        assert!((along(Line::new(1.0, 0.0, 0.0)) - 0.09).abs() < 1e-12);
-        assert!((along(Line::new(0.0, 1.0, 0.0)) - 0.09).abs() < 1e-12);
-        assert!((along(Line::new(0.0, 0.0, 1.0)) - 0.01).abs() < 1e-12);
+        let form = Readout::oriented_slot() & cov;
+        let along = |e1, e2, e0| {
+            let l = Readout::from_coeffs([e1, e2, e0]);
+            form.of(l).of(l).s()
+        };
+        assert!((along(1.0, 0.0, 0.0) - 0.09).abs() < 1e-12);
+        assert!((along(0.0, 1.0, 0.0) - 0.09).abs() < 1e-12);
+        assert!((along(0.0, 0.0, 1.0) - 0.01).abs() < 1e-12);
         // At the start the position ellipse is a circle of the translation variance.
         let start = gax::pga2d::Motor::translation(0.0, 0.0);
         let (here, values, _) = position_ellipse(start, cov);

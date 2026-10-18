@@ -5,7 +5,7 @@
 //! an independent rational oracle in `gax-gen/tests/oracle.rs`).
 #![allow(dead_code)]
 
-use gax::{Extensor, Kind, Slots};
+use gax::{Extensor, Kind, Orientation, Slots};
 use gax_gen::algebra::Algebra;
 use gax_gen::spec::AlgebraSpec;
 use gax_gen::table::{BinOp, UnOp, blade_binop, blade_unop};
@@ -55,6 +55,31 @@ impl Oracle {
                 }
                 for (m, c) in blade_binop(&self.alg, op, i as u32, j as u32) {
                     out[m as usize] += c as f64 * x * y;
+                }
+            }
+        }
+        out
+    }
+
+    /// The oriented sandwich `v >> x` (ADR-051): `v x ~v`, and for an odd versor each blade of
+    /// grade `k` times `(−1)ᵏ` for an extrinsic `x` and `−(−1)ᵏ` for an intrinsic one.
+    pub fn sandwich<V, X>(&self, v: &V, x: &X) -> Dense
+    where
+        V: Extensor<Slots = (), Coef = f64>,
+        X: Extensor<Slots = (), Coef = f64>,
+    {
+        let dv = self.dense(v);
+        let mut out = self.binop(
+            BinOp::Gp,
+            &self.binop(BinOp::Gp, &dv, &self.dense(x)),
+            &self.unop(UnOp::Reverse, &dv),
+        );
+        let odd = |b: &&str| self.alg.parse_blade(b).unwrap().0.count_ones() % 2 == 1;
+        if <V::Kind as Kind>::BLADES.iter().all(odd) {
+            let extrinsic = <<X::Kind as Kind>::Orientation as Orientation>::SIGN > 0;
+            for (mask, c) in out.iter_mut().enumerate() {
+                if (mask.count_ones() % 2 == 1) == extrinsic {
+                    *c = -*c;
                 }
             }
         }

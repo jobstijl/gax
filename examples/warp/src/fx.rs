@@ -18,7 +18,7 @@ use crate::render::{GridSteps, Particle, PostSettings, Shock, Source};
 use crate::sim::body::{Body, ORIGIN, Pose, pose_at, turned};
 use crate::sim::rng::Rng;
 use crate::sim::{ARENA, Event, Kind, World, Wreck};
-use gax::pga2d::{Moments, Motor, Point};
+use gax::pga2d::{Moments, Motor, Point, Twist};
 
 type P = Point<(), f32>;
 
@@ -92,7 +92,7 @@ struct Blast {
 pub struct Fx {
     /// The camera pose (without shake).
     pub cam: Pose,
-    cam_vel: P,
+    cam_vel: Twist<(), f32>,
     shake: f32,
     rng: Rng,
     blasts: Vec<Blast>,
@@ -125,7 +125,7 @@ impl Fx {
     pub fn new() -> Fx {
         Fx {
             cam: pose_at(0.0, 0.0, 0.0),
-            cam_vel: Point::direction(0.0, 0.0),
+            cam_vel: Twist::zero(),
             shake: 0.0,
             rng: Rng::new(0xf00d),
             blasts: Vec::new(),
@@ -406,7 +406,7 @@ impl Fx {
         );
         // Critically damped spring on the twist error log(target ~cam).
         let omega = 5.0;
-        let err: P = (target * self.cam.reverse()).log();
+        let err: Twist<(), f32> = (target * self.cam.reverse()).log();
         self.cam_vel += (err * (omega * omega) - self.cam_vel * (2.0 * omega)) * dt;
         self.cam = (self.cam_vel * dt).exp().mul_renormalized(self.cam);
         let a = self.shake * self.shake * self.shake_scale;

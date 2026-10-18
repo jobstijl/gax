@@ -7,18 +7,22 @@
 //! adjugate carries a direction back so that it measures against a patch what the direction
 //! measures against the moved patch, `adj(c) & patch = c & areas(patch)`. That is a pairing
 //! solve, gax's induced map, with no inverse in it, so it exists at zero volume too, where the
-//! deformation after it gives nothing: `F(adj(c)) = det(F) c`. Its adjoint through the metric
-//! `|`, the cofactor, carries the faces' area normals forward, their lengths the moved areas.
-//! gax has neither `adjugate` nor `adjoint` as a method; both are the pairing solves above.
+//! normal it returns pairs to nothing with every patch through the lost direction, the patches
+//! the area map crushes. Its adjoint through the metric `|`, the cofactor, carries the faces'
+//! area normals forward, their lengths the moved areas. gax has neither `adjugate` nor
+//! `adjoint` as a method; both are the pairing solves above.
 //!
-//! A face's oriented patch is its area normal's undual: gax's `dual` is the metric-free
-//! complement, which in VGA3D takes a bivector to the same vector as numga's (Hodge) dual.
+//! A face's oriented patch is the wedge of its two edge directions, wound counter-clockwise
+//! seen from outside, and its area normal is the patch's dual: an intrinsic vector, a
+//! measurement against patches rather than an edge, so the adjugate and the cofactor are maps
+//! on normals. gax's `dual` is the metric-free complement, which in VGA3D takes a bivector to
+//! the same vector as numga's (Hodge) dual.
 //!
 //! The animation squeezes a unit cube flat and back while shearing it: its faces, their area
 //! normals carried by the cofactor, and the faces' areas and the volume as bars. At the flat
 //! sheet the volume is zero while the faces still have area. From the centre, in yellow, the
-//! adjugate's image of the vertical: the direction the deformation takes to the vertical
-//! scaled by the volume, which at the flat sheet is the direction the deformation loses.
+//! adjugate's image of the horizontal faces' normal, which at the flat sheet lies along the
+//! direction the deformation loses.
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, ORIGIN3, Point2, Rect, Scene3, backdrop,
@@ -30,14 +34,19 @@ mod space;
 
 mod area_transport {
     use super::space::adjoint;
+    use gax::Intrinsic;
     use gax::vga3d::{Bivector, Vector};
 
     /// A direction, or a position from the cube's centre.
     pub type V = Vector<(), f64>;
     /// An oriented area.
     pub type B = Bivector<(), f64>;
+    /// An area normal: the dual of a patch, intrinsic.
+    pub type N = Vector<(), f64, Intrinsic>;
     /// A map on directions, `Vector <- Vector`.
     pub type Linear = Vector<(Vector,), f64>;
+    /// A map on area normals.
+    pub type NormalMap = Vector<(Vector<(), f32, Intrinsic>,), f64, Intrinsic>;
     /// A map on oriented areas, `Bivector <- Bivector`.
     pub type AreaMap = Bivector<(Bivector,), f64>;
 
@@ -58,10 +67,10 @@ mod area_transport {
     }
 
     /// The adjugate of an area map, from its defining pairing: `adj(c) & patch` equals
-    /// `c & areas(patch)` for every direction `c` and patch.
-    pub fn adjugate(areas: AreaMap) -> Linear {
-        let pairing = Vector::slot() & Bivector::slot();
-        pairing.solve(Vector::slot() & areas)
+    /// `c & areas(patch)` for every normal `c` and patch.
+    pub fn adjugate(areas: AreaMap) -> NormalMap {
+        let pairing = N::oriented_slot() & Bivector::slot();
+        pairing.solve(N::oriented_slot() & areas)
     }
 
     /// A deformation with its areas carried forward and its measurements carried back.
@@ -71,9 +80,9 @@ mod area_transport {
         /// The outermorphism on patches.
         pub areas: AreaMap,
         /// Pulls a volume measurement back through the area map.
-        pub adjugate: Linear,
+        pub adjugate: NormalMap,
         /// Pushes area normals forward.
-        pub cofactor: Linear,
+        pub cofactor: NormalMap,
         /// The determinant: the factor on volumes, negative when the deformation mirrors.
         pub volume: f64,
     }
@@ -97,12 +106,13 @@ mod area_transport {
         pub vertices: Vec<V>,
         pub centres: Vec<V>,
         pub patches: Vec<B>,
-        pub area_normals: Vec<V>,
+        pub area_normals: Vec<N>,
     }
 
     /// A cube centred at the origin. Its corners in numga's order (corner `i` has the bits of
     /// `i` as its signs along `x`, `y`, `z`, `x` the highest), its faces facing `+x`, `+y`, `+z`,
-    /// `-x`, `-y`, `-z`, each patch the undual of its area normal.
+    /// `-x`, `-y`, `-z`, each patch the wedge of its edges, as large as the face, and each area
+    /// normal the patch's dual.
     pub fn cube(side: f64) -> Surface {
         let half = side / 2.0;
         let sign = |i: usize, bit: usize| if i >> bit & 1 == 1 { half } else { -half };
@@ -110,12 +120,17 @@ mod area_transport {
             .map(|i| V::new(sign(i, 2), sign(i, 1), sign(i, 0)))
             .collect();
         let outward = [X, Y, Z, -X, -Y, -Z];
-        let area_normals: Vec<V> = outward.iter().map(|n| *n * (side * side)).collect();
+        // The faces at +x, +y and +z; the opposite faces are wound the other way.
+        let facing = [Y ^ Z, Z ^ X, X ^ Y];
+        let patches: Vec<B> = (facing.iter().copied())
+            .chain(facing.iter().map(|f| -*f))
+            .map(|f| f * (side * side))
+            .collect();
         Surface {
             vertices,
             centres: outward.iter().map(|n| *n * half).collect(),
-            patches: area_normals.iter().map(|n| n.undual()).collect(),
-            area_normals,
+            area_normals: patches.iter().map(|p| p.dual()).collect(),
+            patches,
         }
     }
 
@@ -127,7 +142,9 @@ mod area_transport {
             vertices: on(t.deformation, &surface.vertices),
             centres: on(t.deformation, &surface.centres),
             patches: surface.patches.iter().map(|p| t.areas.of(*p)).collect(),
-            area_normals: on(t.cofactor, &surface.area_normals),
+            area_normals: (surface.area_normals.iter())
+                .map(|n| t.cofactor.of(*n))
+                .collect(),
         }
     }
 
@@ -212,7 +229,7 @@ fn draw_cube(c: &mut Canvas, rect: Rect, transport: &Transport, surface: &Surfac
             colour(f % 3),
         );
     }
-    let lost = transport.adjugate.of(Z) * ADJUGATE_SCALE;
+    let lost = transport.adjugate.of((X ^ Y).dual()) * ADJUGATE_SCALE;
     s.arrow(ORIGIN3, lost, 2.0, 8.0, palette::yellow());
     s.draw(c);
 }
@@ -287,8 +304,8 @@ mod tests {
     }
 
     /// numga's scene checks, at its three cases (solid, compressed and sheared, flat sheet):
-    /// the carried area normals are the carried patches' duals, and the adjugate undoes the
-    /// deformation up to its volume, at the flat sheet too.
+    /// the carried area normals are the carried patches' duals, and the deformation and its area
+    /// map scale every volume by the determinant, at the flat sheet too.
     #[test]
     fn scene_checks() {
         for (thickness, shear) in [(1.0, 0.0), (0.35, 0.45), (0.0, MAX_SHEAR)] {
@@ -297,8 +314,10 @@ mod tests {
             for (n, p) in surface.area_normals.iter().zip(&surface.patches) {
                 assert!(close(n.c, p.dual().c, 1e-12), "{n:?} {p:?}");
             }
-            let undone = t.adjugate.of(t.deformation) - Vector::slot() * t.volume;
-            assert!(undone.c.iter().flatten().all(|v| v.abs() < 1e-12));
+            let volumes = t.deformation.of(Vector::slot()) ^ t.areas.of(Bivector::slot());
+            let scaled = (Vector::slot() ^ Bivector::slot()) * t.volume;
+            let error = (volumes - scaled).c;
+            assert!(error.iter().flatten().flatten().all(|v| v.abs() < 1e-12));
         }
     }
 
@@ -330,18 +349,15 @@ mod tests {
     /// numga's `test_the_adjugate_identifies_the_lost_direction_at_collapse`.
     #[test]
     fn the_adjugate_identifies_the_lost_direction_at_collapse() {
-        let probes = [V::new(1.0, 2.0, -1.0), V::new(0.0, 1.0, 3.0)];
-        for (thickness, shear) in [(1.0, 0.0), (0.2, 0.4), (0.0, 0.7)] {
-            let t = transport(deformation(thickness, shear));
-            for probe in probes {
-                let image = t.deformation.of(t.adjugate.of(probe));
-                assert!(close(image.c, (probe * t.volume).c, 1e-12));
-            }
-        }
         let flat = transport(deformation(0.0, 0.7));
-        let lost = flat.adjugate.of(Z);
-        assert!(close(lost.c, (Z - X * 0.7).c, 1e-12), "{lost:?}");
-        assert!(close(flat.deformation.of(lost).c, [0.0; 3], 1e-12));
+        let lost = flat.adjugate.of((X ^ Y).dual());
+        let expected = ((X ^ Y) - (Y ^ Z) * 0.7).dual();
+        assert!(close(lost.c, expected.c, 1e-12), "{lost:?}");
+        // A patch through the lost direction: the adjugate's image pairs to nothing with it,
+        // and the area map crushes it.
+        let crushed = (Z - X * 0.7) ^ Y;
+        assert!((lost & crushed).s().abs() < 1e-12);
+        assert!(close(flat.areas.of(crushed).c, [0.0; 3], 1e-12));
     }
 
     #[test]

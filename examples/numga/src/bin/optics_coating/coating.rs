@@ -6,15 +6,19 @@
 #![cfg_attr(not(test), allow(dead_code))]
 
 use core::f64::consts::{FRAC_1_SQRT_2, TAU};
-use gax::Complex;
-use gax::sta::{Bivector, Even, Odd, Vector};
+use gax::sta::{Bivector, Even, Odd, Scalar, Vector};
+use gax::{Complex, Intrinsic};
 
 pub type C = Complex<f64>;
 pub type V = Vector<(), f64>;
 pub type B = Bivector<(), f64>;
+/// An excitation: the dual of a field, a bivector of the other orientation (intrinsic).
+pub type Excitation = Bivector<(), f64, Intrinsic>;
 pub type Rotor = gax::Unit<Even<(), f64>>;
 /// numga's `Constitutive`: a field in, its excitation out (`Antibivector <- Bivector`).
-pub type Constitutive = Bivector<(Bivector,), f64>;
+pub type Constitutive = Bivector<(Bivector,), f64, Intrinsic>;
+/// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
+pub type AxionCoupling = Scalar<(), f64, Intrinsic>;
 
 /// numga's `Polarization`, the tangential blades `x y`: a vector of the interface plane,
 /// VGA2D's vector, with complex coefficients for its phase. [`tangential`] sends it into
@@ -30,6 +34,8 @@ pub use gax::vga3d::Paravector as Boundary;
 
 /// numga's `BoundaryMap`: the boundary amplitudes of a field.
 pub type BoundaryMap = Boundary<(Bivector,), f64>;
+/// The boundary amplitudes of an excitation.
+pub type ExcitationBoundary = Boundary<(Bivector<(), f32, Intrinsic>,), f64>;
 /// numga's `FieldMap`: the field reconstructed from boundary amplitudes.
 pub type FieldMap = Bivector<(Boundary,), f64>;
 /// The amplitudes' generator along the layer's normal (numga's `Propagation`, real).
@@ -105,9 +111,9 @@ pub fn field_boundary() -> BoundaryMap {
 
 /// The tangential magnetic excitation of an excitation, `t · (t ∧ (z ∧ G)*)` (numga's `dual`
 /// is gax's `hodge`).
-pub fn excitation_boundary() -> BoundaryMap {
+pub fn excitation_boundary() -> ExcitationBoundary {
     let (t, z) = (t(), z());
-    amplitudes().of((t | (t ^ (z ^ Bivector::slot()).hodge())).cast::<Odd>())
+    amplitudes().of((t | (t ^ (z ^ Excitation::oriented_slot()).hodge())).cast::<Odd>())
 }
 
 /// The tangential electric field of the amplitudes as a polarization, `-t · (z · B)`:
@@ -122,7 +128,7 @@ pub fn electric_trace() -> Polarization<(Boundary,), f64> {
 /// planes by the reluctivity, then the Hodge dual (numga's `dual`).
 pub fn dielectric(permittivity: [f64; 3], reluctivity: f64) -> Constitutive {
     let open = Bivector::slot();
-    let electric: Constitutive = [x(), y(), z()]
+    let electric: Bivector<(Bivector,), f64> = [x(), y(), z()]
         .into_iter()
         .zip(permittivity)
         .map(|(axis, e)| {
@@ -132,6 +138,13 @@ pub fn dielectric(permittivity: [f64; 3], reluctivity: f64) -> Constitutive {
         .sum();
     let magnetic = (open + (t() >> open)) * 0.5;
     (electric + magnetic * reluctivity).hodge()
+}
+
+/// The axion response of strength `alpha`: the coupling, a pseudoscalar, times the identity
+/// on field planes. The coupling's number is declared the pseudoscalar's orientation.
+pub fn axion_response(alpha: f64) -> Constitutive {
+    let coupling: AxionCoupling = Scalar::new(alpha).with_orientation();
+    coupling * Bivector::slot()
 }
 
 /// A lossless nonmagnetic isotropic medium of refractive index `index`.
@@ -403,6 +416,7 @@ pub fn along_y() -> Wave {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use gax::sta::Trivector;
     use gax::{ApproxEq, Extensor, Slots};
     use gax_numga_examples::signal::linspace;
 
@@ -648,7 +662,7 @@ pub mod tests {
         let parallel = t() + x() * 0.4 + y() * 0.1;
         let base = dielectric(permittivity, reluctivity);
         let open = Bivector::slot();
-        let chi = (material_turn >> base.of(material_turn << open)) + open * axion;
+        let chi = (material_turn >> base.of(material_turn << open)) + axion_response(axion);
 
         let medium = Medium::from_chi(chi, parallel);
         let (indices, modes) = medium.generator.eig();
@@ -686,7 +700,6 @@ pub mod tests {
         let index = 1.5;
         let common_axion = 0.43;
         let base = isotropic(index);
-        let open = Bivector::slot();
         let scatter_between = |left: Constitutive, right: Constitutive| {
             let incident = Ports::from_medium(&Medium::from_chi(left, t()), index, t());
             let substrate_medium = Medium::from_chi(right, t());
@@ -700,15 +713,15 @@ pub mod tests {
         };
         for jump in [0.0, 0.2, 0.7, 2.0] {
             let (result, incident, substrate, substrate_medium) =
-                scatter_between(base, base + open * jump);
+                scatter_between(base, base + axion_response(jump));
             let denominator = 4.0 * index * index + jump * jump;
             let reflected = wave(
                 real(-jump * jump / denominator),
                 real(2.0 * index * jump / denominator),
             );
             let (reflectance, transmittance) = result.powers(along_x(), &incident, &substrate);
-            let shifted_base = base + open * common_axion;
-            let (shifted, ..) = scatter_between(shifted_base, shifted_base + open * jump);
+            let shifted_base = base + axion_response(common_axion);
+            let (shifted, ..) = scatter_between(shifted_base, shifted_base + axion_response(jump));
 
             assert!(close(result.reflection.of(along_x()), reflected));
             assert!(close(
@@ -744,7 +757,7 @@ pub mod tests {
             .map(|k| {
                 let rotation = (xy() * turns[k].0 + yz * turns[k].1).exp();
                 let base = dielectric(permittivities[k], reluctivities[k]);
-                (rotation >> base.of(rotation << open)) + open * axions[k]
+                (rotation >> base.of(rotation << open)) + axion_response(axions[k])
             })
             .collect();
         let (incident_chi, substrate_chi) = (isotropic(incident_index), isotropic(substrate_index));
@@ -780,18 +793,19 @@ pub mod tests {
                 let chi = chis[k].map_coefs(C::real);
                 let (first, last) = (fields[k][0], fields[k][fractions.len() - 1]);
                 // Maxwell's jump conditions compare physical fields across different materials.
-                let zero = gax::sta::Trivector::zero();
-                assert!(close(complex(normal) ^ (last - right_field), zero));
+                assert!(close(
+                    complex(normal) ^ (last - right_field),
+                    Trivector::zero()
+                ));
                 assert!(close(
                     complex(normal) ^ (chi.of(last) - right_excitation),
-                    zero
+                    Trivector::zero()
                 ));
                 for field in &fields[k] {
                     let electric = complex(t()) | *field;
                     let magnetic = complex(t()) | chi.of(*field);
-                    let part = |v: Vector<(), C>, f: fn(C) -> f64| v.map_coefs(f);
                     let flux = |f: fn(C) -> f64| {
-                        (part(electric, f) ^ part(magnetic, f) ^ normal)
+                        (electric.map_coefs(f) ^ magnetic.map_coefs(f) ^ normal)
                             .scalar_product(spatial_volume)
                             .s()
                     };
@@ -809,15 +823,14 @@ pub mod tests {
                 (tangential() - z() * (parallel | tangential()) / n).map_coefs(C::real);
             let exterior_field = (forward_wavevector ^ incident.electric_field.of(polarization))
                 + (backward_wavevector ^ backward_electric.of(result.reflection.of(polarization)));
-            let zero = gax::sta::Trivector::zero();
             assert!(close(
                 complex(normal) ^ (right_field - exterior_field),
-                zero
+                Trivector::zero()
             ));
             let exterior_excitation = incident_chi.map_coefs(C::real).of(exterior_field);
             assert!(close(
                 complex(normal) ^ (right_excitation - exterior_excitation),
-                zero
+                Trivector::zero()
             ));
         }
     }

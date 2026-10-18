@@ -4,7 +4,7 @@ use super::kabuto::*;
 use super::paper::*;
 use super::picture::{Picture, View};
 use gax::pga3d::{Line, Point};
-use gax::{ApproxEq, vga2d};
+use gax::{ApproxEq, Intrinsic, vga2d};
 use gax_numga_examples::Light;
 use std::f64::consts::PI;
 
@@ -173,10 +173,10 @@ fn point_and_line_coincidence_crease_constructions() {
     let motion = half_turn(point_bisector(first, third));
     assert!((motion >> first).max_abs_diff(&third) < 1e-12);
     let (first_line, second_line) = (first & second, first & third);
-    let turn = half_turn(line_bisector(first_line, second_line, paper.sheet));
+    let turn = half_turn(line_bisector(first_line, second_line, first));
     let matched = turn >> first_line.normalized().into_inner();
     let target = second_line.normalized().into_inner();
-    assert!((matched + target).approx_eq(&Line::zero(), 1e-12));
+    assert!((matched + target).approx_eq(&Edge::zero(), 1e-12));
 }
 
 /// The picture at every pixel centre of a `size` square, rows from the top.
@@ -335,7 +335,7 @@ fn overlap(first: &[vga2d::Vector<(), f64>], second: &[vga2d::Vector<(), f64>]) 
             edge.dual().normalized().into_inner()
         })
     });
-    let shadow = |polygon: &[vga2d::Vector<(), f64>], axis: vga2d::Vector<(), f64>| {
+    let shadow = |polygon: &[vga2d::Vector<(), f64>], axis: vga2d::Vector<(), f64, Intrinsic>| {
         let along = polygon.iter().map(|p| (*p | axis).s());
         (
             along.clone().fold(f64::INFINITY, f64::min),

@@ -69,7 +69,7 @@ const BEAM_VIEW: f32 = 8.0;
 /// clamp under any turn of the load, the colour scale's end.
 struct Scene {
     bodies: Vec<Body>,
-    edges: Vec<Vec<[Strain; 3]>>,
+    edges: Vec<Vec<[Edge; 3]>>,
     kerns: Vec<Vec<P2>>,
     largest: f64,
 }
@@ -98,8 +98,11 @@ fn scene() -> &'static Scene {
     })
 }
 
+/// A triangle's edge: the join of two of its corners, an intrinsic line.
+type Edge = gax::pga2d::Line<(), f64, gax::Intrinsic>;
+
 /// Each triangle's edges as lines, the triangle on their positive sides.
-fn edges(section: &sections::Section) -> Vec<[Strain; 3]> {
+fn edges(section: &sections::Section) -> Vec<[Edge; 3]> {
     let triangles = section.triangles.iter();
     triangles
         .map(|[a, b, c]| [*a & *b, *b & *c, *c & *a])
@@ -107,7 +110,7 @@ fn edges(section: &sections::Section) -> Vec<[Strain; 3]> {
 }
 
 /// Whether a point lies in one of the triangles with these edges.
-fn inside(edges: &[[Strain; 3]], p: P2) -> bool {
+fn inside(edges: &[[Edge; 3]], p: P2) -> bool {
     edges
         .iter()
         .any(|lines| lines.iter().all(|l| (*l & p).s() >= 0.0))
@@ -119,9 +122,10 @@ fn corner_stresses(body: &Body, strain: Strain) -> impl Iterator<Item = f64> + '
     corners.map(move |p| beam::stress(strain, *p))
 }
 
-/// The direction of a line of the section: its meet with the line at infinity.
+/// The direction of a line of the section: its meet with the line at infinity, an extrinsic
+/// point, taken as the displacement along the line.
 fn heading(line: Strain) -> P2 {
-    line ^ beam::shift_along_beam()
+    (line ^ beam::shift_along_beam()).with_orientation()
 }
 
 /// The point `reach` from `from` towards a direction.
@@ -338,9 +342,11 @@ mod tests {
         (axis(row) | map.of(axis(column))).s()
     }
 
-    /// The lines through the centroid across and up.
+    /// The lines through the centroid across and up, as strains: joins taken as the axes of
+    /// turns.
     fn turns(body: &Body) -> [Strain; 2] {
-        [P2::direction(1.0, 0.0), P2::direction(0.0, 1.0)].map(|d| body.centroid & d)
+        [P2::direction(1.0, 0.0), P2::direction(0.0, 1.0)]
+            .map(|d| (body.centroid & d).with_orientation())
     }
 
     /// A strain's energy, `strain & stiffness(strain)`.

@@ -1605,7 +1605,7 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         }
         let _ = writeln!(s, "}}\n");
     }
-    for (alias, kind) in &spec.aliases {
+    for (alias, kind, _) in &spec.aliases {
         let _ = writeln!(s, "alias {alias} = {kind};\n");
     }
     // Constructors.

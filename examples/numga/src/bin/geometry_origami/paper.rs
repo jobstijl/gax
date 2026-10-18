@@ -1,13 +1,16 @@
 //! numga's origami `core.py`: crease construction, polygon splitting and rigid folds of a
 //! sheet of paper, in PGA3D.
 
-use gax::Unit;
-use gax::pga3d::{Line, Motor, Plane, Point, Pseudoscalar};
+use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::{Intrinsic, Unit};
 use std::ops::Range;
 
 pub type P = Point<(), f64>;
 pub type Pl = Plane<(), f64>;
 pub type L = Line<(), f64>;
+/// A line from one point of the paper to another, oriented along itself (intrinsic), as their
+/// join is.
+pub type Edge = Line<(), f64, Intrinsic>;
 pub type M = Unit<Motor<(), f64>>;
 
 /// The perpendicular bisector plane of two equally weighted finite points: the inner product of
@@ -18,15 +21,14 @@ pub fn point_bisector(first: P, second: P) -> Pl {
         .into_inner()
 }
 
-/// The external angle bisector of two intersecting oriented lines in a sheet: the plane through
-/// their crossing orthogonal to the sum of the unit lines. Folding along it lays one line on the
+/// The external angle bisector of two oriented lines crossing at a point: the plane through
+/// the crossing orthogonal to the sum of the unit lines. Folding along it lays one line on the
 /// other, reversed.
-pub fn line_bisector(first: L, second: L, sheet: Pl) -> Pl {
+pub fn line_bisector(first: Edge, second: Edge, crossing: P) -> Pl {
     let (first, second) = (
         first.normalized().into_inner(),
         second.normalized().into_inner(),
     );
-    let crossing = (sheet | first) ^ second;
     ((first + second) | crossing).normalized().into_inner()
 }
 
@@ -203,7 +205,16 @@ impl Paper {
     /// creases stay exactly on the mathematical sheet.
     fn folded_offsets(&self, motors: &[M], turning: &[bool], angle: f64) -> Vec<P> {
         let sign = angle.signum();
-        let heights = self.offsets.iter().map(|o| (self.sheet & *o).s() * sign);
+        // The sheet's normal: the direction of the line square to it, signed towards its
+        // positive side by its pairing with the sheet. An offset's height is its pairing with
+        // the sheet, in units of the normal's.
+        let square = (self.sheet | Point::xyz(0.0, 0.0, 0.0)) ^ Plane::new(0.0, 0.0, 0.0, 1.0);
+        let normal = square.gp((self.sheet & square).s());
+        let unit = (self.sheet & normal).s();
+        let heights = self
+            .offsets
+            .iter()
+            .map(|o| (self.sheet & *o).s() / unit * sign);
         let highest = |turns: bool| {
             heights
                 .clone()
@@ -213,8 +224,7 @@ impl Paper {
                 .fold(f64::NEG_INFINITY, f64::max)
         };
         let height = (highest(true) + highest(false) + 1.0) / 2.0;
-        // The sheet times the pseudoscalar is its normal direction.
-        let pivot: P = (self.sheet * Pseudoscalar::new(1.0)).gp(height * sign);
+        let pivot = normal.gp(height * sign);
         self.offsets
             .iter()
             .zip(motors)

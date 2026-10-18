@@ -9,11 +9,12 @@
 //!
 //! Light's polarization is a point on the Poincaré sphere, a unit Stokes vector of VGA3D: linear
 //! polarizations on its equator, at twice their angle in the plate, circular ones at its poles.
-//! The state polarized along a direction `d` of the plate is `x` reflected in `d`, the sandwich
-//! `d x d`, which doubles the angle. The weak stress-optic law makes the stressed plate a rotor
-//! of that sphere, about the state polarized along a principal direction, by the retardance that
-//! the principal stress difference builds through the thickness: the exponential of that state's
-//! dual times half the retardance. A polarizer passes the share `(1 + a · s) / 2` of light in the
+//! The state polarized along a direction `d` of the plate is `x` turned by the rotor `d x`,
+//! which doubles the angle. The weak stress-optic law makes the stressed plate a rotor of that
+//! sphere, about the state polarized along a principal direction, by the retardance that the
+//! principal stress difference builds through the thickness: the exponential of the plane square
+//! to that state times half the retardance. The plane holds the linear state an eighth of a turn
+//! from the principal direction, and the circular state. A polarizer passes the share `(1 + a · s) / 2` of light in the
 //! state `s` (Malus's law). Light travels normal to the plate; absorption, reflection and ray
 //! bending are neglected.
 //!
@@ -49,6 +50,11 @@ mod photoelasticity {
         Planar::new(1.0, 0.0)
     }
 
+    /// The plate's `y` axis.
+    pub fn y() -> Planar {
+        Planar::new(0.0, 1.0)
+    }
+
     /// The circular state, at the sphere's pole.
     pub fn circular() -> Polarization {
         Polarization::new(0.0, 0.0, 1.0)
@@ -80,9 +86,9 @@ mod photoelasticity {
     }
 
     /// Light polarized linearly along a unit direction in the plate, on the Poincaré sphere: `x`
-    /// reflected in the direction, at twice its angle from `x`.
+    /// turned by the rotor `direction x`, by twice the direction's angle from `x`.
     pub fn polarization(direction: Planar) -> Polarization {
-        (direction >> x()).into()
+        ((direction * x()) >> x()).into()
     }
 
     /// The principal stress difference.
@@ -99,7 +105,10 @@ mod photoelasticity {
     pub fn half_turn(stress: Stress, stress_phase: f64) -> HalfTurn {
         let (principal, directions) = stress.eigh();
         let retardance = stress_phase * (principal[1] - principal[0]);
-        polarization(directions[1]).hodge() * (retardance / 2.0)
+        // The plane of the turn, square to its axis: the linear state an eighth of a turn from
+        // the principal direction, and the circular state.
+        let eighth_turn = Pseudoscalar::new(-core::f64::consts::PI / 8.0).exp();
+        (polarization(eighth_turn >> directions[1]) ^ circular()) * (retardance / 2.0)
     }
 
     /// The plate's turn of the Poincaré sphere.
@@ -140,10 +149,10 @@ mod photoelasticity {
     /// The retardance per unit of principal stress difference.
     pub const STRESS_PHASE: f64 = core::f64::consts::TAU * STRESS_OPTIC * THICKNESS / WAVELENGTH;
 
-    /// A tension along `x`: averaging the identity and the reflection in `x` keeps axial
-    /// traction and cancels transverse traction.
+    /// A tension along `x`: averaging the identity and the reflection in `y` (in the mirror with
+    /// normal `y`, which keeps `x`) keeps axial traction and cancels transverse traction.
     pub fn uniaxial(tension: f64) -> Stress {
-        (Planar::slot() + (x() >> Planar::slot())) * (tension / 2.0)
+        (Planar::slot() + (y() >> Planar::slot())) * (tension / 2.0)
     }
 
     /// The remote stress.
@@ -374,11 +383,6 @@ mod tests {
         dyad(x(), x()) * along_x
             + dyad(y(), y()) * along_y
             + (dyad(x(), y()) + dyad(y(), x())) * shear
-    }
-
-    /// The plate's `y` axis.
-    fn y() -> Planar {
-        Planar::new(0.0, 1.0)
     }
 
     #[test]

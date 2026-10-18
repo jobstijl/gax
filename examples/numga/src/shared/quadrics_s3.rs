@@ -23,8 +23,8 @@ gax::algebra! {
     kind Scalar = [1];
     versor Vector = [e1, e2, e3, e4];
     kind Bivector = [e23, e31, e12, e14, e24, e34];
-    versor Trivector = [e234, e314, e124, e321];
-    kind ScreenPoint = [e234, e314, e124];
+    versor Trivector = [e234, e314, e124, e321] intrinsic;
+    kind ScreenPoint = [e234, e314, e124] intrinsic;
     kind Pseudoscalar = [e1234];
     versor Rotor = [1, e23, e31, e12, e14, e24, e34, e1234];
 }
@@ -36,7 +36,8 @@ use gax_numga_examples::points::box_map;
 use gax_numga_examples::signal::tangent;
 use gax_numga_examples::{Point2, Rect};
 
-/// A point of S³: a trivector, on numga's `yzw`, `zxw`, `xyw`, `zyx`.
+/// A point of S³: a trivector, on numga's `yzw`, `zxw`, `xyw`, `zyx`. The pole of a plane,
+/// its dual, and so intrinsic (ADR-051), as the algebra declares its trivectors.
 pub type Point = Trivector<(), f64>;
 /// A plane through the origin of `R⁴`: a great sphere of S³.
 pub type Plane = Vector<(), f64>;
@@ -65,9 +66,10 @@ pub fn unit(p: Point) -> Point {
     p.gp(1.0 / (w() & p).s()).normalized().into_inner()
 }
 
-/// The origin of S³, `zyx`, where every body is centred in its own frame and the eye sits.
+/// The origin of S³, `zyx`, the pole of the plane `w = 0`, where every body is centred in its
+/// own frame and the eye sits.
 pub fn origin() -> Point {
-    unit(Trivector::new(0.0, 0.0, 0.0, 1.0))
+    unit(w().dual())
 }
 
 /// A direction at the origin: a vector of the tangent space there, Euclidean 3-space.

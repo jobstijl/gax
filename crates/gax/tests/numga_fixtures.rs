@@ -20,11 +20,14 @@ where
     M: Extensor<Slots = (), Coef = f64>
         + gax::Gp<M, Output = M>
         + gax::Wedge<M, Output = M>
-        + gax::Vee<M, Output = M>
+        + gax::Vee<M>
         + gax::Dot<M, Output = M>
         + gax::Commutator<M, Output = M>
         + gax::Reverse<Output = M>
-        + gax::Dual<Output = M>,
+        + gax::Dual,
+    // The join and the dual flip the orientation (ADR-051): the same coefficients, another type.
+    <M as gax::Vee<M>>::Output: Extensor<Slots = (), Coef = f64>,
+    <M as gax::Dual>::Output: Extensor<Slots = (), Coef = f64>,
 {
     let mut checked = std::collections::BTreeMap::<String, usize>::new();
     for line in fixture
@@ -38,13 +41,13 @@ where
         let (a, b, want) = (&v[..n], &v[n..2 * n], &v[2 * n..]);
         let (ma, mb): (M, M) = (o.from_dense(&a.to_vec()), o.from_dense(&b.to_vec()));
         let got = match op {
-            "gp" => ma.gp(mb),
-            "wedge" => ma.wedge(mb),
-            "vee" => ma.vee(mb),
-            "dot" => ma.dot(mb),
-            "commutator" => ma.commutator(mb),
-            "reverse" => ma.reverse(),
-            "dual" => ma.dual(),
+            "gp" => o.dense(&ma.gp(mb)),
+            "wedge" => o.dense(&ma.wedge(mb)),
+            "vee" => o.dense(&ma.vee(mb)),
+            "dot" => o.dense(&ma.dot(mb)),
+            "commutator" => o.dense(&ma.commutator(mb)),
+            "reverse" => o.dense(&ma.reverse()),
+            "dual" => o.dense(&ma.dual()),
             other => panic!("unknown op {other}"),
         };
         // vee and dual are defined relative to the pseudoscalar's orientation.
@@ -54,7 +57,7 @@ where
             1.0
         };
         let want: Vec<f64> = want.iter().map(|x| s * x).collect();
-        assert_close(&o.dense(&got), &want, &format!("numga {op}"));
+        assert_close(&got, &want, &format!("numga {op}"));
         *checked.entry(op.to_string()).or_default() += 1;
     }
     assert_eq!(checked.len(), 7, "every operation was checked: {checked:?}");

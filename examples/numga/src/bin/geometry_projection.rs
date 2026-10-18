@@ -16,17 +16,18 @@ use gax_numga_examples::{
 
 mod projection {
     use gax::pga3d::{Line, Motor, Plane, Point, Pseudoscalar};
-    use gax::{Unit, pga2d};
+    use gax::{Intrinsic, Unit, pga2d};
     use gax_numga_examples::signal::wave;
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
-    pub type L = Line<(), f64>;
+    /// A line, the join of two points: oriented along itself (intrinsic).
+    pub type L = Line<(), f64, Intrinsic>;
     pub type M = Unit<Motor<(), f64>>;
     /// A camera, or a shadow: `Point <- Point`.
     pub type Camera = Point<(Point,), f64>;
     /// The camera for lines.
-    pub type LineCamera = Line<(Line,), f64>;
+    pub type LineCamera = Line<(Line<(), f32, Intrinsic>,), f64, Intrinsic>;
     /// The bilinear form on two cameras' image points that vanishes on corresponding pairs.
     pub type Correspondence = Pseudoscalar<(Point, Point), f64>;
     /// A rig's screen coordinates: points of space as points of the plane.
@@ -131,12 +132,12 @@ mod projection {
     pub fn stereo(subject: &[P; 8], centre: P, screen: Pl, rig_1: M, rig_2: M) -> Stereo {
         let camera = camera(centre, screen);
         // The same join-then-meet with a line in the slot is the camera for lines.
-        let line_camera: LineCamera = (centre & Line::slot()) ^ screen;
+        let line_camera: LineCamera = (centre & L::oriented_slot()) ^ screen;
         // The camera moves as a map: pull the world back into the rig's frame, push the image
         // forward.
         let camera_1 = rig_1 >> camera.of(rig_1 << Point::slot());
         let camera_2 = rig_2 >> camera.of(rig_2 << Point::slot());
-        let line_camera_2 = rig_2 >> line_camera.of(rig_2 << Line::slot());
+        let line_camera_2 = rig_2 >> line_camera.of(rig_2 << L::oriented_slot());
         let (centre_1, centre_2) = (rig_1 >> centre, rig_2 >> centre);
         let image_1 = subject.map(|p| camera_1.of(p));
         let image_2 = subject.map(|p| camera_2.of(p));
@@ -513,21 +514,21 @@ mod tests {
         }
     }
 
-    /// The translator adds its displacement, and the rotation about the join of the origin and
-    /// `+y` is right handed. gax's join orients that axis opposite to numga's (ADR-009), so
-    /// numga's `exp(axis π/4)` is gax's `exp(-axis π/4)`, `Motor::rotation(axis, π/2)`.
+    /// The translator adds its displacement, and the rotation about the `y` axis is right
+    /// handed. numga's axis is `zx`, the meet of the planes `z = 0` and `x = 0` (a turn about
+    /// the line, extrinsic, as a generator is), and its exponential is numga's; the join of the
+    /// origin and `+y` turns the same way under `Motor::rotation`.
     #[test]
     fn bivector_exponentials_translate_and_rotate() {
         // numga's `xw 0.5 - yw + zw 0.25`, with `xw = e1 e0 = -e01`.
         let b = Line::new(0.0, 0.0, 0.0, -0.5, 1.0, -0.25);
         let moved = b.exp() >> Point::xyz(1.0, 2.0, 3.0);
         assert!(same(moved, Point::xyz(2.0, 0.0, 3.5), 1e-14));
-        let y_axis = (origin() & Point::direction(0.0, 1.0, 0.0))
-            .normalized()
-            .into_inner();
+        let y_axis = Plane::new(0.0, 0.0, 1.0, 0.0) ^ Plane::new(1.0, 0.0, 0.0, 0.0);
         let turned = y_axis.gp(-core::f64::consts::FRAC_PI_4).exp() >> Point::xyz(1.0, 0.0, 0.0);
         assert!(same(turned, Point::xyz(0.0, 0.0, -1.0), 1e-8));
-        let rotation = Motor::rotation(y_axis, core::f64::consts::FRAC_PI_2);
+        let joined = origin() & Point::direction(0.0, 1.0, 0.0);
+        let rotation = Motor::rotation(joined, core::f64::consts::FRAC_PI_2);
         let turned = rotation >> Point::xyz(1.0, 0.0, 0.0);
         assert!(same(turned, Point::xyz(0.0, 0.0, -1.0), 1e-15));
     }
@@ -550,7 +551,7 @@ mod tests {
     fn line_camera_commutes_with_join() {
         let centre = Point::xyz(0.3, -0.2, -1.0);
         let camera = camera(centre, screen());
-        let line_camera: LineCamera = (centre & Line::slot()) ^ screen();
+        let line_camera: LineCamera = (centre & L::oriented_slot()) ^ screen();
         let (a, b) = (Point::xyz(1.0, 0.0, 2.0), Point::xyz(0.0, 1.0, 3.0));
         let imaged_join = line_camera.of(a & b);
         let joined_images = camera.of(a) & camera.of(b);
@@ -584,7 +585,7 @@ mod tests {
         assert!(!vanishes(form.of(image_1[0]).of(image_2[2]), 1e-3));
         let epipole_2 = camera_2.of(centre_1);
         assert!(vanishes(form.at::<1>().of(epipole_2), 1e-14));
-        let line_camera_2: LineCamera = (centre_2 & Line::slot()) ^ screen();
+        let line_camera_2: LineCamera = (centre_2 & L::oriented_slot()) ^ screen();
         for (i1, i2) in image_1.iter().zip(&image_2) {
             let line = line_camera_2.of(centre_1 & *i1);
             assert!(vanishes(line & *i2, 1e-12));

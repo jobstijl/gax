@@ -81,10 +81,10 @@ fn drifted_unit_motors_move_lines_and_planes_consistently() {
     );
     for delta in DRIFTS {
         let m = Unit::new_unchecked(u.into_inner().gp(1.0 + delta));
-        let line: Line<(), f64> = m >> (p & q);
-        let joined: Line<(), f64> = (m >> p) & (m >> q);
-        let plane: Plane<(), f64> = m >> ((p & q) & r);
-        let plane_joined: Plane<(), f64> = ((m >> p) & (m >> q)) & (m >> r);
+        let line: Line<(), f64, gax::Intrinsic> = m >> (p & q);
+        let joined: Line<(), f64, gax::Intrinsic> = (m >> p) & (m >> q);
+        let plane: Plane<(), f64, gax::Intrinsic> = m >> ((p & q) & r);
+        let plane_joined: Plane<(), f64, gax::Intrinsic> = ((m >> p) & (m >> q)) & (m >> r);
         // Parallel up to scale: every 2x2 minor of the coefficient pair vanishes.
         let parallel = |a: &[f64], b: &[f64]| {
             let scale = a.iter().chain(b).fold(0.0f64, |s, x| s.max(x.abs()));

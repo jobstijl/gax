@@ -30,9 +30,10 @@ pub type Dense<M> =
 ///
 /// ```
 /// use gax::map::LinearMap;
-/// use gax::pga3d::{Line, PrincipalInertia};
+/// use gax::pga3d::{Forque, Line, PrincipalInertia};
 /// let inertia = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
-/// let dense: Line<(Line,), f64> = inertia.to_dense();
+/// // From twists to momenta (forques, intrinsic lines).
+/// let dense: Forque<(Line,), f64> = inertia.to_dense();
 /// let b = Line::new(0.1, 0.2, 0.3, 1.0, -1.0, 0.5);
 /// assert_eq!(dense.of(b), inertia.of(b));
 /// ```
@@ -64,17 +65,17 @@ impl<M: Extensor> LinearMap for M {
 /// ```
 /// use gax::ApproxEq;
 /// use gax::map::SquareLinearMap;
-/// use gax::pga3d::{Line, PrincipalInertia};
+/// use gax::pga3d::{Forque, Line, PrincipalInertia};
 ///
-/// // Written once, for any representation of an inertia.
-/// fn twist_of<I: SquareLinearMap<Kind = Line, Input = Line, Coef = f64>>(
+/// // Written once, for any representation of an inertia (twists to momenta).
+/// fn twist_of<I: SquareLinearMap<Kind = Forque, Input = Line, Coef = f64>>(
 ///     inertia: I,
-///     momentum: Line<(), f64>,
+///     momentum: Forque<(), f64>,
 /// ) -> Line<(), f64> {
 ///     inertia.solve(momentum)
 /// }
 /// let compact = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
-/// let f = Line::new(1.0, 0.0, -1.0, 0.5, 0.25, 2.0);
+/// let f = Forque::from_coeffs([1.0, 0.0, -1.0, 0.5, 0.25, 2.0]);
 /// assert!(twist_of(compact, f).approx_eq(&twist_of(compact.to_map(), f), 1e-15));
 /// ```
 pub trait SquareLinearMap: LinearMap<Coef: Real> {

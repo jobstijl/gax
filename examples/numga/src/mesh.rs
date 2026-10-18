@@ -31,6 +31,9 @@ use gax::{Extensor, Kind};
 
 /// A vector of space: the default vertex.
 pub type Vector3 = Vector<(), f64>;
+/// A normal: the dual of a face's bivector, so oriented by the face's winding, intrinsic
+/// (ADR-051), and reflected as such.
+pub type Normal3 = Vector<(), f64, gax::Intrinsic>;
 /// A scalar of space's algebra.
 pub type Scalar3 = Scalar<(), f64>;
 /// A bivector of space: a plane through the origin, with its orientation and area.
@@ -386,7 +389,7 @@ impl Mesh<Vector3> {
     /// `[V]`: the unit normal at each vertex, the mean of its faces' normals weighted by their
     /// areas.
     #[must_use]
-    pub fn vertex_normals(&self) -> Field<Vector3> {
+    pub fn vertex_normals(&self) -> Field<Normal3> {
         let face_normals = face_bivectors(&self.triangle_edges()).map(|b| b.dual());
         (&self.face_means().reverse() * &face_normals).map(|n| n.normalized().into_inner())
     }

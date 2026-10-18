@@ -61,9 +61,9 @@ unsafe impl gx::bytemuck::Zeroable for ScalarGpu {}
 unsafe impl gx::bytemuck::Pod for ScalarGpu {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Scalar<(), f32>> for ScalarGpu {
+impl<O: gx::Orientation> From<Scalar<(), f32, O>> for ScalarGpu {
     #[inline]
-    fn from(x: Scalar<(), f32>) -> Self {
+    fn from(x: Scalar<(), f32, O>) -> Self {
         let mut c = [[0.0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = *v;
@@ -73,9 +73,9 @@ impl From<Scalar<(), f32>> for ScalarGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<gx::Unit<Scalar<(), f32>>> for ScalarGpu {
+impl<O: gx::Orientation> From<gx::Unit<Scalar<(), f32, O>>> for ScalarGpu {
     #[inline]
-    fn from(x: gx::Unit<Scalar<(), f32>>) -> Self {
+    fn from(x: gx::Unit<Scalar<(), f32, O>>) -> Self {
         x.into_inner().into()
     }
 }
@@ -113,10 +113,10 @@ unsafe impl gx::bytemuck::Zeroable for ScalarGpu16 {}
 unsafe impl gx::bytemuck::Pod for ScalarGpu16 {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Scalar<(), f32>> for ScalarGpu16 {
+impl<O: gx::Orientation> From<Scalar<(), f32, O>> for ScalarGpu16 {
     /// Each coefficient rounded to the nearest `f16`.
     #[inline]
-    fn from(x: Scalar<(), f32>) -> Self {
+    fn from(x: Scalar<(), f32, O>) -> Self {
         let mut c = [[0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
@@ -160,9 +160,9 @@ unsafe impl gx::bytemuck::Zeroable for VectorGpu {}
 unsafe impl gx::bytemuck::Pod for VectorGpu {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Vector<(), f32>> for VectorGpu {
+impl<O: gx::Orientation> From<Vector<(), f32, O>> for VectorGpu {
     #[inline]
-    fn from(x: Vector<(), f32>) -> Self {
+    fn from(x: Vector<(), f32, O>) -> Self {
         let mut c = [[0.0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = *v;
@@ -172,9 +172,9 @@ impl From<Vector<(), f32>> for VectorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<gx::Unit<Vector<(), f32>>> for VectorGpu {
+impl<O: gx::Orientation> From<gx::Unit<Vector<(), f32, O>>> for VectorGpu {
     #[inline]
-    fn from(x: gx::Unit<Vector<(), f32>>) -> Self {
+    fn from(x: gx::Unit<Vector<(), f32, O>>) -> Self {
         x.into_inner().into()
     }
 }
@@ -212,10 +212,10 @@ unsafe impl gx::bytemuck::Zeroable for VectorGpu16 {}
 unsafe impl gx::bytemuck::Pod for VectorGpu16 {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Vector<(), f32>> for VectorGpu16 {
+impl<O: gx::Orientation> From<Vector<(), f32, O>> for VectorGpu16 {
     /// Each coefficient rounded to the nearest `f16`.
     #[inline]
-    fn from(x: Vector<(), f32>) -> Self {
+    fn from(x: Vector<(), f32, O>) -> Self {
         let mut c = [[0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
@@ -259,9 +259,9 @@ unsafe impl gx::bytemuck::Zeroable for PseudoscalarGpu {}
 unsafe impl gx::bytemuck::Pod for PseudoscalarGpu {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Pseudoscalar<(), f32>> for PseudoscalarGpu {
+impl<O: gx::Orientation> From<Pseudoscalar<(), f32, O>> for PseudoscalarGpu {
     #[inline]
-    fn from(x: Pseudoscalar<(), f32>) -> Self {
+    fn from(x: Pseudoscalar<(), f32, O>) -> Self {
         let mut c = [[0.0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = *v;
@@ -271,9 +271,9 @@ impl From<Pseudoscalar<(), f32>> for PseudoscalarGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<gx::Unit<Pseudoscalar<(), f32>>> for PseudoscalarGpu {
+impl<O: gx::Orientation> From<gx::Unit<Pseudoscalar<(), f32, O>>> for PseudoscalarGpu {
     #[inline]
-    fn from(x: gx::Unit<Pseudoscalar<(), f32>>) -> Self {
+    fn from(x: gx::Unit<Pseudoscalar<(), f32, O>>) -> Self {
         x.into_inner().into()
     }
 }
@@ -311,10 +311,10 @@ unsafe impl gx::bytemuck::Zeroable for PseudoscalarGpu16 {}
 unsafe impl gx::bytemuck::Pod for PseudoscalarGpu16 {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Pseudoscalar<(), f32>> for PseudoscalarGpu16 {
+impl<O: gx::Orientation> From<Pseudoscalar<(), f32, O>> for PseudoscalarGpu16 {
     /// Each coefficient rounded to the nearest `f16`.
     #[inline]
-    fn from(x: Pseudoscalar<(), f32>) -> Self {
+    fn from(x: Pseudoscalar<(), f32, O>) -> Self {
         let mut c = [[0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
@@ -358,9 +358,9 @@ unsafe impl gx::bytemuck::Zeroable for RotorGpu {}
 unsafe impl gx::bytemuck::Pod for RotorGpu {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Rotor<(), f32>> for RotorGpu {
+impl<O: gx::Orientation> From<Rotor<(), f32, O>> for RotorGpu {
     #[inline]
-    fn from(x: Rotor<(), f32>) -> Self {
+    fn from(x: Rotor<(), f32, O>) -> Self {
         let mut c = [[0.0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = *v;
@@ -370,9 +370,9 @@ impl From<Rotor<(), f32>> for RotorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<gx::Unit<Rotor<(), f32>>> for RotorGpu {
+impl<O: gx::Orientation> From<gx::Unit<Rotor<(), f32, O>>> for RotorGpu {
     #[inline]
-    fn from(x: gx::Unit<Rotor<(), f32>>) -> Self {
+    fn from(x: gx::Unit<Rotor<(), f32, O>>) -> Self {
         x.into_inner().into()
     }
 }
@@ -410,10 +410,10 @@ unsafe impl gx::bytemuck::Zeroable for RotorGpu16 {}
 unsafe impl gx::bytemuck::Pod for RotorGpu16 {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Rotor<(), f32>> for RotorGpu16 {
+impl<O: gx::Orientation> From<Rotor<(), f32, O>> for RotorGpu16 {
     /// Each coefficient rounded to the nearest `f16`.
     #[inline]
-    fn from(x: Rotor<(), f32>) -> Self {
+    fn from(x: Rotor<(), f32, O>) -> Self {
         let mut c = [[0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
@@ -457,9 +457,9 @@ unsafe impl gx::bytemuck::Zeroable for MultivectorGpu {}
 unsafe impl gx::bytemuck::Pod for MultivectorGpu {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Multivector<(), f32>> for MultivectorGpu {
+impl<O: gx::Orientation> From<Multivector<(), f32, O>> for MultivectorGpu {
     #[inline]
-    fn from(x: Multivector<(), f32>) -> Self {
+    fn from(x: Multivector<(), f32, O>) -> Self {
         let mut c = [[0.0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = *v;
@@ -469,9 +469,9 @@ impl From<Multivector<(), f32>> for MultivectorGpu {
 }
 
 #[cfg(feature = "bytemuck")]
-impl From<gx::Unit<Multivector<(), f32>>> for MultivectorGpu {
+impl<O: gx::Orientation> From<gx::Unit<Multivector<(), f32, O>>> for MultivectorGpu {
     #[inline]
-    fn from(x: gx::Unit<Multivector<(), f32>>) -> Self {
+    fn from(x: gx::Unit<Multivector<(), f32, O>>) -> Self {
         x.into_inner().into()
     }
 }
@@ -509,10 +509,10 @@ unsafe impl gx::bytemuck::Zeroable for MultivectorGpu16 {}
 unsafe impl gx::bytemuck::Pod for MultivectorGpu16 {}
 
 #[cfg(feature = "bytemuck")]
-impl From<Multivector<(), f32>> for MultivectorGpu16 {
+impl<O: gx::Orientation> From<Multivector<(), f32, O>> for MultivectorGpu16 {
     /// Each coefficient rounded to the nearest `f16`.
     #[inline]
-    fn from(x: Multivector<(), f32>) -> Self {
+    fn from(x: Multivector<(), f32, O>) -> Self {
         let mut c = [[0; 4]; 1];
         for (i, v) in x.c.iter().enumerate() {
             c[i / 4][i % 4] = gx::gpu::f16_bits(*v);

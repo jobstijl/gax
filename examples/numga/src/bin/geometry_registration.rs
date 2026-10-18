@@ -36,8 +36,9 @@ mod registration {
         m.reverse().scalar_product(m)
     }
 
-    /// The residual of the one-sided equations for one correspondence, linear in the open motor.
-    pub fn residual(source: P, target: P) -> gax::pga3d::Flector<(Motor,), f64> {
+    /// The residual of the one-sided equations for one correspondence, linear in the open motor:
+    /// intrinsic, as the points are.
+    pub fn residual(source: P, target: P) -> gax::pga3d::Flector<(Motor,), f64, gax::Intrinsic> {
         let (s, t) = (source.unitized(), target.unitized());
         t * Motor::slot() - Motor::slot() * s
     }

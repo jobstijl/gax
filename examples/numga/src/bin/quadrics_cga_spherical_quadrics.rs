@@ -25,18 +25,19 @@ gax::algebra! {
 
 mod cga {
     use super::cl31::{Bivector, Trivector, Vector};
+    use gax::Intrinsic;
     use gax_numga_examples::signal::phasor;
 
     /// A point of S², or any vector.
     pub type V = Vector<(), f64>;
-    /// A plane: a trivector, the dual of a vector.
-    pub type Plane = Trivector<(), f64>;
+    /// A plane: a trivector, the dual of a vector, and so intrinsic (ADR-051).
+    pub type Plane = Trivector<(), f64, Intrinsic>;
     /// A 2-blade, the generator of a flow.
     pub type B = Bivector<(), f64>;
     /// A conformal rotor.
     pub type R = gax::Unit<super::cl31::Rotor<(), f64>>;
     /// A spherical quadric: a map from vectors to planes.
-    pub type Quadric = Trivector<(Vector,), f64>;
+    pub type Quadric = Trivector<(Vector,), f64, Intrinsic>;
 
     /// The basis vectors x, y, z and w.
     pub fn x() -> V {
@@ -52,23 +53,19 @@ mod cga {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
-    /// The pseudoscalar `xyzw`.
-    pub fn pseudoscalar() -> super::cl31::Pseudoscalar<(), f64> {
-        super::cl31::Pseudoscalar::new(1.0)
-    }
-
-    /// The dual basis planes: the basis vectors times the pseudoscalar (`-w I` for w).
+    /// The dual basis planes: the duals of the basis vectors (for x, y and z their products
+    /// with the pseudoscalar `xyzw`, for w, which squares to -1, minus that).
     pub fn px() -> Plane {
-        (x() * pseudoscalar()).cast::<Trivector>()
+        x().dual()
     }
     pub fn py() -> Plane {
-        (y() * pseudoscalar()).cast::<Trivector>()
+        y().dual()
     }
     pub fn pz() -> Plane {
-        (z() * pseudoscalar()).cast::<Trivector>()
+        z().dual()
     }
     pub fn pw() -> Plane {
-        (-(w() * pseudoscalar())).cast::<Trivector>()
+        w().dual()
     }
 
     /// Rotation generators in numga's blade names: `yz`, `zx`, `xy`, and the boost `xw`.

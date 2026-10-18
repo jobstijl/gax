@@ -7,10 +7,10 @@
 //! on a face at least as near as the nearest, so covered creases leave no mark. Each face shows
 //! its front or its back, lit by a fixed light and an ambient fill.
 
-use super::paper::{P, Paper, Pl};
-use gax::Unit;
+use super::paper::{P, Paper};
 use gax::pga2d;
 use gax::pga3d::{Motor, Plane, Point};
+use gax::{Intrinsic, Unit};
 use gax_numga_examples::Light;
 use std::ops::Range;
 
@@ -94,16 +94,19 @@ impl View {
 /// and the box it covers.
 struct Facet {
     corners: Vec<pga2d::Point<(), f64>>,
-    edges: Vec<pga2d::Line<(), f64>>,
+    edges: Vec<pga2d::Line<(), f64, Intrinsic>>,
     ends: Vec<[P; 2]>,
-    plane: Pl,
+    plane: Winding,
     colour: Light,
     bounds: [f64; 4],
 }
 
+/// A plane oriented by a winding within it (intrinsic), as a join of points is.
+type Winding = Plane<(), f64, Intrinsic>;
+
 /// The plane of a polygon: the sum of the planes of its fan of triangles, each the join of its
-/// corners, so the polygon's plane weighted by its area.
-fn polygon_plane(corners: &[P]) -> Pl {
+/// corners, so the polygon's plane weighted by its area and oriented by its winding.
+fn polygon_plane(corners: &[P]) -> Winding {
     (1..corners.len() - 1).fold(Plane::zero(), |sum, i| {
         sum + (corners[0] & corners[i] & corners[i + 1])
     })
@@ -274,7 +277,7 @@ impl Picture {
 /// A face's colour: its front where its plane faces the viewer (the plane's inner product with
 /// the one facing the eye is positive), else its back, under a fixed diffuse light from the
 /// upper left and an ambient fill. The light scales the paper's linear reflectance.
-fn shade(face: Pl, eye: P) -> Light {
+fn shade(face: Winding, eye: P) -> Light {
     let unit = face.normalized().into_inner();
     let facing = (unit | Plane::orthogonal_to(eye)).s() > 0.0;
     let outward = if facing { unit } else { -unit };

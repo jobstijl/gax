@@ -294,8 +294,8 @@ law_suite::law_suite! {
         (Quadvector, Scalar),
     ],
     unit_det: [
-        (Vector, Vector, Pseudoscalar, true),
-        (Vector, Quadvector, Scalar, true),
+        (Vector, Vector, Pseudoscalar, false),
+        (Vector, Quadvector, Scalar, false),
     ],
     pairings: [
         (Vee, vee, Vector, Quadvector),

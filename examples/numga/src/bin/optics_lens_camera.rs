@@ -15,8 +15,8 @@ use gax_numga_examples::{
 };
 
 mod lens {
-    use gax::Unit;
     use gax::pga3d::{Line, Motor, Plane, Point};
+    use gax::{Intrinsic, Unit};
     use gax_numga_examples::measure;
 
     pub type P = Point<(), f64>;
@@ -24,7 +24,10 @@ mod lens {
     pub type M = Unit<Motor<(), f64>>;
     /// A collineation maps points to points.
     pub type PointMap = Point<(Point,), f64>;
-    pub type LineMap = Line<(Line,), f64>;
+    /// A ray: the join of two points, a line oriented along itself (intrinsic).
+    pub type Ray = Line<(), f64, Intrinsic>;
+    /// A map on rays.
+    pub type LineMap = Line<(Line<(), f32, Intrinsic>,), f64, Intrinsic>;
     /// A primal quadric maps a point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
     /// A dual quadric maps a plane to its pole.
@@ -47,7 +50,7 @@ mod lens {
     /// the induced map on lines.
     pub fn thin_lens(focal: f64) -> (PointMap, LineMap) {
         let p = Point::slot();
-        let l = Line::slot();
+        let l = Ray::oriented_slot();
         let points = p + origin() * (home() & p).gp(1.0 / focal);
         let lines = l - (origin() & (l ^ home())).gp(1.0 / focal);
         (points, lines)
@@ -110,7 +113,7 @@ mod lens {
             placements[i] >> lenses[i].0.of(placements[i] << Point::slot())
         });
         let lines: [LineMap; 2] = core::array::from_fn(|i| {
-            placements[i] >> lenses[i].1.of(placements[i] << Line::slot())
+            placements[i] >> lenses[i].1.of(placements[i] << Ray::oriented_slot())
         });
         let [front, rear] = lines;
         let (front_plane, rear_plane) = (placements[0] >> home(), placements[1] >> home());
@@ -477,7 +480,11 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     let heights = [radius, 0.6, 0.35];
     let names = ["FRONT", "REAR", "SENSOR"];
     for ((plane, h), name) in exposure.planes.iter().zip(heights).zip(names) {
-        let (top, bottom) = (*plane ^ z ^ at(h), *plane ^ z ^ at(-h));
+        // Where three planes meet: a corner, used as a place.
+        let (top, bottom) = (
+            (*plane ^ z ^ at(h)).position(),
+            (*plane ^ z ^ at(-h)).position(),
+        );
         let colour = if name == "SENSOR" {
             palette::orange()
         } else {

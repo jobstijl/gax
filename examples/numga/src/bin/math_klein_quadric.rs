@@ -36,19 +36,23 @@ use gax_numga_examples::{
 
 mod klein {
     use super::*;
+    use gax::Intrinsic;
     use gax::pga3d::Pseudoscalar;
 
     /// A complex number.
     pub type C = Complex<f64>;
 
+    /// A line: every line here is a meet of two planes, as the lines through a point that meet
+    /// two lines are, and so extrinsic, an axis (ADR-051).
     pub type L = Line<(), f64>;
     pub type P = Point<(), f64>;
     /// A line with complex coefficients.
     pub type CL = Line<(), C>;
     /// A point with complex coefficients.
     pub type CP = Point<(), C>;
-    /// A quadric: a map from points to planes, zero on its points.
-    pub type Quadric = Plane<(Point,), f64>;
+    /// A quadric: a map from points to planes, zero on its points. A point joined with a line
+    /// and met with others gives a plane through points, oriented within itself: intrinsic.
+    pub type Quadric = Plane<(Point,), f64, Intrinsic>;
 
     /// The Klein form: zero on one bivector twice exactly when it is a line, zero on two lines
     /// exactly when they meet.
@@ -71,6 +75,14 @@ mod klein {
         Plane::new(0.0, 0.0, 0.0, 1.0)
     }
 
+    /// The plane at infinity as the join of the three directions, whose meet with a line is
+    /// the line's point at infinity.
+    pub fn horizon() -> Plane<(), f64, Intrinsic> {
+        Point::direction(1.0, 0.0, 0.0)
+            & Point::direction(0.0, 1.0, 0.0)
+            & Point::direction(0.0, 0.0, 1.0)
+    }
+
     /// The two roots of the quadratic `a + 2 b t + c t²` along the combinations of two ends, as
     /// the weights of the ends, one root per sign: `first (sign root - b) + second a`, with
     /// `root² = b² - a c`.
@@ -83,7 +95,9 @@ mod klein {
     /// between it and a bivector is zero exactly on the bivectors that meet all four, which are
     /// the right singular vectors of zero singular value. Returns the pencil's two bivectors.
     pub fn pencil(lines: &[L; 4]) -> [L; 2] {
-        let misses: Line<(Line,), f64> = lines.iter().map(|l| *l * klein().of(*l).dual()).sum();
+        // The Klein form of two axes is a signed volume, intrinsic, and so are the misses.
+        let misses: Line<(Line,), f64, Intrinsic> =
+            lines.iter().map(|l| *l * klein().of(*l).dual()).sum();
         let (_, _, right) = misses.svd();
         [right[4], right[5]]
     }
@@ -156,7 +170,7 @@ mod klein {
     /// point at infinity).
     pub fn frame(line: L) -> (P, P) {
         let unit = line.normalized().into_inner();
-        (((origin() | unit) ^ unit).unitized(), unit ^ infinity())
+        (((origin() | unit) ^ unit).unitized(), unit ^ horizon())
     }
 
     /// Points spread over a whole line, its point at infinity included: the nearest point
@@ -172,17 +186,19 @@ mod klein {
     }
 
     /// Lines of the hyperboloid `x² + y² = 1 + z²` through the points of its waist at the given
-    /// angles, all leaning the same way: the line through (1, 0, 0) leaning along (0, 1, 1),
-    /// turned about z.
+    /// angles, all leaning the same way: the line through (1, 0, 0) leaning along (0, 1, 1), the
+    /// meet of the planes `x = 1` and `y = z`, turned about z.
     pub fn waist_lines(angles: [f64; 3]) -> [L; 3] {
-        let line = Point::xyz(1.0, 0.0, 0.0) & Point::direction(0.0, 1.0, 1.0);
+        let line = Plane::new(1.0, 0.0, 0.0, -1.0) ^ Plane::new(0.0, 1.0, -1.0, 0.0);
         angles.map(|a| Motor::rotation_about(0.0, 0.0, 1.0, a) >> line)
     }
 
-    /// A steep line crossing the plane `z = 0` at an offset along x, beside the x axis.
+    /// A steep line crossing the plane `z = 0` at an offset along x, beside the x axis: the
+    /// meet of the two planes through it along x and along y.
     pub fn steep(offset: f64) -> L {
         let base = Motor::translation(offset, 0.0, 0.0) >> Point::xyz(0.0, 0.4, 0.0);
-        base & Point::direction(0.3, -0.2, 1.0)
+        let along = base & Point::direction(0.3, -0.2, 1.0);
+        (along & Point::direction(1.0, 0.0, 0.0)) ^ (along & Point::direction(0.0, 1.0, 0.0))
     }
 
     /// The three lines of the scenes.

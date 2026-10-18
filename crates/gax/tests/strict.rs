@@ -28,7 +28,9 @@ impl Map for Pipeline {
                 T::one(),
             );
         let k = (b.norm() * T::from_f64(0.5)).exp();
-        (gax::Log::log(m) + (p & Point::new(T::zero(), T::zero(), T::zero(), T::one()))).gp(k)
+        // An arbitrary kernel: the join (intrinsic, ADR-051) taken as a twist to add to one.
+        let line = (p & Point::new(T::zero(), T::zero(), T::zero(), T::one())).with_orientation();
+        (gax::Log::log(m) + line).gp(k)
     }
 }
 

@@ -165,7 +165,10 @@ fn draw_markers(s: &mut Scene3, markers: &Markers, strength: f32) {
 /// `near`; nothing for a translation, whose axis lies at infinity.
 fn draw_axis(s: &mut Scene3, motor: M, near: P) {
     let screw: L = motor.log();
-    let direction = screw ^ gax::pga3d::Plane::new(0.0, 0.0, 0.0, 1.0);
+    // Where the axis meets the plane at infinity: its direction, used as a displacement (an
+    // intrinsic direction, as a difference of points is).
+    let direction =
+        (screw ^ gax::pga3d::Plane::new(0.0, 0.0, 0.0, 1.0)).with_orientation::<gax::Intrinsic>();
     if direction.ideal_norm() < 1e-9 {
         return;
     }

@@ -32,9 +32,10 @@ mod symmetry {
     /// A form with four vector slots: an elasticity.
     pub type Elasticity = Scalar<(Vector, Vector, Vector, Vector), f64>;
     pub type P3 = pga3d::Point<(), f64>;
+    /// A rate of turning: an axis line, the meet of two planes.
     pub type L3 = pga3d::Line<(), f64>;
-    /// Inertia: rigid-body velocities (lines) to momenta (lines).
-    pub type Inertia = pga3d::Line<(pga3d::Line,), f64>;
+    /// Inertia: rigid-body velocities (twists, extrinsic lines) to momenta (forques).
+    pub type Inertia = pga3d::Forque<(pga3d::Line,), f64>;
 
     pub fn x() -> V {
         Vector::new(1.0, 0.0, 0.0)
@@ -250,13 +251,14 @@ mod symmetry {
 
     /// The axis through the hub at `angle` from `x` in the wheel's plane.
     pub fn probe(angle: f64) -> L3 {
-        let x_axis = pga3d::Point::xyz(0.0, 0.0, 0.0) & pga3d::Point::direction(1.0, 0.0, 0.0);
+        // The x axis, where the planes y = 0 and z = 0 meet.
+        let x_axis = pga3d::Plane::new(0.0, 1.0, 0.0, 0.0) ^ pga3d::Plane::new(0.0, 0.0, 1.0, 0.0);
         pga3d::Motor::rotation_about(0.0, 0.0, 1.0, angle) >> x_axis
     }
 
-    /// The wheel's axis.
+    /// The wheel's axis, where the planes x = 0 and y = 0 meet.
     pub fn z_axis() -> L3 {
-        pga3d::Point::xyz(0.0, 0.0, 0.0) & pga3d::Point::direction(0.0, 0.0, 1.0)
+        pga3d::Plane::new(1.0, 0.0, 0.0, 0.0) ^ pga3d::Plane::new(0.0, 1.0, 0.0, 0.0)
     }
 
     /// The moment about a unit axis: the regressive pairing of the rotation with the momentum

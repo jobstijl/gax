@@ -9,5 +9,5 @@ help: the trait `GradePart<1>` is not implemented for `gax::pga3d::Point`
       but trait `GradePart<3>` is implemented for it
  --> src/algebras/pga3d/kinds.rs
   |
-  | impl gx::GradePart<3> for Point {
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  | impl<O: gx::Orientation> gx::GradePart<3> for Point<(), f32, O> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

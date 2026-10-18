@@ -25,7 +25,7 @@ gax::algebra! {
     kind Direction = [ex, ey, ez];
     versor Vector = [ex, ey, ez, ew, ee];
     kind Bivector = [exy, exz, exw, exe, eyz, eyw, eye, ezw, eze, ewe];
-    kind Quadvector = [eyzwe, exzwe, exywe, exyze, exyzw];
+    kind Quadvector = [eyzwe, exzwe, exywe, exyze, exyzw] intrinsic;
     kind Pseudoscalar = [exyzwe];
     versor Even = [1, exy, exz, exw, exe, eyz, eyw, eye, ezw, eze, ewe, eyzwe, exzwe, exywe, exyze, exyzw];
 }
@@ -38,7 +38,7 @@ use gax_numga_examples::{Align, Anim, Canvas, Point2, backdrop, palette, run};
 // numga's scenes in full: the tests check every one, the animation shows a selection.
 #[cfg_attr(not(test), allow(dead_code))]
 mod cyclides {
-    use super::s3::{Bivector, Direction, Even, Pseudoscalar, Quadvector, Scalar, Vector};
+    use super::s3::{Bivector, Direction, Even, Quadvector, Scalar, Vector};
     use gax_numga_examples::measure;
     use gax_numga_examples::signal::{phasor, wave};
 
@@ -85,12 +85,13 @@ mod cyclides {
         Quadvector::slot()
     }
 
-    /// The point of a null vector: its Hodge dual, the product with the pseudoscalar. numga's
-    /// `dual` is the right Hodge dual, which uses the metric; gax's `dual` is the metric-free
-    /// complement, which would flip the sign of the `e` part here (`e² = -1`), so the pairing
-    /// `sphere ∨ point` would no longer be the inner product of the sphere with the null vector.
+    /// The point of a null vector: its Hodge dual, the product with the pseudoscalar, of the
+    /// other orientation (intrinsic, as numga's points are). numga's `dual` is the right Hodge
+    /// dual, which uses the metric; gax's `dual` is the metric-free complement, which would flip
+    /// the sign of the `e` part here (`e² = -1`), so the pairing `sphere ∨ point` would no
+    /// longer be the inner product of the sphere with the null vector.
     pub fn point(v: Sphere) -> Point {
-        v * Pseudoscalar::new(1.0)
+        v.hodge()
     }
 
     /// The eye, at `w` on S³.

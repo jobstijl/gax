@@ -6,7 +6,9 @@
 //!   edges from the first vertex over `k!`.
 //! * PGA: positions are points of weight one, and the measure is the join of the vertices over
 //!   `k!`: an edge's line (its norm the length), a triangle's plane (in 3D) and, for a simplex of
-//!   the full dimension, a scalar, signed as the VGA measure's pseudoscalar coefficient.
+//!   the full dimension, a scalar, signed as the VGA measure's pseudoscalar coefficient. Joins of
+//!   points are intrinsic (ADR-051): an edge's line points along it, a triangle's plane winds,
+//!   and the volume's sign is a handedness, which a mirror reverses.
 //! * CGA: positions are round points of weight one, `eo + x + ½|x|² e∞`, and the measure is
 //!   `P₀ ∧ … ∧ P_k ∧ e∞` over `k!`, the flat through the vertices, signed as the VGA measure.
 //!
@@ -123,7 +125,7 @@ macro_rules! point_model {
 
             $(
                 impl<T: Coef> Measure<$n> for Point<(), T> {
-                    type Blade = crate::$alg::$Blade<(), T>;
+                    type Blade = crate::$alg::$Blade<(), T, crate::Intrinsic>;
                     #[inline]
                     fn measure($v: &[Self; $n]) -> Self::Blade {
                         ($join) * inverse_factorial::<T>($n - 1)

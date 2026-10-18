@@ -21,7 +21,7 @@
 //! down and back while its joints stay closed to a fraction of a millimetre, well within
 //! numga's bound of 1% of the spacing (the plot on the right).
 
-use gax::pga3d::{Line, Motor, Point};
+use gax::pga3d::{Forque, Line, Motor, Point};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
@@ -100,8 +100,8 @@ mod xpbd {
     }
 
     /// The line joining an anchor with its velocity under an open rate: rate to world-frame
-    /// velocity line, before the motor.
-    pub fn anchor_velocity(anchor: P) -> Line<(Line,), f64> {
+    /// velocity line (a join, so a forque), before the motor.
+    pub fn anchor_velocity(anchor: P) -> Forque<(Line,), f64> {
         anchor & anchor.commutator(Line::slot())
     }
 

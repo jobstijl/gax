@@ -7,7 +7,7 @@ error[E0277]: no outermorphism from maps on `Orbital<(Orbital,), f64>` to `FourE
    = note: outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions)
    = note: for larger kinds, build the extended map from its images: `B::<(B,), T>::from_images`, the image of a blade `e_a ∧ e_b ∧ …` being `t.of(e_a) ^ t.of(e_b) ^ …`
 help: the trait `Outermorphism<FourElectrons>` is not implemented for `Orbital<(Orbital,), f64>`
-      but trait `Outermorphism<TwoElectrons>` is implemented for it
+      but trait `Outermorphism<TwoElectrons<(), f32, _>>` is implemented for it
   --> tests/compile_fail/outermorphism_over_limit.rs:5:1
    |
  5 | / gax::algebra! {
@@ -18,5 +18,5 @@ help: the trait `Outermorphism<FourElectrons>` is not implemented for `Orbital<(
 16 | |         e3568, e3578, e3678, e4567, e4568, e4578, e4678, e5678];
 17 | | }
    | |_^
-   = help: for that trait implementation, expected `TwoElectrons`, found `FourElectrons`
+   = help: for that trait implementation, expected `TwoElectrons<(), f32, _>`, found `FourElectrons`
    = note: this error originates in the macro `gax::algebra` (in Nightly builds, run with -Z macro-backtrace for more info)

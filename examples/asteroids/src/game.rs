@@ -5,7 +5,7 @@
 
 use gax::Unit;
 use gax::batch::BatchTransform;
-use gax::pga2d::{Line, Moments, Motor, Point};
+use gax::pga2d::{Line, Moments, Motor, Point, Twist};
 use rand::Rng as _;
 
 /// The width and height of the world (it wraps around at the edges).
@@ -95,13 +95,13 @@ impl Body {
     }
 
     /// The twist of a translation at `vel`.
-    fn translation_twist(&self) -> Point {
+    fn translation_twist(&self) -> Twist {
         Point::translation_twist(self.vel.e20(), self.vel.e01())
     }
 
     /// The world twist of its motion: a translation at `vel` plus a turn at `spin` about its
     /// origin. Twists add.
-    pub fn twist(&self) -> Point {
+    pub fn twist(&self) -> Twist {
         self.translation_twist() + Point::rotation_twist(self.position(), self.spin)
     }
 
@@ -166,15 +166,16 @@ impl Shape {
 }
 
 /// The convex polygon `poly` cut by `line` into the parts on its two sides: each edge whose ends
-/// lie on different sides contributes the meet of its line with `line` to both.
-pub fn cut(poly: &[Point], line: Line) -> [Vec<Point>; 2] {
+/// lie on different sides contributes the meet of its line with `line` to both. The cutting line
+/// is a join of points, so intrinsic (ADR-051).
+pub fn cut(poly: &[Point], line: Line<(), f32, gax::Intrinsic>) -> [Vec<Point>; 2] {
     let side = |p: Point| (line ^ p).e012() * p.e12().signum();
     let mut parts = [Vec::new(), Vec::new()];
     for (&a, &b) in poly.iter().zip(poly.iter().cycle().skip(1)) {
         let (sa, sb) = (side(a), side(b));
         parts[usize::from(sa < 0.0)].push(a);
         if (sa < 0.0) != (sb < 0.0) {
-            let x = ((a & b) ^ line).unitized();
+            let x = ((a & b) ^ line).position();
             parts[0].push(x);
             parts[1].push(x);
         }
@@ -189,7 +190,7 @@ pub fn contains(poly: &[Point], inside: Point, p: Point) -> bool {
     poly.iter()
         .zip(poly.iter().cycle().skip(1))
         .all(|(&a, &b)| {
-            let edge: Line = a & b;
+            let edge = a & b;
             let (s, t) = ((edge ^ p).e012(), (edge ^ inside).e012());
             s * t >= 0.0
         })

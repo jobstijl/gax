@@ -91,8 +91,18 @@ macro_rules! check {
                 for _ in 0..3 {
                     let x = $x::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
                     let typed: $x<(), f64> = u >> x;
-                    let full: Multivector<(), f64> =
-                        (u.into_inner() * x * u.reverse().into_inner()).cast::<Multivector>();
+                    // The oriented sandwich (ADR-051): an odd versor sends `x` to `±u x̂ ~u`,
+                    // plus for an extrinsic `x`.
+                    let odd = <$versor as gax::Kind>::BLADES
+                        .iter()
+                        .all(|b| b.len() % 2 == 0);
+                    let sign = <<$x as gax::Kind>::Orientation as gax::Orientation>::SIGN;
+                    let xr = if odd { x.involute() } else { x };
+                    let mut full: Multivector<(), f64> =
+                        (u.into_inner() * xr * u.reverse().into_inner()).cast::<Multivector>();
+                    if odd {
+                        full.c.iter_mut().for_each(|c| *c *= f64::from(sign));
+                    }
                     let scale = full.c.iter().fold(1.0f64, |m, v| m.max(v.abs()));
                     let part: Multivector<(), f64> = typed.cast::<Multivector>();
                     for (a, b) in part.c.iter().zip(full.c) {

@@ -34,6 +34,7 @@ use lie::{Lie, rigid};
 mod simplex;
 
 /// R(4,0,0): numga's spherical model `x+y+z+w+`, laid out as PGA3D with `e0` squaring to +1.
+/// Its points, like PGA3D's, are intrinsic: made from their coordinates, not met from planes.
 mod sga3d {
     gax::algebra! {
         algebra sga3d "Spherical 3-space as R(4,0,0), with the PGA3D layout.";
@@ -41,14 +42,15 @@ mod sga3d {
         kind Scalar = [1];
         kind Plane = [e1, e2, e3, e0];
         kind Line = [e23, e31, e12, e01, e02, e03];
-        kind Point = [e032, e013, e021, e123];
+        kind Point = [e032, e013, e021, e123] intrinsic;
         kind Pseudoscalar = [e0123];
         versor Motor = [1, e23, e31, e12, e01, e02, e03, e0123];
     }
     pub use sga3d::*;
 }
 
-/// R(4,0,1): numga's `x+y+z+v+w0`, the PGA of four dimensions.
+/// R(4,0,1): numga's `x+y+z+v+w0`, the PGA of four dimensions. Points and forques (the
+/// joins of points with their velocities) are intrinsic, as in PGA3D.
 mod pga4d {
     gax::algebra! {
         algebra pga4d "Plane-based PGA of 4D Euclidean space, R(4,0,1).";
@@ -56,8 +58,8 @@ mod pga4d {
         kind Scalar = [1];
         kind Plane = [e1, e2, e3, e4, e0];
         kind Line = [e12, e13, e14, e23, e24, e34, e01, e02, e03, e04];
-        kind Forque = [e234, e134, e124, e123, e034, e024, e023, e014, e013, e012];
-        kind Point = [e0234, e0134, e0124, e0123, e1234];
+        kind Forque = [e234, e134, e124, e123, e034, e024, e023, e014, e013, e012] intrinsic;
+        kind Point = [e0234, e0134, e0124, e0123, e1234] intrinsic;
         kind Pseudoscalar = [e01234];
         versor Motor = [1, e12, e13, e14, e23, e24, e34, e01, e02, e03, e04,
             e1234, e0234, e0134, e0124, e0123];
@@ -66,14 +68,14 @@ mod pga4d {
 }
 
 /// numga's `inertia.py` over the kinds `Plane`, `Point`, `Line` (the bivectors, rates),
-/// `Forque` (the antibivectors) and `Motor` (the even versor) in scope, for an algebra whose
-/// points have `$n` coefficients (and whose motors list the scalar first).
+/// `Forque` (the antibivectors, intrinsic: joins) and `Motor` (the even versor) in scope, for
+/// an algebra whose points have `$n` coefficients (and whose motors list the scalar first).
 macro_rules! principal_frame {
     ($n:literal) => {
         use crate::Draw as _;
 
-        /// A rate-to-momentum map.
-        pub type Inertia = Forque<(Line,), f64>;
+        /// A rate-to-momentum map: from twists to forques.
+        pub type Inertia = Forque<(Line,), f64, gax::Intrinsic>;
         /// A second-moment map: `b & S(a)` is `Σ m (a & p)(b & p)` over the mass points.
         pub type Moment = Point<(Plane,), f64>;
         pub type Pl = Plane<(), f64>;

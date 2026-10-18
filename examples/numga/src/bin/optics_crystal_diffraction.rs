@@ -25,11 +25,12 @@ use gax_numga_examples::{
 };
 
 mod crystal {
-    use gax::Complex;
     use gax::vga3d::{Bivector, Vector};
+    use gax::{Complex, Intrinsic};
 
     pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
+    /// A phase plane: the Hodge dual of a wavevector, of the other orientation (intrinsic).
+    pub type B = Bivector<(), f64, Intrinsic>;
     /// A linear map on positions.
     pub type Linear = Vector<(Vector,), f64>;
 
@@ -59,7 +60,7 @@ mod crystal {
     /// The phase plane whose incidence with every deformed position is the old one's with the
     /// position: the same solve against the regressive pairing, `P' ∨ A(x) = P ∨ x`.
     pub fn carried_plane(deformation: Linear, plane: B) -> B {
-        let incidence = Bivector::slot() & deformation.of(Vector::slot());
+        let incidence = B::oriented_slot() & deformation.of(Vector::slot());
         incidence.solve(plane & Vector::slot())
     }
 

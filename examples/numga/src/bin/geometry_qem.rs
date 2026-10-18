@@ -20,7 +20,9 @@ mod qem {
     use super::*;
 
     pub type P = Point<(), f64>;
-    pub type Pl = Plane<(), f64>;
+    /// A face's supporting plane: the join of its corners, oriented by their winding
+    /// (intrinsic).
+    pub type Pl = Plane<(), f64, gax::Intrinsic>;
     /// A quadric: a polarity, each point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
 
@@ -279,8 +281,9 @@ mod tests {
     /// A plane's dyad evaluates to the squared perpendicular distance.
     #[test]
     fn plane_dyad_evaluates_to_squared_perpendicular_distance() {
-        // The plane y = 0.5.
-        let q = dyad(Plane::new(0.0, 1.0, 0.0, -0.5));
+        // The plane y = 0.5, and its dyad.
+        let p = Plane::new(0.0, 1.0, 0.0, -0.5);
+        let q: Quadric = p * (p & Point::slot());
         assert!((error(q, Point::xyz(1.0, 2.5, -0.5)) - 4.0).abs() < 1e-12);
         assert!((error(q, Point::xyz(0.0, -1.5, 3.0)) - 4.0).abs() < 1e-12);
         assert!(error(q, Point::xyz(1.0, 0.5, -0.5)).abs() < 1e-12);

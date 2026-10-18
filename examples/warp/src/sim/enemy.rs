@@ -44,7 +44,7 @@ pub struct Enemy {
 /// A shot in flight as an evader sees it.
 struct Shot {
     /// Its line of flight.
-    line: Line<(), f32>,
+    line: Line<(), f32, gax::Intrinsic>,
     /// Where it is.
     pos: P,
     /// Its velocity.

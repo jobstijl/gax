@@ -44,8 +44,9 @@ pub trait Cast<K: Kind>: Kind {
 /// slot of kind `K`. Generated for every such pair, a kind with itself included.
 #[diagnostic::on_unimplemented(
     message = "a `{Self}` does not fit a slot of kind `{K}`",
-    label = "some blade of `{Self}` is not a blade of `{K}`",
-    note = "a slot takes values whose blades are among its kind's; project first with `.cast::<{K}>()` if dropping blades is intended"
+    label = "not a blade of `{K}`, or not of its orientation",
+    note = "a slot takes values whose blades are among its kind's; project first with `.cast::<{K}>()` if dropping blades is intended",
+    note = "and of the slot's orientation (ADR-051): a join of points is intrinsic, a meet of planes extrinsic. Take a slot of the value's orientation (`Kind::<(), T, gax::Intrinsic>::oriented_slot()`), or declare the coefficients' orientation with `.with_orientation()` if they mean the other"
 )]
 pub trait SubKind<K: Kind>: Cast<K> {}
 

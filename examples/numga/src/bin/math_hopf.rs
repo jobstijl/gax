@@ -65,9 +65,12 @@ mod hopf {
     }
 
     /// The stereographic projection of a unit spinor from -1 into space: the bivector part over
-    /// one plus the scalar part, read as the vector it is dual to.
+    /// one plus the scalar part, read as the vector it is dual to, its product with the inverse
+    /// pseudoscalar `-xyz` (a product, unlike `dual()`, keeps the orientation: extrinsic, a
+    /// vector of space as the directions are).
     pub fn stereographic(spinor: R) -> V {
-        (spinor.grade::<2>().gp(1.0 / (1.0 + spinor.s()))).dual()
+        let inverse_pseudoscalar = gax::vga3d::Pseudoscalar::<(), f64>::new(-1.0);
+        spinor.grade::<2>().gp(1.0 / (1.0 + spinor.s())) * inverse_pseudoscalar
     }
 
     /// The rotors that carry a frame along a curve of unit directions, by the smallest rotation

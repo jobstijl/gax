@@ -96,8 +96,8 @@ impl World {
         b.prev = b.pos;
         b.pos += b.vel * DT;
         if let Some(wall) = outside(b.prev, b.pos, 0.0) {
-            // Where the path met the wall.
-            let pos = ((b.prev & b.pos) ^ wall).unitized();
+            // Where the path met the wall: the meet of two joins, a position.
+            let pos = ((b.prev & b.pos) ^ wall).position();
             self.events.push(Event::Wall { pos });
             return false;
         }

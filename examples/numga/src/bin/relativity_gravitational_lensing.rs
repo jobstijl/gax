@@ -5,7 +5,8 @@
 //! `observed - Σ m (observed - p)⁻¹`.
 //!
 //! The derivative of that deflection is a map on vectors, built with an open slot: the
-//! identity plus each mass's reflection sandwich `s⁻¹ x s⁻¹`, the change of a vector's inverse.
+//! identity plus each mass's reflection `s⁻¹ x s⁻¹` in the line of its separation `s`, the
+//! change of a vector's inverse: `>>` by the inverse of the separation's dual, the line's normal.
 //! Its outermorphism on the pseudoscalar is the area ratio, zero on the critical curve; the
 //! lens carries that curve to the caustic. The animation slides a small round source behind
 //! two equal masses: crossing the caustic, it gains or loses a pair of images, and the light
@@ -43,13 +44,14 @@ mod lensing {
 
     /// The map from a small displacement of the observed direction to the displacement it makes
     /// at the source: the identity plus each mass's reflection in the line of its separation,
-    /// scaled by the inverse square distance (the sandwich by the separation's inverse).
+    /// scaled by the inverse square distance (`>>` by the inverse of the separation's dual, the
+    /// normal of that line: a mirror vector is the mirror's normal).
     pub fn local_map(observed: V, positions: &[V], masses: &[f64]) -> LocalMap {
         positions
             .iter()
             .zip(masses)
             .fold(Vector::slot(), |acc, (p, m)| {
-                acc + ((observed - *p).inverse() >> Vector::slot()) * *m
+                acc + ((observed - *p).dual().inverse() >> Vector::slot()) * *m
             })
     }
 

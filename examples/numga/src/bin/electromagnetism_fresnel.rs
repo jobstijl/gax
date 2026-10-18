@@ -27,14 +27,17 @@ use gax_numga_examples::{
 };
 
 mod fresnel {
+    use gax::Intrinsic;
     use gax::sta::{Bivector, Scalar, Trivector, Vector};
     use gax_numga_examples::measure::roots;
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
     /// A material: the map from the field to its excitation, `Antibivector <- Bivector`
-    /// (antibivectors are bivectors in four dimensions).
-    pub type Medium = Bivector<(Bivector,), f64>;
+    /// (antibivectors are bivectors in four dimensions, of the other orientation).
+    pub type Medium = Bivector<(Bivector,), f64, Intrinsic>;
+    /// A map on fields, `Bivector <- Bivector`, such as a material's response.
+    pub type Response = Bivector<(Bivector,), f64>;
     /// A map on vectors, such as a wavevector's potential map.
     pub type VectorMap = Vector<(Vector,), f64>;
     /// A potential's field, `Bivector <- Vector`.
@@ -49,7 +52,7 @@ mod fresnel {
     pub const XY: B = B::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 
     /// The open field.
-    pub fn open_field() -> Medium {
+    pub fn open_field() -> Response {
         Bivector::slot()
     }
 
@@ -61,9 +64,9 @@ mod fresnel {
     /// The response of a reciprocal dielectric at rest along `t`, `Bivector <- Bivector`: its
     /// electric planes weighted by their permittivities, its magnetic planes by the reluctivity
     /// (the inverse permeability).
-    pub fn response(permittivity: [f64; 3], reluctivity: f64) -> Medium {
+    pub fn response(permittivity: [f64; 3], reluctivity: f64) -> Response {
         // Each plane reads the field's part along itself and returns that plane, weighted.
-        let electric: Medium = [X, Y, Z]
+        let electric: Response = [X, Y, Z]
             .into_iter()
             .zip(permittivity)
             .map(|(axis, weight)| {
@@ -97,7 +100,8 @@ mod fresnel {
     /// volume what the vector measures against the volume's image, `adj(c) & v = c & volumes(v)`.
     pub fn volume_adjugate(map: VectorMap) -> VectorMap {
         let volumes = map.outermorphism::<Trivector>();
-        let incidence: Scalar<(Vector, Trivector), f64> = Vector::slot() & Trivector::slot();
+        let incidence: Scalar<(Vector, Trivector), f64, Intrinsic> =
+            Vector::slot() & Trivector::slot();
         incidence.solve(Vector::slot() & volumes)
     }
 
@@ -461,7 +465,7 @@ mod tests {
                 }
             }
             let metric = Bivector::slot() | Bivector::slot();
-            let response_adjoint: Medium = metric.solve(Bivector::slot() | response);
+            let response_adjoint: Response = metric.solve(Bivector::slot() | response);
             assert!(near(response_adjoint, response, 1e-12));
         }
     }

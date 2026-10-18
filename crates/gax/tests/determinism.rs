@@ -33,7 +33,9 @@ impl Map for Pipeline {
                 T::one(),
             );
         let k = (b.norm() * T::from_f64(0.5)).exp();
-        (gax::Log::log(m) + (p & Point::new(T::zero(), T::zero(), T::zero(), T::one()))).gp(k)
+        // The line from `p` to the origin, a join, read as a turn about it (ADR-051).
+        let axis = (p & Point::new(T::zero(), T::zero(), T::zero(), T::one())).with_orientation();
+        (gax::Log::log(m) + axis).gp(k)
     }
 }
 

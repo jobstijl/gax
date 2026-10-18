@@ -60,7 +60,6 @@ pub fn kabuto() -> (Paper, [Pl; 11]) {
     let upper_centre = midpoint(centre, top);
     let left_centre = midpoint(centre, left);
     let eighth = midpoint(centre, quarter);
-    let brim = (sheet() | (left & top)).normalized().into_inner();
     let planes = [
         point_bisector(upper_left, lower_right),
         point_bisector(upper_right, lower_right),
@@ -68,11 +67,11 @@ pub fn kabuto() -> (Paper, [Pl; 11]) {
         point_bisector(centre, upper_left),
         point_bisector(top, centre),
         point_bisector(left, centre),
-        line_bisector(left_centre & quarter, quarter & centre, sheet()),
-        line_bisector(quarter & upper_centre, centre & quarter, sheet()),
+        line_bisector(left_centre & quarter, quarter & centre, quarter),
+        line_bisector(upper_centre & quarter, quarter & centre, quarter),
         point_bisector(eighth, upper_left),
-        brim,
-        brim,
+        point_bisector(centre, upper_left),
+        point_bisector(centre, upper_left),
     ];
     let paper = Paper {
         points: corners.to_vec(),

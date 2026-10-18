@@ -32,7 +32,7 @@ mod lie;
 
 mod top {
     use super::*;
-    pub use crate::lie::rigid::{G, Inertia, InertiaInv, M, P, R};
+    pub use crate::lie::rigid::{F, G, Inertia, InertiaInv, M, P, R};
 
     /// A quadric: each point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
@@ -44,6 +44,13 @@ mod top {
     /// The plane at infinity, `e0`: its pairing with a point is the point's weight.
     pub fn w() -> Pl {
         Plane::new(0.0, 0.0, 0.0, 1.0)
+    }
+
+    /// The plane at infinity as the join of the three axis directions, where [`w`] is their
+    /// meet: intrinsic, so that a plane wedged with it is a load (a forque), not a turn.
+    pub fn horizon() -> Plane<(), f64, gax::Intrinsic> {
+        let [x, y, z] = directions();
+        x & y & z
     }
 
     /// The coordinate planes `x = 0`, `y = 0`, `z = 0`.
@@ -169,7 +176,7 @@ mod top {
     }
 
     /// The body's twist per unit forque along a line, and its compliance along that line.
-    pub fn compliance(motor: M, inertia_inv: InertiaInv, line: Line<(), f64>) -> (R, f64) {
+    pub fn compliance(motor: M, inertia_inv: InertiaInv, line: F) -> (R, f64) {
         let body = motor << line;
         let step = inertia_inv.of(body);
         (step, (step & body).s())
@@ -262,11 +269,12 @@ mod top {
         // Hold against turning about the normal: undo the step's turn, with at most static
         // friction times the pressing forque times the contact patch's radius, the square root
         // of the radius of curvature times the indentation. The couple is the torque about the
-        // normal: the line at infinity of the planes normal to it.
+        // normal: the line at infinity of the planes normal to it, as a load the meet with the
+        // joined plane at infinity; its sense cancels below (it enters the step and the turn).
         let turn: R = (motor * before.reverse()).log();
         let mut twist = Line::zero();
         for i in 0..n {
-            let couple = normal[i].dual() ^ w();
+            let couple = normal[i].dual() ^ horizon();
             let turned = (couple & (turn * -2.0)).s();
             let [k1, k2] = principal(placed[i], contact[i]);
             #[allow(clippy::disallowed_methods)]

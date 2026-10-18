@@ -8,7 +8,7 @@ use crate::slots::{MAX_SLOTS, Slots};
 ///
 /// ```
 /// use gax::pga3d::{Line, Point};
-/// let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
+/// let join: Line<(Point, Point), f64, gax::Intrinsic> = Point::slot() & Point::slot();
 /// let (a, b) = (Point::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 0.0, 0.0));
 /// assert_eq!(join.at::<1>().of(b).of(a), a & b); // fill the second slot first
 /// ```

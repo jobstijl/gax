@@ -129,8 +129,8 @@ fn solvers(c: &mut Criterion) {
             0.7 - f,
             -0.2 * f,
         );
-        let (pa, pb): (Scalar<(Line,), f64>, Scalar<(Line,), f64>) =
-            (a & Line::slot(), bb & Line::slot());
+        // The join of two twists is intrinsic; its square extrinsic (ADR-051).
+        let (pa, pb) = (a & Line::slot(), bb & Line::slot());
         stiffness += pa * pa;
         inertia += pb * pb;
     }

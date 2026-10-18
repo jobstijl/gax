@@ -1,7 +1,8 @@
 //! numga's `mechanics/riccati`: finite-horizon feedback for docking a vessel, with every cost a
-//! quadratic form (PGA2D). The remaining displacement and turn is a twist (a point in PGA2D),
-//! with pose `exp(-error / 2)`; the thrusters' total force and torque is a forque (a line).
-//! Strong drag makes a push a velocity, so one step adds the mobility of the push to the error.
+//! quadratic form (PGA2D). The remaining displacement and turn is a twist (an extrinsic point in
+//! PGA2D, a turn about it), with pose `exp(-error / 2)`; the thrusters' total force and torque is
+//! a forque (an intrinsic line, a join). Strong drag makes a push a velocity, so one step adds the
+//! mobility of the push to the error.
 //! A cost is a scalar with two open twist slots, and filling both with maps pulls it back through
 //! them: `value.of_both(dynamics, actuation)` is the future cost seen from the present error and
 //! push, with no transposes. The Riccati recursion pulls the future cost back one step at a time and
@@ -11,7 +12,7 @@
 //! deadline nears.
 
 use gax::Unit;
-use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax::pga2d::{Forque, Motor, Point, Scalar, Twist};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
@@ -22,17 +23,20 @@ mod riccati {
     use super::*;
 
     pub type P = Point<(), f64>;
-    pub type L = Line<(), f64>;
+    /// An error: a twist, the extrinsic point (a turn about it), where a position is intrinsic.
+    pub type E = Twist<(), f64>;
+    /// A forque: a line of force, the join of a point and a direction.
+    pub type L = Forque<(), f64>;
     /// `Scalar <- (Twist, Twist)`.
-    pub type StateCost = Scalar<(Point, Point), f64>;
+    pub type StateCost = Scalar<(Twist, Twist), f64>;
     /// `Scalar <- (Forque, Forque)`.
-    pub type EffortCost = Scalar<(Line, Line), f64>;
+    pub type EffortCost = Scalar<(Forque, Forque), f64>;
     /// `Twist <- Twist`.
-    pub type Dynamics = Point<(Point,), f64>;
+    pub type Dynamics = Twist<(Twist,), f64>;
     /// `Twist <- Forque`.
-    pub type Actuation = Point<(Line,), f64>;
+    pub type Actuation = Twist<(Forque,), f64>;
     /// `Forque <- Twist`.
-    pub type Feedback = Line<(Point,), f64>;
+    pub type Feedback = Forque<(Twist,), f64>;
 
     /// The cost still to pay and the feedback, one more step back from `value` each time.
     pub fn riccati(
@@ -48,7 +52,7 @@ mod riccati {
                 // A push costs effort now and moves the error whose cost is paid next.
                 let control_cost: EffortCost = effort_cost + value.of_both(actuation, actuation);
                 // The push that cancels the cost's derivative, for every error at once.
-                let cross: Scalar<(Point, Line), f64> = value.of_both(dynamics, actuation);
+                let cross: Scalar<(Twist, Forque), f64> = value.of_both(dynamics, actuation);
                 let feedback: Feedback = -control_cost.solve(cross);
                 // The error's cost now, and its future cost through the step that feedback takes.
                 let closed: Dynamics = dynamics + actuation.of(feedback);
@@ -60,11 +64,11 @@ mod riccati {
 
     /// The initial error and its evolution under the feedbacks.
     pub fn rollout(
-        initial: P,
+        initial: E,
         dynamics: Dynamics,
         actuation: Actuation,
         feedbacks: &[Feedback],
-    ) -> Vec<P> {
+    ) -> Vec<E> {
         let mut error = initial;
         let mut out = vec![error];
         for f in feedbacks {
@@ -119,8 +123,8 @@ mod riccati {
         [Point::xy(0.45, 0.0), Point::xy(-0.35, 0.0)]
     }
     /// numga's `0.4 xw + 0.5 yw + 0.35 xy`: with `w = e0`, `xw = -e01` and `yw = e20`.
-    pub fn initial() -> P {
-        Point::new(0.5, -0.4, 0.35)
+    pub fn initial() -> E {
+        Twist::from_coeffs([0.5, -0.4, 0.35])
     }
 
     /// The thrusters' lines of force: a mount joined with its ideal direction, lever arm
@@ -139,7 +143,7 @@ mod riccati {
     /// The vessel and its costs.
     pub struct Model {
         /// The thrusters' resistance: a forque to the twist of least weighted effort.
-        pub resistance: Point<(Line,), f64>,
+        pub resistance: Actuation,
         pub state_cost: StateCost,
         /// The effort cost of each case.
         pub effort_cost: [EffortCost; 2],
@@ -152,17 +156,17 @@ mod riccati {
         let authority: Feedback = thrusters
             .iter()
             .zip(THRUSTER_WEIGHTS)
-            .map(|(t, w)| (*t * (*t & Point::slot())).gp(1.0 / w))
+            .map(|(t, w)| (*t * (*t & Twist::oriented_slot())).gp(1.0 / w))
             .sum();
         let resistance = authority.inverse();
-        let effort: EffortCost = Line::slot() & resistance.of(Line::slot());
+        let effort: EffortCost = Forque::oriented_slot() & resistance.of(Forque::oriented_slot());
         let effort_cost = EFFORT_SCALES.map(|s| effort.gp(s * DT));
 
         // Each tracking line's reading squared is that displacement's cost.
         let state_cost: StateCost = (tracking_lines().as_flattened().iter())
             .zip(TRACKING_WEIGHTS.as_flattened())
             .map(|(l, w)| {
-                let readout = *l & Point::slot();
+                let readout = *l & Twist::oriented_slot();
                 (readout * readout).gp(w * DT)
             })
             .sum();
@@ -174,14 +178,14 @@ mod riccati {
         let drag: Feedback = drag_lines
             .iter()
             .zip(DRAG_WEIGHTS)
-            .map(|(l, w)| (*l * (*l & Point::slot())).gp(w))
+            .map(|(l, w)| (*l * (*l & Twist::oriented_slot())).gp(w))
             .sum();
         // Without a push the vessel stays put.
         Model {
             resistance,
             state_cost,
             effort_cost,
-            dynamics: Point::slot(),
+            dynamics: Twist::oriented_slot(),
             actuation: drag.inverse().gp(DT),
         }
     }
@@ -191,7 +195,7 @@ mod riccati {
     pub struct Docking {
         pub values: Vec<StateCost>,
         pub feedbacks: Vec<Feedback>,
-        pub errors: Vec<P>,
+        pub errors: Vec<E>,
         pub commands: Vec<[f64; 3]>,
     }
 
@@ -238,14 +242,14 @@ mod riccati {
     }
 
     /// The pose of an error: `exp(-error / 2)`.
-    pub fn pose(error: P) -> Unit<Motor<(), f64>> {
+    pub fn pose(error: E) -> Unit<Motor<(), f64>> {
         error.gp(-0.5).exp()
     }
 
     /// The twist whose pose is the translation carrying the dock's centre to `to`.
-    pub fn offset(to: P) -> P {
+    pub fn offset(to: P) -> E {
         let d = to.unitized() - centre();
-        Point::translation_twist(d.e20(), d.e01()).gp(-2.0)
+        Twist::translation_twist(d.e20(), d.e01()).gp(-2.0)
     }
 }
 
@@ -367,7 +371,7 @@ fn main() {
 mod tests {
     use super::riccati::*;
     use gax::ApproxEq;
-    use gax::pga2d::{Line, Point, Scalar};
+    use gax::pga2d::{Forque, Point, Scalar, Twist};
 
     /// The recursion's policy is the best over the whole horizon, with general dynamics and
     /// actuation. The total cost is convex in the pushes (the effort cost is positive definite),
@@ -406,14 +410,15 @@ mod tests {
                 riccati(terminal, d, a, q, r, steps).into_iter().unzip();
             gains.reverse();
             // Six initial errors fix the value's quadratic form; each tests the whole policy.
-            let starts: [P; 6] = [
-                Point::new(1.0, 0.0, 0.0),
-                Point::new(0.0, 1.0, 0.0),
-                Point::new(0.0, 0.0, 1.0),
-                Point::new(1.0, 1.0, 0.0),
-                Point::new(0.0, 1.0, 1.0),
-                Point::new(1.0, 0.0, 1.0),
-            ];
+            let starts: [E; 6] = [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 1.0],
+                [1.0, 0.0, 1.0],
+            ]
+            .map(Twist::from_coeffs);
             for start in starts {
                 let errors = rollout(start, d, a, &gains);
                 let pushes: Vec<L> = gains.iter().zip(&errors).map(|(g, x)| g.of(*x)).collect();
@@ -429,9 +434,9 @@ mod tests {
                     "{paid} {predicted}"
                 );
                 // Half the derivatives of the cost (the forms are symmetric).
-                let mut costate: Scalar<(Point,), f64> = terminal.of(errors[steps]);
+                let mut costate: Scalar<(Twist,), f64> = terminal.of(errors[steps]);
                 for step in (0..steps).rev() {
-                    let gradient: Scalar<(Line,), f64> = r.of(pushes[step]) + costate.of(a);
+                    let gradient: Scalar<(Forque,), f64> = r.of(pushes[step]) + costate.of(a);
                     let size = r.of(pushes[step]).max_abs_diff(&Scalar::zero());
                     assert!(
                         gradient.max_abs_diff(&Scalar::zero()) < 1e-10 * size.max(1.0),
@@ -471,7 +476,7 @@ mod tests {
                 })
                 .collect();
             let landing = tracking[STEPS] * LANDING;
-            let cost = |v: &StateCost, e: P| v.of(e).of(e).s();
+            let cost = |v: &StateCost, e: E| v.of(e).of(e).s();
             let predicted = cost(&d.values[STEPS - 1], d.errors[0]);
             let total: f64 = running.iter().sum::<f64>() + landing;
             assert!((total - predicted).abs() < 1e-9, "{total} {predicted}");
@@ -505,7 +510,7 @@ mod tests {
                 assert!(supplied.max_abs_diff(&requested) < 1e-10);
             }
         }
-        for trial in [Point::new(0.2, -0.3, 0.15), Point::new(-0.1, 0.25, -0.12)] {
+        for trial in [[0.2, -0.3, 0.15], [-0.1, 0.25, -0.12]].map(E::from_coeffs) {
             for ((m, dir), t) in mounts().iter().zip(directions()).zip(thrusters) {
                 let v = m.commutator(trial);
                 let power = dir.e20() * v.e20() + dir.e01() * v.e01();

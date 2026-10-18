@@ -179,6 +179,24 @@ where
         .all(|(c, v)| *c || zero_mod(v.poly()))
 }
 
+/// The oriented sandwich (ADR-051) from the plain `z = v x ~v` of a versor of kind `V`: for an
+/// odd versor, each blade of grade `k` times `(−1)ᵏ` for an extrinsic `x` and `−(−1)ᵏ` for an
+/// intrinsic one (`z` has the orientation of `x`).
+pub fn oriented<V: Kind, Z: Extensor<Slots = ()>>(z: Z) -> Z {
+    if !V::BLADES.iter().all(|b| blade_grade(b) % 2 == 1) {
+        return z;
+    }
+    let extrinsic = <<Z::Kind as Kind>::Orientation as gax::Orientation>::SIGN > 0;
+    let (blades, c) = (<Z::Kind as Kind>::BLADES, z.coeffs().as_ref());
+    Z::from_coeffs(<Z::Kind as Kind>::arr_from_fn(|i| {
+        if (blade_grade(blades[i]) % 2 == 1) == extrinsic {
+            c[i] * Z::Coef::from_i64(-1)
+        } else {
+            c[i]
+        }
+    }))
+}
+
 /// The adjoint of the map `t: B<(B,)>` through the pairing `p: Scalar<(A, B)>`, which must be
 /// a constant signed permutation matrix: the map `adj: A<(A,)>` with
 /// `p(adj(l), x) == p(l, t(x))`. With `P⁻¹ = Pᵀ`, `adj = P tᵀ Pᵀ`.
@@ -545,7 +563,8 @@ macro_rules! law_suite {
                 let name = concat!("cast ", stringify!($ca), " to ", stringify!($cb));
                 let x: $ca<(), T> = fresh();
                 let (want, _) = law_suite::project_exactly::<_, $cb<(), T>, T>(&x);
-                law(x.cast::<$cb>() == want, name);
+                // A cast keeps the orientation (ADR-051).
+                law(x.cast::<$cb>() == want.with_orientation(), name);
                 let m: $ca<($slot,), T> = fresh();
                 let p: $slot<(), T> = fresh();
                 law(m.cast::<$cb>().of(p) == m.of(p).cast::<$cb>(), name);
@@ -561,12 +580,14 @@ macro_rules! law_suite {
             $((|| {
                 reset();
                 let name = concat!(stringify!($sa), " in ", stringify!($sb));
-                let x: $sa<(), T> = fresh();
+                // Of the larger kind's orientation, to fill its slots (ADR-051).
+                let x: $sa<(), T, <$sb as gax::Kind>::Orientation> = fresh();
                 law(x.cast::<$sb>().cast::<$sa>() == x, name);
                 law(x.cast::<$sb>() == $sb::from(x), name);
                 let m: $scalar<($sb,), T> = fresh();
                 law(m.of(x) == m.of(x.cast::<$sb>()), name);
-                let narrowed: $scalar<($sa,), T> = m.of($sa::slot());
+                let narrowed: $scalar<($sa<(), f32, <$sb as gax::Kind>::Orientation>,), T> =
+                    m.of($sa::<(), T, <$sb as gax::Kind>::Orientation>::oriented_slot());
                 law(narrowed.of(x) == m.of(x), name);
             })();)*
         }
@@ -579,7 +600,7 @@ macro_rules! law_suite {
                 reset();
                 let name = concat!(stringify!($gk), " grade ", stringify!($gg));
                 let x: $gk<(), T> = fresh();
-                let part: $go<(), T> = x.grade::<$gg>();
+                let part: $go<(), T, <$gk as gax::Kind>::Orientation> = x.grade::<$gg>();
                 let mut want = x;
                 for (c, b) in want.c.iter_mut().zip(<$gk as gax::Kind>::BLADES) {
                     if law_suite::blade_grade(b) != $gg {
@@ -602,7 +623,7 @@ macro_rules! law_suite {
                     let x: $zx<(), T> = fresh();
                     let name = concat!("sampled ", stringify!($zv), " >> ", stringify!($zx));
                     let y = v >> x;
-                    law(projects_to(&y, &((v * x) * v.reverse()), &[]), name);
+                    law(projects_to(&y, &oriented::<$zv, _>((v * x) * v.reverse()), &[]), name);
                     law((v >> $zx::slot()).of(x) == y, name);
                 }
             })();)*
@@ -614,7 +635,7 @@ macro_rules! law_suite {
                     let name = concat!("sampled Unit<", stringify!($uv), "> >> ", stringify!($ux));
                     let u = Unit::new_unchecked(v);
                     let y = u >> x;
-                    law(projects_to(&y, &((v * x) * v.reverse()), &[]), name);
+                    law(projects_to(&y, &oriented::<$uv, _>((v * x) * v.reverse()), &[]), name);
                     law((u >> $ux::slot()).of(x) == y, name);
                     law((u.prepare::<$ux>() >> x) == y, name);
                     law(u << y == x, name);
@@ -668,7 +689,7 @@ macro_rules! law_suite {
                     let x: $zx<(), F> = random_field(&mut rng);
                     let name = concat!("mod p: sampled ", stringify!($zv), " >> ", stringify!($zx));
                     let y = v >> x;
-                    law(projects_exactly(&y, &((v * x) * v.reverse())), name);
+                    law(projects_exactly(&y, &oriented::<$zv, _>((v * x) * v.reverse())), name);
                     law((v >> $zx::slot()).of(x) == y, name);
                 }
             })();)*
@@ -679,7 +700,7 @@ macro_rules! law_suite {
                     let name = concat!("mod p: sampled Unit<", stringify!($uv), "> >> ", stringify!($ux));
                     let u = Unit::new_unchecked(v);
                     let y = u >> x;
-                    law(projects_exactly(&y, &((v * x) * v.reverse())), name);
+                    law(projects_exactly(&y, &oriented::<$uv, _>((v * x) * v.reverse())), name);
                     law((u >> $ux::slot()).of(x) == y, name);
                     law((u.prepare::<$ux>() >> x) == y, name);
                     law(u << y == x, name);
@@ -720,7 +741,7 @@ macro_rules! law_suite {
             $((|| {
                 reset();
                 let (a, v): ($divnum<(), T>, $divden<(), T>) = (fresh(), fresh());
-                let back: $divback<(), T> = (a / v) * v;
+                let back: $divback<(), T, <$divnum as gax::Kind>::Orientation> = (a / v) * v;
                 let relations = law_suite::basis(&law_suite::Sym::atom_relations());
                 law(
                     same_mod(&back, &$divback::from(a), &relations),
@@ -731,7 +752,7 @@ macro_rules! law_suite {
 
         #[allow(unused_imports)]
         use law_suite::{
-            adjoint, close, factor, flat, fresh, law, projects_to, random_f64, reset,
+            adjoint, close, factor, flat, fresh, law, oriented, projects_to, random_f64, reset,
             same_mod, top_coefficient, unit_basis, var, versor_basis, T,
         };
         #[allow(unused_imports)]
@@ -952,7 +973,8 @@ macro_rules! law_suite {
                     f.of(g).outermorphism::<$ob>() == f.outermorphism::<$ob>().of(g.outermorphism::<$ob>()),
                     name,
                 );
-                law($ov::slot().outermorphism::<$ob>() == $ob::<(), T>::slot(), name);
+                // The identity extends to the identity (its orientation is the factors', ADR-051).
+                law($ov::<(), T>::slot().outermorphism::<$ob>().c == $ob::<(), T>::slot().c, name);
             })();)*
             $((|| {
                 reset();
@@ -1022,8 +1044,9 @@ macro_rules! law_suite {
         fn adjoint_laws() {
             $((|| {
                 reset();
-                let p: $scalar<($ra, $rb), T> = gax::$rtr::$rm($ra::slot(), $rb::slot());
-                let q: $scalar<($rb, $ra), T> = gax::$rtr::$rm($rb::slot(), $ra::slot());
+                // A pairing's orientation follows its factors' (ADR-051).
+                let p: $scalar<($ra, $rb), T, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
+                let q: $scalar<($rb, $ra), T, _> = gax::$rtr::$rm($rb::slot(), $ra::slot());
                 let (t, s): ($rb<($rb,), T>, $rb<($rb,), T>) = (fresh(), fresh());
                 let (l, x): ($ra<(), T>, $rb<(), T>) = (fresh(), fresh());
                 let name = concat!(stringify!($rm), " pairing of ", stringify!($ra), " and ", stringify!($rb));
@@ -1039,7 +1062,7 @@ macro_rules! law_suite {
 
                 // The solver agrees with the closed form (f64).
                 let mut seed = 0x9e37_79b9_7f4a_7c15u64;
-                let pf: $scalar<($ra, $rb), f64> = gax::$rtr::$rm($ra::slot(), $rb::slot());
+                let pf: $scalar<($ra, $rb), f64, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
                 for _ in 0..4 {
                     let tf: $rb<($rb,), f64> = random_f64(&mut seed);
                     let solved: $ra<($ra,), f64> = pf.solve(gax::$rtr::$rm($ra::slot(), tf));
@@ -1060,7 +1083,7 @@ macro_rules! law_suite {
                 let x: $px<(), T> = fresh();
                 let name = concat!(stringify!($pv), " >> ", stringify!($px));
                 let y = v >> x;
-                law(projects_to(&y, &((v * x) * v.reverse()), &[]), name);
+                law(projects_to(&y, &oriented::<$pv, _>((v * x) * v.reverse()), &[]), name);
                 law((v >> $px::slot()).of(x) == y, name);
                 let prepared = gax::Prepare::<$px>::prepare(v);
                 law((prepared >> x) == y, name);
@@ -1075,7 +1098,7 @@ macro_rules! law_suite {
                 let u = Unit::new_unchecked(v);
                 let name = concat!("Unit<", stringify!($sv), "> >> ", stringify!($sx));
                 let y = u >> x;
-                law(projects_to(&y, &((v * x) * v.reverse()), &basis), name);
+                law(projects_to(&y, &oriented::<$sv, _>((v * x) * v.reverse()), &basis), name);
                 law(same_mod(&(u >> $sx::slot()).of(x), &y, &basis), name);
                 let prepared = u.prepare::<$sx>();
                 law(same_mod(&(prepared >> x), &y, &basis), name);

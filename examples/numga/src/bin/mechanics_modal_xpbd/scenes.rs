@@ -2,7 +2,7 @@
 //! and a spliced beam fixed at both ends and compressed until it buckles.
 
 use crate::girder::{P, S, Shape, origin};
-use crate::xpbd::{Bodies, Constraints, Couple, M, Mobility, step};
+use crate::xpbd::{Bodies, Constraints, Couple, M, Mobility, R, step};
 use core::f64::consts::PI;
 use gax::field::Field;
 use gax::pga2d::{Motor, Point};
@@ -75,7 +75,7 @@ pub fn girders(shape: &Shape, fixed: &[bool], damping: f64) -> Bodies {
         motor: (0..count)
             .map(|b| Motor::translation((b as f64 - 0.5) * length, 0.0))
             .collect(),
-        rate: vec![Point::zero(); count],
+        rate: vec![R::zero(); count],
         amplitudes: still(),
         rates: still(),
         compliance: shape

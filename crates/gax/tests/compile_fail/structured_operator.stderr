@@ -6,14 +6,14 @@ error[E0277]: no regressive product (`&`) of `gax::pga3d::Line<(gax::pga3d::Line
   |
   = note: the product is identically zero for these kinds (so it is not defined), or an operand is not a multivector of the same algebra and coefficient type (versor transport needs a declared versor kind as a value on the left)
   = note: a structured map (`map::LinearMap`, such as `PrincipalInertia`) takes part in products as its dense form, `.to_dense()`
-  = help: `gax::pga3d::Line<S1, T>` implements trait `Vee<Rhs>`:
-            Vee<gax::pga3d::Direction<S2, T>>
-            Vee<gax::pga3d::Flector<S2, T>>
-            Vee<gax::pga3d::Line<S2, T>>
-            Vee<gax::pga3d::Motor<S2, T>>
-            Vee<gax::pga3d::Multivector<S2, T>>
-            Vee<gax::pga3d::Point<S2, T>>
-            Vee<gax::pga3d::Pseudoscalar<S2, T>>
-            Vee<gax::pga3d::Rotor<S2, T>>
-            Vee<gax::pga3d::Translator<S2, T>>
+  = help: `gax::pga3d::Line<S1, T, OA>` implements trait `Vee<Rhs>`:
+            Vee<gax::pga3d::Direction<S2, T, OB>>
+            Vee<gax::pga3d::Flector<S2, T, OB>>
+            Vee<gax::pga3d::Line<S2, T, OB>>
+            Vee<gax::pga3d::Motor<S2, T, OB>>
+            Vee<gax::pga3d::Multivector<S2, T, OB>>
+            Vee<gax::pga3d::Point<S2, T, OB>>
+            Vee<gax::pga3d::Pseudoscalar<S2, T, OB>>
+            Vee<gax::pga3d::Rotor<S2, T, OB>>
+            Vee<gax::pga3d::Translator<S2, T, OB>>
   = note: required for `gax::pga3d::Line<(gax::pga3d::Line,), f64>` to implement `BitAnd<PrincipalInertia<{float}>>`

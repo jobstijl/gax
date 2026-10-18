@@ -147,8 +147,8 @@ impl Proj {
     }
 
     /// The world ray from the eye through a screen point: the camera-frame direction whose
-    /// projection it is, taken into the world, joined with the eye.
-    pub(super) fn ray(&self, at: Point2<(), f32>) -> gax::pga3d::Line<(), f32> {
+    /// projection it is, taken into the world, joined with the eye (so intrinsic).
+    pub(super) fn ray(&self, at: Point2<(), f32>) -> gax::pga3d::Line<(), f32, gax::Intrinsic> {
         let [x, y] = at.to_euclidean();
         let d = dir(-x / self.focal, y / self.focal, 1.0);
         let eye = self.cam >> Point::xyz(0.0, 0.0, 0.0);

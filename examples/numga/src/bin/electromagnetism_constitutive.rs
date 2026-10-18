@@ -29,15 +29,22 @@ mod constitutive {
     // numga's API in full: the tests use parts the animation does not.
     #![cfg_attr(not(test), allow(dead_code))]
 
-    use gax::Vee;
-    use gax::sta::{Bivector, Odd, Trivector, Vector};
+    use gax::sta::{Bivector, Odd, Scalar, Trivector, Vector};
+    use gax::{Intrinsic, Orientation, Vee};
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
-    /// A constitutive map, `Antibivector <- Bivector` (antibivectors are bivectors in 4D).
-    pub type Medium = Bivector<(Bivector,), f64>;
+    /// An excitation, the dual of a field: a bivector of the other orientation (intrinsic).
+    pub type Excitation = Bivector<(), f64, Intrinsic>;
+    /// A map on fields, `Bivector <- Bivector`.
+    pub type Projector = Bivector<(Bivector,), f64>;
+    /// A constitutive map, `Antibivector <- Bivector` (antibivectors are bivectors in 4D, of
+    /// the other orientation).
+    pub type Medium = Bivector<(Bivector,), f64, Intrinsic>;
+    /// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
+    pub type AxionCoupling = Scalar<(), f64, Intrinsic>;
     /// A stress-energy current, `Antivector <- Vector`.
-    pub type Current = Trivector<(Vector,), f64>;
+    pub type Current = Trivector<(Vector,), f64, Intrinsic>;
     /// Both Maxwell residuals of a plane wave, `Odd <- Bivector`.
     pub type WaveMap = Odd<(Bivector,), f64>;
     pub type Rotor = gax::Unit<gax::sta::Even<(), f64>>;
@@ -57,7 +64,7 @@ mod constitutive {
     }
 
     /// The open field.
-    pub fn open() -> Medium {
+    pub fn open() -> Projector {
         Bivector::slot()
     }
 
@@ -79,8 +86,9 @@ mod constitutive {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
-    /// The spatial part of a vector as the rest observer `t` reads it, a vector of space.
-    pub fn spatial(v: V) -> Space {
+    /// The spatial part of a vector as the rest observer `t` reads it, a vector of space (for
+    /// drawing, of either orientation).
+    pub fn spatial<O: Orientation>(v: Vector<(), f64, O>) -> Space {
         Space::new(v.e1(), v.e2(), v.e3())
     }
 
@@ -98,7 +106,7 @@ mod constitutive {
 
     /// The electric and magnetic projectors of a unit timelike observer: `(F - u F u) / 2`
     /// and the rest.
-    pub fn observer_projectors(observer: V) -> (Medium, Medium) {
+    pub fn observer_projectors(observer: V) -> (Projector, Projector) {
         let electric = (open() - (observer >> open())).gp(0.5);
         (electric, open() - electric)
     }
@@ -115,7 +123,7 @@ mod constitutive {
     /// An anisotropic electric response: each axis's plane with the observer weighted.
     pub fn crystal_medium(eps: [f64; 3], mu: f64, observer: V) -> Medium {
         let (_, magnetic) = observer_projectors(observer);
-        let electric: Medium = [x(), y(), z()]
+        let electric: Projector = [x(), y(), z()]
             .iter()
             .zip(eps)
             .map(|(axis, e)| {
@@ -130,7 +138,7 @@ mod constitutive {
     /// permeability.
     pub fn ferrite_medium(eps: f64, mu_inv: [f64; 3], observer: V) -> Medium {
         let (electric, _) = observer_projectors(observer);
-        let magnetic: Medium = [x(), y(), z()]
+        let magnetic: Projector = [x(), y(), z()]
             .iter()
             .zip(mu_inv)
             .map(|(axis, m)| {
@@ -141,9 +149,14 @@ mod constitutive {
         (electric.gp(eps) - magnetic).hodge()
     }
 
+    /// An axion coupling of strength `alpha`: the number, declared a pseudoscalar.
+    pub fn axion_coupling(alpha: f64) -> AxionCoupling {
+        Scalar::new(alpha).with_orientation()
+    }
+
     /// Add the axion response, a multiple of the identity on field planes.
-    pub fn axion_medium(base: Medium, alpha: f64) -> Medium {
-        base + open().gp(alpha)
+    pub fn axion_medium(base: Medium, coupling: AxionCoupling) -> Medium {
+        base + coupling * open()
     }
 
     /// The boost to speed `beta` along a unit spatial `direction`.
@@ -159,7 +172,7 @@ mod constitutive {
 
     /// The electromagnetic stress-energy current `v ↦ (v · F) ∧ G + ½ (F ∨ G) v*`. An
     /// observer's energy density is `u ∨ current(u)`.
-    pub fn stress_energy(field: B, excitation: B) -> Current {
+    pub fn stress_energy(field: B, excitation: Excitation) -> Current {
         let lagrangian = pair(field, excitation).s() / 2.0;
         ((open_vector() | field) ^ excitation) + open_vector().hodge().gp(lagrangian)
     }
@@ -254,7 +267,11 @@ mod constitutive {
         let against_flow = add_speeds(1.0 / n, -BETA_BOOST);
         vec![
             ("GLASS", glass, vec![1.0 / n]),
-            ("AXION", axion_medium(glass, AXION_ALPHA), vec![1.0 / n]),
+            (
+                "AXION",
+                axion_medium(glass, axion_coupling(AXION_ALPHA)),
+                vec![1.0 / n],
+            ),
             (
                 "CRYSTAL",
                 crystal(),
@@ -686,7 +703,7 @@ mod tests {
         let (electric, magnetic) = observer_projectors(t());
         assert!(near(electric.of(electric), electric, 1e-14));
         assert!(near(magnetic.of(magnetic), magnetic, 1e-14));
-        assert!(near(electric.of(magnetic), Medium::zero(), 1e-14));
+        assert!(near(electric.of(magnetic), Projector::zero(), 1e-14));
         let f = field(1.0, 2.0, 5.0, 3.0, 0.0, 4.0);
         assert!(near(electric.of(f) + magnetic.of(f), f, 1e-14));
     }
@@ -820,7 +837,7 @@ mod tests {
         let base_current = stress_energy(f, glass.of(f));
         let s = speeds();
         for alpha in [0.4, -1.3] {
-            let axion = axion_medium(glass, alpha);
+            let axion = axion_medium(glass, axion_coupling(alpha));
             let axion_form = pair(open(), axion);
             let change = (axion_form.of(f).of(f).s() - base_form.of(f).of(f).s()) / 2.0;
             assert_eq!(

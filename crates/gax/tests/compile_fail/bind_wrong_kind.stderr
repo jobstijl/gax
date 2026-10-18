@@ -2,29 +2,30 @@ error[E0277]: a `Plane` does not fit a slot of kind `gax::pga3d::Point`
  --> tests/compile_fail/bind_wrong_kind.rs:7:20
   |
 7 |     let _ = map.of(plane);
-  |                 -- ^^^^^ some blade of `Plane` is not a blade of `gax::pga3d::Point`
+  |                 -- ^^^^^ not a blade of `gax::pga3d::Point`, or not of its orientation
   |                 |
   |                 required by a bound introduced by this call
   |
   = help: the trait `SubKind<gax::pga3d::Point>` is not implemented for `Plane`
   = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::Point>()` if dropping blades is intended
-help: `Plane` implements trait `SubKind<K>`
+  = note: and of the slot's orientation (ADR-051): a join of points is intrinsic, a meet of planes extrinsic. Take a slot of the value's orientation (`Kind::<(), T, gax::Intrinsic>::oriented_slot()`), or declare the coefficients' orientation with `.with_orientation()` if they mean the other
+help: `Plane<(), f32, O>` implements trait `SubKind<K>`
  --> src/algebras/pga3d/kinds.rs
   |
-  | impl gx::SubKind<Plane> for Plane {}
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<Plane>`
+  | impl<O: gx::Orientation> gx::SubKind<Plane<(), f32, O>> for Plane<(), f32, O> {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<Plane<(), f32, O>>`
 ...
-  | impl gx::SubKind<Flector> for Plane {}
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Flector>`
+      | impl<O: gx::Orientation> gx::SubKind<Flector<(), f32, O>> for Plane<(), f32, O> {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Flector<(), f32, O>>`
 ...
-  | impl gx::SubKind<Multivector> for Plane {}
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector>`
-  = note: required for `gax::pga3d::Line<(gax::pga3d::Point,)>` to implement `Of<Plane>`
-note: required by a bound in `gax::pga3d::Line::<S, T>::of`
+      | impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Plane<(), f32, O> {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector<(), f32, O>>`
+      = note: required for `gax::pga3d::Line<(gax::pga3d::Point,), {float}, Intrinsic>` to implement `Of<Plane<(), {float}>>`
+note: required by a bound in `gax::pga3d::Line::<S, T, O>::of`
  --> src/algebras/pga3d/kinds.rs
   |
   |     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
   |            -- required by a bound in this associated function
   |     where
   |         Self: gx::Of<X>,
-  |               ^^^^^^^^^ required by this bound in `Line::<S, T>::of`
+  |               ^^^^^^^^^ required by this bound in `Line::<S, T, O>::of`

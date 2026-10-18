@@ -6,7 +6,8 @@
 //! densest directions within each, the <110> directions, which are the lines where two of those
 //! planes meet. With the planes as the duals of their normals, a slip direction is the meet of
 //! two planes, `planes[i] & planes[j]`: each plane meets the other three in three directions,
-//! twelve slip systems in all.
+//! twelve slip systems in all. A meet is intrinsic, its sense a convention, and so is the sign
+//! of the stress resolved along it: a slip, their product, is a move of space, extrinsic.
 //!
 //! A pull along an axis is the stress map `axis (axis | Vector)`: the traction on a plane with a
 //! given normal points along the axis, by the normal's share of it. The part of that traction
@@ -23,11 +24,11 @@
 //! direction, until a second system catches up at [112] and the two slip together.
 //!
 //! Left, the stereographic chart of pull directions (the upper half of the sphere, a direction
-//! lifted from the chart by the reflection of `z` in `z + p`), each coloured by the system that
-//! yields first and dimmed where its Schmid factor is small, with the slip planes' normals
-//! (triangles) and the slip directions (dots). Right, the standard triangle between [001], [011]
-//! and [111] close up, with the paths of eight pulls' axes growing, each step coloured by the
-//! systems that slipped in it.
+//! lifted from the chart by the reflection of `-z` in the plane across `z + p`), each coloured by
+//! the system that yields first and dimmed where its Schmid factor is small, with the slip
+//! planes' normals (triangles) and the slip directions (dots). Right, the standard triangle
+//! between [001], [011] and [111] close up, with the paths of eight pulls' axes growing, each
+//! step coloured by the systems that slipped in it.
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
@@ -36,9 +37,15 @@ use gax_numga_examples::{
 use std::sync::OnceLock;
 
 mod slip {
-    use gax::vga3d::Vector;
+    use gax::Intrinsic;
+    use gax::vga3d::{Scalar, Vector};
 
     pub type V = Vector<(), f64>;
+    /// A slip direction: the meet of two slip planes, intrinsic, its sense a convention.
+    pub type D = Vector<(), f64, Intrinsic>;
+    /// A Schmid factor or a slip: the stress resolved along a slip direction, intrinsic like the
+    /// direction, so that its product with the direction, a move, does not depend on its sense.
+    pub type Factor = Scalar<(), f64, Intrinsic>;
     /// A stress: a map on vectors, the traction on a plane for its normal.
     pub type Stress = Vector<(Vector,), f64>;
     /// One value per slip system: per plane, per slip direction in it.
@@ -51,7 +58,7 @@ mod slip {
 
     /// The slip directions of each slip plane: the lines where it meets each of the others,
     /// normalized.
-    pub fn slip_directions(normals: &[V; PLANES]) -> Systems<V> {
+    pub fn slip_directions(normals: &[V; PLANES]) -> Systems<D> {
         let planes = normals.map(|n| n.dual());
         core::array::from_fn(|i| {
             core::array::from_fn(|k| {
@@ -69,11 +76,11 @@ mod slip {
 
     /// The shear stress a pull resolves along each slip system, per unit pull: the traction on
     /// the slip plane, along the slip direction.
-    pub fn schmid(axis: V, normals: &[V; PLANES], directions: &Systems<V>) -> Systems<f64> {
+    pub fn schmid(axis: V, normals: &[V; PLANES], directions: &Systems<D>) -> Systems<Factor> {
         let stress = tension(axis);
         core::array::from_fn(|i| {
             let traction = stress.of(normals[i]);
-            directions[i].map(|d| d.dot(traction).s())
+            directions[i].map(|d| d.dot(traction))
         })
     }
 
@@ -83,14 +90,14 @@ mod slip {
     pub fn slipped(
         axis: V,
         normals: &[V; PLANES],
-        directions: &Systems<V>,
-        amounts: &Systems<f64>,
+        directions: &Systems<D>,
+        amounts: &Systems<Factor>,
     ) -> V {
         let mut shift = V::zero();
         for ((normal, plane), amount) in normals.iter().zip(directions).zip(amounts) {
             let height = normal.dot(axis).s();
             for (d, a) in plane.iter().zip(amount) {
-                shift += *d * (a * height);
+                shift += *d * (*a * height);
             }
         }
         (-(axis ^ shift) / 2.0).exp() >> axis
@@ -134,10 +141,10 @@ mod slip {
         NORMALS.map(unit)
     }
 
-    /// The pull direction at a point `(x, y)` of the chart, the plane across [001]: [001]
-    /// reflected in the line along [001] plus the point, the stereographic lift.
+    /// The pull direction at a point `(x, y)` of the chart, the plane across [001]: [001]'s
+    /// opposite reflected in the plane across [001] plus the point, the stereographic lift.
     pub fn lift(x: f64, y: f64) -> V {
-        (Z + Vector::new(x, y, 0.0)).normalized() >> Z
+        (Z + Vector::new(x, y, 0.0)).normalized() >> -Z
     }
 
     /// The point of the chart a direction projects to, its opposite (the same pull) taken on
@@ -151,20 +158,20 @@ mod slip {
     /// How much each system slips in a step: the step's slip, in the sign of the Schmid factor,
     /// scaled by the factor's size over the leading one raised to the steepness, a power law of
     /// the resolved shear stress.
-    pub fn power_law(factors: &Systems<f64>) -> Systems<f64> {
+    pub fn power_law(factors: &Systems<Factor>) -> Systems<Factor> {
         let leading = factors
             .iter()
             .flatten()
-            .fold(0.0, |m: f64, f| m.max(f.abs()));
-        factors
-            .map(|plane| plane.map(|f| AMOUNT * f.signum() * (f.abs() / leading).powi(STEEPNESS)))
+            .fold(0.0, |m: f64, f| m.max(f.s().abs()));
+        let scale = |f: Factor| AMOUNT * f.s().abs().powi(STEEPNESS - 1) / leading.powi(STEEPNESS);
+        factors.map(|plane| plane.map(|f| f * scale(f)))
     }
 
     /// The slip planes' normals and slip directions.
     #[derive(Clone, Copy, Debug)]
     pub struct Crystal {
         pub normals: [V; PLANES],
-        pub slips: Systems<V>,
+        pub slips: Systems<D>,
     }
 
     impl Crystal {
@@ -178,19 +185,19 @@ mod slip {
         }
 
         /// The Schmid factors of a pull along the axis.
-        pub fn schmid(&self, axis: V) -> Systems<f64> {
+        pub fn schmid(&self, axis: V) -> Systems<Factor> {
             schmid(axis, &self.normals, &self.slips)
         }
 
         /// One pull's axis after a slip step, and how much each system slipped in it.
-        pub fn step(&self, axis: V) -> (V, Systems<f64>) {
+        pub fn step(&self, axis: V) -> (V, Systems<Factor>) {
             let amounts = power_law(&self.schmid(axis));
             (slipped(axis, &self.normals, &self.slips, &amounts), amounts)
         }
 
         /// A pull's axis at every step (`STEPS + 1`), and how much each system slipped in each
         /// step (`STEPS`).
-        pub fn path(&self, start: V) -> (Vec<V>, Vec<Systems<f64>>) {
+        pub fn path(&self, start: V) -> (Vec<V>, Vec<Systems<Factor>>) {
             let (mut axes, mut amounts) = (vec![start], Vec::with_capacity(STEPS));
             for _ in 0..STEPS {
                 let (axis, slipped) = self.step(axes[axes.len() - 1]);
@@ -201,7 +208,7 @@ mod slip {
         }
 
         /// Every pull's path.
-        pub fn paths(&self) -> Vec<(Vec<V>, Vec<Systems<f64>>)> {
+        pub fn paths(&self) -> Vec<(Vec<V>, Vec<Systems<Factor>>)> {
             STARTS.iter().map(|s| self.path(unit(*s))).collect()
         }
     }
@@ -235,7 +242,7 @@ const EDGE_SAMPLES: usize = 60;
 /// The crystal and the pulls' paths, computed once.
 struct Scene {
     crystal: Crystal,
-    paths: Vec<(Vec<V>, Vec<Systems<f64>>)>,
+    paths: Vec<(Vec<V>, Vec<Systems<Factor>>)>,
 }
 
 fn scene() -> &'static Scene {
@@ -261,8 +268,8 @@ fn system_colour(k: usize) -> Light {
 
 /// The colour of a pull direction: the hue of the system that yields first, dimmed where its
 /// Schmid factor is small.
-fn shade(factors: &Systems<f64>) -> Light {
-    let sizes = factors.iter().flatten().map(|f| f.abs()).enumerate();
+fn shade(factors: &Systems<Factor>) -> Light {
+    let sizes = factors.iter().flatten().map(|f| f.s().abs()).enumerate();
     let (leading, factor) = sizes.max_by(|a, b| a.1.total_cmp(&b.1)).expect("systems");
     let strength = ((factor - FAINT) / (FULL - FAINT)).clamp(0.0, 1.0) as f32;
     let [faint, full] = REGION_LIGHT;
@@ -306,7 +313,9 @@ fn draw_chart(c: &mut Canvas, rect: Rect, crystal: &Crystal) {
     );
     let normals: Vec<Point2> = crystal.normals.iter().map(|n| chart(*n)).collect();
     ax.scatter(c, &normals, Marker::Triangle, 10.0, palette::ink());
-    let slips: Vec<Point2> = crystal.slips.iter().flatten().map(|d| chart(*d)).collect();
+    // A slip direction drawn where its line pierces the chart: its sense does not show.
+    let slip_at = |d: &D| chart(d.with_orientation());
+    let slips: Vec<Point2> = crystal.slips.iter().flatten().map(slip_at).collect();
     ax.scatter(c, &slips, Marker::Dot, 6.0, palette::ink());
     draw_triangle(c, &ax);
     title(c, rect, "THE SYSTEM THAT YIELDS FIRST");
@@ -319,8 +328,8 @@ fn title(c: &mut Canvas, rect: Rect, text: &str) {
 }
 
 /// A step's colour: the colours of the systems that slipped in it, mixed by how much.
-fn mixed(amounts: &Systems<f64>) -> Light {
-    let weights: Vec<f32> = amounts.iter().flatten().map(|a| a.abs() as f32).collect();
+fn mixed(amounts: &Systems<Factor>) -> Light {
+    let weights: Vec<f32> = amounts.iter().flatten().map(|a| a.s().abs() as f32).collect();
     let total: f32 = weights.iter().sum();
     (weights.iter().enumerate()).fold(gax_colour::DARK, |light, (k, w)| {
         light + system_colour(k) * (w / total)
@@ -328,16 +337,16 @@ fn mixed(amounts: &Systems<f64>) -> Light {
 }
 
 /// The systems that carry a step's slip, one bit each.
-fn carriers(amounts: &Systems<f64>) -> u32 {
-    let total: f64 = amounts.iter().flatten().map(|a| a.abs()).sum();
+fn carriers(amounts: &Systems<Factor>) -> u32 {
+    let total: f64 = amounts.iter().flatten().map(|a| a.s().abs()).sum();
     let bits = amounts.iter().flatten().enumerate();
-    bits.filter(|(_, a)| a.abs() >= CARRIER_SHARE * total)
+    bits.filter(|(_, a)| a.s().abs() >= CARRIER_SHARE * total)
         .fold(0, |set, (k, _)| set | 1 << k)
 }
 
 /// A path's first `reached` steps as runs on the same systems, each drawn as one stroke in the
 /// colour of its first step.
-fn draw_path(c: &mut Canvas, ax: &Axes, axes: &[V], amounts: &[Systems<f64>], reached: usize) {
+fn draw_path(c: &mut Canvas, ax: &Axes, axes: &[V], amounts: &[Systems<Factor>], reached: usize) {
     let mut start = 0;
     while start < reached {
         let systems = carriers(&amounts[start]);
@@ -416,8 +425,8 @@ mod tests {
     const GRID: usize = 1000;
 
     /// The magnitudes of a set of Schmid factors.
-    fn sizes(factors: &Systems<f64>) -> impl Iterator<Item = f64> + '_ {
-        factors.iter().flatten().map(|f| f.abs())
+    fn sizes(factors: &Systems<Factor>) -> impl Iterator<Item = f64> + '_ {
+        factors.iter().flatten().map(|f| f.s().abs())
     }
 
     #[test]
@@ -457,7 +466,7 @@ mod tests {
             let mut carried = [0.0; PLANES * DIRECTIONS];
             for step in &amounts {
                 for (sum, a) in carried.iter_mut().zip(step.iter().flatten()) {
-                    *sum += a.abs();
+                    *sum += a.s().abs();
                 }
             }
             carried.sort_by(f64::total_cmp);

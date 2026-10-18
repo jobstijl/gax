@@ -1170,9 +1170,9 @@ law_suite::law_suite! {
         (Bivector, Scalar),
     ],
     unit_det: [
-        (Vector, Vector, Pseudoscalar, true),
+        (Vector, Vector, Pseudoscalar, false),
         (Rotor, Vector, Pseudoscalar, true),
-        (Odd, Vector, Pseudoscalar, true),
+        (Odd, Vector, Pseudoscalar, false),
         (Vector, Bivector, Scalar, true),
         (Rotor, Bivector, Scalar, true),
         (Odd, Bivector, Scalar, true),

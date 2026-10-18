@@ -17,7 +17,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 |---|---|---|
 | `Vector` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -43,7 +43,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 | `Even` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Odd` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Odd` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -77,7 +77,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 |---|---|---|
 | `Vector` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -157,7 +157,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 |---|---|---|
 | `Plane` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Plane` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Plane` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Plane` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Plane` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Plane` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Plane` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -174,7 +174,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 | `Line` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
 | `Point` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Point` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Point` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Point` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Point` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Point` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Point` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -209,7 +209,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 | `Motor` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
 | `Flector` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Flector` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Flector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Flector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Flector` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Flector` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Flector` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -229,7 +229,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 |---|---|---|
 | `Vector` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -246,7 +246,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 | `Even` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Odd` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Odd` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Odd` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
@@ -276,7 +276,7 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 |---|---|---|
 | `Vector` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
-| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `−‖m‖²` |
+| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
 | `Vector` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |

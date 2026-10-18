@@ -40,7 +40,7 @@ pub fn turns([first, second, third]: [V; 3]) -> [(R, usize); 3] {
 
 /// A point of the sphere folded into the triangle, and how many reflections it took.
 pub fn folded(mirrors: &[V; 3], point: V) -> (V, u32) {
-    fold(point, mirrors, ROUNDS, |m, p| (m | p).s(), |m, p| -(m >> p))
+    fold(point, mirrors, ROUNDS, |m, p| (m | p).s(), |m, p| m >> p)
 }
 
 /// The view at `angle` of the sphere's half turn about the axis where the first two mirrors

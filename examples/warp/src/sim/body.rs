@@ -3,7 +3,7 @@
 //! one Newton step every tick (docs/numerics.md: drift policy).
 
 use gax::Unit;
-use gax::pga2d::{Motor, Point};
+use gax::pga2d::{Motor, Point, Twist};
 
 /// A pose.
 pub type Pose = Unit<Motor<(), f32>>;
@@ -54,7 +54,7 @@ impl Body {
 
     /// The world-frame twist of its motion: translation at `vel` plus rotation at `spin`
     /// about its centre. Twists add.
-    pub fn twist(&self) -> Point<(), f32> {
+    pub fn twist(&self) -> Twist<(), f32> {
         let [vx, vy] = [self.vel.e20(), self.vel.e01()];
         Point::translation_twist(vx, vy) + Point::rotation_twist(self.pos(), self.spin)
     }
@@ -98,7 +98,7 @@ pub use crate::geom::ORIGIN;
 /// The velocity of the point `p` (a unit point) of a body moving with the world twist `twist`:
 /// the rate of `exp(t B) p exp(-t B)`, `B p - p B`, twice gax's commutator (which is half the
 /// bracket).
-pub fn velocity_at(twist: Point<(), f32>, p: Point<(), f32>) -> Point<(), f32> {
+pub fn velocity_at(twist: Twist<(), f32>, p: Point<(), f32>) -> Point<(), f32> {
     twist.commutator(p) * 2.0
 }
 

@@ -1,11 +1,12 @@
 //! Product and involution traits implemented by the generated algebras.
 //!
 //! ```
+//! use gax::Intrinsic;
 //! use gax::pga3d::{Line, Plane, Point};
 //! let (p, q) = (Point::<(), f64>::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 1.0, 0.0));
-//! let l: Line<(), f64> = p & q;           // join (regressive product)
+//! let l: Line<(), f64, Intrinsic> = p & q; // join (regressive product): intrinsic
 //! let floor = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
-//! let _meet: Point<(), f64> = l ^ floor;  // meet (outer product)
+//! let _meet: Point<(), f64> = l ^ floor;    // meet (outer product): intrinsic too
 //! assert!((floor & p).s().abs() < 1e-12); // incidence: the origin lies on the floor
 //! ```
 //!
@@ -161,9 +162,11 @@ unary_trait!(
 /// {
 ///     about.normalized().into_inner().gp(-0.5 * angle).exp()
 /// }
-/// let z = pga3d::Point::<(), f64>::xyz(0.0, 0.0, 0.0) & pga3d::Point::xyz(0.0, 0.0, 1.0);
+/// // Generators are extrinsic (ADR-051): meets, here of the planes (lines) x = 0 and y = 0.
+/// let z = pga3d::Plane::<(), f64>::new(1.0, 0.0, 0.0, 0.0) ^ pga3d::Plane::new(0.0, 1.0, 0.0, 0.0);
 /// let r3 = rotation(z, 1.0);
-/// let r2 = rotation(pga2d::Point::<(), f64>::xy(0.0, 0.0), 1.0);
+/// let origin = pga2d::Line::<(), f64>::new(1.0, 0.0, 0.0) ^ pga2d::Line::new(0.0, 1.0, 0.0);
+/// let r2 = rotation(origin, 1.0);
 /// assert!((r3.into_inner().s() - r2.into_inner().s()).abs() < 1e-15);
 /// ```
 pub trait Exp {

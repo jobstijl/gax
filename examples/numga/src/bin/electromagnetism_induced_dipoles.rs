@@ -3,9 +3,9 @@
 //!
 //! An atom in a field carries a dipole, its polarizability times the field at it, and in a
 //! cluster that field is the applied one plus the fields of all the other atoms' dipoles. A dipole
-//! `p` at separation `r` makes the field `(r² p + 3 r p r) / (2 |r|⁵)`: the sandwich `r p r / r²`
-//! turns the dipole a half turn about the separation, keeping its part along `r` and reversing
-//! its part across, so the field is twice the part along and minus the part across, falling off
+//! `p` at separation `r` makes the field `(r² p + 3 r p r) / (2 |r|⁵)`: the sandwich by the plane
+//! square to the separation, its dual, turns the dipole a half turn about `r`, keeping its part
+//! along `r` and reversing its part across, so the field is twice the part along and minus the part across, falling off
 //! with the cube of the distance. As a map `Vector <- Vector` for every pair of atoms, these are
 //! the couplings of a field map over the atoms; with one over the polarizability where an atom
 //! meets itself, less the couplings, it is the response, the map from the dipoles to the applied
@@ -79,11 +79,11 @@ mod dipoles {
     }
 
     /// The field a dipole makes at separation `r` from it, as a map from the dipole: the dipole
-    /// plus three times the dipole turned a half turn about `r`, over twice the cube of the
-    /// distance.
+    /// plus three times the dipole turned a half turn about `r` (in the plane its dual makes of
+    /// it), over twice the cube of the distance.
     pub fn dipole_field(r: V) -> Coupling {
         let squared = r.norm_squared();
-        let turned = r >> open();
+        let turned = gax::vga3d::Rotor::from(r.dual()) >> open();
         (turned * 3.0 + open() * squared) * (1.0 / (2.0 * squared * squared * r.norm()))
     }
 

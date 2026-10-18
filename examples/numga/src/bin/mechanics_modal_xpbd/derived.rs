@@ -7,12 +7,12 @@ use crate::girder::P;
 use crate::xpbd::{Bodies, Constraints, Coupling, M, SIDES, per_side};
 use gax::Real;
 use gax::dual::jacobian;
-use gax::pga2d::{Direction, Point, Scalar};
+use gax::pga2d::{Direction, Point, Scalar, Twist};
 
 /// A side's anchor in the world: its point in the body's frame moved by the motor after a twist
 /// of the body over the step. Generic over the coefficients, for the jets that carry the
 /// derivative.
-fn placed<T: Real>(motor: M, twist: Point<(), T>, local: Point<(), T>) -> Direction<(), T> {
+fn placed<T: Real>(motor: M, twist: Twist<(), T>, local: Point<(), T>) -> Direction<(), T> {
     let step = (twist * T::from_f64(-0.5)).exp().into_inner();
     let moved = motor.into_inner().map_coefs(T::from_f64) * step;
     (moved >> local).cast::<Direction>()
@@ -27,7 +27,7 @@ fn lift<T: Real>(p: P) -> Point<(), T> {
 /// `shape`, from the anchor as it is, at amplitude `now`.
 fn deformed<T: Real>(motor: M, local: P, shape: P, now: f64, a: Scalar<(), T>) -> Direction<(), T> {
     let offset = lift::<T>(shape) * (a.s() - T::from_f64(now));
-    placed(motor, Point::zero(), lift(local) + offset)
+    placed(motor, Twist::zero(), lift(local) + offset)
 }
 
 /// The couplings as the derivatives of each side's signed anchor: by its body's twist, at no
@@ -44,7 +44,7 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
     };
     let rigid = per_side(constraints, count, |c, s| {
         let (motor, local, _) = side(c, s);
-        let (_, change) = jacobian(|twist| placed(motor, twist, lift(local)), Point::zero());
+        let (_, change) = jacobian(|twist| placed(motor, twist, lift(local)), Twist::zero());
         change * SIDES[s]
     });
     let modal = (0..constraints.modes.len())

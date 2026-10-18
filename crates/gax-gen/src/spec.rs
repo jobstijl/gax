@@ -40,6 +40,9 @@ pub struct KindSpec {
     pub result: bool,
     /// Documentation.
     pub doc: String,
+    /// Whether the kind's values are intrinsic by default (ADR-051): its constructors make them
+    /// so, as PGA's points are. Declared with `intrinsic` after the blade list.
+    pub intrinsic: bool,
 }
 
 /// A parsed algebra declaration.
@@ -53,8 +56,9 @@ pub struct AlgebraSpec {
     pub algebra: Algebra,
     /// Declared kinds, in order.
     pub kinds: Vec<KindSpec>,
-    /// Type aliases `(alias, kind)`.
-    pub aliases: Vec<(String, String)>,
+    /// Type aliases `(alias, kind, orientation)`: the orientation `Some(true)` for an
+    /// intrinsic alias, `Some(false)` extrinsic, `None` the kind's own default (ADR-051).
+    pub aliases: Vec<(String, String, Option<bool>)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -207,7 +211,7 @@ impl AlgebraSpec {
         let mut basis: Vec<(char, i64)> = Vec::new();
         let mut basis_declared = false;
         let mut off_diagonal: Vec<(char, char, i64)> = Vec::new();
-        let mut raw_kinds: Vec<(String, Vec<String>, bool, bool, String)> = Vec::new();
+        let mut raw_kinds: Vec<(String, Vec<String>, bool, bool, bool, String)> = Vec::new();
         let mut aliases = Vec::new();
         while let Some(tok) = p.next() {
             let Tok::Ident(word) = tok else {
@@ -285,16 +289,37 @@ impl AlgebraSpec {
                             }
                         }
                     }
+                    let intrinsic = if p.peek() == Some(&Tok::Ident("intrinsic".into())) {
+                        p.next();
+                        true
+                    } else {
+                        false
+                    };
                     let kdoc = p.opt_str();
                     p.expect_punct(';')?;
-                    raw_kinds.push((kname, blades, word == "versor", word != "part", kdoc));
+                    raw_kinds.push((
+                        kname,
+                        blades,
+                        word == "versor",
+                        word != "part",
+                        intrinsic,
+                        kdoc,
+                    ));
                 }
                 "alias" => {
                     let a = p.ident()?;
                     p.expect_punct('=')?;
                     let k = p.ident()?;
+                    let orientation = match p.peek() {
+                        Some(Tok::Ident(w)) if w == "intrinsic" => Some(true),
+                        Some(Tok::Ident(w)) if w == "extrinsic" => Some(false),
+                        _ => None,
+                    };
+                    if orientation.is_some() {
+                        p.next();
+                    }
                     p.expect_punct(';')?;
-                    aliases.push((a, k));
+                    aliases.push((a, k, orientation));
                 }
                 other => return Err(AlgebraError(format!("unknown declaration `{other}`"))),
             }
@@ -328,7 +353,7 @@ impl AlgebraSpec {
         }
         let algebra = Algebra::new(&names, metric)?;
         let mut kinds: Vec<KindSpec> = Vec::new();
-        for (kname, blades, versor, result, kdoc) in raw_kinds {
+        for (kname, blades, versor, result, intrinsic, kdoc) in raw_kinds {
             if kinds.iter().any(|k| k.name == kname) {
                 return Err(AlgebraError(format!("duplicate kind {kname}")));
             }
@@ -341,6 +366,7 @@ impl AlgebraSpec {
                 versor,
                 result,
                 doc: kdoc,
+                intrinsic,
             });
         }
         // Every algebra has a scalar kind and a kind holding every blade; add them (in the
@@ -362,6 +388,7 @@ impl AlgebraSpec {
                     versor: false,
                     result: true,
                     doc: "A scalar.".into(),
+                    intrinsic: false,
                 },
             );
         }
@@ -383,9 +410,10 @@ impl AlgebraSpec {
                 versor: false,
                 result: true,
                 doc: "A general multivector, blades by grade then index.".into(),
+                intrinsic: false,
             });
         }
-        for (a, k) in &aliases {
+        for (a, k, _) in &aliases {
             if !kinds.iter().any(|x| &x.name == k) {
                 return Err(AlgebraError(format!(
                     "alias {a} refers to unknown kind {k}"
@@ -476,7 +504,10 @@ mod tests {
         assert_eq!(s.kinds.len(), 5);
         assert!(s.kinds[3].versor);
         assert_eq!(s.kinds[2].layout.blades[0].1, -1); // e20 = -e02
-        assert_eq!(s.aliases, vec![("Twist".to_string(), "Point".to_string())]);
+        assert_eq!(
+            s.aliases,
+            vec![("Twist".to_string(), "Point".to_string(), None)]
+        );
     }
 
     /// `basis;` declares Cl(0,0), whose one blade is the scalar; leaving `basis` out is an error.

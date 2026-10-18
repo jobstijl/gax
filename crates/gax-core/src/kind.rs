@@ -36,6 +36,12 @@ pub trait Kind: Copy + Debug + PartialEq + 'static {
     type Mv<S: Slots, T: Coef>: Extensor<Kind = Self, Slots = S, Coef = T>;
     /// The scalar kind of the same algebra.
     type Scalar: Kind;
+    /// The orientation of the kind's values (ADR-051): [`Extrinsic`](crate::Extrinsic) or
+    /// [`Intrinsic`](crate::Intrinsic).
+    type Orientation: crate::orientation::Orientation;
+    /// Whether the kind's default orientation, the one its constructors make and its bare name
+    /// means (`Point` for `Point<(), f32, Intrinsic>`), is intrinsic.
+    const DEFAULT_INTRINSIC: bool;
 
     /// Build an array from its index.
     fn arr_from_fn<X: Elem>(f: impl FnMut(usize) -> X) -> Self::Arr<X>;
@@ -67,10 +73,10 @@ pub type Coeffs<M> = <<M as Extensor>::Kind as Kind>::Arr<
 /// ```
 /// use gax::pga3d::{Line, Point};
 /// use gax::Extensor;
-/// let m: Line<(Point,), f64> = Point::xyz(0.0, 0.0, 0.0) & Point::slot();
+/// let m: Line<(Point,), f64, gax::Intrinsic> = Point::xyz(0.0, 0.0, 0.0) & Point::slot();
 /// // Output first: one array over the slot per output coefficient.
 /// let c: &[[f64; 4]; 6] = m.coeffs();
-/// assert_eq!(Line::<(Point,), f64>::from_coeffs(*c), m);
+/// assert_eq!(Line::<(Point,), f64, gax::Intrinsic>::from_coeffs(*c), m);
 /// ```
 pub trait Extensor: Copy + Debug + PartialEq + 'static {
     /// The output kind.

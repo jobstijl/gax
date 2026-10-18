@@ -170,10 +170,15 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     }
     for a in &spec.kinds {
         for b in &spec.kinds {
-            let eq = if a.name == b.name { "True" } else { "False" };
+            // The same kind is the same blades and the same orientation (ADR-051).
+            let eq = if a.name == b.name {
+                "<OA as gx::Orientation>::Same<OB>"
+            } else {
+                "gx::False"
+            };
             let _ = writeln!(
                 e.out,
-                "impl gx::KindEq<{}> for {} {{\n    type Out = gx::{eq};\n}}\n",
+                "impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<{}<(), f32, OB>> for {}<(), f32, OA> {{\n    type Out = {eq};\n}}\n",
                 b.name, a.name
             );
         }
@@ -265,22 +270,34 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     e.out.push_str(&outer);
     e.stats.outermorphisms = pairs;
     e.part("layouts");
-    for (alias, kind) in &spec.aliases {
+    for (alias, kind, orientation) in &spec.aliases {
+        let (o, which) = match orientation {
+            Some(true) => (", gx::Intrinsic", ", intrinsic"),
+            Some(false) => (", gx::Extrinsic", ", extrinsic"),
+            None => ("", ""),
+        };
         let _ = writeln!(
             e.out,
-            "/// Alias of [`{kind}`].\npub type {alias}<S = (), T = f32> = {kind}<S, T>;\n"
+            "/// Alias of [`{kind}`]{which}.\npub type {alias}<S = (), T = f32> = {kind}<S, T{o}>;\n"
         );
     }
     if let Some(gate) = &cfg.batch {
         let names = spec
             .kinds
             .iter()
-            .map(|k| (&k.name, &k.name))
-            .chain(spec.aliases.iter().map(|(a, k)| (a, k)));
-        for (name, kind) in names {
+            .map(|k| (k.name.clone(), k.name.clone(), k.name.clone()))
+            .chain(spec.aliases.iter().map(|(a, k, o)| {
+                let marker = match o {
+                    Some(true) => format!("{k}<(), f32, gx::Intrinsic>"),
+                    Some(false) => format!("{k}<(), f32, gx::Extrinsic>"),
+                    None => k.clone(),
+                };
+                (a.clone(), k.clone(), marker)
+            }));
+        for (name, kind, marker) in names {
             let _ = writeln!(
                 e.out,
-                "{gate}\n/// [`{kind}`] values in struct-of-arrays form, for the batch kernels.\npub type {name}Soa<E = f32> = gx::batch::Soa<{kind}, E>;\n"
+                "{gate}\n/// [`{kind}`] values in struct-of-arrays form, for the batch kernels.\npub type {name}Soa<E = f32> = gx::batch::Soa<{marker}, E>;\n"
             );
         }
     }
@@ -310,6 +327,10 @@ pub const RESERVED: &[&str] = &[
     "Prepared",
     "TraceFirst",
     "Outermorphism",
+    "Orientation",
+    "Extrinsic",
+    "Intrinsic",
+    "Reorient",
     "Reciprocal",
     "SplitLast",
     "Gp",
@@ -719,6 +740,12 @@ impl Emitter<'_> {
             k.doc.clone()
         };
         let blade_doc = k.blades.join(", ");
+        let default_intrinsic = k.intrinsic;
+        let (orient, orient_doc) = if k.intrinsic {
+            ("Intrinsic", "intrinsic")
+        } else {
+            ("Extrinsic", "extrinsic")
+        };
         // Spelled out rather than `core::array::from_fn`: batch kernels need these inlined
         // (see `gax::batch`), and the core helpers are not always.
         let each = |f: &dyn Fn(usize) -> String| (0..n).map(f).collect::<Vec<_>>().join(", ");
@@ -731,31 +758,33 @@ impl Emitter<'_> {
 /// Blades, in coefficient order: `[{blade_doc}]`.
 ///
 /// `S` lists the open slots: `{name}` (that is, `{name}<()>`) is a value, `{name}<(A,)>` a
-/// linear map from `A`, `{name}<(A, B)>` a bilinear map. `T` is the coefficient type.
+/// linear map from `A`, `{name}<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
+/// the orientation of the output, {orient_doc} by default (ADR-051).
 #[repr(C)]
-pub struct {name}<S: Slots = (), T: Coef = f32> {{
+pub struct {name}<S: Slots = (), T: Coef = f32, O: gx::Orientation = gx::{orient}> {{
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; {n}],
+    o: core::marker::PhantomData<O>,
 }}
 
-impl<S: Slots, T: Coef> Clone for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> Clone for {name}<S, T, O> {{
     #[inline(always)]
     fn clone(&self) -> Self {{
         *self
     }}
 }}
 
-impl<S: Slots, T: Coef> Copy for {name}<S, T> {{}}
+impl<S: Slots, T: Coef, O: gx::Orientation> Copy for {name}<S, T, O> {{}}
 
-impl<S: Slots, T: Coef> PartialEq for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> PartialEq for {name}<S, T, O> {{
     fn eq(&self, other: &Self) -> bool {{
         self.c == other.c
     }}
 }}
 
-impl<S: Slots, T: Coef> core::fmt::Debug for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> core::fmt::Debug for {name}<S, T, O> {{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {{
-        let mut d = f.debug_struct("{name}");
+        let mut d = f.debug_struct(if O::SIGN < 0 {{ "intrinsic {name}" }} else {{ "{name}" }});
         for (b, c) in <{name} as Kind>::BLADES.iter().zip(self.c.iter()) {{
             d.field(b, c);
         }}
@@ -764,16 +793,18 @@ impl<S: Slots, T: Coef> core::fmt::Debug for {name}<S, T> {{
 }}
 
 // SAFETY: `Arr<X>` is `[X; {n}]`, the layout `gx::FlatKind` promises.
-unsafe impl gx::FlatKind for {name} {{}}
+unsafe impl<O: gx::Orientation> gx::FlatKind for {name}<(), f32, O> {{}}
 
-impl Kind for {name} {{
+impl<O: gx::Orientation> Kind for {name}<(), f32, O> {{
     const N: usize = {n};
     const NAME: &'static str = "{name}";
     const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &[{blades}];
     type Arr<X: gx::Elem> = [X; {n}];
-    type Mv<S: Slots, T: Coef> = {name}<S, T>;
+    type Mv<S: Slots, T: Coef> = {name}<S, T, O>;
     type Scalar = {scalar};
+    type Orientation = O;
+    const DEFAULT_INTRINSIC: bool = {default_intrinsic};
     #[inline(always)]
     fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; {n}] {{
         [{arr_ff}]
@@ -792,13 +823,13 @@ impl Kind for {name} {{
     }}
 }}
 
-impl<S: Slots, T: Coef> Extensor for {name}<S, T> {{
-    type Kind = {name};
+impl<S: Slots, T: Coef, O: gx::Orientation> Extensor for {name}<S, T, O> {{
+    type Kind = {name}<(), f32, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
     fn from_coeffs(c: [S::Arr<T>; {n}]) -> Self {{
-        {name} {{ c }}
+        {name} {{ o: core::marker::PhantomData, c }}
     }}
     #[inline(always)]
     fn coeffs(&self) -> &[S::Arr<T>; {n}] {{
@@ -806,23 +837,23 @@ impl<S: Slots, T: Coef> Extensor for {name}<S, T> {{
     }}
 }}
 
-impl<S: Slots, T: Coef> {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> {name}<S, T, O> {{
     /// Construct from output-first coefficients.
     #[inline(always)]
     pub const fn from_coeffs(c: [S::Arr<T>; {n}]) -> Self {{
-        {name} {{ c }}
+        {name} {{ o: core::marker::PhantomData, c }}
     }}
 
     /// All coefficients zero.
     #[inline(always)]
     pub fn zero() -> Self {{
-        {name} {{ c: [S::from_flat(&mut |_| T::zero(), 0); {n}] }}
+        {name} {{ o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0); {n}] }}
     }}
 
     /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `Dual` or `f32`
     /// (see [`Extensor::map_coefs`]).
     #[inline]
-    pub fn map_coefs<U: Coef>(&self, f: impl FnMut(T) -> U) -> {name}<S, U> {{
+    pub fn map_coefs<U: Coef>(&self, f: impl FnMut(T) -> U) -> {name}<S, U, O> {{
         gx::Extensor::map_coefs(self, f)
     }}
 
@@ -838,19 +869,28 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        {name}: gx::Cast<K>,
+        K: gx::Reorient<O>,
+        <K as gx::Reorient<O>>::Out: gx::Kind,
+        {name}<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {{
-        gx::cast::cast::<Self, K>(&self)
+        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+    }}
+
+    /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
+    /// (a file, a GPU buffer, a raw `new`) whose orientation the type does not know.
+    #[inline(always)]
+    pub fn with_orientation<O2: gx::Orientation>(self) -> {name}<S, T, O2> {{
+        {name} {{ o: core::marker::PhantomData, c: self.c }}
     }}
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<{name} as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<{name}<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        {name}: gx::GradePart<G>,
+        {name}<(), f32, O>: gx::GradePart<G>,
     {{
         gx::cast::grade::<Self, G>(&self)
     }}
@@ -905,20 +945,20 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> {name}<<S as gx::MoveToFront<I>>::Moved, T>
+    pub fn at<const I: usize>(self) -> {name}<<S as gx::MoveToFront<I>>::Moved, T, O>
     where
         S: gx::MoveToFront<I>,
     {{
-        {name} {{ c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }}
+        {name} {{ o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }}
     }}
 
     /// Contract the output with open slot `I` (which must be of kind `{name}`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <{name}<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <{name}<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
         S: gx::MoveToFront<I>,
-        {name}<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+        {name}<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {{
         gx::TraceFirst::trace_first(self.at::<I>())
     }}
@@ -935,18 +975,19 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> {name}<<S as gx::FillList<X::Kind>>::Out, T>
+    pub fn fill<X>(self, x: X) -> {name}<<S as gx::FillList<X::Kind>>::Out, T, O>
     where
         X: Extensor<Slots = (), Coef = T>,
         S: gx::FillList<X::Kind>,
     {{
         let xc = x.coeffs();
-        {name} {{ c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }}
+        {name} {{ o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }}
     }}
 "#,
             blades = blades_list.join(", "),
         );
         self.w(&s);
+
         for (tr, m) in [
             ("Gp", "gp"),
             ("Wedge", "wedge"),
@@ -989,11 +1030,16 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
             let (pn, sign) = (&ps.name, if ps.layout.blades[0].1 > 0 { "" } else { "-" });
             let _ = write!(
                 self.out,
-                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not.\n    #[inline(always)]\n    pub fn hodge(self) -> <<Self as Reverse>::Output as Gp<{pn}<(), T>>>::Output\n    where\n        <Self as Reverse>::Output: Gp<{pn}<(), T>>,\n    {{\n        Gp::gp(Reverse::reverse(self), {pn}::new({sign}T::one()))\n    }}\n"
+                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not.\n    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume\n    /// form, the complement against the orientation of space.\n    #[inline(always)]\n    pub fn hodge(self) -> <<Self as Reverse>::Output as Gp<{pn}<(), T, gx::Intrinsic>>>::Output\n    where\n        <Self as Reverse>::Output: Gp<{pn}<(), T, gx::Intrinsic>>,\n    {{\n        Gp::gp(Reverse::reverse(self), {pn}::new({sign}T::one()).with_orientation::<gx::Intrinsic>())\n    }}\n"
             );
         }
         self.w("}\n\n");
 
+        // A value, map or kind of another orientation, the coefficients kept (ADR-051).
+        let _ = write!(
+            self.out,
+            "impl<S: Slots, T: Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for {name}<S, T, O> {{\n    type Out = {name}<S, T, O2>;\n    #[inline(always)]\n    fn reorient(self) -> {name}<S, T, O2> {{\n        {name} {{ o: core::marker::PhantomData, c: self.c }}\n    }}\n}}\n\n"
+        );
         // Value constructors and accessors.
         let params: Vec<String> = k
             .blades
@@ -1003,7 +1049,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         let args: Vec<String> = k.blades.iter().map(|b| blade_ident(b)).collect();
         let _ = write!(
             self.out,
-            "impl<T: Coef> {name}<(), T> {{\n    /// A value from its coefficients, in blade order.\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({}) -> Self {{\n        {name} {{ c: [{}] }}\n    }}\n\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see
+            "impl<T: Coef> {name}<(), T> {{\n    /// A value from its coefficients, in blade order, of the kind's default orientation\n    /// (another through [`with_orientation`](Self::with_orientation)).\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({}) -> Self {{\n        {name} {{ o: core::marker::PhantomData, c: [{}] }}\n    }}\n\n    /// The identity map on `{name}`: a `{name}` with one open `{name}` slot.\n    #[inline(always)]\n    pub fn slot() -> {name}<({name},), T> {{\n        Self::oriented_slot()\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> {name}<(), T, O> {{\n    /// The identity map on `{name}` of this orientation, on its output and its slot: for a type\n    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).\n    #[inline(always)]\n    pub fn oriented_slot() -> {name}<({name}<(), f32, O>,), T, O> {{\n        {name} {{ o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j {{ T::one() }} else {{ T::zero() }})) }}\n    }}\n\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
@@ -1012,8 +1058,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     {{
         gx::Prepare::prepare(self)
     }}
-
-    /// The identity map on `{name}`: a `{name}` with one open `{name}` slot.\n    #[inline(always)]\n    pub fn slot() -> {name}<({name},), T> {{\n        {name} {{ c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j {{ T::one() }} else {{ T::zero() }})) }}\n    }}\n",
+",
             params.join(", "),
             args.join(", ")
         );
@@ -1038,7 +1083,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     #[inline]
     pub fn from_images(images: A::Arr<{name}<(), T>>) -> Self {{
         let images = images.as_ref();
-        {name} {{ c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }}
+        {name} {{ o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }}
     }}
 }}
 
@@ -1048,7 +1093,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         // Both slots of a two-slot extensor filled with maps.
         let _ = write!(
             self.out,
-            r"impl<A: Kind, B: Kind, T: Coef> {name}<(A, B), T> {{
+            r"impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
     /// `{name} <- (X, Y)` (see [`gx::OfBoth`]).
     #[inline]
@@ -1067,7 +1112,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         if k.layout.blades == [(0, 1)] {
             let _ = write!(
                 self.out,
-                r"impl<A: Kind, B: Kind, T: Coef> {name}<(A, B), T> {{
+                r"impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// This form `{name} <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
     /// methods of maps (`svd_thin`, `pinv`, `svdvals`, `det`).
     #[inline]
@@ -1083,12 +1128,12 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         // Methods of maps and forms (see `gax_core::extensor`).
         let _ = write!(
             self.out,
-            r"impl<A: Kind, T: Real> {name}<(A,), T> {{
+            r"impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A,), T, O> {{
     /// The inverse map, `A <- {name}`.
     #[inline]
-    pub fn inverse(self) -> <A as Kind>::Mv<({name},), T>
+    pub fn inverse(self) -> <A as Kind>::Mv<({name}<(), f32, O>,), T>
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A, Inverse = <A as Kind>::Mv<({name},), T>>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A, Inverse = <A as Kind>::Mv<({name}<(), f32, O>,), T>>,
     {{
         SquareMap::inverse(self)
     }}
@@ -1097,7 +1142,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     #[inline]
     pub fn det(self) -> T
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
     {{
         SquareMap::det(self)
     }}
@@ -1115,9 +1160,9 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     /// [`gx::SingularValues::svd_thin`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>, <A as Kind>::Arr<{name}<(), T>>)
+    pub fn svd_thin(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>, <A as Kind>::Arr<{name}<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = {name}>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = {name}<(), f32, O>>,
     {{
         gx::SingularValues::svd_thin(self)
     }}
@@ -1126,18 +1171,18 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     /// symmetric (see [`SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<{name} as Kind>::Arr<T>, <{name} as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<{name}<(), f32, O> as Kind>::Arr<T>, <{name}<(), f32, O> as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
     {{
         SquareMap::eigh(self)
     }}
 
     /// The eigenvalues, complex in general, sorted (see [`SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <{name} as Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <{name}<(), f32, O> as Kind>::Arr<gx::Complex<T>>
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
     {{
         SquareMap::eigvals(self)
     }}
@@ -1145,9 +1190,9 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<{name} as Kind>::Arr<gx::Complex<T>>, <{name} as Kind>::Arr<<A as Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<{name}<(), f32, O> as Kind>::Arr<gx::Complex<T>>, <{name}<(), f32, O> as Kind>::Arr<<A as Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
     {{
         SquareMap::eig(self)
     }}
@@ -1156,8 +1201,8 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as Kind>::Mv<X::Slots, T>
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
-        X: Extensor<Kind = {name}, Coef = T>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
+        X: Extensor<Kind = {name}<(), f32, O>, Coef = T>,
     {{
         SquareMap::solve(self, rhs)
     }}
@@ -1165,9 +1210,9 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<{name} as Kind>::Arr<{name}<(), T>>, <{name} as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<{name}<(), f32, O> as Kind>::Arr<{name}<(), T, O>>, <{name}<(), f32, O> as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
     {{
         SquareMap::svd(self)
     }}
@@ -1175,18 +1220,18 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     /// The Moore–Penrose pseudo-inverse, `A <- {name}`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) ≈ b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<({name},), T>
+    pub fn pinv(self) -> A::Mv<({name}<(), f32, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name},), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name}<(), f32, O>,), T>>,
     {{
         gx::PseudoInverse::pinv(self)
     }}
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<({name},), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<({name}<(), f32, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name},), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name}<(), f32, O>,), T>>,
     {{
         gx::PseudoInverse::pinv_with(self, rcond)
     }}
@@ -1195,41 +1240,41 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: Endomorphism<Coef = T, Kind = {name}, Input = {name}>,
+        Self: Endomorphism<Coef = T, Kind = {name}<(), f32, O>, Input = {name}<(), f32, O>>,
     {{
         Endomorphism::trace(self)
     }}
 }}
 
-impl<A: Kind, B: Kind, T: Coef> {name}<(A, B), T> {{
+impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// Exchange the two slots.
     #[inline]
-    pub fn swap(self) -> {name}<(B, A), T> {{
+    pub fn swap(self) -> {name}<(B, A), T, O> {{
         self.at::<1>()
     }}
 }}
 
-impl<A: Kind, B: Kind, T: Real> {name}<(A, B), T> {{
+impl<A: Kind, B: Kind, T: Real, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// Solve `self(x, ·) == rhs(l, ·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
     where
-        Self: Pairing<Coef = T, Kind = {name}, First = A, Second = B>,
-        R: Extensor<Kind = {name}, Coef = T>,
+        Self: Pairing<Coef = T, Kind = {name}<(), f32, O>, First = A, Second = B>,
+        R: Extensor<Kind = {name}<(), f32, O>, Coef = T>,
         R::Slots: SplitLast<Last = B>,
     {{
         Pairing::solve(self, rhs)
     }}
 }}
 
-impl<A: Kind, T: Real> {name}<(A, A), T> {{
+impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
     #[inline]
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+        Self: Form<Coef = T, Kind = {name}<(), f32, O>, Slot = A>,
     {{
         Form::eigh_with(self, metric)
     }}
@@ -1241,7 +1286,7 @@ impl<A: Kind, T: Real> {name}<(A, A), T> {{
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+        Self: Form<Coef = T, Kind = {name}<(), f32, O>, Slot = A>,
     {{
         Form::eigh_semidefinite(self, metric)
     }}
@@ -1251,7 +1296,7 @@ impl<A: Kind, T: Real> {name}<(A, A), T> {{
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+        Self: Form<Coef = T, Kind = {name}<(), f32, O>, Slot = A>,
     {{
         Form::eigh(self)
     }}
@@ -1263,12 +1308,12 @@ impl<A: Kind, T: Real> {name}<(A, A), T> {{
         // Arithmetic.
         let arr = |op: &str| {
             format!(
-                "{name} {{ c: core::array::from_fn(|i| (SlotArr::<S, T>(self.c[i]) {op} SlotArr::<S, T>(rhs.c[i])).0) }}"
+                "{name} {{ o: core::marker::PhantomData, c: core::array::from_fn(|i| (SlotArr::<S, T>(self.c[i]) {op} SlotArr::<S, T>(rhs.c[i])).0) }}"
             )
         };
         let _ = write!(
             self.out,
-            r"impl<S: Slots, T: Coef> core::ops::Add for {name}<S, T> {{
+            r"impl<S: Slots, T: Coef, O: gx::Orientation> core::ops::Add for {name}<S, T, O> {{
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {{
@@ -1276,7 +1321,7 @@ impl<A: Kind, T: Real> {name}<(A, A), T> {{
     }}
 }}
 
-impl<S: Slots, T: Coef> core::ops::Sub for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> core::ops::Sub for {name}<S, T, O> {{
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {{
@@ -1284,7 +1329,7 @@ impl<S: Slots, T: Coef> core::ops::Sub for {name}<S, T> {{
     }}
 }}
 
-impl<S: Slots, T: Coef> core::iter::Sum for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> core::iter::Sum for {name}<S, T, O> {{
     /// The sum of values or of maps; zero for none.
     #[inline]
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {{
@@ -1292,46 +1337,46 @@ impl<S: Slots, T: Coef> core::iter::Sum for {name}<S, T> {{
     }}
 }}
 
-impl<S: Slots, T: Coef> core::ops::AddAssign for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> core::ops::AddAssign for {name}<S, T, O> {{
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {{
         *self = *self + rhs;
     }}
 }}
 
-impl<S: Slots, T: Coef> core::ops::SubAssign for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> core::ops::SubAssign for {name}<S, T, O> {{
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {{
         *self = *self - rhs;
     }}
 }}
 
-impl<S: Slots, T: Coef> core::ops::Neg for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> core::ops::Neg for {name}<S, T, O> {{
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {{
-        {name} {{ c: self.c.map(|x| (-SlotArr::<S, T>(x)).0) }}
+        {name} {{ o: core::marker::PhantomData, c: self.c.map(|x| (-SlotArr::<S, T>(x)).0) }}
     }}
 }}
 
-impl<S: Slots, T: Coef> Gp<T> for {name}<S, T> {{
+impl<S: Slots, T: Coef, O: gx::Orientation> Gp<T> for {name}<S, T, O> {{
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {{
-        {name} {{ c: self.c.map(|x| SlotArr::<S, T>(x).scale(rhs).0) }}
+        {name} {{ o: core::marker::PhantomData, c: self.c.map(|x| SlotArr::<S, T>(x).scale(rhs).0) }}
     }}
 }}
 
-impl<S: Slots, T: Real> DivBy<T> for {name}<S, T> {{
+impl<S: Slots, T: Real, O: gx::Orientation> DivBy<T> for {name}<S, T, O> {{
     type Output = Self;
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {{
         let r = rhs.recip();
-        {name} {{ c: self.c.map(|x| SlotArr::<S, T>(x).scale(r).0) }}
+        {name} {{ o: core::marker::PhantomData, c: self.c.map(|x| SlotArr::<S, T>(x).scale(r).0) }}
     }}
 }}
 
-impl<S: Slots, T: Coef, R> core::ops::Div<R> for {name}<S, T>
+impl<S: Slots, T: Coef, O: gx::Orientation, R> core::ops::Div<R> for {name}<S, T, O>
 where
     Self: DivBy<R>,
 {{
@@ -1342,18 +1387,18 @@ where
     }}
 }}
 
-impl<S: Slots> core::ops::Mul<{name}<S, f32>> for f32 {{
-    type Output = {name}<S, f32>;
+impl<S: Slots, O: gx::Orientation> core::ops::Mul<{name}<S, f32, O>> for f32 {{
+    type Output = {name}<S, f32, O>;
     #[inline(always)]
-    fn mul(self, rhs: {name}<S, f32>) -> {name}<S, f32> {{
+    fn mul(self, rhs: {name}<S, f32, O>) -> {name}<S, f32, O> {{
         rhs.gp(self)
     }}
 }}
 
-impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
-    type Output = {name}<S, f64>;
+impl<S: Slots, O: gx::Orientation> core::ops::Mul<{name}<S, f64, O>> for f64 {{
+    type Output = {name}<S, f64, O>;
     #[inline(always)]
-    fn mul(self, rhs: {name}<S, f64>) -> {name}<S, f64> {{
+    fn mul(self, rhs: {name}<S, f64, O>) -> {name}<S, f64, O> {{
         rhs.gp(self)
     }}
 }}
@@ -1372,7 +1417,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         ] {
             let _ = write!(
                 self.out,
-                "impl<S: Slots, T: Coef, R> core::ops::{std_tr}<R> for {name}<S, T>\nwhere\n    Self: {tr}<R>,\n{{\n    type Output = <Self as {tr}<R>>::Output;\n    #[inline(always)]\n    fn {std_m}(self, rhs: R) -> Self::Output {{\n        {tr}::{m}(self, rhs)\n    }}\n}}\n\n"
+                "impl<S: Slots, T: Coef, O: gx::Orientation, R> core::ops::{std_tr}<R> for {name}<S, T, O>\nwhere\n    Self: {tr}<R>,\n{{\n    type Output = <Self as {tr}<R>>::Output;\n    #[inline(always)]\n    fn {std_m}(self, rhs: R) -> Self::Output {{\n        {tr}::{m}(self, rhs)\n    }}\n}}\n\n"
             );
         }
     }
@@ -1395,13 +1440,13 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 let (an, bn) = (&a.name, &b.name);
                 let _ = write!(
                     body,
-                    "impl<S: Slots, T: Real> DivBy<{bn}<(), T>> for {an}<S, T> {{\n    type Output = <Self as Gp<{inv}<(), T>>>::Output;\n    #[inline(always)]\n    fn div_by(self, rhs: {bn}<(), T>) -> Self::Output {{\n        Gp::gp(self, rhs.inverse())\n    }}\n}}\n\n"
+                    "impl<S: Slots, T: Real, OA: gx::Orientation, OB: gx::Orientation> DivBy<{bn}<(), T, OB>> for {an}<S, T, OA> {{\n    type Output = <Self as Gp<{inv}<(), T, OB>>>::Output;\n    #[inline(always)]\n    fn div_by(self, rhs: {bn}<(), T, OB>) -> Self::Output {{\n        Gp::gp(self, rhs.inverse())\n    }}\n}}\n\n"
                 );
                 // A unit versor's inverse is its reverse: no arithmetic.
                 if b.versor && *inv == b.name {
                     let _ = write!(
                         body,
-                        "impl<S: Slots, T: Coef> DivBy<Unit<{bn}<(), T>>> for {an}<S, T> {{\n    type Output = <Self as Gp<{bn}<(), T>>>::Output;\n    /// `self ~rhs`: a unit versor's inverse is its reverse.\n    #[inline(always)]\n    fn div_by(self, rhs: Unit<{bn}<(), T>>) -> Self::Output {{\n        Gp::gp(self, rhs.into_inner().reverse())\n    }}\n}}\n\n"
+                        "impl<S: Slots, T: Coef, OA: gx::Orientation, OB: gx::Orientation> DivBy<Unit<{bn}<(), T, OB>>> for {an}<S, T, OA> {{\n    type Output = <Self as Gp<{bn}<(), T, OB>>>::Output;\n    /// `self ~rhs`: a unit versor's inverse is its reverse.\n    #[inline(always)]\n    fn div_by(self, rhs: Unit<{bn}<(), T, OB>>) -> Self::Output {{\n        Gp::gp(self, rhs.into_inner().reverse())\n    }}\n}}\n\n"
                     );
                 }
             }
@@ -1456,7 +1501,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 let (an, bn) = (&a.name, &b.name);
                 let _ = write!(
                     body,
-                    "impl<S: Slots, T: Coef> From<{an}<S, T>> for {bn}<S, T> {{\n    /// The same multivector as a [`{bn}`].\n    #[inline(always)]\n    fn from(x: {an}<S, T>) -> Self {{\n        {bn} {{ c: [{}] }}\n    }}\n}}\n\nimpl<T: Coef> gx::Widen<{bn}<(), T>> for {an}<(), T> {{}}\n\n",
+                    "impl<S: Slots, T: Coef, O: gx::Orientation> From<{an}<S, T, O>> for {bn}<S, T, O> {{\n    /// The same multivector as a [`{bn}`], of the same orientation.\n    #[inline(always)]\n    fn from(x: {an}<S, T, O>) -> Self {{\n        {bn} {{ o: core::marker::PhantomData, c: [{}] }}\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> gx::Widen<{bn}<(), T, O>> for {an}<(), T, O> {{}}\n\n",
                     exprs.join(", ")
                 );
             }
@@ -1478,6 +1523,13 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let table = binop_table(alg, op, &a.layout, &b.layout, &out.layout);
         let (tr, m) = trait_of(op);
         let (an, bn, on) = (&a.name, &b.name, &out.name);
+        // The result's orientation (ADR-051): the product of the factors' signs, flipped once
+        // more for the regressive product, the outer product of the duals dualized.
+        let oo = if op == BinOp::Vee {
+            "gx::orientation::Joined<OA, OB>"
+        } else {
+            "gx::orientation::Times<OA, OB>"
+        };
         let mut body = String::new();
         if table.len() > UNROLL_MAX {
             // A loop over a static table of the terms, by output: unrolled, one such product
@@ -1487,7 +1539,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             let nout = out.layout.len();
             let _ = write!(
                 body,
-                "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n{}        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n        let zero = SlotArr::<Cat<S1, S2>, T>(<Cat<S1, S2> as Slots>::from_flat(&mut |_| T::zero(), 0));\n        let mut c = [zero; {nout}];\n{}        {on} {{ c: c.map(|x| x.0) }}\n    }}\n}}\n\n",
+                "impl<S1: Slots, S2: Slots, T: Coef, OA: gx::Orientation, OB: gx::Orientation> {tr}<{bn}<S2, T, OB>> for {an}<S1, T, OA> {{\n    type Output = {on}<Cat<S1, S2>, T, {oo}>;\n    #[inline]\n    fn {m}(self, rhs: {bn}<S2, T, OB>) -> {on}<Cat<S1, S2>, T, {oo}> {{\n{}        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n        let zero = SlotArr::<Cat<S1, S2>, T>(<Cat<S1, S2> as Slots>::from_flat(&mut |_| T::zero(), 0));\n        let mut c = [zero; {nout}];\n{}        {on} {{ o: core::marker::PhantomData, c: c.map(|x| x.0) }}\n    }}\n}}\n\n",
                 term_table("TERMS", &terms, nout),
                 term_loop("TERMS", "c", "zero", "a[i] * b[j]", "({p}).scale(k)"),
             );
@@ -1543,7 +1595,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         );
         let _ = write!(
             body,
-            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    {inline}\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n{by_entries}        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            c: [\n"
+            "impl<S1: Slots, S2: Slots, T: Coef, OA: gx::Orientation, OB: gx::Orientation> {tr}<{bn}<S2, T, OB>> for {an}<S1, T, OA> {{\n    type Output = {on}<Cat<S1, S2>, T, {oo}>;\n    {inline}\n    fn {m}(self, rhs: {bn}<S2, T, OB>) -> {on}<Cat<S1, S2>, T, {oo}> {{\n{by_entries}        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            o: core::marker::PhantomData,\n            c: [\n"
         );
         for e in exprs {
             let _ = writeln!(body, "                {e},");
@@ -1571,6 +1623,12 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             .push((op, k.name.clone(), out.name.clone()));
         let (tr, m) = unop_trait(op);
         let (kn, on) = (&k.name, &out.name);
+        // The dual and its inverse flip the orientation; the involutions keep it (ADR-051).
+        let oo = if matches!(op, UnOp::Dual | UnOp::Undual) {
+            "gx::orientation::Flip<O>"
+        } else {
+            "O"
+        };
         let exprs: Vec<String> = (0..out.layout.len())
             .map(|o| match table.iter().find(|t| t.o == o) {
                 None => "S::from_flat(&mut |_| T::zero(), 0)".to_string(),
@@ -1584,7 +1642,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             .collect();
         let _ = write!(
             self.out,
-            "impl<S: Slots, T: Coef> {tr} for {kn}<S, T> {{\n    type Output = {on}<S, T>;\n    #[inline]\n    fn {m}(self) -> {on}<S, T> {{\n        let a = self.c;\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
+            "impl<S: Slots, T: Coef, O: gx::Orientation> {tr} for {kn}<S, T, O> {{\n    type Output = {on}<S, T, {oo}>;\n    #[inline]\n    fn {m}(self) -> {on}<S, T, {oo}> {{\n        let a = self.c;\n        {on} {{ o: core::marker::PhantomData, c: [{}] }}\n    }}\n}}\n\n",
             exprs.join(", ")
         );
     }
@@ -1652,6 +1710,35 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         };
         let nxv = xk.layout.len();
         let nout = out.layout.len();
+        // An odd versor reflects: its result takes a sign per blade by the passenger's
+        // orientation (ADR-051, `gx::orientation::reflect`). Even versors keep the sandwich.
+        let parity = |m: u32| m.count_ones() % 2 == 1;
+        let odd = vk.layout.blades.iter().all(|&(m, _)| parity(m));
+        assert!(
+            odd || vk.layout.blades.iter().all(|&(m, _)| !parity(m)),
+            "versor kind {vn} mixes even and odd blades"
+        );
+        let odd_mask = out
+            .layout
+            .blades
+            .iter()
+            .map(|&(m, _)| if parity(m) { "true" } else { "false" })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let signed = |slots: &str, c: &str| -> String {
+            if odd {
+                format!("gx::orientation::reflect::<O, {slots}, T, {nout}>({c}, [{odd_mask}])")
+            } else {
+                c.to_string()
+            }
+        };
+        // The versor's type in the transforms: any orientation (it appears twice, so its own
+        // orientation does not matter).
+        let self_ty_any = if unit {
+            format!("Unit<{vn}<(), T, OV>>")
+        } else {
+            format!("{vn}<(), T, OV>")
+        };
         let var_name = move |var: Var| {
             if var < nv {
                 format!("v[{var}]")
@@ -1673,8 +1760,14 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         );
         let value = match map {
             MapPath::Program(_) => format!(
-                "{lets}            return {on} {{ c: gx::slots::from_values::<S, T, {nout}>([{}]) }};\n",
-                outs.join(", ")
+                "{lets}            return {on} {{ o: core::marker::PhantomData, c: {} }};\n",
+                signed(
+                    "S",
+                    &format!(
+                        "gx::slots::from_values::<S, T, {nout}>([{}])",
+                        outs.join(", ")
+                    )
+                )
             ),
             MapPath::Columns => {
                 // The same for a `Unit` versor and a plain one when their results agree.
@@ -1710,13 +1803,17 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                     }
                 }
                 format!(
-                    "            return {on} {{ c: gx::slots::from_values::<S, T, {nout}>({helper}(&v, &xv)) }};\n"
+                    "            return {on} {{ o: core::marker::PhantomData, c: {} }};\n",
+                    signed(
+                        "S",
+                        &format!("gx::slots::from_values::<S, T, {nout}>({helper}(&v, &xv))")
+                    )
                 )
             }
         };
         let _ = write!(
             s,
-            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n{check}        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n{value}        }}\n"
+            "impl<S: Slots, T: Coef, O: gx::Orientation, OV: gx::Orientation> Transform<{xn}<S, T, O>> for {self_ty_any} {{\n    type Output = {on}<S, T, O>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T, O>) -> {on}<S, T, O> {{\n        let v = {vexpr};\n{check}        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n{value}        }}\n"
         );
         // The map's entries: exact constants, or values computed from `v` by `map_lets`.
         let mat_name = move |var: Var| format!("v[{var}]");
@@ -1788,8 +1885,8 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         });
         let _ = write!(
             s,
-            "        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
-            cols.join(", ")
+            "        {on} {{ o: core::marker::PhantomData, c: {} }}\n    }}\n}}\n\n",
+            signed("S", &format!("[{}]", cols.join(", ")))
         );
         // Inverse transport ~v x v = (~v) x ~(~v).
         let rev_self = if unit {
@@ -1799,7 +1896,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         };
         let _ = write!(
             s,
-            "impl<S: Slots, T: Coef> TransformInv<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform_inv(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        Transform::transform({rev_self}, x)\n    }}\n}}\n\n"
+            "impl<S: Slots, T: Coef, O: gx::Orientation, OV: gx::Orientation> TransformInv<{xn}<S, T, O>> for {self_ty_any} {{\n    type Output = {on}<S, T, O>;\n    #[inline(always)]\n    fn transform_inv(self, x: {xn}<S, T, O>) -> {on}<S, T, O> {{\n        Transform::transform({rev_self}, x)\n    }}\n}}\n\n"
         );
         // Prepared action: the non-constant matrix entries, applied sparsely.
         let nst = stored.len();
@@ -1808,10 +1905,10 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         } else {
             vn.clone()
         };
-        let prep_ty = format!("gx::Prepared<{vkind}, {xn}, T, {nst}>");
+        let prep_ty = format!("gx::Prepared<{vkind}, {xn}<(), f32, O>, T, {nst}>");
         let _ = write!(
             s,
-            "impl<T: Coef> gx::Prepare<{xn}> for {self_ty} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{map_lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
+            "impl<T: Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<{xn}<(), f32, O>> for {self_ty_any} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{map_lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
             stored.join(", ")
         );
         let cols = sum(&|i, v| match v {
@@ -1820,8 +1917,8 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         });
         let _ = write!(
             s,
-            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {prep_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let m = self.m;\n        let x = x.c.map(SlotArr::<S, T>);\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
-            cols.join(", ")
+            "impl<S: Slots, T: Coef, O: gx::Orientation> Transform<{xn}<S, T, O>> for {prep_ty} {{\n    type Output = {on}<S, T, O>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T, O>) -> {on}<S, T, O> {{\n        let m = self.m;\n        let x = x.c.map(SlotArr::<S, T>);\n        {on} {{ o: core::marker::PhantomData, c: {} }}\n    }}\n}}\n\n",
+            signed("S", &format!("[{}]", cols.join(", ")))
         );
         // The dense map, written entry by entry (no multiplication by an identity's zeros).
         let rows: Vec<String> = (0..nout)
@@ -1842,8 +1939,11 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             .collect();
         let _ = write!(
             s,
-            "impl<T: Coef> From<{prep_ty}> for {on}<({xn},), T> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
-            rows.join(", ")
+            "impl<T: Coef, O: gx::Orientation> From<{prep_ty}> for {on}<({xn}<(), f32, O>,), T, O> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {on} {{ o: core::marker::PhantomData, c: {} }}\n    }}\n}}\n\n",
+            signed(
+                &format!("({xn}<(), f32, O>,)"),
+                &format!("[{}]", rows.join(", "))
+            )
         );
         if let Some(gate) = &self.cfg.batch {
             let mapped = (0..nst)
@@ -1858,7 +1958,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             };
             let _ = write!(
                 s,
-                "{gate}\nimpl gx::batch::SandwichKernel<{xn}, gx::batch::{cert}> for {vn} {{\n    type Y = {on};\n    type Versor<T: gx::Coef> = {self_ty};\n    type Prepared<T: gx::Coef> = {prep_ty};\n    #[inline(always)]\n    fn wrap<T: gx::Coef>(v: {vn}<(), T>) -> {self_ty} {{\n        {wrap}\n    }}\n    #[inline(always)]\n    fn unwrap<T: gx::Coef>(v: {self_ty}) -> {vn}<(), T> {{\n        {unwrap}\n    }}\n    #[inline(always)]\n    fn prepare<T: gx::Coef>(v: {self_ty}) -> {prep_ty} {{\n        gx::Prepare::<{xn}>::prepare(v)\n    }}\n    #[inline(always)]\n    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: {prep_ty}, {fparam}: impl FnMut(T) -> W) -> gx::Prepared<{vkind}, {xn}, W, {nst}> {{\n        let m = p.m;\n        gx::Prepared::from_entries([{mapped}])\n    }}\n    #[inline(always)]\n    fn apply_prepared<T: gx::Coef>(p: {prep_ty}, x: {xn}<(), T>) -> {on}<(), T> {{\n        gx::Transform::transform(p, x)\n    }}\n    #[inline(always)]\n    fn apply<T: gx::Coef>(v: {self_ty}, x: {xn}<(), T>) -> {on}<(), T> {{\n        gx::Transform::transform(v, x)\n    }}\n}}\n\n"
+                "{gate}\nimpl<O: gx::Orientation> gx::batch::SandwichKernel<{xn}<(), f32, O>, gx::batch::{cert}> for {vn} {{\n    type Y = {on}<(), f32, O>;\n    type Versor<T: gx::Coef> = {self_ty};\n    type Prepared<T: gx::Coef> = {prep_ty};\n    #[inline(always)]\n    fn wrap<T: gx::Coef>(v: {vn}<(), T>) -> {self_ty} {{\n        {wrap}\n    }}\n    #[inline(always)]\n    fn unwrap<T: gx::Coef>(v: {self_ty}) -> {vn}<(), T> {{\n        {unwrap}\n    }}\n    #[inline(always)]\n    fn prepare<T: gx::Coef>(v: {self_ty}) -> {prep_ty} {{\n        gx::Prepare::<{xn}<(), f32, O>>::prepare(v)\n    }}\n    #[inline(always)]\n    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: {prep_ty}, {fparam}: impl FnMut(T) -> W) -> gx::Prepared<{vkind}, {xn}<(), f32, O>, W, {nst}> {{\n        let m = p.m;\n        gx::Prepared::from_entries([{mapped}])\n    }}\n    #[inline(always)]\n    fn apply_prepared<T: gx::Coef>(p: {prep_ty}, x: {xn}<(), T, O>) -> {on}<(), T, O> {{\n        gx::Transform::transform(p, x)\n    }}\n    #[inline(always)]\n    fn apply<T: gx::Coef>(v: {self_ty}, x: {xn}<(), T, O>) -> {on}<(), T, O> {{\n        gx::Transform::transform(v, x)\n    }}\n}}\n\n"
             );
         }
         self.w(&s);
@@ -1929,9 +2029,9 @@ unsafe impl gx::bytemuck::Zeroable for {name}Gpu {{}}
 unsafe impl gx::bytemuck::Pod for {name}Gpu {{}}
 
 {gate}
-impl From<{name}<(), f32>> for {name}Gpu {{
+impl<O: gx::Orientation> From<{name}<(), f32, O>> for {name}Gpu {{
     #[inline]
-    fn from(x: {name}<(), f32>) -> Self {{
+    fn from(x: {name}<(), f32, O>) -> Self {{
         let mut c = [[0.0; 4]; {m}];
         for (i, v) in x.c.iter().enumerate() {{
             c[i / 4][i % 4] = *v;
@@ -1941,9 +2041,9 @@ impl From<{name}<(), f32>> for {name}Gpu {{
 }}
 
 {gate}
-impl From<gx::Unit<{name}<(), f32>>> for {name}Gpu {{
+impl<O: gx::Orientation> From<gx::Unit<{name}<(), f32, O>>> for {name}Gpu {{
     #[inline]
-    fn from(x: gx::Unit<{name}<(), f32>>) -> Self {{
+    fn from(x: gx::Unit<{name}<(), f32, O>>) -> Self {{
         x.into_inner().into()
     }}
 }}
@@ -1981,10 +2081,10 @@ unsafe impl gx::bytemuck::Zeroable for {name}Gpu16 {{}}
 unsafe impl gx::bytemuck::Pod for {name}Gpu16 {{}}
 
 {gate}
-impl From<{name}<(), f32>> for {name}Gpu16 {{
+impl<O: gx::Orientation> From<{name}<(), f32, O>> for {name}Gpu16 {{
     /// Each coefficient rounded to the nearest `f16`.
     #[inline]
-    fn from(x: {name}<(), f32>) -> Self {{
+    fn from(x: {name}<(), f32, O>) -> Self {{
         let mut c = [[0; 4]; {m}];
         for (i, v) in x.c.iter().enumerate() {{
             c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
@@ -2012,7 +2112,7 @@ impl From<{name}Gpu16> for {name}<(), f32> {{
                 .iter()
                 .any(|k| k.name == kind && k.layout.len() <= WGSL_MAX)
         };
-        for (alias, kind) in spec.aliases.iter().filter(|(_, k)| small(k)) {
+        for (alias, kind, _) in spec.aliases.iter().filter(|(_, k, _)| small(k)) {
             let _ = writeln!(
                 self.out,
                 "{gate}
@@ -2277,7 +2377,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
          \x20       let a: A = random(rng);\n\
          \x20       assert_close(&o.dense(&f(a)), &o.unop(op, &o.dense(&a)), &format!(\"{{op:?}} {{}}\", std::any::type_name::<A>()));\n\
          \x20   }}\n}}\n\n\
-         /// `v x ~v` against the oracle; with `unit`, `v` is first normalized to `v ~v = 1`.\n\
+         /// `v >> x` against the oracle's oriented `v x ~v`; with `unit`, `v` is first normalized to `v ~v = 1`.\n\
          fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R, prepared: impl Fn(V, X) -> R)\n\
          where\n    V: Extensor<Slots = (), Coef = f64>,\n    X: Extensor<Slots = (), Coef = f64>,\n    R: Extensor<Slots = (), Coef = f64>,\n{{\n\
          \x20   let mut tested = 0;\n\
@@ -2288,8 +2388,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
          \x20           v = u;\n\
          \x20       }}\n\
          \x20       tested += 1;\n\
-         \x20       let (dv, dx) = (o.dense(&v), o.dense(&x));\n\
-         \x20       let want = o.binop(BinOp::Gp, &o.binop(BinOp::Gp, &dv, &dx), &o.unop(UnOp::Reverse, &dv));\n\
+         \x20       let want = o.sandwich(&v, &x);\n\
          \x20       assert_close(&o.dense(&f(v, x)), &want, &format!(\"sandwich {{}} {{}}\", std::any::type_name::<V>(), std::any::type_name::<X>()));\n\
          \x20       assert_close(&o.dense(&prepared(v, x)), &want, &format!(\"prepared {{}} {{}}\", std::any::type_name::<V>(), std::any::type_name::<X>()));\n\
          \x20   }}\n\
@@ -2344,6 +2443,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
                 "    common::normalized::<{k}<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());"
             );
         }
+        // exp, log and sqrt are extrinsic only (ADR-051).
         if let Some(on) = &v.exp {
             let has_log = stats
                 .values
@@ -2352,14 +2452,14 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
             if has_log {
                 let _ = writeln!(
                     t,
-                    "    common::exp_log::<{k}<(), f64>, {on}<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());"
+                    "    common::exp_log::<{k}<(), f64, gax::Extrinsic>, {on}<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());"
                 );
             }
         }
         if v.sqrt && v.log.is_some() {
             let _ = writeln!(
                 t,
-                "    common::sqrt::<{k}<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());"
+                "    common::sqrt::<{k}<(), f64, gax::Extrinsic>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());"
             );
         }
     }
@@ -2508,7 +2608,7 @@ fn reciprocal_impl(spec: &AlgebraSpec, kind: &KindSpec, out: &mut String) {
         .collect();
     let _ = writeln!(
         out,
-        "#[diagnostic::do_not_recommend]\nimpl gx::Reciprocal for {} {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n}}\n",
+        "#[diagnostic::do_not_recommend]\nimpl<O: gx::Orientation> gx::Reciprocal for {}<(), f32, O> {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n}}\n",
         kind.name,
         rows.join(", ")
     );
@@ -2525,11 +2625,14 @@ fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
             let (an, bn) = (&a.name, &b.name);
             let _ = writeln!(
                 out,
-                "impl gx::Cast<{bn}> for {an} {{\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
+                "impl<O: gx::Orientation> gx::Cast<{bn}<(), f32, O>> for {an}<(), f32, O> {{\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
                 render_shared(&shared)
             );
             if shared.len() == a.layout.len() {
-                let _ = writeln!(out, "impl gx::SubKind<{bn}> for {an} {{}}\n");
+                let _ = writeln!(
+                    out,
+                    "impl<O: gx::Orientation> gx::SubKind<{bn}<(), f32, O>> for {an}<(), f32, O> {{}}\n"
+                );
             }
         }
         let grades: BTreeSet<u32> = a
@@ -2552,7 +2655,7 @@ fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
             let shared = shared_blades(a, o, |m| m.count_ones() == g);
             let _ = writeln!(
                 out,
-                "impl gx::GradePart<{g}> for {} {{\n    type Out = {};\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
+                "impl<O: gx::Orientation> gx::GradePart<{g}> for {}<(), f32, O> {{\n    type Out = {}<(), f32, O>;\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
                 a.name,
                 o.name,
                 render_shared(&shared)
@@ -2567,31 +2670,31 @@ fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, out: &mut S
     if let Some(on) = &meta.exp {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real> gx::Exp for {name}<(), T> {{\n    type Output = gx::Unit<{on}<(), T>>;\n    #[inline(always)]\n    fn exp(self) -> Self::Output {{\n        Self::exp(self)\n    }}\n}}\n"
+            "impl<T: gx::Real> gx::Exp for {name}<(), T, gx::Extrinsic> {{\n    type Output = gx::Unit<{on}<(), T>>;\n    #[inline(always)]\n    fn exp(self) -> Self::Output {{\n        Self::exp(self)\n    }}\n}}\n"
         );
     }
     if let Some(on) = &meta.inverse {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real> gx::Inverse for {name}<(), T> {{\n    type Output = {on}<(), T>;\n    #[inline(always)]\n    fn inverse(self) -> Self::Output {{\n        Self::inverse(self)\n    }}\n}}\n"
+            "impl<T: gx::Real, O: gx::Orientation> gx::Inverse for {name}<(), T, O> {{\n    type Output = {on}<(), T, O>;\n    #[inline(always)]\n    fn inverse(self) -> Self::Output {{\n        Self::inverse(self)\n    }}\n}}\n"
         );
     }
     if meta.norm {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real> gx::Norm for {name}<(), T> {{\n    #[inline(always)]\n    fn norm_squared(self) -> T {{\n        Self::norm_squared(self)\n    }}\n    #[inline(always)]\n    fn norm(self) -> T {{\n        Self::norm(self)\n    }}\n}}\n"
+            "impl<T: gx::Real, O: gx::Orientation> gx::Norm for {name}<(), T, O> {{\n    #[inline(always)]\n    fn norm_squared(self) -> T {{\n        Self::norm_squared(self)\n    }}\n    #[inline(always)]\n    fn norm(self) -> T {{\n        Self::norm(self)\n    }}\n}}\n"
         );
     }
     if meta.normalized {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real> gx::Normalize for {name}<(), T> {{\n    #[inline(always)]\n    fn normalized(self) -> gx::Unit<Self> {{\n        Self::normalized(self)\n    }}\n}}\n"
+            "impl<T: gx::Real, O: gx::Orientation> gx::Normalize for {name}<(), T, O> {{\n    #[inline(always)]\n    fn normalized(self) -> gx::Unit<Self> {{\n        Self::normalized(self)\n    }}\n}}\n"
         );
     }
     if meta.sqrt {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real> gx::Sqrt for {name}<(), T> {{\n    type Output = gx::Unit<Self>;\n    #[inline(always)]\n    fn sqrt(self) -> Self::Output {{\n        Self::sqrt(self)\n    }}\n}}\n"
+            "impl<T: gx::Real> gx::Sqrt for {name}<(), T, gx::Extrinsic> {{\n    type Output = gx::Unit<Self>;\n    #[inline(always)]\n    fn sqrt(self) -> Self::Output {{\n        Self::sqrt(self)\n    }}\n}}\n"
         );
     }
 }
