@@ -296,3 +296,15 @@ fn pivot_ties_pick_the_first_row() {
         assert_eq!(fl.perm[i].v, [i as f64; 4]);
     }
 }
+
+/// The test of `try_inverse` and `try_solve` holds for lanes only when it holds in every lane:
+/// one singular lane makes the batch singular.
+#[test]
+fn regular_needs_every_lane() {
+    let (ok, singular) = ([[2.0, 1.0], [1.0, 3.0]], [[1.0, 2.0], [2.0, 4.0]]);
+    assert!(regular(&ok, &lu(&ok)) && !regular(&singular, &lu(&singular)));
+    let all = lanes(&[ok; 4]);
+    assert!(regular(&all, &lu(&all)));
+    let one = lanes(&[ok, singular, ok, ok]);
+    assert!(!regular(&one, &lu(&one)));
+}

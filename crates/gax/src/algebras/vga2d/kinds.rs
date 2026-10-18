@@ -210,16 +210,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
-    #[inline(always)]
-    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
-    where
-        Self: gx::Outermorphism<B>,
-    {
-        gx::Outermorphism::outermorphism(self)
-    }
-
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Scalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -294,15 +284,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         gx::ScalarProduct::scalar_product(self, rhs)
     }
 
-    /// See [`gx::Commutator`].
-    #[inline(always)]
-    pub fn commutator<R>(self, rhs: R) -> <Self as gx::Commutator<R>>::Output
-    where
-        Self: gx::Commutator<R>,
-    {
-        gx::Commutator::commutator(self, rhs)
-    }
-
     /// See [`gx::Anticommutator`].
     #[inline(always)]
     pub fn anticommutator<R>(self, rhs: R) -> <Self as gx::Anticommutator<R>>::Output
@@ -310,24 +291,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         Self: gx::Anticommutator<R>,
     {
         gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// See [`gx::Transform`].
-    #[inline(always)]
-    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
-    where
-        Self: gx::Transform<R>,
-    {
-        gx::Transform::transform(self, rhs)
-    }
-
-    /// See [`gx::TransformInv`].
-    #[inline(always)]
-    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
-    where
-        Self: gx::TransformInv<R>,
-    {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 
     /// See [`gx::Reverse`].
@@ -425,16 +388,6 @@ impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Scalar<(), T, O> {
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Scalar<(), T, O> {
-    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`]).
-    #[inline(always)]
-    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
-    where
-        Self: gx::Prepare<X>,
-    {
-        gx::Prepare::prepare(self)
-    }
-
     /// Coefficient of `1`.
     #[inline(always)]
     pub fn s(&self) -> T {
@@ -467,15 +420,6 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
     }
 }
 
-impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T, O> {
-    /// This form `Scalar <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
-    /// methods of maps (`svd`, `pinv`, `svdvals`, `det`).
-    #[inline]
-    pub fn as_map(self) -> <A as gx::Kind>::Mv<(B,), T> {
-        gx::FormAsMap::as_map(self)
-    }
-}
-
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -484,6 +428,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
         Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Scalar<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Scalar<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Scalar<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
     }
 
     /// The determinant of the map's coefficient matrix.
@@ -555,6 +509,17 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Scalar<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
     /// The MooreâPenrose pseudo-inverse, `A <- Scalar`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -592,6 +557,15 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T, O> {
+    /// This form `Scalar <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
+    /// methods of maps (`svd`, `pinv`, `svdvals`, `det`).
+    #[inline]
+    pub fn as_map(self) -> <A as gx::Kind>::Mv<(B,), T> {
+        gx::FormAsMap::as_map(self)
+    }
+}
+
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, B), T, O> {
     /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
     /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
@@ -603,6 +577,18 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, B), T
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
+    }
+
+    /// [`solve`](Self::solve), or `None` where the pairing is singular or the solution is not
+    /// finite (see [`gx::Pairing::try_solve`]).
+    #[inline]
+    pub fn try_solve<R>(self, rhs: R) -> Option<<A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Scalar<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Scalar<(), f64, O>, Coef = T>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
+    {
+        gx::Pairing::try_solve(self, rhs)
     }
 }
 
@@ -1120,16 +1106,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
-    #[inline(always)]
-    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
-    where
-        Self: gx::Outermorphism<B>,
-    {
-        gx::Outermorphism::outermorphism(self)
-    }
-
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Vector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -1220,24 +1196,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
         Self: gx::Anticommutator<R>,
     {
         gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// See [`gx::Transform`].
-    #[inline(always)]
-    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
-    where
-        Self: gx::Transform<R>,
-    {
-        gx::Transform::transform(self, rhs)
-    }
-
-    /// See [`gx::TransformInv`].
-    #[inline(always)]
-    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
-    where
-        Self: gx::TransformInv<R>,
-    {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 
     /// See [`gx::Reverse`].
@@ -1335,7 +1293,25 @@ impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Vector<(), T, O> {
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Vector<(), T, O> {
-    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// See [`gx::Transform`].
+    #[inline(always)]
+    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
+    where
+        Self: gx::Transform<R>,
+    {
+        gx::Transform::transform(self, rhs)
+    }
+
+    /// See [`gx::TransformInv`].
+    #[inline(always)]
+    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
+    where
+        Self: gx::TransformInv<R>,
+    {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+
+    /// This versor's action on kind `X`, prepared for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
@@ -1383,6 +1359,18 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
     }
 }
 
+impl<T: gx::Coef, O: gx::Orientation> Vector<(Vector<(), f64, O>,), T, O> {
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     /// The inverse map, `A <- Vector`.
     #[inline]
@@ -1391,6 +1379,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
         Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Vector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Vector<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Vector<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
     }
 
     /// The determinant of the map's coefficient matrix.
@@ -1462,6 +1460,17 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Vector<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
     /// The MooreâPenrose pseudo-inverse, `A <- Vector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -1496,59 +1505,6 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
     #[inline]
     pub fn swap(self) -> Vector<(B, A), T, O> {
         self.at::<1>()
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, B), T, O> {
-    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
-    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
-    #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
-    where
-        Self: gx::Pairing<Coef = T, Kind = Vector<(), f64, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Vector<(), f64, O>, Coef = T>,
-        R::Slots: gx::__private::SplitLast<Last = B>,
-    {
-        gx::Pairing::solve(self, rhs)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, A), T, O> {
-    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
-    /// its metric because its eigenvalues against the identity depend on the basis; where the
-    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh(self, metric)
-    }
-
-    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
-    /// eigenvalues (`+â`, last) for the directions it does not measure (see
-    /// [`gx::Form::eigh_semidefinite`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh_semidefinite(self, metric)
-    }
-
-    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
-    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
-    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
-    #[inline]
-    #[must_use]
-    pub fn identity() -> Self
-    where
-        Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
-    {
-        gx::Form::identity()
     }
 }
 
@@ -2021,16 +1977,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
-    #[inline(always)]
-    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
-    where
-        Self: gx::Outermorphism<B>,
-    {
-        gx::Outermorphism::outermorphism(self)
-    }
-
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -2121,24 +2067,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         Self: gx::Anticommutator<R>,
     {
         gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// See [`gx::Transform`].
-    #[inline(always)]
-    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
-    where
-        Self: gx::Transform<R>,
-    {
-        gx::Transform::transform(self, rhs)
-    }
-
-    /// See [`gx::TransformInv`].
-    #[inline(always)]
-    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
-    where
-        Self: gx::TransformInv<R>,
-    {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 
     /// See [`gx::Reverse`].
@@ -2236,16 +2164,6 @@ impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Pseudoscalar<(), T, O> {
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Pseudoscalar<(), T, O> {
-    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`]).
-    #[inline(always)]
-    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
-    where
-        Self: gx::Prepare<X>,
-    {
-        gx::Prepare::prepare(self)
-    }
-
     /// Coefficient of `e12`.
     #[inline(always)]
     pub fn e12(&self) -> T {
@@ -2286,6 +2204,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
         Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Pseudoscalar<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Pseudoscalar<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Pseudoscalar<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
     }
 
     /// The determinant of the map's coefficient matrix.
@@ -2357,6 +2285,17 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Pseudoscalar<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
     /// The MooreâPenrose pseudo-inverse, `A <- Pseudoscalar`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -2391,59 +2330,6 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
     #[inline]
     pub fn swap(self) -> Pseudoscalar<(B, A), T, O> {
         self.at::<1>()
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, B), T, O> {
-    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
-    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
-    #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
-    where
-        Self: gx::Pairing<Coef = T, Kind = Pseudoscalar<(), f64, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Pseudoscalar<(), f64, O>, Coef = T>,
-        R::Slots: gx::__private::SplitLast<Last = B>,
-    {
-        gx::Pairing::solve(self, rhs)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, A), T, O> {
-    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
-    /// its metric because its eigenvalues against the identity depend on the basis; where the
-    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh(self, metric)
-    }
-
-    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
-    /// eigenvalues (`+â`, last) for the directions it does not measure (see
-    /// [`gx::Form::eigh_semidefinite`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh_semidefinite(self, metric)
-    }
-
-    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
-    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
-    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
-    #[inline]
-    #[must_use]
-    pub fn identity() -> Self
-    where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
-    {
-        gx::Form::identity()
     }
 }
 
@@ -2929,16 +2815,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
-    #[inline(always)]
-    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
-    where
-        Self: gx::Outermorphism<B>,
-    {
-        gx::Outermorphism::outermorphism(self)
-    }
-
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Rotor<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -3029,24 +2905,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
         Self: gx::Anticommutator<R>,
     {
         gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// See [`gx::Transform`].
-    #[inline(always)]
-    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
-    where
-        Self: gx::Transform<R>,
-    {
-        gx::Transform::transform(self, rhs)
-    }
-
-    /// See [`gx::TransformInv`].
-    #[inline(always)]
-    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
-    where
-        Self: gx::TransformInv<R>,
-    {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 
     /// See [`gx::Reverse`].
@@ -3144,7 +3002,25 @@ impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Rotor<(), T, O> {
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Rotor<(), T, O> {
-    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// See [`gx::Transform`].
+    #[inline(always)]
+    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
+    where
+        Self: gx::Transform<R>,
+    {
+        gx::Transform::transform(self, rhs)
+    }
+
+    /// See [`gx::TransformInv`].
+    #[inline(always)]
+    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
+    where
+        Self: gx::TransformInv<R>,
+    {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+
+    /// This versor's action on kind `X`, prepared for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
@@ -3200,6 +3076,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Rotor<(A,), T, O> {
         Self: gx::SquareMap<Coef = T, Kind = Rotor<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Rotor<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Rotor<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Rotor<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Rotor<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
     }
 
     /// The determinant of the map's coefficient matrix.
@@ -3271,6 +3157,17 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Rotor<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Rotor<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Rotor<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
     /// The MooreâPenrose pseudo-inverse, `A <- Rotor`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -3305,59 +3202,6 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Rotor<(A, B), T,
     #[inline]
     pub fn swap(self) -> Rotor<(B, A), T, O> {
         self.at::<1>()
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Rotor<(A, B), T, O> {
-    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
-    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
-    #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
-    where
-        Self: gx::Pairing<Coef = T, Kind = Rotor<(), f64, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Rotor<(), f64, O>, Coef = T>,
-        R::Slots: gx::__private::SplitLast<Last = B>,
-    {
-        gx::Pairing::solve(self, rhs)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Rotor<(A, A), T, O> {
-    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
-    /// its metric because its eigenvalues against the identity depend on the basis; where the
-    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Rotor<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh(self, metric)
-    }
-
-    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
-    /// eigenvalues (`+â`, last) for the directions it does not measure (see
-    /// [`gx::Form::eigh_semidefinite`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Rotor<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh_semidefinite(self, metric)
-    }
-
-    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
-    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
-    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
-    #[inline]
-    #[must_use]
-    pub fn identity() -> Self
-    where
-        Self: gx::Form<Coef = T, Kind = Rotor<(), f64, O>, Slot = A>,
-    {
-        gx::Form::identity()
     }
 }
 
@@ -3888,16 +3732,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
-    #[inline(always)]
-    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
-    where
-        Self: gx::Outermorphism<B>,
-    {
-        gx::Outermorphism::outermorphism(self)
-    }
-
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Multivector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -3988,24 +3822,6 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         Self: gx::Anticommutator<R>,
     {
         gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// See [`gx::Transform`].
-    #[inline(always)]
-    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
-    where
-        Self: gx::Transform<R>,
-    {
-        gx::Transform::transform(self, rhs)
-    }
-
-    /// See [`gx::TransformInv`].
-    #[inline(always)]
-    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
-    where
-        Self: gx::TransformInv<R>,
-    {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 
     /// See [`gx::Reverse`].
@@ -4103,16 +3919,6 @@ impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Multivector<(), T, O> {
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Multivector<(), T, O> {
-    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`]).
-    #[inline(always)]
-    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
-    where
-        Self: gx::Prepare<X>,
-    {
-        gx::Prepare::prepare(self)
-    }
-
     /// Coefficient of `1`.
     #[inline(always)]
     pub fn s(&self) -> T {
@@ -4171,6 +3977,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
         Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Multivector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Multivector<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Multivector<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
     }
 
     /// The determinant of the map's coefficient matrix.
@@ -4242,6 +4058,17 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Multivector<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
     /// The MooreâPenrose pseudo-inverse, `A <- Multivector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -4276,59 +4103,6 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A, 
     #[inline]
     pub fn swap(self) -> Multivector<(B, A), T, O> {
         self.at::<1>()
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A, B), T, O> {
-    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
-    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
-    #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
-    where
-        Self: gx::Pairing<Coef = T, Kind = Multivector<(), f64, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Multivector<(), f64, O>, Coef = T>,
-        R::Slots: gx::__private::SplitLast<Last = B>,
-    {
-        gx::Pairing::solve(self, rhs)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A, A), T, O> {
-    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
-    /// its metric because its eigenvalues against the identity depend on the basis; where the
-    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh(self, metric)
-    }
-
-    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
-    /// eigenvalues (`+â`, last) for the directions it does not measure (see
-    /// [`gx::Form::eigh_semidefinite`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector<(), f64, O>, Slot = A>,
-    {
-        gx::Form::eigh_semidefinite(self, metric)
-    }
-
-    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
-    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
-    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
-    #[inline]
-    #[must_use]
-    pub fn identity() -> Self
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector<(), f64, O>, Slot = A>,
-    {
-        gx::Form::identity()
     }
 }
 

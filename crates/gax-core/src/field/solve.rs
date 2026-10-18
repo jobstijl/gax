@@ -105,22 +105,58 @@ where
     /// [`solve_direct`](Self::solve_direct) solves exactly by sparse LU.
     ///
     /// # Panics
-    /// If the map is not square, `b` is not over its sites, or the iteration fails: its
-    /// residual stays above `√ε` (the map is not positive definite, or too ill-conditioned).
+    /// If the map is not square, `b` is not over its sites, or the iteration fails (see
+    /// [`try_solve`](Self::try_solve)).
     #[must_use]
     #[track_caller]
     pub fn solve(&self, b: &Field<K::Mv<(), T>>) -> Field<K::Mv<(), T>> {
-        let unknowns = b.len() * K::N;
-        let eps = T::epsilon();
-        let s = self.cg(b, eps * T::from_i64(16), 4 * unknowns + 20);
+        let s = self.solve_cg(b);
         assert!(
-            s.converged || T::all_lt(s.residual, eps.sqrt()),
+            solved(&s),
             "SparseMap::solve: conjugate gradients did not converge ({} iterations, relative residual {:?}); the couplings must be symmetric positive definite, else use solve_direct",
             s.iterations,
             s.residual
         );
         s.x
     }
+
+    /// [`solve`](Self::solve), or `None` where the iteration fails: its residual stays above
+    /// `√ε` (the map is not positive definite, or too ill-conditioned, or `b` is not finite).
+    ///
+    /// ```
+    /// use gax::field::{Field, SparseMap};
+    /// use gax::vga3d::{Scalar, Vector};
+    /// let s = Scalar::<(), f64>::new;
+    /// let b = Field::from_fn(2, |_| Vector::new(1.0, 0.0, 0.0));
+    /// let definite = &SparseMap::from_diagonal(&Field::from_fn(2, |_| s(2.0))) * Vector::slot();
+    /// assert!(definite.try_solve(&b).is_some());
+    /// // Conjugate gradients needs a positive definite map, and diag(1, -1) is not.
+    /// let signs = Field::from_fn(2, |i| s(if i == 0 { 1.0 } else { -1.0 }));
+    /// let indefinite = &SparseMap::from_diagonal(&signs) * Vector::slot();
+    /// assert!(indefinite.try_solve(&b).is_none());
+    /// ```
+    ///
+    /// # Panics
+    /// If the map is not square, or `b` is not over its sites.
+    #[must_use]
+    #[track_caller]
+    pub fn try_solve(&self, b: &Field<K::Mv<(), T>>) -> Option<Field<K::Mv<(), T>>> {
+        let s = self.solve_cg(b);
+        solved(&s).then_some(s.x)
+    }
+
+    /// [`cg`](Self::cg) with the tolerance and iterations of [`solve`](Self::solve).
+    #[track_caller]
+    fn solve_cg(&self, b: &Field<K::Mv<(), T>>) -> Solved<K::Mv<(), T>> {
+        let unknowns = b.len() * K::N;
+        self.cg(b, T::epsilon() * T::from_i64(16), 4 * unknowns + 20)
+    }
+}
+
+/// Whether an iteration of [`SparseMap::solve`] is accepted: converged, or with a residual
+/// below `√ε`.
+fn solved<X: Extensor<Coef: Real>>(s: &Solved<X>) -> bool {
+    s.converged || X::Coef::all_lt(s.residual, X::Coef::epsilon().sqrt())
 }
 
 /// The coefficients of a field of values, site by site.

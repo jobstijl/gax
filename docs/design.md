@@ -2068,15 +2068,35 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   is `solve` (the trait method too), like a square map's, since the types tell them apart: a
   map's solves `m.of(x) = b`, a pairing's `p(x, ·) = r(l, ·)`. Its dyad binding stays
   `of_dyad` and `lstsq_dyad` (`OfDyad`, `LeastSquaresDyad`), apart from `of` and `lstsq`, which
-  bind one slot. Plain methods return NaN on failure as documented, `try_*`
-  methods an `Option` (still open).
+  bind one slot.
+* **One failure policy.** The plain methods keep their behaviour: a singular dense map's
+  `inverse` and `solve`, and a pairing's `solve`, return non-finite coefficients, which keeps
+  them branch free on lanes and in traced kernels; the field maps' `solve` and `solve_direct`
+  panic with the reason. A checked twin returns an `Option`: `try_inverse` and `try_solve` on
+  square maps (trait methods of `SquareMap`, with `SiteField`'s forwards), `try_solve` on
+  pairings, `try_solve` and `try_solve_direct` on field maps. It runs the same factorization
+  (shared helpers, no second code path) and returns `None` when the map is singular or the
+  result is not finite. Singular is one test: an LU pivot at most `n ε max|aᵢⱼ|` in magnitude,
+  `numpy.linalg.matrix_rank`'s tolerance with the pivots in place of the singular values, in any
+  lane. A test on the result alone (non-finite) misses the usual case, a pivot that rounding left
+  at `10⁻¹⁷` instead of zero, whose inverse is huge and finite. The sparse `factor` reports
+  `Singular` by the same test (it was an exactly zero column), and conjugate gradients fails
+  where `solve` panics, a residual above `√ε`. The eigenproblems have no twin: a symmetric
+  eigenproblem has no singular case, and a form's `eigh` against a metric that is not positive
+  definite returns NaN, as documented.
 * **A smaller visible surface.** Items only generated code needs (`True`, `False`, `FillList`,
   `KindEq`, `SplitLast`, `MoveToFront`, `HasCat`, `SlotArr`, `Reorient`, `NewtonStep`,
   `LogNeedsUnit`, `PreparedDense`, `orientation::reflect`, `slots::by_entries`, the `linalg`
   kernels and the `study` functions) move to a hidden `gx::__private`, which the generator
   names; `fill`, `permute`, `linalg` and `study` become private modules, the items that stay in
   public ones are `#[doc(hidden)]`, and `trace::write_kind_path` is private. Methods are emitted
-  only where their bounds can hold.
+  only where their bounds can hold, as the generator knows from its own tables: a product
+  method where the kind has that product with some kind, `hodge` where it has one with the
+  pseudoscalar, `transform`, `transform_inv` and `prepare` on the values of a versor kind whose
+  sandwiches were generated, `outermorphism` on the maps of a base kind to itself, and the
+  methods of forms and pairings (`as_map`, a pairing's `solve`, `eigh(metric)`,
+  `eigh_semidefinite`, `identity`) on the scalar kind. The standard algebras' generated code
+  shrank by about 6 400 lines; a call that compiled before still does.
 * **Geometry in gax types, evenly across algebras.** Constructors take gax values, not float
   tuples; coordinates enter only through the plain constructors (`Point::xyz`,
   `Point::direction`, `new`, CGA's `up`), the boundary to floats, as `to_euclidean` and the

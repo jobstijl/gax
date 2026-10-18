@@ -32,8 +32,24 @@ pub trait SquareMap: Extensor<Coef: Real> {
     /// The inverse map `A <- B`.
     type Inverse: Extensor<Kind = Self::Input, Slots = (Self::Kind,), Coef = Self::Coef>;
 
-    /// The inverse map, by LU factorization with partial pivoting.
+    /// The inverse map, by LU factorization with partial pivoting. A singular map gives
+    /// non-finite coefficients (NaN or infinities); [`try_inverse`](Self::try_inverse) checks.
     fn inverse(self) -> Self::Inverse;
+    /// [`inverse`](Self::inverse), or `None` where the map is singular: where a pivot of its
+    /// LU factorization is at most `n ε max|aᵢⱼ|` in magnitude (`n` the size, `aᵢⱼ` the
+    /// coefficients), or where the inverse is not finite; on SIMD lanes, in any lane.
+    ///
+    /// ```
+    /// use gax::pga3d::{Motor, Plane, Point};
+    /// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.4);
+    /// let t: Point<(Point,), f64> = m >> Point::slot();
+    /// assert_eq!(t.try_inverse(), Some(t.inverse()));
+    /// // A central projection onto the floor sends the eye to zero: no inverse.
+    /// let (eye, floor) = (Point::xyz(0.0, 0.0, 5.0), Plane::new(0.0, 0.0, 1.0, 0.0));
+    /// let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ floor;
+    /// assert_eq!(projection.try_inverse(), None);
+    /// ```
+    fn try_inverse(self) -> Option<Self::Inverse>;
     /// The determinant of the coefficient matrix.
     ///
     /// For a map between different kinds this depends on the blade layouts (orientation and
@@ -69,7 +85,27 @@ pub trait SquareMap: Extensor<Coef: Real> {
     /// Solve `self(x) = rhs` for `x`. A right-hand side with slots of its own keeps them: the
     /// solution is then a map with those slots. (A pairing's [`Pairing::solve`] solves
     /// against one slot of a two-slot form instead.)
+    ///
+    /// A singular map gives non-finite coefficients; [`try_solve`](Self::try_solve) checks.
     fn solve<X>(self, rhs: X) -> <Self::Input as Kind>::Mv<X::Slots, Self::Coef>
+    where
+        X: Extensor<Kind = Self::Kind, Coef = Self::Coef>;
+    /// [`solve`](Self::solve), or `None` where the map is singular (by the test of
+    /// [`try_inverse`](Self::try_inverse)) or the solution is not finite.
+    ///
+    /// ```
+    /// use gax::ApproxEq;
+    /// use gax::pga3d::{Motor, Plane, Point};
+    /// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.4);
+    /// let t: Point<(Point,), f64> = m >> Point::slot();
+    /// let p = Point::xyz(1.0, 2.0, 3.0);
+    /// assert!(t.try_solve(t.of(p)).is_some_and(|x| x.approx_eq(&p, 1e-12)));
+    /// // Every point on the line through the eye and `p` casts the same shadow.
+    /// let (eye, floor) = (Point::xyz(0.0, 0.0, 5.0), Plane::new(0.0, 0.0, 1.0, 0.0));
+    /// let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ floor;
+    /// assert_eq!(projection.try_solve(projection.of(p)), None);
+    /// ```
+    fn try_solve<X>(self, rhs: X) -> Option<<Self::Input as Kind>::Mv<X::Slots, Self::Coef>>
     where
         X: Extensor<Kind = Self::Kind, Coef = Self::Coef>;
 }
@@ -109,10 +145,14 @@ where
     type Inverse = A::Mv<(M::Kind,), M::Coef>;
 
     fn inverse(self) -> Self::Inverse {
-        let inv = linalg::inverse(self.coeffs());
-        <Self::Inverse as Extensor>::from_coeffs(A::arr_from_fn(|i| {
-            <M::Kind as Kind>::arr_from_fn(|j| inv[i][j])
-        }))
+        typed_inverse::<M, A>(&linalg::inverse(self.coeffs()))
+    }
+
+    fn try_inverse(self) -> Option<Self::Inverse> {
+        let f = linalg::lu(self.coeffs());
+        linalg::regular(self.coeffs(), &f)
+            .then(|| typed_inverse::<M, A>(&linalg::inverse_lu(&f)))
+            .filter(Extensor::is_finite)
     }
 
     fn det(self) -> M::Coef {
@@ -155,25 +195,68 @@ where
     where
         X: Extensor<Kind = M::Kind, Coef = M::Coef>,
     {
-        let f = linalg::lu(self.coeffs());
-        let cols = rhs.coeffs().as_ref();
-        // One solve per entry of the right-hand side's slot arrays, then the solutions'
-        // coefficients gathered output first.
-        let xs = <X::Slots as Slots>::from_flat(
-            &mut |flat| {
-                let mut b =
-                    <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
-                for (i, col) in cols.iter().enumerate() {
-                    b[i] = <X::Slots as Slots>::get_flat(col, flat);
-                }
-                let x = linalg::lu_solve(&f, &b);
-                A::arr_from_fn(|i| x[i])
-            },
-            0,
-        );
-        let solutions = A::arr_from_fn(|i| <X::Slots as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
-        <A::Mv<X::Slots, M::Coef> as Extensor>::from_coeffs(solutions)
+        solve_lu::<M, A, X>(&linalg::lu(self.coeffs()), &rhs)
     }
+
+    fn try_solve<X>(self, rhs: X) -> Option<A::Mv<X::Slots, M::Coef>>
+    where
+        X: Extensor<Kind = M::Kind, Coef = M::Coef>,
+    {
+        let f = linalg::lu(self.coeffs());
+        linalg::regular(self.coeffs(), &f)
+            .then(|| solve_lu::<M, A, X>(&f, &rhs))
+            .filter(Extensor::is_finite)
+    }
+}
+
+/// The coefficient matrix of a map `M` from `A`, square where `SquareMap` holds.
+type Matrix<M, A> = <<M as Extensor>::Kind as Kind>::Arr<<A as Kind>::Arr<<M as Extensor>::Coef>>;
+
+/// The LU factorization of a matrix of `M`'s coefficients with rows over `R` and columns over
+/// `C`: a map's (`R` its output kind) or a pairing's transposed (`R` its second slot).
+type MatrixLu<M, R, C> = linalg::Lu<
+    <R as Kind>::Arr<<C as Kind>::Arr<<M as Extensor>::Coef>>,
+    <<R as Kind>::Arr<<C as Kind>::Arr<<M as Extensor>::Coef>> as SquareArr<
+        <M as Extensor>::Coef,
+    >>::Vector,
+>;
+
+/// The inverse map `A <- K` of a map `M: K <- (A,)`, from its coefficients `inv`.
+fn typed_inverse<M, A>(inv: &Matrix<M, A>) -> A::Mv<(M::Kind,), M::Coef>
+where
+    M: Extensor<Slots = (A,), Coef: Real>,
+    A: Kind,
+    Matrix<M, A>: SquareArr<M::Coef>,
+{
+    <A::Mv<(M::Kind,), M::Coef> as Extensor>::from_coeffs(A::arr_from_fn(|i| {
+        <M::Kind as Kind>::arr_from_fn(|j| inv[i][j])
+    }))
+}
+
+/// The `x` with `m.of(x) == rhs`, from the factorization `f` of the map `m: K <- (A,)`.
+fn solve_lu<M, A, X>(f: &MatrixLu<M, M::Kind, A>, rhs: &X) -> A::Mv<X::Slots, M::Coef>
+where
+    M: Extensor<Slots = (A,), Coef: Real>,
+    A: Kind,
+    Matrix<M, A>: SquareArr<M::Coef>,
+    X: Extensor<Kind = M::Kind, Coef = M::Coef>,
+{
+    let cols = rhs.coeffs().as_ref();
+    // One solve per entry of the right-hand side's slot arrays, then the solutions'
+    // coefficients gathered output first.
+    let xs = <X::Slots as Slots>::from_flat(
+        &mut |flat| {
+            let mut b = <Matrix<M, A> as SquareArr<M::Coef>>::zero_vector();
+            for (i, col) in cols.iter().enumerate() {
+                b[i] = <X::Slots as Slots>::get_flat(col, flat);
+            }
+            let x = linalg::lu_solve(f, &b);
+            A::arr_from_fn(|i| x[i])
+        },
+        0,
+    );
+    let solutions = A::arr_from_fn(|i| <X::Slots as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
+    <A::Mv<X::Slots, M::Coef> as Extensor>::from_coeffs(solutions)
 }
 
 /// A map from a kind to itself.
@@ -360,10 +443,33 @@ pub trait Pairing: Extensor<Coef: Real> {
     /// a map on them. The induced map of a point map `t` on planes, which exists even when `t`
     /// is singular, is `(Plane::slot() & Point::slot()).solve(Plane::slot() & t)`. (A square
     /// map's [`SquareMap::solve`] inverts the map itself, `self.of(x) == rhs`.)
+    ///
+    /// A singular pairing gives non-finite coefficients; [`try_solve`](Self::try_solve) checks.
     fn solve<R>(
         self,
         rhs: R,
     ) -> <Self::First as Kind>::Mv<<R::Slots as SplitLast>::Init, Self::Coef>
+    where
+        R: Extensor<Kind = Self::Kind, Coef = Self::Coef>,
+        R::Slots: SplitLast<Last = Self::Second>;
+
+    /// [`solve`](Self::solve), or `None` where the pairing is singular (by the test of
+    /// [`SquareMap::try_inverse`], on its coefficient matrix) or the solution is not finite.
+    ///
+    /// ```
+    /// use gax::pga3d::{Plane, Point, Scalar};
+    /// let r = Plane::<(), f64>::new(1.0, 0.0, 0.0, -2.0) & Point::slot();
+    /// let joins: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
+    /// assert_eq!(joins.try_solve(r), Some(Plane::new(1.0, 0.0, 0.0, -2.0)));
+    /// // PGA's metric does not see `e0`: points paired by it cannot be told apart.
+    /// let metric: Scalar<(Point, Point), f64> = Point::slot() | Point::slot();
+    /// assert_eq!(metric.try_solve(Point::xyz(1.0, 0.0, 0.0) | Point::slot()), None);
+    /// ```
+    #[allow(clippy::type_complexity)]
+    fn try_solve<R>(
+        self,
+        rhs: R,
+    ) -> Option<<Self::First as Kind>::Mv<<R::Slots as SplitLast>::Init, Self::Coef>>
     where
         R: Extensor<Kind = Self::Kind, Coef = Self::Coef>,
         R::Slots: SplitLast<Last = Self::Second>;
@@ -385,31 +491,70 @@ where
         R: Extensor<Kind = M::Kind, Coef = M::Coef>,
         R::Slots: SplitLast<Last = B>,
     {
-        type Init<R> = <<R as Extensor>::Slots as SplitLast>::Init;
-        // form(x, y) = Σ_ij F[i][j] x_i y_j, so form(x, ·) = r(·) is Fᵀ x = r.
-        let f = &self.coeffs().as_ref()[0];
-        let ft: B::Arr<A::Arr<M::Coef>> = matrix_from(|i, j| f[j][i]);
-        let lu = linalg::lu(&ft);
-        let r = &rhs.coeffs().as_ref()[0];
-        let nb = B::N;
-        let solve_at = |l: usize| {
-            let mut b = <B::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
-            for j in 0..nb {
-                b[j] = <R::Slots as Slots>::get_flat(r, l * nb + j);
-            }
-            linalg::lu_solve(&lu, &b)
-        };
-        // One solve per value of the leading slots, then gathered output first.
-        let xs = <Init<R> as Slots>::from_flat(
-            &mut |l| {
-                let x = solve_at(l);
-                A::arr_from_fn(|i| x[i])
-            },
-            0,
-        );
-        let coeffs = A::arr_from_fn(|i| <Init<R> as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
-        <A::Mv<Init<R>, M::Coef> as Extensor>::from_coeffs(coeffs)
+        let ft = transposed::<M, A, B>(&self);
+        solve_pairing::<M, A, B, R>(&linalg::lu(&ft), &rhs)
     }
+
+    fn try_solve<R>(self, rhs: R) -> Option<A::Mv<<R::Slots as SplitLast>::Init, M::Coef>>
+    where
+        R: Extensor<Kind = M::Kind, Coef = M::Coef>,
+        R::Slots: SplitLast<Last = B>,
+    {
+        let ft = transposed::<M, A, B>(&self);
+        let f = linalg::lu(&ft);
+        linalg::regular(&ft, &f)
+            .then(|| solve_pairing::<M, A, B, R>(&f, &rhs))
+            .filter(Extensor::is_finite)
+    }
+}
+
+/// The transposed coefficients `Fᵀ` of a pairing: `form(x, y) = Σ_ij F[i][j] x_i y_j`, so
+/// `form(x, ·) = r(·)` is `Fᵀ x = r`.
+fn transposed<M, A, B>(form: &M) -> B::Arr<A::Arr<M::Coef>>
+where
+    M: Extensor<Slots = (A, B), Coef: Real>,
+    A: Kind,
+    B: Kind,
+    A::Arr<B::Arr<M::Coef>>: SquareArr<M::Coef>,
+    B::Arr<A::Arr<M::Coef>>: SquareArr<M::Coef>,
+{
+    let f = &form.coeffs().as_ref()[0];
+    matrix_from(|i, j| f[j][i])
+}
+
+/// The `x` with `form(x, ·) == rhs(l, ·)`, from the factorization `f` of the pairing's `Fᵀ`.
+fn solve_pairing<M, A, B, R>(
+    f: &MatrixLu<M, B, A>,
+    rhs: &R,
+) -> A::Mv<<R::Slots as SplitLast>::Init, M::Coef>
+where
+    M: Extensor<Slots = (A, B), Coef: Real>,
+    A: Kind,
+    B: Kind,
+    B::Arr<A::Arr<M::Coef>>: SquareArr<M::Coef>,
+    R: Extensor<Kind = M::Kind, Coef = M::Coef>,
+    R::Slots: SplitLast<Last = B>,
+{
+    type Init<R> = <<R as Extensor>::Slots as SplitLast>::Init;
+    let r = &rhs.coeffs().as_ref()[0];
+    let nb = B::N;
+    let solve_at = |l: usize| {
+        let mut b = <B::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
+        for j in 0..nb {
+            b[j] = <R::Slots as Slots>::get_flat(r, l * nb + j);
+        }
+        linalg::lu_solve(f, &b)
+    };
+    // One solve per value of the leading slots, then gathered output first.
+    let xs = <Init<R> as Slots>::from_flat(
+        &mut |l| {
+            let x = solve_at(l);
+            A::arr_from_fn(|i| x[i])
+        },
+        0,
+    );
+    let coeffs = A::arr_from_fn(|i| <Init<R> as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
+    <A::Mv<Init<R>, M::Coef> as Extensor>::from_coeffs(coeffs)
 }
 
 /// `(F + Fᵀ) / 2`: a form's symmetric part, which is all an eigenproblem sees.

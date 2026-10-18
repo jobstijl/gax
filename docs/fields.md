@@ -93,7 +93,9 @@ keeps, with `of_into` (map cells) and `mul_into` (multivector cells), and alloca
 
 * `solve` runs conjugate gradients with a diagonal preconditioner over the whole coupled system.
   The couplings must be symmetric positive definite, as a stiffness, a mass matrix or a Laplacian
-  with anchors are. If the iteration fails, `solve` panics rather than return a wrong answer.
+  with anchors are. If the iteration fails, `solve` panics rather than return a wrong answer;
+  `try_solve` returns `None` instead ([guide.md §6](guide.md#6-solving-eigenproblems-and-pairings)
+  states the failure policy).
 * `cg(b, tolerance, max_iterations)` is the same iteration, and reports its iterations, its
   residual and whether it converged.
 * `factor` computes a sparse LU of the block matrix, and `solve_direct` is `factor` followed by
@@ -101,7 +103,8 @@ keeps, with `of_into` (map cells) and `mul_into` (multivector cells), and alloca
   system of constraints, where conjugate gradients fails.
   * The sites are ordered by minimum degree, which keeps the factors of meshes sparse.
   * The rows are pivoted for stability.
-  * A singular map is reported as `Err(Singular { site, blade })`.
+  * A singular map, one with a pivot at most `n ε max|aᵢⱼ|`, is reported as
+    `Err(Singular { site, blade })`; `try_solve_direct` returns `None` for it.
   * The factors solve again for every new right-hand side, as the steps of an implicit time
     integration need.
 

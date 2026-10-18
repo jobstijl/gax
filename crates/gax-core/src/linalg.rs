@@ -279,17 +279,39 @@ pub fn det<T: Real, M: SquareArr<T>>(a: &M) -> T {
     )
 }
 
+/// Whether the factorization `f` of `a` is regular: every pivot larger in magnitude than
+/// `n ε max|aᵢⱼ|`, in every lane (the tolerance of `numpy.linalg.matrix_rank`, on the pivots
+/// in place of the singular values). A singular matrix, a zero one, or one with a non-finite entry on the
+/// pivots' path is not.
+#[inline]
+pub fn regular<T: Real, M: SquareArr<T>>(a: &M, f: &Lu<M, M::Vector>) -> bool {
+    let n = M::N;
+    let largest = (0..n)
+        .flat_map(|i| (0..n).map(move |j| (i, j)))
+        .fold(T::zero(), |m, (i, j)| m.max(a[i][j].abs()));
+    let tolerance = T::epsilon() * T::from_i64(n as i64) * largest;
+    (0..n).all(|k| T::all_lt(tolerance, f.lu[k][k].abs()))
+}
+
 /// Inverse, by LU factorization.
-///
-/// The `n` columns share the factorization and the reciprocals of the pivots, so the only
-/// divisions are those `n` reciprocals.
 #[inline]
 pub fn inverse<T: Real, M: SquareArr<T>>(a: &M) -> M {
     T::vectorize(
         #[inline(always)]
+        || inverse_lu(&lu(a)),
+    )
+}
+
+/// Inverse from the LU factorization `f`.
+///
+/// The `n` columns share the factorization and the reciprocals of the pivots, so the only
+/// divisions are those `n` reciprocals.
+#[inline]
+pub fn inverse_lu<T: Real, M: SquareArr<T>>(f: &Lu<M, M::Vector>) -> M {
+    T::vectorize(
+        #[inline(always)]
         || {
             let n = M::N;
-            let f = lu(a);
             let mut rdiag = M::zero_vector();
             for i in 0..n {
                 rdiag[i] = f.lu[i][i].recip();

@@ -4,6 +4,7 @@
 use super::{Emitter, IMPL_ALL, IMPL_O, blade_ident, kind_literal, zero_slots};
 use crate::poly::Rational;
 use crate::spec::{AlgebraSpec, KindSpec};
+use crate::table::{BinOp, binop_support};
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
@@ -132,8 +133,8 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     }
 
     /// The methods of every value and map of a kind (any slots, coefficients and orientation):
-    /// slot filling, casts, least squares, the products and unary operations as methods, the
-    /// Hodge dual; and `Reorient`.
+    /// slot filling, casts, least squares, the products the kind has and the unary operations as
+    /// methods, the Hodge dual; and `Reorient`.
     #[allow(clippy::too_many_lines)]
     fn kind_methods(&mut self, k: &KindSpec) {
         let name = &k.name;
@@ -268,16 +269,6 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         gx::TraceFirst::trace_first(self.at::<I>())
     }}
 
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
-    #[inline(always)]
-    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
-    where
-        Self: gx::Outermorphism<B>,
-    {{
-        gx::Outermorphism::outermorphism(self)
-    }}
-
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> {name}<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -296,23 +287,33 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         );
         self.w(&s);
 
-        for (tr, m) in [
-            ("Gp", "gp"),
-            ("Wedge", "wedge"),
-            ("Vee", "vee"),
-            ("Dot", "dot"),
-            ("Lc", "lc"),
-            ("Rc", "rc"),
-            ("ScalarProduct", "scalar_product"),
-            ("Commutator", "commutator"),
-            ("Anticommutator", "anticommutator"),
-            ("Transform", "transform"),
-            ("TransformInv", "transform_inv"),
-        ] {
-            let _ = write!(
-                self.out,
-                "\n    /// See [`{tr}`].\n    #[inline(always)]\n    pub fn {m}<R>(self, rhs: R) -> <Self as {tr}<R>>::Output\n    where\n        Self: {tr}<R>,\n    {{\n        {tr}::{m}(self, rhs)\n    }}\n"
-            );
+        // A product method where the kind has the product with some kind (the geometric
+        // product always, with a coefficient).
+        let alg = &self.spec.algebra;
+        let has = |op: BinOp| {
+            op == BinOp::Gp
+                || self
+                    .spec
+                    .kinds
+                    .iter()
+                    .any(|b| !binop_support(alg, op, &k.layout, &b.layout).is_empty())
+        };
+        for op in [
+            BinOp::Gp,
+            BinOp::Wedge,
+            BinOp::Vee,
+            BinOp::Dot,
+            BinOp::Lc,
+            BinOp::Rc,
+            BinOp::Scalar,
+            BinOp::Commutator,
+            BinOp::Anticommutator,
+        ]
+        .into_iter()
+        .filter(|&op| has(op))
+        {
+            let (tr, m, _) = op.names();
+            let _ = write!(self.out, "\n{}", binary_method(tr, m));
         }
         for (tr, m) in [
             ("Reverse", "reverse"),
@@ -333,6 +334,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
             .kinds
             .iter()
             .find(|k| k.layout.blades.len() == 1 && k.layout.blades[0].0 == full)
+            .filter(|ps| !binop_support(alg, BinOp::Gp, &k.layout, &ps.layout).is_empty())
         {
             let (pn, sign) = (&ps.name, if ps.layout.blades[0].1 > 0 { "" } else { "-" });
             let _ = write!(
@@ -349,8 +351,8 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         );
     }
 
-    /// The value constructors (`new`, `slot`, per orientation), `gx::Slot`, `prepare`, and the
-    /// coefficient accessors of a kind.
+    /// The value constructors (`new`, `slot`, per orientation), `gx::Slot`, a versor's
+    /// `transform`, `transform_inv` and `prepare`, and the coefficient accessors of a kind.
     fn kind_values(&mut self, k: &KindSpec) {
         let name = &k.name;
         let lit = |c: &str| kind_literal(name, c);
@@ -376,20 +378,35 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         }
         let _ = write!(
             self.out,
-            "impl<T: Coef, O: gx::Orientation> gx::Slot for {name}<(), T, O> {{\n    type Map = {name}<({name}<(), f64, O>,), T, O>;\n    #[inline(always)]\n    fn slot() -> Self::Map {{\n        {identity}\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> {name}<(), T, O> {{\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see\n    /// [`gx::Prepared`]).\n    #[inline(always)]\n    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output\n    where\n        Self: gx::Prepare<X>,\n    {{\n        gx::Prepare::prepare(self)\n    }}\n"
+            "impl<T: Coef, O: gx::Orientation> gx::Slot for {name}<(), T, O> {{\n    type Map = {name}<({name}<(), f64, O>,), T, O>;\n    #[inline(always)]\n    fn slot() -> Self::Map {{\n        {identity}\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> {name}<(), T, O> {{\n"
         );
-        for (i, b) in k.blades.iter().enumerate() {
+        // A versor's value transforms and prepares, where its sandwiches were generated.
+        if self.transforms.contains(name) {
             let _ = write!(
                 self.out,
-                "\n    /// Coefficient of `{b}`.\n    #[inline(always)]\n    pub fn {}(&self) -> T {{\n        self.c[{i}]\n    }}\n",
-                blade_ident(b)
+                "{}\n{}\n    /// This versor's action on kind `X`, prepared for applying it to many objects (see\n    /// [`gx::Prepared`]).\n    #[inline(always)]\n    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output\n    where\n        Self: gx::Prepare<X>,\n    {{\n        gx::Prepare::prepare(self)\n    }}\n\n",
+                binary_method("Transform", "transform"),
+                binary_method("TransformInv", "transform_inv")
             );
         }
+        let accessors: Vec<String> = k
+            .blades
+            .iter()
+            .enumerate()
+            .map(|(i, b)| {
+                format!(
+                    "    /// Coefficient of `{b}`.\n    #[inline(always)]\n    pub fn {}(&self) -> T {{\n        self.c[{i}]\n    }}\n",
+                    blade_ident(b)
+                )
+            })
+            .collect();
+        self.w(&accessors.join("\n"));
         self.w("}\n\n");
     }
 
     /// The methods of a kind's maps and forms: building them from images, filling both slots,
-    /// inverses, determinants, decompositions and solves (see `gax_core::extensor`).
+    /// a base kind's outermorphisms, inverses, determinants, decompositions and solves, and for
+    /// the scalar kind those of forms and pairings (see `gax_core::extensor`).
     #[allow(clippy::too_many_lines)]
     fn kind_maps(&mut self, k: &KindSpec) {
         let name = &k.name;
@@ -432,16 +449,19 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
 "
         );
 
-        // A form as a map, for the scalar kind.
-        if k.layout.blades == [(0, 1)] {
+        // The extensions of a map on vectors (or antivectors) to the other grades.
+        if self.outer_bases.contains(name) {
             let _ = write!(
                 self.out,
-                r"impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
-    /// This form `{name} <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
-    /// methods of maps (`svd`, `pinv`, `svdvals`, `det`).
-    #[inline]
-    pub fn as_map(self) -> <A as Kind>::Mv<(B,), T> {{
-        gx::FormAsMap::as_map(self)
+                r"impl<T: Coef, O: gx::Orientation> {name}<({name}<(), f64, O>,), T, O> {{
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {{
+        gx::Outermorphism::outermorphism(self)
     }}
 }}
 
@@ -460,6 +480,16 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A, Inverse = <A as Kind>::Mv<({name}<(), f64, O>,), T>>,
     {{
         SquareMap::inverse(self)
+    }}
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as Kind>::Mv<({name}<(), f64, O>,), T>>
+    where
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A, Inverse = <A as Kind>::Mv<({name}<(), f64, O>,), T>>,
+    {{
+        SquareMap::try_inverse(self)
     }}
 
     /// The determinant of the map's coefficient matrix.
@@ -531,6 +561,17 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         SquareMap::solve(self, rhs)
     }}
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as Kind>::Mv<X::Slots, T>>
+    where
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
+        X: Extensor<Kind = {name}<(), f64, O>, Coef = T>,
+    {{
+        SquareMap::try_solve(self, rhs)
+    }}
+
     /// The Moore–Penrose pseudo-inverse, `A <- {name}`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) ≈ b`.
     #[inline]
@@ -568,6 +609,22 @@ impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
     }}
 }}
 
+"
+        );
+
+        // The methods of forms and pairings, `{name} <- (A, B)`: for the scalar kind.
+        if name == &self.spec.scalar_kind().name {
+            let _ = write!(
+                self.out,
+                r"impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
+    /// This form `{name} <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
+    /// methods of maps (`svd`, `pinv`, `svdvals`, `det`).
+    #[inline]
+    pub fn as_map(self) -> <A as Kind>::Mv<(B,), T> {{
+        gx::FormAsMap::as_map(self)
+    }}
+}}
+
 impl<A: Kind, B: Kind, T: Real, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// Solve the pairing `self(x, ·) == rhs(l, ·)` for `x`; leading slots of `rhs` become slots
     /// of `x` (see [`Pairing::solve`]; a map's `solve` inverts the map itself).
@@ -579,6 +636,18 @@ impl<A: Kind, B: Kind, T: Real, O: gx::Orientation> {name}<(A, B), T, O> {{
         R::Slots: SplitLast<Last = B>,
     {{
         Pairing::solve(self, rhs)
+    }}
+
+    /// [`solve`](Self::solve), or `None` where the pairing is singular or the solution is not
+    /// finite (see [`Pairing::try_solve`]).
+    #[inline]
+    pub fn try_solve<R>(self, rhs: R) -> Option<<A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>>
+    where
+        Self: Pairing<Coef = T, Kind = {name}<(), f64, O>, First = A, Second = B>,
+        R: Extensor<Kind = {name}<(), f64, O>, Coef = T>,
+        R::Slots: SplitLast<Last = B>,
+    {{
+        Pairing::try_solve(self, rhs)
     }}
 }}
 
@@ -622,7 +691,8 @@ impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
 }}
 
 "
-        );
+            );
+        }
     }
 
     /// A kind's arithmetic: sums, negation, scaling and division by scalars, and the operators
@@ -784,6 +854,14 @@ impl<S: Slots, O: gx::Orientation> core::ops::Mul<{name}<S, f64, O>> for f64 {{
         }
         self.w(&body);
     }
+}
+
+/// The method `m` forwarding to the binary trait `tr` (`gp`, `transform`), indented for an impl
+/// block.
+fn binary_method(tr: &str, m: &str) -> String {
+    format!(
+        "    /// See [`{tr}`].\n    #[inline(always)]\n    pub fn {m}<R>(self, rhs: R) -> <Self as {tr}<R>>::Output\n    where\n        Self: {tr}<R>,\n    {{\n        {tr}::{m}(self, rhs)\n    }}\n"
+    )
 }
 
 /// The blades of `a` listed by `keep` (in `a`'s order) as `(i, j, flip)` entries of `b`'s

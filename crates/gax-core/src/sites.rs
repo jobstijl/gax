@@ -349,10 +349,27 @@ impl<K: FlatKind, const N: usize, T: Real> SiteField<K, N, (Sites<K, N>,), T> {
         SquareMap::solve(self, b)
     }
 
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`SquareMap::try_solve`]).
+    #[must_use]
+    pub fn try_solve<X>(self, b: X) -> Option<SiteField<K, N, X::Slots, T>>
+    where
+        X: Extensor<Kind = Sites<K, N>, Coef = T>,
+    {
+        SquareMap::try_solve(self, b)
+    }
+
     /// The inverse field map.
     #[must_use]
     pub fn inverse(self) -> Self {
         SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`SquareMap::try_inverse`]).
+    #[must_use]
+    pub fn try_inverse(self) -> Option<Self> {
+        SquareMap::try_inverse(self)
     }
 
     /// The determinant of the block matrix.

@@ -14,7 +14,7 @@ help: the trait `gax::__private::linalg::SquareArr<f64>` is not implemented for 
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   = note: required for `Plane<(gax::pga3d::oriented::Line,)>` to implement `SquareMap`
 note: required by a bound in `Plane::<(A,), T, O>::inverse`
- --> src/algebras/pga3d/kinds_1.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   |     pub fn inverse(self) -> <A as gx::Kind>::Mv<(Plane<(), f64, O>,), T>
   |            ------- required by a bound in this associated function

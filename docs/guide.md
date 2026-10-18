@@ -431,6 +431,37 @@ let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & projection);
 // on_planes.of(l) & p == l & projection.of(p) for every plane l and point p
 ```
 
+**When a solve fails.** The plain methods do not check. A singular dense map's `inverse` and
+`solve`, and a singular pairing's `solve`, return non-finite coefficients (NaN or infinities),
+and a form's `eigh` returns NaN against a metric that is not positive definite. That keeps
+them branch free, so they run unchanged on SIMD lanes and in
+traced kernels. The field maps' `solve` and `solve_direct` panic instead, with the reason,
+because a field is too large to inspect for NaN afterwards.
+
+Each solve has a checked twin that returns an `Option`:
+
+* `try_inverse()` and `try_solve(rhs)` on square maps;
+* `try_solve(rhs)` on pairings;
+* `try_solve(b)` (conjugate gradients) and `try_solve_direct(b)` (sparse LU) on field maps.
+
+The twin runs the same factorization and returns `None` if the map is singular or the result is
+not finite. Singular means one test everywhere: a pivot of the LU factorization at most
+`n ε max|aᵢⱼ|` in magnitude, with `n` the number of unknowns and `aᵢⱼ` the coefficients. That
+is NumPy's `matrix_rank` tolerance, applied to the pivots instead of the singular values.
+`factor` uses the same test for its `Err(Singular)`. Conjugate gradients fails when its residual
+stays above `√ε`. On SIMD lanes, `None` means that some lane failed.
+
+```rust
+use gax::pga3d::{Plane, Point};
+
+let eye = Point::<(), f64>::xyz(0.0, 0.0, 5.0);
+let floor = Plane::<(), f64>::new(0.0, 0.0, 1.0, 0.0);
+let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ floor;
+assert_eq!(projection.try_inverse(), None); // it sends the eye to zero
+let p = Point::xyz(1.0, 2.0, 3.0);
+assert_eq!(projection.try_solve(projection.of(p)), None); // the ray from the eye shares the shadow
+```
+
 Values have closed-form methods where their type allows them:
 
 * `inverse`;

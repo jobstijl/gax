@@ -167,48 +167,9 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         out: String::new(),
         stats: Stats::default(),
         helpers: BTreeSet::new(),
+        transforms: BTreeSet::new(),
+        outer_bases: BTreeSet::new(),
     };
-    e.header();
-    e.part("kinds");
-    let phase = std::time::Instant::now();
-    let values = crate::par::map(&spec.kinds, |k| {
-        crate::par::timed(
-            || format!("{} values of {}", spec.name, k.name),
-            || crate::emit_values::value_methods(spec, k),
-        )
-    });
-    for (k, (methods, meta)) in spec.kinds.iter().zip(values) {
-        e.kind(k);
-        e.out.push_str(&methods);
-        value_traits(&k.name, &meta, &mut e.out);
-        e.stats.values.push(meta);
-    }
-    kind_eqs(spec, &mut e.out);
-    kind_tables(spec, &mut e.out);
-    crate::par::report(&format!("{} values", spec.name), phase);
-    let phase = std::time::Instant::now();
-    for op in BinOp::ALL {
-        e.part(&format!("products_{}", format!("{op:?}").to_lowercase()));
-        for a in &spec.kinds {
-            for b in &spec.kinds {
-                e.binary(op, a, b);
-            }
-        }
-    }
-    crate::par::report(&format!("{} products", spec.name), phase);
-    let phase = std::time::Instant::now();
-    e.part("conversions");
-    e.divisions();
-    e.embeddings();
-    for k in &spec.kinds {
-        for op in UnOp::ALL {
-            e.unary(op, k);
-        }
-    }
-    crate::par::report(
-        &format!("{} divisions, embeddings, unary", spec.name),
-        phase,
-    );
     let phase = std::time::Instant::now();
     let jobs: Vec<(&KindSpec, &KindSpec, bool)> = spec
         .kinds
@@ -253,6 +214,60 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         },
         || crate::emit_outer::outermorphisms(spec),
     );
+    crate::par::report(
+        &format!("{} sandwiches and outermorphisms", spec.name),
+        phase,
+    );
+    // The kinds' methods `transform`, `prepare` and `outermorphism` are emitted only where
+    // these impls exist.
+    e.transforms = jobs
+        .iter()
+        .zip(&maths)
+        .filter(|((_, _, unit), math)| !unit && math.is_some())
+        .map(|((v, _, _), _)| v.name.clone())
+        .collect();
+    e.outer_bases = pairs.iter().map(|(base, _, _)| base.clone()).collect();
+    e.header();
+    e.part("kinds");
+    let phase = std::time::Instant::now();
+    let values = crate::par::map(&spec.kinds, |k| {
+        crate::par::timed(
+            || format!("{} values of {}", spec.name, k.name),
+            || crate::emit_values::value_methods(spec, k),
+        )
+    });
+    for (k, (methods, meta)) in spec.kinds.iter().zip(values) {
+        e.kind(k);
+        e.out.push_str(&methods);
+        value_traits(&k.name, &meta, &mut e.out);
+        e.stats.values.push(meta);
+    }
+    kind_eqs(spec, &mut e.out);
+    kind_tables(spec, &mut e.out);
+    crate::par::report(&format!("{} values", spec.name), phase);
+    let phase = std::time::Instant::now();
+    for op in BinOp::ALL {
+        e.part(&format!("products_{}", format!("{op:?}").to_lowercase()));
+        for a in &spec.kinds {
+            for b in &spec.kinds {
+                e.binary(op, a, b);
+            }
+        }
+    }
+    crate::par::report(&format!("{} products", spec.name), phase);
+    let phase = std::time::Instant::now();
+    e.part("conversions");
+    e.divisions();
+    e.embeddings();
+    for k in &spec.kinds {
+        for op in UnOp::ALL {
+            e.unary(op, k);
+        }
+    }
+    crate::par::report(
+        &format!("{} divisions, embeddings, unary", spec.name),
+        phase,
+    );
     let mut versor = "";
     for (&(v, x, unit), math) in jobs.iter().zip(maths) {
         if v.name != versor {
@@ -263,10 +278,6 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             e.sandwich(v, x, unit, math);
         }
     }
-    crate::par::report(
-        &format!("{} sandwiches and outermorphisms", spec.name),
-        phase,
-    );
     e.part("outermorphisms");
     e.out.push_str(&outer);
     e.stats.outermorphisms = pairs;
@@ -407,6 +418,10 @@ struct Emitter<'a> {
     stats: Stats,
     /// The plain sandwich kernels emitted so far, by name.
     helpers: BTreeSet<String>,
+    /// The versor kinds whose plain values have `Transform` and `Prepare` impls.
+    transforms: BTreeSet<String>,
+    /// The kinds whose maps to themselves have `Outermorphism` impls.
+    outer_bases: BTreeSet<String>,
 }
 
 /// Rust identifier for a blade accessor (`1` becomes `s`).
