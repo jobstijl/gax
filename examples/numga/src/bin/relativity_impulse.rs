@@ -180,7 +180,7 @@ mod impulse {
         let half_rapidity = speed.atanh();
         // Start in the symmetric frame: two identical velocity reversals at time zero.
         let (kinks, directions) = velocity_step(-half_rapidity, half_rapidity);
-        let bisector = (directions[0] + directions[1]).normalized().into_inner();
+        let bisector = (directions[0] + directions[1]).normalized();
         // Leave the passenger open to obtain the observer change as a map; apply each to both
         // events and tangents, preserving incidence.
         let views = [Vector::slot(), boost(half_rapidity)];

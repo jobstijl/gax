@@ -62,7 +62,7 @@ mod collision {
     /// Its two roots lie either side of the centre's offset `b / a`, the outward one beyond it
     /// along `n`. Rescaling `q` rescales all three alike, so neither root moves.
     pub fn tangent_line(q: Quadric, normal: L) -> L {
-        let n = normal.normalized().into_inner();
+        let n = normal.normalized();
         let inf = infinity();
         let (a, b, c) = (
             (inf & q.of(inf)).s(),
@@ -155,8 +155,8 @@ mod collision {
     pub fn contact(q1: Quadric, q2: Quadric) -> (f64, L, P) {
         let (lambda, _) = peak(q1, q2);
         let (_, _, lines) = blend(q1, q2, lambda).dual().svd();
-        let line = lines[2].normalized().into_inner();
-        (lambda, line, q1.of(line).normalized().into_inner())
+        let line = lines[2].normalized();
+        (lambda, line, q1.of(line).normalized())
     }
 
     /// The blend at the peak of a pose that is apart, as a primal quadric: a hyperbola
@@ -365,7 +365,7 @@ fn main() {
 mod tests {
     use super::collision::*;
     use gax::ApproxEq;
-    use gax::pga2d::{Line, Point};
+    use gax::pga2d::{Line, Point, intrinsic};
 
     fn placed() -> Quadric {
         moved(motor(1.5, -0.8, 35f64.to_radians()), ellipse(2.0, 1.2))
@@ -450,10 +450,10 @@ mod tests {
         }
         let (_, line, point) = contact(s.q1, q2[1]);
         assert!((line & s.q1.of(line)).s().abs() < 1e-6);
-        let other = q2[1].of(line).normalized().into_inner();
+        let other = q2[1].of(line).normalized();
         // The two contact points are one: their join vanishes.
         let join = other & point;
-        assert!(join.max_abs_diff(&Line::zero()) < 1e-5);
+        assert!(join.max_abs_diff(&intrinsic::Line::zero()) < 1e-5);
         // numga's contact point, at no distance from ours.
         let numga = Point::xy(0.623064025936332, 0.821205844662909);
         assert!((point & numga).norm() < 1e-6);

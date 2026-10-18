@@ -6,19 +6,19 @@
 #![cfg_attr(not(test), allow(dead_code))]
 
 use core::f64::consts::{FRAC_1_SQRT_2, TAU};
-use gax::sta::{Bivector, Even, Odd, Scalar, Vector};
-use gax::{Complex, Intrinsic};
+use gax::Complex;
+use gax::sta::{Bivector, Even, Odd, Scalar, Vector, intrinsic};
 
 pub type C = Complex<f64>;
 pub type V = Vector<(), f64>;
 pub type B = Bivector<(), f64>;
 /// An excitation: the dual of a field, a bivector of the other orientation (intrinsic).
-pub type Excitation = Bivector<(), f64, Intrinsic>;
+pub type Excitation = intrinsic::Bivector<(), f64>;
 pub type Rotor = gax::Unit<Even<(), f64>>;
 /// numga's `Constitutive`: a field in, its excitation out (`Antibivector <- Bivector`).
-pub type Constitutive = Bivector<(Bivector,), f64, Intrinsic>;
+pub type Constitutive = intrinsic::Bivector<(Bivector,), f64>;
 /// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
-pub type AxionCoupling = Scalar<(), f64, Intrinsic>;
+pub type AxionCoupling = intrinsic::Scalar<(), f64>;
 
 /// numga's `Polarization`, the tangential blades `x y`: a vector of the interface plane,
 /// VGA2D's vector, with complex coefficients for its phase. [`tangential`] sends it into
@@ -35,7 +35,7 @@ pub use gax::vga3d::Paravector as Boundary;
 /// numga's `BoundaryMap`: the boundary amplitudes of a field.
 pub type BoundaryMap = Boundary<(Bivector,), f64>;
 /// The boundary amplitudes of an excitation.
-pub type ExcitationBoundary = Boundary<(Bivector<(), f32, Intrinsic>,), f64>;
+pub type ExcitationBoundary = Boundary<(intrinsic::Bivector,), f64>;
 /// numga's `FieldMap`: the field reconstructed from boundary amplitudes.
 pub type FieldMap = Bivector<(Boundary,), f64>;
 /// The amplitudes' generator along the layer's normal (numga's `Propagation`, real).
@@ -113,7 +113,7 @@ pub fn field_boundary() -> BoundaryMap {
 /// is gax's `hodge`).
 pub fn excitation_boundary() -> ExcitationBoundary {
     let (t, z) = (t(), z());
-    amplitudes().of((t | (t ^ (z ^ Excitation::oriented_slot()).hodge())).cast::<Odd>())
+    amplitudes().of((t | (t ^ (z ^ Excitation::slot()).hodge())).cast::<Odd>())
 }
 
 /// The tangential electric field of the amplitudes as a polarization, `-t · (z · B)`:
@@ -683,7 +683,10 @@ pub mod tests {
             let wavevector = complex(parallel) + complex(z()).gp(index);
             assert!(close(wavevector ^ field, gax::sta::Trivector::zero()));
             let excitation = chi.map_coefs(C::real).of(field);
-            assert!(close(wavevector ^ excitation, gax::sta::Trivector::zero()));
+            assert!(close(
+                wavevector ^ excitation,
+                gax::sta::intrinsic::Trivector::zero()
+            ));
         }
         assert!(near(
             moved.generator,
@@ -799,7 +802,7 @@ pub mod tests {
                 ));
                 assert!(close(
                     complex(normal) ^ (chi.of(last) - right_excitation),
-                    Trivector::zero()
+                    intrinsic::Trivector::zero()
                 ));
                 for field in &fields[k] {
                     let electric = complex(t()) | *field;
@@ -830,7 +833,7 @@ pub mod tests {
             let exterior_excitation = incident_chi.map_coefs(C::real).of(exterior_field);
             assert!(close(
                 complex(normal) ^ (right_excitation - exterior_excitation),
-                Trivector::zero()
+                intrinsic::Trivector::zero()
             ));
         }
     }

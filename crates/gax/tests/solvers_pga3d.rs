@@ -90,8 +90,8 @@ fn generalized_eigenproblem_returns_modes_of_the_slot_kind() {
     for _ in 0..8 {
         let a: Line<(), f64> = random(&mut rng);
         let b: Line<(), f64> = random(&mut rng);
-        let pa: Scalar<(Line,), f64, gax::Intrinsic> = a & Line::slot();
-        let pb: Scalar<(Line,), f64, gax::Intrinsic> = b & Line::slot();
+        let pa: intrinsic::Scalar<(Line,), f64> = a & Line::slot();
+        let pb: intrinsic::Scalar<(Line,), f64> = b & Line::slot();
         stiffness += pa * pa;
         inertia += pb * pb;
     }

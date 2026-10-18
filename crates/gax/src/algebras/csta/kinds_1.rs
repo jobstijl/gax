@@ -8,7 +8,7 @@
 /// linear map from `A`, `Scalar<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Scalar<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Scalar<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 1],
     o: core::marker::PhantomData<O>,
@@ -40,9 +40,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Scalar<
 }
 
 // SAFETY: `Arr<X>` is `[X; 1]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Scalar<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Scalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Scalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Scalar<(), f64, O> {
     const N: usize = 1;
     const NAME: &'static str = "Scalar";
     const MODULE: &'static str = module_path!();
@@ -71,7 +71,7 @@ impl<O: gx::Orientation> gx::Kind for Scalar<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Scalar<S, T, O> {
-    type Kind = Scalar<(), f32, O>;
+    type Kind = Scalar<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -120,7 +120,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Scalar<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Scalar<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -135,9 +135,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Scalar<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Scalar<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Scalar<(), f32, O>: gx::GradePart<G>,
+        Scalar<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -372,7 +372,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -384,30 +384,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Scalar<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Scalar<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(s: T) -> Self {
         Scalar { o: core::marker::PhantomData, c: [s] }
     }
 
-    /// The identity map on `Scalar`: a `Scalar` with one open `Scalar` slot.
+    /// The identity map on `Scalar`: a `Scalar` with one open `Scalar` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Scalar<(Scalar,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Scalar<(Scalar<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Scalar<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(s: T) -> Self {
+        Scalar { o: core::marker::PhantomData, c: [s] }
+    }
+
+    /// The identity map on `Scalar`: a `Scalar` with one open `Scalar` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Scalar<(Scalar<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Scalar<(), T, O> {
+    type Map = Scalar<(Scalar<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Scalar<(), T, O> {
-    /// The identity map on `Scalar` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Scalar<(Scalar<(), f32, O>,), T, O> {
-        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -425,14 +442,14 @@ impl<T: gx::Coef, O: gx::Orientation> Scalar<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Scalar<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Scalar`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Scalar<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Scalar<(), T, O>>) -> Self {
         let images = images.as_ref();
         Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -462,9 +479,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Scalar<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Scalar<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Scalar<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Scalar<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -473,7 +490,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -493,7 +510,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Scalar<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Scalar<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Scalar<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -502,18 +519,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Scalar<(), f32, O> as gx::Kind>::Arr<T>, <Scalar<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Scalar<(), f64, O> as gx::Kind>::Arr<T>, <Scalar<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Scalar<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Scalar<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -521,9 +538,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Scalar<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Scalar<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Scalar<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Scalar<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -532,8 +549,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Scalar<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Scalar<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -541,9 +558,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Scalar<(), f32, O> as gx::Kind>::Arr<Scalar<(), T, O>>, <Scalar<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Scalar<(), f64, O> as gx::Kind>::Arr<Scalar<(), T, O>>, <Scalar<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -551,18 +568,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Scalar`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Scalar<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Scalar<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Scalar<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Scalar<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Scalar<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Scalar<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Scalar<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Scalar<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -571,7 +588,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Scalar<(), f32, O>, Input = Scalar<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Scalar<(), f64, O>, Input = Scalar<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -590,8 +607,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, B), T
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Scalar<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Scalar<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Scalar<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Scalar<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -605,7 +622,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Scalar<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Scalar<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -617,7 +634,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Scalar<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Scalar<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -627,7 +644,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Scalar<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Scalar<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -818,12 +835,19 @@ impl<T: gx::Real, O: gx::Orientation> Scalar<(), T, O> {
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[0] * x[0];
         let s0 = (p0).abs().sqrt().recip();
         let t0 = x[0] * s0;
         gx::Unit::new_unchecked(Scalar::from_coeffs([t0]))
+    }
+
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
     }
 
 }
@@ -834,7 +858,7 @@ impl<T: gx::Real> Scalar<(), T, gx::Extrinsic> {
     pub fn sqrt(self) -> gx::Unit<Self> {
         let mut c = self.c;
         c[0] = c[0] + T::one();
-        Scalar::from_coeffs(c).normalized()
+        Scalar::from_coeffs(c).unit()
     }
 
 }
@@ -878,8 +902,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Scalar<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Scalar<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -899,7 +923,7 @@ impl<T: gx::Real> gx::Sqrt for Scalar<(), T, gx::Extrinsic> {
 /// linear map from `A`, `Vector<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Vector<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Vector<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 6],
     o: core::marker::PhantomData<O>,
@@ -931,9 +955,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Vector<
 }
 
 // SAFETY: `Arr<X>` is `[X; 6]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Vector<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Vector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Vector<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Vector<(), f64, O> {
     const N: usize = 6;
     const NAME: &'static str = "Vector";
     const MODULE: &'static str = module_path!();
@@ -962,7 +986,7 @@ impl<O: gx::Orientation> gx::Kind for Vector<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Vector<S, T, O> {
-    type Kind = Vector<(), f32, O>;
+    type Kind = Vector<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -1011,7 +1035,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Vector<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Vector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -1026,9 +1050,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Vector<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Vector<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Vector<(), f32, O>: gx::GradePart<G>,
+        Vector<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -1263,7 +1287,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -1275,30 +1299,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Vector<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Vector<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e1: T, e2: T, e3: T, e4: T, eo: T, ei: T) -> Self {
         Vector { o: core::marker::PhantomData, c: [e1, e2, e3, e4, eo, ei] }
     }
 
-    /// The identity map on `Vector`: a `Vector` with one open `Vector` slot.
+    /// The identity map on `Vector`: a `Vector` with one open `Vector` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Vector<(Vector,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Vector<(Vector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Vector<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e1: T, e2: T, e3: T, e4: T, eo: T, ei: T) -> Self {
+        Vector { o: core::marker::PhantomData, c: [e1, e2, e3, e4, eo, ei] }
+    }
+
+    /// The identity map on `Vector`: a `Vector` with one open `Vector` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Vector<(Vector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Vector<(), T, O> {
+    type Map = Vector<(Vector<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Vector<(), T, O> {
-    /// The identity map on `Vector` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Vector<(Vector<(), f32, O>,), T, O> {
-        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -1346,14 +1387,14 @@ impl<T: gx::Coef, O: gx::Orientation> Vector<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Vector<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Vector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Vector<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Vector<(), T, O>>) -> Self {
         let images = images.as_ref();
         Vector { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -1374,9 +1415,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     /// The inverse map, `A <- Vector`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Vector<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Vector<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Vector<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Vector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -1385,7 +1426,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -1405,7 +1446,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Vector<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Vector<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Vector<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -1414,18 +1455,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Vector<(), f32, O> as gx::Kind>::Arr<T>, <Vector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Vector<(), f64, O> as gx::Kind>::Arr<T>, <Vector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Vector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Vector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -1433,9 +1474,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Vector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Vector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Vector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Vector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -1444,8 +1485,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Vector<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Vector<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -1453,9 +1494,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Vector<(), f32, O> as gx::Kind>::Arr<Vector<(), T, O>>, <Vector<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Vector<(), f64, O> as gx::Kind>::Arr<Vector<(), T, O>>, <Vector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -1463,18 +1504,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Vector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Vector<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Vector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Vector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Vector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Vector<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Vector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Vector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Vector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -1483,7 +1524,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Vector<(), f32, O>, Input = Vector<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Vector<(), f64, O>, Input = Vector<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -1502,8 +1543,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, B), T
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Vector<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Vector<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Vector<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Vector<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -1517,7 +1558,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Vector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -1529,7 +1570,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Vector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -1539,7 +1580,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Vector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -1770,7 +1811,7 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p1 = x[1] * x[1];
         let p2 = x[2] * x[2];
@@ -1787,6 +1828,13 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
         let t4 = x[4] * s0;
         let t5 = x[5] * s0;
         gx::Unit::new_unchecked(Vector::from_coeffs([t0, t1, t2, t3, t4, t5]))
+    }
+
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
     }
 
 }
@@ -1846,8 +1894,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Vector<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Vector<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -1859,7 +1907,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Vector<(), T, O> {
 /// linear map from `A`, `Twist<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Twist<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Twist<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 10],
     o: core::marker::PhantomData<O>,
@@ -1891,9 +1939,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Twist<S
 }
 
 // SAFETY: `Arr<X>` is `[X; 10]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Twist<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Twist<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Twist<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Twist<(), f64, O> {
     const N: usize = 10;
     const NAME: &'static str = "Twist";
     const MODULE: &'static str = module_path!();
@@ -1922,7 +1970,7 @@ impl<O: gx::Orientation> gx::Kind for Twist<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Twist<S, T, O> {
-    type Kind = Twist<(), f32, O>;
+    type Kind = Twist<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -1971,7 +2019,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Twist<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Twist<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -1986,9 +2034,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Twist<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Twist<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Twist<(), f32, O>: gx::GradePart<G>,
+        Twist<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -2223,7 +2271,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -2235,30 +2283,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Twist<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Twist<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1i: T, e2i: T, e3i: T, e4i: T) -> Self {
         Twist { o: core::marker::PhantomData, c: [e23, e31, e12, e41, e42, e43, e1i, e2i, e3i, e4i] }
     }
 
-    /// The identity map on `Twist`: a `Twist` with one open `Twist` slot.
+    /// The identity map on `Twist`: a `Twist` with one open `Twist` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Twist<(Twist,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Twist<(Twist<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Twist<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1i: T, e2i: T, e3i: T, e4i: T) -> Self {
+        Twist { o: core::marker::PhantomData, c: [e23, e31, e12, e41, e42, e43, e1i, e2i, e3i, e4i] }
+    }
+
+    /// The identity map on `Twist`: a `Twist` with one open `Twist` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Twist<(Twist<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Twist<(), T, O> {
+    type Map = Twist<(Twist<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Twist<(), T, O> {
-    /// The identity map on `Twist` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Twist<(Twist<(), f32, O>,), T, O> {
-        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -2330,14 +2395,14 @@ impl<T: gx::Coef, O: gx::Orientation> Twist<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Twist<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Twist<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Twist`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Twist<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Twist<(), T, O>>) -> Self {
         let images = images.as_ref();
         Twist { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -2358,9 +2423,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Twist<(A, B), T,
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     /// The inverse map, `A <- Twist`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Twist<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Twist<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Twist<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Twist<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -2369,7 +2434,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -2389,7 +2454,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Twist<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Twist<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Twist<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -2398,18 +2463,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Twist<(), f32, O> as gx::Kind>::Arr<T>, <Twist<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Twist<(), f64, O> as gx::Kind>::Arr<T>, <Twist<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Twist<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Twist<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -2417,9 +2482,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Twist<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Twist<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Twist<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Twist<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -2428,8 +2493,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Twist<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Twist<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -2437,9 +2502,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Twist<(), f32, O> as gx::Kind>::Arr<Twist<(), T, O>>, <Twist<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Twist<(), f64, O> as gx::Kind>::Arr<Twist<(), T, O>>, <Twist<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -2447,18 +2512,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Twist`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Twist<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Twist<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Twist<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Twist<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Twist<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Twist<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Twist<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Twist<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -2467,7 +2532,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Twist<(), f32, O>, Input = Twist<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Twist<(), f64, O>, Input = Twist<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -2486,8 +2551,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, B), T,
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Twist<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Twist<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Twist<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Twist<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -2501,7 +2566,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Twist<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Twist<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -2513,7 +2578,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Twist<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Twist<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -2523,7 +2588,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Twist<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Twist<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -2855,7 +2920,7 @@ impl<T: gx::Real, O: gx::Orientation> Twist<(), T, O> {
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[0] * x[3];
         let p1 = x[1] * x[4];
@@ -2946,6 +3011,13 @@ impl<T: gx::Real, O: gx::Orientation> Twist<(), T, O> {
         let t94 = t93 * T::from_i64(2);
         let t95 = x[9].mul_add(s0, t94);
         gx::Unit::new_unchecked(Twist::from_coeffs([t69, t71, t73, t75, t77, t79, t83, t87, t91, t95]))
+    }
+
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
     }
 
 }
@@ -3223,8 +3295,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Twist<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Twist<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -3236,7 +3308,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Twist<(), T, O> {
 /// linear map from `A`, `Bivector<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Bivector<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Bivector<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 15],
     o: core::marker::PhantomData<O>,
@@ -3268,9 +3340,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Bivecto
 }
 
 // SAFETY: `Arr<X>` is `[X; 15]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Bivector<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Bivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Bivector<(), f64, O> {
     const N: usize = 15;
     const NAME: &'static str = "Bivector";
     const MODULE: &'static str = module_path!();
@@ -3299,7 +3371,7 @@ impl<O: gx::Orientation> gx::Kind for Bivector<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Bivector<S, T, O> {
-    type Kind = Bivector<(), f32, O>;
+    type Kind = Bivector<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -3348,7 +3420,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Bivector<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Bivector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -3363,9 +3435,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Bivector<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Bivector<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Bivector<(), f32, O>: gx::GradePart<G>,
+        Bivector<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -3600,7 +3672,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -3612,30 +3684,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Bivector<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Bivector<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1o: T, e2o: T, e3o: T, e4o: T, e1i: T, e2i: T, e3i: T, e4i: T, eoi: T) -> Self {
         Bivector { o: core::marker::PhantomData, c: [e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi] }
     }
 
-    /// The identity map on `Bivector`: a `Bivector` with one open `Bivector` slot.
+    /// The identity map on `Bivector`: a `Bivector` with one open `Bivector` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Bivector<(Bivector,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Bivector<(Bivector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Bivector<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1o: T, e2o: T, e3o: T, e4o: T, e1i: T, e2i: T, e3i: T, e4i: T, eoi: T) -> Self {
+        Bivector { o: core::marker::PhantomData, c: [e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi] }
+    }
+
+    /// The identity map on `Bivector`: a `Bivector` with one open `Bivector` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Bivector<(Bivector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Bivector<(), T, O> {
+    type Map = Bivector<(Bivector<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Bivector<(), T, O> {
-    /// The identity map on `Bivector` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Bivector<(Bivector<(), f32, O>,), T, O> {
-        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -3737,14 +3826,14 @@ impl<T: gx::Coef, O: gx::Orientation> Bivector<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Bivector<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Bivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Bivector<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Bivector<(), T, O>>) -> Self {
         let images = images.as_ref();
         Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -3765,9 +3854,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A, B),
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// The inverse map, `A <- Bivector`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Bivector<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Bivector<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Bivector<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Bivector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -3776,7 +3865,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -3796,7 +3885,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Bivector<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Bivector<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Bivector<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -3805,18 +3894,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Bivector<(), f32, O> as gx::Kind>::Arr<T>, <Bivector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Bivector<(), f64, O> as gx::Kind>::Arr<T>, <Bivector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Bivector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Bivector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -3824,9 +3913,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Bivector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Bivector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Bivector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Bivector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -3835,8 +3924,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Bivector<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Bivector<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -3844,9 +3933,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Bivector<(), f32, O> as gx::Kind>::Arr<Bivector<(), T, O>>, <Bivector<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Bivector<(), f64, O> as gx::Kind>::Arr<Bivector<(), T, O>>, <Bivector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -3854,18 +3943,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Bivector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Bivector<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Bivector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Bivector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Bivector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Bivector<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Bivector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Bivector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Bivector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -3874,7 +3963,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Bivector<(), f32, O>, Input = Bivector<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Bivector<(), f64, O>, Input = Bivector<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -3893,8 +3982,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, B),
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Bivector<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Bivector<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Bivector<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Bivector<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -3908,7 +3997,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Bivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Bivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -3920,7 +4009,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Bivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Bivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -3930,7 +4019,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Bivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Bivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -4642,7 +4731,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Bivector<(), T, O> {
 /// linear map from `A`, `Trivector<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Trivector<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Trivector<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 20],
     o: core::marker::PhantomData<O>,
@@ -4674,9 +4763,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Trivect
 }
 
 // SAFETY: `Arr<X>` is `[X; 20]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Trivector<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Trivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Trivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Trivector<(), f64, O> {
     const N: usize = 20;
     const NAME: &'static str = "Trivector";
     const MODULE: &'static str = module_path!();
@@ -4705,7 +4794,7 @@ impl<O: gx::Orientation> gx::Kind for Trivector<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Trivector<S, T, O> {
-    type Kind = Trivector<(), f32, O>;
+    type Kind = Trivector<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -4754,7 +4843,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Trivector<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Trivector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -4769,9 +4858,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Trivector<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Trivector<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Trivector<(), f32, O>: gx::GradePart<G>,
+        Trivector<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -5006,7 +5095,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -5018,30 +5107,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Trivector<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Trivector<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e234: T, e314: T, e124: T, e123: T, e23o: T, e31o: T, e12o: T, e41o: T, e42o: T, e43o: T, e23i: T, e31i: T, e12i: T, e41i: T, e42i: T, e43i: T, e1oi: T, e2oi: T, e3oi: T, e4oi: T) -> Self {
         Trivector { o: core::marker::PhantomData, c: [e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi] }
     }
 
-    /// The identity map on `Trivector`: a `Trivector` with one open `Trivector` slot.
+    /// The identity map on `Trivector`: a `Trivector` with one open `Trivector` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Trivector<(Trivector,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Trivector<(Trivector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Trivector<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e234: T, e314: T, e124: T, e123: T, e23o: T, e31o: T, e12o: T, e41o: T, e42o: T, e43o: T, e23i: T, e31i: T, e12i: T, e41i: T, e42i: T, e43i: T, e1oi: T, e2oi: T, e3oi: T, e4oi: T) -> Self {
+        Trivector { o: core::marker::PhantomData, c: [e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi] }
+    }
+
+    /// The identity map on `Trivector`: a `Trivector` with one open `Trivector` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Trivector<(Trivector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Trivector<(), T, O> {
+    type Map = Trivector<(Trivector<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Trivector<(), T, O> {
-    /// The identity map on `Trivector` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Trivector<(Trivector<(), f32, O>,), T, O> {
-        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -5173,14 +5279,14 @@ impl<T: gx::Coef, O: gx::Orientation> Trivector<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Trivector<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Trivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Trivector<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Trivector<(), T, O>>) -> Self {
         let images = images.as_ref();
         Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -5201,9 +5307,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A, B)
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// The inverse map, `A <- Trivector`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Trivector<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Trivector<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Trivector<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Trivector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -5212,7 +5318,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -5232,7 +5338,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Trivector<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Trivector<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Trivector<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -5241,18 +5347,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Trivector<(), f32, O> as gx::Kind>::Arr<T>, <Trivector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Trivector<(), f64, O> as gx::Kind>::Arr<T>, <Trivector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Trivector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Trivector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -5260,9 +5366,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Trivector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Trivector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Trivector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Trivector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -5271,8 +5377,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Trivector<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Trivector<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -5280,9 +5386,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Trivector<(), f32, O> as gx::Kind>::Arr<Trivector<(), T, O>>, <Trivector<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Trivector<(), f64, O> as gx::Kind>::Arr<Trivector<(), T, O>>, <Trivector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -5290,18 +5396,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Trivector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Trivector<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Trivector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Trivector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Trivector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Trivector<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Trivector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Trivector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Trivector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -5310,7 +5416,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Trivector<(), f32, O>, Input = Trivector<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Trivector<(), f64, O>, Input = Trivector<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -5329,8 +5435,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, B)
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Trivector<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Trivector<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Trivector<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Trivector<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -5344,7 +5450,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Trivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Trivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -5356,7 +5462,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Trivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Trivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -5366,7 +5472,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Trivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Trivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -5651,7 +5757,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Trivector<(), T, O> {
 /// linear map from `A`, `Quadvector<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Quadvector<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Quadvector<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 15],
     o: core::marker::PhantomData<O>,
@@ -5683,9 +5789,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Quadvec
 }
 
 // SAFETY: `Arr<X>` is `[X; 15]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Quadvector<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Quadvector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Quadvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Quadvector<(), f64, O> {
     const N: usize = 15;
     const NAME: &'static str = "Quadvector";
     const MODULE: &'static str = module_path!();
@@ -5714,7 +5820,7 @@ impl<O: gx::Orientation> gx::Kind for Quadvector<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Quadvector<S, T, O> {
-    type Kind = Quadvector<(), f32, O>;
+    type Kind = Quadvector<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -5763,7 +5869,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Quadvector<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Quadvector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -5778,9 +5884,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Quadvector<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Quadvector<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Quadvector<(), f32, O>: gx::GradePart<G>,
+        Quadvector<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -6015,7 +6121,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -6027,30 +6133,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Quadvector<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Quadvector<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e1234: T, e234o: T, e314o: T, e124o: T, e123o: T, e234i: T, e314i: T, e124i: T, e123i: T, e23oi: T, e31oi: T, e12oi: T, e41oi: T, e42oi: T, e43oi: T) -> Self {
         Quadvector { o: core::marker::PhantomData, c: [e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi] }
     }
 
-    /// The identity map on `Quadvector`: a `Quadvector` with one open `Quadvector` slot.
+    /// The identity map on `Quadvector`: a `Quadvector` with one open `Quadvector` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Quadvector<(Quadvector,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Quadvector<(Quadvector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Quadvector<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e1234: T, e234o: T, e314o: T, e124o: T, e123o: T, e234i: T, e314i: T, e124i: T, e123i: T, e23oi: T, e31oi: T, e12oi: T, e41oi: T, e42oi: T, e43oi: T) -> Self {
+        Quadvector { o: core::marker::PhantomData, c: [e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi] }
+    }
+
+    /// The identity map on `Quadvector`: a `Quadvector` with one open `Quadvector` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Quadvector<(Quadvector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Quadvector<(), T, O> {
+    type Map = Quadvector<(Quadvector<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Quadvector<(), T, O> {
-    /// The identity map on `Quadvector` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Quadvector<(Quadvector<(), f32, O>,), T, O> {
-        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -6152,14 +6275,14 @@ impl<T: gx::Coef, O: gx::Orientation> Quadvector<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Quadvector<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Quadvector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Quadvector<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Quadvector<(), T, O>>) -> Self {
         let images = images.as_ref();
         Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -6180,9 +6303,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A, B
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// The inverse map, `A <- Quadvector`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Quadvector<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Quadvector<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Quadvector<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Quadvector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -6191,7 +6314,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -6211,7 +6334,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quadvector<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quadvector<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quadvector<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -6220,18 +6343,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Quadvector<(), f32, O> as gx::Kind>::Arr<T>, <Quadvector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Quadvector<(), f64, O> as gx::Kind>::Arr<T>, <Quadvector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Quadvector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Quadvector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -6239,9 +6362,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Quadvector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Quadvector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Quadvector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Quadvector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -6250,8 +6373,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Quadvector<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Quadvector<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -6259,9 +6382,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Quadvector<(), f32, O> as gx::Kind>::Arr<Quadvector<(), T, O>>, <Quadvector<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Quadvector<(), f64, O> as gx::Kind>::Arr<Quadvector<(), T, O>>, <Quadvector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -6269,18 +6392,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Quadvector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Quadvector<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Quadvector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quadvector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quadvector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Quadvector<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Quadvector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quadvector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quadvector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -6289,7 +6412,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Quadvector<(), f32, O>, Input = Quadvector<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Quadvector<(), f64, O>, Input = Quadvector<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -6308,8 +6431,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, B
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Quadvector<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Quadvector<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Quadvector<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Quadvector<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -6323,7 +6446,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Quadvector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Quadvector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -6335,7 +6458,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Quadvector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Quadvector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -6345,7 +6468,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Quadvector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Quadvector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -6621,7 +6744,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Quadvector<(), T, O> {
 /// linear map from `A`, `Quintvector<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Quintvector<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Quintvector<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 6],
     o: core::marker::PhantomData<O>,
@@ -6653,9 +6776,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Quintve
 }
 
 // SAFETY: `Arr<X>` is `[X; 6]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Quintvector<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Quintvector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Quintvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Quintvector<(), f64, O> {
     const N: usize = 6;
     const NAME: &'static str = "Quintvector";
     const MODULE: &'static str = module_path!();
@@ -6684,7 +6807,7 @@ impl<O: gx::Orientation> gx::Kind for Quintvector<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Quintvector<S, T, O> {
-    type Kind = Quintvector<(), f32, O>;
+    type Kind = Quintvector<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -6733,7 +6856,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Quintvector<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Quintvector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -6748,9 +6871,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Quintvector<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Quintvector<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Quintvector<(), f32, O>: gx::GradePart<G>,
+        Quintvector<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -6985,7 +7108,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -6997,30 +7120,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Quintvector<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Quintvector<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e234oi: T, e314oi: T, e124oi: T, e123oi: T, e1234o: T, e1234i: T) -> Self {
         Quintvector { o: core::marker::PhantomData, c: [e234oi, e314oi, e124oi, e123oi, e1234o, e1234i] }
     }
 
-    /// The identity map on `Quintvector`: a `Quintvector` with one open `Quintvector` slot.
+    /// The identity map on `Quintvector`: a `Quintvector` with one open `Quintvector` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Quintvector<(Quintvector,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Quintvector<(Quintvector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Quintvector<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e234oi: T, e314oi: T, e124oi: T, e123oi: T, e1234o: T, e1234i: T) -> Self {
+        Quintvector { o: core::marker::PhantomData, c: [e234oi, e314oi, e124oi, e123oi, e1234o, e1234i] }
+    }
+
+    /// The identity map on `Quintvector`: a `Quintvector` with one open `Quintvector` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Quintvector<(Quintvector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Quintvector<(), T, O> {
+    type Map = Quintvector<(Quintvector<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Quintvector<(), T, O> {
-    /// The identity map on `Quintvector` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Quintvector<(Quintvector<(), f32, O>,), T, O> {
-        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -7068,14 +7208,14 @@ impl<T: gx::Coef, O: gx::Orientation> Quintvector<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Quintvector<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Quintvector<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Quintvector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Quintvector<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Quintvector<(), T, O>>) -> Self {
         let images = images.as_ref();
         Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -7096,9 +7236,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quintvector<(A, 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     /// The inverse map, `A <- Quintvector`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Quintvector<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Quintvector<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Quintvector<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Quintvector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -7107,7 +7247,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -7127,7 +7267,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quintvector<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quintvector<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quintvector<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -7136,18 +7276,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Quintvector<(), f32, O> as gx::Kind>::Arr<T>, <Quintvector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Quintvector<(), f64, O> as gx::Kind>::Arr<T>, <Quintvector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Quintvector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Quintvector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -7155,9 +7295,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Quintvector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Quintvector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Quintvector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Quintvector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -7166,8 +7306,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Quintvector<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Quintvector<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -7175,9 +7315,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Quintvector<(), f32, O> as gx::Kind>::Arr<Quintvector<(), T, O>>, <Quintvector<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Quintvector<(), f64, O> as gx::Kind>::Arr<Quintvector<(), T, O>>, <Quintvector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -7185,18 +7325,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Quintvector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Quintvector<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Quintvector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quintvector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quintvector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Quintvector<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Quintvector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quintvector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Quintvector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -7205,7 +7345,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Quintvector<(), f32, O>, Input = Quintvector<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Quintvector<(), f64, O>, Input = Quintvector<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -7224,8 +7364,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A, 
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Quintvector<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Quintvector<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Quintvector<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Quintvector<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -7239,7 +7379,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Quintvector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Quintvector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -7251,7 +7391,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Quintvector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Quintvector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -7261,7 +7401,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Quintvector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Quintvector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -7492,7 +7632,7 @@ impl<T: gx::Real, O: gx::Orientation> Quintvector<(), T, O> {
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p1 = x[1] * x[1];
         let p2 = x[2] * x[2];
@@ -7509,6 +7649,13 @@ impl<T: gx::Real, O: gx::Orientation> Quintvector<(), T, O> {
         let t4 = x[4] * s0;
         let t5 = x[5] * s0;
         gx::Unit::new_unchecked(Quintvector::from_coeffs([t0, t1, t2, t3, t4, t5]))
+    }
+
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
     }
 
 }
@@ -7568,8 +7715,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Quintvector<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Quintvector<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -7581,7 +7728,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Quintvector<(), T, O> {
 /// linear map from `A`, `Pseudoscalar<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Pseudoscalar<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Pseudoscalar<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 1],
     o: core::marker::PhantomData<O>,
@@ -7613,9 +7760,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Pseudos
 }
 
 // SAFETY: `Arr<X>` is `[X; 1]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Pseudoscalar<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Pseudoscalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Pseudoscalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Pseudoscalar<(), f64, O> {
     const N: usize = 1;
     const NAME: &'static str = "Pseudoscalar";
     const MODULE: &'static str = module_path!();
@@ -7644,7 +7791,7 @@ impl<O: gx::Orientation> gx::Kind for Pseudoscalar<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Pseudoscalar<S, T, O> {
-    type Kind = Pseudoscalar<(), f32, O>;
+    type Kind = Pseudoscalar<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -7693,7 +7840,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Pseudoscalar<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Pseudoscalar<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -7708,9 +7855,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Pseudoscalar<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Pseudoscalar<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Pseudoscalar<(), f32, O>: gx::GradePart<G>,
+        Pseudoscalar<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -7945,7 +8092,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -7957,30 +8104,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Pseudoscalar<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Pseudoscalar<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e1234oi: T) -> Self {
         Pseudoscalar { o: core::marker::PhantomData, c: [e1234oi] }
     }
 
-    /// The identity map on `Pseudoscalar`: a `Pseudoscalar` with one open `Pseudoscalar` slot.
+    /// The identity map on `Pseudoscalar`: a `Pseudoscalar` with one open `Pseudoscalar` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Pseudoscalar<(Pseudoscalar,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Pseudoscalar<(Pseudoscalar<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Pseudoscalar<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e1234oi: T) -> Self {
+        Pseudoscalar { o: core::marker::PhantomData, c: [e1234oi] }
+    }
+
+    /// The identity map on `Pseudoscalar`: a `Pseudoscalar` with one open `Pseudoscalar` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Pseudoscalar<(Pseudoscalar<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Pseudoscalar<(), T, O> {
+    type Map = Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Pseudoscalar<(), T, O> {
-    /// The identity map on `Pseudoscalar` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Pseudoscalar<(Pseudoscalar<(), f32, O>,), T, O> {
-        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -7998,14 +8162,14 @@ impl<T: gx::Coef, O: gx::Orientation> Pseudoscalar<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Pseudoscalar<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Pseudoscalar`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Pseudoscalar<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Pseudoscalar<(), T, O>>) -> Self {
         let images = images.as_ref();
         Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -8026,9 +8190,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     /// The inverse map, `A <- Pseudoscalar`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Pseudoscalar<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Pseudoscalar<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Pseudoscalar<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Pseudoscalar<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -8037,7 +8201,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -8057,7 +8221,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Pseudoscalar<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Pseudoscalar<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Pseudoscalar<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -8066,18 +8230,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Pseudoscalar<(), f32, O> as gx::Kind>::Arr<T>, <Pseudoscalar<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Pseudoscalar<(), f64, O> as gx::Kind>::Arr<T>, <Pseudoscalar<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Pseudoscalar<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Pseudoscalar<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -8085,9 +8249,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Pseudoscalar<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Pseudoscalar<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Pseudoscalar<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Pseudoscalar<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -8096,8 +8260,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Pseudoscalar<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Pseudoscalar<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -8105,9 +8269,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Pseudoscalar<(), f32, O> as gx::Kind>::Arr<Pseudoscalar<(), T, O>>, <Pseudoscalar<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Pseudoscalar<(), f64, O> as gx::Kind>::Arr<Pseudoscalar<(), T, O>>, <Pseudoscalar<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -8115,18 +8279,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Pseudoscalar`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Pseudoscalar<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Pseudoscalar<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Pseudoscalar<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Pseudoscalar<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Pseudoscalar<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Pseudoscalar<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Pseudoscalar<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Pseudoscalar<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -8135,7 +8299,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Pseudoscalar<(), f32, O>, Input = Pseudoscalar<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = Pseudoscalar<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -8154,8 +8318,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Pseudoscalar<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Pseudoscalar<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Pseudoscalar<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Pseudoscalar<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -8169,7 +8333,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -8181,7 +8345,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -8191,7 +8355,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -8383,12 +8547,19 @@ impl<T: gx::Real, O: gx::Orientation> Pseudoscalar<(), T, O> {
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[0] * x[0];
         let s0 = (p0).abs().sqrt().recip();
         let t0 = x[0] * s0;
         gx::Unit::new_unchecked(Pseudoscalar::from_coeffs([t0]))
+    }
+
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
     }
 
 }
@@ -8432,8 +8603,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Pseudoscalar<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Pseudoscalar<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -8445,7 +8616,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Pseudoscalar<(), T, O> {
 /// linear map from `A`, `Motor<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Motor<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Motor<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 16],
     o: core::marker::PhantomData<O>,
@@ -8477,9 +8648,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Motor<S
 }
 
 // SAFETY: `Arr<X>` is `[X; 16]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Motor<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Motor<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Motor<(), f64, O> {
     const N: usize = 16;
     const NAME: &'static str = "Motor";
     const MODULE: &'static str = module_path!();
@@ -8508,7 +8679,7 @@ impl<O: gx::Orientation> gx::Kind for Motor<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Motor<S, T, O> {
-    type Kind = Motor<(), f32, O>;
+    type Kind = Motor<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -8557,7 +8728,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Motor<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Motor<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -8572,9 +8743,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Motor<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Motor<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Motor<(), f32, O>: gx::GradePart<G>,
+        Motor<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -8809,7 +8980,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -8821,30 +8992,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Motor<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Motor<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(s: T, e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1i: T, e2i: T, e3i: T, e4i: T, e234i: T, e314i: T, e124i: T, e123i: T, e1234: T) -> Self {
         Motor { o: core::marker::PhantomData, c: [s, e23, e31, e12, e41, e42, e43, e1i, e2i, e3i, e4i, e234i, e314i, e124i, e123i, e1234] }
     }
 
-    /// The identity map on `Motor`: a `Motor` with one open `Motor` slot.
+    /// The identity map on `Motor`: a `Motor` with one open `Motor` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Motor<(Motor,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Motor<(Motor<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Motor<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(s: T, e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1i: T, e2i: T, e3i: T, e4i: T, e234i: T, e314i: T, e124i: T, e123i: T, e1234: T) -> Self {
+        Motor { o: core::marker::PhantomData, c: [s, e23, e31, e12, e41, e42, e43, e1i, e2i, e3i, e4i, e234i, e314i, e124i, e123i, e1234] }
+    }
+
+    /// The identity map on `Motor`: a `Motor` with one open `Motor` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Motor<(Motor<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Motor<(), T, O> {
+    type Map = Motor<(Motor<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Motor<(), T, O> {
-    /// The identity map on `Motor` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Motor<(Motor<(), f32, O>,), T, O> {
-        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -8952,14 +9140,14 @@ impl<T: gx::Coef, O: gx::Orientation> Motor<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Motor<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Motor<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Motor`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Motor<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Motor<(), T, O>>) -> Self {
         let images = images.as_ref();
         Motor { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -8980,9 +9168,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Motor<(A, B), T,
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     /// The inverse map, `A <- Motor`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Motor<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Motor<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Motor<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Motor<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -8991,7 +9179,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -9011,7 +9199,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Motor<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Motor<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Motor<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -9020,18 +9208,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Motor<(), f32, O> as gx::Kind>::Arr<T>, <Motor<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Motor<(), f64, O> as gx::Kind>::Arr<T>, <Motor<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Motor<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Motor<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -9039,9 +9227,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Motor<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Motor<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Motor<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Motor<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -9050,8 +9238,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Motor<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Motor<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -9059,9 +9247,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Motor<(), f32, O> as gx::Kind>::Arr<Motor<(), T, O>>, <Motor<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Motor<(), f64, O> as gx::Kind>::Arr<Motor<(), T, O>>, <Motor<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -9069,18 +9257,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Motor`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Motor<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Motor<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Motor<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Motor<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Motor<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Motor<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Motor<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Motor<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -9089,7 +9277,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Motor<(), f32, O>, Input = Motor<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Motor<(), f64, O>, Input = Motor<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -9108,8 +9296,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, B), T,
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Motor<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Motor<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Motor<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Motor<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -9123,7 +9311,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Motor<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Motor<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -9135,7 +9323,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Motor<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Motor<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -9145,7 +9333,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Motor<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Motor<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -9634,7 +9822,7 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[0] * x[15];
         let p1 = x[1] * x[4];
@@ -9831,11 +10019,18 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
         gx::Unit::new_unchecked(Motor::from_coeffs([t156, t158, t160, t162, t164, t166, t168, t173, t178, t183, t188, t193, t198, t203, t208, t210]))
     }
 
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
+    }
+
 }
 
 impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
-    /// (`self.normalized().log()`). This method only makes the compile error say so.
+    /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
     #[inline(always)]
     pub fn log(self) -> Twist<(), T, gx::Extrinsic>
@@ -9850,7 +10045,7 @@ impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
     pub fn sqrt(self) -> gx::Unit<Self> {
         let mut c = self.c;
         c[0] = c[0] + T::one();
-        Motor::from_coeffs(c).normalized()
+        Motor::from_coeffs(c).unit()
     }
 
 }
@@ -10132,13 +10327,14 @@ impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Motor<(), T, O> {
     }
 }
 
-impl<T: gx::Real> gx::Log<Twist<(), T, gx::Extrinsic>> for gx::Unit<Motor<(), T, gx::Extrinsic>> {
+impl<T: gx::Real> gx::Log for Motor<(), T, gx::Extrinsic> {
+    type Output = Twist<(), T, gx::Extrinsic>;
     /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
     #[inline]
     #[allow(unused_variables)]
-    fn log(self) -> Twist<(), T, gx::Extrinsic> {
+    fn log(unit: gx::Unit<Self>) -> Twist<(), T, gx::Extrinsic> {
         T::vectorize(#[inline(always)] move || {
-        let x = self.into_inner().c;
+        let x = unit.into_inner().c;
         let p0 = x[15] * x[15];
         let p1 = -p0;
         let [h0, h1] = gx::study::log_coeffs_q(x[0], p1);
@@ -10205,8 +10401,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Motor<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Motor<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -10226,7 +10422,7 @@ impl<T: gx::Real> gx::Sqrt for Motor<(), T, gx::Extrinsic> {
 /// linear map from `A`, `Even<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Even<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Even<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 32],
     o: core::marker::PhantomData<O>,
@@ -10258,9 +10454,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Even<S,
 }
 
 // SAFETY: `Arr<X>` is `[X; 32]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Even<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Even<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Even<(), f64, O> {
     const N: usize = 32;
     const NAME: &'static str = "Even";
     const MODULE: &'static str = module_path!();
@@ -10289,7 +10485,7 @@ impl<O: gx::Orientation> gx::Kind for Even<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Even<S, T, O> {
-    type Kind = Even<(), f32, O>;
+    type Kind = Even<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -10338,7 +10534,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Even<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Even<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -10353,9 +10549,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Even<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Even<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Even<(), f32, O>: gx::GradePart<G>,
+        Even<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -10590,7 +10786,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -10602,30 +10798,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Even<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Even<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(s: T, e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1o: T, e2o: T, e3o: T, e4o: T, e1i: T, e2i: T, e3i: T, e4i: T, eoi: T, e1234: T, e234o: T, e314o: T, e124o: T, e123o: T, e234i: T, e314i: T, e124i: T, e123i: T, e23oi: T, e31oi: T, e12oi: T, e41oi: T, e42oi: T, e43oi: T, e1234oi: T) -> Self {
         Even { o: core::marker::PhantomData, c: [s, e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi, e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi, e1234oi] }
     }
 
-    /// The identity map on `Even`: a `Even` with one open `Even` slot.
+    /// The identity map on `Even`: a `Even` with one open `Even` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Even<(Even,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Even<(Even<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Even<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(s: T, e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1o: T, e2o: T, e3o: T, e4o: T, e1i: T, e2i: T, e3i: T, e4i: T, eoi: T, e1234: T, e234o: T, e314o: T, e124o: T, e123o: T, e234i: T, e314i: T, e124i: T, e123i: T, e23oi: T, e31oi: T, e12oi: T, e41oi: T, e42oi: T, e43oi: T, e1234oi: T) -> Self {
+        Even { o: core::marker::PhantomData, c: [s, e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi, e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi, e1234oi] }
+    }
+
+    /// The identity map on `Even`: a `Even` with one open `Even` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Even<(Even<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Even<(), T, O> {
+    type Map = Even<(Even<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Even<(), T, O> {
-    /// The identity map on `Even` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Even<(Even<(), f32, O>,), T, O> {
-        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -10829,14 +11042,14 @@ impl<T: gx::Coef, O: gx::Orientation> Even<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Even<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Even`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Even<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Even<(), T, O>>) -> Self {
         let images = images.as_ref();
         Even { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -10857,9 +11070,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A, B), T, 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// The inverse map, `A <- Even`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Even<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Even<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Even<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Even<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -10868,7 +11081,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -10888,7 +11101,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Even<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Even<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Even<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -10897,18 +11110,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Even<(), f32, O> as gx::Kind>::Arr<T>, <Even<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Even<(), f64, O> as gx::Kind>::Arr<T>, <Even<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Even<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Even<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -10916,9 +11129,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Even<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Even<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Even<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Even<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -10927,8 +11140,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Even<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Even<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -10936,9 +11149,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Even<(), f32, O> as gx::Kind>::Arr<Even<(), T, O>>, <Even<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Even<(), f64, O> as gx::Kind>::Arr<Even<(), T, O>>, <Even<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -10946,18 +11159,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Even`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Even<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Even<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Even<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Even<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Even<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Even<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Even<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Even<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -10966,7 +11179,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Even<(), f32, O>, Input = Even<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Even<(), f64, O>, Input = Even<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -10985,8 +11198,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, B), T, 
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Even<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Even<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Even<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Even<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -11000,7 +11213,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Even<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Even<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -11012,7 +11225,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Even<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Even<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -11022,7 +11235,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Even<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Even<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -11310,7 +11523,7 @@ impl<T: gx::Real, O: gx::Orientation> Even<(), T, O> {
 
 impl<T: gx::Real> Even<(), T, gx::Extrinsic> {
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
-    /// (`self.normalized().log()`). This method only makes the compile error say so.
+    /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
     #[inline(always)]
     pub fn log(self) -> Bivector<(), T, gx::Extrinsic>
@@ -11320,271 +11533,4 @@ impl<T: gx::Real> Even<(), T, gx::Extrinsic> {
         gx::LogNeedsUnit::log(self)
     }
 
-}
-
-impl<T: gx::Real> Even<(), T> {
-    /// The invariants `[r0, p1, p2, p3]` and bivectors `[G1, G2, G3]` of the closed-form
-    /// logarithm (docs/log6d.md), as one straight-line program.
-    #[doc(hidden)]
-    #[inline]
-    #[allow(unused_variables)]
-    pub fn log_invariants(self) -> ([T; 4], [[T; 15]; 3]) {
-        let x = self.c;
-        let p0 = x[0] * x[31];
-        let p1 = x[0] * x[1];
-        let p2 = x[0] * x[2];
-        let p3 = x[0] * x[3];
-        let p4 = x[0] * x[4];
-        let p5 = x[0] * x[5];
-        let p6 = x[0] * x[6];
-        let p7 = x[0] * x[7];
-        let p8 = x[0] * x[8];
-        let p9 = x[0] * x[9];
-        let p10 = x[0] * x[10];
-        let p11 = x[0] * x[11];
-        let p12 = x[0] * x[12];
-        let p13 = x[0] * x[13];
-        let p14 = x[0] * x[14];
-        let p15 = x[0] * x[15];
-        let p16 = x[0] * x[0];
-        let p18 = x[2] * x[2];
-        let p19 = x[3] * x[3];
-        let p22 = x[6] * x[6];
-        let p24 = x[8] * x[12];
-        let p25 = x[9] * x[13];
-        let p30 = x[18] * x[22];
-        let p31 = x[19] * x[23];
-        let p34 = x[26] * x[26];
-        let p37 = x[29] * x[29];
-        let p38 = x[30] * x[30];
-        let p41 = x[21] * p10;
-        let p42 = x[20] * p11;
-        let p47 = x[22] * p10;
-        let p48 = x[20] * p12;
-        let p53 = x[23] * p10;
-        let p54 = x[20] * p13;
-        let p58 = x[23] * p8;
-        let p62 = x[28] * p15;
-        let p65 = x[21] * p9;
-        let p68 = x[29] * p15;
-        let p70 = x[22] * p7;
-        let p74 = x[30] * p15;
-        let p78 = x[27] * p8;
-        let p79 = x[26] * p9;
-        let p84 = x[27] * p7;
-        let p85 = x[25] * p9;
-        let p90 = x[26] * p7;
-        let p91 = x[25] * p8;
-        let p94 = x[18] * p2;
-        let p97 = x[29] * p8;
-        let p100 = x[23] * p5;
-        let p102 = x[27] * p12;
-        let p107 = x[21] * p6;
-        let p109 = x[25] * p13;
-        let p112 = x[22] * p4;
-        let p114 = x[26] * p11;
-        let p118 = x[22] * p2;
-        let p121 = x[29] * p12;
-        let p124 = x[26] * p2;
-        let p127 = x[29] * p5;
-        let p129 = x[28] * p0;
-        let p130 = x[29] * p0;
-        let p131 = x[30] * p0;
-        let p132 = x[25] * p0;
-        let p133 = x[26] * p0;
-        let p134 = x[27] * p0;
-        let p135 = x[17] * p0;
-        let p136 = x[18] * p0;
-        let p137 = x[19] * p0;
-        let p138 = x[20] * p0;
-        let p139 = x[21] * p0;
-        let p140 = x[22] * p0;
-        let p141 = x[23] * p0;
-        let p142 = x[24] * p0;
-        let p143 = x[16] * p0;
-        let p144 = x[1].mul_add(x[1], p18);
-        let p145 = (-x[4]).mul_add(x[4], p19);
-        let p146 = x[5].mul_add(x[5], p22);
-        let p147 = x[7].mul_add(x[11], p24);
-        let p148 = (-x[10]).mul_add(x[14], p25);
-        let p149 = x[15].mul_add(x[15], -p144);
-        let p150 = p145 - p146;
-        let p151 = p147 + p148;
-        let p152 = p149 - p150;
-        let p154 = p152.mul_add(T::from_ratio(1, 2), p151);
-        let p155 = x[28].mul_add(x[28], p37);
-        let p156 = (-x[16]).mul_add(x[16], p38);
-        let p157 = p155 + p156;
-        let p158 = x[25].mul_add(x[25], p34);
-        let p159 = x[27].mul_add(x[27], p158);
-        let p160 = p157 - p159;
-        let p161 = x[17].mul_add(x[21], p30);
-        let p162 = (-x[20]).mul_add(x[24], p31);
-        let p163 = p161 + p162;
-        let p165 = p16 * T::from_i64(3);
-        let p167 = p163.mul_add(T::from_i64(2), p160);
-        let p168 = (-p154).mul_add(T::from_i64(4), p165);
-        let p169 = p167 + p168;
-        let p171 = (-p154).mul_add(T::from_i64(2), p165);
-        let p172 = x[24].mul_add(p7, p42);
-        let p173 = x[25].mul_add(p15, p172);
-        let p174 = x[16].mul_add(p4, p41);
-        let p175 = x[17].mul_add(p14, p174);
-        let p176 = p173 - p175;
-        let p177 = x[24].mul_add(p8, p48);
-        let p178 = x[26].mul_add(p15, p177);
-        let p179 = x[16].mul_add(p5, p47);
-        let p180 = x[18].mul_add(p14, p179);
-        let p181 = p178 - p180;
-        let p182 = x[24].mul_add(p9, p54);
-        let p183 = x[27].mul_add(p15, p182);
-        let p184 = x[16].mul_add(p6, p53);
-        let p185 = x[19].mul_add(p14, p184);
-        let p186 = p183 - p185;
-        let p187 = x[16].mul_add(p1, p58);
-        let p188 = x[19].mul_add(p12, p187);
-        let p189 = (-x[22]).mul_add(p9, p62);
-        let p190 = (-x[18]).mul_add(p13, p189);
-        let p191 = p188 + p190;
-        let p192 = x[16].mul_add(p2, p65);
-        let p193 = x[17].mul_add(p13, p192);
-        let p194 = (-x[23]).mul_add(p7, p68);
-        let p195 = (-x[19]).mul_add(p11, p194);
-        let p196 = p193 + p195;
-        let p197 = x[16].mul_add(p3, p70);
-        let p198 = x[18].mul_add(p11, p197);
-        let p199 = (-x[21]).mul_add(p8, p74);
-        let p200 = (-x[17]).mul_add(p12, p199);
-        let p201 = p198 + p200;
-        let p202 = x[18].mul_add(p6, p79);
-        let p203 = (-x[20]).mul_add(p1, p202);
-        let p204 = x[19].mul_add(p5, p78);
-        let p205 = x[28].mul_add(p10, p204);
-        let p206 = p203 - p205;
-        let p207 = x[19].mul_add(p4, p84);
-        let p208 = (-x[20]).mul_add(p2, p207);
-        let p209 = x[17].mul_add(p6, p85);
-        let p210 = x[29].mul_add(p10, p209);
-        let p211 = p208 - p210;
-        let p212 = x[17].mul_add(p5, p91);
-        let p213 = (-x[20]).mul_add(p3, p212);
-        let p214 = x[18].mul_add(p4, p90);
-        let p215 = x[30].mul_add(p10, p214);
-        let p216 = p213 - p215;
-        let p217 = x[17].mul_add(p1, p94);
-        let p218 = x[19].mul_add(p3, p217);
-        let p219 = x[28].mul_add(p7, p97);
-        let p220 = x[30].mul_add(p9, p219);
-        let p221 = p218 + p220;
-        let p222 = -p221;
-        let p223 = x[22].mul_add(p6, p102);
-        let p224 = x[28].mul_add(p14, p223);
-        let p225 = x[24].mul_add(p1, p100);
-        let p226 = x[26].mul_add(p13, p225);
-        let p227 = p224 - p226;
-        let p228 = x[23].mul_add(p4, p109);
-        let p229 = x[29].mul_add(p14, p228);
-        let p230 = x[24].mul_add(p2, p107);
-        let p231 = x[27].mul_add(p11, p230);
-        let p232 = p229 - p231;
-        let p233 = x[21].mul_add(p5, p114);
-        let p234 = x[30].mul_add(p14, p233);
-        let p235 = x[24].mul_add(p3, p112);
-        let p236 = x[25].mul_add(p12, p235);
-        let p237 = p234 - p236;
-        let p238 = x[28].mul_add(p11, p121);
-        let p239 = x[30].mul_add(p13, p238);
-        let p240 = x[21].mul_add(p1, p118);
-        let p241 = x[23].mul_add(p3, p240);
-        let p242 = p239 - p241;
-        let p243 = x[28].mul_add(p4, p127);
-        let p244 = x[30].mul_add(p6, p243);
-        let p245 = x[25].mul_add(p1, p124);
-        let p246 = x[27].mul_add(p3, p245);
-        let p247 = p244 - p246;
-        let p248 = -p129;
-        let p249 = -p130;
-        let p250 = -p131;
-        let p251 = -p135;
-        let p252 = -p136;
-        let p253 = -p137;
-        let p254 = -p138;
-        let p255 = -p143;
-        (
-            [x[0], p169, p171, p16],
-            [[x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15]], [p176, p181, p186, p191, p196, p201, p206, p211, p216, p222, p227, p232, p237, p242, p247], [p248, p249, p250, p132, p133, p134, p251, p252, p253, p254, p139, p140, p141, p142, p255]],
-        )
-    }
-
-    /// The logarithm of a unit `Even` in closed form (docs/log6d.md), right where `â¨Râ©â > 0`
-    /// and accurate to `Îµ/â¨Râ©â`.
-    #[doc(hidden)]
-    #[inline]
-    pub fn log_closed(self) -> Bivector<(), T> {
-        let ([r0, p1, p2, p3], [g1, g2, g3]) = self.log_invariants();
-        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
-        Bivector::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]))
-    }
-}
-
-impl<T: gx::Real> gx::Log<Bivector<(), T, gx::Extrinsic>> for gx::Unit<Even<(), T, gx::Extrinsic>> {
-    /// The logarithm of a unit versor, in closed form through the invariant decomposition
-    /// (docs/log6d.md): `u_j = coshÂ²(Î¼_j)` of the three commuting planes are the roots of a
-    /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
-    /// `r0â»Â¹ (Î±2 Q2 + Î±1 Q1 + Î±0 â¨Râ©â)` for bivectors `Q` from `R`'s grade parts and the
-    /// quadratic `Î±` interpolating `Ï(u) = âu asinh(â(uâ1))/â(uâ1)` at the roots
-    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Below
-    /// `â¨Râ©â = 1/16` (near or past a half turn in some plane), the lanes there first turn the
-    /// planes near a half turn by a quarter turn (`gx::study::log_turn_6d`): `log R =
-    /// log(R E) + (Ï/2) Z`, with `Z` the sum of their unit bivectors and `E = â(âbÌ)`. The
-    /// principal logarithm: rotations below a half turn in each invariant plane where
-    /// `â¨Râ©â > 0`, boosts and dilations of any size.
-    #[inline]
-    fn log(self) -> Bivector<(), T, gx::Extrinsic> {
-        T::vectorize(#[inline(always)] move || {
-        let x = self.into_inner();
-        let ([r0, p1, p2, p3], [g1, g2, g3]) = x.log_invariants();
-        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
-        let closed: [T; 15] = core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]);
-        let limit = T::from_ratio(1, 16);
-        if T::all_lt(limit, r0) {
-            return Bivector::from_coeffs(closed);
-        }
-        let [a0, a1, a2, n] = gx::study::log_turn_6d(p1, p2, p3, r0);
-        let z: [T; 15] = core::array::from_fn(|i| {
-            let q1 = g3[i] - g2[i] + p3 * g1[i];
-            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
-            a2 * q2 + a1 * q1 + a0 * g1[i]
-        });
-        let [e0, e1, e2, e3] = gx::study::turn_polynomial(n);
-        let ze = Even::<(), T>::from_coeffs([T::zero(), z[0], z[1], z[2], z[3], z[4], z[5], z[6], z[7], z[8], z[9], z[10], z[11], z[12], z[13], z[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()]);
-        let z2 = ze * ze;
-        let mut e = ze.gp(e1) + z2.gp(e2) + (z2 * ze).gp(e3);
-        e.c[0] = e.c[0] + e0;
-        let turned = (x * e).log_closed();
-        let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
-        Bivector::from_coeffs(core::array::from_fn(|i| {
-            T::select_lt(limit, r0, closed[i], turned.c[i] + quarter * z[i])
-        }))
-        })
-    }
-}
-
-impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Even<(), T, O> {
-    type Output = Even<(), T, O>;
-    #[inline(always)]
-    fn inverse(self) -> Self::Output {
-        Self::inverse(self)
-    }
-}
-
-impl<T: gx::Real, O: gx::Orientation> gx::Norm for Even<(), T, O> {
-    #[inline(always)]
-    fn norm_squared(self) -> T {
-        Self::norm_squared(self)
-    }
-    #[inline(always)]
-    fn norm(self) -> T {
-        Self::norm(self)
-    }
 }

@@ -24,17 +24,17 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Scalar<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Scalar<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Scalar<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<Point, Scalar<(), f64, O>, T, 1> {
         let v = self.c;
         let m0 = v[3] * v[3];
         gx::Prepared::from_entries([m0])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<Point, Scalar<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<Point, Scalar<(), f64, O>, T, 1> {
     type Output = Scalar<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
@@ -44,20 +44,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Scalar<(), f32, O>, T, 1>> for Scalar<(Scalar<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Scalar<(), f64, O>, T, 1>> for Scalar<(Scalar<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Scalar<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<Point, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Scalar<(), f32, O>,), T, 1>([[m[0]]], [false]) }
+        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Scalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Scalar<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Scalar<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Scalar<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -67,16 +67,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Scalar<(), f32, O>, T, 1> {
-        gx::Prepare::<Scalar<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Scalar<(), f64, O>, T, 1> {
+        gx::Prepare::<Scalar<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Scalar<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Scalar<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Scalar<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Scalar<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Scalar<(), f32, O>, T, 1>, x: Scalar<(), T, O>) -> Scalar<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Scalar<(), f64, O>, T, 1>, x: Scalar<(), T, O>) -> Scalar<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -114,10 +114,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -129,7 +129,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<()
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1> {
     type Output = Scalar<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
@@ -139,20 +139,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1>> for Scalar<(Scalar<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1>> for Scalar<(Scalar<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Scalar<(), f32, O>,), T, 1>([[m[0]]], [false]) }
+        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Scalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Scalar<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -162,16 +162,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1> {
-        gx::Prepare::<Scalar<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1> {
+        gx::Prepare::<Scalar<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Scalar<(), f32, O>, T, 1>, x: Scalar<(), T, O>) -> Scalar<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Scalar<(), f64, O>, T, 1>, x: Scalar<(), T, O>) -> Scalar<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -225,10 +225,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Plane<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Plane<(), f32, O>, T, 5>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Plane<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Plane<(), f64, O>, T, 5>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Plane<(), f32, O>, T, 5> {
+    fn prepare(self) -> gx::Prepared<Point, Plane<(), f64, O>, T, 5> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -245,7 +245,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Plane<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>> for gx::Prepared<Point, Plane<(), f32, O>, T, 5> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>> for gx::Prepared<Point, Plane<(), f64, O>, T, 5> {
     type Output = Plane<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Plane<S, T, O>) -> Plane<S, T, O> {
@@ -255,20 +255,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Plane<(), f32, O>, T, 5>> for Plane<(Plane<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Plane<(), f64, O>, T, 5>> for Plane<(Plane<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Plane<(), f32, O>, T, 5>) -> Self {
+    fn from(p: gx::Prepared<Point, Plane<(), f64, O>, T, 5>) -> Self {
         let m = p.m;
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Plane<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [m[1], m[2], m[3], m[4]]], [true, true, true, true]) }
+        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Plane<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [m[1], m[2], m[3], m[4]]], [true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Plane<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Plane<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Plane<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Plane<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Plane<(), f32, O>, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Plane<(), f64, O>, T, 5>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -278,16 +278,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Plane<(), f32, O>, gx::batch:
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Plane<(), f32, O>, T, 5> {
-        gx::Prepare::<Plane<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Plane<(), f64, O>, T, 5> {
+        gx::Prepare::<Plane<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Plane<(), f32, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Plane<(), f32, O>, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Plane<(), f64, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Plane<(), f64, O>, W, 5> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Plane<(), f32, O>, T, 5>, x: Plane<(), T, O>) -> Plane<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Plane<(), f64, O>, T, 5>, x: Plane<(), T, O>) -> Plane<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -346,10 +346,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Plane<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Plane<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -371,7 +371,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Plane<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>> for gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>> for gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5> {
     type Output = Plane<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Plane<S, T, O>) -> Plane<S, T, O> {
@@ -381,20 +381,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5>> for Plane<(Plane<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5>> for Plane<(Plane<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5>) -> Self {
         let m = p.m;
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Plane<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [m[1], m[2], m[3], m[4]]], [true, true, true, true]) }
+        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Plane<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [m[1], m[2], m[3], m[4]]], [true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Plane<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Plane<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Plane<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Plane<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -404,16 +404,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Plane<(), f32, O>, gx::batch:
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5> {
-        gx::Prepare::<Plane<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5> {
+        gx::Prepare::<Plane<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, W, 5> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Plane<(), f32, O>, T, 5>, x: Plane<(), T, O>) -> Plane<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Plane<(), f64, O>, T, 5>, x: Plane<(), T, O>) -> Plane<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -473,10 +473,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Line<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Line<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Line<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Line<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Line<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<Point, Line<(), f64, O>, T, 8> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -493,7 +493,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Line<(), 
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>> for gx::Prepared<Point, Line<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>> for gx::Prepared<Point, Line<(), f64, O>, T, 8> {
     type Output = Line<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Line<S, T, O>) -> Line<S, T, O> {
@@ -503,20 +503,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Line<(), f32, O>, T, 8>> for Line<(Line<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Line<(), f64, O>, T, 8>> for Line<(Line<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Line<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<Point, Line<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Line<(), f32, O>,), T, 6>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero()], [m[4], T::zero(), m[5], T::zero(), m[3], T::zero()], [m[6], m[7], T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false]) }
+        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Line<(), f64, O>,), T, 6>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero()], [m[4], T::zero(), m[5], T::zero(), m[3], T::zero()], [m[6], m[7], T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Line<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Line<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Line<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Line<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Line<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Line<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -526,16 +526,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Line<(), f32, O>, gx::batch::
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Line<(), f32, O>, T, 8> {
-        gx::Prepare::<Line<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Line<(), f64, O>, T, 8> {
+        gx::Prepare::<Line<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Line<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Line<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Line<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Line<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Line<(), f32, O>, T, 8>, x: Line<(), T, O>) -> Line<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Line<(), f64, O>, T, 8>, x: Line<(), T, O>) -> Line<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -600,10 +600,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Line<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Line<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -625,7 +625,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Line<(), 
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>> for gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>> for gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8> {
     type Output = Line<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Line<S, T, O>) -> Line<S, T, O> {
@@ -635,20 +635,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8>> for Line<(Line<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8>> for Line<(Line<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Line<(), f32, O>,), T, 6>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero()], [m[4], T::zero(), m[5], T::zero(), m[3], T::zero()], [m[6], m[7], T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false]) }
+        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Line<(), f64, O>,), T, 6>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero()], [m[4], T::zero(), m[5], T::zero(), m[3], T::zero()], [m[6], m[7], T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Line<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Line<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Line<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Line<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -658,16 +658,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Line<(), f32, O>, gx::batch::
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8> {
-        gx::Prepare::<Line<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8> {
+        gx::Prepare::<Line<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Line<(), f32, O>, T, 8>, x: Line<(), T, O>) -> Line<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Line<(), f64, O>, T, 8>, x: Line<(), T, O>) -> Line<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -717,10 +717,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Point<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Point<(), f32, O>, T, 5>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Point<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Point<(), f64, O>, T, 5>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Point<(), f32, O>, T, 5> {
+    fn prepare(self) -> gx::Prepared<Point, Point<(), f64, O>, T, 5> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -734,7 +734,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Point<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>> for gx::Prepared<Point, Point<(), f32, O>, T, 5> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>> for gx::Prepared<Point, Point<(), f64, O>, T, 5> {
     type Output = Point<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Point<S, T, O>) -> Point<S, T, O> {
@@ -744,20 +744,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Point<(), f32, O>, T, 5>> for Point<(Point<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Point<(), f64, O>, T, 5>> for Point<(Point<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Point<(), f32, O>, T, 5>) -> Self {
+    fn from(p: gx::Prepared<Point, Point<(), f64, O>, T, 5>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Point<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero(), m[1]], [T::zero(), m[0], T::zero(), m[2]], [T::zero(), T::zero(), m[0], m[3]], [T::zero(), T::zero(), T::zero(), m[4]]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Point<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), m[1]], [T::zero(), m[0], T::zero(), m[2]], [T::zero(), T::zero(), m[0], m[3]], [T::zero(), T::zero(), T::zero(), m[4]]], [true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Point<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Point<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Point<(), f32, O>, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Point<(), f64, O>, T, 5>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -767,16 +767,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f32, O>, gx::batch:
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Point<(), f32, O>, T, 5> {
-        gx::Prepare::<Point<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Point<(), f64, O>, T, 5> {
+        gx::Prepare::<Point<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Point<(), f32, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Point<(), f32, O>, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Point<(), f64, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Point<(), f64, O>, W, 5> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Point<(), f32, O>, T, 5>, x: Point<(), T, O>) -> Point<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Point<(), f64, O>, T, 5>, x: Point<(), T, O>) -> Point<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -831,10 +831,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Point<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Point<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -853,7 +853,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Point<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>> for gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>> for gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5> {
     type Output = Point<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Point<S, T, O>) -> Point<S, T, O> {
@@ -863,20 +863,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5>> for Point<(Point<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5>> for Point<(Point<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Point<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero(), m[1]], [T::zero(), m[0], T::zero(), m[2]], [T::zero(), T::zero(), m[0], m[3]], [T::zero(), T::zero(), T::zero(), m[4]]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Point<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), m[1]], [T::zero(), m[0], T::zero(), m[2]], [T::zero(), T::zero(), m[0], m[3]], [T::zero(), T::zero(), T::zero(), m[4]]], [true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Point<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Point<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -886,16 +886,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f32, O>, gx::batch:
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5> {
-        gx::Prepare::<Point<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5> {
+        gx::Prepare::<Point<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, W, 5> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Point<(), f32, O>, T, 5>, x: Point<(), T, O>) -> Point<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Point<(), f64, O>, T, 5>, x: Point<(), T, O>) -> Point<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -934,10 +934,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Direction<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Direction<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Direction<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<Point, Direction<(), f64, O>, T, 1> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = -m0;
@@ -945,7 +945,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<Point, Direction<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<Point, Direction<(), f64, O>, T, 1> {
     type Output = Point<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
@@ -955,20 +955,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Direction<(), f32, O>, T, 1>> for Point<(Direction<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Direction<(), f64, O>, T, 1>> for Point<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Direction<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<Point, Direction<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Direction<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero()], [T::zero(), m[0], T::zero()], [T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero()], [T::zero(), m[0], T::zero()], [T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Point<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Point<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Direction<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Direction<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -978,16 +978,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f32, O>, gx::ba
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Direction<(), f32, O>, T, 1> {
-        gx::Prepare::<Direction<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Direction<(), f64, O>, T, 1> {
+        gx::Prepare::<Direction<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Direction<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Direction<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Direction<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Direction<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Direction<(), f32, O>, T, 1>, x: Direction<(), T, O>) -> Point<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Direction<(), f64, O>, T, 1>, x: Direction<(), T, O>) -> Point<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1031,10 +1031,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1047,7 +1047,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1> {
     type Output = Point<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
@@ -1057,20 +1057,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1>> for Point<(Direction<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1>> for Point<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Direction<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero()], [T::zero(), m[0], T::zero()], [T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero()], [T::zero(), m[0], T::zero()], [T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Point<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Point<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -1080,16 +1080,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f32, O>, gx::ba
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1> {
-        gx::Prepare::<Direction<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1> {
+        gx::Prepare::<Direction<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Direction<(), f32, O>, T, 1>, x: Direction<(), T, O>) -> Point<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Direction<(), f64, O>, T, 1>, x: Direction<(), T, O>) -> Point<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1124,10 +1124,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudoscalar<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudoscalar<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = -m0;
@@ -1135,7 +1135,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudosca
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S, T, O>> for gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S, T, O>> for gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1> {
     type Output = Pseudoscalar<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
@@ -1145,20 +1145,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1>> for Pseudoscalar<(Pseudoscalar<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1>> for Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Pseudoscalar<(), f32, O>,), T, 1>([[m[0]]], [false]) }
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Pseudoscalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Pseudoscalar<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Pseudoscalar<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -1168,16 +1168,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f32, O>, gx:
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1> {
-        gx::Prepare::<Pseudoscalar<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1> {
+        gx::Prepare::<Pseudoscalar<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Pseudoscalar<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Pseudoscalar<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Pseudoscalar<(), f32, O>, T, 1>, x: Pseudoscalar<(), T, O>) -> Pseudoscalar<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Pseudoscalar<(), f64, O>, T, 1>, x: Pseudoscalar<(), T, O>) -> Pseudoscalar<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1217,10 +1217,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudoscalar<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudoscalar<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1233,7 +1233,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudosca
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S, T, O>> for gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S, T, O>> for gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1> {
     type Output = Pseudoscalar<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
@@ -1243,20 +1243,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1>> for Pseudoscalar<(Pseudoscalar<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1>> for Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Pseudoscalar<(), f32, O>,), T, 1>([[m[0]]], [false]) }
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Pseudoscalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Pseudoscalar<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Pseudoscalar<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -1266,16 +1266,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f32, O>, gx:
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1> {
-        gx::Prepare::<Pseudoscalar<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1> {
+        gx::Prepare::<Pseudoscalar<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f32, O>, T, 1>, x: Pseudoscalar<(), T, O>) -> Pseudoscalar<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Pseudoscalar<(), f64, O>, T, 1>, x: Pseudoscalar<(), T, O>) -> Pseudoscalar<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1332,10 +1332,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Rotor<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Rotor<(), f32, O>, T, 7>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Rotor<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Rotor<(), f64, O>, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Rotor<(), f32, O>, T, 7> {
+    fn prepare(self) -> gx::Prepared<Point, Rotor<(), f64, O>, T, 7> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -1351,7 +1351,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Rotor<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>> for gx::Prepared<Point, Rotor<(), f32, O>, T, 7> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>> for gx::Prepared<Point, Rotor<(), f64, O>, T, 7> {
     type Output = Motor<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T, O>) -> Motor<S, T, O> {
@@ -1361,20 +1361,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Rotor<(), f32, O>, T, 7>> for Motor<(Rotor<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Rotor<(), f64, O>, T, 7>> for Motor<(Rotor<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Rotor<(), f32, O>, T, 7>) -> Self {
+    fn from(p: gx::Prepared<Point, Rotor<(), f64, O>, T, 7>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Rotor<(), f32, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), m[1], m[2]], [T::zero(), m[3], T::zero(), m[4]], [T::zero(), m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Rotor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), m[1], m[2]], [T::zero(), m[3], T::zero(), m[4]], [T::zero(), m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Rotor<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Motor<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Rotor<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Motor<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Rotor<(), f32, O>, T, 7>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Rotor<(), f64, O>, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -1384,16 +1384,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Rotor<(), f32, O>, gx::batch:
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Rotor<(), f32, O>, T, 7> {
-        gx::Prepare::<Rotor<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Rotor<(), f64, O>, T, 7> {
+        gx::Prepare::<Rotor<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Rotor<(), f32, O>, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Rotor<(), f32, O>, W, 7> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Rotor<(), f64, O>, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Rotor<(), f64, O>, W, 7> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Rotor<(), f32, O>, T, 7>, x: Rotor<(), T, O>) -> Motor<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Rotor<(), f64, O>, T, 7>, x: Rotor<(), T, O>) -> Motor<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1455,10 +1455,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Rotor<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Rotor<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1479,7 +1479,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Rotor<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>> for gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>> for gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7> {
     type Output = Motor<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T, O>) -> Motor<S, T, O> {
@@ -1489,20 +1489,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7>> for Motor<(Rotor<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7>> for Motor<(Rotor<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Rotor<(), f32, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), m[1], m[2]], [T::zero(), m[3], T::zero(), m[4]], [T::zero(), m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Rotor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), m[1], m[2]], [T::zero(), m[3], T::zero(), m[4]], [T::zero(), m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Rotor<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Motor<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Rotor<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Motor<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -1512,16 +1512,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Rotor<(), f32, O>, gx::batch:
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7> {
-        gx::Prepare::<Rotor<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7> {
+        gx::Prepare::<Rotor<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, W, 7> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, W, 7> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Rotor<(), f32, O>, T, 7>, x: Rotor<(), T, O>) -> Motor<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Rotor<(), f64, O>, T, 7>, x: Rotor<(), T, O>) -> Motor<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1561,10 +1561,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Translator<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Translator<(), f32, O>, T, 2>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Translator<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Translator<(), f64, O>, T, 2>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Translator<(), f32, O>, T, 2> {
+    fn prepare(self) -> gx::Prepared<Point, Translator<(), f64, O>, T, 2> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = -m0;
@@ -1572,7 +1572,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Translato
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, T, O>> for gx::Prepared<Point, Translator<(), f32, O>, T, 2> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, T, O>> for gx::Prepared<Point, Translator<(), f64, O>, T, 2> {
     type Output = Translator<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T, O>) -> Translator<S, T, O> {
@@ -1582,20 +1582,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, 
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Translator<(), f32, O>, T, 2>> for Translator<(Translator<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Translator<(), f64, O>, T, 2>> for Translator<(Translator<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Translator<(), f32, O>, T, 2>) -> Self {
+    fn from(p: gx::Prepared<Point, Translator<(), f64, O>, T, 2>) -> Self {
         let m = p.m;
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Translator<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], T::zero(), T::zero()], [T::zero(), T::zero(), m[1], T::zero()], [T::zero(), T::zero(), T::zero(), m[1]]], [false, false, false, false]) }
+        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Translator<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], T::zero(), T::zero()], [T::zero(), T::zero(), m[1], T::zero()], [T::zero(), T::zero(), T::zero(), m[1]]], [false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Translator<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Translator<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Translator<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Translator<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Translator<(), f32, O>, T, 2>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Translator<(), f64, O>, T, 2>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -1605,16 +1605,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Translator<(), f32, O>, gx::b
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Translator<(), f32, O>, T, 2> {
-        gx::Prepare::<Translator<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Translator<(), f64, O>, T, 2> {
+        gx::Prepare::<Translator<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Translator<(), f32, O>, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Translator<(), f32, O>, W, 2> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Translator<(), f64, O>, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Translator<(), f64, O>, W, 2> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Translator<(), f32, O>, T, 2>, x: Translator<(), T, O>) -> Translator<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Translator<(), f64, O>, T, 2>, x: Translator<(), T, O>) -> Translator<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1659,10 +1659,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Translator<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Translator<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1675,7 +1675,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Translato
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, T, O>> for gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, T, O>> for gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2> {
     type Output = Translator<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T, O>) -> Translator<S, T, O> {
@@ -1685,20 +1685,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, 
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2>> for Translator<(Translator<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2>> for Translator<(Translator<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2>) -> Self {
         let m = p.m;
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Translator<(), f32, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], T::zero(), T::zero()], [T::zero(), T::zero(), m[1], T::zero()], [T::zero(), T::zero(), T::zero(), m[1]]], [false, false, false, false]) }
+        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Translator<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], T::zero(), T::zero()], [T::zero(), T::zero(), m[1], T::zero()], [T::zero(), T::zero(), T::zero(), m[1]]], [false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Translator<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Translator<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Translator<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Translator<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -1708,16 +1708,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Translator<(), f32, O>, gx::b
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2> {
-        gx::Prepare::<Translator<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2> {
+        gx::Prepare::<Translator<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, W, 2> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, W, 2> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Translator<(), f32, O>, T, 2>, x: Translator<(), T, O>) -> Translator<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Translator<(), f64, O>, T, 2>, x: Translator<(), T, O>) -> Translator<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1780,10 +1780,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Motor<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Motor<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Motor<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Motor<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Motor<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<Point, Motor<(), f64, O>, T, 8> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -1800,7 +1800,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Motor<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>> for gx::Prepared<Point, Motor<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>> for gx::Prepared<Point, Motor<(), f64, O>, T, 8> {
     type Output = Motor<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T, O>) -> Motor<S, T, O> {
@@ -1810,20 +1810,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Motor<(), f32, O>, T, 8>> for Motor<(Motor<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Motor<(), f64, O>, T, 8>> for Motor<(Motor<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Motor<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<Point, Motor<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Motor<(), f32, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero()], [T::zero(), m[4], T::zero(), m[5], T::zero(), m[3], T::zero(), T::zero()], [T::zero(), m[6], m[7], T::zero(), T::zero(), T::zero(), m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Motor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero()], [T::zero(), m[4], T::zero(), m[5], T::zero(), m[3], T::zero(), T::zero()], [T::zero(), m[6], m[7], T::zero(), T::zero(), T::zero(), m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Motor<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Motor<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Motor<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Motor<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Motor<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Motor<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -1833,16 +1833,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Motor<(), f32, O>, gx::batch:
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Motor<(), f32, O>, T, 8> {
-        gx::Prepare::<Motor<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Motor<(), f64, O>, T, 8> {
+        gx::Prepare::<Motor<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Motor<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Motor<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Motor<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Motor<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Motor<(), f32, O>, T, 8>, x: Motor<(), T, O>) -> Motor<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Motor<(), f64, O>, T, 8>, x: Motor<(), T, O>) -> Motor<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1910,10 +1910,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Motor<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Motor<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1935,7 +1935,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Motor<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>> for gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>> for gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8> {
     type Output = Motor<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T, O>) -> Motor<S, T, O> {
@@ -1945,20 +1945,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8>> for Motor<(Motor<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8>> for Motor<(Motor<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Motor<(), f32, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero()], [T::zero(), m[4], T::zero(), m[5], T::zero(), m[3], T::zero(), T::zero()], [T::zero(), m[6], m[7], T::zero(), T::zero(), T::zero(), m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Motor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero()], [T::zero(), m[4], T::zero(), m[5], T::zero(), m[3], T::zero(), T::zero()], [T::zero(), m[6], m[7], T::zero(), T::zero(), T::zero(), m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3]]], [false, false, false, false, false, false, false, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Motor<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Motor<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Motor<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Motor<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -1968,16 +1968,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Motor<(), f32, O>, gx::batch:
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8> {
-        gx::Prepare::<Motor<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8> {
+        gx::Prepare::<Motor<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Motor<(), f32, O>, T, 8>, x: Motor<(), T, O>) -> Motor<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Motor<(), f64, O>, T, 8>, x: Motor<(), T, O>) -> Motor<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -2041,10 +2041,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Flector<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Flector<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Flector<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Flector<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Flector<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<Point, Flector<(), f64, O>, T, 8> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -2061,7 +2061,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Flector<(
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, O>> for gx::Prepared<Point, Flector<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, O>> for gx::Prepared<Point, Flector<(), f64, O>, T, 8> {
     type Output = Flector<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T, O>) -> Flector<S, T, O> {
@@ -2071,20 +2071,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, 
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Flector<(), f32, O>, T, 8>> for Flector<(Flector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Flector<(), f64, O>, T, 8>> for Flector<(Flector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Flector<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<Point, Flector<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Flector<(), f32, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), T::zero(), m[5]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), m[6]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]], [true, true, true, true, true, true, true, true]) }
+        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Flector<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), T::zero(), m[5]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), m[6]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]], [true, true, true, true, true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Flector<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Flector<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Flector<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Flector<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Flector<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Flector<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -2094,16 +2094,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Flector<(), f32, O>, gx::batc
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Flector<(), f32, O>, T, 8> {
-        gx::Prepare::<Flector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Flector<(), f64, O>, T, 8> {
+        gx::Prepare::<Flector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Flector<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Flector<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Flector<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Flector<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Flector<(), f32, O>, T, 8>, x: Flector<(), T, O>) -> Flector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Flector<(), f64, O>, T, 8>, x: Flector<(), T, O>) -> Flector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -2172,10 +2172,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Flector<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Flector<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -2197,7 +2197,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Flector<(
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, O>> for gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, O>> for gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8> {
     type Output = Flector<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T, O>) -> Flector<S, T, O> {
@@ -2207,20 +2207,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, 
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8>> for Flector<(Flector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8>> for Flector<(Flector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Flector<(), f32, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), T::zero(), m[5]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), m[6]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]], [true, true, true, true, true, true, true, true]) }
+        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Flector<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), T::zero(), m[5]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], T::zero(), m[6]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]], [true, true, true, true, true, true, true, true]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Flector<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Flector<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Flector<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Flector<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -2230,16 +2230,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Flector<(), f32, O>, gx::batc
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8> {
-        gx::Prepare::<Flector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8> {
+        gx::Prepare::<Flector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Flector<(), f32, O>, T, 8>, x: Flector<(), T, O>) -> Flector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Flector<(), f64, O>, T, 8>, x: Flector<(), T, O>) -> Flector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -2321,10 +2321,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivector<(), f32, O>> for Point<(), T, OV> {
-    type Output = gx::Prepared<Point, Multivector<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivector<(), f64, O>> for Point<(), T, OV> {
+    type Output = gx::Prepared<Point, Multivector<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Point, Multivector<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<Point, Multivector<(), f64, O>, T, 8> {
         let v = self.c;
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
@@ -2341,7 +2341,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivect
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S, T, O>> for gx::Prepared<Point, Multivector<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S, T, O>> for gx::Prepared<Point, Multivector<(), f64, O>, T, 8> {
     type Output = Multivector<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
@@ -2351,20 +2351,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Multivector<(), f32, O>, T, 8>> for Multivector<(Multivector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Point, Multivector<(), f64, O>, T, 8>> for Multivector<(Multivector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Point, Multivector<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<Point, Multivector<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Multivector<(), f32, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[2], T::zero(), m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[7], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[2], T::zero(), m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[7], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f32, O>, gx::batch::Plain> for Point {
-    type Y = Multivector<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::batch::Plain> for Point {
+    type Y = Multivector<(), f64, O>;
     type Versor<T: gx::Coef> = Point<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Point, Multivector<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Point, Multivector<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> Point<(), T> {
         v
@@ -2374,16 +2374,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f32, O>, gx::
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Multivector<(), f32, O>, T, 8> {
-        gx::Prepare::<Multivector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Point<(), T>) -> gx::Prepared<Point, Multivector<(), f64, O>, T, 8> {
+        gx::Prepare::<Multivector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Multivector<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Multivector<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Point, Multivector<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Point, Multivector<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Multivector<(), f32, O>, T, 8>, x: Multivector<(), T, O>) -> Multivector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Point, Multivector<(), f64, O>, T, 8>, x: Multivector<(), T, O>) -> Multivector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -2470,10 +2470,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivector<(), f32, O>> for gx::Unit<Point<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivector<(), f64, O>> for gx::Unit<Point<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -2495,7 +2495,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivect
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S, T, O>> for gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S, T, O>> for gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8> {
     type Output = Multivector<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
@@ -2505,20 +2505,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8>> for Multivector<(Multivector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8>> for Multivector<(Multivector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Multivector<(), f32, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[2], T::zero(), m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[7], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[2], T::zero(), m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[7], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), T::zero(), m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero(), m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f32, O>, gx::batch::Certified> for Point {
-    type Y = Multivector<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::batch::Certified> for Point {
+    type Y = Multivector<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Point<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Point<(), T>) -> gx::Unit<Point<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -2528,16 +2528,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f32, O>, gx::
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8> {
-        gx::Prepare::<Multivector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Point<(), T>>) -> gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8> {
+        gx::Prepare::<Multivector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, W, 8> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Multivector<(), f32, O>, T, 8>, x: Multivector<(), T, O>) -> Multivector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Point>, Multivector<(), f64, O>, T, 8>, x: Multivector<(), T, O>) -> Multivector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]

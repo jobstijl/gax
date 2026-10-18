@@ -10,7 +10,7 @@ use rng::{Draw, rng};
 
 use gax::dual::{Dual, derivative, gradient_array, jacobian_array};
 use gax::fp::Fp;
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::pga3d::{Line, Motor, Point, intrinsic};
 use gax::{Coef, Real};
 
 type D1 = Dual<f64, 1>;
@@ -125,7 +125,7 @@ fn jacobian_of_a_join() {
     let (v, j) = jacobian_array(
         |x: [Dual<f64, 3>; 3]| {
             let c = Dual::constant;
-            let p: Plane<(), Dual<f64, 3>, gax::Intrinsic> = Point::xyz(x[0], c(0.0), c(0.0))
+            let p: intrinsic::Plane<(), Dual<f64, 3>> = Point::xyz(x[0], c(0.0), c(0.0))
                 & Point::xyz(c(0.0), x[1], c(0.0))
                 & Point::xyz(c(0.0), c(0.0), x[2]);
             let n = (p.e1() * p.e1() + p.e2() * p.e2() + p.e3() * p.e3()).sqrt();

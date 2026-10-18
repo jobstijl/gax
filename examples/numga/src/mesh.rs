@@ -26,14 +26,14 @@ use core::ops::{Add, Mul, Sub};
 use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
 use gax::mesh::Complex;
-use gax::vga3d::{Bivector, Scalar, Vector};
+use gax::vga3d::{Bivector, Scalar, Vector, intrinsic};
 use gax::{Extensor, Kind};
 
 /// A vector of space: the default vertex.
 pub type Vector3 = Vector<(), f64>;
 /// A normal: the dual of a face's bivector, so oriented by the face's winding, intrinsic
 /// (ADR-051), and reflected as such.
-pub type Normal3 = Vector<(), f64, gax::Intrinsic>;
+pub type Normal3 = intrinsic::Vector<(), f64>;
 /// A scalar of space's algebra.
 pub type Scalar3 = Scalar<(), f64>;
 /// A bivector of space: a plane through the origin, with its orientation and area.
@@ -353,7 +353,7 @@ impl Mesh<Vector3> {
     /// `[F]`: each face's unit plane, counter-clockwise seen from outside.
     #[must_use]
     pub fn face_planes(&self) -> Field<Bivector3> {
-        face_bivectors(&self.triangle_edges()).map(|b| b.normalized().into_inner())
+        face_bivectors(&self.triangle_edges()).map(|b| b.normalized())
     }
 
     /// `[F]`: each face's area.
@@ -391,7 +391,7 @@ impl Mesh<Vector3> {
     #[must_use]
     pub fn vertex_normals(&self) -> Field<Normal3> {
         let face_normals = face_bivectors(&self.triangle_edges()).map(|b| b.dual());
-        (&self.face_means().reverse() * &face_normals).map(|n| n.normalized().into_inner())
+        (&self.face_means().reverse() * &face_normals).map(|n| n.normalized())
     }
 
     /// `[V]`: a third of the area of each triangle at the vertex.

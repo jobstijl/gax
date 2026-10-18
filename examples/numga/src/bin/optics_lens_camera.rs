@@ -15,8 +15,8 @@ use gax_numga_examples::{
 };
 
 mod lens {
-    use gax::pga3d::{Line, Motor, Plane, Point};
-    use gax::{Intrinsic, Unit};
+    use gax::Unit;
+    use gax::pga3d::{Motor, Plane, Point, intrinsic};
     use gax_numga_examples::measure;
 
     pub type P = Point<(), f64>;
@@ -25,9 +25,9 @@ mod lens {
     /// A collineation maps points to points.
     pub type PointMap = Point<(Point,), f64>;
     /// A ray: the join of two points, a line oriented along itself (intrinsic).
-    pub type Ray = Line<(), f64, Intrinsic>;
+    pub type Ray = intrinsic::Line<(), f64>;
     /// A map on rays.
-    pub type LineMap = Line<(Line<(), f32, Intrinsic>,), f64, Intrinsic>;
+    pub type LineMap = intrinsic::Line<(intrinsic::Line,), f64>;
     /// A primal quadric maps a point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
     /// A dual quadric maps a plane to its pole.
@@ -50,7 +50,7 @@ mod lens {
     /// the induced map on lines.
     pub fn thin_lens(focal: f64) -> (PointMap, LineMap) {
         let p = Point::slot();
-        let l = Ray::oriented_slot();
+        let l = Ray::slot();
         let points = p + origin() * (home() & p).gp(1.0 / focal);
         let lines = l - (origin() & (l ^ home())).gp(1.0 / focal);
         (points, lines)
@@ -112,9 +112,8 @@ mod lens {
         let points: [PointMap; 2] = core::array::from_fn(|i| {
             placements[i] >> lenses[i].0.of(placements[i] << Point::slot())
         });
-        let lines: [LineMap; 2] = core::array::from_fn(|i| {
-            placements[i] >> lenses[i].1.of(placements[i] << Ray::oriented_slot())
-        });
+        let lines: [LineMap; 2] =
+            core::array::from_fn(|i| placements[i] >> lenses[i].1.of(placements[i] << Ray::slot()));
         let [front, rear] = lines;
         let (front_plane, rear_plane) = (placements[0] >> home(), placements[1] >> home());
         let collineation = points[1].of(points[0]);

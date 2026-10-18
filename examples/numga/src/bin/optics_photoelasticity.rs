@@ -70,7 +70,7 @@ mod photoelasticity {
     /// stress is the remote one.
     pub fn kirsch(position: Planar, radius: f64, remote: Stress) -> Stress {
         let ratio = radius * radius / position.norm_squared();
-        let radial = position.normalized().into_inner();
+        let radial = position.normalized();
         let tangent = Pseudoscalar::new(1.0) | radial;
         // The remote traction map resolved in the local radial and tangential directions.
         let mean = remote.trace() / 2.0;
@@ -421,7 +421,7 @@ mod tests {
             // Symmetric: the pairing of two normals through it does not depend on their order.
             let form = Vector::slot() | stress.of(Vector::slot());
             assert!(form.max_abs_diff(&form.swap()) < ROUND_OFF);
-            let far = kirsch(p.normalized().into_inner() * far_distance, radius, remote);
+            let far = kirsch(p.normalized() * far_distance, radius, remote);
             assert!(far.max_abs_diff(&remote) < ROUND_OFF);
         }
     }

@@ -9,7 +9,7 @@
 //! The animation turns the three views about the sphere while a point runs along the oval with
 //! its two geodesics to the foci and its tangent great circle.
 
-use gax::vga3d::{Bivector, Vector};
+use gax::vga3d::{Bivector, Vector, intrinsic};
 use gax_colour::Light;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
@@ -19,20 +19,19 @@ use gax_numga_examples::{
 
 mod conic {
     use super::*;
-    use gax::Intrinsic;
     use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
     /// A point of the sphere: the pole of a plane, on `e23`, `e31`, `e12`, the poles of the
     /// planes x, y and z. It is the dual of the vector of its coordinates, which `undual`
     /// recovers, and so intrinsic (ADR-051).
-    pub type P = Bivector<(), f64, Intrinsic>;
+    pub type P = intrinsic::Bivector<(), f64>;
     /// A plane through the origin: a great circle.
     pub type Plane = Vector<(), f64>;
     /// A polarity: a point to its polar plane.
-    pub type Polarity = Vector<(Bivector<(), f32, Intrinsic>,), f64>;
+    pub type Polarity = Vector<(intrinsic::Bivector,), f64>;
     /// A dual polarity: a plane to its pole.
-    pub type DualPolarity = Bivector<(Vector,), f64, Intrinsic>;
+    pub type DualPolarity = intrinsic::Bivector<(Vector,), f64>;
     pub type R = gax::Unit<gax::vga3d::Rotor<(), f64>>;
 
     /// The basis planes x, y and z.
@@ -47,7 +46,7 @@ mod conic {
     /// The polarity with the given eigenvalues on the basis planes: each plane paired with an
     /// open point, weighted.
     pub fn polarity(eigenvalues: [f64; 3]) -> Polarity {
-        let p = P::oriented_slot();
+        let p = P::slot();
         let [a, b, c] = planes();
         (a & p) * a.gp(eigenvalues[0])
             + (b & p) * b.gp(eigenvalues[1])
@@ -92,7 +91,7 @@ mod conic {
     /// `end / start`: that rotor turns `start` through twice their angle, so the logarithm's norm
     /// is the angle and half of it the turn.
     fn turn(start: P, end: P) -> Bivector<(), f64> {
-        (end / start).normalized().log()
+        (end / start).unit().log()
     }
 
     /// The great-circle arc from `start` to `end`, at fraction `t` of its length: a fraction of
@@ -106,7 +105,7 @@ mod conic {
     /// the pole is (numga's `Turn`, the scalar of flipped orientation), so their product is the
     /// turn's generator, extrinsic.
     pub fn great_circle(plane: Plane, through: P, angle: f64) -> P {
-        let turn = gax::vga3d::Scalar::<(), f64>::new(angle / 2.0).with_orientation::<Intrinsic>();
+        let turn = intrinsic::Scalar::new(angle / 2.0);
         (plane.dual() * turn).exp() >> through
     }
 
@@ -133,7 +132,7 @@ mod conic {
     pub fn spherical_conic(n: usize) -> Conic {
         let eigenvalues = [1.0, 0.4, -0.8];
         let rotor = Bivector::new(0.15, 0.0, 0.25).exp();
-        let c = rotor >> polarity(eigenvalues).of(rotor << P::oriented_slot());
+        let c = rotor >> polarity(eigenvalues).of(rotor << P::slot());
         let q = rotor >> polarity(eigenvalues).solve(rotor << Vector::slot());
         // The semi-axes as arcs, the semi-minor along x and the semi-major along y, and the focal
         // arc along the major axis.
@@ -161,10 +160,7 @@ mod conic {
             .collect();
         let foci = foci.map(|f| rotor >> f.dual());
         // The polar plane of a point of the oval is its tangent great circle.
-        let tangents = curve
-            .iter()
-            .map(|p| c.of(*p).normalized().into_inner())
-            .collect();
+        let tangents = curve.iter().map(|p| c.of(*p).normalized()).collect();
         Conic {
             eigenvalues,
             rotor,

@@ -14,7 +14,7 @@
 //! ```ignore
 //! use gax::batch::{BatchTransform, Soa};
 //! use gax::pga3d::{Motor, Point};
-//! let m = Motor::<(), f32>::rotation_about(0.0, 0.0, 1.0, 0.5).normalized();
+//! let m = Motor::<(), f32>::rotation_about(0.0, 0.0, 1.0, 0.5);
 //! let points: Vec<Point> = (0..100).map(|i| Point::xyz(i as f32, 1.0, 0.0)).collect();
 //! let mut moved = vec![Point::zero(); points.len()];
 //! m.transform_slice(&points, &mut moved); // one prepared map, applied 8 points at a time

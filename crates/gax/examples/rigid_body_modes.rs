@@ -38,9 +38,7 @@ fn main() {
     // Stiffness: each spring along line l contributes k · l (l ∨ B).
     let mut stiffness: Line<(Point,), f64> = Line::zero();
     for ((x, y), (dx, dy), k) in springs {
-        let l = (Point::xy(x, y) & Point::direction(dx, dy))
-            .normalized()
-            .into_inner();
+        let l = (Point::xy(x, y) & Point::direction(dx, dy)).normalized();
         stiffness += (l * (l & Point::slot())).gp(k);
     }
 

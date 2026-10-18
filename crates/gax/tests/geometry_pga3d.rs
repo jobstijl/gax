@@ -51,11 +51,11 @@ proptest! {
         // Incidence: the plane through p, q, r contains each of them: (p & q & r) & p == 0.
         // Joins of points are intrinsic, the plane oriented by the order of its points
         // (ADR-051); meets with it follow the product of the signs.
-        let pl: Plane<(), f64, gax::Intrinsic> = (p & q) & r;
+        let pl: intrinsic::Plane<(), f64> = (p & q) & r;
         prop_assert!((pl & p).s().abs() < 1e-12);
         // Meet of that plane with another is a line lying in both.
-        let l: Line<(), f64, gax::Intrinsic> = pl ^ e;
-        let on: Point<(), f64, gax::Extrinsic> = l ^ pl;
+        let l: intrinsic::Line<(), f64> = pl ^ e;
+        let on: extrinsic::Point<(), f64> = l ^ pl;
         prop_assert!(on.coeffs().iter().all(|c| c.abs() < 1e-12));
     }
 

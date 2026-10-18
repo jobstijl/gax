@@ -72,11 +72,7 @@ mod stress {
     pub fn principal_frame(stress: Map) -> ([f64; 3], [V; 3], Turn) {
         let (values, directions) = stress.eigh();
         let one = Rotor::new(1.0, 0.0, 0.0, 0.0);
-        (
-            values,
-            directions,
-            (one + directions[0] * AXES[0]).normalized(),
-        )
+        (values, directions, (one + directions[0] * AXES[0]).unit())
     }
 
     /// The centre of Mohr's circle in the shear plane, and its radius, the largest shear: from
@@ -167,7 +163,7 @@ mod stress {
     /// numga's three frames: the lab, the principal frame, and the frame an eighth of a turn
     /// on, where the shear is greatest.
     pub fn frames(material: &Material) -> [Turn; 3] {
-        let lab = Rotor::new(1.0, 0.0, 0.0, 0.0).normalized();
+        let lab = Rotor::new(1.0, 0.0, 0.0, 0.0).unit();
         [lab, material.principal, turned(material, FRAC_PI_4)]
     }
 

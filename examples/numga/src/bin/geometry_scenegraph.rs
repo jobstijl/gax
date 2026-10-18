@@ -228,9 +228,7 @@ fn photograph_panel(c: &mut Canvas, rect: Rect, photo: &Photo) {
     let frame = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
     c.fill(&frame, Light::from_srgb(0.11, 0.12, 0.16, 1.0), 1.0);
     c.clip(rect);
-    let facing = Plane::orthogonal_to(Point::direction(-0.4, -0.8, 0.45))
-        .normalized()
-        .into_inner();
+    let facing = Plane::orthogonal_to(Point::direction(-0.4, -0.8, 0.45)).normalized();
     for (i, (pixels, w)) in photo.pixels.iter().zip(&photo.world).enumerate() {
         for f in BOX_FACES {
             let poly: Vec<Point2> = f.iter().map(|&j| px(pixels[j])).collect();

@@ -35,7 +35,7 @@ pub trait Draw: rand::Rng {
         V: gax::Extensor<Slots = (), Coef = f64> + gax::Normalize,
     {
         let c = <V::Kind as gax::Kind>::arr_from_fn(|_| self.normal());
-        V::from_coeffs(c).normalized().into_inner()
+        V::from_coeffs(c).normalized()
     }
 }
 

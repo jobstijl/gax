@@ -344,7 +344,7 @@ mod tests {
         for season in seasons() {
             let shape = cone(pole, season);
             for sun in day(season) {
-                let ray = (nodus() - shadow(nodus(), sun)).normalized().into_inner();
+                let ray = (nodus() - shadow(nodus(), sun)).normalized();
                 assert!((ray | shape.of(ray)).s().abs() < 1e-10);
             }
         }
@@ -355,7 +355,7 @@ mod tests {
             for sun in hour_line(hour) {
                 let offset = shadow(nodus(), sun) - foot;
                 let bearing = vga2d::Vector::new(offset.e1(), offset.e2());
-                let sine = bearing.normalized().into_inner() ^ expected.normalized().into_inner();
+                let sine = bearing.normalized() ^ expected.normalized();
                 assert!(sine.e12().abs() < 1e-10, "{hour}: {}", sine.e12());
             }
         }

@@ -46,7 +46,7 @@ pub fn shift_along_beam() -> Strain {
 /// the beam through it (gax's `pga2d` to `pga3d` homomorphism takes a point of the plane to the
 /// line along `z` through it) met with the plane.
 pub fn in_space(p: P2) -> P3 {
-    pga3d::Line::from(p) ^ section_plane()
+    pga3d::intrinsic::Line::from(p) ^ section_plane()
 }
 
 /// A strain as a line of space: the plane along the beam through it (the homomorphism) met with

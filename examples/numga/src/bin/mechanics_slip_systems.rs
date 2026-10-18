@@ -37,15 +37,14 @@ use gax_numga_examples::{
 use std::sync::OnceLock;
 
 mod slip {
-    use gax::Intrinsic;
-    use gax::vga3d::{Scalar, Vector};
+    use gax::vga3d::{Vector, intrinsic};
 
     pub type V = Vector<(), f64>;
     /// A slip direction: the meet of two slip planes, intrinsic, its sense a convention.
-    pub type D = Vector<(), f64, Intrinsic>;
+    pub type D = intrinsic::Vector<(), f64>;
     /// A Schmid factor or a slip: the stress resolved along a slip direction, intrinsic like the
     /// direction, so that its product with the direction, a move, does not depend on its sense.
-    pub type Factor = Scalar<(), f64, Intrinsic>;
+    pub type Factor = intrinsic::Scalar<(), f64>;
     /// A stress: a map on vectors, the traction on a plane for its normal.
     pub type Stress = Vector<(Vector,), f64>;
     /// One value per slip system: per plane, per slip direction in it.
@@ -63,7 +62,7 @@ mod slip {
         core::array::from_fn(|i| {
             core::array::from_fn(|k| {
                 let other = planes[(i + k + 1) % PLANES];
-                (planes[i] & other).normalized().into_inner()
+                (planes[i] & other).normalized()
             })
         })
     }
@@ -133,7 +132,7 @@ mod slip {
 
     /// A unit vector from coordinates.
     pub fn unit(c: [f64; 3]) -> V {
-        Vector::from_coeffs(c).normalized().into_inner()
+        Vector::from_coeffs(c).normalized()
     }
 
     /// The slip planes' normals.
@@ -329,7 +328,11 @@ fn title(c: &mut Canvas, rect: Rect, text: &str) {
 
 /// A step's colour: the colours of the systems that slipped in it, mixed by how much.
 fn mixed(amounts: &Systems<Factor>) -> Light {
-    let weights: Vec<f32> = amounts.iter().flatten().map(|a| a.s().abs() as f32).collect();
+    let weights: Vec<f32> = amounts
+        .iter()
+        .flatten()
+        .map(|a| a.s().abs() as f32)
+        .collect();
     let total: f32 = weights.iter().sum();
     (weights.iter().enumerate()).fold(gax_colour::DARK, |light, (k, w)| {
         light + system_colour(k) * (w / total)

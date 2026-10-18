@@ -411,10 +411,10 @@ impl Fx {
         self.cam = (self.cam_vel * dt).exp().mul_renormalized(self.cam);
         let a = self.shake * self.shake * self.shake_scale;
         if a > 1e-4 {
-            let jitter = Point::translation_twist(
+            let jitter = Twist::translation_twist(
                 self.rng.range(-1.0, 1.0) * a,
                 self.rng.range(-1.0, 1.0) * a,
-            ) + Point::rotation_twist(
+            ) + Twist::rotation_twist(
                 self.cam >> Point::xy(0.0, 0.0),
                 self.rng.range(-0.02, 0.02) * a,
             );

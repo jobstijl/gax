@@ -354,7 +354,7 @@ mod kane_mele {
 
     /// The electron's spinor: its spin along x, half up and half down, `(1 - zx) / √2`.
     pub fn spinor_along_x() -> Spinor {
-        Rotor::new(1.0, 0.0, -1.0, 0.0).normalized().into_inner()
+        Rotor::new(1.0, 0.0, -1.0, 0.0).normalized()
     }
 
     /// `count` masses evenly over the sweep.
@@ -683,7 +683,7 @@ mod tests {
             assert!(rim_share(&f, &lengths) > 0.9);
         }
         let spins = at(FRAMES / 4);
-        let start = f.positions.site(f.start).normalized().into_inner();
+        let start = f.positions.site(f.start).normalized();
         let sine = |sign: f64| {
             let half: Vec<f64> = spins
                 .iter()
@@ -696,7 +696,7 @@ mod tests {
                 .map(|(p, h)| p * *h)
                 .sum::<V>()
                 / half.iter().sum::<f64>();
-            (xy() | (centre.normalized().into_inner() ^ start)).s()
+            (xy() | (centre.normalized() ^ start)).s()
         };
         let (up, down) = (sine(1.0), sine(-1.0));
         assert!(up < -0.5 && down > 0.5, "{up} {down}");

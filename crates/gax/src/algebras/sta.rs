@@ -7,6 +7,115 @@
 
 use crate as gx;
 
+pub use oriented::*;
+
+#[doc = "A scalar."]
+///
+/// In its default orientation, extrinsic: [`oriented::Scalar`] is the kind for any orientation,
+/// [`intrinsic::Scalar`] and [`extrinsic::Scalar`] name either one.
+pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Extrinsic>;
+
+#[doc = "A spacetime vector (an event or a four-momentum)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Vector`] is the kind for any orientation,
+/// [`intrinsic::Vector`] and [`extrinsic::Vector`] name either one.
+pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Extrinsic>;
+
+#[doc = "A bivector: an electromagnetic field, or the generator of a Lorentz transformation. `e10, e20, e30` are the boosts (electric part), `e23, e31, e12` the rotations (magnetic part)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Bivector`] is the kind for any orientation,
+/// [`intrinsic::Bivector`] and [`extrinsic::Bivector`] name either one.
+pub type Bivector<S = (), T = f64> = oriented::Bivector<S, T, gx::Extrinsic>;
+
+#[doc = "A trivector (a pseudovector)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Trivector`] is the kind for any orientation,
+/// [`intrinsic::Trivector`] and [`extrinsic::Trivector`] name either one.
+pub type Trivector<S = (), T = f64> = oriented::Trivector<S, T, gx::Extrinsic>;
+
+#[doc = "The unit four-volume `e0123`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Pseudoscalar`] is the kind for any orientation,
+/// [`intrinsic::Pseudoscalar`] and [`extrinsic::Pseudoscalar`] name either one.
+pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Extrinsic>;
+
+#[doc = "A scalar plus a pseudoscalar: a complex number with `i = e0123`, which commutes with the even subalgebra (`exp` of a pseudoscalar, the duality rotation `exp(I Î²)` of a spinor)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Phasor`] is the kind for any orientation,
+/// [`intrinsic::Phasor`] and [`extrinsic::Phasor`] name either one.
+pub type Phasor<S = (), T = f64> = oriented::Phasor<S, T, gx::Extrinsic>;
+
+#[doc = "The even subalgebra: spinors and Lorentz rotors."]
+///
+/// In its default orientation, extrinsic: [`oriented::Even`] is the kind for any orientation,
+/// [`intrinsic::Even`] and [`extrinsic::Even`] name either one.
+pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Extrinsic>;
+
+#[doc = "The odd subalgebra."]
+///
+/// In its default orientation, extrinsic: [`oriented::Odd`] is the kind for any orientation,
+/// [`intrinsic::Odd`] and [`extrinsic::Odd`] name either one.
+pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
+
+#[doc = "A general multivector."]
+///
+/// In its default orientation, extrinsic: [`oriented::Multivector`] is the kind for any orientation,
+/// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
+pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+
+/// Every kind of the algebra, intrinsic (ADR-051).
+pub mod intrinsic {
+    use super::{gx, oriented};
+
+    /// [`oriented::Scalar`], intrinsic.
+    pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Intrinsic>;
+    /// [`oriented::Vector`], intrinsic.
+    pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Intrinsic>;
+    /// [`oriented::Bivector`], intrinsic.
+    pub type Bivector<S = (), T = f64> = oriented::Bivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Trivector`], intrinsic.
+    pub type Trivector<S = (), T = f64> = oriented::Trivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Pseudoscalar`], intrinsic.
+    pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Intrinsic>;
+    /// [`oriented::Phasor`], intrinsic.
+    pub type Phasor<S = (), T = f64> = oriented::Phasor<S, T, gx::Intrinsic>;
+    /// [`oriented::Even`], intrinsic.
+    pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Intrinsic>;
+    /// [`oriented::Odd`], intrinsic.
+    pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Intrinsic>;
+    /// [`oriented::Multivector`], intrinsic.
+    pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+}
+
+/// Every kind of the algebra, extrinsic (ADR-051).
+pub mod extrinsic {
+    use super::{gx, oriented};
+
+    /// [`oriented::Scalar`], extrinsic.
+    pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Extrinsic>;
+    /// [`oriented::Vector`], extrinsic.
+    pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Extrinsic>;
+    /// [`oriented::Bivector`], extrinsic.
+    pub type Bivector<S = (), T = f64> = oriented::Bivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Trivector`], extrinsic.
+    pub type Trivector<S = (), T = f64> = oriented::Trivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Pseudoscalar`], extrinsic.
+    pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Extrinsic>;
+    /// [`oriented::Phasor`], extrinsic.
+    pub type Phasor<S = (), T = f64> = oriented::Phasor<S, T, gx::Extrinsic>;
+    /// [`oriented::Even`], extrinsic.
+    pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Extrinsic>;
+    /// [`oriented::Odd`], extrinsic.
+    pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
+    /// [`oriented::Multivector`], extrinsic.
+    pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+}
+
+/// The kinds as structs generic over their orientation `O` (ADR-051), with every
+/// operation; the module root and [`intrinsic`] and [`extrinsic`] name them with `O` fixed.
+pub mod oriented {
+use super::gx;
+
 include!("sta/kinds.rs");
 include!("sta/products_gp.rs");
 include!("sta/products_wedge.rs");
@@ -23,3 +132,4 @@ include!("sta/sandwiches_even.rs");
 include!("sta/sandwiches_odd.rs");
 include!("sta/outermorphisms.rs");
 include!("sta/layouts.rs");
+}

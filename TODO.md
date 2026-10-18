@@ -200,8 +200,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [ ] The numga ports synced to upstream `7dff347` (its newer content), with its four orientation examples ported (normals, mechanical work, mirror energy, conformal circle)
 
 ## Phase 12: API consolidation (ADR-052)
-- [ ] Internal cleanups: the generator (output byte-identical: shared emission helpers, split modules, data structures) and gax-core (one SVD, the study series over `Channel`, shared sparse and DEC kernels, iterator style)
-- [ ] Batch 1, generator and types: orientation by name (`oriented::`, `intrinsic::`, `extrinsic::`), orientation arithmetic that reduces, `f64` default, `gx::Slot`, `Oriented<K, O>`, `Log` with an associated output, `normalized()`/`unit()`; everything migrated
+- [x] Internal cleanups: the generator (output byte-identical: shared emission helpers, split modules, data structures) and gax-core (one SVD, the study series over `Channel`, shared sparse and DEC kernels, iterator style)
+- [x] Batch 1, generator and types: orientation by name (`oriented::`, `intrinsic::`, `extrinsic::`), orientation arithmetic that reduces, `f64` default, `gx::Slot`, `Oriented<K, O>`, `Log` with an associated output, `normalized()`/`unit()`; everything migrated
 - [ ] Batch 2, names and linear algebra: `of`/`to_dense` everywhere, one trace module, `jet`, `SimplicialComplex`, `Svd`/`Eigen` results, `eigh_with`, `solve_pairing`, `of_dyad`, `try_*`, `gx::__private`
 - [ ] Batch 3, geometry: gax types in constructors, uniform roles and helpers across algebras (`Line::direction`, `Plane::normal`, `Point::distance`, PGA2D `Line::through`, VGA rotations, CGA motors, STA boosts)
 

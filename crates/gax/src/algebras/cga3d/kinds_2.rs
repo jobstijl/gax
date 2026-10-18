@@ -36,7 +36,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Odd<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Odd<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Odd<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -51,9 +51,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Odd<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Odd<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Odd<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Odd<(), f32, O>: gx::GradePart<G>,
+        Odd<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -288,7 +288,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Odd<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -300,30 +300,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Odd<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Odd<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e1: T, e2: T, e3: T, eo: T, ei: T, e23o: T, e31o: T, e12o: T, e23i: T, e31i: T, e12i: T, e1oi: T, e2oi: T, e3oi: T, e123: T, e123oi: T) -> Self {
         Odd { o: core::marker::PhantomData, c: [e1, e2, e3, eo, ei, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e123oi] }
     }
 
-    /// The identity map on `Odd`: a `Odd` with one open `Odd` slot.
+    /// The identity map on `Odd`: a `Odd` with one open `Odd` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Odd<(Odd,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Odd<(Odd<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Odd<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e1: T, e2: T, e3: T, eo: T, ei: T, e23o: T, e31o: T, e12o: T, e23i: T, e31i: T, e12i: T, e1oi: T, e2oi: T, e3oi: T, e123: T, e123oi: T) -> Self {
+        Odd { o: core::marker::PhantomData, c: [e1, e2, e3, eo, ei, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e123oi] }
+    }
+
+    /// The identity map on `Odd`: a `Odd` with one open `Odd` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Odd<(Odd<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Odd<(), T, O> {
+    type Map = Odd<(Odd<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Odd<(), T, O> {
-    /// The identity map on `Odd` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Odd<(Odd<(), f32, O>,), T, O> {
-        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -431,14 +448,14 @@ impl<T: gx::Coef, O: gx::Orientation> Odd<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Odd<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Odd`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Odd<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Odd<(), T, O>>) -> Self {
         let images = images.as_ref();
         Odd { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -459,9 +476,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A, B), T, O
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// The inverse map, `A <- Odd`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Odd<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Odd<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Odd<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Odd<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -470,7 +487,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -490,7 +507,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Odd<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Odd<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Odd<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -499,18 +516,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Odd<(), f32, O> as gx::Kind>::Arr<T>, <Odd<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Odd<(), f64, O> as gx::Kind>::Arr<T>, <Odd<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Odd<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Odd<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -518,9 +535,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Odd<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Odd<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Odd<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Odd<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -529,8 +546,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Odd<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Odd<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -538,9 +555,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Odd<(), f32, O> as gx::Kind>::Arr<Odd<(), T, O>>, <Odd<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Odd<(), f64, O> as gx::Kind>::Arr<Odd<(), T, O>>, <Odd<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Odd<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -548,18 +565,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Odd`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Odd<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Odd<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Odd<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Odd<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Odd<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Odd<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Odd<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Odd<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -568,7 +585,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Odd<(), f32, O>, Input = Odd<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Odd<(), f64, O>, Input = Odd<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -587,8 +604,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A, B), T, O
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Odd<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Odd<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Odd<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Odd<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -602,7 +619,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Odd<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Odd<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -614,7 +631,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Odd<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Odd<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -624,7 +641,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Odd<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Odd<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -1395,7 +1412,7 @@ impl<T: gx::Real, O: gx::Orientation> Odd<(), T, O> {
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
-    pub fn normalized(self) -> gx::Unit<Self> {
+    pub fn unit(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[3] * x[4];
         let p1 = x[5] * x[8];
@@ -1841,6 +1858,13 @@ impl<T: gx::Real, O: gx::Orientation> Odd<(), T, O> {
         gx::Unit::new_unchecked(Odd::from_coeffs([t240, t248, t256, t262, t268, t274, t280, t286, t292, t298, t304, t312, t320, t328, t336, t344]))
     }
 
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
+    }
+
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Odd<(), T, O> {
@@ -2260,8 +2284,8 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Odd<(), T, O> {
 
 impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Odd<(), T, O> {
     #[inline(always)]
-    fn normalized(self) -> gx::Unit<Self> {
-        Self::normalized(self)
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
     }
 }
 
@@ -2273,7 +2297,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Odd<(), T, O> {
 /// linear map from `A`, `Multivector<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, extrinsic by default (ADR-051).
 #[repr(C)]
-pub struct Multivector<S: gx::Slots = (), T: gx::Coef = f32, O: gx::Orientation = gx::Extrinsic> {
+pub struct Multivector<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; 32],
     o: core::marker::PhantomData<O>,
@@ -2305,9 +2329,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Multive
 }
 
 // SAFETY: `Arr<X>` is `[X; 32]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Multivector<(), f32, O> {}
+unsafe impl<O: gx::Orientation> gx::FlatKind for Multivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Kind for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Kind for Multivector<(), f64, O> {
     const N: usize = 32;
     const NAME: &'static str = "Multivector";
     const MODULE: &'static str = module_path!();
@@ -2336,7 +2360,7 @@ impl<O: gx::Orientation> gx::Kind for Multivector<(), f32, O> {
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Multivector<S, T, O> {
-    type Kind = Multivector<(), f32, O>;
+    type Kind = Multivector<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -2385,7 +2409,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        Multivector<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        Multivector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }
@@ -2400,9 +2424,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Multivector<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<Multivector<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        Multivector<(), f32, O>: gx::GradePart<G>,
+        Multivector<(), f64, O>: gx::GradePart<G>,
     {
         gx::cast::grade::<Self, G>(&self)
     }
@@ -2637,7 +2661,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
     where
         <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()).with_orientation::<gx::Intrinsic>())
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
     }
 }
 
@@ -2649,30 +2673,47 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reo
     }
 }
 
-impl<T: gx::Coef> Multivector<(), T> {
-    /// A value from its coefficients, in blade order, of the kind's default orientation
-    /// (another through [`with_orientation`](Self::with_orientation)).
+impl<T: gx::Coef> Multivector<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(s: T, e1: T, e2: T, e3: T, eo: T, ei: T, e23: T, e31: T, e12: T, e1o: T, e2o: T, e3o: T, e1i: T, e2i: T, e3i: T, eoi: T, e23o: T, e31o: T, e12o: T, e23i: T, e31i: T, e12i: T, e1oi: T, e2oi: T, e3oi: T, e123: T, e23oi: T, e31oi: T, e12oi: T, e123o: T, e123i: T, e123oi: T) -> Self {
         Multivector { o: core::marker::PhantomData, c: [s, e1, e2, e3, eo, ei, e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e23oi, e31oi, e12oi, e123o, e123i, e123oi] }
     }
 
-    /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot.
+    /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot, both of this
+    /// orientation.
     #[inline(always)]
-    pub fn slot() -> Multivector<(Multivector,), T> {
-        Self::oriented_slot()
+    pub fn slot() -> Multivector<(Multivector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Multivector<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(s: T, e1: T, e2: T, e3: T, eo: T, ei: T, e23: T, e31: T, e12: T, e1o: T, e2o: T, e3o: T, e1i: T, e2i: T, e3i: T, eoi: T, e23o: T, e31o: T, e12o: T, e23i: T, e31i: T, e12i: T, e1oi: T, e2oi: T, e3oi: T, e123: T, e23oi: T, e31oi: T, e12oi: T, e123o: T, e123i: T, e123oi: T) -> Self {
+        Multivector { o: core::marker::PhantomData, c: [s, e1, e2, e3, eo, ei, e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e23oi, e31oi, e12oi, e123o, e123i, e123oi] }
+    }
+
+    /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Multivector<(Multivector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Multivector<(), T, O> {
+    type Map = Multivector<(Multivector<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }
 
 impl<T: gx::Coef, O: gx::Orientation> Multivector<(), T, O> {
-    /// The identity map on `Multivector` of this orientation, on its output and its slot: for a type
-    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).
-    #[inline(always)]
-    pub fn oriented_slot() -> Multivector<(Multivector<(), f32, O>,), T, O> {
-        Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
     /// [`gx::Prepared`]).
     #[inline(always)]
@@ -2876,14 +2917,14 @@ impl<T: gx::Coef, O: gx::Orientation> Multivector<(), T, O> {
     }
 }
 
-impl<A: gx::Kind, T: gx::Coef> Multivector<(A,), T> {
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A,), T, O> {
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `Multivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<Multivector<(), T>>) -> Self {
+    pub fn from_images(images: A::Arr<Multivector<(), T, O>>) -> Self {
         let images = images.as_ref();
         Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
@@ -2904,9 +2945,9 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A, 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Multivector<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Multivector<(), f64, O>,), T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Multivector<(), f32, O>,), T>>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Multivector<(), f64, O>,), T>>,
     {
         gx::SquareMap::inverse(self)
     }
@@ -2915,7 +2956,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     #[inline]
     pub fn det(self) -> T
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::det(self)
     }
@@ -2935,7 +2976,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Multivector<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Multivector<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Multivector<(), f64, O>>,
     {
         gx::SingularValues::svd_thin(self)
     }
@@ -2944,18 +2985,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// symmetric (see [`gx::SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Multivector<(), f32, O> as gx::Kind>::Arr<T>, <Multivector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<Multivector<(), f64, O> as gx::Kind>::Arr<T>, <Multivector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <Multivector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <Multivector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigvals(self)
     }
@@ -2963,9 +3004,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Multivector<(), f32, O> as gx::Kind>::Arr<gx::Complex<T>>, <Multivector<(), f32, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<Multivector<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Multivector<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eig(self)
     }
@@ -2974,8 +3015,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A>,
-        X: gx::Extensor<Kind = Multivector<(), f32, O>, Coef = T>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Multivector<(), f64, O>, Coef = T>,
     {
         gx::SquareMap::solve(self, rhs)
     }
@@ -2983,9 +3024,9 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Multivector<(), f32, O> as gx::Kind>::Arr<Multivector<(), T, O>>, <Multivector<(), f32, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<Multivector<(), f64, O> as gx::Kind>::Arr<Multivector<(), T, O>>, <Multivector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f32, O>, Input = A>,
+        Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::svd(self)
     }
@@ -2993,18 +3034,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// The MooreâPenrose pseudo-inverse, `A <- Multivector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<(Multivector<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<(Multivector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv(self)
     }
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Multivector<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Multivector<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector<(), f64, O>,), T>>,
     {
         gx::PseudoInverse::pinv_with(self, rcond)
     }
@@ -3013,7 +3054,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: gx::Endomorphism<Coef = T, Kind = Multivector<(), f32, O>, Input = Multivector<(), f32, O>>,
+        Self: gx::Endomorphism<Coef = T, Kind = Multivector<(), f64, O>, Input = Multivector<(), f64, O>>,
     {
         gx::Endomorphism::trace(self)
     }
@@ -3032,8 +3073,8 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A, 
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
     where
-        Self: gx::Pairing<Coef = T, Kind = Multivector<(), f32, O>, First = A, Second = B>,
-        R: gx::Extensor<Kind = Multivector<(), f32, O>, Coef = T>,
+        Self: gx::Pairing<Coef = T, Kind = Multivector<(), f64, O>, First = A, Second = B>,
+        R: gx::Extensor<Kind = Multivector<(), f64, O>, Coef = T>,
         R::Slots: gx::SplitLast<Last = B>,
     {
         gx::Pairing::solve(self, rhs)
@@ -3047,7 +3088,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Multivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Multivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
     }
@@ -3059,7 +3100,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Multivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Multivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh_semidefinite(self, metric)
     }
@@ -3069,7 +3110,7 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A, A), T, O> {
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
-        Self: gx::Form<Coef = T, Kind = Multivector<(), f32, O>, Slot = A>,
+        Self: gx::Form<Coef = T, Kind = Multivector<(), f64, O>, Slot = A>,
     {
         gx::Form::eigh(self)
     }
@@ -3374,933 +3415,933 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Multivector<(), T, O> {
     }
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Scalar<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Scalar<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Scalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Scalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Vector<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Vector<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Vector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Vector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Twist<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Twist<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Twist<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Twist<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Bivector<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Bivector<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Bivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Bivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Trivector<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Trivector<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Trivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Trivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Quadvector<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Quadvector<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Quadvector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Quadvector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Pseudoscalar<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Motor<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Motor<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Motor<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Motor<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Even<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Even<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Even<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Even<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Odd<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Odd<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Odd<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Odd<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Scalar<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Vector<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Twist<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Bivector<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Trivector<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Quadvector<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Pseudoscalar<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Motor<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Even<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f32, OB>> for Multivector<(), f32, OA> {
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Odd<(), f64, OB>> for Multivector<(), f64, OA> {
     type Out = gx::False;
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f32, OB>> for Multivector<(), f32, OA> {
-    type Out = <OA as gx::Orientation>::Same<OB>;
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<Multivector<(), f64, OB>> for Multivector<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Scalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Scalar<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f32, O>> for Scalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Scalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Scalar<(), f32, O>> for Scalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Scalar<(), f64, O>> for Scalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Scalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Scalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f32, O>> for Scalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Scalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Scalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Scalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Even<(), f32, O>> for Scalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Even<(), f64, O>> for Scalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Scalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Scalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Scalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Scalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<0> for Scalar<(), f32, O> {
-    type Out = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<0> for Scalar<(), f64, O> {
+    type Out = Scalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Vector<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Vector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(4, -1, 1)], &[(3, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Vector<(), f32, O>> for Vector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Vector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Vector<(), f32, O>> for Vector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Vector<(), f64, O>> for Vector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Odd<(), f32, O>> for Vector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Vector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f32, O>> for Vector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Vector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Vector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Vector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Vector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Vector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<1> for Vector<(), f32, O> {
-    type Out = Vector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<1> for Vector<(), f64, O> {
+    type Out = Vector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Twist<(), f32, O>> for Twist<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Twist<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Twist<(), f32, O>> for Twist<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Twist<(), f64, O>> for Twist<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f32, O>> for Twist<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Twist<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 6, false), (4, 7, false), (5, 8, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Bivector<(), f32, O>> for Twist<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Bivector<(), f64, O>> for Twist<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Twist<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Twist<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f32, O>> for Twist<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Twist<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Twist<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Twist<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 7, false), (4, 8, false), (5, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Even<(), f32, O>> for Twist<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Even<(), f64, O>> for Twist<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Twist<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Twist<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 6, false), (1, 7, false), (2, 8, false), (3, 12, false), (4, 13, false), (5, 14, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Twist<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Twist<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<2> for Twist<(), f32, O> {
-    type Out = Twist<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<2> for Twist<(), f64, O> {
+    type Out = Twist<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Bivector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)], &[(1, -1, 1)], &[(2, -1, 1)], &[(6, 1, 1)], &[(7, 1, 1)], &[(8, 1, 1)], &[(3, 1, 1)], &[(4, 1, 1)], &[(5, 1, 1)], &[(9, 1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Twist<(), f32, O>> for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Bivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (6, 3, false), (7, 4, false), (8, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f32, O>> for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Bivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Bivector<(), f32, O>> for Bivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Bivector<(), f64, O>> for Bivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Bivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (6, 4, false), (7, 5, false), (8, 6, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Bivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (6, 7, false), (7, 8, false), (8, 9, false), (9, 10, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Even<(), f32, O>> for Bivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Even<(), f64, O>> for Bivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Bivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Bivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 6, false), (1, 7, false), (2, 8, false), (3, 9, false), (4, 10, false), (5, 11, false), (6, 12, false), (7, 13, false), (8, 14, false), (9, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Bivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Bivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<2> for Bivector<(), f32, O> {
-    type Out = Bivector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<2> for Bivector<(), f64, O> {
+    type Out = Bivector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Trivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Trivector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(3, 1, 1)], &[(4, 1, 1)], &[(5, 1, 1)], &[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(6, 1, 1)], &[(7, 1, 1)], &[(8, 1, 1)], &[(9, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f32, O>> for Trivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Trivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Trivector<(), f32, O>> for Trivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Trivector<(), f64, O>> for Trivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Odd<(), f32, O>> for Trivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Trivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 6, false), (2, 7, false), (3, 8, false), (4, 9, false), (5, 10, false), (6, 11, false), (7, 12, false), (8, 13, false), (9, 14, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f32, O>> for Trivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Trivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Trivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Trivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 16, false), (1, 17, false), (2, 18, false), (3, 19, false), (4, 20, false), (5, 21, false), (6, 22, false), (7, 23, false), (8, 24, false), (9, 25, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Trivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Trivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<3> for Trivector<(), f32, O> {
-    type Out = Trivector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<3> for Trivector<(), f64, O> {
+    type Out = Trivector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Quadvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Quadvector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)], &[(1, -1, 1)], &[(2, -1, 1)], &[(4, -1, 1)], &[(3, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f32, O>> for Quadvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Quadvector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Quadvector<(), f32, O>> for Quadvector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Quadvector<(), f64, O>> for Quadvector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Quadvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Quadvector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(4, 7, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Quadvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Quadvector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 11, false), (1, 12, false), (2, 13, false), (3, 14, false), (4, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Even<(), f32, O>> for Quadvector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Even<(), f64, O>> for Quadvector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Quadvector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Quadvector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 26, false), (1, 27, false), (2, 28, false), (3, 29, false), (4, 30, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Quadvector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Quadvector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<4> for Quadvector<(), f32, O> {
-    type Out = Quadvector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<4> for Quadvector<(), f64, O> {
+    type Out = Quadvector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Pseudoscalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Pseudoscalar<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f32, O>> for Pseudoscalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Pseudoscalar<(), f32, O>> for Pseudoscalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Odd<(), f32, O>> for Pseudoscalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Pseudoscalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f32, O>> for Pseudoscalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Pseudoscalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Pseudoscalar<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Pseudoscalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 31, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Pseudoscalar<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Pseudoscalar<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<5> for Pseudoscalar<(), f32, O> {
-    type Out = Pseudoscalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<5> for Pseudoscalar<(), f64, O> {
+    type Out = Pseudoscalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Twist<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 6, false), (5, 7, false), (6, 8, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(7, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f32, O>> for Motor<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Motor<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 7, false), (5, 8, false), (6, 9, false), (7, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Even<(), f32, O>> for Motor<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Even<(), f64, O>> for Motor<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Motor<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 6, false), (2, 7, false), (3, 8, false), (4, 12, false), (5, 13, false), (6, 14, false), (7, 30, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Motor<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Motor<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<0> for Motor<(), f32, O> {
-    type Out = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<0> for Motor<(), f64, O> {
+    type Out = Scalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<2> for Motor<(), f32, O> {
-    type Out = Twist<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<2> for Motor<(), f64, O> {
+    type Out = Twist<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<4> for Motor<(), f32, O> {
-    type Out = Quadvector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<4> for Motor<(), f64, O> {
+    type Out = Quadvector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(7, 4, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Even<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, -1, 1)], &[(2, -1, 1)], &[(3, -1, 1)], &[(7, 1, 1)], &[(8, 1, 1)], &[(9, 1, 1)], &[(4, 1, 1)], &[(5, 1, 1)], &[(6, 1, 1)], &[(10, 1, 1)], &[(11, -1, 1)], &[(12, -1, 1)], &[(13, -1, 1)], &[(15, -1, 1)], &[(14, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Twist<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (7, 3, false), (8, 4, false), (9, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false), (15, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (7, 4, false), (8, 5, false), (9, 6, false), (15, 7, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Even<(), f32, O>> for Even<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Even<(), f64, O>> for Even<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Even<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Even<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 6, false), (2, 7, false), (3, 8, false), (4, 9, false), (5, 10, false), (6, 11, false), (7, 12, false), (8, 13, false), (9, 14, false), (10, 15, false), (11, 26, false), (12, 27, false), (13, 28, false), (14, 29, false), (15, 30, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Even<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Even<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<0> for Even<(), f32, O> {
-    type Out = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<0> for Even<(), f64, O> {
+    type Out = Scalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<2> for Even<(), f32, O> {
-    type Out = Bivector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<2> for Even<(), f64, O> {
+    type Out = Bivector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<4> for Even<(), f32, O> {
-    type Out = Quadvector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<4> for Even<(), f64, O> {
+    type Out = Quadvector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false), (15, 4, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Odd<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Odd<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(4, -1, 1)], &[(3, -1, 1)], &[(8, 1, 1)], &[(9, 1, 1)], &[(10, 1, 1)], &[(5, 1, 1)], &[(6, 1, 1)], &[(7, 1, 1)], &[(11, 1, 1)], &[(12, 1, 1)], &[(13, 1, 1)], &[(14, -1, 1)], &[(15, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Vector<(), f32, O>> for Odd<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Odd<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f32, O>> for Odd<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Odd<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f32, O>> for Odd<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Odd<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Odd<(), f32, O>> for Odd<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Odd<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f32, O>> for Odd<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Odd<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Odd<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Odd<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 16, false), (6, 17, false), (7, 18, false), (8, 19, false), (9, 20, false), (10, 21, false), (11, 22, false), (12, 23, false), (13, 24, false), (14, 25, false), (15, 31, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Odd<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Odd<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<1> for Odd<(), f32, O> {
-    type Out = Vector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<1> for Odd<(), f64, O> {
+    type Out = Vector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<3> for Odd<(), f32, O> {
-    type Out = Trivector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<3> for Odd<(), f64, O> {
+    type Out = Trivector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<5> for Odd<(), f32, O> {
-    type Out = Pseudoscalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<5> for Odd<(), f64, O> {
+    type Out = Pseudoscalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
 }
 
 #[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Reciprocal for Multivector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(3, 1, 1)], &[(5, -1, 1)], &[(4, -1, 1)], &[(6, -1, 1)], &[(7, -1, 1)], &[(8, -1, 1)], &[(12, 1, 1)], &[(13, 1, 1)], &[(14, 1, 1)], &[(9, 1, 1)], &[(10, 1, 1)], &[(11, 1, 1)], &[(15, 1, 1)], &[(19, 1, 1)], &[(20, 1, 1)], &[(21, 1, 1)], &[(16, 1, 1)], &[(17, 1, 1)], &[(18, 1, 1)], &[(22, 1, 1)], &[(23, 1, 1)], &[(24, 1, 1)], &[(25, -1, 1)], &[(26, -1, 1)], &[(27, -1, 1)], &[(28, -1, 1)], &[(30, -1, 1)], &[(29, -1, 1)], &[(31, -1, 1)]];
 }
 
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Vector<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Twist<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (12, 3, false), (13, 4, false), (14, 5, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(16, 0, false), (17, 1, false), (18, 2, false), (19, 3, false), (20, 4, false), (21, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(26, 0, false), (27, 1, false), (28, 2, false), (29, 3, false), (30, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(31, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Motor<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (12, 4, false), (13, 5, false), (14, 6, false), (30, 7, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Even<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false), (15, 10, false), (26, 11, false), (27, 12, false), (28, 13, false), (29, 14, false), (30, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Odd<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (16, 5, false), (17, 6, false), (18, 7, false), (19, 8, false), (20, 9, false), (21, 10, false), (22, 11, false), (23, 12, false), (24, 13, false), (25, 14, false), (31, 15, false)];
 }
 
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f32, O>> for Multivector<(), f32, O> {
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Multivector<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false), (20, 20, false), (21, 21, false), (22, 22, false), (23, 23, false), (24, 24, false), (25, 25, false), (26, 26, false), (27, 27, false), (28, 28, false), (29, 29, false), (30, 30, false), (31, 31, false)];
 }
 
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Multivector<(), f32, O> {}
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Multivector<(), f64, O> {}
 
-impl<O: gx::Orientation> gx::GradePart<0> for Multivector<(), f32, O> {
-    type Out = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<0> for Multivector<(), f64, O> {
+    type Out = Scalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<1> for Multivector<(), f32, O> {
-    type Out = Vector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<1> for Multivector<(), f64, O> {
+    type Out = Vector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<2> for Multivector<(), f32, O> {
-    type Out = Bivector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<2> for Multivector<(), f64, O> {
+    type Out = Bivector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<3> for Multivector<(), f32, O> {
-    type Out = Trivector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<3> for Multivector<(), f64, O> {
+    type Out = Trivector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(16, 0, false), (17, 1, false), (18, 2, false), (19, 3, false), (20, 4, false), (21, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<4> for Multivector<(), f32, O> {
-    type Out = Quadvector<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<4> for Multivector<(), f64, O> {
+    type Out = Quadvector<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(26, 0, false), (27, 1, false), (28, 2, false), (29, 3, false), (30, 4, false)];
 }
 
-impl<O: gx::Orientation> gx::GradePart<5> for Multivector<(), f32, O> {
-    type Out = Pseudoscalar<(), f32, O>;
+impl<O: gx::Orientation> gx::GradePart<5> for Multivector<(), f64, O> {
+    type Out = Pseudoscalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(31, 0, false)];
 }

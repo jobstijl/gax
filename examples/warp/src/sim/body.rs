@@ -56,7 +56,7 @@ impl Body {
     /// about its centre. Twists add.
     pub fn twist(&self) -> Twist<(), f32> {
         let [vx, vy] = [self.vel.e20(), self.vel.e01()];
-        Point::translation_twist(vx, vy) + Point::rotation_twist(self.pos(), self.spin)
+        Twist::translation_twist(vx, vy) + Twist::rotation_twist(self.pos(), self.spin)
     }
 
     /// Advance by `dt`: `pose ← exp(dt B) pose`, then one Newton step towards `m ~m = 1`.
@@ -120,7 +120,7 @@ pub fn place(p: Point<(), f32>, angle: f32) -> Pose {
 
 /// The Euclidean distance between two finite points, as the norm of their join.
 pub fn distance(p: Point<(), f32>, q: Point<(), f32>) -> f32 {
-    (p.normalized().into_inner() & q.normalized().into_inner()).norm()
+    (p.normalized() & q.normalized()).norm()
 }
 
 #[cfg(test)]

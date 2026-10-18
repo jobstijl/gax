@@ -325,7 +325,7 @@ mod tests {
         let semi_axes = [3.0, 1.5, 0.5];
         let entries = [[0.3, -1.2, 0.4], [0.7, 0.1, -0.5], [-0.2, 0.9, -0.4]];
         let gradient = gradient_of(entries);
-        let identity = Rotor::<(), f64>::new(1.0, 0.0, 0.0, 0.0).normalized();
+        let identity = Rotor::<(), f64>::new(1.0, 0.0, 0.0, 0.0).unit();
         let spin = spin(placed(stretch(semi_axes), identity), gradient);
         let fluid = curl(gradient) * 0.5;
         for (first, second) in [(0, 1), (1, 2), (0, 2)] {

@@ -125,7 +125,7 @@ macro_rules! point_model {
 
             $(
                 impl<T: Coef> Measure<$n> for Point<(), T> {
-                    type Blade = crate::$alg::$Blade<(), T, crate::Intrinsic>;
+                    type Blade = crate::$alg::intrinsic::$Blade<(), T>;
                     #[inline]
                     fn measure($v: &[Self; $n]) -> Self::Blade {
                         ($join) * inverse_factorial::<T>($n - 1)

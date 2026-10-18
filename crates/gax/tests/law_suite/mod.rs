@@ -581,13 +581,13 @@ macro_rules! law_suite {
                 reset();
                 let name = concat!(stringify!($sa), " in ", stringify!($sb));
                 // Of the larger kind's orientation, to fill its slots (ADR-051).
-                let x: $sa<(), T, <$sb as gax::Kind>::Orientation> = fresh();
+                let x: oriented::$sa<(), T, <$sb as gax::Kind>::Orientation> = fresh();
                 law(x.cast::<$sb>().cast::<$sa>() == x, name);
                 law(x.cast::<$sb>() == $sb::from(x), name);
                 let m: $scalar<($sb,), T> = fresh();
                 law(m.of(x) == m.of(x.cast::<$sb>()), name);
-                let narrowed: $scalar<($sa<(), f32, <$sb as gax::Kind>::Orientation>,), T> =
-                    m.of($sa::<(), T, <$sb as gax::Kind>::Orientation>::oriented_slot());
+                let narrowed: $scalar<(gax::Oriented<$sa, <$sb as gax::Kind>::Orientation>,), T> =
+                    m.of(<oriented::$sa<(), T, <$sb as gax::Kind>::Orientation> as gax::Slot>::slot());
                 law(narrowed.of(x) == m.of(x), name);
             })();)*
         }
@@ -600,7 +600,7 @@ macro_rules! law_suite {
                 reset();
                 let name = concat!(stringify!($gk), " grade ", stringify!($gg));
                 let x: $gk<(), T> = fresh();
-                let part: $go<(), T, <$gk as gax::Kind>::Orientation> = x.grade::<$gg>();
+                let part: oriented::$go<(), T, <$gk as gax::Kind>::Orientation> = x.grade::<$gg>();
                 let mut want = x;
                 for (c, b) in want.c.iter_mut().zip(<$gk as gax::Kind>::BLADES) {
                     if law_suite::blade_grade(b) != $gg {
@@ -741,10 +741,10 @@ macro_rules! law_suite {
             $((|| {
                 reset();
                 let (a, v): ($divnum<(), T>, $divden<(), T>) = (fresh(), fresh());
-                let back: $divback<(), T, <$divnum as gax::Kind>::Orientation> = (a / v) * v;
+                let back: oriented::$divback<(), T, <$divnum as gax::Kind>::Orientation> = (a / v) * v;
                 let relations = law_suite::basis(&law_suite::Sym::atom_relations());
                 law(
-                    same_mod(&back, &$divback::from(a), &relations),
+                    same_mod(&back, &oriented::$divback::from(a), &relations),
                     concat!("(a / v) v = a for ", stringify!($divnum), " / ", stringify!($divden)),
                 );
             })();)*
@@ -1045,8 +1045,8 @@ macro_rules! law_suite {
             $((|| {
                 reset();
                 // A pairing's orientation follows its factors' (ADR-051).
-                let p: $scalar<($ra, $rb), T, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
-                let q: $scalar<($rb, $ra), T, _> = gax::$rtr::$rm($rb::slot(), $ra::slot());
+                let p: oriented::$scalar<($ra, $rb), T, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
+                let q: oriented::$scalar<($rb, $ra), T, _> = gax::$rtr::$rm($rb::slot(), $ra::slot());
                 let (t, s): ($rb<($rb,), T>, $rb<($rb,), T>) = (fresh(), fresh());
                 let (l, x): ($ra<(), T>, $rb<(), T>) = (fresh(), fresh());
                 let name = concat!(stringify!($rm), " pairing of ", stringify!($ra), " and ", stringify!($rb));
@@ -1062,7 +1062,7 @@ macro_rules! law_suite {
 
                 // The solver agrees with the closed form (f64).
                 let mut seed = 0x9e37_79b9_7f4a_7c15u64;
-                let pf: $scalar<($ra, $rb), f64, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
+                let pf: oriented::$scalar<($ra, $rb), f64, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
                 for _ in 0..4 {
                     let tf: $rb<($rb,), f64> = random_f64(&mut seed);
                     let solved: $ra<($ra,), f64> = pf.solve(gax::$rtr::$rm($ra::slot(), tf));

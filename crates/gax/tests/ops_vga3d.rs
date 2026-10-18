@@ -668,20 +668,20 @@ fn value_methods() {
     let o = Oracle::from_spec(SPEC);
     let mut rng = Rng::new(77);
     common::inverse::<Scalar<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::normalized::<Scalar<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::normalized::<Scalar<(), f64>>(&o, &mut rng, |x| x.normalized());
     common::inverse::<Vector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::normalized::<Vector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::normalized::<Vector<(), f64>>(&o, &mut rng, |x| x.normalized());
     common::inverse::<Bivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::normalized::<Bivector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
-    common::exp_log::<Bivector<(), f64, gax::Extrinsic>, Rotor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
+    common::normalized::<Bivector<(), f64>>(&o, &mut rng, |x| x.normalized());
+    common::exp_log::<extrinsic::Bivector<(), f64>, Rotor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
     common::inverse::<Pseudoscalar<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::normalized::<Pseudoscalar<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::normalized::<Pseudoscalar<(), f64>>(&o, &mut rng, |x| x.normalized());
     common::inverse::<Paravector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Rotor<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::normalized::<Rotor<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
-    common::sqrt::<Rotor<(), f64, gax::Extrinsic>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
+    common::normalized::<Rotor<(), f64>>(&o, &mut rng, |x| x.normalized());
+    common::sqrt::<extrinsic::Rotor<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
     common::inverse::<Odd<(), f64>, _>(&o, &mut rng, |x| x.inverse());
-    common::normalized::<Odd<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::normalized::<Odd<(), f64>>(&o, &mut rng, |x| x.normalized());
     common::inverse::<Multivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
 }
 

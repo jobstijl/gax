@@ -272,8 +272,8 @@ fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
         .collect();
     let first = projected(points[0], ex.parts);
     let flat = core::array::from_fn(|k| {
-        let across = first[k].normalized().into_inner();
-        let along = (across | ex.parts[k]).normalized().into_inner();
+        let across = first[k].normalized();
+        let along = (across | ex.parts[k]).normalized();
         points
             .iter()
             .map(|p| {

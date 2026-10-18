@@ -10,7 +10,7 @@
 
 use super::ARENA;
 use super::body::Pose;
-use gax::pga2d::{Line, Point};
+use gax::pga2d::{Point, intrinsic};
 
 /// Does the segment from `a` to `b` (both unit points) pass within `r` of `c`? Its distance,
 /// from the kernel the renderer traces (`kernels::segment_distance`).
@@ -25,7 +25,7 @@ pub fn segment_hits_circle(
 
 /// A wall, the join of two corners: an intrinsic line, oriented along it (ADR-051), so that
 /// `>>` reflects in it and its side test survives a mirror.
-pub type Wall = Line<(), f32, gax::Intrinsic>;
+pub type Wall = intrinsic::Line<(), f32>;
 
 /// The walls of the box `[-hw, hw] x [-hh, hh]`, counterclockwise and normalized: each has
 /// the inside on its positive side, so `(wall & p).s()` is the signed distance inwards.
@@ -36,7 +36,7 @@ pub fn walls(hw: f32, hh: f32) -> [Wall; 4] {
         Point::xy(hw, hh),
         Point::xy(-hw, hh),
     ];
-    core::array::from_fn(|i| (c[i] & c[(i + 1) % 4]).normalized().into_inner())
+    core::array::from_fn(|i| (c[i] & c[(i + 1) % 4]).normalized())
 }
 
 /// The wall that a path from `from` to `to` (unit points) crossed out of the arena, `margin` in

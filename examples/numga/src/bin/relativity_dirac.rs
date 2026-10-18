@@ -350,7 +350,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (k, (path, spins)) in s.paths.iter().zip(&s.spins).enumerate() {
         scene3.polyline(&path[..upto], 1.6, colours[k]);
         let here = path[upto - 1];
-        let axis = spins[upto - 1].normalized().into_inner() * 0.4;
+        let axis = spins[upto - 1].normalized() * 0.4;
         scene3.arrow(here, axis, 2.0, 8.0, colours[k]);
         scene3.dot(here, Marker::Dot, 6.0, colours[k]);
     }

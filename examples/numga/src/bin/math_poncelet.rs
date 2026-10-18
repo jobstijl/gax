@@ -22,27 +22,27 @@
 //! pentagon the path of five sides closes from every start, about the conic of the same pentagon
 //! shrunk a little towards the centre it misses.
 
-use gax::pga2d::{Line, Motor, Point};
+use gax::pga2d::{Line, Motor, Point, extrinsic, intrinsic};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, measure, palette, plot, run,
 };
 
 mod poncelet {
     use super::*;
-    use gax::{Extrinsic, Intrinsic, Unit};
+    use gax::Unit;
 
     // Every line here is the join of two points and every point the meet of two lines. A join
     // is oriented along itself and a meet by what turns around it, so the lines are intrinsic
     // and the points extrinsic (ADR-051).
-    pub type L = Line<(), f64, Intrinsic>;
-    pub type P = Point<(), f64, Extrinsic>;
+    pub type L = intrinsic::Line<(), f64>;
+    pub type P = extrinsic::Point<(), f64>;
     /// The kinds of the slots of the maps below: a line and a point of the construction.
-    type LineSlot = Line<(), f32, Intrinsic>;
-    type PointSlot = Point<(), f32, Extrinsic>;
+    type LineSlot = intrinsic::Line;
+    type PointSlot = extrinsic::Point;
     /// A conic: points to their polar lines.
-    pub type Conic = Line<(PointSlot,), f64, Intrinsic>;
+    pub type Conic = intrinsic::Line<(PointSlot,), f64>;
     /// A conic held by its tangents: lines to their poles.
-    pub type Envelope = Point<(LineSlot,), f64, Extrinsic>;
+    pub type Envelope = extrinsic::Point<(LineSlot,), f64>;
 
     /// The point at `(x, y)`, made as the construction makes its points: the meet of the lines
     /// `x = a` and `y = b`.
@@ -66,7 +66,7 @@ mod poncelet {
     /// Two points as one envelope: zero on the lines through either, its pairing the product
     /// of the line's pairings with the two points.
     pub fn pair(first: P, second: P) -> Envelope {
-        let l = L::oriented_slot();
+        let l = L::slot();
         (first * (second & l) + second * (first & l)).gp(0.5)
     }
 
@@ -100,11 +100,8 @@ mod poncelet {
         let a = at(first, first);
         let (middle, half) = measure::roots(a, at(first, second), at(second, second))
             .expect("a point outside the envelope");
-        [1.0, -1.0].map(|sign| {
-            (first.gp(a * middle + sign * a.abs() * half) + second.gp(a))
-                .normalized()
-                .into_inner()
-        })
+        [1.0, -1.0]
+            .map(|sign| (first.gp(a * middle + sign * a.abs() * half) + second.gp(a)).normalized())
     }
 
     /// Where the line from a point on the conic towards a heading meets the conic again. Along
@@ -128,9 +125,7 @@ mod poncelet {
         let mut side = side;
         for _ in 0..steps {
             let last = *vertices.last().expect("a vertex");
-            side = other_tangent(inner, side, side | last)
-                .normalized()
-                .into_inner();
+            side = other_tangent(inner, side, side | last).normalized();
             let vertex = other_crossing(outer, last, side ^ infinity());
             vertices.push(vertex.unitized());
         }
@@ -151,7 +146,7 @@ mod poncelet {
     /// centre with the headings of the other axis, placed), each weighted by the inverse square
     /// of the semi-axis, less the line at infinity twice.
     pub fn ellipse() -> Conic {
-        let p = P::oriented_slot();
+        let p = P::slot();
         let mut conic = -(infinity() * (infinity() & p));
         let [along_x, along_y] = headings();
         for (heading, semi) in [along_y, along_x].into_iter().zip(SEMI) {
@@ -264,7 +259,7 @@ mod tests {
                     assert!(on(outer, *v).abs() < 1e-12, "{}", on(outer, *v));
                 }
                 for pair in vertices.windows(2) {
-                    let side = (pair[0] & pair[1]).normalized().into_inner();
+                    let side = (pair[0] & pair[1]).normalized();
                     let touch = touches(*inner, side) / scale;
                     assert!(touch.abs() < 1e-10, "{touch}");
                 }

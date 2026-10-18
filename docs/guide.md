@@ -19,7 +19,7 @@ In `gax` both are one expression. Every type can carry *open slots*, holes in th
 are filled in later:
 
 ```rust
-use gax::pga3d::{Line, Point};
+use gax::pga3d::{Line, Point, intrinsic};
 
 let p: Point = Point::xyz(1.0, 2.0, 3.0); // a point
 let open: Point<(Point,)> = Point::slot(); // a hole where a point goes: the identity map
@@ -28,7 +28,7 @@ let q: Point = Point::xyz(0.0, 0.0, 5.0);
 let line_through_q_and_p = q & p; // a value: a line
 let lines_through_q = q & open; // a map: point -> the line through q and it
 assert_eq!(lines_through_q.of(p), line_through_q_and_p);
-let _: Line<(Point,), f32, gax::Intrinsic> = lines_through_q; // a join is intrinsic (§5)
+let _: intrinsic::Line<(Point,)> = lines_through_q; // a join is intrinsic (§5)
 ```
 
 Read `Line<(Point,)>` as "a `Line` that is still waiting for a `Point`". Types with open slots are
@@ -41,7 +41,7 @@ called *extensors*, the name Hestenes and Sobczyk use for multilinear functions 
 | `Line<(Point, Point)>` | a bilinear map: two points in, a line out |
 | `Scalar<(Line, Line)>` | a bilinear form on lines (twists), such as an energy |
 
-The last parameter is the coefficient type (default `f32`): `Point<(), f64>`, or
+The last parameter is the coefficient type (default `f64`): `Point<(), f32>` for the GPU, or
 `Point<(), f32x8>` for eight points at once (section 7).
 
 ## 2. Write a function once
@@ -118,13 +118,13 @@ the slot:
 
 ```rust
 use gax::Intrinsic;
-use gax::pga3d::{Flector, Line, Motor, Point, Rotor, Scalar};
+use gax::pga3d::{Flector, Line, Motor, Point, Rotor, Scalar, intrinsic};
 
 // A point is intrinsic (§5), and so is its product with a motor.
-let act: Flector<(Motor,), f64, Intrinsic> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
+let act: intrinsic::Flector<(Motor,), f64> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
 let r = Rotor::<(), f64>::from_coeffs([0.9, 0.1, 0.2, 0.3]);
 assert_eq!(act.of(r), act.of(r.cast::<Motor>())); // a rotor fills a motor slot
-let on_rotors: Flector<(Rotor,), f64, Intrinsic> = act.of(Rotor::slot()); // the slot, narrowed
+let on_rotors: intrinsic::Flector<(Rotor,), f64> = act.of(Rotor::slot()); // the slot, narrowed
 assert_eq!(on_rotors.of(r), act.of(r));
 let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5).into_inner();
 let (s, b): (Scalar<(), f64>, Line<(), f64>) = (m.grade::<0>(), m.grade::<2>());
@@ -141,10 +141,10 @@ set of blades you want as a type of its own.)
 the motor left open has two motor slots, and filling them gives the transformed point:
 
 ```rust
-use gax::pga3d::{Flector, Motor, Point};
+use gax::pga3d::{Flector, Motor, Point, intrinsic};
 
 let p: Point<(), f64> = Point::xyz(1.0, 0.0, 0.0);
-let open: Flector<(Motor, Motor), f64, gax::Intrinsic> = (Motor::slot() * p) * Motor::slot().reverse();
+let open: intrinsic::Flector<(Motor, Motor), f64> = (Motor::slot() * p) * Motor::slot().reverse();
 let m = Motor::<(), f64>::translation(0.0, 2.0, 0.0).into_inner();
 let moved = open.fill(m); // the same as m >> p, as a flector whose plane part is zero
 ```
@@ -178,7 +178,8 @@ motors, and maps. `Unit<Motor>` certifies that `m ~m = 1`, and certified versors
   33 mul and 21 add, against 38 and 32);
 * the product of units is a unit.
 
-Get a unit with `normalized()`, `exp()`, or constructors such as `Motor::translation`.
+Get a unit with `unit()` (`normalized()` scales the same way and returns a plain value), `exp()`,
+or constructors such as `Motor::translation`.
 
 **Drift.** A product of units is certified without renormalizing, so a long chain drifts slightly
 from `m ~m = 1`. The simplified formulas are built so that drift only scales the result
@@ -217,13 +218,17 @@ assert_eq!((mirror >> duck) & (mirror >> peer), mirror >> (duck & peer));
 ```
 
 The two orientations are different types: a twist and a momentum cannot be added, and a map on
-twists does not take a join. Where coefficients mean the other orientation, say so with
-`x.with_orientation::<Intrinsic>()`; a slot of either is `K::<(), T, O>::oriented_slot()`. A meet
-of joins (two joined lines in PGA2D) is an extrinsic point, its sign a handedness; where it is used
-as a place, `p.position()` is the intrinsic point of weight one there. A mirror's own orientation
-does not matter (it enters twice), so `wall.reflect(p)` takes a joined wall too. Exponentials,
-logarithms and square roots are of extrinsic elements only. Constructors (`new`, `slot`,
-`from_images`) make the kind's default orientation.
+twists does not take a join. Each kind is named in its default orientation at the algebra's root
+(`Line`, `Point`), and in either in the modules `intrinsic` and `extrinsic`: `intrinsic::Line` is a
+join, `extrinsic::Point` a meet of planes, `Forque` is `intrinsic::Line` (ADR-052). Each name has its
+constructors, `intrinsic::Line::new(..)`, `Forque::slot()`, and a slot list names kinds the same way,
+`Line<(intrinsic::Line,)>`. Code generic over the orientation names the kind
+`oriented::Line<S, T, O>`, takes its slot from `gax::Slot`, and names a kind in another orientation
+`gax::Oriented<K, O>`. Where coefficients mean the other orientation, say so with
+`x.with_orientation::<Intrinsic>()`. A meet of joins (two joined lines in PGA2D) is an extrinsic
+point, its sign a handedness; where it is used as a place, `p.position()` is the intrinsic point of
+weight one there. A mirror's own orientation does not matter (it enters twice), so `wall.reflect(p)`
+takes a joined wall too. Exponentials, logarithms and square roots are of extrinsic elements only.
 
 **The motor between two elements.** Two planes make a rotation about the line where they meet
 (or a translation, if they are parallel), by twice the angle between them: the ratio `b / a` is
@@ -351,11 +356,11 @@ least-norm `x: A<(B,)>` with `m.of_pair(x) ≈ rhs`. The examples `geometry_pose
 
 ```rust
 use gax::ApproxEq;
-use gax::pga3d::{Line, Point};
+use gax::pga3d::{Line, Point, intrinsic};
 
 // A dyad on points whose joins sum to a given line: the least-norm one is antisymmetric.
 let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
-let join: Line<(Point, Point), f64, gax::Intrinsic> = Point::slot() & Point::slot();
+let join: intrinsic::Line<(Point, Point), f64> = Point::slot() & Point::slot();
 let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
 assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
 ```
@@ -635,12 +640,12 @@ let m3: Unit<pga3d::Motor<(), f64>> = m2.widen(); // a turn about the vertical l
 let p = pga2d::Point::xy(0.0, 2.0);
 // Move, then convert; or convert, then move: the same vertical line, a join (intrinsic) as the
 // point is.
-let a: pga3d::Line<(), f64, gax::Intrinsic> = (m2 >> p).into();
-let b = m3 >> pga3d::Line::from(p);
+let a: pga3d::intrinsic::Line<(), f64> = (m2 >> p).into();
+let b = m3 >> pga3d::intrinsic::Line::from(p);
 assert!(a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-12));
 ```
 
-The impls are generic over slots, so a map converts too, and `pga3d::Line::from(pga2d::Point::slot())`
+The impls are generic over slots, so a map converts too, and `pga3d::intrinsic::Line::from(pga2d::Point::slot())`
 is the conversion itself as a map. Maps may also go between algebras of your choice:
 `from_images` builds one from the images of its input's basis blades. A projection that drops
 `z`, from PGA3D points to PGA2D points, composed with a motion of space, is one matrix:
@@ -672,7 +677,7 @@ and let the tables give the result. A shadow is a join with the light and a
 meet with the ground, for points and lines alike:
 
 ```rust
-use gax::pga3d::{Line, Plane, Point};
+use gax::pga3d::{Line, Plane, Point, intrinsic};
 use gax::{Intrinsic, Vee, Wedge};
 
 fn shadow<X>(light: Point<(), f64>, ground: Plane<(), f64>, x: X)
@@ -688,8 +693,8 @@ let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::from_normal([0.0, 0.0,
 let pole = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 5.0);
 let p: Point<(), f64> = shadow(light, ground, Point::xyz(1.0, 2.0, 5.0)); // a point's: a point
 // The pole is a join, so intrinsic, and so is its shadow; the map takes intrinsic lines.
-let l: Line<(), f64, Intrinsic> = shadow(light, ground, pole);           // a line's: a line
-let on_lines = shadow(light, ground, Line::<(), f64, Intrinsic>::oriented_slot()); // and maps, still
+let l: intrinsic::Line<(), f64> = shadow(light, ground, pole);           // a line's: a line
+let on_lines = shadow(light, ground, intrinsic::Line::<(), f64>::slot()); // and maps, still
 assert_eq!(on_lines.of(pole), l);
 assert_eq!(p.to_euclidean(), [2.0, 4.0, 0.0]);
 ```
@@ -955,13 +960,12 @@ themselves (`crates/gax-bench/tests/interop.rs`).
 * **Clippy and the operators.** `clippy::eq_op` reads `a | a` and `b ^ b` as bitwise operations
   on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.
-* **Orientation and inference.** `from_coeffs` and `zero` are generic over the orientation, so
-  without an annotation Rust may not know which one is meant: write
-  `Line::<(), f64>::from_coeffs(c)` (the default) or annotate the binding. A mismatch reads
-  ``expected `Line<…, Extrinsic>`, found `Line<…, Intrinsic>` ``: a join where a turn was
-  expected, see §5.
-* **Float literals.** Type parameter defaults do not drive inference in Rust. `Point::xyz(1.0, 2.0, 3.0)`
-  alone is `f64` by the literal fallback; annotate (`let p: Point = …`) for the `f32` default.
+* **Orientation in messages.** A mismatch reads ``expected `Line<…, Extrinsic>`, found
+  `Line<…, Intrinsic>` ``: a join where a turn was expected (§5). `K::from(x)` converts into `K`'s
+  default orientation; `x.cast::<K>()` and `x.into()` keep `x`'s.
+* **`f32`.** The default coefficient type is `f64`, which float literals infer too; GPU and
+  game code that wants `f32` names it (`Point<(), f32>`), and slot lists name kinds bare
+  (`Point<(Point,), f32>` is an `f32` map on points).
 * **Floating point.** See [numerics.md](numerics.md) for the details:
   * In `f32`, positions far from the origin lose accuracy (about 2 ulp of the distance, so
     `10⁻³` at `10⁴`). Use `f64` or a floating origin.

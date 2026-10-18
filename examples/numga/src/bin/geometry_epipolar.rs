@@ -12,8 +12,8 @@
 //! translation onto the true pose, its epipolar lines swinging through the keypoints, and the
 //! triangulated house settling onto the true one, seen from a camera circling the scene.
 
-use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
-use gax::{Intrinsic, Unit, pga2d, vga3d};
+use gax::pga3d::{Line, Motor, Plane, Point, Scalar, intrinsic};
+use gax::{Unit, pga2d, vga3d};
 
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::{smoothstep, wave};
@@ -29,7 +29,7 @@ mod epipolar {
     pub type P = Point<(), f64>;
     /// A sight ray, the join of the centre and an image point: a line oriented along itself
     /// (intrinsic).
-    pub type L = Line<(), f64, Intrinsic>;
+    pub type L = intrinsic::Line<(), f64>;
     pub type M = Unit<Motor<(), f64>>;
 
     /// The cameras' centre, the world origin (camera 1 is at it, looking along `+z`).
@@ -106,7 +106,7 @@ mod epipolar {
     pub fn rays(images: &[P]) -> Vec<L> {
         images
             .iter()
-            .map(|p| (origin() & *p).normalized().into_inner())
+            .map(|p| (origin() & *p).normalized())
             .collect()
     }
 
@@ -121,8 +121,8 @@ mod epipolar {
         let mut rhs: Scalar<(Line,), f64> = Scalar::zero();
         for (r1, r2) in rays_1.iter().zip(rays_2) {
             let moved = motor >> *r2;
-            let res: Scalar<(), f64, Intrinsic> = (*r1 ^ moved).dual();
-            let j: Scalar<(Line,), f64, Intrinsic> = (*r1 ^ Line::slot().commutator(moved)).dual();
+            let res: intrinsic::Scalar<(), f64> = (*r1 ^ moved).dual();
+            let j: intrinsic::Scalar<(Line,), f64> = (*r1 ^ Line::slot().commutator(moved)).dual();
             h += j * j;
             rhs -= res * j;
         }
@@ -163,7 +163,7 @@ mod epipolar {
     /// The epipolar lines on camera 2's screen: the images of camera 1's rays, by the same
     /// join-then-meet with a line in the open slot.
     pub fn epipolar_lines(rays_1: &[L], motor: M) -> Vec<L> {
-        let line_camera = (origin() & L::oriented_slot()) ^ screen();
+        let line_camera = (origin() & L::slot()) ^ screen();
         rays_1.iter().map(|r| line_camera.of(motor << *r)).collect()
     }
 
@@ -490,7 +490,7 @@ mod tests {
         // The epipolar line of each keypoint passes near its match on camera 2's screen: the
         // plane joining a unit line and a unit point has the distance between them as its norm.
         for (l, p) in epipolar_lines(&s.rays_1, est).iter().zip(&s.noisy_2) {
-            let d = (l.normalized().into_inner() & p.unitized()).norm();
+            let d = (l.normalized() & p.unitized()).norm();
             assert!(d < 0.01, "{d}");
         }
     }

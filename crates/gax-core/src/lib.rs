@@ -81,14 +81,14 @@ pub use extensor::{
 };
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;
-pub use kind::{ApproxEq, Coeffs, Extensor, FlatKind, Kind, Retype, select_lt};
+pub use kind::{ApproxEq, Coeffs, Extensor, FlatKind, Kind, Retype, Slot, select_lt};
 pub use map::{LinearMap, SquareLinearMap};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Exp, Gp, Inverse, Involute, Lc, Log,
     Norm, Normalize, Outermorphism, Rc, Reverse, ScalarProduct, Sqrt, Transform, TransformInv,
     Undual, Vee, Wedge,
 };
-pub use orientation::{Extrinsic, Intrinsic, Orientation, Reorient};
+pub use orientation::{Extrinsic, Intrinsic, Orientation, Oriented, Reorient};
 pub use permute::MoveToFront;
 pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};

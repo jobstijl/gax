@@ -85,7 +85,7 @@ pub fn ellipse_mesh(
             // a uniform mass over the ellipse. The omitted node at r = 0 has zero area element.
             let area = tx * ty * r / (1.0 + x * x + y * y).powf(1.5);
             masses.push(area * w_phi * w_r);
-            points.push((ex.gp(x) + ey.gp(y) + pole).normalized().into_inner());
+            points.push((ex.gp(x) + ey.gp(y) + pole).normalized());
         }
     }
     let total: f64 = masses.iter().sum();
@@ -445,7 +445,7 @@ pub fn tunnel(frames: usize) -> Tunnel {
     let side_up = crate::s3::ScreenPoint::new(0.0, 1.0, 1.0);
     let (conic, polar) = crate::s3::project(eye, bodies[0].world());
     let wall_hit = hit(eye, crate::s3::reproject(conic, polar, side_up), side_up);
-    let light = (camera + wall_hit).normalized().into_inner();
+    let light = (camera + wall_hit).normalized();
     Tunnel {
         scene: finish(bodies, frames, eye, light),
         wall_hit,

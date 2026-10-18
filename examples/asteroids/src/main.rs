@@ -39,13 +39,13 @@ impl View {
         }
     }
     /// Where a world point lands on the screen (macroquad's vectors start here).
-    fn at(&self, p: gax::pga2d::Point) -> Vec2 {
+    fn at(&self, p: gax::pga2d::Point<(), f32>) -> Vec2 {
         let [x, y] = p.to_euclidean();
         vec2(self.cx + x * self.scale, self.cy - y * self.scale)
     }
 }
 
-fn polygon(view: &View, pts: &[gax::pga2d::Point], color: Color, width: f32) {
+fn polygon(view: &View, pts: &[gax::pga2d::Point<(), f32>], color: Color, width: f32) {
     for (a, b) in pts.iter().zip(pts.iter().cycle().skip(1)) {
         let (a, b) = (view.at(*a), view.at(*b));
         // Skip edges that wrap across the screen.

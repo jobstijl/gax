@@ -3,7 +3,7 @@
 //! from it is a join, the foot on it a meet, and turns about it are motors.
 
 use gax::Unit;
-use gax::pga3d::{Line, Motor, Point};
+use gax::pga3d::{Motor, Point, intrinsic};
 
 /// A point or a direction in straightened coordinates.
 pub type P = Point<(), f32>;
@@ -20,7 +20,7 @@ pub fn dir(x: f32, y: f32, s: f32) -> P {
 
 /// The tunnel's axis, the join of the origin and the direction `z`: an intrinsic line
 /// (ADR-051).
-pub fn axis() -> Line<(), f32, gax::Intrinsic> {
+pub fn axis() -> intrinsic::Line<(), f32> {
     at(0.0, 0.0, 0.0) & dir(0.0, 0.0, 1.0)
 }
 
@@ -60,7 +60,7 @@ pub fn segment_hits_sphere(a: P, b: P, c: P, r: f32) -> bool {
     if dist(a, c) < r || dist(b, c) < r {
         return true;
     }
-    let l: Line<(), f32, gax::Intrinsic> = a & b;
+    let l: intrinsic::Line<(), f32> = a & b;
     let len = l.norm();
     if len < 1e-6 {
         return false;

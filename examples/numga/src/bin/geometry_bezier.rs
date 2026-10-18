@@ -30,13 +30,12 @@ use gax_numga_examples::{
 };
 
 mod bezier {
-    use gax::Intrinsic;
-    use gax::vga3d::Vector;
+    use gax::vga3d::{Vector, intrinsic};
 
     pub type V = Vector<(), f64>;
     /// The normal of a plane through the origin: the dual of a bivector, of the other
     /// orientation (intrinsic).
-    pub type Normal = Vector<(), f64, Intrinsic>;
+    pub type Normal = intrinsic::Vector<(), f64>;
     /// A quadratic form on vectors, as the map from a vector to the vector it pairs with.
     pub type Conic = Vector<(Vector,), f64>;
     /// The weights of a quadratic curve's three control points.
@@ -181,10 +180,7 @@ fn draw_rays(s: &mut Scene3, points: &[V], colour: Light) {
         let (a, b) = (sum[k], sum[k + FAN_STRIDE]);
         s.tri(ORIGIN3, a, b, colour.faded(0.5), 0.12);
     }
-    let pierced: Vec<_> = points
-        .iter()
-        .map(|v| reach3(v.normalized().into_inner()))
-        .collect();
+    let pierced: Vec<_> = points.iter().map(|v| reach3(v.normalized())).collect();
     s.polyline(&pierced, 3.0, colour);
 }
 

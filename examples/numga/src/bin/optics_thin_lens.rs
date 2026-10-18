@@ -7,8 +7,7 @@
 //! mirror with the first lens sliding and tilting and the mirror rocking; the image stays sharp
 //! because every element is a collineation.
 
-use gax::pga2d::{Line, Motor, Point};
-use gax::{Extrinsic, Intrinsic};
+use gax::pga2d::{Line, Motor, Point, extrinsic, intrinsic};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
@@ -19,14 +18,14 @@ mod optics {
     use super::*;
 
     /// A ray: the join of two points, a line oriented along itself (intrinsic).
-    pub type L = Line<(), f64, Intrinsic>;
+    pub type L = intrinsic::Line<(), f64>;
     /// The plane of a lens, a prism or a mirror: a vector (extrinsic), as a mirror is.
     pub type Pl = Line<(), f64>;
     pub type P = Point<(), f64>;
     /// Where two rays cross: a meet, oriented by what crosses it (extrinsic).
-    pub type Crossing = Point<(), f64, Extrinsic>;
+    pub type Crossing = extrinsic::Point<(), f64>;
     /// A map on rays.
-    pub type LineMap = Line<(Line<(), f32, Intrinsic>,), f64, Intrinsic>;
+    pub type LineMap = intrinsic::Line<(intrinsic::Line,), f64>;
     pub type M = gax::Unit<Motor<(), f64>>;
 
     /// The origin.
@@ -46,7 +45,7 @@ mod optics {
 
     /// A thin lens of focal length `focal` in the home plane: `L - (L ∨ O) x / f`.
     pub fn lens_at_home(focal: f64) -> LineMap {
-        let l = L::oriented_slot();
+        let l = L::slot();
         l - (l & origin()) * home().gp(1.0 / focal)
     }
 
@@ -58,7 +57,7 @@ mod optics {
 
     /// An element defined at home, placed by a motor: `m >> element(m << line)`.
     pub fn placed(m: M, element: LineMap) -> LineMap {
-        m >> element.of(m << L::oriented_slot())
+        m >> element.of(m << L::slot())
     }
 
     /// The train's elements, each a map on lines defined in the home plane: a lens of focal
@@ -66,13 +65,13 @@ mod optics {
     /// with an ideal point), a lens of focal length -2, and a flat mirror (the sandwich by the
     /// home plane).
     pub fn elements() -> [LineMap; 4] {
-        let l = L::oriented_slot();
+        let l = L::slot();
         let up = Point::direction(0.0, 1.0);
         [
             lens_at_home(1.0),
             l - (l & up) * home().gp(0.15),
             lens_at_home(-2.0),
-            home().normalized() >> L::oriented_slot(),
+            home().normalized() >> L::slot(),
         ]
     }
 
@@ -83,7 +82,7 @@ mod optics {
         motors: &[M; 4],
         elements: &[LineMap; 4],
     ) -> (Vec<Pl>, Vec<Vec<L>>, LineMap) {
-        let mut train = L::oriented_slot();
+        let mut train = L::slot();
         let mut legs = vec![rays.to_vec()];
         for (motor, element) in motors.iter().zip(elements) {
             let placed = placed(*motor, *element);

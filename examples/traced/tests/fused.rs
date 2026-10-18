@@ -59,7 +59,7 @@ fn generic_kernel_also_builds_the_map() {
 /// `Motor::between`, fused: the same motor as the generic code, and it carries `a` onto `b`.
 #[test]
 fn between_fused_matches_generic() {
-    use gax::pga3d::Line;
+    use gax::pga3d::intrinsic;
     for k in 0..20 {
         let f = f64::from(k) + 0.5;
         let (pa, pb) = (
@@ -105,7 +105,7 @@ fn between_fused_matches_generic() {
         let (moved, want) = ((m >> ga).normalized(), gb.normalized());
         close(&moved.c, &want.c);
         let m: Unit<Motor<(), f64>> = Unit::new_unchecked(between_lines_fused(la, lb));
-        let moved: Line<(), f64, gax::Intrinsic> = (m >> la).normalized().into_inner();
-        close(&moved.c, &lb.normalized().into_inner().c);
+        let moved: intrinsic::Line<(), f64> = (m >> la).normalized();
+        close(&moved.c, &lb.normalized().c);
     }
 }

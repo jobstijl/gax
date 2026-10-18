@@ -94,7 +94,7 @@ pub fn inside_map(directions: &Field<Vector3>, faces: &[[usize; 3]]) -> SparseMa
         let frame = [(b ^ c) * volume, (c ^ a) * volume, (a ^ b) * volume];
         let at = |k: usize| [a, b, c][k % 3];
         for k in 0..3 {
-            let wall = (at(k) ^ at(k + 1)).normalized().into_inner();
+            let wall = (at(k) ^ at(k + 1)).normalized();
             let third = wall ^ at(k + 2);
             for (j, &corner) in corners.iter().enumerate() {
                 let distance = (wall ^ frame[j]) * third.reverse() * (1.0 / third.norm());

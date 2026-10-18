@@ -4,7 +4,7 @@ use super::kabuto::*;
 use super::paper::*;
 use super::picture::{Picture, View};
 use gax::pga3d::{Line, Point};
-use gax::{ApproxEq, Intrinsic, vga2d};
+use gax::{ApproxEq, vga2d};
 use gax_numga_examples::Light;
 use std::f64::consts::PI;
 
@@ -139,7 +139,7 @@ fn folds_keep_shared_material_points_joined() {
             .flat_map(|i| (0..n).map(move |j| (i, j)))
             .filter(|&(i, j)| (material[i] & material[j]).norm_squared() < 1e-18)
             .collect();
-        let hinge = (planes[k] ^ paper.sheet).normalized().into_inner();
+        let hinge = (planes[k] ^ paper.sheet).normalized();
         let (peak, end) = (PI * PEAKS[k], PI * ENDS[k]);
         for angle in [peak / 2.0, peak, (peak + end) / 2.0, end] {
             let folded = split.folded(hinge, &turning, angle);
@@ -163,19 +163,13 @@ fn folds_keep_shared_material_points_joined() {
 fn point_and_line_coincidence_crease_constructions() {
     let (paper, _) = kabuto();
     let [first, second, third] = [0, 1, 2].map(|i| paper.points[i]);
-    let half_turn = |plane: Pl| {
-        (plane ^ paper.sheet)
-            .normalized()
-            .into_inner()
-            .gp(PI / 2.0)
-            .exp()
-    };
+    let half_turn = |plane: Pl| (plane ^ paper.sheet).normalized().gp(PI / 2.0).exp();
     let motion = half_turn(point_bisector(first, third));
     assert!((motion >> first).max_abs_diff(&third) < 1e-12);
     let (first_line, second_line) = (first & second, first & third);
     let turn = half_turn(line_bisector(first_line, second_line, first));
-    let matched = turn >> first_line.normalized().into_inner();
-    let target = second_line.normalized().into_inner();
+    let matched = turn >> first_line.normalized();
+    let target = second_line.normalized();
     assert!((matched + target).approx_eq(&Edge::zero(), 1e-12));
 }
 
@@ -332,10 +326,10 @@ fn overlap(first: &[vga2d::Vector<(), f64>], second: &[vga2d::Vector<(), f64>]) 
     let mut normals = [first, second].into_iter().flat_map(|polygon| {
         (0..polygon.len()).map(|i| {
             let edge = polygon[(i + 1) % polygon.len()] - polygon[i];
-            edge.dual().normalized().into_inner()
+            edge.dual().normalized()
         })
     });
-    let shadow = |polygon: &[vga2d::Vector<(), f64>], axis: vga2d::Vector<(), f64, Intrinsic>| {
+    let shadow = |polygon: &[vga2d::Vector<(), f64>], axis: vga2d::intrinsic::Vector<(), f64>| {
         let along = polygon.iter().map(|p| (*p | axis).s());
         (
             along.clone().fold(f64::INFINITY, f64::min),

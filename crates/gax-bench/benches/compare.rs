@@ -42,13 +42,16 @@ fn transforms(c: &mut Criterion) {
     let prep8 = m8.prepare::<Point>();
 
     let mut g = c.benchmark_group("compare: transform");
-    g.bench_function("gax Unit<Motor> >> Point", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>> >> Point", |b| {
         b.iter(|| black_box(m) >> black_box(p));
     });
-    g.bench_function("geometric_algebra Motor::transformation(Point)", |b| {
-        use geometric_algebra::Transformation;
-        b.iter(|| black_box(ga_m).transformation(black_box(ga_p)));
-    });
+    g.bench_function(
+        "geometric_algebra Motor::transformation(Point<(), f32>)",
+        |b| {
+            use geometric_algebra::Transformation;
+            b.iter(|| black_box(ga_m).transformation(black_box(ga_p)));
+        },
+    );
     g.bench_function("nalgebra Isometry3 * Point3", |b| {
         b.iter(|| black_box(iso) * black_box(np));
     });
@@ -65,7 +68,7 @@ fn transforms(c: &mut Criterion) {
 }
 
 fn chains(c: &mut Criterion) {
-    let ms: Vec<Unit<Motor>> = (0..5)
+    let ms: Vec<Unit<Motor<(), f32>>> = (0..5)
         .map(|i| {
             motor(
                 0.3 * i as f32 + 0.1,
@@ -93,7 +96,7 @@ fn chains(c: &mut Criterion) {
         })
         .collect();
     let mut g = c.benchmark_group("compare: compose a chain of 5 rigid motions");
-    g.bench_function("gax Unit<Motor> product", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>> product", |b| {
         b.iter(|| {
             let v = black_box(&ms);
             v[0] * v[1] * v[2] * v[3] * v[4]
@@ -270,7 +273,7 @@ fn conformal(c: &mut Criterion) {
     let a = csta::Vector::<(), f32>::new(1.0, 0.2, 0.3, 0.4, 0.5, 0.6);
     let bb = csta::Vector::<(), f32>::new(0.3, -0.2, 0.1, 0.8, 0.2, 0.4);
     let mut g = c.benchmark_group("compare: conformal (f32)");
-    g.bench_function("gax CGA3D Unit<Motor> >> point", |b| {
+    g.bench_function("gax CGA3D Unit<Motor<(), f32>> >> point", |b| {
         b.iter(|| black_box(cm) >> black_box(v));
     });
     g.bench_function("gax CGA3D Even >> point (general versor)", |b| {
@@ -289,7 +292,7 @@ fn conformal(c: &mut Criterion) {
         0.3 * ((i as f64 * 0.7).sin())
     }));
     let r = biv.exp();
-    g.bench_function("gax Unit<Even>::log (closed form)", |b| {
+    g.bench_function("gax Unit<Even<(), f32>>::log (closed form)", |b| {
         b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(r).log() });
     });
     // A rotation towards a half turn (e12) with a boost (e43).
@@ -297,9 +300,12 @@ fn conformal(c: &mut Criterion) {
     near[2] = core::f64::consts::FRAC_PI_2 - 0.01;
     near[5] = 0.5;
     let near = gax::csta::Bivector::<(), f64>::from_coeffs(near).exp();
-    g.bench_function("gax Unit<Even>::log near a half turn (turned)", |b| {
-        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(near).log() });
-    });
+    g.bench_function(
+        "gax Unit<Even<(), f32>>::log near a half turn (turned)",
+        |b| {
+            b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(near).log() });
+        },
+    );
     // The exponential (docs/log6d.md §12): in closed form, and with a rotation beyond a quarter
     // turn (turned back by one first).
     g.bench_function("gax Bivector::exp", |b| b.iter(|| black_box(biv).exp()));
@@ -371,10 +377,10 @@ fn numerics(c: &mut Criterion) {
     let bd = Line::<(), D6>::from_coeffs(core::array::from_fn(|i| D6::variable(bl.c[i], i)));
     let pd = Point::<(), D6>::from_coeffs(p.c.map(D6::constant));
     let md = bd.exp();
-    g.bench_function("gax Unit<Motor> >> Point", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>> >> Point", |b| {
         b.iter(|| black_box(m) >> black_box(p));
     });
-    g.bench_function("gax Unit<Motor> >> Point, six derivatives", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>> >> Point, six derivatives", |b| {
         b.iter(|| black_box(md) >> black_box(pd));
     });
     g.bench_function("gax Line::exp", |b| b.iter(|| black_box(bl).exp()));
@@ -382,12 +388,12 @@ fn numerics(c: &mut Criterion) {
         b.iter(|| black_box(bd).exp());
     });
     // The typed forms (ADR-043): the same exp with its derivative as a `Motor <- Line`, and the
-    // Hessian of a scalar of the moved point, `Scalar <- (Line, Line)`.
+    // Hessian of a scalar of the moved point, `Scalar <- (Line<(), f32>, Line<(), f32>)`.
     g.bench_function("gax jacobian of Line::exp (Motor <- Line)", |b| {
         b.iter(|| gax::dual::jacobian(|b| b.exp().into_inner(), black_box(bl)));
     });
     g.bench_function(
-        "gax hessian of a coordinate of exp(B) >> p (Scalar <- (Line, Line))",
+        "gax hessian of a coordinate of exp(B) >> p (Scalar <- (Line<(), f32>, Line<(), f32>))",
         |b| {
             b.iter(|| {
                 gax::dual::hessian(

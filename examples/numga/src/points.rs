@@ -80,12 +80,12 @@ pub trait Dir3: Copy {
 
 // Points of either orientation (ADR-051): a meet of lines or planes is an extrinsic point, a
 // point made from coordinates or a join intrinsic; drawn, both are where they are.
-impl<T: Precision, O: gax::Orientation> Pos2 for pga2d::Point<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Pos2 for pga2d::oriented::Point<(), T, O> {
     fn point2(self) -> Point2 {
         self.map_coefs(T::to_f32).with_orientation()
     }
 }
-impl<T: Precision, O: gax::Orientation> Pos3 for pga3d::Point<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Pos3 for pga3d::oriented::Point<(), T, O> {
     fn point3(self) -> Point3 {
         self.map_coefs(T::to_f32).with_orientation()
     }
@@ -93,12 +93,12 @@ impl<T: Precision, O: gax::Orientation> Pos3 for pga3d::Point<(), T, O> {
 
 // Directions: a PGA point's weightless part (a weight, if any, is dropped), the `Direction`
 // kinds, and VGA vectors.
-impl<T: Precision, O: gax::Orientation> Dir2 for pga2d::Point<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Dir2 for pga2d::oriented::Point<(), T, O> {
     fn dir2(self) -> Point2 {
         Point2::direction(self.e20().to_f32(), self.e01().to_f32())
     }
 }
-impl<T: Precision, O: gax::Orientation> Dir3 for pga3d::Point<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Dir3 for pga3d::oriented::Point<(), T, O> {
     fn dir3(self) -> Point3 {
         Point3::direction(
             self.e032().to_f32(),
@@ -107,23 +107,29 @@ impl<T: Precision, O: gax::Orientation> Dir3 for pga3d::Point<(), T, O> {
         )
     }
 }
-impl<T: Precision, O: gax::Orientation> Dir2 for pga2d::Direction<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Dir2 for pga2d::oriented::Direction<(), T, O> {
     fn dir2(self) -> Point2 {
-        Point2::from(self.map_coefs(T::to_f32).with_orientation::<gax::Intrinsic>())
+        Point2::from(
+            self.map_coefs(T::to_f32)
+                .with_orientation::<gax::Intrinsic>(),
+        )
     }
 }
-impl<T: Precision, O: gax::Orientation> Dir3 for pga3d::Direction<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Dir3 for pga3d::oriented::Direction<(), T, O> {
     fn dir3(self) -> Point3 {
-        Point3::from(self.map_coefs(T::to_f32).with_orientation::<gax::Intrinsic>())
+        Point3::from(
+            self.map_coefs(T::to_f32)
+                .with_orientation::<gax::Intrinsic>(),
+        )
     }
 }
-impl<T: Precision, O: gax::Orientation> Dir2 for vga2d::Vector<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Dir2 for vga2d::oriented::Vector<(), T, O> {
     fn dir2(self) -> Point2 {
         let [x, y] = self.c.map(T::to_f32);
         Point2::direction(x, y)
     }
 }
-impl<T: Precision, O: gax::Orientation> Dir3 for vga3d::Vector<(), T, O> {
+impl<T: Precision, O: gax::Orientation> Dir3 for vga3d::oriented::Vector<(), T, O> {
     fn dir3(self) -> Point3 {
         let [x, y, z] = self.c.map(T::to_f32);
         Point3::direction(x, y, z)

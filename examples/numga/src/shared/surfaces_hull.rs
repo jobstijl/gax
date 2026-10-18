@@ -39,7 +39,7 @@ pub fn directions(count: usize) -> Field<Vector3> {
         let azimuth = core::f64::consts::TAU * GOLDEN * turns;
         let spiral = direction(azimuth) * radius + up * height;
         let nudge = Vector3::new(nudges.normal(), nudges.normal(), nudges.normal());
-        (spiral + nudge * JITTER).normalized().into_inner()
+        (spiral + nudge * JITTER).normalized()
     })
 }
 
@@ -130,7 +130,7 @@ pub fn camera(rect: Rect) -> Camera {
 /// The direction towards the viewer.
 pub fn facing(cam: &Camera) -> Vector3 {
     let [x, y, z] = cam.eye().to_euclidean().map(f64::from);
-    Vector3::new(x, y, z).normalized().into_inner()
+    Vector3::new(x, y, z).normalized()
 }
 
 /// A point of space, as drawn.

@@ -2,9 +2,9 @@
 //!
 //! ```
 //! use gax::Intrinsic;
-//! use gax::pga3d::{Line, Plane, Point};
+//! use gax::pga3d::{Line, Plane, Point, intrinsic};
 //! let (p, q) = (Point::<(), f64>::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 1.0, 0.0));
-//! let l: Line<(), f64, Intrinsic> = p & q; // join (regressive product): intrinsic
+//! let l: intrinsic::Line<(), f64> = p & q; // join (regressive product): intrinsic
 //! let floor = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
 //! let _meet: Point<(), f64> = l ^ floor;    // meet (outer product): intrinsic too
 //! assert!((floor & p).s().abs() < 1e-12); // incidence: the origin lies on the floor
@@ -160,7 +160,7 @@ unary_trait!(
 /// where
 ///     X: Normalize + Exp + Gp<f64, Output = X>,
 /// {
-///     about.normalized().into_inner().gp(-0.5 * angle).exp()
+///     about.normalized().gp(-0.5 * angle).exp()
 /// }
 /// // Generators are extrinsic (ADR-051): meets, here of the planes (lines) x = 0 and y = 0.
 /// let z = pga3d::Plane::<(), f64>::new(1.0, 0.0, 0.0, 0.0) ^ pga3d::Plane::new(0.0, 1.0, 0.0, 0.0);
@@ -195,11 +195,16 @@ pub trait Norm: crate::kind::Extensor {
     fn norm(self) -> Self::Coef;
 }
 
-/// Normalization to a certified unit versor. Implemented by the generated algebras for the
-/// kinds that have `normalized`.
+/// Normalization to unit norm. Implemented by the generated algebras for the kinds that have
+/// `normalized` and `unit`.
 pub trait Normalize: Sized {
-    /// `self` scaled to unit norm, as a [`Unit`](crate::Unit).
-    fn normalized(self) -> crate::unit::Unit<Self>;
+    /// `self` scaled to unit norm, certified as a [`Unit`](crate::Unit).
+    fn unit(self) -> crate::unit::Unit<Self>;
+    /// `self` scaled to unit norm, as a plain value.
+    #[inline(always)]
+    fn normalized(self) -> Self {
+        self.unit().into_inner()
+    }
 }
 
 /// The square root of a value. Implemented by the generated algebras for the kinds that have
@@ -211,19 +216,21 @@ pub trait Sqrt {
     fn sqrt(self) -> Self::Output;
 }
 
-/// The logarithm of a unit versor, a bivector (implemented by the generated algebras for
-/// `Unit<K>`; call it as `unit.log()`).
+/// The logarithm of a unit versor, a bivector (implemented by the generated algebras for the
+/// versor kinds `K`, so that `Unit<K>` has it; call it as `unit.log()`).
 ///
 /// ```
 /// use gax::pga3d::{Line, Motor};
-/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 1.2);
-/// let b: Line<(), f64> = m.log();
+/// let m = Motor::rotation_about(0.0, 0.0, 1.0, 1.2f64);
+/// let b = m.log(); // a `Line`
 /// // Half the angle, about the z axis (the line through the origin along z).
 /// assert!((b.norm() - 0.6).abs() < 1e-12);
 /// ```
-pub trait Log<Out> {
-    /// The logarithm: `exp(self.log()) == self`.
-    fn log(self) -> Out;
+pub trait Log: Sized {
+    /// The bivector: each versor kind has one logarithm.
+    type Output;
+    /// The logarithm of a unit versor of this kind: `exp(log(u)) == u`.
+    fn log(unit: crate::unit::Unit<Self>) -> Self::Output;
 }
 
 /// The outermorphism of a linear map on vectors (or antivectors): its extension to the kind

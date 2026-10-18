@@ -1,8 +1,8 @@
 //! Kernels written once as plain generic functions. `build.rs` includes this same file and
 //! traces the functions with symbolic coefficients to emit fused versions.
 
-use gax::pga3d::{Line, Motor, Plane, Point};
-use gax::{Intrinsic, Real, Slots, Unit};
+use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
+use gax::{Real, Slots, Unit};
 
 /// Move a point by a unit motor, then project it onto a plane from a light point:
 /// a chain of a sandwich, a join and a meet.
@@ -14,7 +14,7 @@ pub fn shadow_of_moved<S: Slots, T: Real>(
 ) -> Point<S, T> {
     let moved = m >> p;
     // A join of points is intrinsic, and so is its meet with a plane: a point (ADR-051).
-    let ray: Line<S, T, Intrinsic> = light & moved;
+    let ray: intrinsic::Line<S, T> = light & moved;
     ray ^ ground
 }
 
@@ -53,8 +53,8 @@ pub fn screw_apply<T: Real>(b: Line<(), T>, p: Point<(), T>) -> Point<(), T> {
 /// `b / a`): a logarithm, a halving and an exponential, with the branches as selects, so it
 /// traces to Rust, SIMD lanes and WGSL alike. The lines are joins of points, so intrinsic.
 pub fn between_lines<T: Real>(
-    a: Line<(), T, Intrinsic>,
-    b: Line<(), T, Intrinsic>,
+    a: intrinsic::Line<(), T>,
+    b: intrinsic::Line<(), T>,
 ) -> Motor<(), T> {
     Motor::between(a, b).into_inner()
 }

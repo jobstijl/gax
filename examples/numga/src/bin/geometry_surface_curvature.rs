@@ -194,8 +194,8 @@ fn seen(surface: &Surface, cam: &Camera, q: Point2, height: f64) -> Option<Seen>
     }
     // Lit from behind the viewer's shoulder, both sides alike: the cosine between the tangent
     // plane and the plane facing the lamp.
-    let tangent = surface.q.of(p).normalized().into_inner();
-    let facing = Plane::orthogonal_to(lamp(d)).normalized().into_inner();
+    let tangent = surface.q.of(p).normalized();
+    let facing = Plane::orthogonal_to(lamp(d)).normalized();
     Some(Seen {
         light: (0.4 + 0.6 * (tangent | facing).s().abs()) as f32,
         k: surface.principal(p),

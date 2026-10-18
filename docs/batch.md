@@ -19,7 +19,7 @@ work for every pair of kinds that the algebra's `>>` supports:
 
 | method | input layout | versors |
 |---|---|---|
-| `v.transform_slice(&xs, &mut out)` | array of structs (`&[Point]`) | one, prepared once |
+| `v.transform_slice(&xs, &mut out)` | array of structs (`&[Point<(), f32>]`) | one, prepared once |
 | `v.transform_soa(&xs, &mut out)` | struct of arrays (`Soa<Point>`) | one, prepared once |
 | `V::transform_each(&vs, &xs, &mut out)` | array of structs | one per element |
 | `V::transform_each_soa(&vs, &xs, &mut out)` | struct of arrays | one per element |
@@ -29,8 +29,8 @@ use gax::batch::{BatchTransform, Soa};
 use gax::pga3d::{Motor, Point};
 use gax::Unit;
 
-let m = Motor::<(), f32>::rotation_about(0.0, 0.0, 1.0, 0.5).normalized();
-let points: Vec<Point> = (0..100).map(|i| Point::xyz(i as f32, 1.0, 0.0)).collect();
+let m = Motor::<(), f32>::rotation_about(0.0, 0.0, 1.0, 0.5);
+let points: Vec<Point<(), f32>> = (0..100).map(|i| Point::xyz(i as f32, 1.0, 0.0)).collect();
 
 // Array of structs: the motor's action is prepared once, then applied 8 points at a time.
 let mut moved = vec![Point::zero(); points.len()];
@@ -46,8 +46,8 @@ assert_eq!(out.len(), 100);
 assert!((out.get(7).to_euclidean()[0] - moved[7].to_euclidean()[0]).abs() < 1e-6);
 
 // One motor per point.
-let motors: Vec<Unit<Motor>> = (0..100)
-    .map(|i| Motor::rotation_about(0.0, 0.0, 1.0, 0.01 * i as f32).normalized())
+let motors: Vec<Unit<Motor<(), f32>>> = (0..100)
+    .map(|i| Motor::rotation_about(0.0, 0.0, 1.0, 0.01 * i as f32))
     .collect();
 Unit::transform_each(&motors, &points, &mut moved);
 ```
@@ -76,7 +76,7 @@ let screen = Plane::<(), f32>::from_normal([0.0, 0.0, 1.0], 1.0);
 let eye = Point::<(), f32>::xyz(0.0, 0.0, 0.0);
 // World to camera, then the central projection onto the screen: one 4x4.
 let view: Point<(Point,), f32> = (eye & (cam << Point::slot())) ^ screen;
-let points: Vec<Point> = (0..100).map(|i| Point::xyz(i as f32 * 0.1, 0.0, 10.0)).collect();
+let points: Vec<Point<(), f32>> = (0..100).map(|i| Point::xyz(i as f32 * 0.1, 0.0, 10.0)).collect();
 let mut out = vec![Point::zero(); points.len()];
 view.of_slice(&points, &mut out);
 assert!((out[3].to_euclidean()[2] - 1.0).abs() < 1e-5);
@@ -104,7 +104,7 @@ impl Map for Exp {
     }
 }
 
-let twists: Vec<Line> = (0..50).map(|i| Line::new(0.0, 0.0, 0.1 * i as f32, 1.0, 0.0, 0.0)).collect();
+let twists: Vec<Line<(), f32>> = (0..50).map(|i| Line::new(0.0, 0.0, 0.1 * i as f32, 1.0, 0.0, 0.0)).collect();
 let mut motors = vec![Motor::zero(); twists.len()];
 batch::map(&Exp, &twists, &mut motors);
 ```

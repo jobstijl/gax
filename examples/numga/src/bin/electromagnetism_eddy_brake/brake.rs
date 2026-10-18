@@ -45,7 +45,7 @@ pub fn fibre_conductivity(
     mean: f64,
 ) -> Field<Conductivity> {
     mesh.face_centers().map(|centre| {
-        let radial = centre.normalized().into_inner();
+        let radial = centre.normalized();
         let distance = centre.norm();
         let in_band = distance >= inner && distance <= outer;
         let local = principal.map(|p| if in_band { p } else { mean });

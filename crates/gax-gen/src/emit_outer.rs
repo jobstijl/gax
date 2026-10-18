@@ -159,7 +159,7 @@ fn outermorphism(
         (_, false) => "O",
     };
     let code = format!(
-        "impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<{bn}<(), f32, X>> for {vn}<({vn}<(), f32, O>,), T, O> {{\n    type Output = {bn}<({bn}<(), f32, {oo}>,), T, {oo}>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> Self::Output {{\n        let t = self.c;\n{lets}        {}\n    }}\n}}\n\n",
+        "impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<{bn}<(), f64, X>> for {vn}<({vn}<(), f64, O>,), T, O> {{\n    type Output = {bn}<({bn}<(), f64, {oo}>,), T, {oo}>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> Self::Output {{\n        let t = self.c;\n{lets}        {}\n    }}\n}}\n\n",
         crate::emit::kind_literal(bn, &format!("[{}]", rows.join(", ")))
     );
     Some((code, (vn.clone(), bn.clone(), k == n)))

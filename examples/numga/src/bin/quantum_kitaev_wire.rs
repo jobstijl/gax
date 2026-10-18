@@ -621,9 +621,7 @@ mod tests {
     fn the_cayley_steps_converge_to_the_rotor() {
         let wire = Wire::chain(2, 1.0, 0.7);
         let mu = [0.6, 1.1];
-        let start = majoranas::Vector::<(), f64>::new(1.0, 2.0, 3.0, 4.0)
-            .normalized()
-            .into_inner();
+        let start = majoranas::Vector::<(), f64>::new(1.0, 2.0, 3.0, 4.0).normalized();
         let duration = 0.8;
         let exact = (bivector(mu, 1.0, 0.7) * (duration / 2.0)).exp() >> start;
         let error = |steps: usize| {

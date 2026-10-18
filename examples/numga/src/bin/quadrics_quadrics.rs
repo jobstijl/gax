@@ -44,7 +44,7 @@ mod quadrics {
     /// centre with that normal, then shifted until it contains its own pole.
     pub fn support_plane(quadric: DualQuadric, normal: Pl) -> Pl {
         let inf = infinity();
-        let normal = normal.normalized().into_inner();
+        let normal = normal.normalized();
         // The pole of the plane at infinity: the centre.
         let centre = quadric.of(inf);
         let through_centre = normal - inf * ((normal & centre).s() / (inf & centre).s());
@@ -300,7 +300,7 @@ mod tests {
         for n in normals {
             let tangent = support_plane(dual, n);
             assert!((tangent & dual.of(tangent)).s().abs() < 1e-12);
-            let unit = n.normalized().into_inner();
+            let unit = n.normalized();
             assert!(((tangent | unit).s() - (unit | unit).s()).abs() < 1e-12);
         }
     }

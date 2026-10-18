@@ -41,9 +41,9 @@ pub fn run<T: Real>(
             8 => ps[i] += ps[j],
             9 => ls[i] = ls[i].gp((ps[i] | ps[1 - i]).s()),
             10 => ps[i] = gax::select_lt(ps[i].e123(), ps[1 - i].e123(), ps[i], ps[1 - i]),
-            11 => ls[i] = ls[i].normalized().into_inner(),
+            11 => ls[i] = ls[i].normalized(),
             _ => {
-                ms[i] = Log::log(ms[i].normalized())
+                ms[i] = Log::log(ms[i].unit())
                     .gp(T::from_f64(0.5))
                     .exp()
                     .into_inner();

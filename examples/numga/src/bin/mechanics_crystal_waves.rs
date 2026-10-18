@@ -166,7 +166,7 @@ mod crystal {
             for (a, b) in edge.iter().zip(expected) {
                 assert!((a - b).abs() <= 1e-8 * b);
             }
-            let diagonal = speeds(Vector::new(1.0, 1.0, 0.0).normalized().into_inner());
+            let diagonal = speeds(Vector::new(1.0, 1.0, 0.0).normalized());
             let mut expected = [
                 (C11[m] - C12[m]) / 2.0,
                 C44[m],

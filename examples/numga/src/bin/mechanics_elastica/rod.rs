@@ -63,8 +63,12 @@ pub fn force_axes() -> [F; 3] {
 /// the load's force along the axis times the compliance to shifting (zero for a rod that only
 /// bends and twists).
 pub fn compliance(turning: [f64; 3], shifting: [f64; 3]) -> Compliance {
-    let slot = Forque::oriented_slot();
-    let axes = turn_axes().into_iter().zip(force_axes()).zip(turning).zip(shifting);
+    let slot = Forque::slot();
+    let axes = turn_axes()
+        .into_iter()
+        .zip(force_axes())
+        .zip(turning)
+        .zip(shifting);
     axes.map(|(((axis, force), turn), shift)| {
         let shift_along = force.dual();
         axis * (axis & slot) * turn + shift_along * (shift_along & slot) * shift
@@ -93,7 +97,11 @@ pub fn rod(load: F, flex: Compliance, start: Frame, length: f64, pieces: usize) 
 /// and along it a force for the shift along it times the rigidity against shifting.
 pub fn stiffness(turning: [f64; 3], shifting: [f64; 3]) -> Stiffness {
     let slot = Line::slot();
-    let axes = turn_axes().into_iter().zip(force_axes()).zip(turning).zip(shifting);
+    let axes = turn_axes()
+        .into_iter()
+        .zip(force_axes())
+        .zip(turning)
+        .zip(shifting);
     axes.map(|(((axis, force), turn), shift)| {
         let couple = axis.dual();
         couple * (couple & slot) * turn + force * (force & slot) * shift

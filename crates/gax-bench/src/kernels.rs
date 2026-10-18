@@ -45,7 +45,7 @@ pub fn rigid_step<T: Real>(
 ) -> (Motor<(), T>, Line<(), T>) {
     let db = inertia_inv(b.commutator(inertia(b, mass, moments)) + f, mass, moments);
     let dm: Motor<(), T> = (m * b).gp(T::from_f64(-0.5));
-    let m2 = (m + dm.gp(dt)).normalized().into_inner();
+    let m2 = (m + dm.gp(dt)).normalized();
     (m2, b + db.gp(dt))
 }
 

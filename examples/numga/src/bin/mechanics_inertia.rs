@@ -75,7 +75,7 @@ macro_rules! principal_frame {
         use crate::Draw as _;
 
         /// A rate-to-momentum map: from twists to forques.
-        pub type Inertia = Forque<(Line,), f64, gax::Intrinsic>;
+        pub type Inertia = Forque<(Line,), f64>;
         /// A second-moment map: `b & S(a)` is `Σ m (a & p)(b & p)` over the mass points.
         pub type Moment = Point<(Plane,), f64>;
         pub type Pl = Plane<(), f64>;
@@ -182,7 +182,7 @@ macro_rules! principal_frame {
                     best = Some(x);
                 }
             }
-            best.expect("a motor eigenvector").normalized()
+            best.expect("a motor eigenvector").unit()
         }
 
         /// The inertia moved by a motor: its input and its output.
@@ -206,11 +206,7 @@ macro_rules! principal_frame {
         pub fn cloud(seed: u64) -> (Vec<Pt>, Vec<f64>) {
             let mut rng = crate::rng(seed);
             let points: Vec<Pt> = (0..80)
-                .map(|_| {
-                    Point::from_coeffs(core::array::from_fn(|_| rng.normal()))
-                        .normalized()
-                        .into_inner()
-                })
+                .map(|_| Point::from_coeffs(core::array::from_fn(|_| rng.normal())).normalized())
                 .collect();
             let placement = random_motor(&mut rng, 0.3);
             let masses = (0..80).map(|_| rng.range(0.5, 1.5)).collect();
@@ -253,13 +249,13 @@ macro_rules! principal_frame {
 
 /// Euclidean PGA3D, numga's `x+y+z+w0`.
 pub mod e3 {
-    use gax::pga3d::{Line, Line as Forque, Motor, Plane, Point};
+    use gax::pga3d::{Forque, Line, Motor, Plane, Point};
     principal_frame!(4);
 }
 
 /// Spherical R(4,0,0), numga's `x+y+z+w+`.
 pub mod s3 {
-    use crate::sga3d::{Line, Line as Forque, Motor, Plane, Point};
+    use crate::sga3d::{Line, Motor, Plane, Point, intrinsic::Line as Forque};
     principal_frame!(4);
 }
 

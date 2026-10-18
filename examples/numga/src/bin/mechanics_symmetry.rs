@@ -269,14 +269,14 @@ mod symmetry {
 
     /// The lattice scene's responses.
     pub fn crystal_lattice() -> (Response, Elasticity) {
-        let seeds = [x(), (x() + y()).normalized().into_inner()];
+        let seeds = [x(), (x() + y()).normalized()];
         let (conductivity, elasticity) = lattice_responses(&seeds, &cube_rotations());
         // Conduction is isotropic, 2/3 in every direction; stiffness is 1/2 along the cube's
         // axes and 1/3 along its body diagonals.
         for d in directions() {
             assert!(((d | conductivity.of(d)).s() - 2.0 / 3.0).abs() < 1e-7 * 2.0 / 3.0);
         }
-        let diagonal = (x() + y() + z()).normalized().into_inner();
+        let diagonal = (x() + y() + z()).normalized();
         assert!((elasticity.fill(x()).s() - 0.5).abs() < 1e-7 * 0.5);
         assert!((elasticity.fill(diagonal).s() - 1.0 / 3.0).abs() < 1e-7 / 3.0);
         (conductivity, elasticity)

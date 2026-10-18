@@ -1,27 +1,27 @@
-error[E0277]: a `gax::pga3d::Line<(), f32, Intrinsic>` does not fit a slot of kind `gax::pga3d::Line`
+error[E0277]: a `gax::pga3d::oriented::Line<(), f64, Intrinsic>` does not fit a slot of kind `gax::pga3d::oriented::Line`
  --> tests/compile_fail/map_wrong_orientation.rs:8:20
   |
 8 |     let _ = map.of(joined);
-  |                 -- ^^^^^^ not a blade of `gax::pga3d::Line`, or not of its orientation
+  |                 -- ^^^^^^ not a blade of `gax::pga3d::oriented::Line`, or not of its orientation
   |                 |
   |                 required by a bound introduced by this call
   |
-  = help: the trait `SubKind<gax::pga3d::Line>` is not implemented for `gax::pga3d::Line<(), f32, Intrinsic>`
-  = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::Line>()` if dropping blades is intended
-  = note: and of the slot's orientation (ADR-051): a join of points is intrinsic, a meet of planes extrinsic. Take a slot of the value's orientation (`Kind::<(), T, gax::Intrinsic>::oriented_slot()`), or declare the coefficients' orientation with `.with_orientation()` if they mean the other
-help: `gax::pga3d::Line<(), f32, O>` implements trait `SubKind<K>`
+  = help: the trait `SubKind<gax::pga3d::oriented::Line>` is not implemented for `gax::pga3d::oriented::Line<(), f64, Intrinsic>`
+  = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::oriented::Line>()` if dropping blades is intended
+  = note: and of the slot's orientation (ADR-051): a join of points is intrinsic, a meet of planes extrinsic. Take a slot of the value's orientation (`intrinsic::Kind::slot()`, `extrinsic::Kind::slot()`), or declare the coefficients' orientation with `.with_orientation()` if they mean the other
+help: `gax::pga3d::oriented::Line<(), f64, O>` implements trait `SubKind<K>`
  --> src/algebras/pga3d/kinds.rs
   |
-  | impl<O: gx::Orientation> gx::SubKind<Line<(), f32, O>> for Line<(), f32, O> {}
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Line<(), f32, O>>`
+  | impl<O: gx::Orientation> gx::SubKind<Line<(), f64, O>> for Line<(), f64, O> {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::oriented::Line<(), f64, O>>`
 ...
-      | impl<O: gx::Orientation> gx::SubKind<Motor<(), f32, O>> for Line<(), f32, O> {}
-      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Motor<(), f32, O>>`
+      | impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Line<(), f64, O> {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::oriented::Motor<(), f64, O>>`
 ...
-      | impl<O: gx::Orientation> gx::SubKind<Multivector<(), f32, O>> for Line<(), f32, O> {}
-      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector<(), f32, O>>`
-      = note: required for `gax::pga3d::Line<(gax::pga3d::Line,)>` to implement `Of<gax::pga3d::Line<(), f32, Intrinsic>>`
-note: required by a bound in `gax::pga3d::Line::<S, T, O>::of`
+      | impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Line<(), f64, O> {}
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::oriented::Multivector<(), f64, O>>`
+      = note: required for `gax::pga3d::oriented::Line<(gax::pga3d::oriented::Line,)>` to implement `Of<gax::pga3d::oriented::Line<(), f64, Intrinsic>>`
+note: required by a bound in `gax::pga3d::oriented::Line::<S, T, O>::of`
  --> src/algebras/pga3d/kinds.rs
   |
   |     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output

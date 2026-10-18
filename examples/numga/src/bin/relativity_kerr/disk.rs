@@ -24,7 +24,7 @@ pub fn disk_coherency(
     let ray = state.ray;
     let local_momentum = frame(&field(ray.event, hole)).of(ray.momentum);
     let direction = spatial(local_momentum) * (t() | local_momentum).s().recip();
-    let magnetic = (ray.event | (normal | xyz())).normalized().into_inner();
+    let magnetic = (ray.event | (normal | xyz())).normalized();
     let electric = (direction ^ magnetic) | xyz();
     let polarization = adjoint(state.screen).of(electric);
     let polarized_fraction = -polarization_degree * polarization.norm_squared();
@@ -345,7 +345,7 @@ pub mod tests {
         assert!((straight - (1.0 - (-depth).exp())).abs() < 1e-4);
         // Two rays at one slant through opposite sides of the orbit: the gas at +x moves along
         // +y, towards where the light goes, and the gas at -x away from it.
-        let slant = (y() - z()).normalized().into_inner();
+        let slant = (y() - z()).normalized();
         let opacity = |side: V| {
             let momentum = initial_momentum(side, slant, hole);
             disk_opacity(side, momentum, depth, z(), xy(), hole)

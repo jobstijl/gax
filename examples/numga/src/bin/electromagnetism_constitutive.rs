@@ -29,22 +29,22 @@ mod constitutive {
     // numga's API in full: the tests use parts the animation does not.
     #![cfg_attr(not(test), allow(dead_code))]
 
-    use gax::sta::{Bivector, Odd, Scalar, Trivector, Vector};
-    use gax::{Intrinsic, Orientation, Vee};
+    use gax::sta::{Bivector, Odd, Scalar, Vector, intrinsic, oriented};
+    use gax::{Orientation, Vee};
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
     /// An excitation, the dual of a field: a bivector of the other orientation (intrinsic).
-    pub type Excitation = Bivector<(), f64, Intrinsic>;
+    pub type Excitation = intrinsic::Bivector<(), f64>;
     /// A map on fields, `Bivector <- Bivector`.
     pub type Projector = Bivector<(Bivector,), f64>;
     /// A constitutive map, `Antibivector <- Bivector` (antibivectors are bivectors in 4D, of
     /// the other orientation).
-    pub type Medium = Bivector<(Bivector,), f64, Intrinsic>;
+    pub type Medium = intrinsic::Bivector<(Bivector,), f64>;
     /// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
-    pub type AxionCoupling = Scalar<(), f64, Intrinsic>;
+    pub type AxionCoupling = intrinsic::Scalar<(), f64>;
     /// A stress-energy current, `Antivector <- Vector`.
-    pub type Current = Trivector<(Vector,), f64, Intrinsic>;
+    pub type Current = intrinsic::Trivector<(Vector,), f64>;
     /// Both Maxwell residuals of a plane wave, `Odd <- Bivector`.
     pub type WaveMap = Odd<(Bivector,), f64>;
     pub type Rotor = gax::Unit<gax::sta::Even<(), f64>>;
@@ -88,7 +88,7 @@ mod constitutive {
 
     /// The spatial part of a vector as the rest observer `t` reads it, a vector of space (for
     /// drawing, of either orientation).
-    pub fn spatial<O: Orientation>(v: Vector<(), f64, O>) -> Space {
+    pub fn spatial<O: Orientation>(v: oriented::Vector<(), f64, O>) -> Space {
         Space::new(v.e1(), v.e2(), v.e3())
     }
 
@@ -508,7 +508,7 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     for (f, col) in fields.iter().zip([palette::red(), palette::blue()]) {
         // The electric vector lies across the beam: its x and y, at unit length.
         let (e, _) = arrows(*f);
-        let a = e.normalized().into_inner();
+        let a = e.normalized();
         let along = |k: f64| origin + Point::direction(a.e1(), a.e2()).gp(k);
         ax.dashed(c, &[along(-1.0), along(1.0)], 1.0, 4.0, col.faded(0.7));
         ax.arrow(c, origin, along(1.0), 2.5, 9.0, col);
@@ -668,7 +668,7 @@ fn main() {
 mod tests {
     use super::constitutive::*;
     use gax::ApproxEq;
-    use gax::sta::{Pseudoscalar, Trivector};
+    use gax::sta::{Pseudoscalar, Trivector, intrinsic};
     use gax_numga_examples::rng::{Draw, Rng, rng};
     use gax_numga_examples::signal::linspace;
 
@@ -794,7 +794,7 @@ mod tests {
         for (s, f) in speeds.iter().zip(fields) {
             let k = t().gp(*s) + z();
             assert!(near(k ^ f, Trivector::zero(), 1e-12));
-            assert!(near(k ^ crystal.of(f), Trivector::zero(), 1e-12));
+            assert!(near(k ^ crystal.of(f), intrinsic::Trivector::zero(), 1e-12));
             let e_part: B = electric_planes.iter().map(|p| *p * (*p | f)).sum();
             let m_part: B = magnetic_planes.iter().map(|p| *p * (*p | f)).sum();
             assert!(near(electric.of(f), e_part, 1e-12));
@@ -811,7 +811,7 @@ mod tests {
         let action_form = pair(open(), vacuum);
         for f in &fields[4..] {
             assert!(near(k ^ *f, Trivector::zero(), 1e-12));
-            assert!(near(k ^ vacuum.of(*f), Trivector::zero(), 1e-12));
+            assert!(near(k ^ vacuum.of(*f), intrinsic::Trivector::zero(), 1e-12));
             assert!((action_form.of(*f).of(*f).s() / 2.0).abs() < 1e-12);
             let stress_form = pair(open_vector(), stress_energy(*f, vacuum.of(*f)));
             assert!(stress_form.of(t()).of(t()).s() > 0.0);

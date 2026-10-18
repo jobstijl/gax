@@ -416,7 +416,7 @@ fn turn_gap(a: &Motion, b: &Motion) -> f64 {
 fn material_heat_and_motion_converge_at_second_order_in_time() {
     let (speed, elapsed, steps) = (2.0, 1.6, 8);
     let mesh = Mesh::disk(RADIUS, 4, 24);
-    let radial = mesh.face_centers().map(|c| c.normalized().into_inner());
+    let radial = mesh.face_centers().map(|c| c.normalized());
     let conductivity = radial.map(|r| (open() * 0.3 + r * (r | open()) * 1.4) * CONDUCTANCE);
     let brake = brake(&mesh, &conductivity, magnet(STRENGTH));
     let finals = [1, 2, 4].map(|refinement| {
@@ -546,7 +546,7 @@ fn material_frame_heating_matches_a_solve_on_the_rotated_world_mesh() {
     };
     let orientation = turn(plane, angle) * tilt;
     let spin = plane * speed;
-    let radial = mesh.face_centers().map(|c| c.normalized().into_inner());
+    let radial = mesh.face_centers().map(|c| c.normalized());
     let conductivity = radial.map(|r| (open() * 0.1 + r * (r | open()) * 1.8) * CONDUCTANCE);
     let states =
         brake(&mesh, &conductivity, tilted).braking(orientation, spin, cold(&mesh), step, 1);

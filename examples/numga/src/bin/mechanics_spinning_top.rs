@@ -20,7 +20,7 @@
 //! its bowl, and plots the tilt and spin of numga's four variations: the base, a sharper tip,
 //! a heavier disc and a slippery bowl.
 
-use gax::pga3d::{Direction, Line, Motor, Plane, Point};
+use gax::pga3d::{Direction, Line, Motor, Plane, Point, intrinsic};
 use gax_colour::light;
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
@@ -48,7 +48,7 @@ mod top {
 
     /// The plane at infinity as the join of the three axis directions, where [`w`] is their
     /// meet: intrinsic, so that a plane wedged with it is a load (a forque), not a turn.
-    pub fn horizon() -> Plane<(), f64, gax::Intrinsic> {
+    pub fn horizon() -> intrinsic::Plane<(), f64> {
         let [x, y, z] = directions();
         x & y & z
     }

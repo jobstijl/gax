@@ -256,14 +256,13 @@ mod neutrino {
     /// The unit circle in a plane, in `count` steps: a direction in the plane (the plane's
     /// contraction with the axis it leans on least) turned about its normal.
     pub fn great_circle(plane: Bi, count: usize) -> Vec<V> {
-        let unit = plane.normalized().into_inner();
+        let unit = plane.normalized();
         let start = [x(), y(), electron()]
             .map(|a| a.lc(unit))
             .into_iter()
             .max_by(|a, b| a.norm_squared().total_cmp(&b.norm_squared()))
             .expect("three directions")
-            .normalized()
-            .into_inner();
+            .normalized();
         (0..=count)
             .map(|k| {
                 let angle = core::f64::consts::TAU * k as f64 / count as f64;
@@ -333,7 +332,7 @@ fn draw_sphere(s: &mut Scene3) {
 fn draw_plane(s: &mut Scene3, plane: Bi, colour: Light) {
     let circle: Vec<_> = great_circle(plane, 96).into_iter().map(reach3).collect();
     s.polyline(&circle, 1.4, colour);
-    let n = axis(plane).normalized().into_inner() * 1.15;
+    let n = axis(plane).normalized() * 1.15;
     s.seg(reach3(-n), reach3(n), 1.0, colour.faded(0.6));
 }
 

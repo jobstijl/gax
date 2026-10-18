@@ -187,7 +187,7 @@ mod render {
         View {
             frame,
             extent,
-            lamp: Plane::orthogonal_to(lamp).normalized().into_inner(),
+            lamp: Plane::orthogonal_to(lamp).normalized(),
         }
     }
 

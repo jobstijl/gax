@@ -259,7 +259,7 @@ mod tests {
             .iter()
             .map(|a| {
                 let turn = Bivector::new(0.0, deg(*a) / 2.0, 0.0).exp();
-                s2::overlap(c1, turn >> c2.of(turn << s2::P::oriented_slot()), 12).0
+                s2::overlap(c1, turn >> c2.of(turn << s2::P::slot()), 12).0
             })
             .collect();
         assert!(margins[0] > 0.005);

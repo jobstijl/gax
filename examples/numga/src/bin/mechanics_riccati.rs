@@ -156,17 +156,17 @@ mod riccati {
         let authority: Feedback = thrusters
             .iter()
             .zip(THRUSTER_WEIGHTS)
-            .map(|(t, w)| (*t * (*t & Twist::oriented_slot())).gp(1.0 / w))
+            .map(|(t, w)| (*t * (*t & Twist::slot())).gp(1.0 / w))
             .sum();
         let resistance = authority.inverse();
-        let effort: EffortCost = Forque::oriented_slot() & resistance.of(Forque::oriented_slot());
+        let effort: EffortCost = Forque::slot() & resistance.of(Forque::slot());
         let effort_cost = EFFORT_SCALES.map(|s| effort.gp(s * DT));
 
         // Each tracking line's reading squared is that displacement's cost.
         let state_cost: StateCost = (tracking_lines().as_flattened().iter())
             .zip(TRACKING_WEIGHTS.as_flattened())
             .map(|(l, w)| {
-                let readout = *l & Twist::oriented_slot();
+                let readout = *l & Twist::slot();
                 (readout * readout).gp(w * DT)
             })
             .sum();
@@ -178,14 +178,14 @@ mod riccati {
         let drag: Feedback = drag_lines
             .iter()
             .zip(DRAG_WEIGHTS)
-            .map(|(l, w)| (*l * (*l & Twist::oriented_slot())).gp(w))
+            .map(|(l, w)| (*l * (*l & Twist::slot())).gp(w))
             .sum();
         // Without a push the vessel stays put.
         Model {
             resistance,
             state_cost,
             effort_cost,
-            dynamics: Twist::oriented_slot(),
+            dynamics: Twist::slot(),
             actuation: drag.inverse().gp(DT),
         }
     }
@@ -401,8 +401,8 @@ mod tests {
             [[0.5, -0.05, 0.1], [-0.05, 0.7, 0.0], [0.1, 0.0, 1.0]],
         ];
         for case in 0..2 {
-            let d: Dynamics = Point::from_coeffs(dynamics[case]);
-            let a: Actuation = Point::from_coeffs(actuation[case]);
+            let d = Dynamics::from_coeffs(dynamics[case]);
+            let a = Actuation::from_coeffs(actuation[case]);
             let q: StateCost = Scalar::from_coeffs([state_cost[case]]);
             let r: EffortCost = Scalar::from_coeffs([effort_cost[case]]);
             let terminal = q.gp(3.0);

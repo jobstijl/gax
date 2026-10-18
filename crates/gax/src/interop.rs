@@ -34,7 +34,7 @@ mod pga3d_interop {
         #[inline]
         pub fn from_quaternion(q: [T; 4]) -> Unit<Self> {
             let [x, y, z, w] = q;
-            Rotor::new(w, -x, -y, -z).normalized()
+            Rotor::new(w, -x, -y, -z).unit()
         }
 
         /// The unit quaternion `[x, y, z, w]` of this rotor's rotation (normalized). `r` and

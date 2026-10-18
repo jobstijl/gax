@@ -24,20 +24,19 @@ gax::algebra! {
 }
 
 mod cga {
-    use super::cl31::{Bivector, Trivector, Vector};
-    use gax::Intrinsic;
+    use super::cl31::{Bivector, Vector, intrinsic};
     use gax_numga_examples::signal::phasor;
 
     /// A point of S², or any vector.
     pub type V = Vector<(), f64>;
     /// A plane: a trivector, the dual of a vector, and so intrinsic (ADR-051).
-    pub type Plane = Trivector<(), f64, Intrinsic>;
+    pub type Plane = intrinsic::Trivector<(), f64>;
     /// A 2-blade, the generator of a flow.
     pub type B = Bivector<(), f64>;
     /// A conformal rotor.
     pub type R = gax::Unit<super::cl31::Rotor<(), f64>>;
     /// A spherical quadric: a map from vectors to planes.
-    pub type Quadric = Trivector<(Vector,), f64, Intrinsic>;
+    pub type Quadric = intrinsic::Trivector<(Vector,), f64>;
 
     /// The basis vectors x, y, z and w.
     pub fn x() -> V {
@@ -276,7 +275,7 @@ mod cga {
     pub fn circle_intersection_vortex(center1: V, radius1: f64, center2: V, radius2: f64) -> B {
         let c1 = center1 + w().gp(height(radius1));
         let c2 = center2 + w().gp(height(radius2));
-        (c1 ^ c2).normalized().into_inner()
+        (c1 ^ c2).normalized()
     }
 
     /// numga's vortex: circles of radii 48° and 52° about the pole tilted toward x and toward y.

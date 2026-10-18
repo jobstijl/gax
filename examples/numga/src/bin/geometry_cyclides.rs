@@ -192,7 +192,7 @@ mod cyclides {
     /// about it.
     pub fn placement(toward: Sphere, ahead: f64, tilt: f64) -> Motor {
         let target = moved_sphere(turn(w() ^ x(), ahead / 2.0), w());
-        (one() + target * toward).normalized() * turn(y() ^ w(), tilt / 2.0)
+        (one() + target * toward).unit() * turn(y() ^ w(), tilt / 2.0)
     }
 
     /// A rotation of R⁴ by the given angles in the planes xy, xz, xw, yz, yw and zw, in turn.
@@ -216,7 +216,7 @@ mod cyclides {
     pub fn view(centre: Sphere, angles: [f64; 6], ahead: f64, yaw: f64, pitch: f64) -> Motor {
         let turned = orientation(angles);
         let target = moved_sphere(turn(w() ^ x(), ahead / 2.0), w());
-        let carry = (one() + target * moved_sphere(turned, centre)).normalized();
+        let carry = (one() + target * moved_sphere(turned, centre)).unit();
         let look = turn(x() ^ y(), yaw / 2.0) * turn(x() ^ z(), pitch / 2.0);
         look * carry * turned
     }
@@ -364,7 +364,7 @@ mod cyclides {
         // The tangent of the half field: the height over the width of the turned direction.
         let half = phasor(fov / 2.0);
         let k = half.e01() / half.e20();
-        Direction::new(-1.0, u * k, v * k).normalized().into_inner()
+        Direction::new(-1.0, u * k, v * k).normalized()
     }
 
     /// numga's sensor: the pixel centres of a `rows` x `cols` image, row-major.
@@ -440,7 +440,7 @@ mod cyclides {
         let unit_e = |v: Sphere| v.gp(-1.0 / (v | e()).s());
         let a = unit_e(moved_sphere(dil, z() + e()));
         let b = unit_e(moved_sphere(dil, e() - z()));
-        (bent, (a + b - e().gp(2.0)).normalized().into_inner())
+        (bent, (a + b - e().gp(2.0)).normalized())
     }
 
     /// One of numga's spindle shots: which spindle (lean 0 or 0.7), its orientation in the
@@ -533,7 +533,7 @@ mod cyclides {
 
     pub fn cyclide() -> Vec<Part> {
         // An off-centre sphere inversion gives the torus unequal tube widths.
-        let inversion = moved_sphere(shift(x().gp(3.2)), chart_sphere(9.0)).normalized();
+        let inversion = moved_sphere(shift(x().gp(3.2)), chart_sphere(9.0)).unit();
         let pose = turn(x() ^ y(), 0.12) * turn(y() ^ z(), -0.22);
         still(moved(pose, inverted(inversion, torus(1.4, 0.5))))
     }
@@ -566,7 +566,7 @@ mod cyclides {
 
     pub fn pinched_surface() -> Quadric {
         inverted(
-            (chart_origin() - chart_infinity()).normalized(),
+            (chart_origin() - chart_infinity()).unit(),
             hyperboloid_of_one_sheet(),
         )
     }
@@ -594,8 +594,7 @@ mod cyclides {
     /// outside the solid, and the inversion.
     fn inverted_hyperboloid() -> (Quadric, gax::Unit<Vector<(), f64>>) {
         let surface = hyperboloid_of_one_sheet() - dyad(y()).gp(1.0 / (0.65 * 0.65) - 1.0);
-        let inversion =
-            moved_sphere(shift(x().gp(1.7)), chart_origin() - chart_infinity()).normalized();
+        let inversion = moved_sphere(shift(x().gp(1.7)), chart_origin() - chart_infinity()).unit();
         (-inverted(inversion, surface), inversion)
     }
 
@@ -610,9 +609,7 @@ mod cyclides {
 
     /// The core circle of radius `radius` about z, in the plane z = 0, as a unit bivector.
     fn core_circle(radius: f64) -> Biv {
-        (z() ^ chart_sphere(radius * radius))
-            .normalized()
-            .into_inner()
+        (z() ^ chart_sphere(radius * radius)).normalized()
     }
 
     pub fn linked_vortex() -> Vec<Part> {
@@ -620,7 +617,7 @@ mod cyclides {
         // Invert a circle about the uninverted hyperboloid's waist together with the body:
         // the vortex circle threads its opening transversely.
         let sphere = chart_sphere(2.5 * 2.5);
-        let circle = (inversion >> (z() ^ sphere)).normalized().into_inner();
+        let circle = (inversion >> (z() ^ sphere)).normalized();
         // The inverted circle still lies in z = 0. Normalize its sphere to recover its radius,
         // then give it a thin tube of constant thickness.
         let sphere = inversion >> sphere;
@@ -760,14 +757,12 @@ mod cyclides {
     /// chart's straight lines through its origin, so the view is the flat tracer's.
     pub fn flat_camera(position: [f64; 3], target: [f64; 3]) -> Motor {
         let (position, target) = (chart_point(position), chart_point(target));
-        let forward = (target - position).normalized().into_inner();
+        let forward = (target - position).normalized();
         // `(forward ∧ z) xyz⁻¹`, the cross product with z (numga computes it with the
         // trivector; this algebra declares no trivector kind).
-        let right = Vector::new(forward.c[1], -forward.c[0], 0.0, 0.0, 0.0)
-            .normalized()
-            .into_inner();
-        let aim = (one() - forward * x()).normalized();
-        let roll = (one() + right * moved_sphere(aim, y())).normalized();
+        let right = Vector::new(forward.c[1], -forward.c[0], 0.0, 0.0, 0.0).normalized();
+        let aim = (one() - forward * x()).unit();
+        let roll = (one() + right * moved_sphere(aim, y())).unit();
         (shift(position) * roll * aim).inverse()
     }
 

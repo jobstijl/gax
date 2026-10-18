@@ -63,7 +63,7 @@ pub fn w() -> Plane {
 
 /// The representative of a point with positive unit weight on `w`; a unit point is a versor.
 pub fn unit(p: Point) -> Point {
-    p.gp(1.0 / (w() & p).s()).normalized().into_inner()
+    p.gp(1.0 / (w() & p).s()).normalized()
 }
 
 /// The origin of S³, `zyx`, the pole of the plane `w = 0`, where every body is centred in its
@@ -80,7 +80,7 @@ pub type TangentPlane = gax::vga3d::Bivector<(), f64>;
 /// The point a quarter turn from the origin in the direction `d`.
 pub fn direction(d: Tangent) -> Point {
     let [x, y, z] = d.c;
-    Trivector::new(x, y, z, 0.0).normalized().into_inner()
+    Trivector::new(x, y, z, 0.0).normalized()
 }
 
 /// The rate `a xw + b yw + c zw` of `v = a e1 + b e2 + c e3`: a motion of the origin along `v`.
@@ -173,9 +173,7 @@ pub fn reproject(conic: ScreenConic, polar: ScreenPolar, pixel: Pixel) -> f64 {
 /// The point of S³ reached first along a pixel's ray at a depth, sign and all.
 pub fn hit(eye_frame: Motor, depth: f64, pixel: Pixel) -> Point {
     let ray: Point = eye_frame >> pixel.cast::<Trivector>();
-    ((eye_frame >> origin()).gp(depth) + ray)
-        .normalized()
-        .into_inner()
+    ((eye_frame >> origin()).gp(depth) + ray).normalized()
 }
 
 /// A scene to trace: the eye, the bodies' primal forms in the world, their colours (lights, at

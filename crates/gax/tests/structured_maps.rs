@@ -44,7 +44,7 @@ fn composes_and_binds() {
         assert_eq!(body.of(m), dense.of(m)); // body ∘ m
         // Into a form's first slot, the power of a momentum against a twist, and the kinetic
         // energy form built from it.
-        let power: Scalar<(Forque, Line), f64> = Forque::oriented_slot() & Line::slot();
+        let power: Scalar<(Forque, Line), f64> = Forque::slot() & Line::slot();
         assert_eq!(power.of(body), power.of(dense));
         assert_eq!(Line::slot() & body.of(Line::slot()), body.energy_form());
         // A point's velocity, of a twist, composed with the mobility, momenta to twists.

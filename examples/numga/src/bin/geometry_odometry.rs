@@ -51,10 +51,10 @@ macro_rules! odometry_core {
 
         /// The open twist and the open forque.
         pub fn twists() -> Twist<(Twist,), f64> {
-            Tw::oriented_slot()
+            Tw::slot()
         }
         pub fn forques() -> Forque<(Forque,), f64> {
-            Fq::oriented_slot()
+            Fq::slot()
         }
 
         /// The basis twist `i`.
@@ -470,7 +470,7 @@ mod plane {
                 let twice = phasor(2.0 * phase);
                 let turn = (1.0 + 0.4 * twice.e01()) * core::f64::consts::TAU / STEPS as f64;
                 let slip = -0.1 * twice.e20();
-                (Point::translation_twist(0.7, slip) + Point::rotation_twist(origin(), turn)).exp()
+                (Twist::translation_twist(0.7, slip) + Twist::rotation_twist(origin(), turn)).exp()
             })
             .collect()
     }

@@ -81,7 +81,7 @@ mod hopf {
         directions
             .windows(2)
             .map(|w| {
-                let step = (one + w[1] * w[0]).normalized().into_inner();
+                let step = (one + w[1] * w[0]).normalized();
                 total = step * total;
                 total
             })
@@ -337,7 +337,7 @@ mod tests {
     /// it on its fibre.
     #[test]
     fn the_fibre_is_the_top_eigenspace_of_the_paired_form() {
-        let direction: V = Vector::new(0.3, -0.5, 0.8).normalized().into_inner();
+        let direction: V = Vector::new(0.3, -0.5, 0.8).normalized();
         let (values, spinors) = (direction | hopf()).eigh();
         for (v, want) in values.iter().zip([-1.0, -1.0, 1.0, 1.0]) {
             assert!((v - want).abs() < 1e-12, "{values:?}");

@@ -83,7 +83,7 @@ mod dipoles {
     /// it), over twice the cube of the distance.
     pub fn dipole_field(r: V) -> Coupling {
         let squared = r.norm_squared();
-        let turned = gax::vga3d::Rotor::from(r.dual()) >> open();
+        let turned = gax::vga3d::intrinsic::Rotor::from(r.dual()) >> open();
         (turned * 3.0 + open() * squared) * (1.0 / (2.0 * squared * squared * r.norm()))
     }
 

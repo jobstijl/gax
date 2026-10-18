@@ -317,13 +317,13 @@ fn kind_impl(
     let (an, bn) = (&a.name, &b.name);
     let widen = if keeps_unit {
         format!(
-            "    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::{tm}::{bn}<(), T, O>> for crate::{sm}::{an}<(), T, O> {{}}\n\n"
+            "    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::{tm}::oriented::{bn}<(), T, O>> for crate::{sm}::oriented::{an}<(), T, O> {{}}\n\n"
         )
     } else {
         String::new()
     };
     let code = format!(
-        "    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::{sm}::{an}<S, T, O>> for crate::{tm}::{bn}<S, T, O> {{\n        /// The image under the homomorphism from `{sm}` to `{tm}`, of the same orientation: a\n        /// homomorphism keeps products, and so the orientations they give (ADR-051).\n        #[inline(always)]\n        fn from(x: crate::{sm}::{an}<S, T, O>) -> Self {{\n            let a = x.c.map(SlotArr::<S, T>);\n            crate::{tm}::{bn}::from_coeffs([{}])\n        }}\n    }}\n\n",
+        "    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::{sm}::oriented::{an}<S, T, O>> for crate::{tm}::oriented::{bn}<S, T, O> {{\n        /// The image under the homomorphism from `{sm}` to `{tm}`, of the same orientation: a\n        /// homomorphism keeps products, and so the orientations they give (ADR-051).\n        #[inline(always)]\n        fn from(x: crate::{sm}::oriented::{an}<S, T, O>) -> Self {{\n            let a = x.c.map(SlotArr::<S, T>);\n            crate::{tm}::oriented::{bn}::from_coeffs([{}])\n        }}\n    }}\n\n",
         exprs.join(", ")
     ) + &widen;
     Some((code, bn.clone()))
@@ -365,12 +365,14 @@ pub fn emit_hom_test(
         };
         // A zero image of the product (a kind that maps to nothing) is compared as zero.
         let lhs = match image(c) {
-            Some(ic) => format!("{tm}::Multivector::from({tm}::{ic}::from(a * b))"),
-            None => format!("{tm}::Multivector::zero()"),
+            Some(ic) => {
+                format!("{tm}::oriented::Multivector::from({tm}::oriented::{ic}::from(a * b))")
+            }
+            None => format!("{tm}::oriented::Multivector::zero()"),
         };
         let _ = writeln!(
             fns,
-            "    #[inline(never)]\n    fn p{k}(rng: &mut Rng) {{\n        let (a, b): ({sm}::{a}<(), f64>, {sm}::{b}<(), f64>) = (rng.value(), rng.value());\n        let rhs = {tm}::Multivector::from({tm}::{ia}::from(a) * {tm}::{ib}::from(b));\n        assert!(close(&{lhs}, &rhs), \"{a} * {b}\");\n    }}"
+            "    #[inline(never)]\n    fn p{k}(rng: &mut Rng) {{\n        let (a, b): ({sm}::{a}<(), f64>, {sm}::{b}<(), f64>) = (rng.value(), rng.value());\n        let rhs = {tm}::oriented::Multivector::from({tm}::oriented::{ia}::from(a) * {tm}::oriented::{ib}::from(b));\n        assert!(close(&{lhs}, &rhs), \"{a} * {b}\");\n    }}"
         );
         let _ = writeln!(calls, "        p{k}(&mut rng);");
     }

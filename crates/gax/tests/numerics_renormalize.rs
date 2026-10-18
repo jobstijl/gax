@@ -79,7 +79,7 @@ fn five_d_steps_converge_quadratically() {
                 let d = $m::<(), f64>::from_coeffs(core::array::from_fn(|_| next()));
                 // Scaled and pushed off the versors: normalized lands back on u ~u = 1.
                 let x = u.gp(1.7) + d.gp(1e-2);
-                let y = x.normalized().into_inner();
+                let y = x.normalized();
                 assert!(err!(y) < 1e-12, "normalized: {}", err!(y));
                 // Drift: one Newton step squares the error.
                 let m = u + d.gp(1e-3);

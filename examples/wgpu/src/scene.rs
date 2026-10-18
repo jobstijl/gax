@@ -15,7 +15,7 @@ pub type Rng = rand::rngs::StdRng;
 /// A rate `B` with `exp(dt B)` moving forward (along the local x axis) at `speed` and turning
 /// at `spin` radians per second: twists add.
 pub fn rate(speed: f32, spin: f32) -> Twist<(), f32> {
-    Point::translation_twist(speed, 0.0) + Point::rotation_twist(ORIGIN, spin)
+    Twist::translation_twist(speed, 0.0) + Twist::rotation_twist(ORIGIN, spin)
 }
 
 struct Ship {

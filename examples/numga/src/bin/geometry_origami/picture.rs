@@ -8,9 +8,9 @@
 //! its front or its back, lit by a fixed light and an ambient fill.
 
 use super::paper::{P, Paper};
+use gax::Unit;
 use gax::pga2d;
-use gax::pga3d::{Motor, Plane, Point};
-use gax::{Intrinsic, Unit};
+use gax::pga3d::{Motor, Plane, Point, intrinsic};
 use gax_numga_examples::Light;
 use std::ops::Range;
 
@@ -94,7 +94,7 @@ impl View {
 /// and the box it covers.
 struct Facet {
     corners: Vec<pga2d::Point<(), f64>>,
-    edges: Vec<pga2d::Line<(), f64, Intrinsic>>,
+    edges: Vec<pga2d::intrinsic::Line<(), f64>>,
     ends: Vec<[P; 2]>,
     plane: Winding,
     colour: Light,
@@ -102,12 +102,12 @@ struct Facet {
 }
 
 /// A plane oriented by a winding within it (intrinsic), as a join of points is.
-type Winding = Plane<(), f64, Intrinsic>;
+type Winding = intrinsic::Plane<(), f64>;
 
 /// The plane of a polygon: the sum of the planes of its fan of triangles, each the join of its
 /// corners, so the polygon's plane weighted by its area and oriented by its winding.
 fn polygon_plane(corners: &[P]) -> Winding {
-    (1..corners.len() - 1).fold(Plane::zero(), |sum, i| {
+    (1..corners.len() - 1).fold(Winding::zero(), |sum, i| {
         sum + (corners[0] & corners[i] & corners[i + 1])
     })
 }
@@ -195,7 +195,7 @@ fn segment_foot(
 ) -> Option<f64> {
     let line = a & b;
     if line.norm() > 0.0 {
-        let l = line.normalized().into_inner();
+        let l = line.normalized();
         let (before, after) = (((l | a) & q).s(), ((l | b) & q).s());
         if before * after <= 0.0 {
             return ((l & q).s().abs() <= PEN).then(|| before / (before - after));
@@ -278,12 +278,10 @@ impl Picture {
 /// the one facing the eye is positive), else its back, under a fixed diffuse light from the
 /// upper left and an ambient fill. The light scales the paper's linear reflectance.
 fn shade(face: Winding, eye: P) -> Light {
-    let unit = face.normalized().into_inner();
+    let unit = face.normalized();
     let facing = (unit | Plane::orthogonal_to(eye)).s() > 0.0;
     let outward = if facing { unit } else { -unit };
-    let light = Plane::orthogonal_to(Point::direction(-0.4, 0.5, 1.0))
-        .normalized()
-        .into_inner();
+    let light = Plane::orthogonal_to(Point::direction(-0.4, 0.5, 1.0)).normalized();
     let illumination = AMBIENT + (1.0 - AMBIENT) * (outward | light).s().max(0.0);
     let reflectance = if facing { front() } else { back() };
     reflectance.faded(illumination as f32)

@@ -78,7 +78,7 @@ mod condensate {
         /// The ground state: every spin of length a half against its field, iterated from a
         /// seed gap to self-consistency.
         pub fn equilibrium(&self, seed: Spin, iterations: usize) -> Spins {
-            let against = |gap: Spin| self.fields(gap).map(|f| -f.normalized().into_inner() * 0.5);
+            let against = |gap: Spin| self.fields(gap).map(|f| -f.normalized() * 0.5);
             let mut spins = against(seed);
             for _ in 1..iterations {
                 spins = against(self.gap(&spins));

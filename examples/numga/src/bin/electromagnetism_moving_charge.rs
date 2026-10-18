@@ -32,8 +32,7 @@ use std::sync::OnceLock;
 
 mod moving_charge {
     use core::ops::{Add, BitAnd};
-    use gax::Intrinsic;
-    use gax::sta::{Bivector, Even, Odd, Scalar, Trivector, Vector};
+    use gax::sta::{Bivector, Even, Odd, Scalar, Vector, intrinsic};
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
@@ -168,7 +167,7 @@ mod moving_charge {
     }
 
     /// An antivector: the complement of a vector, of the other orientation (intrinsic).
-    type Antivector = Trivector<(), f64, Intrinsic>;
+    type Antivector = intrinsic::Trivector<(), f64>;
 
     /// The antivectors dual to the basis by incidence alone, `Eⁱ` with `eⱼ & Eⁱ = δᵢⱼ`: each
     /// basis vector's complement, scaled to meet it at one.
@@ -190,7 +189,7 @@ mod moving_charge {
     /// Maxwell's equations without a metric: the incidence trace of the field's gradient, the
     /// current, and of its dual's, the magnetic source (of the dual's orientation), which
     /// vanishes.
-    pub fn sources(gradient: FieldGradient) -> (V, Vector<(), f64, Intrinsic>) {
+    pub fn sources(gradient: FieldGradient) -> (V, intrinsic::Vector<(), f64>) {
         let current = incidence_trace(|e| gradient.of(e));
         let magnetic = incidence_trace(|e| gradient.of(e).hodge());
         (current, magnetic)
@@ -505,7 +504,7 @@ fn main() {
 mod tests {
     use super::moving_charge::*;
     use gax::ApproxEq;
-    use gax::sta::{Even, Odd, Vector};
+    use gax::sta::{Even, Odd, intrinsic};
 
     /// numga's window on the soft charge reaches this far along `x`.
     const HALF_WIDTH: f64 = 1.5;
@@ -532,7 +531,7 @@ mod tests {
                 current.cast::<Odd>(),
                 1e-12
             ));
-            assert!(near(magnetic, Vector::zero(), 1e-12));
+            assert!(near(magnetic, intrinsic::Vector::zero(), 1e-12));
             // The current is the Plummer density carried along the charge's time direction.
             let separation = spatial(moving.boost << event);
             let softened = CORE_RADIUS * CORE_RADIUS - separation.norm_squared();

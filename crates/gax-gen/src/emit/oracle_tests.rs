@@ -99,7 +99,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
         if v.normalized {
             let _ = writeln!(
                 t,
-                "    common::normalized::<{k}<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());"
+                "    common::normalized::<{k}<(), f64>>(&o, &mut rng, |x| x.normalized());"
             );
         }
         // exp, log and sqrt are extrinsic only (ADR-051).
@@ -111,14 +111,14 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
             if has_log {
                 let _ = writeln!(
                     t,
-                    "    common::exp_log::<{k}<(), f64, gax::Extrinsic>, {on}<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());"
+                    "    common::exp_log::<extrinsic::{k}<(), f64>, {on}<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());"
                 );
             }
         }
         if v.sqrt && v.log.is_some() {
             let _ = writeln!(
                 t,
-                "    common::sqrt::<{k}<(), f64, gax::Extrinsic>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());"
+                "    common::sqrt::<extrinsic::{k}<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());"
             );
         }
     }

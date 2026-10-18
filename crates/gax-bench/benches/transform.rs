@@ -39,7 +39,7 @@ fn single(c: &mut Criterion) {
     let mat = m >> Point::slot();
     let prep = m.prepare::<Point>();
     let mut g = c.benchmark_group("transform one point");
-    g.bench_function("gax Unit<Motor> >> Point", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>> >> Point", |b| {
         b.iter(|| black_box(m) >> black_box(p));
     });
     g.bench_function("gax prepared >> Point", |b| {
@@ -52,11 +52,11 @@ fn single(c: &mut Criterion) {
         let r = &prep;
         b.iter(|| *black_box(r) >> black_box(p));
     });
-    g.bench_function("gax Point<(Point,)>::of, map from memory", |b| {
+    g.bench_function("gax Point<(Point,), f32>::of, map from memory", |b| {
         let r = &mat;
         b.iter(|| black_box(r).of(black_box(p)));
     });
-    g.bench_function("gax Point<(Point,)>::of", |b| {
+    g.bench_function("gax Point<(Point,), f32>::of", |b| {
         b.iter(|| black_box(mat).of(black_box(p)));
     });
     g.bench_function("glam Affine3A::transform_point3a", |b| {
@@ -70,7 +70,7 @@ fn single(c: &mut Criterion) {
 
 fn batch(c: &mut Criterion) {
     let m = motor(0.7, [1.0, 2.0, 3.0], [0.5, -1.0, 2.0]);
-    let pts: Vec<Point> = points()
+    let pts: Vec<Point<(), f32>> = points()
         .iter()
         .map(|p| Point::new(p[0], p[1], p[2], 1.0))
         .collect();
@@ -164,9 +164,12 @@ fn motors(c: &mut Criterion) {
     let axis = glam::Vec3::new(1.0, 2.0, 3.0).normalize();
 
     let mut g = c.benchmark_group("motors");
-    g.bench_function("gax compose Unit<Motor> * Unit<Motor>", |b| {
-        b.iter(|| black_box(m1) * black_box(m2));
-    });
+    g.bench_function(
+        "gax compose Unit<Motor<(), f32>> * Unit<Motor<(), f32>>",
+        |b| {
+            b.iter(|| black_box(m1) * black_box(m2));
+        },
+    );
     g.bench_function("glam Quat * Quat", |b| {
         b.iter(|| black_box(q1) * black_box(q2));
     });
@@ -179,7 +182,7 @@ fn motors(c: &mut Criterion) {
     g.bench_function("glam Quat::normalize", |b| {
         b.iter(|| black_box(qraw).normalize());
     });
-    g.bench_function("gax Unit<Motor>::inverse", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>>::inverse", |b| {
         b.iter(|| black_box(m1).inverse());
     });
     g.bench_function("glam Affine3A::inverse", |b| {
@@ -194,12 +197,12 @@ fn motors(c: &mut Criterion) {
     g.bench_function("glam Quat::from_scaled_axis", |b| {
         b.iter(|| glam::Quat::from_scaled_axis(black_box(scaled)));
     });
-    g.bench_function("gax Unit<Motor>::log", |b| {
-        b.iter(|| -> Line { black_box(m1).log() });
+    g.bench_function("gax Unit<Motor<(), f32>>::log", |b| {
+        b.iter(|| -> Line<(), f32> { black_box(m1).log() });
     });
     // 256 different arguments per iteration (rotations of 0.05 to 2.6 rad with translations):
     // with one constant argument, the elementary functions' branches are always predicted.
-    let bivs: Vec<Line> = (0..256)
+    let bivs: Vec<Line<(), f32>> = (0..256)
         .map(|i| {
             let t = i as f32 / 256.0;
             Line::new(0.1 + t, 0.4 * t, 0.6 - t, 0.1, -0.2 + t, 0.3)
@@ -209,7 +212,7 @@ fn motors(c: &mut Criterion) {
         .iter()
         .map(|l| glam::Vec3::new(l.c[0], l.c[1], l.c[2]))
         .collect();
-    let motors: Vec<Unit<Motor>> = bivs.iter().map(|l| l.exp()).collect();
+    let motors: Vec<Unit<Motor<(), f32>>> = bivs.iter().map(|l| l.exp()).collect();
     g.bench_function("gax Line::exp, 256 arguments", |b| {
         b.iter(|| {
             for l in black_box(&bivs) {
@@ -224,10 +227,10 @@ fn motors(c: &mut Criterion) {
             }
         });
     });
-    g.bench_function("gax Unit<Motor>::log, 256 arguments", |b| {
+    g.bench_function("gax Unit<Motor<(), f32>>::log, 256 arguments", |b| {
         b.iter(|| {
             for m in black_box(&motors) {
-                let l: Line = m.log();
+                let l: Line<(), f32> = m.log();
                 black_box(l);
             }
         });
@@ -236,7 +239,7 @@ fn motors(c: &mut Criterion) {
         b.iter(|| black_box(m1) >> Point::slot());
     });
     g.bench_function("gax build map m.prepare().to_map()", |b| {
-        b.iter(|| -> Point<(Point,)> { black_box(m1).prepare::<Point>().to_map() });
+        b.iter(|| -> Point<(Point,), f32> { black_box(m1).prepare::<Point>().to_map() });
     });
     g.bench_function("glam Affine3A::from_rotation_translation", |b| {
         b.iter(|| {

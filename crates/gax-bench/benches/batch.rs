@@ -18,7 +18,7 @@ use std::hint::black_box;
 
 const N: usize = 1024;
 
-fn points(n: usize) -> Vec<Point> {
+fn points(n: usize) -> Vec<Point<(), f32>> {
     (0..n)
         .map(|i| {
             let x = i as f32;
@@ -27,7 +27,7 @@ fn points(n: usize) -> Vec<Point> {
         .collect()
 }
 
-fn motors(n: usize) -> Vec<Unit<Motor>> {
+fn motors(n: usize) -> Vec<Unit<Motor<(), f32>>> {
     (0..n)
         .map(|i| {
             let x = i as f32 * 0.01;
@@ -36,7 +36,7 @@ fn motors(n: usize) -> Vec<Unit<Motor>> {
         .collect()
 }
 
-fn twists(n: usize) -> Vec<Line> {
+fn twists(n: usize) -> Vec<Line<(), f32>> {
     (0..n)
         .map(|i| {
             let x = i as f32 * 0.003;
@@ -126,7 +126,7 @@ fn uniform(c: &mut Criterion) {
         black_box(&soa_out);
     });
     // The motor's matrix, built once: the dense 4x4 against the prepared sparse action.
-    let map: Point<(Point,)> = m >> Point::slot();
+    let map: Point<(Point,), f32> = m >> Point::slot();
     per_level(&mut g, "batch of_slice (matrix)", || {
         black_box(map).of_slice(&pts, &mut out);
         black_box(&out);
@@ -192,7 +192,7 @@ fn pairwise(c: &mut Criterion) {
     );
     let mut soa_out: Soa<Point> = Soa::new();
     per_level(&mut g, "batch transform_each_soa", || {
-        Unit::<Motor>::transform_each_soa(black_box(&vsoa), &xsoa, &mut soa_out);
+        Unit::<Motor<(), f32>>::transform_each_soa(black_box(&vsoa), &xsoa, &mut soa_out);
         black_box(&soa_out);
     });
     per_level(&mut g, "batch transform_each", || {
@@ -265,9 +265,9 @@ fn rigid_body(c: &mut Criterion) {
     use gax_bench::fused::{rigid_step_fused, rigid_step_fused_batch};
     use gax_bench::kernels::rigid_step;
     let n = N;
-    let ms: Vec<Motor> = motors(n).iter().map(|m| m.into_inner()).collect();
+    let ms: Vec<Motor<(), f32>> = motors(n).iter().map(|m| m.into_inner()).collect();
     let bs = twists(n);
-    let fs: Vec<Line> = twists(n).iter().map(|b| b.gp(0.1)).collect();
+    let fs: Vec<Line<(), f32>> = twists(n).iter().map(|b| b.gp(0.1)).collect();
     let (dt, mass, moments) = (0.01f32, 2.0f32, [1.0f32, 2.0, 3.0]);
     let mut out = vec![(Motor::zero(), Line::zero()); n];
     let (pm, pb, pf) = (pack(&ms), pack(&bs), pack(&fs));
@@ -322,7 +322,7 @@ fn rigid_rate(c: &mut Criterion) {
     use gax_bench::fused::{rigid_rate_fused, rigid_rate_fused_batch, rigid_rate_fused_batch_soa};
     let n = N;
     let bs = twists(n);
-    let fs: Vec<Line> = twists(n).iter().map(|b| b.gp(0.1)).collect();
+    let fs: Vec<Line<(), f32>> = twists(n).iter().map(|b| b.gp(0.1)).collect();
     let (dt, mass, moments) = (0.01f32, 2.0f32, [1.0f32, 2.0, 3.0]);
     let mut out = vec![Line::zero(); n];
     let (pb, pf) = (pack(&bs), pack(&fs));

@@ -38,7 +38,7 @@ mod registration {
 
     /// The residual of the one-sided equations for one correspondence, linear in the open motor:
     /// intrinsic, as the points are.
-    pub fn residual(source: P, target: P) -> gax::pga3d::Flector<(Motor,), f64, gax::Intrinsic> {
+    pub fn residual(source: P, target: P) -> gax::pga3d::intrinsic::Flector<(Motor,), f64> {
         let (s, t) = (source.unitized(), target.unitized());
         t * Motor::slot() - Motor::slot() * s
     }
@@ -60,7 +60,7 @@ mod registration {
     /// motor metric, normalized.
     pub fn fit_motor(source: &[P], target: &[P]) -> M {
         let (_, modes) = misfit(source, target).eigh_semidefinite(motor_metric());
-        modes[0].normalized()
+        modes[0].unit()
     }
 
     /// The rotor that maximizes the alignment of corresponding vectors (planes through the
@@ -72,7 +72,7 @@ mod registration {
             .map(|(s, t)| t.scalar_product((Rotor::slot() * *s) * Rotor::slot().reverse()))
             .sum();
         let (_, rotors) = alignment.eigh();
-        rotors[3].normalized()
+        rotors[3].unit()
     }
 
     /// The mean of unit points (a point of unit weight).
@@ -235,7 +235,10 @@ mod tests {
         let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
         for (s, t) in source.iter().zip(&target) {
             let r = residual(*s, *t).of(truth().into_inner());
-            assert!(r.max_abs_diff(&gax::pga3d::Flector::zero()) < 1e-8, "{r:?}");
+            assert!(
+                r.max_abs_diff(&gax::pga3d::intrinsic::Flector::zero()) < 1e-8,
+                "{r:?}"
+            );
         }
         let m = misfit(&source, &target);
         assert!(m.approx_eq(&m.swap(), 1e-12));

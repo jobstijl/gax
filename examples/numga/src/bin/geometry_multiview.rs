@@ -140,7 +140,7 @@ macro_rules! multiview_core {
         /// The motion of a camera-frame point per unit right step of its camera's pose: minus
         /// the commutator with the twist.
         pub fn motion(local: P) -> Point<(Twist,), f64> {
-            -Twist::<(), f64>::oriented_slot().commutator(local)
+            -Twist::<(), f64>::slot().commutator(local)
         }
 
         /// One Gauss-Newton step per camera on the cone value, its twist solved by least
@@ -478,8 +478,7 @@ mod plane {
     /// A pose's covariance from its information form: the form as a map from twists to
     /// forques (solved from the incidence pairing), pseudo-inverted with numga's cutoff.
     pub fn pose_covariance(information: Information) -> Twist<(Forque,), f64> {
-        let map: Forque<(Twist,), f64> =
-            (Forque::oriented_slot() & Twist::oriented_slot()).solve(information);
+        let map: Forque<(Twist,), f64> = (Forque::slot() & Twist::slot()).solve(information);
         map.pinv_with(1e-4)
     }
 }
@@ -644,8 +643,8 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
     let origin = plane::origin();
     // The centre moves by the commutator of a local twist with the origin; reading that
     // displacement with a line is reading the twist with a forque.
-    let shift = Twist::oriented_slot().commutator(origin);
-    let readout = (Forque::oriented_slot() & Twist::oriented_slot()).solve(Line::slot() & shift);
+    let shift = Twist::slot().commutator(origin);
+    let readout = (Forque::slot() & Twist::slot()).solve(Line::slot() & shift);
     // The line at infinity, the join of two directions, reads a twist's rotation.
     let w = Point::direction(1.0, 0.0) & Point::direction(0.0, 1.0);
     for (k, (m, info)) in motors.iter().zip(information).enumerate() {
@@ -662,7 +661,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
             .zip(values)
             .filter(|(l, _)| l.norm() > 0.5)
             .map(|(l, v)| {
-                let n = l.normalized().into_inner();
+                let n = l.normalized();
                 (
                     Point::direction(n.e1(), n.e2()),
                     (v.max(1e-8).sqrt() * 0.08).min(1.0),

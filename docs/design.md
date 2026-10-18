@@ -2025,6 +2025,12 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   `Line<(intrinsic::Line,)>`. Generic code names `oriented::Line<S, T, O>` and gets slots from the
   trait `gx::Slot`; `oriented_slot` goes. `gx::Oriented<K, O>` names a kind in another orientation
   generically. The tracer prints `intrinsic::Line` where it printed `Line<(), T, Intrinsic>`.
+  A conversion through an alias converts into that alias's orientation, `pga3d::Line::from(x)`
+  into the default; `x.cast::<Line>()` and `x.into()` keep `x`'s. The struct keeps its parameter
+  defaults (`oriented::Line` alone is the default orientation), so generated code reads as before;
+  the algebra root re-exports `oriented::*` and its aliases shadow the structs' names. Hand-written
+  code was migrated by a rewriter (`Line<a, b, Intrinsic>` to `intrinsic::Line<a, b>`, a generic
+  `O` to `oriented::Line<a, b, O>`).
 * **Orientation arithmetic that reduces for generic `O`.** The products and the flip move into a
   sealed base trait, and `Orientation` states the sign laws as supertrait bindings
   (`O·E = O`, `O·I = Flip<O>`, `O·O = E`, `Flip<Flip<O>> = O`), so helpers generic over `O`
@@ -2034,7 +2040,9 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   100 for `f32`, and `Point::xyz(1.0, ..)` already inferred `f64` while the type `Point` meant
   `f32`. GPU code names `f32` explicitly, as it does its `*Gpu` layouts.
 * **One name per idea, and one idea per name.** `normalized()` returns `Self`; the certified unit
-  is `unit()`. `Log` has an associated output, so `m.log()` needs no annotation. A map is applied
+  is `unit()`. `Log` has an associated output, so `m.log()` needs no annotation; it is implemented
+  on the versor kind (`M::log(unit)`), since `impl Log for Unit<M>` would implement a foreign trait
+  for a foreign type. A map is applied
   with `of` everywhere (`SparseMap`, `SquareLinearMap`, structured maps) and densified with
   `to_dense`. The tracer's facade and `gax_core::trace` become one module. The jet module is
   `jet`, the simplicial complex `SimplicialComplex`, the study internals private.

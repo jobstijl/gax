@@ -1,13 +1,13 @@
-error[E0277]: the logarithm needs a certified unit versor, a `gax::Unit`, not a plain `gax::pga3d::Motor<(), {float}>`
+error[E0277]: the logarithm needs a certified unit versor, a `gax::Unit`, not a plain `gax::pga3d::oriented::Motor<(), {float}>`
  --> tests/compile_fail/log_needs_unit.rs:6:15
   |
 6 |     let _ = m.log();
   |               ^^^ `log` is a method of `Unit`
   |
-  = help: the trait `gax::LogNeedsUnit<gax::pga3d::Line<(), {float}>>` is not implemented for `gax::pga3d::Motor<(), {float}>`
-  = note: certify it first with `.normalized()` (`m.normalized().log()`), or keep the `Unit` that `exp()`, the unit constructors such as `rotation_about`, `sqrt()` and products of units return
+  = help: the trait `gax::LogNeedsUnit<gax::pga3d::oriented::Line<(), {float}>>` is not implemented for `gax::pga3d::oriented::Motor<(), {float}>`
+  = note: certify it first with `.unit()` (`m.unit().log()`), or keep the `Unit` that `exp()`, the unit constructors such as `rotation_about`, `sqrt()` and products of units return
   = note: `Unit::new_unchecked(m)` certifies a versor already known to satisfy `m ~m = 1` without arithmetic
-note: required by a bound in `gax::pga3d::Motor::<(), T>::log`
+note: required by a bound in `gax::pga3d::oriented::Motor::<(), T>::log`
  --> src/algebras/pga3d/kinds.rs
   |
   |     pub fn log(self) -> Line<(), T, gx::Extrinsic>

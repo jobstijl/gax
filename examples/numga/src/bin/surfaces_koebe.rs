@@ -53,9 +53,9 @@ use std::sync::OnceLock;
 use surfaces_hull::{beside, camera, drawn, facing, ghost, near_side};
 
 mod koebe {
-    use super::sphere::{Rotor, Scalar, Vector};
+    use super::sphere::{Rotor, Scalar, Vector, intrinsic, oriented};
     use gax::field::{Field, SparseMap};
-    use gax::{Intrinsic, Orientation, vga3d};
+    use gax::{Orientation, vga3d};
     use gax_numga_examples::mesh::Vector3;
     use gax_numga_examples::signal::phasor;
 
@@ -64,7 +64,7 @@ mod koebe {
     pub type Circle = Vector<(), f64>;
     /// A face's circle, orthogonal to its vertices' circles: the dual of their wedge, so
     /// intrinsic where theirs are extrinsic.
-    pub type FaceCircle = Vector<(), f64, Intrinsic>;
+    pub type FaceCircle = intrinsic::Vector<(), f64>;
     /// A boost or a turn: a rotor of the algebra.
     pub type Boost = Rotor<(), f64>;
     /// A linear form on circles, `c | Vector::slot()`: a row of the Jacobian.
@@ -79,7 +79,7 @@ mod koebe {
     }
 
     /// The spatial part of a point at unit weight along `w`: where it lies in space.
-    pub fn spatial<O: Orientation>(c: Vector<(), f64, O>) -> Vector3 {
+    pub fn spatial<O: Orientation>(c: oriented::Vector<(), f64, O>) -> Vector3 {
         Vector3::new(c.ex(), c.ey(), c.ez()) * (1.0 / c.ew())
     }
 
@@ -108,17 +108,15 @@ mod koebe {
     /// The apex of the cone touching the sphere along each circle, as a point at unit weight
     /// along `w`.
     pub fn apexes<O: Orientation>(
-        circles: &Field<Vector<(), f64, O>>,
-    ) -> Field<Vector<(), f64, O>> {
+        circles: &Field<oriented::Vector<(), f64, O>>,
+    ) -> Field<oriented::Vector<(), f64, O>> {
         circles.map(|c| c * (-1.0 / (c | W).s()))
     }
 
     /// The rotor carrying a unit timelike centre onto `w`: a boost along the centre's spatial
     /// part.
     pub fn centring(centre: Circle) -> Boost {
-        (Rotor::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) - W * centre)
-            .normalized()
-            .into_inner()
+        (Rotor::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) - W * centre).normalized()
     }
 
     /// The boost along a spatial unit direction by a rapidity: points of the sphere crowd
@@ -226,9 +224,7 @@ mod koebe {
                 break;
             }
         }
-        Vector::new(s.e1(), s.e2(), s.e3(), 1.0)
-            .normalized()
-            .into_inner()
+        Vector::new(s.e1(), s.e2(), s.e3(), 1.0).normalized()
     }
 }
 
@@ -269,9 +265,7 @@ mod scenes {
     /// towards it, with a rapidity rising and falling twice per turn.
     pub fn boost_at(phase: f64) -> (Boost, f64) {
         let around = phasor(phase);
-        let direction = Vector3::new(around.e20(), around.e01(), TILT)
-            .normalized()
-            .into_inner();
+        let direction = Vector3::new(around.e20(), around.e01(), TILT).normalized();
         let rapidity = RAPIDITY * wave(phase).powi(2);
         (boost(direction, rapidity), rapidity)
     }
@@ -350,9 +344,11 @@ fn polyhedra(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
 /// Points around a circle on the unit sphere: the plane `n · x = s` of the circle `n + s w`
 /// (squaring to one) cuts the sphere at the height `s / |n|` along `n`, in a circle of radius
 /// `1 / |n|`.
-fn circle_points<O: gax::Orientation>(circle: sphere::Vector<(), f64, O>) -> Vec<Vector3> {
+fn circle_points<O: gax::Orientation>(
+    circle: sphere::oriented::Vector<(), f64, O>,
+) -> Vec<Vector3> {
     let n = Vector3::new(circle.ex(), circle.ey(), circle.ez());
-    let (length, axis) = (n.norm(), n.normalized().into_inner());
+    let (length, axis) = (n.norm(), n.normalized());
     let centre = axis * (circle.ew() / length);
     let radius = circle.norm() / length;
     // Two directions across the axis, from whichever of x and y is further from it.
@@ -361,7 +357,7 @@ fn circle_points<O: gax::Orientation>(circle: sphere::Vector<(), f64, O>) -> Vec
     } else {
         Vector3::new(0.0, 1.0, 0.0)
     };
-    let across = ((axis ^ away) | axis).normalized().into_inner();
+    let across = ((axis ^ away) | axis).normalized();
     // The third direction, across both: their plane times the unit volume.
     let other = (across ^ axis) * gax::vga3d::Pseudoscalar::new(1.0);
     (0..=CIRCLE_SAMPLES)
@@ -437,7 +433,7 @@ mod tests {
     /// The distance from the centre to the line of each edge between apexes: the area of the
     /// parallelogram of its ends over its length.
     fn edge_distances<O: gax::Orientation>(
-        apexes: &Field<super::sphere::Vector<(), f64, O>>,
+        apexes: &Field<super::sphere::oriented::Vector<(), f64, O>>,
         edges: &[[usize; 2]],
     ) -> Vec<f64> {
         let at = |v: usize| spatial(apexes.site(v));

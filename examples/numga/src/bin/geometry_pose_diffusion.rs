@@ -75,7 +75,7 @@ mod station {
     /// the commutator with the turning rate; the controller removes the relaxation's share of
     /// the error per second.
     pub fn drift(rate: Twist, relaxation: f64) -> Dynamics {
-        let t = Twist::oriented_slot();
+        let t = Twist::slot();
         t.commutator(rate) - t.gp(relaxation)
     }
 
@@ -83,8 +83,7 @@ mod station {
     /// reading the error itself with `on_readouts(l)`. Solved from the incidence pairing against
     /// `Line & dynamics`; in matrix notation, the transpose.
     pub fn on_readouts(dynamics: Dynamics) -> Readouts {
-        (Readout::oriented_slot() & Twist::oriented_slot())
-            .solve(Readout::oriented_slot() & dynamics)
+        (Readout::slot() & Twist::slot()).solve(Readout::slot() & dynamics)
     }
 
     /// The rate of change of the covariance: the dynamics on its twists, on its lines, and the
@@ -107,14 +106,14 @@ mod station {
     pub fn covariance(kicks: Kicks) -> Covariance {
         basis()
             .iter()
-            .map(|b| kicks.of(*b) * (kicks.of(*b) & Readout::oriented_slot()))
+            .map(|b| kicks.of(*b) * (kicks.of(*b) & Readout::slot()))
             .sum()
     }
 
     /// The map from white noise to gust twists, from the standard deviations per square root of
     /// a second of the sideways, forward and turning gusts, in the body frame.
     pub fn shaping(sideways: f64, forward: f64, turning: f64) -> Kicks {
-        let l = Readout::oriented_slot();
+        let l = Readout::slot();
         yw(sideways) * (yw(1.0) & l) + wx(forward) * (wx(1.0) & l) + xy(turning) * (xy(1.0) & l)
     }
 
@@ -148,7 +147,7 @@ mod station {
     /// dyad coefficients `x` with `lyapunov.of_pair(x) = −noise`, put back together by the map
     /// that builds the dyads.
     pub fn settled(dynamics: Dynamics, noise: Covariance) -> Covariance {
-        let (t, l) = (Twist::oriented_slot(), Readout::oriented_slot());
+        let (t, l) = (Twist::slot(), Readout::slot());
         // Twist <- (Twist, Twist, Line): the dynamics applied to t, and applied to s.
         let lyapunov = dynamics.of(t) * (t & l) + t * (dynamics.of(t) & l);
         let x: Dynamics = lyapunov.lstsq_pair(-noise);
@@ -161,9 +160,8 @@ mod station {
     /// another line, solved from the incidence pairing. Pairing two such readings through the
     /// covariance gives a symmetric form on lines, whose eigenpairs are the ellipse's axes.
     pub fn position_spread(covariance: Covariance) -> Spread {
-        let shift = Twist::oriented_slot().commutator(origin());
-        let readout =
-            (Readout::oriented_slot() & Twist::oriented_slot()).solve(Line::slot() & shift);
+        let shift = Twist::slot().commutator(origin());
+        let readout = (Readout::slot() & Twist::slot()).solve(Line::slot() & shift);
         readout & covariance.of(readout)
     }
 
@@ -235,10 +233,7 @@ mod station {
 
     /// The sample covariance of the bodies' errors.
     pub fn empirical(errors: &[Twist]) -> Covariance {
-        let sum: Covariance = errors
-            .iter()
-            .map(|e| *e * (*e & Readout::oriented_slot()))
-            .sum();
+        let sum: Covariance = errors.iter().map(|e| *e * (*e & Readout::slot())).sum();
         sum.gp(1.0 / errors.len() as f64)
     }
 }

@@ -21,7 +21,7 @@
 //! condition drawn as a curve of its own lies on the conic, and the join of the three crossings
 //! stays at round-off over the whole turn.
 
-use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax::pga2d::{Line, Motor, Point, Scalar, extrinsic, intrinsic};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
@@ -29,13 +29,12 @@ use gax_numga_examples::{
 
 mod pascal {
     use super::*;
-    use gax::{Extrinsic, Intrinsic};
 
     /// A side: the join of two points, so intrinsic (ADR-051).
-    pub type L = Line<(), f64, Intrinsic>;
+    pub type L = intrinsic::Line<(), f64>;
     pub type P = Point<(), f64>;
     /// A crossing of two sides: their meet, so extrinsic.
-    pub type X = Point<(), f64, Extrinsic>;
+    pub type X = extrinsic::Point<(), f64>;
     /// A conic: a map from points to their polar lines.
     pub type Conic = Line<(Point,), f64>;
     /// A form with a point open in two places.

@@ -572,12 +572,12 @@ where
 /// algebra's metric.
 ///
 /// ```
-/// use gax::pga3d::{Line, Point};
+/// use gax::pga3d::{Line, Point, intrinsic};
 /// use gax::ApproxEq;
 /// // Points to the lines joining them to `q`: rank 3 of 4 (`q` itself maps to zero).
 /// let q = Point::<(), f64>::xyz(0.0, 0.0, 1.0);
-/// let through_q: Line<(Point,), f64, gax::Intrinsic> = q & Point::slot();
-/// let back: Point<(Line<(), f32, gax::Intrinsic>,), f64> = through_q.pinv();
+/// let through_q: intrinsic::Line<(Point,), f64> = q & Point::slot();
+/// let back: Point<(intrinsic::Line,), f64> = through_q.pinv();
 /// let l = through_q.of(Point::xyz(1.0, 2.0, 3.0));
 /// // The least-norm point whose line through `q` is `l`.
 /// let x = back.of(l);
@@ -616,10 +616,10 @@ where
 /// as in `numpy.linalg.svd`.
 ///
 /// ```
-/// use gax::pga3d::{Line, Point};
+/// use gax::pga3d::{Line, Point, intrinsic};
 /// // Points to the lines joining them to `q`: rank 3, and `q` spans the null space.
 /// let q = Point::<(), f64>::xyz(0.0, 0.0, 1.0);
-/// let through_q: Line<(Point,), f64, gax::Intrinsic> = q & Point::slot();
+/// let through_q: intrinsic::Line<(Point,), f64> = q & Point::slot();
 /// let (sigma, right, _) = through_q.svd_thin();
 /// assert!(sigma[3].abs() < 1e-12 && sigma[2] > 1e-6);
 /// let null = right[3];
@@ -1118,12 +1118,12 @@ where
 /// Jacobi.
 ///
 /// ```
-/// use gax::pga3d::{Line, Point};
+/// use gax::pga3d::{Line, Point, intrinsic};
 /// use gax::ApproxEq;
 /// // The dyad `x` on (Point, Point) of least norm whose joins sum to a given line: an
 /// // antisymmetric one (a symmetric part joins to zero).
 /// let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
-/// let join: Line<(Point, Point), f64, gax::Intrinsic> = Point::slot() & Point::slot();
+/// let join: intrinsic::Line<(Point, Point), f64> = Point::slot() & Point::slot();
 /// let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
 /// assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
 /// for i in 0..4 {

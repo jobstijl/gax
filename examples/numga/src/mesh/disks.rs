@@ -109,7 +109,7 @@ impl Mesh<Vector3> {
                     boundary.push(vertices.len());
                 }
                 let at = axes[0] * column as f64 + axes[1] * row as f64;
-                vertices.push(at.normalized().into_inner() * (spacing * layer as f64));
+                vertices.push(at.normalized() * (spacing * layer as f64));
             }
         }
         let mut mesh = Mesh::triangulate(Field::new(vertices));
@@ -123,7 +123,7 @@ impl Mesh<Vector3> {
             let mut positions = &mesh.vertices - &pull.scaled(RELAXATION_RATE);
             for &b in &boundary {
                 let p = &mut positions.sites_mut()[b];
-                *p = p.normalized().into_inner() * radius;
+                *p = p.normalized() * radius;
             }
             mesh = Mesh::triangulate(positions);
         }

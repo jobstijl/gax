@@ -28,16 +28,14 @@ mod elliptical {
             .map(|k| {
                 // `meshgrid`'s default `xy` indexing: x varies along the second axis.
                 let (a, b, c) = (k / 9, (k / 3) % 3, k % 3);
-                Vector::new(vals[b], vals[a], vals[c])
-                    .normalized()
-                    .into_inner()
+                Vector::new(vals[b], vals[a], vals[c]).normalized()
             })
             .collect()
     }
 
     /// The rotor `exp(B angle)` for a bivector `B` normalized first: a turn by twice `angle`.
     pub fn turn(b: Bivector<(), f64>, angle: f64) -> R {
-        (b.normalized().into_inner() * angle).exp()
+        (b.normalized() * angle).exp()
     }
 
     /// A quarter turn about z, `exp(xy π/4)`.

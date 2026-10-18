@@ -112,7 +112,7 @@ fn clump_modes() -> &'static [ClumpMode] {
 fn clump_waves(point: V, radius: f64) -> f64 {
     let east = vga2d::Vector::new(1.0, 0.0);
     let direction = vga2d::Vector::new(point.e1(), point.e2()).normalized();
-    let around = east * direction.into_inner();
+    let around = east * direction;
     let powers: Vec<vga2d::Rotor<(), f64>> =
         std::iter::successors(Some(vga2d::Rotor::new(1.0, 0.0)), |p| Some(*p * around))
             .take(MAX_TURNS + 1)

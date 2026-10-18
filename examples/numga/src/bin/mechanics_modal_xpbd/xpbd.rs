@@ -127,7 +127,7 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
     let motor = |c: usize, side: usize| bodies.motor[constraints.bodies[c][side]];
     let rigid = per_side(constraints, count, |c, side| {
         let anchor = constraints.local_anchor(bodies, c, side);
-        let motion = motor(c, side) >> anchor.commutator(Twist::oriented_slot());
+        let motion = motor(c, side) >> anchor.commutator(Twist::slot());
         motion.cast::<Direction>() * SIDES[side]
     });
     let modal = (0..constraints.modes.len())
@@ -150,7 +150,7 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
 /// pairing): the line whose pairing with any twist is the work the force does along the
 /// displacement that twist causes. A pairing solve.
 fn forque_of(cell: RigidCell) -> Forque<(Direction,), f64> {
-    let pairing = Forque::oriented_slot() & Twist::oriented_slot();
+    let pairing = Forque::slot() & Twist::slot();
     pairing.solve(work().of_both(Direction::slot(), cell))
 }
 

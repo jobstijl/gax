@@ -65,7 +65,7 @@ mod kalman {
                 // `step << (… + motion_noise)`: the noise conjugated on one side only, and the
                 // covariance no longer symmetric.)
                 estimate = estimate * *step;
-                sigma = (*step << sigma.of(*step >> Readout::oriented_slot())) + motion_noise;
+                sigma = (*step << sigma.of(*step >> Readout::slot())) + motion_noise;
                 states.push(State {
                     estimate,
                     sigma,
@@ -101,10 +101,8 @@ mod kalman {
     pub fn position_form(estimate: M, sigma: Covariance) -> Scalar<(Line, Line), f64> {
         let here = estimate >> origin();
         // The velocity of `here` under a body-frame twist.
-        let shift = B::oriented_slot()
-            .commutator(here)
-            .of(estimate >> B::oriented_slot());
-        let pairing = Readout::oriented_slot() & B::oriented_slot();
+        let shift = B::slot().commutator(here).of(estimate >> B::slot());
+        let pairing = Readout::slot() & B::slot();
         let readout = pairing.solve(Line::slot() & shift);
         readout & sigma.of(readout)
     }
@@ -135,7 +133,7 @@ mod kalman {
 
     /// Body-frame noise: isotropic translation, and rotation about the body origin.
     pub fn covariance(translation_std: f64, rotation_std: f64) -> Covariance {
-        let dyad = |b: B| b * (b & Readout::oriented_slot());
+        let dyad = |b: B| b * (b & Readout::slot());
         let unit = |e20, e01, e12| B::from_coeffs([e20, e01, e12]);
         (dyad(unit(1.0, 0.0, 0.0)) + dyad(unit(0.0, 1.0, 0.0)))
             .gp(translation_std * translation_std)
@@ -145,7 +143,7 @@ mod kalman {
     /// One bivector drawn from a covariance: readouts orthonormal in the covariance's own form
     /// carry independent unit normal draws, and the twists they select have covariance `cov`.
     pub fn sample(cov: Covariance, rng: &mut Rng) -> B {
-        let readouts = Readout::oriented_slot() & cov;
+        let readouts = Readout::slot() & cov;
         let (_, lines) = readouts.eigh_with(readouts);
         lines.iter().map(|l| cov.of(*l).gp(rng.normal())).sum()
     }
@@ -221,7 +219,7 @@ mod kalman {
                         let k = (r * STEPS_PER_READING + s) as f64;
                         let turn = 0.9 * wave(0.2 * k * DT);
                         // The twist whose half exponential is the step.
-                        (Point::translation_twist(1.0, 0.0) + Point::rotation_twist(origin(), turn))
+                        (Twist::translation_twist(1.0, 0.0) + Twist::rotation_twist(origin(), turn))
                             .gp(2.0 * DT)
                     })
                     .collect()
@@ -411,7 +409,7 @@ mod tests {
     fn covariances_stay_symmetric_and_offsets_carry_no_variance() {
         let scene = tracking(SEED);
         for s in &scene.states {
-            let form = Readout::oriented_slot() & s.sigma;
+            let form = Readout::slot() & s.sigma;
             assert!(form.approx_eq(&form.swap(), 1e-9), "{form:?}");
             let offset = gax::pga2d::Line::new(0.0, 0.0, 1.0);
             let p = position_form(s.estimate, s.sigma).of(offset);
@@ -457,7 +455,7 @@ mod tests {
     #[test]
     fn covariance_reads_back_its_variances() {
         let cov = covariance(0.3, 0.1);
-        let form = Readout::oriented_slot() & cov;
+        let form = Readout::slot() & cov;
         let along = |e1, e2, e0| {
             let l = Readout::from_coeffs([e1, e2, e0]);
             form.of(l).of(l).s()

@@ -88,14 +88,14 @@ mod modes {
         s.anchors
             .iter()
             .zip(&s.attachments)
-            .map(|(a, b)| (*a & *b).normalized().into_inner())
+            .map(|(a, b)| (*a & *b).normalized())
             .collect()
     }
 
     /// The stiffness and each spring's extension form, from the springs' lines: pairing an open
     /// twist with a line measures the stretch, and Hooke's law scales the line by it.
     pub fn spring_stiffness(lines: &[L], constants: &[f64]) -> (Response, Vec<Extension>) {
-        let extension: Vec<Extension> = lines.iter().map(|l| Twist::oriented_slot() & *l).collect();
+        let extension: Vec<Extension> = lines.iter().map(|l| Twist::slot() & *l).collect();
         let stiffness: Response = lines
             .iter()
             .zip(&extension)
@@ -120,8 +120,8 @@ mod modes {
     /// to unit kinetic energy form) and the frequencies in Hz.
     #[allow(clippy::disallowed_methods)] // an oscillator's law, the frequency sqrt(k / m) / 2π
     pub fn normal_modes(stiffness: Response, inertia: Response) -> ([Q; 3], [f64; 3]) {
-        let pe: Energy = Twist::oriented_slot() & stiffness;
-        let ke: Energy = Twist::oriented_slot() & inertia;
+        let pe: Energy = Twist::slot() & stiffness;
+        let ke: Energy = Twist::slot() & inertia;
         let (values, modes) = pe.eigh_with(ke);
         let frequencies = values.map(|v| v.max(0.0).sqrt() / core::f64::consts::TAU);
         (modes, frequencies)

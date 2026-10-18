@@ -177,7 +177,7 @@ mod tomography {
     pub const STEPS: usize = 48;
 
     pub fn rotation_plane() -> Bi {
-        Bivector::new(1.0, 1.0, 1.0).normalized().into_inner()
+        Bivector::new(1.0, 1.0, 1.0).normalized()
     }
 
     /// The tetrahedral preparations, and the detector's effects: half of them.
@@ -193,7 +193,7 @@ mod tomography {
             Vector::new(-1.0, 1.0, -1.0),
             Vector::new(-1.0, -1.0, 1.0),
         ]
-        .map(|d| d.normalized().into_inner())
+        .map(|d| d.normalized())
     }
     pub fn effects() -> Vec<St> {
         prepared().iter().map(|p| *p * 0.5).collect()
@@ -535,8 +535,8 @@ mod tests {
         let angles = [0.0, 0.47, -0.9, 0.3];
         let phase_flip = [0.0, 0.22, 0.08, 0.5];
         let loss = [0.0, 0.45, 1.0, 0.3];
-        let axis = Vector::new(2.0, -1.0, 3.0).normalized().into_inner();
-        let plane = Bivector::new(2.0, -1.0, 3.0).normalized().into_inner();
+        let axis = Vector::new(2.0, -1.0, 3.0).normalized();
+        let plane = Bivector::new(2.0, -1.0, 3.0).normalized();
         let blochs = blochs(180, 29);
         let detector = tetrahedron();
         let effects: Vec<St> = detector.iter().map(|d| state(*d) * 0.5).collect();
@@ -565,7 +565,7 @@ mod tests {
         let angles = [0.31, -0.76];
         let phase_flip = [0.12, 0.07];
         let loss = [0.26, 0.54];
-        let plane = Bivector::new(1.0, 0.0, 1.0).normalized().into_inner();
+        let plane = Bivector::new(1.0, 0.0, 1.0).normalized();
         // Six preparations are redundant, while the four detector directions are rotated
         // independently: the reconstruction cannot rely on matching the two frames.
         let axes = [x(), Vector::new(0.0, 1.0, 0.0), z()];
@@ -605,7 +605,7 @@ mod tests {
             Vector::new(-0.6, 0.1, 0.2),
             Vector::new(0.0, 0.0, -1.0),
         ];
-        let axis = Vector::new(1.0, 1.0, 1.0).normalized().into_inner();
+        let axis = Vector::new(1.0, 1.0, 1.0).normalized();
         for (c, l) in learned.iter().enumerate() {
             let mut expected = blochs;
             for accumulated in powers(*l, 4) {

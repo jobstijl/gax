@@ -179,7 +179,7 @@ pub fn chunks2<L: Batch, A: Copy, B: Copy, Y: Copy>(
 ///         b.exp().into_inner()
 ///     }
 /// }
-/// let twists: Vec<Line> = (0..20).map(|i| Line::new(0.1, 0.2, 0.3, 0.01 * i as f32, 0.5, 0.2)).collect();
+/// let twists: Vec<Line<(), f32>> = (0..20).map(|i| Line::new(0.1, 0.2, 0.3, 0.01 * i as f32, 0.5, 0.2)).collect();
 /// let mut motors = vec![Motor::zero(); 20];
 /// batch::map(&Exp, &twists, &mut motors);
 /// let d = motors[3] - twists[3].exp().into_inner();
@@ -279,7 +279,7 @@ fn apply_rows<Y: Kind, X: Kind, L: Coef>(m: &Y::Arr<X::Arr<L>>, x: &Mv<X, L>) ->
 /// // Move, then drop onto the floor from a light: one map.
 /// let light = Point::<(), f32>::xyz(0.0, 10.0, 0.0);
 /// let shadow: Point<(Point,), f32> = (light & (m >> Point::slot())) ^ floor;
-/// let points: Vec<Point> = (0..100).map(|i| Point::xyz(i as f32 * 0.1, 1.0, 0.0)).collect();
+/// let points: Vec<Point<(), f32>> = (0..100).map(|i| Point::xyz(i as f32 * 0.1, 1.0, 0.0)).collect();
 /// let mut out = vec![Point::zero(); points.len()];
 /// shadow.of_slice(&points, &mut out);
 /// let d = out[7].to_euclidean()[0] - shadow.of(points[7]).to_euclidean()[0];

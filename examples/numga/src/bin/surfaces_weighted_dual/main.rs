@@ -212,7 +212,7 @@ fn space(c: &mut Canvas, rect: Rect, mesh: &Mesh, points: &Field<Vector3>) {
             }
         }
         for point in points.iter().filter(|&p| in_front(p)) {
-            let (distance, ray) = (point.norm(), point.normalized().into_inner());
+            let (distance, ray) = (point.norm(), point.normalized());
             let ends = [1.0 - RAY_SPAN, 1.0 + RAY_SPAN].map(|r| drawn(ray * r));
             s.seg(ends[0], ends[1], RAY_WIDTH, palette::ink().faded(0.4));
             let shade = 0.5 + 0.5 * ((distance - 1.0) / DISTANCE_RANGE).clamp(-1.0, 1.0);
@@ -227,7 +227,7 @@ fn space(c: &mut Canvas, rect: Rect, mesh: &Mesh, points: &Field<Vector3>) {
 fn arc(a: Vector3, b: Vector3, toward: Vector3) -> Vec<Point3> {
     let at = |k: usize| {
         let share = k as f64 / (ARC_SAMPLES - 1) as f64;
-        let p = (a * (1.0 - share) + b * share).normalized().into_inner();
+        let p = (a * (1.0 - share) + b * share).normalized();
         near_side(p, toward)
     };
     (0..ARC_SAMPLES).map(at).collect()

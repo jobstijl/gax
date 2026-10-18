@@ -10,7 +10,7 @@ mod rng;
 use rng::{Draw, rng};
 
 use gax::ApproxEq;
-use gax::pga3d::{Line, Plane, Point};
+use gax::pga3d::{Line, Plane, Point, intrinsic};
 
 /// The dyad with a single 1 at `(i, j)`.
 fn unit_dyad(i: usize, j: usize) -> Point<(Point,), f64> {
@@ -63,7 +63,7 @@ fn normal_equations() {
 /// least-norm solution is antisymmetric, and the default cutoff drops the kernel cleanly.
 #[test]
 fn least_norm_on_a_kernel() {
-    let join: Line<(Point, Point), f64, gax::Intrinsic> = Point::slot() & Point::slot();
+    let join: intrinsic::Line<(Point, Point), f64> = Point::slot() & Point::slot();
     let mut rng = rng(0x0bad_cafe);
     for _ in 0..20 {
         // A line to reach by joins: intrinsic (ADR-051).

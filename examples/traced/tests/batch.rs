@@ -3,7 +3,7 @@
 //! arguments.
 
 use gax::batch;
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 use gax::{Extensor, Unit};
 use gax_example_traced::*;
 
@@ -15,10 +15,10 @@ impl Rng {
         self.0 ^= self.0 << 17;
         ((self.0 >> 40) as f32 / (1u64 << 24) as f32) * 2.0 - 1.0
     }
-    fn point(&mut self) -> Point {
+    fn point(&mut self) -> Point<(), f32> {
         Point::xyz(self.next(), self.next(), self.next())
     }
-    fn motor(&mut self) -> Unit<Motor> {
+    fn motor(&mut self) -> Unit<Motor<(), f32>> {
         Motor::new(
             2.0,
             self.next(),
@@ -29,9 +29,9 @@ impl Rng {
             self.next(),
             self.next(),
         )
-        .normalized()
+        .unit()
     }
-    fn line(&mut self) -> Line {
+    fn line(&mut self) -> Line<(), f32> {
         Line::from_coeffs(core::array::from_fn(|_| self.next()))
     }
 }
@@ -58,49 +58,52 @@ fn batch_forms_match_the_fused_kernels() {
     for level in batch::levels() {
         batch::with_level(level, || {
             for &n in LENS {
-                let ms: Vec<Unit<Motor>> = (0..n).map(|_| rng.motor()).collect();
-                let ls: Vec<Point> = (0..n).map(|_| rng.point()).collect();
-                let ps: Vec<Point> = (0..n).map(|_| rng.point()).collect();
-                let bs: Vec<Line> = (0..n).map(|_| rng.line()).collect();
+                let ms: Vec<Unit<Motor<(), f32>>> = (0..n).map(|_| rng.motor()).collect();
+                let ls: Vec<Point<(), f32>> = (0..n).map(|_| rng.point()).collect();
+                let ps: Vec<Point<(), f32>> = (0..n).map(|_| rng.point()).collect();
+                let bs: Vec<Line<(), f32>> = (0..n).map(|_| rng.line()).collect();
                 let g = [Plane::new(0.1, 0.2, 1.0, -0.3)];
                 let mut out = vec![Point::zero(); n];
 
                 // Every argument per element, and a broadcast plane.
                 shadow_of_moved_fused_batch(&ms, &ls, &g, &ps, &mut out);
-                let want: Vec<Point> = (0..n)
+                let want: Vec<Point<(), f32>> = (0..n)
                     .map(|i| shadow_of_moved_fused(ms[i], ls[i], g[0], ps[i]))
                     .collect();
                 assert_close(&out, &want, &format!("shadow_of_moved n={n}"));
 
                 // One motor for all points.
                 compose_apply_fused_batch(&ms[..1], &ms, &ps, &mut out);
-                let want: Vec<Point> = (0..n)
+                let want: Vec<Point<(), f32>> = (0..n)
                     .map(|i| compose_apply_fused(ms[0], ms[i], ps[i]))
                     .collect();
                 assert_close(&out, &want, &format!("compose_apply n={n}"));
 
                 euclidean_fused_batch(&ps, &mut out);
-                let want: Vec<Point> = ps.iter().map(|&p| euclidean_fused(p)).collect();
+                let want: Vec<Point<(), f32>> = ps.iter().map(|&p| euclidean_fused(p)).collect();
                 assert_close(&out, &want, &format!("euclidean n={n}"));
 
                 // Vectorized sines and cosines inside.
                 screw_apply_fused_batch(&bs, &ps, &mut out);
-                let want: Vec<Point> = (0..n).map(|i| screw_apply_fused(bs[i], ps[i])).collect();
+                let want: Vec<Point<(), f32>> =
+                    (0..n).map(|i| screw_apply_fused(bs[i], ps[i])).collect();
                 assert_close(&out, &want, &format!("screw_apply n={n}"));
 
                 // `Motor::between` on lanes: logarithms, exponentials and selects per lane.
-                let qs: Vec<Point> = (0..n).map(|_| rng.point()).collect();
+                let qs: Vec<Point<(), f32>> = (0..n).map(|_| rng.point()).collect();
                 let mut motors = vec![Motor::zero(); n];
                 between_points_fused_batch(&ps, &qs, &mut motors);
-                let want: Vec<Motor> = (0..n).map(|i| between_points_fused(ps[i], qs[i])).collect();
+                let want: Vec<Motor<(), f32>> =
+                    (0..n).map(|i| between_points_fused(ps[i], qs[i])).collect();
                 assert_close(&motors, &want, &format!("between_points n={n}"));
                 // `between_lines` takes joins, intrinsic lines (ADR-051).
-                let bs: Vec<Line<(), f32, gax::Intrinsic>> =
+                let bs: Vec<intrinsic::Line<(), f32>> =
                     bs.iter().map(|l| l.with_orientation()).collect();
-                let cs: Vec<Line<(), f32, gax::Intrinsic>> =
+                let cs: Vec<intrinsic::Line<(), f32>> =
                     (0..n).map(|_| rng.line().with_orientation()).collect();
                 between_lines_fused_batch(&bs, &cs, &mut motors);
-                let want: Vec<Motor> = (0..n).map(|i| between_lines_fused(bs[i], cs[i])).collect();
+                let want: Vec<Motor<(), f32>> =
+                    (0..n).map(|i| between_lines_fused(bs[i], cs[i])).collect();
                 assert_close(&motors, &want, &format!("between_lines n={n}"));
             }
         });
@@ -114,9 +117,9 @@ fn soa_forms_match_the_fused_kernels() {
     for level in batch::levels() {
         batch::with_level(level, || {
             for &n in LENS {
-                let ms: Vec<Unit<Motor>> = (0..n).map(|_| rng.motor()).collect();
-                let ps: Vec<Point> = (0..n).map(|_| rng.point()).collect();
-                let bs: Vec<Line> = (0..n).map(|_| rng.line()).collect();
+                let ms: Vec<Unit<Motor<(), f32>>> = (0..n).map(|_| rng.motor()).collect();
+                let ps: Vec<Point<(), f32>> = (0..n).map(|_| rng.point()).collect();
+                let bs: Vec<Line<(), f32>> = (0..n).map(|_| rng.line()).collect();
                 let msoa: Soa<Motor> = ms.iter().map(|m| m.into_inner()).collect();
                 let psoa: Soa<Point> = ps.iter().copied().collect();
                 let bsoa: Soa<Line> = bs.iter().copied().collect();
@@ -126,13 +129,14 @@ fn soa_forms_match_the_fused_kernels() {
 
                 // Per-element motors and points, broadcast light and ground.
                 shadow_of_moved_fused_batch_soa(&msoa, &light, &ground, &psoa, &mut out);
-                let want: Vec<Point> = (0..n)
+                let want: Vec<Point<(), f32>> = (0..n)
                     .map(|i| shadow_of_moved_fused(ms[i], light.get(0), ground.get(0), ps[i]))
                     .collect();
                 assert_close(&out.to_vec(), &want, &format!("shadow_of_moved soa n={n}"));
 
                 screw_apply_fused_batch_soa(&bsoa, &psoa, &mut out);
-                let want: Vec<Point> = (0..n).map(|i| screw_apply_fused(bs[i], ps[i])).collect();
+                let want: Vec<Point<(), f32>> =
+                    (0..n).map(|i| screw_apply_fused(bs[i], ps[i])).collect();
                 assert_close(&out.to_vec(), &want, &format!("screw_apply soa n={n}"));
                 assert_eq!(out.len(), n);
             }

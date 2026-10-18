@@ -12,12 +12,17 @@ use std::fmt::Write as _;
 /// The marker the emitter writes before each part.
 pub const MARKER: &str = "// @part ";
 
+/// The marker the emitter writes before the module's closing lines, which follow the parts (the
+/// end of `pub mod oriented`).
+pub const EPILOGUE: &str = "// @epilogue";
+
 /// The index file and the parts `(file name, content)` of the module `code` of algebra `name`,
 /// each part at most `budget` bytes where top-level items allow.
 #[must_use]
 pub fn split(name: &str, code: &str, budget: usize) -> (String, Vec<(String, String)>) {
     let mut sections: Vec<(String, String)> = Vec::new();
     let mut prelude = String::new();
+    let (code, epilogue) = code.split_once(EPILOGUE).unwrap_or((code, ""));
     for line in code.split_inclusive('\n') {
         if let Some(part) = line.trim_end().strip_prefix(MARKER) {
             sections.push((part.to_string(), String::new()));
@@ -52,6 +57,7 @@ pub fn split(name: &str, code: &str, budget: usize) -> (String, Vec<(String, Str
     for (file, _) in &files {
         let _ = writeln!(index, "include!(\"{name}/{file}\");");
     }
+    index.push_str(epilogue.trim_start_matches('\n'));
     (index, files)
 }
 

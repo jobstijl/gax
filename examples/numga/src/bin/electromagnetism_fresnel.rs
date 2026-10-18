@@ -27,15 +27,14 @@ use gax_numga_examples::{
 };
 
 mod fresnel {
-    use gax::Intrinsic;
-    use gax::sta::{Bivector, Scalar, Trivector, Vector};
+    use gax::sta::{Bivector, Trivector, Vector, intrinsic};
     use gax_numga_examples::measure::roots;
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
     /// A material: the map from the field to its excitation, `Antibivector <- Bivector`
     /// (antibivectors are bivectors in four dimensions, of the other orientation).
-    pub type Medium = Bivector<(Bivector,), f64, Intrinsic>;
+    pub type Medium = intrinsic::Bivector<(Bivector,), f64>;
     /// A map on fields, `Bivector <- Bivector`, such as a material's response.
     pub type Response = Bivector<(Bivector,), f64>;
     /// A map on vectors, such as a wavevector's potential map.
@@ -100,7 +99,7 @@ mod fresnel {
     /// volume what the vector measures against the volume's image, `adj(c) & v = c & volumes(v)`.
     pub fn volume_adjugate(map: VectorMap) -> VectorMap {
         let volumes = map.outermorphism::<Trivector>();
-        let incidence: Scalar<(Vector, Trivector), f64, Intrinsic> =
+        let incidence: intrinsic::Scalar<(Vector, Trivector), f64> =
             Vector::slot() & Trivector::slot();
         incidence.solve(Vector::slot() & volumes)
     }
@@ -332,7 +331,7 @@ fn main() {
 mod tests {
     use super::fresnel::*;
     use gax::ApproxEq;
-    use gax::sta::{Bivector, Trivector, Vector};
+    use gax::sta::{Bivector, Vector, intrinsic};
 
     /// numga's comparison grid: twice as many longitudes as latitudes, round the sphere.
     const LONGITUDES: usize = 2 * (LATITUDES - 1) + 1;
@@ -426,7 +425,7 @@ mod tests {
                     assert!(near(volume_adjugate(wave), VectorMap::zero(), 1e-9));
                     // Repeated radial roots lose half the significant digits to the square root.
                     for f in fields {
-                        assert!(near(k ^ medium.of(f), Trivector::zero(), 1e-5));
+                        assert!(near(k ^ medium.of(f), intrinsic::Trivector::zero(), 1e-5));
                     }
                     let size: f64 = fields
                         .iter()

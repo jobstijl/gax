@@ -31,8 +31,8 @@ use gax::motions::{Pga2d, Pga3d};
 use gax::{pga2d, pga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Pos2, Pos3, Rect, Scene3,
-    backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Pos2, Pos3, Rect,
+    Scene3, backdrop, caption, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -83,7 +83,7 @@ mod tricycle {
             a ^ b
         }
         fn unit(t: Self::Twist) -> Self::Twist {
-            t.normalized().into_inner()
+            t.normalized()
         }
         fn moved(m: Self::Motor, a: Self::Plane) -> Self::Plane {
             m >> a
@@ -112,7 +112,7 @@ mod tricycle {
             a ^ b
         }
         fn unit(t: Self::Twist) -> Self::Twist {
-            t.normalized().into_inner()
+            t.normalized()
         }
         fn moved(m: Self::Motor, a: Self::Plane) -> Self::Plane {
             m >> a
@@ -317,7 +317,9 @@ fn draw_plane(c: &mut Canvas, rect: Rect, drive: &Drive<Pga2d>, k: usize) {
 }
 
 /// A point raised to the wheels' hubs: a contact, or the foot of the turning centre (a meet).
-fn hub<O: gax::Orientation>(p: pga3d::Point<(), f64, O>) -> pga3d::Point<(), f64, O> {
+fn hub<O: gax::Orientation>(
+    p: pga3d::oriented::Point<(), f64, O>,
+) -> pga3d::oriented::Point<(), f64, O> {
     pga3d::Motor::translation(0.0, 0.0, WHEEL_RADIUS) >> p
 }
 
@@ -459,8 +461,8 @@ mod tests {
                     "{rolling}"
                 );
             }
-            let [before, after] =
-                [k, k + 1].map(|j| Vector::<(), f64>::from_coeffs(coordinates::<G>(drive.contacts[j][2])));
+            let [before, after] = [k, k + 1]
+                .map(|j| Vector::<(), f64>::from_coeffs(coordinates::<G>(drive.contacts[j][2])));
             let length = (after - before).norm();
             assert!(
                 (length - STEP * WHEELBASE).abs() <= 1e-3 * STEP * WHEELBASE,

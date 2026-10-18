@@ -85,7 +85,7 @@ macro_rules! geometry {
 
             pub type V = Vector<(), f64>;
             /// A point: a dual of a direction, so intrinsic (ADR-051).
-            pub type B = Bivector<(), f64, gax::Intrinsic>;
+            pub type B = gax::Oriented<Bivector, gax::Intrinsic>;
             pub type R = Rotor<(), f64>;
             /// What the normal to the first two mirrors squares to.
             pub const CURVATURE: i32 = $curvature;

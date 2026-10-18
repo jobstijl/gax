@@ -5,9 +5,9 @@
 #[allow(dead_code)]
 mod kernels;
 
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::Unit;
+use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 use gax::trace::{Sym, Tracer};
-use gax::{Intrinsic, Unit};
 
 fn main() {
     let mut t = Tracer::new();
@@ -40,7 +40,7 @@ fn main() {
     );
     t.kernel(
         "between_lines_fused",
-        |a: Line<(), Sym, Intrinsic>, b: Line<(), Sym, Intrinsic>| kernels::between_lines(a, b),
+        |a: intrinsic::Line<(), Sym>, b: intrinsic::Line<(), Sym>| kernels::between_lines(a, b),
     );
     t.kernel(
         "between_planes_fused",

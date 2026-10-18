@@ -8,6 +8,135 @@
 
 use crate as gx;
 
+pub use oriented::*;
+
+#[doc = "A scalar."]
+///
+/// In its default orientation, extrinsic: [`oriented::Scalar`] is the kind for any orientation,
+/// [`intrinsic::Scalar`] and [`extrinsic::Scalar`] name either one.
+pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Extrinsic>;
+
+#[doc = "A vector: a point `x + Â½xÂ² ei + eo`, a sphere or a plane (dual representation). As a versor it is a reflection or an inversion."]
+///
+/// In its default orientation, extrinsic: [`oriented::Vector`] is the kind for any orientation,
+/// [`intrinsic::Vector`] and [`extrinsic::Vector`] name either one.
+pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Extrinsic>;
+
+#[doc = "The bivectors of rigid motions (the Lie algebra of motors): rotations `e23, e31, e12` and translations `e1i, e2i, e3i`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Twist`] is the kind for any orientation,
+/// [`intrinsic::Twist`] and [`extrinsic::Twist`] name either one.
+pub type Twist<S = (), T = f64> = oriented::Twist<S, T, gx::Extrinsic>;
+
+#[doc = "A bivector: a point pair (dual), or the generator of a conformal transformation."]
+///
+/// In its default orientation, extrinsic: [`oriented::Bivector`] is the kind for any orientation,
+/// [`intrinsic::Bivector`] and [`extrinsic::Bivector`] name either one.
+pub type Bivector<S = (), T = f64> = oriented::Bivector<S, T, gx::Extrinsic>;
+
+#[doc = "A trivector: a circle or a line (direct representation)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Trivector`] is the kind for any orientation,
+/// [`intrinsic::Trivector`] and [`extrinsic::Trivector`] name either one.
+pub type Trivector<S = (), T = f64> = oriented::Trivector<S, T, gx::Extrinsic>;
+
+#[doc = "A quadvector: a sphere or a plane (direct representation)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Quadvector`] is the kind for any orientation,
+/// [`intrinsic::Quadvector`] and [`extrinsic::Quadvector`] name either one.
+pub type Quadvector<S = (), T = f64> = oriented::Quadvector<S, T, gx::Extrinsic>;
+
+#[doc = "The pseudoscalar `e123oi`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Pseudoscalar`] is the kind for any orientation,
+/// [`intrinsic::Pseudoscalar`] and [`extrinsic::Pseudoscalar`] name either one.
+pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Extrinsic>;
+
+#[doc = "A rigid motion: rotation and translation."]
+///
+/// In its default orientation, extrinsic: [`oriented::Motor`] is the kind for any orientation,
+/// [`intrinsic::Motor`] and [`extrinsic::Motor`] name either one.
+pub type Motor<S = (), T = f64> = oriented::Motor<S, T, gx::Extrinsic>;
+
+#[doc = "The even subalgebra: all conformal versors of even grade (rotors, translators, dilators, transversions)."]
+///
+/// In its default orientation, extrinsic: [`oriented::Even`] is the kind for any orientation,
+/// [`intrinsic::Even`] and [`extrinsic::Even`] name either one.
+pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Extrinsic>;
+
+#[doc = "The odd subalgebra."]
+///
+/// In its default orientation, extrinsic: [`oriented::Odd`] is the kind for any orientation,
+/// [`intrinsic::Odd`] and [`extrinsic::Odd`] name either one.
+pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
+
+#[doc = "A general multivector."]
+///
+/// In its default orientation, extrinsic: [`oriented::Multivector`] is the kind for any orientation,
+/// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
+pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+
+/// Every kind of the algebra, intrinsic (ADR-051).
+pub mod intrinsic {
+    use super::{gx, oriented};
+
+    /// [`oriented::Scalar`], intrinsic.
+    pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Intrinsic>;
+    /// [`oriented::Vector`], intrinsic.
+    pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Intrinsic>;
+    /// [`oriented::Twist`], intrinsic.
+    pub type Twist<S = (), T = f64> = oriented::Twist<S, T, gx::Intrinsic>;
+    /// [`oriented::Bivector`], intrinsic.
+    pub type Bivector<S = (), T = f64> = oriented::Bivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Trivector`], intrinsic.
+    pub type Trivector<S = (), T = f64> = oriented::Trivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Quadvector`], intrinsic.
+    pub type Quadvector<S = (), T = f64> = oriented::Quadvector<S, T, gx::Intrinsic>;
+    /// [`oriented::Pseudoscalar`], intrinsic.
+    pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Intrinsic>;
+    /// [`oriented::Motor`], intrinsic.
+    pub type Motor<S = (), T = f64> = oriented::Motor<S, T, gx::Intrinsic>;
+    /// [`oriented::Even`], intrinsic.
+    pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Intrinsic>;
+    /// [`oriented::Odd`], intrinsic.
+    pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Intrinsic>;
+    /// [`oriented::Multivector`], intrinsic.
+    pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+}
+
+/// Every kind of the algebra, extrinsic (ADR-051).
+pub mod extrinsic {
+    use super::{gx, oriented};
+
+    /// [`oriented::Scalar`], extrinsic.
+    pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Extrinsic>;
+    /// [`oriented::Vector`], extrinsic.
+    pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Extrinsic>;
+    /// [`oriented::Twist`], extrinsic.
+    pub type Twist<S = (), T = f64> = oriented::Twist<S, T, gx::Extrinsic>;
+    /// [`oriented::Bivector`], extrinsic.
+    pub type Bivector<S = (), T = f64> = oriented::Bivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Trivector`], extrinsic.
+    pub type Trivector<S = (), T = f64> = oriented::Trivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Quadvector`], extrinsic.
+    pub type Quadvector<S = (), T = f64> = oriented::Quadvector<S, T, gx::Extrinsic>;
+    /// [`oriented::Pseudoscalar`], extrinsic.
+    pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Extrinsic>;
+    /// [`oriented::Motor`], extrinsic.
+    pub type Motor<S = (), T = f64> = oriented::Motor<S, T, gx::Extrinsic>;
+    /// [`oriented::Even`], extrinsic.
+    pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Extrinsic>;
+    /// [`oriented::Odd`], extrinsic.
+    pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
+    /// [`oriented::Multivector`], extrinsic.
+    pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+}
+
+/// The kinds as structs generic over their orientation `O` (ADR-051), with every
+/// operation; the module root and [`intrinsic`] and [`extrinsic`] name them with `O` fixed.
+pub mod oriented {
+use super::gx;
+
 include!("cga3d/kinds_1.rs");
 include!("cga3d/kinds_2.rs");
 include!("cga3d/products_gp.rs");
@@ -33,3 +162,4 @@ include!("cga3d/sandwiches_odd_3.rs");
 include!("cga3d/sandwiches_odd_4.rs");
 include!("cga3d/outermorphisms.rs");
 include!("cga3d/layouts.rs");
+}

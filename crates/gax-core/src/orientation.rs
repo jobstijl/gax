@@ -17,16 +17,16 @@
 //! rules.
 //!
 //! ```
-//! use gax::pga3d::{Line, Plane, Point};
-//! use gax::{Extrinsic, Intrinsic};
+//! use gax::pga3d::{Line, Plane, Point, intrinsic};
 //!
 //! // Points are intrinsic, and so is the line joining them; planes are extrinsic, and so is
-//! // their meet.
-//! let (p, q) = (Point::<(), f64>::xyz(0.0, 0.0, 0.0), Point::xyz(0.0, 0.0, 1.0));
-//! let joined: Line<(), f64, Intrinsic> = p & q;
-//! let met: Line<(), f64, Extrinsic> = Plane::new(1.0, 0.0, 0.0, 0.0) ^ Plane::new(0.0, 1.0, 0.0, 0.0);
+//! // their meet. An algebra's root names each kind in its default orientation, `intrinsic` and
+//! // `extrinsic` in either (ADR-052).
+//! let (p, q) = (Point::xyz(0.0, 0.0, 0.0), Point::xyz(0.0, 0.0, 1.0));
+//! let joined: intrinsic::Line = p & q;
+//! let met: Line = Plane::new(1.0, 0.0, 0.0, 0.0) ^ Plane::new(0.0, 1.0, 0.0, 0.0);
 //! // The mirror x = 0 contains the z axis: it keeps the joined line and reverses the turn about it.
-//! let mirror = Plane::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
+//! let mirror = Plane::new(1.0, 0.0, 0.0, 0.0);
 //! assert_eq!(mirror >> joined, joined);
 //! assert_eq!(mirror >> met, -met);
 //! ```
@@ -40,32 +40,34 @@ mod sealed {
     impl Sealed for super::Intrinsic {}
 }
 
-/// One of the two orientations: [`Extrinsic`] or [`Intrinsic`].
-pub trait Orientation:
-    Copy
-    + Default
-    + Debug
-    + PartialEq
-    + Eq
-    + Hash
-    + Send
-    + Sync
-    + 'static
-    + sealed::Sealed
-    + IsExtrinsic
-    + IsIntrinsic
+/// The arithmetic of orientations: the flip and the product. [`Orientation`] states its laws, so
+/// that they hold for a generic orientation too (ADR-052).
+pub trait Signs:
+    Copy + Default + Debug + PartialEq + Eq + Hash + Send + Sync + 'static + sealed::Sealed
 {
-    /// `+1` for extrinsic, `−1` for intrinsic: the sign the orientation gives a reflection.
-    const SIGN: i8;
-    /// `""` for extrinsic, `"intrinsic "` for intrinsic: how a type's name is printed.
-    const PREFIX: &'static str;
     /// The other orientation: what the dual makes of this one.
     type Flip: Orientation;
     /// The orientation of a product with an element of orientation `B`: extrinsic for equal
     /// orientations, intrinsic for different ones.
     type Times<B: Orientation>: Orientation;
-    /// Whether `B` is this orientation, as a type-level boolean.
-    type Same<B: Orientation>: crate::fill::Bit;
+    /// Whether this is [`Extrinsic`], as a type-level boolean.
+    type Ext: crate::fill::Bit;
+}
+
+/// One of the two orientations: [`Extrinsic`] or [`Intrinsic`].
+///
+/// The supertraits are the sign laws, `o·(+) = o`, `−(−o) = o`, `o·(−) = −o` and `o·o = (+)`: with
+/// them a product of a generic orientation `O` with a known one reduces (`Times<Times<O, I>, I>`
+/// is `O`), so code generic over `O` typechecks. One law per bound, as Rust 1.89 requires.
+pub trait Orientation:
+    Signs<Times<Extrinsic> = Self, Flip: Signs<Flip = Self>>
+    + Signs<Times<Intrinsic> = <Self as Signs>::Flip>
+    + Signs<Times<Self> = Extrinsic>
+{
+    /// `+1` for extrinsic, `−1` for intrinsic: the sign the orientation gives a reflection.
+    const SIGN: i8;
+    /// `""` for extrinsic, `"intrinsic "` for intrinsic: how a type's name is printed.
+    const PREFIX: &'static str;
 }
 
 /// Oriented by the space around it: a plane by its side, a line by a turn about it. Vectors and
@@ -78,55 +80,46 @@ pub struct Extrinsic;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Intrinsic;
 
+impl Signs for Extrinsic {
+    type Flip = Intrinsic;
+    type Times<B: Orientation> = B;
+    type Ext = crate::fill::True;
+}
+
+impl Signs for Intrinsic {
+    type Flip = Extrinsic;
+    type Times<B: Orientation> = <B as Signs>::Flip;
+    type Ext = crate::fill::False;
+}
+
 impl Orientation for Extrinsic {
     const SIGN: i8 = 1;
     const PREFIX: &'static str = "";
-    type Flip = Intrinsic;
-    type Times<B: Orientation> = B;
-    type Same<B: Orientation> = <B as IsExtrinsic>::Out;
 }
 
 impl Orientation for Intrinsic {
     const SIGN: i8 = -1;
     const PREFIX: &'static str = "intrinsic ";
-    type Flip = Extrinsic;
-    type Times<B: Orientation> = B::Flip;
-    type Same<B: Orientation> = <B as IsIntrinsic>::Out;
-}
-
-/// Whether an orientation is extrinsic, as a type-level boolean (for [`Orientation::Same`]).
-pub trait IsExtrinsic {
-    /// `True` for [`Extrinsic`].
-    type Out: crate::fill::Bit;
-}
-impl IsExtrinsic for Extrinsic {
-    type Out = crate::fill::True;
-}
-impl IsExtrinsic for Intrinsic {
-    type Out = crate::fill::False;
-}
-
-/// Whether an orientation is intrinsic, as a type-level boolean (for [`Orientation::Same`]).
-pub trait IsIntrinsic {
-    /// `True` for [`Intrinsic`].
-    type Out: crate::fill::Bit;
-}
-impl IsIntrinsic for Extrinsic {
-    type Out = crate::fill::False;
-}
-impl IsIntrinsic for Intrinsic {
-    type Out = crate::fill::True;
 }
 
 /// The orientation of a product of elements of orientations `A` and `B`.
-pub type Times<A, B> = <A as Orientation>::Times<B>;
+pub type Times<A, B> = <A as Signs>::Times<B>;
 
 /// The orientation of a regressive product (a join) of elements of orientations `A` and `B`: the
 /// product's, flipped.
-pub type Joined<A, B> = <<A as Orientation>::Times<B> as Orientation>::Flip;
+pub type Joined<A, B> = Flip<Times<A, B>>;
 
 /// The other orientation.
-pub type Flip<A> = <A as Orientation>::Flip;
+pub type Flip<A> = <A as Signs>::Flip;
+
+/// Whether `A` and `B` are the same orientation, as a type-level boolean: whether their product
+/// is extrinsic.
+pub type Same<A, B> = <Times<A, B> as Signs>::Ext;
+
+/// The kind `K` in orientation `O`: `Oriented<Line, Intrinsic>` is `Line<(), f64, Intrinsic>`,
+/// for naming a slot kind generically (ADR-052; an algebra's `intrinsic` and `extrinsic` modules
+/// name each kind directly).
+pub type Oriented<K, O> = <K as Reorient<O>>::Out;
 
 /// The same value, map or kind with orientation `O`: the coefficients kept, their orientation
 /// declared anew. Generated for every kind; [`cast`](crate::cast) and the dual use it to keep or

@@ -39,7 +39,7 @@ impl Emitter<'_> {
         let arr_ff = each(&|i| format!("f({i})"));
         let arr_fm = each(&|i| format!("f(&a[{i}])"));
         let arr_fz = each(&|i| format!("f(&a[{i}], &b[{i}])"));
-        let (ty, marker) = (format!("{name}<S, T, O>"), format!("{name}<(), f32, O>"));
+        let (ty, marker) = (format!("{name}<S, T, O>"), format!("{name}<(), f64, O>"));
         let s = format!(
             r#"#[doc = {doc:?}]
 ///
@@ -49,7 +49,7 @@ impl Emitter<'_> {
 /// linear map from `A`, `{name}<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
 /// the orientation of the output, {orient_doc} by default (ADR-051).
 #[repr(C)]
-pub struct {name}<S: Slots = (), T: Coef = f32, O: gx::Orientation = gx::{orient}> {{
+pub struct {name}<S: Slots = (), T: Coef = f64, O: gx::Orientation = gx::{orient}> {{
     /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
     pub c: [S::Arr<T>; {n}],
     o: core::marker::PhantomData<O>,
@@ -112,7 +112,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
 }}
 
 {IMPL_ALL} Extensor for {ty} {{
-    type Kind = {name}<(), f32, O>;
+    type Kind = {name}<(), f64, O>;
     type Slots = S;
     type Coef = T;
     #[inline(always)]
@@ -178,7 +178,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     where
         K: gx::Reorient<O>,
         <K as gx::Reorient<O>>::Out: gx::Kind,
-        {name}<(), f32, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        {name}<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
     {{
         gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
     }}
@@ -193,9 +193,9 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<{name}<(), f32, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    pub fn grade<const G: usize>(self) -> <<{name}<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
     where
-        {name}<(), f32, O>: gx::GradePart<G>,
+        {name}<(), f64, O>: gx::GradePart<G>,
     {{
         gx::cast::grade::<Self, G>(&self)
     }}
@@ -336,7 +336,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
             let (pn, sign) = (&ps.name, if ps.layout.blades[0].1 > 0 { "" } else { "-" });
             let _ = write!(
                 self.out,
-                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not.\n    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume\n    /// form, the complement against the orientation of space.\n    #[inline(always)]\n    pub fn hodge(self) -> <<Self as Reverse>::Output as Gp<{pn}<(), T, gx::Intrinsic>>>::Output\n    where\n        <Self as Reverse>::Output: Gp<{pn}<(), T, gx::Intrinsic>>,\n    {{\n        Gp::gp(Reverse::reverse(self), {pn}::new({sign}T::one()).with_orientation::<gx::Intrinsic>())\n    }}\n"
+                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not.\n    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume\n    /// form, the complement against the orientation of space.\n    #[inline(always)]\n    pub fn hodge(self) -> <<Self as Reverse>::Output as Gp<{pn}<(), T, gx::Intrinsic>>>::Output\n    where\n        <Self as Reverse>::Output: Gp<{pn}<(), T, gx::Intrinsic>>,\n    {{\n        Gp::gp(Reverse::reverse(self), {pn}::<(), T, gx::Intrinsic>::new({sign}T::one()))\n    }}\n"
             );
         }
         self.w("}\n\n");
@@ -348,8 +348,8 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         );
     }
 
-    /// The value constructors (`new`, `slot`, `oriented_slot`), `prepare`, and the coefficient
-    /// accessors of a kind.
+    /// The value constructors (`new`, `slot`, per orientation), `gx::Slot`, `prepare`, and the
+    /// coefficient accessors of a kind.
     fn kind_values(&mut self, k: &KindSpec) {
         let name = &k.name;
         let lit = |c: &str| kind_literal(name, c);
@@ -359,23 +359,23 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
             .map(|b| format!("{}: T", blade_ident(b)))
             .collect();
         let args: Vec<String> = k.blades.iter().map(|b| blade_ident(b)).collect();
+        let identity = lit(
+            "core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() }))",
+        );
+        // The constructors, once per orientation (ADR-052): a path through an alias
+        // (`Line`, `intrinsic::Line`, `Forque`) fixes the orientation, so `new` and `slot` need
+        // no annotation; generic code takes slots from `gx::Slot`.
+        for o in ["Extrinsic", "Intrinsic"] {
+            let _ = write!(
+                self.out,
+                "impl<T: Coef> {name}<(), T, gx::{o}> {{\n    /// A value from its coefficients, in blade order.\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({params}) -> Self {{\n        {value}\n    }}\n\n    /// The identity map on `{name}`: a `{name}` with one open `{name}` slot, both of this\n    /// orientation.\n    #[inline(always)]\n    pub fn slot() -> {name}<({name}<(), f64, gx::{o}>,), T, gx::{o}> {{\n        {identity}\n    }}\n}}\n\n",
+                params = params.join(", "),
+                value = lit(&format!("[{}]", args.join(", "))),
+            );
+        }
         let _ = write!(
             self.out,
-            "impl<T: Coef> {name}<(), T> {{\n    /// A value from its coefficients, in blade order, of the kind's default orientation\n    /// (another through [`with_orientation`](Self::with_orientation)).\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({}) -> Self {{\n        {}\n    }}\n\n    /// The identity map on `{name}`: a `{name}` with one open `{name}` slot.\n    #[inline(always)]\n    pub fn slot() -> {name}<({name},), T> {{\n        Self::oriented_slot()\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> {name}<(), T, O> {{\n    /// The identity map on `{name}` of this orientation, on its output and its slot: for a type\n    /// whose orientation is not the kind's default, such as an alias (`Forque::oriented_slot()`).\n    #[inline(always)]\n    pub fn oriented_slot() -> {name}<({name}<(), f32, O>,), T, O> {{\n        {identity}\n    }}\n\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`]).
-    #[inline(always)]
-    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
-    where
-        Self: gx::Prepare<X>,
-    {{
-        gx::Prepare::prepare(self)
-    }}
-",
-            params.join(", "),
-            lit(&format!("[{}]", args.join(", "))),
-            identity = lit(
-                "core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() }))"
-            ),
+            "impl<T: Coef, O: gx::Orientation> gx::Slot for {name}<(), T, O> {{\n    type Map = {name}<({name}<(), f64, O>,), T, O>;\n    #[inline(always)]\n    fn slot() -> Self::Map {{\n        {identity}\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> {name}<(), T, O> {{\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see\n    /// [`gx::Prepared`]).\n    #[inline(always)]\n    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output\n    where\n        Self: gx::Prepare<X>,\n    {{\n        gx::Prepare::prepare(self)\n    }}\n"
         );
         for (i, b) in k.blades.iter().enumerate() {
             let _ = write!(
@@ -396,14 +396,14 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         // Building a map from the images of its input's basis blades.
         let _ = write!(
             self.out,
-            r"impl<A: Kind, T: Coef> {name}<(A,), T> {{
+            r"impl<A: Kind, T: Coef, O: gx::Orientation> {name}<(A,), T, O> {{
     /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
     /// `{name}`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
     /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
     /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
     /// the input blade `i`.
     #[inline]
-    pub fn from_images(images: A::Arr<{name}<(), T>>) -> Self {{
+    pub fn from_images(images: A::Arr<{name}<(), T, O>>) -> Self {{
         let images = images.as_ref();
         {from_images}
     }}
@@ -454,9 +454,9 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
             r"impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A,), T, O> {{
     /// The inverse map, `A <- {name}`.
     #[inline]
-    pub fn inverse(self) -> <A as Kind>::Mv<({name}<(), f32, O>,), T>
+    pub fn inverse(self) -> <A as Kind>::Mv<({name}<(), f64, O>,), T>
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A, Inverse = <A as Kind>::Mv<({name}<(), f32, O>,), T>>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A, Inverse = <A as Kind>::Mv<({name}<(), f64, O>,), T>>,
     {{
         SquareMap::inverse(self)
     }}
@@ -465,7 +465,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     #[inline]
     pub fn det(self) -> T
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
     {{
         SquareMap::det(self)
     }}
@@ -485,7 +485,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     #[allow(clippy::type_complexity)]
     pub fn svd_thin(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>, <A as Kind>::Arr<{name}<(), T, O>>)
     where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = {name}<(), f32, O>>,
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = {name}<(), f64, O>>,
     {{
         gx::SingularValues::svd_thin(self)
     }}
@@ -494,18 +494,18 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// symmetric (see [`SquareMap::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<{name}<(), f32, O> as Kind>::Arr<T>, <{name}<(), f32, O> as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    pub fn eigh(self) -> (<{name}<(), f64, O> as Kind>::Arr<T>, <{name}<(), f64, O> as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
     {{
         SquareMap::eigh(self)
     }}
 
     /// The eigenvalues, complex in general, sorted (see [`SquareMap::eigvals`]).
     #[inline]
-    pub fn eigvals(self) -> <{name}<(), f32, O> as Kind>::Arr<gx::Complex<T>>
+    pub fn eigvals(self) -> <{name}<(), f64, O> as Kind>::Arr<gx::Complex<T>>
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
     {{
         SquareMap::eigvals(self)
     }}
@@ -513,9 +513,9 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// The eigenvalues and an eigenvector of each, a complex `A` (see [`SquareMap::eig`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<{name}<(), f32, O> as Kind>::Arr<gx::Complex<T>>, <{name}<(), f32, O> as Kind>::Arr<<A as Kind>::Mv<(), gx::Complex<T>>>)
+    pub fn eig(self) -> (<{name}<(), f64, O> as Kind>::Arr<gx::Complex<T>>, <{name}<(), f64, O> as Kind>::Arr<<A as Kind>::Mv<(), gx::Complex<T>>>)
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
     {{
         SquareMap::eig(self)
     }}
@@ -524,8 +524,8 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as Kind>::Mv<X::Slots, T>
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
-        X: Extensor<Kind = {name}<(), f32, O>, Coef = T>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
+        X: Extensor<Kind = {name}<(), f64, O>, Coef = T>,
     {{
         SquareMap::solve(self, rhs)
     }}
@@ -533,9 +533,9 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<{name}<(), f32, O> as Kind>::Arr<{name}<(), T, O>>, <{name}<(), f32, O> as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    pub fn svd(self) -> (<{name}<(), f64, O> as Kind>::Arr<{name}<(), T, O>>, <{name}<(), f64, O> as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f32, O>, Input = A>,
+        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
     {{
         SquareMap::svd(self)
     }}
@@ -543,18 +543,18 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// The Moore–Penrose pseudo-inverse, `A <- {name}`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) ≈ b`.
     #[inline]
-    pub fn pinv(self) -> A::Mv<({name}<(), f32, O>,), T>
+    pub fn pinv(self) -> A::Mv<({name}<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name}<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name}<(), f64, O>,), T>>,
     {{
         gx::PseudoInverse::pinv(self)
     }}
 
     /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<({name}<(), f32, O>,), T>
+    pub fn pinv_with(self, rcond: T) -> A::Mv<({name}<(), f64, O>,), T>
     where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name}<(), f32, O>,), T>>,
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name}<(), f64, O>,), T>>,
     {{
         gx::PseudoInverse::pinv_with(self, rcond)
     }}
@@ -563,7 +563,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     #[inline]
     pub fn trace(self) -> T
     where
-        Self: Endomorphism<Coef = T, Kind = {name}<(), f32, O>, Input = {name}<(), f32, O>>,
+        Self: Endomorphism<Coef = T, Kind = {name}<(), f64, O>, Input = {name}<(), f64, O>>,
     {{
         Endomorphism::trace(self)
     }}
@@ -582,8 +582,8 @@ impl<A: Kind, B: Kind, T: Real, O: gx::Orientation> {name}<(A, B), T, O> {{
     #[inline]
     pub fn solve<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
     where
-        Self: Pairing<Coef = T, Kind = {name}<(), f32, O>, First = A, Second = B>,
-        R: Extensor<Kind = {name}<(), f32, O>, Coef = T>,
+        Self: Pairing<Coef = T, Kind = {name}<(), f64, O>, First = A, Second = B>,
+        R: Extensor<Kind = {name}<(), f64, O>, Coef = T>,
         R::Slots: SplitLast<Last = B>,
     {{
         Pairing::solve(self, rhs)
@@ -597,7 +597,7 @@ impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
     #[allow(clippy::type_complexity)]
     pub fn eigh_with(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: Form<Coef = T, Kind = {name}<(), f32, O>, Slot = A>,
+        Self: Form<Coef = T, Kind = {name}<(), f64, O>, Slot = A>,
     {{
         Form::eigh_with(self, metric)
     }}
@@ -609,7 +609,7 @@ impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
     #[allow(clippy::type_complexity)]
     pub fn eigh_semidefinite(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: Form<Coef = T, Kind = {name}<(), f32, O>, Slot = A>,
+        Self: Form<Coef = T, Kind = {name}<(), f64, O>, Slot = A>,
     {{
         Form::eigh_semidefinite(self, metric)
     }}
@@ -619,7 +619,7 @@ impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
     #[allow(clippy::type_complexity)]
     pub fn eigh(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
-        Self: Form<Coef = T, Kind = {name}<(), f32, O>, Slot = A>,
+        Self: Form<Coef = T, Kind = {name}<(), f64, O>, Slot = A>,
     {{
         Form::eigh(self)
     }}
@@ -887,7 +887,7 @@ fn reciprocal_impl(spec: &AlgebraSpec, kind: &KindSpec, out: &mut String) {
         .collect();
     let _ = writeln!(
         out,
-        "#[diagnostic::do_not_recommend]\n{IMPL_O} gx::Reciprocal for {}<(), f32, O> {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n}}\n",
+        "#[diagnostic::do_not_recommend]\n{IMPL_O} gx::Reciprocal for {}<(), f64, O> {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n}}\n",
         kind.name,
         rows.join(", ")
     );
@@ -899,13 +899,13 @@ pub(super) fn kind_eqs(spec: &AlgebraSpec, out: &mut String) {
         for b in &spec.kinds {
             // The same kind is the same blades and the same orientation (ADR-051).
             let eq = if a.name == b.name {
-                "<OA as gx::Orientation>::Same<OB>"
+                "gx::orientation::Same<OA, OB>"
             } else {
                 "gx::False"
             };
             let _ = writeln!(
                 out,
-                "impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<{}<(), f32, OB>> for {}<(), f32, OA> {{\n    type Out = {eq};\n}}\n",
+                "impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<{}<(), f64, OB>> for {}<(), f64, OA> {{\n    type Out = {eq};\n}}\n",
                 b.name, a.name
             );
         }
@@ -926,13 +926,13 @@ pub(super) fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
             let (an, bn) = (&a.name, &b.name);
             let _ = writeln!(
                 out,
-                "{IMPL_O} gx::Cast<{bn}<(), f32, O>> for {an}<(), f32, O> {{\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
+                "{IMPL_O} gx::Cast<{bn}<(), f64, O>> for {an}<(), f64, O> {{\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
                 render_shared(&shared)
             );
             if shared.len() == a.layout.len() {
                 let _ = writeln!(
                     out,
-                    "{IMPL_O} gx::SubKind<{bn}<(), f32, O>> for {an}<(), f32, O> {{}}\n"
+                    "{IMPL_O} gx::SubKind<{bn}<(), f64, O>> for {an}<(), f64, O> {{}}\n"
                 );
             }
         }
@@ -956,7 +956,7 @@ pub(super) fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
             let shared = shared_blades(a, o, |m| m.count_ones() == g);
             let _ = writeln!(
                 out,
-                "{IMPL_O} gx::GradePart<{g}> for {}<(), f32, O> {{\n    type Out = {}<(), f32, O>;\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
+                "{IMPL_O} gx::GradePart<{g}> for {}<(), f64, O> {{\n    type Out = {}<(), f64, O>;\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
                 a.name,
                 o.name,
                 render_shared(&shared)
@@ -989,7 +989,7 @@ pub(super) fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, 
     if meta.normalized {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real, O: gx::Orientation> gx::Normalize for {name}<(), T, O> {{\n    #[inline(always)]\n    fn normalized(self) -> gx::Unit<Self> {{\n        Self::normalized(self)\n    }}\n}}\n"
+            "impl<T: gx::Real, O: gx::Orientation> gx::Normalize for {name}<(), T, O> {{\n    #[inline(always)]\n    fn unit(self) -> gx::Unit<Self> {{\n        Self::unit(self)\n    }}\n}}\n"
         );
     }
     if meta.sqrt {

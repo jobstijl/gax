@@ -109,7 +109,7 @@ mod graphene {
         directions
             .windows(2)
             .map(|w| {
-                let step = (Rotor::new(1.0, 0.0, 0.0, 0.0) + w[1] * w[0]).normalized();
+                let step = (Rotor::new(1.0, 0.0, 0.0, 0.0) + w[1] * w[0]).unit();
                 let next = running.map_or(step, |r| step.mul_renormalized(r));
                 running = Some(next);
                 next
@@ -195,11 +195,7 @@ mod graphene {
     pub fn loop_directions(valley: V, radius: f64, gap: f64, count: usize) -> Vec<V> {
         circle(count)
             .iter()
-            .map(|u| {
-                pseudospin(valley + *u * radius, gap)
-                    .normalized()
-                    .into_inner()
-            })
+            .map(|u| pseudospin(valley + *u * radius, gap).normalized())
             .collect()
     }
 
@@ -372,10 +368,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let now = ((around * count as f64) as usize).min(count - 1);
     let start = dirs[0];
     // A frame vector perpendicular to the start: `(z ^ d) d` is z less its part along d.
-    let first_frame = ((z() ^ start) * start)
-        .cast::<Vector>()
-        .normalized()
-        .into_inner();
+    let first_frame = ((z() ^ start) * start).cast::<Vector>().normalized();
     let carried = if now == 0 {
         first_frame
     } else {
@@ -544,7 +537,7 @@ mod tests {
             assert_eq!(offsets.len(), count * count);
             for (field, directions) in &valleys {
                 for (f, d) in field.iter().zip(directions) {
-                    assert!(close(*d, f.normalized().into_inner(), 1e-10), "{d:?} {f:?}");
+                    assert!(close(*d, f.normalized(), 1e-10), "{d:?} {f:?}");
                 }
             }
         }

@@ -2,13 +2,13 @@
 //! `z`, stepped by a leapfrog that keeps the field's energy.
 
 use crate::coating::{B, Constitutive, Excitation, t, z};
+use gax::Orientation;
 use gax::field::{Field, SparseMap};
-use gax::sta::{Bivector, Scalar};
-use gax::{Intrinsic, Orientation};
+use gax::sta::{Bivector, Scalar, intrinsic, oriented};
 
 /// `t · (z ∧ X)`: a plane swept along the line, as the observer `t` sees it, a field's or an
 /// excitation's. With a difference along `z` it is the curl in both Maxwell equations.
-pub fn swept<O: Orientation>(x: Bivector<(), f64, O>) -> Bivector<(), f64, O> {
+pub fn swept<O: Orientation>(x: oriented::Bivector<(), f64, O>) -> oriented::Bivector<(), f64, O> {
     t() | (z() ^ x)
 }
 
@@ -19,7 +19,7 @@ pub fn pair(a: B, b: Excitation) -> Scalar<(), f64> {
 }
 
 /// An inverse response: an excitation in, its field out.
-type InverseResponse = Bivector<(Bivector<(), f32, Intrinsic>,), f64>;
+type InverseResponse = Bivector<(intrinsic::Bivector,), f64>;
 
 /// A periodic line of cells along `z`. Electric planes sit on the nodes, magnetic planes
 /// halfway between each node and the next.

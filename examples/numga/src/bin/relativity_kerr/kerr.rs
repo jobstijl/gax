@@ -390,7 +390,7 @@ pub fn camera_rays(
             let across = centre(k % width, width) * half_view * aspect;
             let up = -centre(k / width, height) * half_view;
             let look = orientation >> (-z() + y() * across - x() * up);
-            let direction = look.normalized().into_inner();
+            let direction = look.normalized();
             Ray {
                 event: eye,
                 momentum: -initial_momentum(eye, -direction, hole),
@@ -405,9 +405,7 @@ pub fn camera_screen(ray: Ray, orientation: Rotor, hole: Hole) -> ScreenFrame {
     let local_momentum = frame(&field(ray.event, hole)).of(ray.momentum);
     let direction = spatial(local_momentum) * -(t() | local_momentum).s().recip();
     let right = orientation >> y();
-    let right = (right + direction * (direction | right).s())
-        .normalized()
-        .into_inner();
+    let right = (right + direction * (direction | right).s()).normalized();
     let up = (direction ^ right) | xyz();
     -(right * (x() | Vector::slot())) - up * (y() | Vector::slot())
 }
@@ -641,8 +639,8 @@ pub mod tests {
         }
         let centre = rays[size[0] * size[1] / 2];
         let local_null = frame(&field(centre.event, hole)).of(centre.momentum);
-        let looking = spatial(local_null).normalized().into_inner();
-        let toward_hole = (-eye).normalized().into_inner();
+        let looking = spatial(local_null).normalized();
+        let toward_hole = (-eye).normalized();
         assert!(looking.max_abs_diff(&toward_hole) < ROUND_OFF);
 
         // Intersect a tilted disk between events whose heights have opposite signs.
@@ -669,7 +667,7 @@ pub mod tests {
         // Inside the photon sphere, where no ray turns back out.
         let (capture_radius, escape_radius) = (2.1, 40.0);
         for slope in [0.14, 0.18, 0.20, 0.28] {
-            let direction = (-x() + y() * slope).normalized().into_inner();
+            let direction = (-x() + y() * slope).normalized();
             let start = Ray {
                 event: eye,
                 momentum: -initial_momentum(eye, -direction, hole),

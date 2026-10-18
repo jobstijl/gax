@@ -14,37 +14,40 @@ use gax::pga3d::{Motor, Point, Rotor};
 
 /// gax: unit motor applied to a point (direct fused sandwich).
 #[inline(never)]
-pub fn gax_motor_point(m: Unit<Motor>, p: Point) -> Point {
+pub fn gax_motor_point(m: Unit<Motor<(), f32>>, p: Point<(), f32>) -> Point<(), f32> {
     m >> p
 }
 
 /// gax: unit rotor applied to a point.
 #[inline(never)]
-pub fn gax_rotor_point(r: Unit<Rotor>, p: Point) -> Point {
+pub fn gax_rotor_point(r: Unit<Rotor<(), f32>>, p: Point<(), f32>) -> Point<(), f32> {
     r >> p
 }
 
 /// gax: build the point map of a unit motor.
 #[inline(never)]
-pub fn gax_motor_matrix(m: Unit<Motor>) -> Point<(Point,)> {
+pub fn gax_motor_matrix(m: Unit<Motor<(), f32>>) -> Point<(Point,), f32> {
     m >> Point::slot()
 }
 
 /// gax: apply a point map to a point.
 #[inline(never)]
-pub fn gax_apply_matrix(t: Point<(Point,)>, p: Point) -> Point {
+pub fn gax_apply_matrix(t: Point<(Point,), f32>, p: Point<(), f32>) -> Point<(), f32> {
     t.of(p)
 }
 
 /// gax: apply a prepared (sparse) motor action to a point.
 #[inline(never)]
-pub fn gax_apply_prepared(t: <Unit<Motor> as gax::Prepare<Point>>::Output, p: Point) -> Point {
+pub fn gax_apply_prepared(
+    t: <Unit<Motor<(), f32>> as gax::Prepare<Point>>::Output,
+    p: Point<(), f32>,
+) -> Point<(), f32> {
     t >> p
 }
 
 /// gax: motor composition (geometric product, tier 1).
 #[inline(never)]
-pub fn gax_motor_motor(a: Motor, b: Motor) -> Motor {
+pub fn gax_motor_motor(a: Motor<(), f32>, b: Motor<(), f32>) -> Motor<(), f32> {
     a * b
 }
 
@@ -74,34 +77,34 @@ pub fn glam_quat_quat(a: glam::Quat, b: glam::Quat) -> glam::Quat {
 
 /// A motor for a rotation by `angle` about the axis `(ax, ay, az)` (through the origin),
 /// followed by a translation `(tx, ty, tz)`.
-pub fn motor(angle: f32, axis: [f32; 3], t: [f32; 3]) -> Unit<Motor> {
+pub fn motor(angle: f32, axis: [f32; 3], t: [f32; 3]) -> Unit<Motor<(), f32>> {
     Motor::translation(t[0], t[1], t[2]) * Motor::rotation_about(axis[0], axis[1], axis[2], angle)
 }
 
 /// Probe: the rigid-body step, generic code with constants inlined.
 #[inline(never)]
 pub fn probe_rigid_generic(
-    m: Motor,
-    b: gax::pga3d::Line,
-    f: gax::pga3d::Line,
-) -> (Motor, gax::pga3d::Line) {
+    m: Motor<(), f32>,
+    b: gax::pga3d::Line<(), f32>,
+    f: gax::pga3d::Line<(), f32>,
+) -> (Motor<(), f32>, gax::pga3d::Line<(), f32>) {
     kernels::rigid_step_fixed(m, b, f)
 }
 
 /// Probe: the same, fused at build time.
 #[inline(never)]
 pub fn probe_rigid_fused(
-    m: Motor,
-    b: gax::pga3d::Line,
-    f: gax::pga3d::Line,
-) -> (Motor, gax::pga3d::Line) {
+    m: Motor<(), f32>,
+    b: gax::pga3d::Line<(), f32>,
+    f: gax::pga3d::Line<(), f32>,
+) -> (Motor<(), f32>, gax::pga3d::Line<(), f32>) {
     fused::rigid_step_fixed_fused(m, b, f)
 }
 
 /// Batch transform of struct-of-arrays data (for inspecting the dispatched kernels).
 #[inline(never)]
 pub fn probe_batch_soa(
-    m: Unit<Motor>,
+    m: Unit<Motor<(), f32>>,
     xs: &gax::batch::Soa<Point>,
     out: &mut gax::batch::Soa<Point>,
 ) {
@@ -121,21 +124,25 @@ pub fn probe_lanes_fma(
 
 /// Batch transform of array-of-structs data (for inspecting the transposes).
 #[inline(never)]
-pub fn probe_batch_aos(m: Unit<Motor>, xs: &[Point], out: &mut [Point]) {
+pub fn probe_batch_aos(m: Unit<Motor<(), f32>>, xs: &[Point<(), f32>], out: &mut [Point<(), f32>]) {
     use gax::batch::BatchTransform;
     m.transform_slice(xs, out);
 }
 
 /// Batch pairwise sandwiches (for inspecting the dispatched kernel).
 #[inline(never)]
-pub fn probe_batch_each(ms: &[Unit<Motor>], xs: &[Point], out: &mut [Point]) {
+pub fn probe_batch_each(
+    ms: &[Unit<Motor<(), f32>>],
+    xs: &[Point<(), f32>],
+    out: &mut [Point<(), f32>],
+) {
     use gax::batch::BatchTransform;
     Unit::transform_each(ms, xs, out);
 }
 
 /// Batch exp of twists (for inspecting the dispatched kernel).
 #[inline(never)]
-pub fn probe_batch_exp(bs: &[gax::pga3d::Line], out: &mut [Motor]) {
+pub fn probe_batch_exp(bs: &[gax::pga3d::Line<(), f32>], out: &mut [Motor<(), f32>]) {
     struct Exp;
     impl gax::batch::Map for Exp {
         type X = gax::pga3d::Line;

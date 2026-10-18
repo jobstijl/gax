@@ -43,7 +43,7 @@ mod motors {
         pinned: &[bool],
         depth: usize,
     ) -> (SparseMap<Scalar<(), f64>>, Mesh<Motor64>) {
-        refine(mesh, pinned, depth, |m| m.normalized().into_inner())
+        refine(mesh, pinned, depth, |m| m.normalized())
     }
 
     /// The turn by an angle about an axis through the origin along a direction.

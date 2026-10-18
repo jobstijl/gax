@@ -3,7 +3,7 @@
 use crate::ops::{self, Raw};
 use crate::space::{self, Space};
 use core::marker::PhantomData;
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 
 /// A colour of space `S`: a homogeneous point whose position is the colour and whose weight is
 /// how much of it there is, its alpha (paint's coverage, or a light's intensity: premultiplied
@@ -147,13 +147,13 @@ impl<S: Space> Colour<S> {
     // The cylindrical geometry: hue, chroma and lightness about the grey axis.
 
     /// The grey axis, black to white, at unit length: a join, so intrinsic (ADR-051).
-    fn axis() -> Line<(), f32, gax::Intrinsic> {
+    fn axis() -> intrinsic::Line<(), f32> {
         let l = S::black() & S::white();
         l * l.norm().recip()
     }
 
     /// The plane through black orthogonal to the grey axis: lightness 0.
-    fn black_plane() -> Plane {
+    fn black_plane() -> Plane<(), f32> {
         Self::axis() | S::black()
     }
 
@@ -221,13 +221,13 @@ impl<S: Space> Colour<S> {
     pub fn hue(self) -> f32 {
         let axis = Self::axis();
         // The half-planes are joins, so intrinsic; their product, a turn, is extrinsic.
-        let unit = |p: Plane<(), f32, gax::Intrinsic>| p * p.norm().recip();
+        let unit = |p: intrinsic::Plane<(), f32>| p * p.norm().recip();
         let (zero, here) = (axis & S::hue_zero(), axis & self.unit());
         if here.norm() < 1e-9 {
             return 0.0;
         }
-        let turn = (unit(here) * unit(zero)).normalized();
-        let log: Line = turn.log();
+        let turn = (unit(here) * unit(zero)).unit();
+        let log: Line<(), f32> = turn.log();
         let angle = log.norm();
         let tau = core::f32::consts::TAU;
         if (log | axis).s() < 0.0 {

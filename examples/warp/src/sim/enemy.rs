@@ -6,7 +6,7 @@ use super::kind::{Kind, SERPENT_GAP, SERPENT_LEN};
 use super::shots::Wreck;
 use super::wells::{Well, pull};
 use super::{DT, Event, P, Phase, World, dir};
-use gax::pga2d::{Line, Motor};
+use gax::pga2d::{Motor, intrinsic};
 
 /// An enemy.
 #[derive(Clone, Debug)]
@@ -44,7 +44,7 @@ pub struct Enemy {
 /// A shot in flight as an evader sees it.
 struct Shot {
     /// Its line of flight.
-    line: Line<(), f32, gax::Intrinsic>,
+    line: intrinsic::Line<(), f32>,
     /// Where it is.
     pos: P,
     /// Its velocity.
@@ -193,7 +193,7 @@ impl World {
             .bullets
             .iter()
             .map(|b| Shot {
-                line: (b.pos & b.vel).normalized().into_inner(),
+                line: (b.pos & b.vel).normalized(),
                 pos: b.pos,
                 vel: b.vel,
             })

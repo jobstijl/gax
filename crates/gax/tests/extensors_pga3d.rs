@@ -13,11 +13,11 @@ fn fill_binds_every_slot_of_a_kind() {
     // A sandwich with the motor left open: m p ~m has two motor slots.
     let p: Point<(), f64> = random(&mut rng);
     // A point is intrinsic (ADR-051), and so is the open sandwich of one.
-    let open: Flector<(Motor, Motor), f64, gax::Intrinsic> =
+    let open: intrinsic::Flector<(Motor, Motor), f64> =
         (Motor::slot() * p) * Motor::slot().reverse();
     for _ in 0..5 {
         let m: Motor<(), f64> = random(&mut rng);
-        let filled: Flector<(), f64, gax::Intrinsic> = open.fill(m);
+        let filled: intrinsic::Flector<(), f64> = open.fill(m);
         let direct: Point<(), f64> = m >> p;
         // The fused sandwich returns the point part; the rest of the flector vanishes.
         let d = flat(&filled);
@@ -29,10 +29,10 @@ fn fill_binds_every_slot_of_a_kind() {
     let same: Line<(Point,), f64> = q.fill(Motor::<(), f64>::zero());
     assert_eq!(same, q);
     // Mixed slots: only the motor slots are filled, the point slot stays open.
-    let mixed: Flector<(Motor, Point, Motor), f64, gax::Intrinsic> =
+    let mixed: intrinsic::Flector<(Motor, Point, Motor), f64> =
         (Motor::slot() * Point::slot()) * Motor::slot().reverse();
     let m: Motor<(), f64> = random(&mut rng);
-    let map: Flector<(Point,), f64, gax::Intrinsic> = mixed.fill(m);
+    let map: intrinsic::Flector<(Point,), f64> = mixed.fill(m);
     assert_close(
         &flat(&map.of(p)),
         &flat(&open.fill(m)),
@@ -76,8 +76,7 @@ fn outermorphisms_extend_maps_factor_by_factor() {
     let m2: Line<(Line,), f64> = t.outermorphism::<Line>();
     assert_close(&flat(&m2.of(a ^ b)), &flat(&(t.of(a) ^ t.of(b))), "M(a^b)");
     // Wedges of planes are extrinsic, so the extension acts on extrinsic points (ADR-051).
-    let m3: Point<(Point<(), f32, gax::Extrinsic>,), f64, gax::Extrinsic> =
-        t.outermorphism::<Point>();
+    let m3: extrinsic::Point<(extrinsic::Point,), f64> = t.outermorphism::<Point>();
     assert_close(
         &flat(&m3.of(a ^ b ^ c)),
         &flat(&(t.of(a) ^ t.of(b) ^ t.of(c))),
@@ -96,15 +95,13 @@ fn outermorphisms_extend_maps_factor_by_factor() {
         let (p, q, r): (Point<(), f64>, Point<(), f64>, Point<(), f64>) =
             (random(&mut rng), random(&mut rng), random(&mut rng));
         // Joins of points are intrinsic, and so are the lines this extension acts on.
-        let lines: Line<(Line<(), f32, gax::Intrinsic>,), f64, gax::Intrinsic> =
-            tp.outermorphism::<Line>();
+        let lines: intrinsic::Line<(intrinsic::Line,), f64> = tp.outermorphism::<Line>();
         assert_close(
             &flat(&lines.of(p & q)),
             &flat(&(tp.of(p) & tp.of(q))),
             "M(p & q)",
         );
-        let planes: Plane<(Plane<(), f32, gax::Intrinsic>,), f64, gax::Intrinsic> =
-            tp.outermorphism::<Plane>();
+        let planes: intrinsic::Plane<(intrinsic::Plane,), f64> = tp.outermorphism::<Plane>();
         assert_close(
             &flat(&planes.of((p & q) & r)),
             &flat(&((tp.of(p) & tp.of(q)) & tp.of(r))),

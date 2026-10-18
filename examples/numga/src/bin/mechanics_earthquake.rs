@@ -459,8 +459,8 @@ mod tests {
     /// each fault's normal is the other's slip, `(T ± P) / √2`.
     fn fault_planes(moment: Moment) -> [(V, V); 2] {
         let (_, [pressure, _, tension]) = moment.eigh();
-        let first = (tension + pressure).normalized().into_inner();
-        let second = (tension - pressure).normalized().into_inner();
+        let first = (tension + pressure).normalized();
+        let second = (tension - pressure).normalized();
         [(first, second), (second, first)]
     }
 

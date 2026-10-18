@@ -5,6 +5,75 @@
 
 use crate as gx;
 
+pub use oriented::*;
+
+#[doc = "A scalar."]
+///
+/// In its default orientation, extrinsic: [`oriented::Scalar`] is the kind for any orientation,
+/// [`intrinsic::Scalar`] and [`extrinsic::Scalar`] name either one.
+pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Extrinsic>;
+
+#[doc = "A vector. As a versor it is a reflection in the line perpendicular to it."]
+///
+/// In its default orientation, extrinsic: [`oriented::Vector`] is the kind for any orientation,
+/// [`intrinsic::Vector`] and [`extrinsic::Vector`] name either one.
+pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Extrinsic>;
+
+#[doc = "The unit area element `e12`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Pseudoscalar`] is the kind for any orientation,
+/// [`intrinsic::Pseudoscalar`] and [`extrinsic::Pseudoscalar`] name either one.
+pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Extrinsic>;
+
+#[doc = "A rotor: the even subalgebra, isomorphic to the complex numbers."]
+///
+/// In its default orientation, extrinsic: [`oriented::Rotor`] is the kind for any orientation,
+/// [`intrinsic::Rotor`] and [`extrinsic::Rotor`] name either one.
+pub type Rotor<S = (), T = f64> = oriented::Rotor<S, T, gx::Extrinsic>;
+
+#[doc = "A general multivector."]
+///
+/// In its default orientation, extrinsic: [`oriented::Multivector`] is the kind for any orientation,
+/// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
+pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+
+/// Every kind of the algebra, intrinsic (ADR-051).
+pub mod intrinsic {
+    use super::{gx, oriented};
+
+    /// [`oriented::Scalar`], intrinsic.
+    pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Intrinsic>;
+    /// [`oriented::Vector`], intrinsic.
+    pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Intrinsic>;
+    /// [`oriented::Pseudoscalar`], intrinsic.
+    pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Intrinsic>;
+    /// [`oriented::Rotor`], intrinsic.
+    pub type Rotor<S = (), T = f64> = oriented::Rotor<S, T, gx::Intrinsic>;
+    /// [`oriented::Multivector`], intrinsic.
+    pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+}
+
+/// Every kind of the algebra, extrinsic (ADR-051).
+pub mod extrinsic {
+    use super::{gx, oriented};
+
+    /// [`oriented::Scalar`], extrinsic.
+    pub type Scalar<S = (), T = f64> = oriented::Scalar<S, T, gx::Extrinsic>;
+    /// [`oriented::Vector`], extrinsic.
+    pub type Vector<S = (), T = f64> = oriented::Vector<S, T, gx::Extrinsic>;
+    /// [`oriented::Pseudoscalar`], extrinsic.
+    pub type Pseudoscalar<S = (), T = f64> = oriented::Pseudoscalar<S, T, gx::Extrinsic>;
+    /// [`oriented::Rotor`], extrinsic.
+    pub type Rotor<S = (), T = f64> = oriented::Rotor<S, T, gx::Extrinsic>;
+    /// [`oriented::Multivector`], extrinsic.
+    pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+}
+
+/// The kinds as structs generic over their orientation `O` (ADR-051), with every
+/// operation; the module root and [`intrinsic`] and [`extrinsic`] name them with `O` fixed.
+pub mod oriented {
+use super::gx;
+
 include!("vga2d/kinds.rs");
 include!("vga2d/products_gp.rs");
 include!("vga2d/products_wedge.rs");
@@ -20,3 +89,4 @@ include!("vga2d/sandwiches_vector.rs");
 include!("vga2d/sandwiches_rotor.rs");
 include!("vga2d/outermorphisms.rs");
 include!("vga2d/layouts.rs");
+}

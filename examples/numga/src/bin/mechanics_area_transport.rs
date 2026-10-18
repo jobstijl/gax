@@ -34,19 +34,18 @@ mod space;
 
 mod area_transport {
     use super::space::adjoint;
-    use gax::Intrinsic;
-    use gax::vga3d::{Bivector, Vector};
+    use gax::vga3d::{Bivector, Vector, intrinsic};
 
     /// A direction, or a position from the cube's centre.
     pub type V = Vector<(), f64>;
     /// An oriented area.
     pub type B = Bivector<(), f64>;
     /// An area normal: the dual of a patch, intrinsic.
-    pub type N = Vector<(), f64, Intrinsic>;
+    pub type N = intrinsic::Vector<(), f64>;
     /// A map on directions, `Vector <- Vector`.
     pub type Linear = Vector<(Vector,), f64>;
     /// A map on area normals.
-    pub type NormalMap = Vector<(Vector<(), f32, Intrinsic>,), f64, Intrinsic>;
+    pub type NormalMap = intrinsic::Vector<(intrinsic::Vector,), f64>;
     /// A map on oriented areas, `Bivector <- Bivector`.
     pub type AreaMap = Bivector<(Bivector,), f64>;
 
@@ -69,8 +68,8 @@ mod area_transport {
     /// The adjugate of an area map, from its defining pairing: `adj(c) & patch` equals
     /// `c & areas(patch)` for every normal `c` and patch.
     pub fn adjugate(areas: AreaMap) -> NormalMap {
-        let pairing = N::oriented_slot() & Bivector::slot();
-        pairing.solve(N::oriented_slot() & areas)
+        let pairing = N::slot() & Bivector::slot();
+        pairing.solve(N::slot() & areas)
     }
 
     /// A deformation with its areas carried forward and its measurements carried back.

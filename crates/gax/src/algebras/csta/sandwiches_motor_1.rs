@@ -157,10 +157,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f32, O>> for Motor<(), T, OV> {
-    type Output = gx::Prepared<Motor, Scalar<(), f32, O>, T, 6>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, Scalar<(), f64, O>, T, 6>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Motor, Scalar<(), f32, O>, T, 6> {
+    fn prepare(self) -> gx::Prepared<Motor, Scalar<(), f64, O>, T, 6> {
         let v = self.c;
         let m1 = v[1] * v[1];
         let m3 = v[3] * v[3];
@@ -231,7 +231,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<()
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<Motor, Scalar<(), f32, O>, T, 6> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<Motor, Scalar<(), f64, O>, T, 6> {
     type Output = Motor<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Motor<S, T, O> {
@@ -241,20 +241,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Scalar<(), f32, O>, T, 6>> for Motor<(Scalar<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Scalar<(), f64, O>, T, 6>> for Motor<(Scalar<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Motor, Scalar<(), f32, O>, T, 6>) -> Self {
+    fn from(p: gx::Prepared<Motor, Scalar<(), f64, O>, T, 6>) -> Self {
         let m = p.m;
         Motor { o: core::marker::PhantomData, c: [[m[0]], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [m[1]], [m[2]], [m[3]], [m[4]], [m[5]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch::Plain> for Motor {
-    type Y = Motor<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Motor<(), f64, O>;
     type Versor<T: gx::Coef> = Motor<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Scalar<(), f32, O>, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Scalar<(), f64, O>, T, 6>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
         v
@@ -264,16 +264,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Scalar<(), f32, O>, T, 6> {
-        gx::Prepare::<Scalar<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Scalar<(), f64, O>, T, 6> {
+        gx::Prepare::<Scalar<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Scalar<(), f32, O>, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Scalar<(), f32, O>, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Scalar<(), f64, O>, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Scalar<(), f64, O>, W, 6> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Scalar<(), f32, O>, T, 6>, x: Scalar<(), T, O>) -> Motor<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Scalar<(), f64, O>, T, 6>, x: Scalar<(), T, O>) -> Motor<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -395,10 +395,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f32, O>> for gx::Unit<Motor<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -484,7 +484,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<()
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1> {
     type Output = Scalar<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
@@ -494,20 +494,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1>> for Scalar<(Scalar<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1>> for Scalar<(Scalar<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Scalar { o: core::marker::PhantomData, c: [[m[0]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch::Certified> for Motor {
-    type Y = Scalar<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Scalar<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -517,16 +517,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Scalar<(), f32, O>, gx::batch
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1> {
-        gx::Prepare::<Scalar<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1> {
+        gx::Prepare::<Scalar<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, W, 1> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, W, 1> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar<(), f32, O>, T, 1>, x: Scalar<(), T, O>) -> Scalar<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar<(), f64, O>, T, 1>, x: Scalar<(), T, O>) -> Scalar<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1015,10 +1015,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<(), f32, O>> for Motor<(), T, OV> {
-    type Output = gx::Prepared<Motor, Vector<(), f32, O>, T, 36>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, Vector<(), f64, O>, T, 36>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Motor, Vector<(), f32, O>, T, 36> {
+    fn prepare(self) -> gx::Prepared<Motor, Vector<(), f64, O>, T, 36> {
         let v = self.c;
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1243,7 +1243,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<()
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O>> for gx::Prepared<Motor, Vector<(), f32, O>, T, 36> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O>> for gx::Prepared<Motor, Vector<(), f64, O>, T, 36> {
     type Output = Odd<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Vector<S, T, O>) -> Odd<S, T, O> {
@@ -1253,20 +1253,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Vector<(), f32, O>, T, 36>> for Odd<(Vector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Vector<(), f64, O>, T, 36>> for Odd<(Vector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Motor, Vector<(), f32, O>, T, 36>) -> Self {
+    fn from(p: gx::Prepared<Motor, Vector<(), f64, O>, T, 36>) -> Self {
         let m = p.m;
         Odd { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], T::zero()], [m[5], m[6], m[7], m[8], m[9], T::zero()], [m[10], m[11], m[12], m[13], m[14], T::zero()], [m[15], m[16], m[17], m[18], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[20], T::zero()], [m[21], m[22], m[23], m[24], m[25], m[20]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[26], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[27], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[28], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[29], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[30], T::zero()], [m[31], m[32], m[33], m[34], m[35], m[30]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Vector<(), f32, O>, gx::batch::Plain> for Motor {
-    type Y = Odd<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Vector<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Odd<(), f64, O>;
     type Versor<T: gx::Coef> = Motor<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Vector<(), f32, O>, T, 36>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Vector<(), f64, O>, T, 36>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
         v
@@ -1276,16 +1276,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Vector<(), f32, O>, gx::batch
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Vector<(), f32, O>, T, 36> {
-        gx::Prepare::<Vector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Vector<(), f64, O>, T, 36> {
+        gx::Prepare::<Vector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Vector<(), f32, O>, T, 36>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Vector<(), f32, O>, W, 36> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Vector<(), f64, O>, T, 36>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Vector<(), f64, O>, W, 36> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33]), f(m[34]), f(m[35])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Vector<(), f32, O>, T, 36>, x: Vector<(), T, O>) -> Odd<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Vector<(), f64, O>, T, 36>, x: Vector<(), T, O>) -> Odd<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -1657,10 +1657,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<(), f32, O>> for gx::Unit<Motor<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1882,7 +1882,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<()
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26> {
     type Output = Vector<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Vector<S, T, O>) -> Vector<S, T, O> {
@@ -1892,20 +1892,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26>> for Vector<(Vector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26>> for Vector<(Vector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26>) -> Self {
         let m = p.m;
         Vector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], T::zero()], [m[5], m[6], m[7], m[8], m[9], T::zero()], [m[10], m[11], m[12], m[13], m[14], T::zero()], [m[15], m[16], m[17], m[18], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[20], T::zero()], [m[21], m[22], m[23], m[24], m[25], m[20]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Vector<(), f32, O>, gx::batch::Certified> for Motor {
-    type Y = Vector<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Vector<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Vector<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -1915,16 +1915,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Vector<(), f32, O>, gx::batch
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26> {
-        gx::Prepare::<Vector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26> {
+        gx::Prepare::<Vector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, W, 26> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, W, 26> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Vector<(), f32, O>, T, 26>, x: Vector<(), T, O>) -> Vector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Vector<(), f64, O>, T, 26>, x: Vector<(), T, O>) -> Vector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -2596,10 +2596,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Twist<(), f32, O>> for Motor<(), T, OV> {
-    type Output = gx::Prepared<Motor, Twist<(), f32, O>, T, 67>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Twist<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, Twist<(), f64, O>, T, 67>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Motor, Twist<(), f32, O>, T, 67> {
+    fn prepare(self) -> gx::Prepared<Motor, Twist<(), f64, O>, T, 67> {
         let v = self.c;
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2909,7 +2909,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Twist<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>> for gx::Prepared<Motor, Twist<(), f32, O>, T, 67> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>> for gx::Prepared<Motor, Twist<(), f64, O>, T, 67> {
     type Output = Twist<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Twist<S, T, O>) -> Twist<S, T, O> {
@@ -2919,20 +2919,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Twist<(), f32, O>, T, 67>> for Twist<(Twist<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Twist<(), f64, O>, T, 67>> for Twist<(Twist<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Motor, Twist<(), f32, O>, T, 67>) -> Self {
+    fn from(p: gx::Prepared<Motor, Twist<(), f64, O>, T, 67>) -> Self {
         let m = p.m;
         Twist { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero()], [m[12], m[13], m[14], m[15], m[16], m[17], T::zero(), T::zero(), T::zero(), T::zero()], [m[18], m[19], m[20], m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [m[21], m[22], m[23], m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [m[24], m[25], m[26], m[12], m[13], m[14], T::zero(), T::zero(), T::zero(), T::zero()], [m[27], m[28], m[29], m[30], m[31], m[32], m[33], m[34], m[35], m[36]], [m[37], m[38], m[39], m[40], m[41], m[42], m[43], m[44], m[45], m[46]], [m[47], m[48], m[49], m[50], m[51], m[52], m[53], m[54], m[55], m[56]], [m[57], m[58], m[59], m[60], m[61], m[62], m[63], m[64], m[65], m[66]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Twist<(), f32, O>, gx::batch::Plain> for Motor {
-    type Y = Twist<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Twist<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Twist<(), f64, O>;
     type Versor<T: gx::Coef> = Motor<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Twist<(), f32, O>, T, 67>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Twist<(), f64, O>, T, 67>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
         v
@@ -2942,16 +2942,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Twist<(), f32, O>, gx::batch:
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Twist<(), f32, O>, T, 67> {
-        gx::Prepare::<Twist<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Twist<(), f64, O>, T, 67> {
+        gx::Prepare::<Twist<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Twist<(), f32, O>, T, 67>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Twist<(), f32, O>, W, 67> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Twist<(), f64, O>, T, 67>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Twist<(), f64, O>, W, 67> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33]), f(m[34]), f(m[35]), f(m[36]), f(m[37]), f(m[38]), f(m[39]), f(m[40]), f(m[41]), f(m[42]), f(m[43]), f(m[44]), f(m[45]), f(m[46]), f(m[47]), f(m[48]), f(m[49]), f(m[50]), f(m[51]), f(m[52]), f(m[53]), f(m[54]), f(m[55]), f(m[56]), f(m[57]), f(m[58]), f(m[59]), f(m[60]), f(m[61]), f(m[62]), f(m[63]), f(m[64]), f(m[65]), f(m[66])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Twist<(), f32, O>, T, 67>, x: Twist<(), T, O>) -> Twist<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Twist<(), f64, O>, T, 67>, x: Twist<(), T, O>) -> Twist<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -3638,10 +3638,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Twist<(), f32, O>> for gx::Unit<Motor<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Twist<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -3993,7 +3993,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Twist<(),
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67> {
     type Output = Twist<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Twist<S, T, O>) -> Twist<S, T, O> {
@@ -4003,20 +4003,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67>> for Twist<(Twist<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67>> for Twist<(Twist<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67>) -> Self {
         let m = p.m;
         Twist { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero()], [m[12], m[13], m[14], m[15], m[16], m[17], T::zero(), T::zero(), T::zero(), T::zero()], [m[18], m[19], m[20], m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [m[21], m[22], m[23], m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [m[24], m[25], m[26], m[12], m[13], m[14], T::zero(), T::zero(), T::zero(), T::zero()], [m[27], m[28], m[29], m[30], m[31], m[32], m[33], m[34], m[35], m[36]], [m[37], m[38], m[39], m[40], m[41], m[42], m[43], m[44], m[45], m[46]], [m[47], m[48], m[49], m[50], m[51], m[52], m[53], m[54], m[55], m[56]], [m[57], m[58], m[59], m[60], m[61], m[62], m[63], m[64], m[65], m[66]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Twist<(), f32, O>, gx::batch::Certified> for Motor {
-    type Y = Twist<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Twist<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Twist<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -4026,16 +4026,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Twist<(), f32, O>, gx::batch:
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67> {
-        gx::Prepare::<Twist<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67> {
+        gx::Prepare::<Twist<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, W, 67> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, W, 67> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33]), f(m[34]), f(m[35]), f(m[36]), f(m[37]), f(m[38]), f(m[39]), f(m[40]), f(m[41]), f(m[42]), f(m[43]), f(m[44]), f(m[45]), f(m[46]), f(m[47]), f(m[48]), f(m[49]), f(m[50]), f(m[51]), f(m[52]), f(m[53]), f(m[54]), f(m[55]), f(m[56]), f(m[57]), f(m[58]), f(m[59]), f(m[60]), f(m[61]), f(m[62]), f(m[63]), f(m[64]), f(m[65]), f(m[66])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Twist<(), f32, O>, T, 67>, x: Twist<(), T, O>) -> Twist<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Twist<(), f64, O>, T, 67>, x: Twist<(), T, O>) -> Twist<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -5254,10 +5254,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<(), f32, O>> for Motor<(), T, OV> {
-    type Output = gx::Prepared<Motor, Bivector<(), f32, O>, T, 121>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, Bivector<(), f64, O>, T, 121>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<Motor, Bivector<(), f32, O>, T, 121> {
+    fn prepare(self) -> gx::Prepared<Motor, Bivector<(), f64, O>, T, 121> {
         let v = self.c;
         let (m227, m228, m229, m230, m236, m240, m242, m243, m246, m247, m248, m251, m252, m254, m283, m285, m289, m290, m295, m299, m301, m304, m305, m310, m314, m316, m324, m328, m331, m333, m334, m335, m336, m337, m339, m340, m345, m349, m350, m351, m353, m354, m355, m356, m357, m358, m360, m363, m365, m369, m371, m372, m373, m374, m375, m376, m377, m379, m381, m384, m388, m389, m391, m392, m393, m394, m395, m396, m399, m401, m403, m407, m408, m410, m412, m415, m417, m418, m421, m423, m425, m428, m429, m431, m434, m436, m438, m439, m441, m442, m444, m445, m446, m447, m449, m450, m451, m452, m453, m456, m458, m461, m464, m467, m469, m471, m473, m476, m478, m481, m484, m486, m488, m490, m492, m494, m497, m499, m501, m503, m505, m507, m509, m511, m514, m516, m518, m520, m523, m525, m527,) = {
             let m0 = v[0] * v[0];
@@ -5831,7 +5831,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T, O>> for gx::Prepared<Motor, Bivector<(), f32, O>, T, 121> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T, O>> for gx::Prepared<Motor, Bivector<(), f64, O>, T, 121> {
     type Output = Even<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Bivector<S, T, O>) -> Even<S, T, O> {
@@ -5841,20 +5841,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T,
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Bivector<(), f32, O>, T, 121>> for Even<(Bivector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Bivector<(), f64, O>, T, 121>> for Even<(Bivector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<Motor, Bivector<(), f32, O>, T, 121>) -> Self {
+    fn from(p: gx::Prepared<Motor, Bivector<(), f64, O>, T, 121>) -> Self {
         let m = p.m;
         Even { o: core::marker::PhantomData, c: [[T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[10], m[11], m[12], m[13], m[14], m[15], m[16], m[17], m[18], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[20], m[21], m[22], m[23], m[24], m[25], m[26], m[27], m[28], m[29], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[30], m[31], m[32], m[0], m[1], m[2], m[33], m[34], m[35], m[36], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[37], m[38], m[39], m[10], m[11], m[12], m[40], m[41], m[42], m[43], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[44], m[45], m[46], m[20], m[21], m[22], m[47], m[48], m[49], m[50], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[51], m[52], m[53], m[54], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[55], m[56], m[57], m[58], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[59], m[60], m[61], m[62], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[63], m[64], m[65], m[66], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[67], m[68], m[69], m[70], m[71], m[72], m[73], m[74], m[75], m[76], m[51], m[52], m[53], m[54], m[77]], [m[78], m[79], m[80], m[81], m[82], m[83], m[84], m[85], m[86], m[87], m[55], m[56], m[57], m[58], m[88]], [m[89], m[90], m[91], m[92], m[93], m[94], m[95], m[96], m[97], m[98], m[59], m[60], m[61], m[62], m[99]], [m[100], m[101], m[102], m[103], m[104], m[105], m[106], m[107], m[108], m[109], m[63], m[64], m[65], m[66], m[110]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[111], m[112], m[113], m[114], T::zero(), T::zero(), T::zero(), T::zero(), m[115]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[116], m[117], m[118], m[119], T::zero(), T::zero(), T::zero(), T::zero(), m[120]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Bivector<(), f32, O>, gx::batch::Plain> for Motor {
-    type Y = Even<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Bivector<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Even<(), f64, O>;
     type Versor<T: gx::Coef> = Motor<(), T>;
-    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Bivector<(), f32, O>, T, 121>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Bivector<(), f64, O>, T, 121>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
         v
@@ -5864,16 +5864,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Bivector<(), f32, O>, gx::bat
         v
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Bivector<(), f32, O>, T, 121> {
-        gx::Prepare::<Bivector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Bivector<(), f64, O>, T, 121> {
+        gx::Prepare::<Bivector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Bivector<(), f32, O>, T, 121>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Bivector<(), f32, O>, W, 121> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Bivector<(), f64, O>, T, 121>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Bivector<(), f64, O>, W, 121> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33]), f(m[34]), f(m[35]), f(m[36]), f(m[37]), f(m[38]), f(m[39]), f(m[40]), f(m[41]), f(m[42]), f(m[43]), f(m[44]), f(m[45]), f(m[46]), f(m[47]), f(m[48]), f(m[49]), f(m[50]), f(m[51]), f(m[52]), f(m[53]), f(m[54]), f(m[55]), f(m[56]), f(m[57]), f(m[58]), f(m[59]), f(m[60]), f(m[61]), f(m[62]), f(m[63]), f(m[64]), f(m[65]), f(m[66]), f(m[67]), f(m[68]), f(m[69]), f(m[70]), f(m[71]), f(m[72]), f(m[73]), f(m[74]), f(m[75]), f(m[76]), f(m[77]), f(m[78]), f(m[79]), f(m[80]), f(m[81]), f(m[82]), f(m[83]), f(m[84]), f(m[85]), f(m[86]), f(m[87]), f(m[88]), f(m[89]), f(m[90]), f(m[91]), f(m[92]), f(m[93]), f(m[94]), f(m[95]), f(m[96]), f(m[97]), f(m[98]), f(m[99]), f(m[100]), f(m[101]), f(m[102]), f(m[103]), f(m[104]), f(m[105]), f(m[106]), f(m[107]), f(m[108]), f(m[109]), f(m[110]), f(m[111]), f(m[112]), f(m[113]), f(m[114]), f(m[115]), f(m[116]), f(m[117]), f(m[118]), f(m[119]), f(m[120])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Bivector<(), f32, O>, T, 121>, x: Bivector<(), T, O>) -> Even<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Bivector<(), f64, O>, T, 121>, x: Bivector<(), T, O>) -> Even<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -7051,10 +7051,10 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<(), f32, O>> for gx::Unit<Motor<(), T, OV>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116>;
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -7638,7 +7638,7 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116> {
     type Output = Bivector<S, T, O>;
     #[inline(always)]
     fn transform(self, x: Bivector<S, T, O>) -> Bivector<S, T, O> {
@@ -7648,20 +7648,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T,
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116>> for Bivector<(Bivector<(), f32, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116>> for Bivector<(Bivector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116>) -> Self {
         let m = p.m;
         Bivector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[10], m[11], m[12], m[13], m[14], m[15], m[16], m[17], m[18], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[20], m[21], m[22], m[23], m[24], m[25], m[26], m[27], m[28], m[29], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[30], m[31], m[32], m[0], m[1], m[2], m[33], m[34], m[35], m[36], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[37], m[38], m[39], m[10], m[11], m[12], m[40], m[41], m[42], m[43], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[44], m[45], m[46], m[20], m[21], m[22], m[47], m[48], m[49], m[50], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[51], m[52], m[53], m[54], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[55], m[56], m[57], m[58], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[59], m[60], m[61], m[62], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[63], m[64], m[65], m[66], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[67], m[68], m[69], m[70], m[71], m[72], m[73], m[74], m[75], m[76], m[51], m[52], m[53], m[54], m[77]], [m[78], m[79], m[80], m[81], m[82], m[83], m[84], m[85], m[86], m[87], m[55], m[56], m[57], m[58], m[88]], [m[89], m[90], m[91], m[92], m[93], m[94], m[95], m[96], m[97], m[98], m[59], m[60], m[61], m[62], m[99]], [m[100], m[101], m[102], m[103], m[104], m[105], m[106], m[107], m[108], m[109], m[63], m[64], m[65], m[66], m[110]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[111], m[112], m[113], m[114], T::zero(), T::zero(), T::zero(), T::zero(), m[115]]] }
     }
 }
 
 #[cfg(feature = "batch")]
-impl<O: gx::Orientation> gx::batch::SandwichKernel<Bivector<(), f32, O>, gx::batch::Certified> for Motor {
-    type Y = Bivector<(), f32, O>;
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Bivector<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Bivector<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -7671,16 +7671,16 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Bivector<(), f32, O>, gx::bat
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116> {
-        gx::Prepare::<Bivector<(), f32, O>>::prepare(v)
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116> {
+        gx::Prepare::<Bivector<(), f64, O>>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, W, 116> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, W, 116> {
         let m = p.m;
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33]), f(m[34]), f(m[35]), f(m[36]), f(m[37]), f(m[38]), f(m[39]), f(m[40]), f(m[41]), f(m[42]), f(m[43]), f(m[44]), f(m[45]), f(m[46]), f(m[47]), f(m[48]), f(m[49]), f(m[50]), f(m[51]), f(m[52]), f(m[53]), f(m[54]), f(m[55]), f(m[56]), f(m[57]), f(m[58]), f(m[59]), f(m[60]), f(m[61]), f(m[62]), f(m[63]), f(m[64]), f(m[65]), f(m[66]), f(m[67]), f(m[68]), f(m[69]), f(m[70]), f(m[71]), f(m[72]), f(m[73]), f(m[74]), f(m[75]), f(m[76]), f(m[77]), f(m[78]), f(m[79]), f(m[80]), f(m[81]), f(m[82]), f(m[83]), f(m[84]), f(m[85]), f(m[86]), f(m[87]), f(m[88]), f(m[89]), f(m[90]), f(m[91]), f(m[92]), f(m[93]), f(m[94]), f(m[95]), f(m[96]), f(m[97]), f(m[98]), f(m[99]), f(m[100]), f(m[101]), f(m[102]), f(m[103]), f(m[104]), f(m[105]), f(m[106]), f(m[107]), f(m[108]), f(m[109]), f(m[110]), f(m[111]), f(m[112]), f(m[113]), f(m[114]), f(m[115])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Bivector<(), f32, O>, T, 116>, x: Bivector<(), T, O>) -> Bivector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Bivector<(), f64, O>, T, 116>, x: Bivector<(), T, O>) -> Bivector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]

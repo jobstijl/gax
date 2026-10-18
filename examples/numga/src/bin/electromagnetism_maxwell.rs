@@ -25,7 +25,7 @@ mod maxwell {
     // numga's API in full: the tests use parts the animation does not.
     #![cfg_attr(not(test), allow(dead_code))]
 
-    use gax::sta::{Bivector, Even, Scalar, Vector};
+    use gax::sta::{Bivector, Even, Scalar, Vector, oriented};
     use gax_numga_examples::rng::{Draw, Rng};
 
     pub type V = Vector<(), f64>;
@@ -57,7 +57,7 @@ mod maxwell {
 
     /// The spatial part of a vector as the rest observer `t` reads it, a vector of space (for
     /// drawing, of either orientation).
-    pub fn spatial<O: gax::Orientation>(v: Vector<(), f64, O>) -> Space {
+    pub fn spatial<O: gax::Orientation>(v: oriented::Vector<(), f64, O>) -> Space {
         Space::new(v.e1(), v.e2(), v.e3())
     }
 

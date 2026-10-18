@@ -12,21 +12,21 @@
 // Each binary that includes this module uses a different part of it.
 #![allow(dead_code)]
 
-use gax::pga3d::{Line, Motor, Plane, Point};
-use gax::{Intrinsic, Unit};
+use gax::Unit;
+use gax::pga3d::{Motor, Plane, Point, intrinsic};
 
 /// A point (a finite point, or a direction with weight 0).
 pub type P = Point<(), f64>;
 /// A plane.
 pub type Pl = Plane<(), f64>;
 /// A line, oriented along itself (intrinsic): a join of points, as an axis or a ray of light.
-pub type L = Line<(), f64, Intrinsic>;
+pub type L = intrinsic::Line<(), f64>;
 /// A rigid motion.
 pub type M = Unit<Motor<(), f64>>;
 /// A collineation, `Point <- Point`.
 pub type PointMap = Point<(Point,), f64>;
 /// An optical map of rays, `Line <- Line`.
-pub type LineMap = Line<(Line<(), f32, Intrinsic>,), f64, Intrinsic>;
+pub type LineMap = intrinsic::Line<(intrinsic::Line,), f64>;
 
 /// The origin.
 pub fn origin() -> P {
@@ -153,7 +153,7 @@ pub fn robot_arm(angles: [f64; 4]) -> ([PointMap; 5], [M; 4]) {
 /// A thin lens `Line <- Line` that focuses rays towards its centre: it shears a line by its
 /// incidence with the centre, `L - (centre & (L ^ plane)) / f`.
 pub fn thin_lens(centre: P, plane: Pl, focal: f64) -> LineMap {
-    let l = L::oriented_slot();
+    let l = L::slot();
     l - (centre & (l ^ plane)).gp(1.0 / focal)
 }
 
@@ -163,8 +163,7 @@ pub fn lens_train(focal_front: f64, focal_rear: f64, rear_gap: f64) -> (LineMap,
     let front_plane = Plane::new(0.0, 0.0, -1.0, 0.0);
     let front = thin_lens(origin(), front_plane, focal_front);
     let placement = up(rear_gap);
-    let rear = placement
-        >> thin_lens(origin(), front_plane, focal_rear).of(placement << L::oriented_slot());
+    let rear = placement >> thin_lens(origin(), front_plane, focal_rear).of(placement << L::slot());
     (front, rear, placement >> front_plane)
 }
 
@@ -172,7 +171,7 @@ pub fn lens_train(focal_front: f64, focal_rear: f64, rear_gap: f64) -> (LineMap,
 /// pull the world into the camera frame, join with the pupil into a ray, refract through the
 /// front and the rear lens (a composition of maps), and meet the sensor.
 pub fn lens_camera(pose: M, front: LineMap, rear: LineMap, pupil: P, sensor: Pl) -> PointMap {
-    let incoming: Line<(Point,), f64, Intrinsic> = (pose << Point::slot()) & pupil;
+    let incoming: intrinsic::Line<(Point,), f64> = (pose << Point::slot()) & pupil;
     rear.of(front.of(incoming)) ^ sensor
 }
 

@@ -101,14 +101,14 @@ fn zero<M: Extensor<Slots = ()>>() -> M {
 
 mod pga3d {
     use super::*;
-    use gax::pga3d::{Line, Motor, Plane, Point};
+    use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 
     fn unit_motor<T: Real>(rng: &mut Rng) -> Unit<Motor<(), T>> {
         let m: Motor<(), T> = rng.value(1.0);
         (m + Motor::from_coeffs(core::array::from_fn(|i| {
             if i == 0 { T::from_f64(2.0) } else { T::zero() }
         })))
-        .normalized()
+        .unit()
     }
 
     #[test]
@@ -152,12 +152,12 @@ mod pga3d {
         each_level(|| {
             for &n in LENS {
                 let m = unit_motor::<f32>(&mut rng);
-                let eye: Point = rng.value(1.0);
-                let screen: Plane = rng.value(1.0);
-                let square: Point<(Point,)> = (eye & (m >> Point::slot())) ^ screen;
-                let wide: Line<(Point,), f32, gax::Intrinsic> = eye & Point::slot();
-                let xs: Vec<Point> = rng.values(n, 1.0);
-                let want: Vec<Point> = xs.iter().map(|&x| square.of(x)).collect();
+                let eye: Point<(), f32> = rng.value(1.0);
+                let screen: Plane<(), f32> = rng.value(1.0);
+                let square: Point<(Point,), f32> = (eye & (m >> Point::slot())) ^ screen;
+                let wide: intrinsic::Line<(Point,), f32> = eye & Point::slot();
+                let xs: Vec<Point<(), f32>> = rng.values(n, 1.0);
+                let want: Vec<Point<(), f32>> = xs.iter().map(|&x| square.of(x)).collect();
                 let mut got = vec![Point::zero(); n];
                 square.of_slice(&xs, &mut got);
                 assert_lanes(&got, &want, 2e-5, &format!("Point <- Point of_slice n={n}"));
@@ -165,9 +165,8 @@ mod pga3d {
                 let mut out = Soa::new();
                 square.of_soa(&soa, &mut out);
                 assert_lanes(&out.to_vec(), &want, 2e-5, &format!("of_soa n={n}"));
-                let want: Vec<Line<(), f32, gax::Intrinsic>> =
-                    xs.iter().map(|&x| wide.of(x)).collect();
-                let mut got = vec![Line::zero(); n];
+                let want: Vec<intrinsic::Line<(), f32>> = xs.iter().map(|&x| wide.of(x)).collect();
+                let mut got = vec![intrinsic::Line::zero(); n];
                 wide.of_slice(&xs, &mut got);
                 assert_lanes(&got, &want, 2e-5, &format!("Line <- Point of_slice n={n}"));
                 let map64: Point<(Point,), f64> = unit_motor::<f64>(&mut rng) >> Point::slot();
@@ -221,7 +220,7 @@ mod pga2d {
         let mut rng = rng(4);
         let unit = |r: &mut Rng| {
             let m: Motor = r.value(1.0);
-            (m + Motor::new(2.0, 0.0, 0.0, 0.0)).normalized()
+            (m + Motor::new(2.0, 0.0, 0.0, 0.0)).unit()
         };
         check_sandwich::<Unit<Motor>, Point>(&mut rng, unit, 2e-5, "pga2d Unit<Motor> >> Point");
         check_sandwich::<Unit<Motor>, Line>(&mut rng, unit, 2e-5, "pga2d Unit<Motor> >> Line");

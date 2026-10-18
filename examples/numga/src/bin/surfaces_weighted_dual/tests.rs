@@ -13,7 +13,7 @@ const FRAMES: usize = 48;
 
 /// Each point's direction from the centre.
 fn images(points: &Field<Vector3>) -> Field<Vector3> {
-    points.map(|p| p.normalized().into_inner())
+    points.map(|p| p.normalized())
 }
 
 #[test]

@@ -204,7 +204,7 @@ macro_rules! motions {
         }
         #[inline]
         fn ad(h: Self::Twist) -> Self::TwistMap {
-            h.commutator($Twist::oriented_slot())
+            h.commutator($Twist::slot())
         }
     };
     (@brackets commutative $Twist:ident $Forque:ident) => {
@@ -214,7 +214,7 @@ macro_rules! motions {
         }
         #[inline]
         fn coadjoint(_: Self::Forque, _: Self::Twist) -> Self::Forque {
-            $Forque::zero()
+            Self::Forque::zero()
         }
         #[inline]
         fn ad(_: Self::Twist) -> Self::TwistMap {
@@ -227,8 +227,8 @@ macro_rules! motions {
     (@mobility $i:ident $Twist:ident $Forque:ident [proper]) => {{
         // Dualized, the forques proper are the twists; the rest leaves the twist kind.
         // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
-        let proper: $Twist<($Forque<(), f32, $crate::Intrinsic>,), T> =
-            $Forque::<(), T, $crate::Intrinsic>::oriented_slot().dual().cast::<$Twist>();
+        let proper: $Twist<(intrinsic::$Forque,), T> =
+            intrinsic::$Forque::<(), T>::slot().dual().cast::<$Twist>();
         $i.dual().cast::<$Twist>().inverse().of(proper)
     }};
     (@mobility $i:ident $Twist:ident $Forque:ident [$mi:ident = $mob:expr]) => {{
@@ -253,10 +253,10 @@ macro_rules! motions {
                 // Twists are extrinsic, a turn; forques, the duals of twists, and points, the duals
                 // of vectors (PGA's positions), are intrinsic (ADR-051).
                 type Twist = $Twist<(), T>;
-                type Forque = $Forque<(), T, $crate::Intrinsic>;
-                type Point = $Point<(), T, $crate::Intrinsic>;
-                type Inertia = $Forque<($Twist,), T, $crate::Intrinsic>;
-                type Mobility = $Twist<($Forque<(), f32, $crate::Intrinsic>,), T>;
+                type Forque = intrinsic::$Forque<(), T>;
+                type Point = intrinsic::$Point<(), T>;
+                type Inertia = intrinsic::$Forque<($Twist,), T>;
+                type Mobility = $Twist<(intrinsic::$Forque,), T>;
                 type TwistMap = $Twist<($Twist,), T>;
                 type Coords = [T; $n];
                 const DIM: usize = $n;
@@ -289,11 +289,11 @@ macro_rules! motions {
                 }
                 #[inline]
                 fn identity_map() -> Self::TwistMap {
-                    $Twist::oriented_slot()
+                    $Twist::slot()
                 }
                 #[inline]
                 fn point_inertia(p: Self::Point) -> Self::Inertia {
-                    p & p.commutator($Twist::oriented_slot())
+                    p & p.commutator($Twist::slot())
                 }
                 #[inline]
                 fn mobility(inertia: Self::Inertia) -> Self::Mobility {

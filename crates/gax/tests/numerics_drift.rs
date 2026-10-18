@@ -70,7 +70,7 @@ fn drifted_unit_motors_stay_rigid_on_points() {
 
 #[test]
 fn drifted_unit_motors_move_lines_and_planes_consistently() {
-    use gax::pga3d::{Line, Plane, Point};
+    use gax::pga3d::{Line, Point, intrinsic};
     // A line through two points and a plane through three: their images must be the join of
     // the images (up to scale), however the motor has drifted.
     let u = Line::<(), f64>::new(0.4, -0.3, 0.8, 0.9, -0.5, 0.2).exp();
@@ -81,10 +81,10 @@ fn drifted_unit_motors_move_lines_and_planes_consistently() {
     );
     for delta in DRIFTS {
         let m = Unit::new_unchecked(u.into_inner().gp(1.0 + delta));
-        let line: Line<(), f64, gax::Intrinsic> = m >> (p & q);
-        let joined: Line<(), f64, gax::Intrinsic> = (m >> p) & (m >> q);
-        let plane: Plane<(), f64, gax::Intrinsic> = m >> ((p & q) & r);
-        let plane_joined: Plane<(), f64, gax::Intrinsic> = ((m >> p) & (m >> q)) & (m >> r);
+        let line: intrinsic::Line<(), f64> = m >> (p & q);
+        let joined: intrinsic::Line<(), f64> = (m >> p) & (m >> q);
+        let plane: intrinsic::Plane<(), f64> = m >> ((p & q) & r);
+        let plane_joined: intrinsic::Plane<(), f64> = ((m >> p) & (m >> q)) & (m >> r);
         // Parallel up to scale: every 2x2 minor of the coefficient pair vanishes.
         let parallel = |a: &[f64], b: &[f64]| {
             let scale = a.iter().chain(b).fold(0.0f64, |s, x| s.max(x.abs()));
@@ -123,7 +123,7 @@ fn drifted_unit_motors_in_the_plane() {
     use gax::pga2d::{Motor, Point};
     let u = Motor::<(), f64>::rotation(Point::xy(0.5, -0.2), 0.9).into_inner()
         * Motor::translation(1.0, 2.0).into_inner();
-    let u = u.normalized();
+    let u = u.unit();
     let pts = [[0.3, -1.2, 0.0], [1.5, 0.2, 0.0], [-0.8, 0.9, 0.0]];
     for delta in DRIFTS {
         let m = Unit::new_unchecked(u.into_inner().gp(1.0 + delta));

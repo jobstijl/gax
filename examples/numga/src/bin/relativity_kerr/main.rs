@@ -109,7 +109,7 @@ fn camera_view() -> (Vec<Shine>, Vec<Light>) {
         r.sky.map_or(light(0.0, 0.0, 0.0, 1.0), |escape| {
             let d = escape.direction;
             let direction = vga3d::Vector::new(d.e1(), d.e2(), d.e3()).normalized();
-            sky.light(direction.into_inner(), star_width) * escape.weight as f32
+            sky.light(direction, star_width) * escape.weight as f32
         })
     });
     let crossings: Vec<_> = resolutions

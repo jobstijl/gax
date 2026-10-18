@@ -25,7 +25,7 @@
 //! Klein form along the pencil changes sign as they do.
 
 use gax::Complex;
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::phasor;
@@ -36,7 +36,6 @@ use gax_numga_examples::{
 
 mod klein {
     use super::*;
-    use gax::Intrinsic;
     use gax::pga3d::Pseudoscalar;
 
     /// A complex number.
@@ -52,7 +51,7 @@ mod klein {
     pub type CP = Point<(), C>;
     /// A quadric: a map from points to planes, zero on its points. A point joined with a line
     /// and met with others gives a plane through points, oriented within itself: intrinsic.
-    pub type Quadric = Plane<(Point,), f64, Intrinsic>;
+    pub type Quadric = intrinsic::Plane<(Point,), f64>;
 
     /// The Klein form: zero on one bivector twice exactly when it is a line, zero on two lines
     /// exactly when they meet.
@@ -77,7 +76,7 @@ mod klein {
 
     /// The plane at infinity as the join of the three directions, whose meet with a line is
     /// the line's point at infinity.
-    pub fn horizon() -> Plane<(), f64, Intrinsic> {
+    pub fn horizon() -> intrinsic::Plane<(), f64> {
         Point::direction(1.0, 0.0, 0.0)
             & Point::direction(0.0, 1.0, 0.0)
             & Point::direction(0.0, 0.0, 1.0)
@@ -96,7 +95,7 @@ mod klein {
     /// the right singular vectors of zero singular value. Returns the pencil's two bivectors.
     pub fn pencil(lines: &[L; 4]) -> [L; 2] {
         // The Klein form of two axes is a signed volume, intrinsic, and so are the misses.
-        let misses: Line<(Line,), f64, Intrinsic> =
+        let misses: intrinsic::Line<(Line,), f64> =
             lines.iter().map(|l| *l * klein().of(*l).dual()).sum();
         let (_, _, right) = misses.svd();
         [right[4], right[5]]
@@ -169,7 +168,7 @@ mod klein {
     /// The point of a line nearest the origin, at unit weight, and its unit direction (its
     /// point at infinity).
     pub fn frame(line: L) -> (P, P) {
-        let unit = line.normalized().into_inner();
+        let unit = line.normalized();
         (((origin() | unit) ^ unit).unitized(), unit ^ horizon())
     }
 

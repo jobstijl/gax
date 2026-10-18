@@ -16,24 +16,24 @@ use crate::slots::{Cat, SlotArr, SplitFirst};
 ///
 /// ```
 /// use gax::Intrinsic;
-/// use gax::pga3d::{Flector, Motor, Point, Rotor};
+/// use gax::pga3d::{Flector, Motor, Point, Rotor, intrinsic};
 /// // A point is intrinsic, and so is its product with a motor (ADR-051).
-/// let act: Flector<(Motor,), f64, Intrinsic> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
+/// let act: intrinsic::Flector<(Motor,), f64> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
 /// let r = Rotor::<(), f64>::from_coeffs([0.9, 0.1, 0.2, 0.3]);
 /// assert_eq!(act.of(r), act.of(r.cast::<Motor>())); // a rotor fills a motor slot
-/// let on_rotors: Flector<(Rotor,), f64, Intrinsic> = act.of(Rotor::slot()); // the slot narrowed
+/// let on_rotors: intrinsic::Flector<(Rotor,), f64> = act.of(Rotor::slot()); // the slot narrowed
 /// assert_eq!(on_rotors.of(r), act.of(r));
 /// ```
 ///
 /// ```
 /// use gax::Intrinsic;
-/// use gax::pga3d::{Line, Point};
+/// use gax::pga3d::{Line, Point, intrinsic};
 /// let q: Point<(), f64> = Point::xyz(0.0, 0.0, 1.0);
 /// // Joins of points are intrinsic lines (ADR-051).
-/// let lines_through_q: Line<(Point,), f64, Intrinsic> = q & Point::slot();   // a map
+/// let lines_through_q: intrinsic::Line<(Point,), f64> = q & Point::slot();   // a map
 /// let p = Point::xyz(1.0, 2.0, 3.0);
 /// assert_eq!(lines_through_q.of(p), q & p);                       // fill the slot
-/// let moved: Line<(Point,), f64, Intrinsic> = lines_through_q.of(Point::slot().gp(2.0)); // compose
+/// let moved: intrinsic::Line<(Point,), f64> = lines_through_q.of(Point::slot().gp(2.0)); // compose
 /// assert_eq!(moved.of(p), q & p.gp(2.0));
 /// ```
 #[diagnostic::on_unimplemented(

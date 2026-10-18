@@ -277,7 +277,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         });
         let _ = writeln!(
             e.out,
-            "/// Alias of [`{kind}`]{which}.\npub type {alias}<S = (), T = f32> = {kind}<S, T{o}>;\n",
+            "/// Alias of [`{kind}`]{which}.\npub type {alias}<S = (), T = f64> = {kind}<S, T{o}>;\n",
             kind = a.kind,
             alias = a.name
         );
@@ -291,7 +291,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
                 let k = &a.kind;
                 let marker = a
                     .orientation_name()
-                    .map_or_else(|| k.clone(), |t| format!("{k}<(), f32, gx::{t}>"));
+                    .map_or_else(|| k.clone(), |t| format!("{k}<(), f64, gx::{t}>"));
                 (a.name.clone(), k.clone(), marker)
             }));
         for (name, kind, marker) in names {
@@ -304,6 +304,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     if let Some(gate) = &cfg.gpu {
         e.gpu_types(gate);
     }
+    e.epilogue();
     (qualify(&e.out), e.stats)
 }
 
@@ -409,7 +410,7 @@ pub(crate) fn blade_ident(b: &str) -> String {
 /// trait for `{Kind}<S, T, O>` (or of its inherent methods).
 const IMPL_ALL: &str = "impl<S: Slots, T: Coef, O: gx::Orientation>";
 
-/// The head of an impl for every orientation `O`, mostly on a kind's marker `{Kind}<(), f32, O>`.
+/// The head of an impl for every orientation `O`, mostly on a kind's marker `{Kind}<(), f64, O>`.
 const IMPL_O: &str = "impl<O: gx::Orientation>";
 
 /// The zero slot array of the slot list `slots` (a type, `S` or `<S as Slots>`).
@@ -456,6 +457,52 @@ impl Emitter<'_> {
              use {core} as gx;\n\n",
             spec.name
         );
+        self.names();
+    }
+
+    /// The kinds by name (ADR-052): the module root names each in its default orientation,
+    /// [`intrinsic`] and [`extrinsic`] in theirs, all aliases of the structs in `oriented`,
+    /// which the rest of the module defines (closed by [`Self::epilogue`]).
+    fn names(&mut self) {
+        let spec = self.spec;
+        let mut root = String::from("pub use oriented::*;\n\n");
+        let mut fixed = [String::new(), String::new()];
+        for k in &spec.kinds {
+            let name = &k.name;
+            let default = crate::spec::orientation_name(k.intrinsic);
+            let doc = if k.doc.is_empty() {
+                format!("A `{name}` of the `{}` algebra.", spec.name)
+            } else {
+                k.doc.clone()
+            };
+            let _ = write!(
+                root,
+                "#[doc = {doc:?}]\n///\n/// In its default orientation, {}: [`oriented::{name}`] is the kind for any orientation,\n/// [`intrinsic::{name}`] and [`extrinsic::{name}`] name either one.\npub type {name}<S = (), T = f64> = oriented::{name}<S, T, gx::{default}>;\n\n",
+                default.to_lowercase()
+            );
+            for (o, text) in ["Intrinsic", "Extrinsic"].into_iter().zip(&mut fixed) {
+                let _ = write!(
+                    text,
+                    "    /// [`oriented::{name}`], {}.\n    pub type {name}<S = (), T = f64> = oriented::{name}<S, T, gx::{o}>;\n",
+                    o.to_lowercase()
+                );
+            }
+        }
+        self.out.push_str(&root);
+        for (o, text) in ["intrinsic", "extrinsic"].into_iter().zip(&fixed) {
+            let _ = write!(
+                self.out,
+                "/// Every kind of the algebra, {o} (ADR-051).\npub mod {o} {{\n    use super::{{gx, oriented}};\n\n{text}}}\n\n"
+            );
+        }
+        self.out.push_str(
+            "/// The kinds as structs generic over their orientation `O` (ADR-051), with every\n/// operation; the module root and [`intrinsic`] and [`extrinsic`] name them with `O` fixed.\npub mod oriented {\nuse super::gx;\n",
+        );
+    }
+
+    /// The end of `pub mod oriented`, after the parts.
+    fn epilogue(&mut self) {
+        let _ = write!(self.out, "\n{}\n}}\n", crate::split::EPILOGUE);
     }
 
     /// Start a part of the module (see [`crate::split`]): a marker comment, which the

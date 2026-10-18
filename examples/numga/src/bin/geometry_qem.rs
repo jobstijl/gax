@@ -8,7 +8,7 @@
 //! ridge edge of a small patch into that vertex, the two faces flanking the edge shrinking away,
 //! with each quadric's error ellipsoid drawn around its vertex.
 
-use gax::pga3d::{Motor, Plane, Point};
+use gax::pga3d::{Motor, Plane, Point, intrinsic};
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
@@ -22,7 +22,7 @@ mod qem {
     pub type P = Point<(), f64>;
     /// A face's supporting plane: the join of its corners, oriented by their winding
     /// (intrinsic).
-    pub type Pl = Plane<(), f64, gax::Intrinsic>;
+    pub type Pl = intrinsic::Plane<(), f64>;
     /// A quadric: a polarity, each point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
 
@@ -49,11 +49,7 @@ mod qem {
 
     /// The faces' supporting planes: the join of their three vertices, normalized.
     pub fn face_planes(vertices: &[P; 6], faces: &[[usize; 3]; 6]) -> [Pl; 6] {
-        faces.map(|[i, j, k]| {
-            (vertices[i] & vertices[j] & vertices[k])
-                .normalized()
-                .into_inner()
-        })
+        faces.map(|[i, j, k]| (vertices[i] & vertices[j] & vertices[k]).normalized())
     }
 
     /// The dyad of a plane: `P (P & Point)`, its squared distance to a point as a quadric.

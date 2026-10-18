@@ -183,7 +183,7 @@ mod pga3d {
         ) {
             let u = line(scaled(d, 0.7), m).exp().into_inner();
             let small = u.gp(10f64.powf(ls));
-            let (e, s) = diff(&small.normalized().into_inner(), &u);
+            let (e, s) = diff(&small.normalized(), &u);
             prop_assert!(e <= 8.0 * EPS * s, "{e:e}");
         }
 
@@ -197,9 +197,9 @@ mod pga3d {
             let u = line(scaled(d, 0.7), m).exp().into_inner();
             let p = 10f64.powf(lp);
             let x = u * Motor::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, p);
-            let (e, s) = diff(&x.normalized().into_inner(), &u);
+            let (e, s) = diff(&x.normalized(), &u);
             prop_assert!(e <= 16.0 * EPS * s * (1.0 + p), "p = {p:e}: {e:e}");
-            prop_assert!(unit_error(x.normalized().into_inner()) <= 16.0 * EPS * (1.0 + p));
+            prop_assert!(unit_error(x.normalized()) <= 16.0 * EPS * (1.0 + p));
         }
     }
 }

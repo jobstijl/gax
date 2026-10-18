@@ -4,6 +4,7 @@
 //! The batch kernels run on the best SIMD level the CPU has, detected at run time. Run with
 //! `cargo run --release --example batch_particles --features batch`.
 
+use gax::Unit;
 use gax::batch::{self, BatchTransform, Soa};
 use gax::pga3d::{Motor, Point};
 use std::time::Instant;
@@ -11,14 +12,16 @@ use std::time::Instant;
 fn main() {
     let n = 100_000;
     let frames = 100;
-    let points: Vec<Point> = (0..n)
+    // In f32, as particles on a GPU would be.
+    let points: Vec<Point<(), f32>> = (0..n)
         .map(|i| {
             let a = i as f32 * 0.001;
             Point::xyz(a.sin() * 10.0, a.cos() * 10.0, (i % 100) as f32 * 0.1)
         })
         .collect();
     // A little screw motion per frame.
-    let step = Motor::translation(0.0, 0.0, 0.01) * Motor::rotation_about(0.0, 0.0, 1.0, 0.02);
+    let step: Unit<Motor<(), f32>> =
+        Motor::translation(0.0, 0.0, 0.01) * Motor::rotation_about(0.0, 0.0, 1.0, 0.02);
     println!(
         "{n} points, {frames} frames, SIMD level: {}",
         batch::level_name(batch::level())

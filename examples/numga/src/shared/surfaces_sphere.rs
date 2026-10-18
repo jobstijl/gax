@@ -57,5 +57,5 @@ pub fn icosphere(levels: usize) -> Mesh {
             .collect();
         mesh = Mesh::new(vertices, mesh.split_faces());
     }
-    mesh.with_vertices(mesh.vertices.map(|v| v.normalized().into_inner()))
+    mesh.with_vertices(mesh.vertices.map(|v| v.normalized()))
 }

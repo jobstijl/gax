@@ -322,7 +322,7 @@ fn current_arrows(
             .sum::<Vector3>();
         let shown = strength.powf(CURRENT_GAMMA);
         let length = ARROW_LENGTH * RADIUS * f64::from(shown);
-        let half = current.normalized().into_inner() * (length / 2.0);
+        let half = current.normalized() * (length / 2.0);
         let light = palette::sky().faded(shown);
         ax.arrow(
             c,

@@ -143,8 +143,8 @@ mod tests {
     /// difference's direction and the field's are parallel.
     fn runs_along(curve: &[Spatial], field: impl Fn(usize) -> Spatial) -> bool {
         (1..curve.len() - 1).all(|i| {
-            let tangent = (curve[i + 1] - curve[i - 1]).normalized().into_inner();
-            let along = field(i).normalized().into_inner();
+            let tangent = (curve[i + 1] - curve[i - 1]).normalized();
+            let along = field(i).normalized();
             (tangent ^ along).max_abs_diff(&vga3d::Bivector::zero()) < TANGENT_TOLERANCE
         })
     }

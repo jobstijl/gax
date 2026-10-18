@@ -731,10 +731,10 @@ fn sandwich_transforms(sw: &Sandwich, check: &str, value: &str, m: &MapEntries, 
 fn sandwich_prepared(sw: &Sandwich, check: &str, m: &MapEntries, s: &mut String) -> String {
     let (xn, on, self_ty_any, vexpr, vkind) = (sw.xn, sw.on, &sw.self_ty_any, sw.vexpr, &sw.vkind);
     let nst = m.stored.len();
-    let prep_ty = format!("gx::Prepared<{vkind}, {xn}<(), f32, O>, T, {nst}>");
+    let prep_ty = format!("gx::Prepared<{vkind}, {xn}<(), f64, O>, T, {nst}>");
     let _ = write!(
         s,
-        "impl<T: Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<{xn}<(), f32, O>> for {self_ty_any} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
+        "impl<T: Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<{xn}<(), f64, O>> for {self_ty_any} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
         m.lets,
         m.stored.join(", ")
     );
@@ -746,9 +746,9 @@ fn sandwich_prepared(sw: &Sandwich, check: &str, m: &MapEntries, s: &mut String)
     );
     let _ = write!(
         s,
-        "impl<T: Coef, O: gx::Orientation> From<{prep_ty}> for {on}<({xn}<(), f32, O>,), T, O> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {}\n    }}\n}}\n\n",
+        "impl<T: Coef, O: gx::Orientation> From<{prep_ty}> for {on}<({xn}<(), f64, O>,), T, O> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {}\n    }}\n}}\n\n",
         sw.result(
-            &format!("({xn}<(), f32, O>,)"),
+            &format!("({xn}<(), f64, O>,)"),
             &format!("[{}]", m.dense(sw.nxv).join(", "))
         )
     );
@@ -770,7 +770,7 @@ fn sandwich_batch(sw: &Sandwich, gate: &str, prep_ty: &str, nst: usize, s: &mut 
     };
     let _ = write!(
         s,
-        "{gate}\n{IMPL_O} gx::batch::SandwichKernel<{xn}<(), f32, O>, gx::batch::{cert}> for {vn} {{\n    type Y = {on}<(), f32, O>;\n    type Versor<T: gx::Coef> = {self_ty};\n    type Prepared<T: gx::Coef> = {prep_ty};\n    #[inline(always)]\n    fn wrap<T: gx::Coef>(v: {vn}<(), T>) -> {self_ty} {{\n        {wrap}\n    }}\n    #[inline(always)]\n    fn unwrap<T: gx::Coef>(v: {self_ty}) -> {vn}<(), T> {{\n        {unwrap}\n    }}\n    #[inline(always)]\n    fn prepare<T: gx::Coef>(v: {self_ty}) -> {prep_ty} {{\n        gx::Prepare::<{xn}<(), f32, O>>::prepare(v)\n    }}\n    #[inline(always)]\n    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: {prep_ty}, {fparam}: impl FnMut(T) -> W) -> gx::Prepared<{vkind}, {xn}<(), f32, O>, W, {nst}> {{\n        let m = p.m;\n        gx::Prepared::from_entries([{mapped}])\n    }}\n    #[inline(always)]\n    fn apply_prepared<T: gx::Coef>(p: {prep_ty}, x: {xn}<(), T, O>) -> {on}<(), T, O> {{\n        gx::Transform::transform(p, x)\n    }}\n    #[inline(always)]\n    fn apply<T: gx::Coef>(v: {self_ty}, x: {xn}<(), T, O>) -> {on}<(), T, O> {{\n        gx::Transform::transform(v, x)\n    }}\n}}\n\n"
+        "{gate}\n{IMPL_O} gx::batch::SandwichKernel<{xn}<(), f64, O>, gx::batch::{cert}> for {vn} {{\n    type Y = {on}<(), f64, O>;\n    type Versor<T: gx::Coef> = {self_ty};\n    type Prepared<T: gx::Coef> = {prep_ty};\n    #[inline(always)]\n    fn wrap<T: gx::Coef>(v: {vn}<(), T>) -> {self_ty} {{\n        {wrap}\n    }}\n    #[inline(always)]\n    fn unwrap<T: gx::Coef>(v: {self_ty}) -> {vn}<(), T> {{\n        {unwrap}\n    }}\n    #[inline(always)]\n    fn prepare<T: gx::Coef>(v: {self_ty}) -> {prep_ty} {{\n        gx::Prepare::<{xn}<(), f64, O>>::prepare(v)\n    }}\n    #[inline(always)]\n    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: {prep_ty}, {fparam}: impl FnMut(T) -> W) -> gx::Prepared<{vkind}, {xn}<(), f64, O>, W, {nst}> {{\n        let m = p.m;\n        gx::Prepared::from_entries([{mapped}])\n    }}\n    #[inline(always)]\n    fn apply_prepared<T: gx::Coef>(p: {prep_ty}, x: {xn}<(), T, O>) -> {on}<(), T, O> {{\n        gx::Transform::transform(p, x)\n    }}\n    #[inline(always)]\n    fn apply<T: gx::Coef>(v: {self_ty}, x: {xn}<(), T, O>) -> {on}<(), T, O> {{\n        gx::Transform::transform(v, x)\n    }}\n}}\n\n"
     );
 }
 

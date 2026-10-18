@@ -7,7 +7,7 @@
 #![cfg(all(feature = "pga2d", feature = "pga3d"))]
 
 use gax::ApproxEq;
-use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Translator};
+use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Translator, intrinsic};
 use gax::{Unit, pga2d};
 use proptest::prelude::*;
 
@@ -30,7 +30,7 @@ fn plane() -> impl Strategy<Value = Plane<(), f64>> {
 }
 /// A line through two points apart: a simple bivector, with any scale, intrinsic as a join
 /// (ADR-051).
-fn line() -> impl Strategy<Value = Line<(), f64, gax::Intrinsic>> {
+fn line() -> impl Strategy<Value = intrinsic::Line<(), f64>> {
     (point(), point())
         .prop_filter("apart", |(p, q)| {
             let (a, b) = (p.to_euclidean(), q.to_euclidean());
@@ -50,14 +50,14 @@ proptest! {
     fn between_planes(a in plane(), b in plane()) {
         prop_assume!(not_opposite(a, b));
         let m = Motor::between(a, b);
-        prop_assert!((m >> a).normalized().into_inner().approx_eq(&b.normalized().into_inner(), 1e-9));
+        prop_assert!((m >> a).normalized().approx_eq(&b.normalized(), 1e-9));
     }
 
     #[test]
     fn between_lines(a in line(), b in line()) {
         prop_assume!(not_opposite(a, b));
         let m = Motor::between(a, b);
-        prop_assert!((m >> a).normalized().into_inner().approx_eq(&b.normalized().into_inner(), 1e-9));
+        prop_assert!((m >> a).normalized().approx_eq(&b.normalized(), 1e-9));
     }
 
     /// Points of either weight: the translation between them, a pure translation.
@@ -73,7 +73,7 @@ proptest! {
     #[test]
     fn between_is_the_square_root_of_the_ratio(a in line(), b in line()) {
         prop_assume!(not_opposite(a, b));
-        let (a, b) = (a.normalized().into_inner(), b.normalized().into_inner());
+        let (a, b) = (a.normalized(), b.normalized());
         let root = (b / a).sqrt();
         prop_assert!(root.into_inner().approx_eq(&Motor::between(a, b).into_inner(), 1e-9));
         prop_assert!((root * root).into_inner().approx_eq(&(b / a), 1e-9));
@@ -85,7 +85,7 @@ proptest! {
         prop_assume!(a.e1().hypot(a.e2()) > 0.3 && b.e1().hypot(b.e2()) > 0.3);
         prop_assume!((b / a).normalized().s() > -0.9);
         let m = pga2d::Motor::between(a, b);
-        prop_assert!((m >> a).normalized().into_inner().approx_eq(&b.normalized().into_inner(), 1e-9));
+        prop_assert!((m >> a).normalized().approx_eq(&b.normalized(), 1e-9));
         let (p, q) = (pga2d::Point::xy(a.e1(), a.e2()), pga2d::Point::new(b.e0(), b.e1(), -0.5));
         let t = pga2d::Motor::between(p, q);
         prop_assert!((t >> p).unitized().approx_eq(&q.unitized(), 1e-9));
@@ -94,16 +94,16 @@ proptest! {
     /// Division is the product with the inverse, and undoes it; the dividend may be a map.
     #[test]
     fn division_undoes_the_product(a in line(), b in plane(), p in point()) {
-        prop_assert!(((a * b) / b).approx_eq(&Motor::from(a), 1e-9));
-        let pb: Motor<(), f64, gax::Intrinsic> = p * b; // grades 2 and 4
-        prop_assert!((pb / b).approx_eq(&gax::pga3d::Flector::from(p), 1e-9));
+        prop_assert!(((a * b) / b).approx_eq(&a.into(), 1e-9));
+        let pb: intrinsic::Motor<(), f64> = p * b; // grades 2 and 4
+        prop_assert!((pb / b).approx_eq(&p.into(), 1e-9));
         let map: Motor<(Plane,), f64> = Plane::slot() / b;
         prop_assert!(map.of(b).approx_eq(&Motor::from(gax::pga3d::Scalar::new(1.0)), 1e-12));
         prop_assert!((p / 2.0).approx_eq(&(p * 0.5), 0.0));
         // By a unit versor: the reverse, the same as the inverse.
         let u = (Line::new(0.3, -0.2, 0.5, 0.1, 0.7, -0.4) * 0.8).exp();
         prop_assert!((a / u).approx_eq(&(a / u.into_inner()), 1e-12));
-        prop_assert!(((p / u) * u.into_inner()).approx_eq(&gax::pga3d::Flector::from(p), 1e-12));
+        prop_assert!(((p / u) * u.into_inner()).approx_eq(&p.into(), 1e-12));
     }
 }
 
@@ -145,12 +145,8 @@ fn between_nearly_opposite_is_precise_in_f32() {
             f64::from(err) < 2e-7 / delta,
             "planes {delta:e} from a half turn: off by {err:e}"
         );
-        let a = (Point::<(), f32>::xyz(0.0, 0.0, 1.0) & Point::xyz(1.0, 0.0, 1.0))
-            .normalized()
-            .into_inner();
-        let b = (Point::<(), f32>::xyz(0.0, 0.5, 0.0) & Point::xyz(c, 0.5 + s, 0.0))
-            .normalized()
-            .into_inner();
+        let a = (Point::<(), f32>::xyz(0.0, 0.0, 1.0) & Point::xyz(1.0, 0.0, 1.0)).normalized();
+        let b = (Point::<(), f32>::xyz(0.0, 0.5, 0.0) & Point::xyz(c, 0.5 + s, 0.0)).normalized();
         let err = (Motor::between(a, b) >> a)
             .c
             .iter()

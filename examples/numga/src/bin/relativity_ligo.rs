@@ -230,7 +230,7 @@ fn sky_maps() -> &'static Sky {
                 .collect(),
             alike: pairs
                 .iter()
-                .map(|[h, l]| (h.normalized().into_inner() | l.normalized().into_inner()).s())
+                .map(|[h, l]| (h.normalized() | l.normalized()).s())
                 .collect(),
             frames,
         }
@@ -408,7 +408,7 @@ mod tests {
 
     /// The smallest turn that carries the unit vector `from` to the unit vector `to`.
     fn turning(from: V, to: V) -> Frame {
-        (gax::vga3d::Rotor::from(gax::vga3d::Scalar::new(1.0)) + to * from).normalized()
+        (gax::vga3d::Rotor::from(gax::vga3d::Scalar::new(1.0)) + to * from).unit()
     }
 
     /// numga's scenario checks: straight overhead each detector the sensitivity is one, and
@@ -422,7 +422,7 @@ mod tests {
         for d in &DETECTORS {
             let arms = d.arms();
             assert!((sensitivity(responses(arms, d.site())) - 1.0).abs() < 1e-12);
-            let halfway = (arms[0] + arms[1]).normalized().into_inner();
+            let halfway = (arms[0] + arms[1]).normalized();
             let blind = turning(x(), halfway);
             assert!(sensitivity(responses(arms, blind)) < 1e-12);
         }

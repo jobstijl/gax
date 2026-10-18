@@ -101,8 +101,8 @@ mod foucault {
         let one = Rotor::new(1.0, 0.0, 0.0, 0.0);
         sites
             .windows(2)
-            .map(|ab| (one + ab[1] * ab[0]).normalized())
-            .fold(one.normalized(), |total, step| step * total)
+            .map(|ab| (one + ab[1] * ab[0]).unit())
+            .fold(one.unit(), |total, step| step * total)
     }
 
     /// The latitudes in degrees: the equator, thirty degrees north, the Panthéon in Paris

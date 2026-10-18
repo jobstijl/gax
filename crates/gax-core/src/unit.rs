@@ -79,11 +79,11 @@ impl<M> Unit<M> {
     /// assert!(back.approx_eq(&twist, 1e-12));
     /// ```
     #[inline(always)]
-    pub fn log<B>(self) -> B
+    pub fn log(self) -> M::Output
     where
-        Self: crate::ops::Log<B>,
+        M: crate::ops::Log,
     {
-        crate::ops::Log::log(self)
+        M::log(self)
     }
 }
 
@@ -94,7 +94,7 @@ impl<M> Unit<M> {
 #[diagnostic::on_unimplemented(
     message = "the logarithm needs a certified unit versor, a `gax::Unit`, not a plain `{Self}`",
     label = "`log` is a method of `Unit`",
-    note = "certify it first with `.normalized()` (`m.normalized().log()`), or keep the `Unit` that `exp()`, the unit constructors such as `rotation_about`, `sqrt()` and products of units return",
+    note = "certify it first with `.unit()` (`m.unit().log()`), or keep the `Unit` that `exp()`, the unit constructors such as `rotation_about`, `sqrt()` and products of units return",
     note = "`Unit::new_unchecked(m)` certifies a versor already known to satisfy `m ~m = 1` without arithmetic"
 )]
 pub trait LogNeedsUnit<B> {

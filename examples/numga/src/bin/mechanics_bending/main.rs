@@ -99,7 +99,7 @@ fn scene() -> &'static Scene {
 }
 
 /// A triangle's edge: the join of two of its corners, an intrinsic line.
-type Edge = gax::pga2d::Line<(), f64, gax::Intrinsic>;
+type Edge = gax::pga2d::intrinsic::Line<(), f64>;
 
 /// Each triangle's edges as lines, the triangle on their positive sides.
 fn edges(section: &sections::Section) -> Vec<[Edge; 3]> {
@@ -425,7 +425,7 @@ mod tests {
             }
             // A load square to the weakest axis bends the beam along the load alone: the tip
             // stays in the plane of the beam's axis and the load.
-            let weakest = body.principal[0].normalized().into_inner();
+            let weakest = body.principal[0].normalized();
             let load = in_space(quarter >> super::heading(weakest)) * LOAD;
             let along_principal = cantilever(body, load);
             let along = P3::direction(0.0, 0.0, 1.0);

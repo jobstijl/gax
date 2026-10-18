@@ -19,17 +19,16 @@ use gax_numga_examples::{
 };
 
 mod cayley_klein {
-    use gax::pga2d::{Line, Point};
-    use gax::{Extrinsic, Intrinsic};
+    use gax::pga2d::{Line, extrinsic, intrinsic};
     use gax_numga_examples::signal::phasor;
 
     // Every line here is the join of two points and every point the meet of two lines. A join
     // is oriented along itself and a meet by what turns around it, so the lines are intrinsic
     // and the points extrinsic (ADR-051).
-    pub type P = Point<(), f64, Extrinsic>;
-    pub type L = Line<(), f64, Intrinsic>;
+    pub type P = extrinsic::Point<(), f64>;
+    pub type L = intrinsic::Line<(), f64>;
     /// A polarity, points to lines (`Line <- Point`), on points of the constructions.
-    pub type Polarity = Line<(Point<(), f32, Extrinsic>,), f64, Intrinsic>;
+    pub type Polarity = intrinsic::Line<(extrinsic::Point,), f64>;
 
     /// The point at `(x, y)`, made as the constructions make their points: the meet of the
     /// lines `x = a` and `y = b`.
@@ -41,7 +40,7 @@ mod cayley_klein {
     /// `x² + y² ± w² = 0`. With `-` it is the unit circle (hyperbolic), with `+` a conic with no
     /// real points (elliptic).
     pub fn absolute(sign: f64) -> Polarity {
-        let dyad = |l: Line<(), f64>| l * (l & P::oriented_slot());
+        let dyad = |l: Line<(), f64>| l * (l & P::slot());
         dyad(Line::new(1.0, 0.0, 0.0))
             + dyad(Line::new(0.0, 1.0, 0.0))
             + dyad(Line::new(0.0, 0.0, 1.0)).gp(sign)
@@ -101,7 +100,7 @@ mod cayley_klein {
 
         fn angle(l: L, m: L) -> f64 {
             let line = |l: L| metric::Vector::<(), f64>::new(l.e1(), l.e2(), l.e0());
-            let log: metric::Bivector<(), f64> = (line(m) * line(l)).normalized().log();
+            let log: metric::Bivector<(), f64> = (line(m) * line(l)).unit().log();
             log.norm()
         }
 
@@ -109,7 +108,7 @@ mod cayley_klein {
         /// `A` to `B` is the rotor `-B A`.
         fn distance(a: P, b: P) -> f64 {
             let point = |p: P| metric::Vector::<(), f64>::new(p.e20(), p.e01(), p.e12());
-            let log: metric::Bivector<(), f64> = (-(point(b) * point(a))).normalized().log();
+            let log: metric::Bivector<(), f64> = (-(point(b) * point(a))).unit().log();
             log.norm()
         }
     }
@@ -178,7 +177,7 @@ mod cayley_klein {
     /// invariant equation `(P ∨ C(c))² = cosh(r)² (c ∨ C(c)) (P ∨ C(P))` with the root cleared.
     pub fn circle(c: Polarity, centre: P, r: f64) -> Polarity {
         let polar = c.of(centre);
-        polar * (polar & P::oriented_slot()) - c.gp((centre & polar).s() * r.cosh().powi(2))
+        polar * (polar & P::slot()) - c.gp((centre & polar).s() * r.cosh().powi(2))
     }
 
     /// The scene at phase `t` (radians).
@@ -358,12 +357,12 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::cayley_klein::*;
-    use gax::pga2d::{Line, Point};
-    use gax::{ApproxEq, Extrinsic, Intrinsic};
+    use gax::ApproxEq;
+    use gax::pga2d::{extrinsic, intrinsic};
     use gax_numga_examples::measure;
 
     /// A pole map, lines to points (`Point <- Line`), on lines of the constructions.
-    type Pole = Point<(Line<(), f32, Intrinsic>,), f64, Extrinsic>;
+    type Pole = extrinsic::Point<(intrinsic::Line,), f64>;
 
     fn assert_close(a: f64, b: f64, tol: f64) {
         assert!((a - b).abs() <= tol, "{a} vs {b}");

@@ -262,10 +262,10 @@ fn unit_exp_method(doc: &str, on: &str, lets: &str, outs: &[String]) -> String {
 }
 
 /// `gx::Log` of a unit `{name}` with the bivector kind `{on}`, from the lines `lets` after
-/// `let x = self.into_inner().c;` and the result's coefficients `outs`.
+/// `let x = unit.into_inner().c;` and the result's coefficients `outs`.
 fn log_impl(name: &str, on: &str, lets: &str, outs: &[String]) -> String {
     format!(
-        "impl<T: gx::Real> gx::Log<{on}<(), T, gx::Extrinsic>> for gx::Unit<{name}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
+        "impl<T: gx::Real> gx::Log for {name}<(), T, gx::Extrinsic> {{\n    type Output = {on}<(), T, gx::Extrinsic>;\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(unit: gx::Unit<Self>) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = unit.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
         outs.join(", ")
     )
 }
@@ -295,7 +295,7 @@ fn emit_normalized_by(
     );
     let _ = write!(
         body,
-        "{}    #[inline(always)]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({}::from_coeffs([{}]))\n    }}\n\n",
+        "{}    #[inline(always)]\n    pub fn unit(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({}::from_coeffs([{}]))\n    }}\n\n    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)\n    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.\n    #[inline(always)]\n    pub fn normalized(self) -> Self {{\n        self.unit().into_inner()\n    }}\n\n",
         method_doc(doc),
         k.name,
         outs.join(", ")
@@ -472,7 +472,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if let Some(on) = &meta.log {
         let _ = write!(
             body_ext,
-            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.normalized().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T, gx::Extrinsic>\n    where\n        Self: gx::LogNeedsUnit<{on}<(), T, gx::Extrinsic>>,\n    {{\n        gx::LogNeedsUnit::log(self)\n    }}\n\n"
+            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.unit().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T, gx::Extrinsic>\n    where\n        Self: gx::LogNeedsUnit<{on}<(), T, gx::Extrinsic>>,\n    {{\n        gx::LogNeedsUnit::log(self)\n    }}\n\n"
         );
     }
 
@@ -482,7 +482,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         meta.sqrt = true;
         let _ = write!(
             body_ext,
-            "    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).\n    #[inline(always)]\n    pub fn sqrt(self) -> gx::Unit<Self> {{\n        let mut c = self.c;\n        c[{si}] = c[{si}] {} T::one();\n        {name}::from_coeffs(c).normalized()\n    }}\n\n",
+            "    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).\n    #[inline(always)]\n    pub fn sqrt(self) -> gx::Unit<Self> {{\n        let mut c = self.c;\n        c[{si}] = c[{si}] {} T::one();\n        {name}::from_coeffs(c).unit()\n    }}\n\n",
             if ss > 0 { "+" } else { "-" }
         );
     }
@@ -1158,9 +1158,9 @@ fn emit_log_fallback(
         .map(|(pos, flip)| format!("{}l.c[{pos}] * f", if flip { "-" } else { "" }))
         .collect();
     let head = format!(
-        "impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{"
+        "impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{\n    type Output = {bn}<(), T, gx::Extrinsic>;\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(unit: gx::Unit<Self>) -> {bn}<(), T, gx::Extrinsic> {{"
     );
-    let start = "self.into_inner()";
+    let start = "unit.into_inner()";
     let _ = write!(
         traits,
         "{head}
@@ -1411,7 +1411,8 @@ fn emit_log_6d(
     }}
 }}
 
-impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{
+impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
+    type Output = {bn}<(), T, gx::Extrinsic>;
     /// The logarithm of a unit versor, in closed form through the invariant decomposition
     /// (docs/log6d.md): `u_j = cosh²(μ_j)` of the three commuting planes are the roots of a
     /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
@@ -1424,9 +1425,9 @@ impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, g
     /// principal logarithm: rotations below a half turn in each invariant plane where
     /// `⟨R⟩₀ > 0`, boosts and dilations of any size.
     #[inline]
-    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{
+    fn log(unit: gx::Unit<Self>) -> {bn}<(), T, gx::Extrinsic> {{
         T::vectorize(#[inline(always)] move || {{
-        let x = self.into_inner();
+        let x = unit.into_inner();
         let ([r0, p1, p2, p3], [g1, g2, g3]) = x.log_invariants();
         let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
         let closed: [T; {n}] = core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]);
@@ -1534,7 +1535,8 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     }}
 }}
 
-impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{
+impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
+    type Output = {bn}<(), T, gx::Extrinsic>;
     /// The logarithm of a unit versor, in closed form through the invariant decomposition
     /// (docs/log6d.md §9): `u_j = cosh²(μ_j)` of the four commuting planes are the roots of a
     /// quartic in the scalar parts of `R`'s grade parts squared, and `log R` is
@@ -1546,9 +1548,9 @@ impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, g
     /// bivectors and `E = ∏(−b̂)`. The principal logarithm: rotations below a half turn in each
     /// invariant plane where `⟨R⟩₀ > 0`, boosts and dilations of any size.
     #[inline]
-    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{
+    fn log(unit: gx::Unit<Self>) -> {bn}<(), T, gx::Extrinsic> {{
         T::vectorize(#[inline(always)] move || {{
-        let x = self.into_inner();
+        let x = unit.into_inner();
         let ([r0, p1, p2, p3, p4], g) = x.log_invariants();
         let p = [p1, p2, p3, p4];
         let w = gx::study::log_weights_8d(p, r0);

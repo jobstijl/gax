@@ -1,8 +1,8 @@
 //! numga's origami `core.py`: crease construction, polygon splitting and rigid folds of a
 //! sheet of paper, in PGA3D.
 
-use gax::pga3d::{Line, Motor, Plane, Point};
-use gax::{Intrinsic, Unit};
+use gax::Unit;
+use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 use std::ops::Range;
 
 pub type P = Point<(), f64>;
@@ -10,26 +10,21 @@ pub type Pl = Plane<(), f64>;
 pub type L = Line<(), f64>;
 /// A line from one point of the paper to another, oriented along itself (intrinsic), as their
 /// join is.
-pub type Edge = Line<(), f64, Intrinsic>;
+pub type Edge = intrinsic::Line<(), f64>;
 pub type M = Unit<Motor<(), f64>>;
 
 /// The perpendicular bisector plane of two equally weighted finite points: the inner product of
 /// their join with their sum, the plane through their midpoint orthogonal to the line.
 pub fn point_bisector(first: P, second: P) -> Pl {
-    ((first & second) | (first + second))
-        .normalized()
-        .into_inner()
+    ((first & second) | (first + second)).normalized()
 }
 
 /// The external angle bisector of two oriented lines crossing at a point: the plane through
 /// the crossing orthogonal to the sum of the unit lines. Folding along it lays one line on the
 /// other, reversed.
 pub fn line_bisector(first: Edge, second: Edge, crossing: P) -> Pl {
-    let (first, second) = (
-        first.normalized().into_inner(),
-        second.normalized().into_inner(),
-    );
-    ((first + second) | crossing).normalized().into_inner()
+    let (first, second) = (first.normalized(), second.normalized());
+    ((first + second) | crossing).normalized()
 }
 
 /// Which side of a unit plane a point lies on, beyond a tolerance.
@@ -236,7 +231,7 @@ impl Paper {
 /// The motor of each face for a fold by `angle` about `hinge`: the turn for the turning faces,
 /// the identity for the others.
 pub fn turns(hinge: L, turning: &[bool], angle: f64) -> Vec<M> {
-    let hinge = hinge.normalized().into_inner();
+    let hinge = hinge.normalized();
     let turn = hinge.gp(angle / 2.0).exp();
     let still = hinge.gp(0.0).exp();
     turning

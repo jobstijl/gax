@@ -100,7 +100,10 @@ mod arm {
         // Each axis is a line to turn about: the meet of two planes, ordered for a right-handed
         // turn under `exp(-joint / 2)` (numga's `y ^ x` and `x ^ (z - w)` under `exp(joint / 2)`).
         // The pitch axes meet the planes `z = 1` and `z = 2`, through the elbow and the wrist.
-        let [x, y] = [Plane::new(1.0, 0.0, 0.0, 0.0), Plane::new(0.0, 1.0, 0.0, 0.0)];
+        let [x, y] = [
+            Plane::new(1.0, 0.0, 0.0, 0.0),
+            Plane::new(0.0, 1.0, 0.0, 0.0),
+        ];
         let height = |h: f64| Plane::new(0.0, 0.0, 1.0, -h);
         let axis = [x ^ y, height(1.0) ^ x, height(2.0) ^ x];
         let tip_home = Point::xyz(0.0, 0.0, 3.0);

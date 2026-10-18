@@ -298,7 +298,7 @@ mod tests {
         let (centre, one) = ([v(0.0, 0.0)], [1.0]);
         let source = v(0.3, 0.2);
         let radius = source.norm();
-        let direction = source.normalized().into_inner();
+        let direction = source.normalized();
         let root = (radius * radius + 4.0).sqrt();
         let image_radii = [(radius + root) / 2.0, (radius - root) / 2.0];
         let mut magnification = 0.0;

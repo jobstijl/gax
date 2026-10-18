@@ -67,7 +67,7 @@ mod rolling {
     /// running product of the steps' turns, each later one multiplying from the left.
     pub fn orientations(path: &[V]) -> Vec<Turn> {
         path.windows(2)
-            .scan(Rotor::new(1.0, 0.0, 0.0, 0.0).normalized(), |o, w| {
+            .scan(Rotor::new(1.0, 0.0, 0.0, 0.0).unit(), |o, w| {
                 *o = roll(w[1] - w[0]) * *o;
                 Some(*o)
             })

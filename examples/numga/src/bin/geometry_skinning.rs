@@ -9,7 +9,7 @@
 //! towards `cos 75°` in the middle.
 
 use gax::Unit;
-use gax::pga3d::{Line, Motor, Point};
+use gax::pga3d::{Line, Motor, Point, intrinsic};
 
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
@@ -51,7 +51,7 @@ mod skinning {
     }
 
     /// The bone axis, the x axis: the join of the origin and a point along x.
-    pub fn bone_axis() -> Line<(), f64, gax::Intrinsic> {
+    pub fn bone_axis() -> intrinsic::Line<(), f64> {
         Point::xyz(0.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 0.0)
     }
 

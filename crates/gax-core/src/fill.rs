@@ -28,11 +28,11 @@ pub trait KindEq<K: Kind>: Kind {
 /// Slot lists in which every slot of kind `K` can be filled.
 ///
 /// ```
-/// use gax::pga3d::{Flector, Motor, Point};
+/// use gax::pga3d::{Flector, Motor, Point, intrinsic};
 /// let p = Point::<(), f64>::xyz(1.0, 0.0, 0.0);
-/// let open: Flector<(Motor, Motor), f64, gax::Intrinsic> = (Motor::slot() * p) * Motor::slot().reverse();
+/// let open: intrinsic::Flector<(Motor, Motor), f64> = (Motor::slot() * p) * Motor::slot().reverse();
 /// let m = Motor::<(), f64>::translation(0.0, 1.0, 0.0).into_inner();
-/// let filled: Flector<(), f64, gax::Intrinsic> = open.fill(m); // both motor slots receive m
+/// let filled: intrinsic::Flector<(), f64> = open.fill(m); // both motor slots receive m
 /// # let _ = filled;
 /// ```
 ///

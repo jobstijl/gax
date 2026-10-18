@@ -25,23 +25,23 @@ macro_rules! engine {
         use gax_numga_examples::rng::{Draw, Rng};
 
         /// A point of the sphere: the pole of a plane, its dual, so intrinsic (ADR-051).
-        pub type P = Point<(), f64, gax::Intrinsic>;
+        pub type P = gax::Oriented<Point, gax::Intrinsic>;
         /// A rate: a bivector, in the body frame.
         pub type B = Rate<(), f64>;
         /// A momentum: an antibivector, the join of a point with its motion, so intrinsic, in
         /// the body frame.
-        pub type Mom = Momentum<(), f64, gax::Intrinsic>;
+        pub type Mom = gax::Oriented<Momentum, gax::Intrinsic>;
         /// A rotation of the ambient space.
         pub type M = gax::Unit<Rotor<(), f64>>;
         /// The kinds of the slots of points and of momenta.
-        pub type PointSlot = Point<(), f32, gax::Intrinsic>;
-        pub type MomentumSlot = Momentum<(), f32, gax::Intrinsic>;
+        pub type PointSlot = gax::Oriented<Point, gax::Intrinsic>;
+        pub type MomentumSlot = gax::Oriented<Momentum, gax::Intrinsic>;
         /// The primal quadric: a point to its polar plane, negative inside.
         pub type Quadric = Plane<(PointSlot,), f64>;
         /// The dual quadric: a plane to its pole.
-        pub type DualQuadric = Point<(Plane,), f64, gax::Intrinsic>;
+        pub type DualQuadric = gax::Oriented<Point<(Plane,), f64>, gax::Intrinsic>;
         /// The inertia: a rate to its momentum.
-        pub type Inertia = Momentum<(Rate,), f64, gax::Intrinsic>;
+        pub type Inertia = gax::Oriented<Momentum<(Rate,), f64>, gax::Intrinsic>;
         /// The inverse inertia: a momentum to its rate.
         pub type InverseInertia = Rate<(MomentumSlot,), f64>;
 
@@ -66,7 +66,7 @@ macro_rules! engine {
         /// antipode where that is smaller: the norm of the logarithm of the rotor `b / a` that
         /// turns one into the other, or its supplement.
         pub fn arc(a: P, b: P) -> f64 {
-            let log: B = (b / a).normalized().log();
+            let log: B = (b / a).unit().log();
             let angle = log.norm();
             angle.min(core::f64::consts::PI - angle)
         }
@@ -94,7 +94,7 @@ macro_rules! engine {
 
             /// The primal form placed in the world.
             pub fn world(&self) -> Quadric {
-                self.motor >> self.c.of(self.motor << P::oriented_slot())
+                self.motor >> self.c.of(self.motor << P::slot())
             }
         }
 
@@ -186,7 +186,7 @@ macro_rules! engine {
 
         /// The symmetric form `P ∨ Q⁻¹(P)` of a dual quadric, on points.
         pub fn form(q: DualQuadric) -> Scalar<(PointSlot, PointSlot), f64> {
-            P::oriented_slot() & q.solve(P::oriented_slot())
+            P::slot() & q.solve(P::slot())
         }
 
         /// A point uniform on the unit sphere of the span of orthonormal `axes`: normal draws on
@@ -196,7 +196,6 @@ macro_rules! engine {
                 .map(|a| a.gp(rng.normal()))
                 .sum::<P>()
                 .normalized()
-                .into_inner()
         }
 
         /// Mass points filling the inside of any quadric, where its form is negative. In the
@@ -252,7 +251,7 @@ macro_rules! engine {
         fn least(a: Quadric, b: Quadric, phi: f64) -> (f64, P) {
             let turned = gax_numga_examples::signal::phasor(phi);
             let blend = a + b.gp(turned.e01() / turned.e20());
-            let p = P::oriented_slot();
+            let p = P::slot();
             let (values, points) = (p & blend.of(p)).eigh();
             (values[0], points[0])
         }
@@ -305,7 +304,7 @@ macro_rules! engine {
             let relative = motors[i].inverse() * motors[j];
             let (m, deepest) = overlap(
                 bodies[i].c,
-                relative >> bodies[j].c.of(relative << P::oriented_slot()),
+                relative >> bodies[j].c.of(relative << P::slot()),
                 12,
             );
             (m, deepest, relative)
@@ -331,7 +330,7 @@ macro_rules! engine {
                     // The first body's polar plane at the deepest point is the contact plane,
                     // and its pole the contact point. The forque is the line through the contact
                     // point normal to the plane: their inner product.
-                    let plane = bodies[i].c.of(deepest).normalized().into_inner();
+                    let plane = bodies[i].c.of(deepest).normalized();
                     let point = bodies[i].q.of(plane);
                     let one: Mom = plane | point;
                     contacts.push((i, j, one, relative << one));

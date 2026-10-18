@@ -4,6 +4,16 @@ use crate::coef::{Coef, Elem};
 use crate::slots::{Slots, fold_all, fold_all_pairs};
 use core::fmt::Debug;
 
+/// The identity map on a kind, for generic code (ADR-052): `<K as Slot>::slot()` is a `K` with one
+/// open `K` slot, both of `K`'s orientation. Concrete code writes `Line::slot()` or
+/// `intrinsic::Line::slot()`, inherent constructors of each orientation.
+pub trait Slot: Sized {
+    /// The identity map's type.
+    type Map;
+    /// The identity map.
+    fn slot() -> Self::Map;
+}
+
 /// A typed subspace of an algebra, such as `Point` or `Motor`: an ordered list of oriented
 /// basis blades.
 ///
@@ -19,7 +29,7 @@ use core::fmt::Debug;
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a kind",
     label = "not a kind",
-    note = "slot lists name kinds by their bare type name: write `Point<(Point,), f64>`, not `Point<(Point<(), f64>,), f64>`"
+    note = "slot lists name kinds by their bare name, or `intrinsic::Point` and `extrinsic::Point` for an orientation: write `Point<(Point,), f32>`, not `Point<(Point<(), f32>,), f32>`"
 )]
 pub trait Kind: Copy + Debug + PartialEq + 'static {
     /// Number of coefficients.
@@ -71,12 +81,12 @@ pub type Coeffs<M> = <<M as Extensor>::Kind as Kind>::Arr<
 /// A multivector, map or form of some kind: the common interface of all generated types.
 ///
 /// ```
-/// use gax::pga3d::{Line, Point};
+/// use gax::pga3d::{Line, Point, intrinsic};
 /// use gax::Extensor;
-/// let m: Line<(Point,), f64, gax::Intrinsic> = Point::xyz(0.0, 0.0, 0.0) & Point::slot();
+/// let m: intrinsic::Line<(Point,), f64> = Point::xyz(0.0, 0.0, 0.0) & Point::slot();
 /// // Output first: one array over the slot per output coefficient.
 /// let c: &[[f64; 4]; 6] = m.coeffs();
-/// assert_eq!(Line::<(Point,), f64, gax::Intrinsic>::from_coeffs(*c), m);
+/// assert_eq!(intrinsic::Line::<(Point,), f64>::from_coeffs(*c), m);
 /// ```
 pub trait Extensor: Copy + Debug + PartialEq + 'static {
     /// The output kind.
