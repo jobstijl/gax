@@ -140,7 +140,7 @@ where
 /// reciprocal blades on the left. With respect to a vector, the vector derivative `∇f`. Its kind
 /// is that of the geometric product of `x` and `f(x)`.
 ///
-/// `f` sees its argument with [`Jet`] coefficients, as for [`jacobian`](crate::dual::jacobian),
+/// `f` sees its argument with [`Jet`](crate::dual::Jet) coefficients, as for [`jacobian`](crate::dual::jacobian),
 /// so it is written generic over the coefficient type, or as a closure over the jet type.
 ///
 /// ```
