@@ -203,7 +203,7 @@ mod dirac {
         (0..count * count)
             .map(|k| {
                 let p = momentum(along(k % count), along(k / count), 0.0);
-                let (values, states) = form(hamiltonian(p, MASS)).eigh_with(hermitian());
+                let (values, states) = form(hamiltonian(p, MASS)).eigh(hermitian());
                 (p, values, states)
             })
             .collect()

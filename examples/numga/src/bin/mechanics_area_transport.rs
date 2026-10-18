@@ -69,7 +69,7 @@ mod area_transport {
     /// `c & areas(patch)` for every normal `c` and patch.
     pub fn adjugate(areas: AreaMap) -> NormalMap {
         let pairing = N::slot() & Bivector::slot();
-        pairing.solve_pairing(N::slot() & areas)
+        pairing.solve(N::slot() & areas)
     }
 
     /// A deformation with its areas carried forward and its measurements carried back.

@@ -352,7 +352,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::fitting::*;
-    use gax::pga3d::{Line, Plane, Point};
+    use gax::pga3d::{Line, Plane, Point, Scalar};
     use gax::{ApproxEq, vga3d};
     use gax_numga_examples::rng::rng;
 
@@ -373,9 +373,9 @@ mod tests {
     #[test]
     fn unit_forms_are_degenerate_on_the_free_coefficients() {
         let ranks = [
-            rank(squared(Point::<(), f64>::slot()).eigh().0),
-            rank(squared(Line::<(), f64>::slot()).eigh().0),
-            rank(squared(Plane::<(), f64>::slot()).eigh().0),
+            rank(squared(Point::<(), f64>::slot()).eigh(Scalar::identity()).0),
+            rank(squared(Line::<(), f64>::slot()).eigh(Scalar::identity()).0),
+            rank(squared(Plane::<(), f64>::slot()).eigh(Scalar::identity()).0),
         ];
         assert_eq!(ranks, [1, 3, 3]);
     }
@@ -425,7 +425,7 @@ mod tests {
                 (d | v) * (d | v)
             })
             .sum();
-        scatter.eigh().1
+        scatter.eigh(vga3d::Scalar::identity()).1
     }
 
     /// The cosine of the angle between a direction and a vector: the inner product of the

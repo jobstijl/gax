@@ -103,7 +103,7 @@ fn inverse_det_and_composition() {
 fn eigh_matches_the_sparse_solver() {
     let (values, modes) = stiffness().eigh();
     let metric = SparseMap::from_diagonal(&Field::from_fn(4, |_| Vector::slot()));
-    let (sparse, _) = sparse_stiffness().eigh_with(&metric, 12);
+    let (sparse, _) = sparse_stiffness().eigh(&metric, 12);
     assert_close(values.as_ref(), &sparse, 1e-12);
     // Each mode is an eigenvector of the whole coupled system.
     let k = stiffness();

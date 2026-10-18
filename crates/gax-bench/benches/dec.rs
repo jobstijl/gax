@@ -1,11 +1,11 @@
-//! Meshes and discrete exterior calculus: building a complex and its metric, assembling the
+//! Meshes and discrete exterior calculus: building a topology and its metric, assembling the
 //! operators, and solving with them (`docs/performance.md`, "Meshes and DEC").
 #![allow(missing_docs)] // `criterion_group!` generates an undocumented function
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
-use gax::mesh::{Mesh, SimplicialComplex};
+use gax::mesh::{Mesh, Topology};
 use gax::vga3d::{Scalar, Vector};
 use std::collections::BTreeMap;
 use std::hint::black_box;
@@ -122,11 +122,11 @@ fn bench(c: &mut Criterion) {
 
     let mut g = c.benchmark_group("dec");
     g.sample_size(20);
-    g.bench_function("complex: icosphere 4 (5120 triangles)", |b| {
-        b.iter(|| SimplicialComplex::new(sv.len(), black_box(&sf)));
+    g.bench_function("topology: icosphere 4 (5120 triangles)", |b| {
+        b.iter(|| Topology::new(sv.len(), black_box(&sf)));
     });
-    g.bench_function("complex: cube 8 (3072 tetrahedra)", |b| {
-        b.iter(|| SimplicialComplex::new(cv.len(), black_box(&ct)));
+    g.bench_function("topology: cube 8 (3072 tetrahedra)", |b| {
+        b.iter(|| Topology::new(cv.len(), black_box(&ct)));
     });
     g.bench_function("geometry: icosphere 4", |b| {
         b.iter(|| Geometry::new(black_box(&sphere)));
@@ -153,7 +153,7 @@ fn bench(c: &mut Criterion) {
     );
     g.sample_size(10);
     g.bench_function("16 Laplacian modes: icosphere 4", |b| {
-        b.iter(|| form.eigh_with(black_box(&star), 16));
+        b.iter(|| form.eigh(black_box(&star), 16));
     });
     g.finish();
 }

@@ -47,7 +47,7 @@ fn main() {
     let potential: Scalar<(Point, Point), f64> = Point::slot() & stiffness;
 
     // K x = λ M x, solved as forms: the modes come out as twists.
-    let (values, modes) = potential.eigh_with(kinetic);
+    let (values, modes) = potential.eigh(kinetic);
     for (lambda, mode) in values.iter().zip(modes) {
         let frequency = lambda.max(0.0).sqrt() / (2.0 * std::f64::consts::PI);
         if mode.e12().abs() > 1e-9 {

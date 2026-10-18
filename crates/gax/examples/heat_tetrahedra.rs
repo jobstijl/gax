@@ -47,7 +47,7 @@ fn cube(n: usize) -> Mesh<Vector<(), f64>, 4> {
 
 fn main() {
     let mesh = cube(6);
-    let c = mesh.complex();
+    let c = mesh.topology();
     println!(
         "{} vertices, {} edges, {} triangles, {} tetrahedra",
         c.len(0),

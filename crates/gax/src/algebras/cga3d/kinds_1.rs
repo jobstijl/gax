@@ -544,7 +544,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -592,31 +593,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Scalar<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Scalar<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Scalar<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -628,14 +632,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Scalar<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -1463,7 +1469,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -1511,31 +1518,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Vector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Vector<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -1547,14 +1557,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Vector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -2416,7 +2428,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -2464,31 +2477,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Twist<(A, B), T,
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Twist<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Twist<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Twist<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -2500,14 +2516,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Twist<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -3480,7 +3498,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -3528,31 +3547,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A, B),
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Bivector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Bivector<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Bivector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -3564,14 +3586,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Bivector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -5104,7 +5128,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -5152,31 +5177,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A, B)
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Trivector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Trivector<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Trivector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -5188,14 +5216,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Trivector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -6482,7 +6512,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -6530,31 +6561,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A, B
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Quadvector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Quadvector<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Quadvector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -6566,14 +6600,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Quadvector<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -7412,7 +7448,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -7460,31 +7497,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Pseudoscalar<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Pseudoscalar<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -7496,14 +7536,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Pseudoscalar<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -8333,7 +8375,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -8381,31 +8424,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Motor<(A, B), T,
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Motor<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Motor<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Motor<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -8417,14 +8463,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Motor<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -9494,7 +9542,8 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
         gx::SquareMap::eig(self)
     }
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
     where
@@ -9542,31 +9591,34 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A, B), T, 
 }
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, B), T, O> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`gx::Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Even<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Even<(), f64, O>, Coef = T>,
         R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve_pairing(self, rhs)
+        gx::Pairing::solve(self, rhs)
     }
 }
 
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, A), T, O> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`gx::Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
     where
         Self: gx::Form<Coef = T, Kind = Even<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh_with(self, metric)
+        gx::Form::eigh(self, metric)
     }
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+â`, last) for the directions it does not measure (see
     /// [`gx::Form::eigh_semidefinite`]).
     #[inline]
@@ -9578,14 +9630,16 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`gx::Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: gx::Form<Coef = T, Kind = Even<(), f64, O>, Slot = A>,
     {
-        gx::Form::eigh(self)
+        gx::Form::identity()
     }
 }
 
@@ -11378,45 +11432,3 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Odd<S, 
 
 // SAFETY: `Arr<X>` is `[X; 16]`, the layout `gx::FlatKind` promises.
 unsafe impl<O: gx::Orientation> gx::FlatKind for Odd<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Kind for Odd<(), f64, O> {
-    const N: usize = 16;
-    const NAME: &'static str = "Odd";
-    const MODULE: &'static str = module_path!();
-    const BLADES: &'static [&'static str] = &["e1", "e2", "e3", "eo", "ei", "e23o", "e31o", "e12o", "e23i", "e31i", "e12i", "e1oi", "e2oi", "e3oi", "e123", "e123oi"];
-    type Arr<X: gx::Elem> = [X; 16];
-    type Mv<S: gx::Slots, T: gx::Coef> = Odd<S, T, O>;
-    type Scalar = Scalar;
-    type Orientation = O;
-    const DEFAULT_INTRINSIC: bool = false;
-    #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 16] {
-        [f(0), f(1), f(2), f(3), f(4), f(5), f(6), f(7), f(8), f(9), f(10), f(11), f(12), f(13), f(14), f(15)]
-    }
-    #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 16], mut f: impl FnMut(&X) -> Y) -> [Y; 16] {
-        [f(&a[0]), f(&a[1]), f(&a[2]), f(&a[3]), f(&a[4]), f(&a[5]), f(&a[6]), f(&a[7]), f(&a[8]), f(&a[9]), f(&a[10]), f(&a[11]), f(&a[12]), f(&a[13]), f(&a[14]), f(&a[15])]
-    }
-    #[inline(always)]
-    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
-        a: &[X; 16],
-        b: &[Y; 16],
-        mut f: impl FnMut(&X, &Y) -> Z,
-    ) -> [Z; 16] {
-        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2]), f(&a[3], &b[3]), f(&a[4], &b[4]), f(&a[5], &b[5]), f(&a[6], &b[6]), f(&a[7], &b[7]), f(&a[8], &b[8]), f(&a[9], &b[9]), f(&a[10], &b[10]), f(&a[11], &b[11]), f(&a[12], &b[12]), f(&a[13], &b[13]), f(&a[14], &b[14]), f(&a[15], &b[15])]
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Odd<S, T, O> {
-    type Kind = Odd<(), f64, O>;
-    type Slots = S;
-    type Coef = T;
-    #[inline(always)]
-    fn from_coeffs(c: [S::Arr<T>; 16]) -> Self {
-        Odd { o: core::marker::PhantomData, c }
-    }
-    #[inline(always)]
-    fn coeffs(&self) -> &[S::Arr<T>; 16] {
-        &self.c
-    }
-}

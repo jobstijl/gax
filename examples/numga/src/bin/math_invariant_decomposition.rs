@@ -121,7 +121,7 @@ mod decomposition {
     /// the symmetric form that `eigh` takes.
     pub fn from_spectrum(b: B) -> ([f64; 3], [B; 3]) {
         let acceleration = (Vector::slot() | b) | b;
-        let (values, directions) = (Vector::slot() | acceleration).eigh();
+        let (values, directions) = (Vector::slot() | acceleration).eigh(Scalar::identity());
         // The eigenvalues come in equal pairs, in ascending order: one direction of each pair.
         let spanning = [directions[0], directions[2], directions[4]];
         (
@@ -173,7 +173,7 @@ mod decomposition {
         use p6::{Conditions, EuclideanBivector, EuclideanVector, NullBivector};
         let euclidean = motion.cast::<EuclideanBivector>();
         let acceleration = (EuclideanVector::slot() | euclidean) | euclidean;
-        let (_, directions) = (EuclideanVector::slot() | acceleration).eigh();
+        let (_, directions) = (EuclideanVector::slot() | acceleration).eigh(p6::Scalar::identity());
         let planes = [directions[0], directions[2], directions[4]].map(|u| {
             let turning = u ^ (u | euclidean);
             let open = NullBivector::slot();

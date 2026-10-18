@@ -110,7 +110,7 @@ mod waves {
         } = dirac(mesh);
         let wave = &(&(&operator.reverse() * &face_areas) * &operator) * Quaternion::slot();
         let metric = &SparseMap::from_diagonal(&vertex_areas) * Quaternion::slot();
-        wave.eigh_with_block(&metric, count, block)
+        wave.eigh_block(&metric, count, block)
     }
 
     /// A standing wave at a phase of its period: the vertex field a cosine, and the face field,

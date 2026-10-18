@@ -114,7 +114,7 @@ mod maxwell {
     pub fn spectrum(t_map: StressEnergy) -> [f64; 4] {
         let s: Scalar<(Vector, Vector), f64> = open() | t_map;
         let g: Scalar<(Vector, Vector), f64> = open() | open();
-        let (inverse, _) = g.eigh_with(s);
+        let (inverse, _) = g.eigh(s);
         let mut values = inverse.map(|m| 1.0 / m);
         values.sort_by(f64::total_cmp);
         values

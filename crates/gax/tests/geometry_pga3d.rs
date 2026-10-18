@@ -63,7 +63,7 @@ proptest! {
     fn map_adjoint_by_pairing(m in unit_motor(), l in plane(), p in point()) {
         // The plane map induced by the motor's point map satisfies induced(l) & p == l & t(p).
         let t: Point<(Point,), f64> = m >> Point::slot();
-        let induced: Plane<(Plane,), f64> = (Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & t);
+        let induced: Plane<(Plane,), f64> = (Plane::slot() & Point::slot()).solve(Plane::slot() & t);
         prop_assert!(((induced.of(l) & p).s() - (l & t.of(p)).s()).abs() < 1e-10);
         // For a rigid motion it pulls planes back: (m >> l) & (m >> p) == l & p, so the
         // induced map is m << l.

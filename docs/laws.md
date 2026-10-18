@@ -153,7 +153,7 @@ method (ADR-013).
 ### G. Adjoint through a pairing (`adjoint_laws`)
 
 There is no `adj` method, on purpose (ADR-014): the adjoint is a pairing solve,
-`pairing.solve_pairing(A::slot() & t)`. Solves branch and divide, so they can't be proved on `Sym`.
+`pairing.solve(A::slot() & t)`. Solves branch and divide, so they can't be proved on `Sym`.
 Instead, for pairings whose matrix `P` is a constant signed permutation, the suite uses the
 closed form `adj(t) = P tᵀ Pᵀ`, and proves:
 
@@ -358,7 +358,7 @@ On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
 * [prop] The Whitney map inverts the de Rham map on edges, `R ∘ W = id`, and `W₁ d₀ = ∇ W₀`.
 * [prop] `δ` is the adjoint of `d` in the stars' inner products, `⟨d a, b⟩_⋆ = ⟨a, δ b⟩_⋆`, on a
   sphere (so the Hodge decomposition is orthogonal); `D² = Δ` degree by degree.
-* [prop] The harmonic cochains, the null space of `Δ_k` found by `eigh_with` on `(⋆Δ, ⋆)`, have the
+* [prop] The harmonic cochains, the null space of `Δ_k` found by `eigh` on `(⋆Δ, ⋆)`, have the
   Betti numbers' dimensions on a sphere (1, 0, 1) and a torus (1, 2, 1), both well-centred.
 * [prop] On subdivided icosahedra the first 16 eigenvalues of the Laplacian on vertices converge to
   the unit sphere's `ℓ(ℓ+1)` at second order, the error falling more than threefold per

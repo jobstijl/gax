@@ -154,7 +154,7 @@ fn solvers(c: &mut Criterion) {
     let nproj = nalgebra::Matrix4::<f64>::from_fn(|i, j| proj.c[i][j]);
 
     // The metric form must be positive definite (the modes are finite).
-    let (vals, _) = stiffness.eigh_with(inertia);
+    let (vals, _) = stiffness.eigh(inertia);
     assert!(
         vals.iter().all(|v| v.is_finite()),
         "inertia form is not positive definite"
@@ -173,7 +173,7 @@ fn solvers(c: &mut Criterion) {
         b.iter(|| black_box(nm).lu().solve(&black_box(nrhs)));
     });
     g.bench_function("gax 6x6 generalized eigh (modes)", |b| {
-        b.iter(|| black_box(stiffness).eigh_with(black_box(inertia)));
+        b.iter(|| black_box(stiffness).eigh(black_box(inertia)));
     });
     g.bench_function("nalgebra 6x6 Cholesky + SymmetricEigen", |b| {
         b.iter(|| {

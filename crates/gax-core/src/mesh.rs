@@ -1,7 +1,7 @@
 //! Simplicial complexes and meshes (ADR-049): the topology of a mesh of any dimension, its
 //! boundary maps as field maps, and its vertices.
 //!
-//! A [`SimplicialComplex`] is built from its top simplices, `N` vertex indices each: triangles
+//! A [`Topology`] is built from its top simplices, `N` vertex indices each: triangles
 //! for a surface (`N = 3`), tetrahedra for a solid (`N = 4`). It derives every face of every
 //! dimension: the `k`-simplices for `k` from 0 (the vertices) to `N − 1` (the top simplices,
 //! kept in the order and orientation given). Below the top, a simplex is stored with its
@@ -9,8 +9,8 @@
 //!
 //! Quantities on a mesh are [`Field`]s over its simplices of one dimension, and its boundary maps
 //! `d(k)`, from the `k`-simplices to the `(k+1)`-simplices, are [`SparseMap`]s with cells `±1`:
-//! the discrete exterior derivative, with `d(k+1) ∘ d(k) = 0`. A [`Mesh`] is a complex with a
-//! field of vertices of any kind, a VGA vector or a PGA point.
+//! the discrete exterior derivative, with `d(k+1) ∘ d(k) = 0`. A [`Mesh`] is a topology with a
+//! field of vertices of any kind, a VGA vector or a PGA point; `dec::Geometry` adds its metric.
 //!
 //! ```
 //! use gax::field::Field;
@@ -21,7 +21,7 @@
 //! let v = |x: f64, y: f64| Vector::<(), f64>::new(x, y, 0.0);
 //! let vertices: Field<_> = [v(0.0, 0.0), v(1.0, 0.0), v(1.0, 1.0), v(0.0, 1.0)].into_iter().collect();
 //! let square = Mesh::new(vertices, &[[0, 1, 2], [0, 2, 3]]).unwrap();
-//! let c = square.complex();
+//! let c = square.topology();
 //! assert_eq!((c.len(0), c.len(1), c.len(2)), (4, 5, 2));
 //! assert_eq!(c.simplex(1, 1), &[0, 2]); // the diagonal
 //! assert_eq!(c.euler_characteristic(), 1); // a disk
@@ -93,9 +93,11 @@ impl fmt::Display for MeshError {
 
 impl std::error::Error for MeshError {}
 
-/// A simplicial complex: the top simplices of `N` vertices each, and all their faces.
+/// The topology of a simplicial complex: the top simplices of `N` vertices each and all their
+/// faces, the simplices of every dimension with their incidences and boundary maps. It holds the
+/// combinatorics only: a [`Mesh`] adds the vertices' positions, `dec::Geometry` the metric.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SimplicialComplex<const N: usize> {
+pub struct Topology<const N: usize> {
     /// `simplices[k]`: the `k`-simplices, `k + 1` vertices each, one after another.
     simplices: Vec<Vec<usize>>,
     /// `faces[k]` for `k ≥ 1`: for each `k`-simplex, the `(k−1)`-face opposite each of its
@@ -124,8 +126,8 @@ fn without(s: &[usize], i: usize) -> Vec<usize> {
         .collect()
 }
 
-impl<const N: usize> SimplicialComplex<N> {
-    /// The complex of `vertices` vertices (some may be in no simplex) and the top simplices
+impl<const N: usize> Topology<N> {
+    /// The topology of `vertices` vertices (some may be in no simplex) and the top simplices
     /// `top`, each oriented by the order of its vertices.
     ///
     /// # Errors
@@ -199,7 +201,7 @@ impl<const N: usize> SimplicialComplex<N> {
                     face.sort_unstable();
                     let index = below
                         .binary_search(&face.as_slice())
-                        .expect("every face of a simplex is in the complex");
+                        .expect("every face of a simplex is in the topology");
                     out.push((index, sign));
                 }
             }
@@ -209,7 +211,7 @@ impl<const N: usize> SimplicialComplex<N> {
             .into_iter()
             .map(|(key, s)| (key.to_vec(), s))
             .collect();
-        Ok(SimplicialComplex {
+        Ok(Topology {
             simplices,
             faces,
             tops,
@@ -222,7 +224,7 @@ impl<const N: usize> SimplicialComplex<N> {
         self.simplices[k].len() / (k + 1)
     }
 
-    /// Whether the complex has no vertex.
+    /// Whether the topology has no vertex.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.simplices[0].is_empty()
@@ -281,7 +283,7 @@ impl<const N: usize> SimplicialComplex<N> {
     /// vertex in turn.
     ///
     /// # Panics
-    /// If `k + 1` is not a dimension of the complex.
+    /// If `k + 1` is not a dimension of the topology.
     #[must_use]
     pub fn d<C: Extensor<Slots = ()>>(&self, k: usize) -> SparseMap<C> {
         const {
@@ -289,7 +291,7 @@ impl<const N: usize> SimplicialComplex<N> {
         }
         assert!(
             k + 1 < N,
-            "d({k}) maps to {}-simplices, above the top of a complex of {N}-vertex simplices",
+            "d({k}) maps to {}-simplices, above the top of a topology of {N}-vertex simplices",
             k + 1
         );
         let cell = |sign: i8| {
@@ -429,12 +431,12 @@ impl<const N: usize> SimplicialComplex<N> {
 pub type ScalarOf<V> =
     <<<V as Extensor>::Kind as Kind>::Scalar as Kind>::Mv<(), <V as Extensor>::Coef>;
 
-/// A complex with a field of vertices, of any kind.
+/// A topology with a field of vertices, of any kind.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mesh<V, const N: usize> {
     /// The vertices.
     pub vertices: Field<V>,
-    complex: SimplicialComplex<N>,
+    topology: Topology<N>,
 }
 
 impl<V: Extensor<Slots = ()>, const N: usize> Mesh<V, N> {
@@ -443,17 +445,17 @@ impl<V: Extensor<Slots = ()>, const N: usize> Mesh<V, N> {
     /// # Errors
     /// A [`MeshError`] if the top simplices do not make a complex on these vertices.
     pub fn new(vertices: Field<V>, top: &[[usize; N]]) -> Result<Self, MeshError> {
-        let complex = SimplicialComplex::new(vertices.len(), top)?;
-        Ok(Mesh { vertices, complex })
+        let topology = Topology::new(vertices.len(), top)?;
+        Ok(Mesh { vertices, topology })
     }
 
-    /// The complex.
+    /// The topology: the simplices and their incidences, without the positions.
     #[must_use]
-    pub fn complex(&self) -> &SimplicialComplex<N> {
-        &self.complex
+    pub fn topology(&self) -> &Topology<N> {
+        &self.topology
     }
 
-    /// The same complex on other vertices, of any kind.
+    /// The same topology on other vertices, of any kind.
     ///
     /// # Panics
     /// If there is not one vertex for each.
@@ -462,20 +464,20 @@ impl<V: Extensor<Slots = ()>, const N: usize> Mesh<V, N> {
         assert_eq!(vertices.len(), self.vertices.len(), "one vertex for each");
         Mesh {
             vertices,
-            complex: self.complex.clone(),
+            topology: self.topology.clone(),
         }
     }
 
     /// The boundary map `d(k)` with scalar cells of the vertices' algebra
-    /// ([`SimplicialComplex::d`]).
+    /// ([`Topology::d`]).
     #[must_use]
     pub fn d(&self, k: usize) -> SparseMap<ScalarOf<V>> {
-        self.complex.d(k)
+        self.topology.d(k)
     }
 
-    /// The means over the `k`-simplices' vertices ([`SimplicialComplex::means`]).
+    /// The means over the `k`-simplices' vertices ([`Topology::means`]).
     #[must_use]
     pub fn means(&self, k: usize) -> SparseMap<ScalarOf<V>> {
-        self.complex.means(k)
+        self.topology.means(k)
     }
 }

@@ -205,7 +205,7 @@ mod strip {
         }
         // Free edges let the width contract until its force vanishes.
         let relaxed = energy - coupling * coupling * (1.0 / width_stiffness);
-        let state: St = relaxed.solve_pairing(extension() * tension);
+        let state: St = relaxed.solve(extension() * tension);
         (state, -coupling.of(state).s() / width_stiffness)
     }
 

@@ -71,7 +71,7 @@ impl Map for Spectra {
         let form = Scalar::<(Point, Point), T>::from_coeffs([core::array::from_fn(|i| {
             core::array::from_fn(|j| x.c[4 * i + j] + x.c[4 * j + i])
         })]);
-        let (lambda, _) = form.eigh();
+        let (lambda, _) = form.eigh(Scalar::identity());
         Multivector::from_coeffs(core::array::from_fn(|k| match k {
             0..=3 => sigma[k],
             4..=7 => lambda[k - 4],

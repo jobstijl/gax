@@ -99,7 +99,7 @@ fn generalized_eigenproblem_returns_modes_of_the_slot_kind() {
         stiffness += pa * pa;
         inertia += pb * pb;
     }
-    let (values, modes) = stiffness.eigh_with(inertia);
+    let (values, modes) = stiffness.eigh(inertia);
     for k in 0..6 {
         // stiffness(x, .) == λ inertia(x, .)
         let lhs: Scalar<(Line,), f64> = stiffness.of(modes[k]);
@@ -114,7 +114,7 @@ fn generalized_eigenproblem_returns_modes_of_the_slot_kind() {
     // A form solve: stiffness(x, .) == stiffness(y, .) recovers y.
     let y: Line<(), f64> = random(&mut rng);
     assert_close(
-        &flat(&stiffness.solve_pairing(stiffness.of(y))),
+        &flat(&stiffness.solve(stiffness.of(y))),
         &flat(&y),
         "form solve",
     );

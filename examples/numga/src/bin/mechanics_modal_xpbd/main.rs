@@ -2,7 +2,7 @@
 //!
 //! Each body is a girder of bars. Its rigid motion is a motor and its deformation a combination
 //! of its lowest vibration modes, the eigenfields of its sparse stiffness against its masses
-//! (`SparseMap::eigh_with`), each of unit mass. Bodies are connected by point constraints between
+//! (`SparseMap::eigh`), each of unit mass. Bodies are connected by point constraints between
 //! anchor points. Time stepping is modal extended position-based dynamics: rigid bodies under
 //! compliant constraints, each mode one more constraint.
 //!

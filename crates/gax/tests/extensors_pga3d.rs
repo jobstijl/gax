@@ -48,7 +48,7 @@ fn induced_map_on_planes_from_a_pairing() {
     let screen: Plane<(), f64> = Plane::new(0.0, 0.0, 1.0, 0.0);
     let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
     let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
-    let induced: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & projection);
+    let induced: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & projection);
     for _ in 0..5 {
         let (l, p): (Plane<(), f64>, Point<(), f64>) = (random(&mut rng), random(&mut rng));
         assert_close(
@@ -61,8 +61,7 @@ fn induced_map_on_planes_from_a_pairing() {
     // Unit: 0.8² + 0.6² = 1, and the Study part 0.8 · 0.225 − 0.6 · 0.3 vanishes.
     let m = Unit::new_unchecked(Motor::new(0.8, 0.6, 0.0, 0.0, 0.3, -0.1, 0.2, 0.225));
     let on_points: Point<(Point,), f64> = m >> Point::slot();
-    let on_planes: Plane<(Plane,), f64> =
-        pairing.solve_pairing(Plane::slot() & on_points.inverse());
+    let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & on_points.inverse());
     let l: Plane<(), f64> = random(&mut rng);
     let _ = on_planes.of(l);
 }

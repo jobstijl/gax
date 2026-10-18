@@ -179,7 +179,7 @@ assert!((inside - around).c.iter().all(|c| c.abs() < 1e-15));
 A mesh is a chain of simplices that share faces. `gax::mesh` (feature `std`) holds the topology of
 one of any dimension and its boundary maps, the discrete exterior derivative (ADR-049).
 
-* `SimplicialComplex<N>` is built from its top simplices, `N` vertex indices each (triangles for a
+* `Topology<N>` is built from its top simplices, `N` vertex indices each (triangles for a
   surface, tetrahedra for a solid). It derives every face: the `k`-simplices for `k` from 0 (the
   vertices) to `N − 1`. The top simplices keep their order, which orients them; below the top a
   simplex's vertices are sorted, and each dimension is in lexicographic order.
@@ -188,7 +188,7 @@ one of any dimension and its boundary maps, the discrete exterior derivative (AD
   `k = 1`. Each row lists a simplex's faces with the orientations they get from it, so
   `d(k+1) ∘ d(k) = 0`.
 * `means(k)` takes the mean over each `k`-simplex's vertices.
-* `Mesh<V, N>` is a complex with its vertices, a `Field` of any kind: VGA vectors, PGA points.
+* `Mesh<V, N>` is a topology with its vertices, a `Field` of any kind: VGA vectors, PGA points.
 
 The construction returns an error, not a panic, for a vertex index out of range, a simplex that
 repeats a vertex, or a top simplex given twice. Non-manifold complexes are valid, and queries tell
@@ -201,7 +201,7 @@ them apart:
   prime field.
 
 ```rust
-use gax::mesh::SimplicialComplex;
+use gax::mesh::Topology;
 
 // A torus: a 4 × 4 grid of squares, two triangles each, with opposite sides glued.
 let id = |i: usize, j: usize| (i % 4) * 4 + j % 4;
@@ -210,7 +210,7 @@ let faces: Vec<[usize; 3]> = (0..4)
         [[id(i, j), id(i + 1, j), id(i + 1, j + 1)], [id(i, j), id(i + 1, j + 1), id(i, j + 1)]]
     }))
     .collect();
-let torus = SimplicialComplex::new(16, &faces).unwrap();
+let torus = Topology::new(16, &faces).unwrap();
 assert_eq!(torus.betti_numbers(), [1, 2, 1]); // one piece, two loops, one cavity
 assert_eq!(torus.euler_characteristic(), 0);
 assert!(torus.is_oriented() && torus.boundary().is_empty());
@@ -282,7 +282,7 @@ With the stars, `Geometry` gives the operators of calculus on cochains (ADR-050)
 * `laplacian(k)`: the Laplace–de Rham operator `Δ_k = dδ + δd`. Its null space holds the harmonic
   cochains, as many as the `k`-th Betti number.
 * `laplacian_form(k)`: the symmetric form `⋆_k Δ_k`, which with `star(k)` makes the pencil whose
-  eigenpairs are `Δ`'s (`SparseMap::eigh_with`, on a well-centred mesh, whose stars are
+  eigenpairs are `Δ`'s (`SparseMap::eigh`, on a well-centred mesh, whose stars are
   positive). On vertices it is the cotangent Laplacian.
 * `dirac()`: the Dirac operator `D = d + δ` on cochains of every degree at once, one field over all
   the simplices (`offsets()` says where each degree starts). `D² = Δ` degree by degree: it is
@@ -309,7 +309,7 @@ assert!(g.is_well_centered());
 // The Laplacian on vertices has one zero eigenvalue: the surface is one piece.
 let form = &g.laplacian_form::<Scalar<(), f64>>(0) * Scalar::<(), f64>::slot();
 let star = &g.star::<Scalar<(), f64>>(0) * Scalar::<(), f64>::slot();
-let (values, _) = form.eigh_with(&star, 3);
+let (values, _) = form.eigh(&star, 3);
 assert!(values[0].abs() < 1e-12 && values[1] > 0.5);
 // The Dirac operator acts on the cochains of all 26 simplices at once (D² = Δ, laws.md §R).
 assert_eq!(g.offsets(), [0, 6, 18, 26]);

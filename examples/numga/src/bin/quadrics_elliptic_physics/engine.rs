@@ -212,7 +212,7 @@ macro_rules! engine {
             rng: &mut Rng,
         ) -> (Vec<P>, Vec<f64>) {
             let form = form(q);
-            let (values, principal) = form.eigh();
+            let (values, principal) = form.eigh(Scalar::identity());
             let k = values.iter().filter(|v| **v < 0.0).count();
             let mut points = Vec::with_capacity(count);
             let mut weights = Vec::with_capacity(count);
@@ -252,7 +252,7 @@ macro_rules! engine {
             let turned = gax_numga_examples::signal::phasor(phi);
             let blend = a + b.gp(turned.e01() / turned.e20());
             let p = P::slot();
-            let (values, points) = (p & blend.of(p)).eigh();
+            let (values, points) = (p & blend.of(p)).eigh(Scalar::identity());
             (values[0], points[0])
         }
 

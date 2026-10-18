@@ -430,7 +430,14 @@ fn f16_exponentials_on_the_gpu() {
             steps: Vec::new(),
             entries: None,
         };
-        let src = harness_in(Precision::F16, gax::wgsl::CSTA_F16.source, &spec, &[&call], 15, 32);
+        let src = harness_in(
+            Precision::F16,
+            gax::wgsl::CSTA_F16.source,
+            &spec,
+            &[&call],
+            15,
+            32,
+        );
         let out = floats(&gpu.run(
             &src,
             "main",
@@ -447,7 +454,11 @@ fn f16_exponentials_on_the_gpu() {
             let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
             for (o, e) in exact.iter().enumerate() {
                 let rel = (f64::from(out[n * 32 + o]) - e).abs() / scale;
-                assert!(rel < tol, "csta f16: {f} output {o}: {} vs {e}", out[n * 32 + o]);
+                assert!(
+                    rel < tol,
+                    "csta f16: {f} output {o}: {} vs {e}",
+                    out[n * 32 + o]
+                );
                 worst = worst.max(rel);
             }
         }
@@ -533,13 +544,23 @@ fn csta_log_on_the_gpu() {
     let src = harness(module, &spec, &[&call], n_in, n_out);
     let mut rng = Rng(0x0106_5d6d);
     // Every fourth sample a rotation towards a half turn, and every fourth below 1/16: turned.
-    let e12 = <gax::csta::Bivector as Kind>::BLADES.iter().position(|n| *n == "e12").expect("e12");
+    let e12 = <gax::csta::Bivector as Kind>::BLADES
+        .iter()
+        .position(|n| *n == "e12")
+        .expect("e12");
     let mut inputs: Vec<f32> = Vec::with_capacity(SAMPLES * n_in);
     for n in 0..SAMPLES {
         if n % 4 == 3 {
             let mut b: [f64; 15] = core::array::from_fn(|_| 0.05 * f64::from(rng.next()));
             b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
-            inputs.extend(B::from_coeffs(b).exp().into_inner().c.iter().map(|x| *x as f32));
+            inputs.extend(
+                B::from_coeffs(b)
+                    .exp()
+                    .into_inner()
+                    .c
+                    .iter()
+                    .map(|x| *x as f32),
+            );
         } else if n % 4 == 2 {
             // Below 1/16, either sign: turned.
             inputs.extend(csta_versor(&mut rng, 1.0, f64::NEG_INFINITY, 0.0625));
@@ -564,7 +585,10 @@ fn csta_log_on_the_gpu() {
         for (o, e) in exact.c.iter().enumerate() {
             let g = f64::from(out[n * n_out + o]);
             let rel = (g - e).abs() / scale;
-            assert!(rel < 1.0 / 1024.0, "csta: unit_even_log sample {n} output {o}: {g} vs {e}");
+            assert!(
+                rel < 1.0 / 1024.0,
+                "csta: unit_even_log sample {n} output {o}: {g} vs {e}"
+            );
             worst = worst.max(rel);
         }
     }

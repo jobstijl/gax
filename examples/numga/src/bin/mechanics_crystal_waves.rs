@@ -84,7 +84,7 @@ mod crystal {
     pub fn waves(crystal: &Stiffness, heading: V) -> ([f64; 3], [V; 3]) {
         let christoffel = crystal.of(heading).at::<1>().of(heading);
         let form: Scalar<(Vector, Vector), f64> = Vector::slot() | christoffel;
-        form.eigh()
+        form.eigh(Scalar::identity())
     }
 
     /// The velocity of each wave's energy, its group velocity. With the polarization in the

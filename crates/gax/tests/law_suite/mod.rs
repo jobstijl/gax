@@ -1065,7 +1065,7 @@ macro_rules! law_suite {
                 let pf: oriented::$scalar<($ra, $rb), f64, _> = gax::$rtr::$rm($ra::slot(), $rb::slot());
                 for _ in 0..4 {
                     let tf: $rb<($rb,), f64> = random_f64(&mut seed);
-                    let solved: $ra<($ra,), f64> = pf.solve_pairing(gax::$rtr::$rm($ra::slot(), tf));
+                    let solved: $ra<($ra,), f64> = pf.solve(gax::$rtr::$rm($ra::slot(), tf));
                     let closed: $ra<($ra,), f64> = adjoint(&pf, &tf);
                     law(close(&solved, &closed, 1e-12), name);
                 }

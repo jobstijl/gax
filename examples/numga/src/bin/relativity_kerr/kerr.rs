@@ -70,7 +70,7 @@ fn minkowski() -> Scalar<(Vector, Vector), f64> {
 /// The adjoint of a map under the metric, `M*` with `w · M(v) = M*(w) · v` for all `v` and
 /// `w`: a pairing solve.
 pub fn adjoint(map: Map) -> Map {
-    minkowski().solve_pairing(Vector::slot() | map)
+    minkowski().solve(Vector::slot() | map)
 }
 
 /// A rotating black hole: its mass, and its spin, a spatial bivector of magnitude J/M.
@@ -738,7 +738,7 @@ pub mod tests {
             .map(|(e, m)| m.of(velocity) * open_component(*e))
             .sum();
         let koszul = (metric_along_v + by_y - by_z) * 0.5;
-        let christoffel: Map = (Vector::slot() | metric(&geometry)).solve_pairing(koszul);
+        let christoffel: Map = (Vector::slot() | metric(&geometry)).solve(koszul);
         let local_frame = frame(&geometry);
         let expected = -local_frame.solve(along(velocity) + christoffel.of(local_frame));
 

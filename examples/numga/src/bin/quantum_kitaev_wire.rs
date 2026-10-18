@@ -94,7 +94,7 @@ mod kitaev {
         /// slightly negative).
         pub fn modes(&self, generator: &Generator, count: usize) -> (Vec<f64>, Vec<Modes>) {
             let normal = generator.transpose().compose(generator);
-            let (_, modes) = normal.eigh_with(&self.identity(), count);
+            let (_, modes) = normal.eigh(&self.identity(), count);
             let energies = modes.iter().map(|m| generator.of(m).norm()).collect();
             (energies, modes)
         }

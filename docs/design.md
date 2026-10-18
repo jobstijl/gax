@@ -331,8 +331,8 @@ highlight. `gax-regen --check` also reports part files no longer generated.
     product `|` is degenerate in PGA (`e0 · e0 = 0`), so the join `&` is the pairing there.
 * **Maps (`K<(A,), T>`):** `inverse`, `det`, `solve` (right-hand sides keep their slots), `svd` (typed
   singular vectors) and `trace`.
-* **Forms (`Scalar<(A, A)>`):** `eigh_with(metric)`, which returns the modes as values of the slot kind,
-  and `eigh`.
+* **Forms (`Scalar<(A, A)>`):** `eigh(metric)`, which returns the modes as values of the slot kind
+  (`Scalar::identity()` is the coefficient metric, for orthonormal layouts).
 * **Outermorphisms:** `t.outermorphism::<B>()` extends a map on vectors by `∧`, or a map on antivectors
   (PGA points) by `∨`, to every homogeneous kind `B`. The generator derives the extended matrices
   symbolically, as minors; on the top grade the result is the determinant. This is numga's extension
@@ -1238,7 +1238,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   on the data, so they are for scalar coefficients, not SIMD lanes.
 * **`eigh` on a map** takes the coefficient matrix as symmetric: numga's semantics, for maps
   self-adjoint under the coefficient inner product. A map self-adjoint under another metric is
-  paired with it as a form first (`Form::eigh_with`), as before.
+  paired with it as a form first (`Form::eigh`), as before.
 * **`map_coefs`** (on `Extensor`) converts the coefficients of a value or map, to `Complex`,
   `Dual` or `f32`; `Strict`'s wrapping was the private version of it.
 * **Checks.** Rotations give `e^{±iθ}` and 1, boosts `e^{±φ}` and 1, and 200 random 6×6 maps
@@ -1593,7 +1593,7 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       grid of points this took 12 modes from 57 s to 1.9 s.
     * Single-vector Lanczos finds one vector per eigenspace, and a field map of isotropic
       cells repeats every value `K::N` times. The blocks have `2 K::N + 2` vectors, which also
-      covers a doubling by a symmetry of the sites (a square grid); `eigh_with_block` takes
+      covers a doubling by a symmetry of the sites (a square grid); `eigh_block` takes
       more.
     * Measured: on a free 64 × 64 grid of vectors (12288 unknowns), 12 modes in 0.32 s and 30
       in 1.1 s; on an anchored grid of points (16384 unknowns), 12 modes in 1.9 s; residuals
@@ -2049,16 +2049,26 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   owns; `impl LinearMap for Prepared<..>` in generated code would break the orphan rule), so it
   binds into dense maps, and it and the structured maps keep an inherent `to_dense` that needs
   no import. The tracer's facade re-exports `Traceable`, so `gax::trace` is one module with or
-  without the feature. The jet module is `jet`, the simplicial complex `SimplicialComplex`, the
-  study internals private.
+  without the feature. The jet module is `jet` and the study internals private. ADR-049's
+  `Complex` is `mesh::Topology` (its accessor `Mesh::topology()`), since it holds the
+  combinatorics, the simplices of every dimension with their incidences and boundary maps, while
+  `Mesh` adds the positions and `dec::Geometry` the metric; the name `Complex` stays the root's
+  complex numbers.
 * **Linear algebra results and failures.** `Svd { values, inputs, outputs }` replaces the
   positional tuples of `svd` (`(u, σ, v)`) and `svd_thin` (`(σ, v, u)`): one `svd`, for maps of
   any shape, one triple per input blade with `m.of(inputs[i]) = values[i] outputs[i]` (on a
   square map the same factorization as the square `svd` was). The eigenproblems keep their
-  `(values, vectors)` tuples, which agree. Every metric eigenproblem is `eigh_with`, the sparse
-  one included (`eigh_with_block` stays for larger Lanczos blocks); a pairing's solve is
-  `solve_pairing` (the trait method too), its dyad binding `of_dyad` and `lstsq_dyad`
-  (`OfDyad`, `LeastSquaresDyad`). Plain methods return NaN on failure as documented, `try_*`
+  `(values, vectors)` tuples, which agree. There is one name, `eigh`, and the metric is an
+  argument: a map's `m.eigh()` is its own eigenproblem, while a form's is always
+  `form.eigh(metric)`, because a form's eigenvalues against the identity change with the basis
+  (it transforms as `Pᵀ F P`, not `P⁻¹ F P`); the identity-metric form `eigh()` is gone, and
+  `form.eigh(Scalar::identity())` names that metric where the coefficient basis is orthonormal.
+  The sparse one is `SparseMap::eigh(metric, count)` (`eigh_block` for larger Lanczos blocks);
+  `eigh_semidefinite(metric)` keeps its name, since it is a different problem. A pairing's solve
+  is `solve` (the trait method too), like a square map's, since the types tell them apart: a
+  map's solves `m.of(x) = b`, a pairing's `p(x, ·) = r(l, ·)`. Its dyad binding stays
+  `of_dyad` and `lstsq_dyad` (`OfDyad`, `LeastSquaresDyad`), apart from `of` and `lstsq`, which
+  bind one slot. Plain methods return NaN on failure as documented, `try_*`
   methods an `Option` (still open).
 * **A smaller visible surface.** Items only generated code needs (`True`, `False`, `FillList`,
   `KindEq`, `SplitLast`, `MoveToFront`, `HasCat`, `SlotArr`, `Reorient`, `NewtonStep`,

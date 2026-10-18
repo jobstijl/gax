@@ -324,7 +324,7 @@ mod tests {
             // Far from the polarization catastrophe: every eigenvalue of the response keeps more
             // than half of the one over the polarizability an isolated atom has.
             let identity = restoring(positions.len()).map_cells(|c| c * ALPHA);
-            let (lowest, _) = response.eigh_with(&identity, 1);
+            let (lowest, _) = response.eigh(&identity, 1);
             assert!(ALPHA * lowest[0] > 0.5, "{}", lowest[0]);
             gain(&dipoles, applied)
         });

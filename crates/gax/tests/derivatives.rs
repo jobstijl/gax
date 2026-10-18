@@ -175,7 +175,7 @@ fn newton_step_on_a_quadratic() {
     }
     let x0 = Plane::<(), f64>::new(0.3, 0.1, -0.7, 2.0);
     let (_, g, h) = hessian(energy, x0);
-    let x = x0 - h.solve_pairing(g);
+    let x = x0 - h.solve(g);
     let (_, g_at, _) = hessian(energy, x);
     assert!(g_at.c[0].iter().all(|v| v.abs() < 1e-12), "{g_at:?}");
 }

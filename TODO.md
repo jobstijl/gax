@@ -23,7 +23,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `Sym`, the tracer with bounded expansion, `examples/traced` (build.rs)
 - [x] SIMD lanes (`wide`), SoA benchmark
 - [x] Solvers (LU, Cholesky, Jacobi eigh, generalized eigh, SVD), property-tested, branch free
-- [x] Map/form methods: inverse, det, solve, svd, trace, eigh_with, eigh, pairing solve
+- [x] Map/form methods: inverse, det, solve, svd, trace, eigh (a map's own, a form's against a metric), pairing solve
 - [x] Value methods: norm, inverse, normalized, exp, log, sqrt (Study-number calculus)
 - [x] `at::<I>`, `swap`, `fill` (type-level kind equality)
 - [x] `algebra!` proc macro (STAP, CSTA tested)
@@ -203,6 +203,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Internal cleanups: the generator (output byte-identical: shared emission helpers, split modules, data structures) and gax-core (one SVD, the study series over `Channel`, shared sparse and DEC kernels, iterator style)
 - [x] Batch 1, generator and types: orientation by name (`oriented::`, `intrinsic::`, `extrinsic::`), orientation arithmetic that reduces, `f64` default, `gx::Slot`, `Oriented<K, O>`, `Log` with an associated output, `normalized()`/`unit()`; everything migrated
 - [x] Batch 2, names and linear algebra: `of` (and `of_into`) to apply every map, `to_dense` to densify (`Prepared` a `LinearMap`), one `gax::trace`, `jet`, `SimplicialComplex`, one `svd` for every shape returning `Svd { values, inputs, outputs }`, `eigh_with` for every metric eigenproblem, `solve_pairing`, `of_dyad`/`lstsq_dyad`, generated-code internals in a hidden `gx::__private`; everything migrated
+- [x] Batch 2 names shortened: one `eigh` with the metric as an argument (`form.eigh(metric)`, `SparseMap::eigh(metric, count)` and `eigh_block`; the identity-metric form `eigh()` gone for `form.eigh(Scalar::identity())`), `solve` on pairings, `mesh::Topology` (with `Mesh::topology()`) for the simplicial complex; everything migrated
 - [ ] `try_*` methods (an `Option` on failure) beside the plain ones that return NaN
 - [x] Batch 3, geometry: gax types in constructors (`Motor::translation(d)`, `rotation_about(d, angle)`, `Plane::with_normal(n, d)`, `Twist::translation(v)` and `Twist::rotation(axis, ω)`, CGA `sphere(centre, r)`), helpers with sign-pinning doctests (`Line::direction`, `Plane::normal`, PGA2D `Line::with_normal`/`normal`/`through`, `Point::distance`, `Unit::identity()` and `Default`, VGA3D `Rotor::rotation(axis, angle)`, VGA2D `Rotor::rotation(angle)`/`angle()`, `Rotor::interpolate`, `Between` for VGA vectors and planes), either orientation where one was taken (`orthogonal_to`, `rotation_between`, `look_at`'s `up`, CGA `from_point`), `Motor::from_rotor` and `Moments::moved` gone (`widen()`, `m >> moments`), the roles `Twist`, `Forque`, `Even`, `Odd` in every spec; gax, gax-core, gax-bench and the docs migrated by the batch's rewriter
 - [ ] The example crates (numga, warp, asteroids, colour, wgpu) migrated to batch 3

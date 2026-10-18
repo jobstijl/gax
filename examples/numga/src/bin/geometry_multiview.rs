@@ -101,7 +101,7 @@ macro_rules! multiview_core {
         /// The map on planes induced by a map on points, through incidence: `on_planes(t)(l) & p
         /// == l & t(p)` for every plane and point, whether or not `t` is invertible.
         pub fn on_planes(collineation: Camera) -> Plane<(Plane,), f64> {
-            (Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & collineation)
+            (Plane::slot() & Point::slot()).solve(Plane::slot() & collineation)
         }
 
         /// A sensor disc pulled back through the camera into a perspective cone.
@@ -271,7 +271,7 @@ macro_rules! multiview_core {
                         let polar = row[c].of(moving);
                         let cross = polar & moved[c];
                         // The point's displacement per camera step, then its compliance.
-                        let response = h_pt.solve_pairing(cross);
+                        let response = h_pt.solve(cross);
                         information[c] -= polar & (*m << embed().of(response));
                     }
                 }
@@ -480,8 +480,7 @@ mod plane {
     /// A pose's covariance from its information form: the form as a map from twists to
     /// forques (solved from the incidence pairing), pseudo-inverted with numga's cutoff.
     pub fn pose_covariance(information: Information) -> Twist<(Forque,), f64> {
-        let map: Forque<(Twist,), f64> =
-            (Forque::slot() & Twist::slot()).solve_pairing(information);
+        let map: Forque<(Twist,), f64> = (Forque::slot() & Twist::slot()).solve(information);
         map.pinv_with(1e-4)
     }
 }
@@ -642,12 +641,12 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
 /// Each moving camera's position ellipse (scaled for display) and turning fan, from its
 /// marginal information.
 fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[plane::Information]) {
-    use gax::pga2d::{Forque, Line, Motor, Point, Twist};
+    use gax::pga2d::{Forque, Line, Motor, Point, Scalar, Twist};
     let origin = plane::origin();
     // The centre moves by the commutator of a local twist with the origin; reading that
     // displacement with a line is reading the twist with a forque.
     let shift = Twist::slot().commutator(origin);
-    let readout = (Forque::slot() & Twist::slot()).solve_pairing(Line::slot() & shift);
+    let readout = (Forque::slot() & Twist::slot()).solve(Line::slot() & shift);
     // The line at infinity, the join of two directions, reads a twist's rotation.
     let w = Point::direction(1.0, 0.0) & Point::direction(0.0, 1.0);
     for (k, (m, info)) in motors.iter().zip(information).enumerate() {
@@ -657,7 +656,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
         }
         // The ellipse's axes: the modes of the position's spread that read a position (lines
         // with a direction), their normals with their standard deviations.
-        let (values, modes) = (readout & cov.of(readout)).eigh();
+        let (values, modes) = (readout & cov.of(readout)).eigh(Scalar::identity());
         #[allow(clippy::disallowed_methods)] // standard deviations from variances
         let axes: Vec<(Point<(), f64>, f64)> = modes
             .iter()
@@ -911,7 +910,7 @@ mod tests {
                 }
             }
         }
-        let (values, _) = information[1].eigh();
+        let (values, _) = information[1].eigh(plane::Information::identity());
         assert!(values.iter().all(|v| *v > 0.0), "{values:?}");
     }
 

@@ -193,7 +193,7 @@ fn condition(a: &[Vec<f64>], inv: &[Vec<f64>]) -> f64 {
 
 fn symmetric(a: &[[f64; 6]; 6]) {
     let form = Scalar::<(Line, Line), f64>::from_coeffs([*a]);
-    let (vals, vecs) = form.eigh();
+    let (vals, vecs) = form.eigh(Scalar::identity());
     let scale = a.iter().flatten().fold(0.0f64, |m, x| m.max(x.abs()));
     if !a.iter().flatten().all(|x| x.is_finite()) || !(1e-100..1e100).contains(&scale) {
         return;

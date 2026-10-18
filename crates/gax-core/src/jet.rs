@@ -13,7 +13,7 @@
 //!     after `B`'s own (numga's `derivative`);
 //!   * [`gradient`]: of a scalar function of `A`, the linear form `Scalar <- (A,)`;
 //!   * [`hessian`]: its second derivative, the form `Scalar <- (A, A)`, so a Newton step is
-//!     `-hessian.solve_pairing(gradient)`.
+//!     `-hessian.solve(gradient)`.
 //! * [`Dual<T, N>`] is `Jet<T, Params<N>>`, `N` loose parameters:
 //!   * [`derivative`]: `f'(x)` of a function of one variable;
 //!   * [`gradient_array`]: `∇f` of a scalar function of `N` variables;
@@ -558,7 +558,7 @@ where
 
 /// `(f(x), ∇f(x), ∇²f(x))` for a scalar function of a value of kind `A`: the gradient as the
 /// form `Scalar <- (A,)` and the Hessian as the symmetric bilinear form `Scalar <- (A, A)`. A
-/// Newton step is `-hessian.solve_pairing(gradient)`, a value of `A`. One evaluation of `f` on
+/// Newton step is `-hessian.solve(gradient)`, a value of `A`. One evaluation of `f` on
 /// jets of jets, `(1 + A::N)²` numbers per coefficient: written generic over the coefficient
 /// type, the same `f` serves [`gradient`] and `hessian`.
 ///
@@ -574,7 +574,7 @@ where
 /// let mut x = Plane::<(), f64>::zero();
 /// for _ in 0..12 {
 ///     let (_, g, h) = hessian(energy, x); // Scalar <- Plane, Scalar <- (Plane, Plane)
-///     x = x - h.solve_pairing(g); // a Newton step
+///     x = x - h.solve(g); // a Newton step
 /// }
 /// assert!((x.c[3] - 4f64.ln()).abs() < 1e-14);
 /// ```

@@ -520,7 +520,8 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         SquareMap::eig(self)
     }}
 
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as Kind>::Mv<X::Slots, T>
     where
@@ -568,31 +569,34 @@ impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
 }}
 
 impl<A: Kind, B: Kind, T: Real, O: gx::Orientation> {name}<(A, B), T, O> {{
-    /// Solve `self(x, ·) == rhs(l, ·)` for `x`; leading slots of `rhs` become slots of `x`.
+    /// Solve the pairing `self(x, ·) == rhs(l, ·)` for `x`; leading slots of `rhs` become slots
+    /// of `x` (see [`Pairing::solve`]; a map's `solve` inverts the map itself).
     #[inline]
-    pub fn solve_pairing<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
+    pub fn solve<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
     where
         Self: Pairing<Coef = T, Kind = {name}<(), f64, O>, First = A, Second = B>,
         R: Extensor<Kind = {name}<(), f64, O>, Coef = T>,
         R::Slots: SplitLast<Last = B>,
     {{
-        Pairing::solve_pairing(self, rhs)
+        Pairing::solve(self, rhs)
     }}
 }}
 
 impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind. A form names
+    /// its metric because its eigenvalues against the identity depend on the basis; where the
+    /// coefficient basis is orthonormal, pass [`identity`](Self::identity) (see [`Form::eigh`]).
     #[inline]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    pub fn eigh(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
     where
         Self: Form<Coef = T, Kind = {name}<(), f64, O>, Slot = A>,
     {{
-        Form::eigh_with(self, metric)
+        Form::eigh(self, metric)
     }}
 
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// [`eigh`](Self::eigh) against a positive semidefinite metric: infinite
     /// eigenvalues (`+∞`, last) for the directions it does not measure (see
     /// [`Form::eigh_semidefinite`]).
     #[inline]
@@ -604,14 +608,16 @@ impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
         Form::eigh_semidefinite(self, metric)
     }}
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    /// The identity form in the coefficient basis, `x, y ↦ Σᵢ xᵢ yᵢ`: the Euclidean metric
+    /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
+    /// matrix's own eigenproblem (see [`Form::identity`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    #[must_use]
+    pub fn identity() -> Self
     where
         Self: Form<Coef = T, Kind = {name}<(), f64, O>, Slot = A>,
     {{
-        Form::eigh(self)
+        Form::identity()
     }}
 }}
 

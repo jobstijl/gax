@@ -57,7 +57,7 @@ fn tall_and_wide_maps() {
             m
         });
         let form = Scalar::<(Point, Point), f64>::from_coeffs([ata]);
-        let (eig, _) = form.eigh();
+        let (eig, _) = form.eigh(Scalar::identity());
         for (sv, e) in s.iter().rev().zip(eig) {
             assert!((sv * sv - e).abs() < 1e-10 * (1.0 + e.abs()));
         }

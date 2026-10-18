@@ -151,7 +151,7 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
 /// displacement that twist causes. A pairing solve.
 fn forque_of(cell: RigidCell) -> Forque<(Direction,), f64> {
     let pairing = Forque::slot() & Twist::slot();
-    pairing.solve_pairing(work().of_both(Direction::slot(), cell))
+    pairing.solve(work().of_both(Direction::slot(), cell))
 }
 
 /// The load a force puts on a mode through a modal coupling: the work it does along the mode's

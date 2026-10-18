@@ -25,7 +25,7 @@ mod disks;
 use core::ops::{Add, Mul, Sub};
 use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
-use gax::mesh::SimplicialComplex;
+use gax::mesh::Topology;
 use gax::vga3d::{Bivector, Scalar, Vector, intrinsic};
 use gax::{Extensor, Kind};
 
@@ -70,7 +70,7 @@ pub struct Mesh<V = Vector3> {
     /// against it (`-1`).
     pub face_edge_orientation: Vec<[f64; 3]>,
     /// The topology, from which the edges and the incidence maps come.
-    complex: SimplicialComplex<3>,
+    topology: Topology<3>,
 }
 
 impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
@@ -80,14 +80,13 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// If a face names a vertex that is not there.
     #[must_use]
     pub fn new(vertices: Field<V>, faces: Vec<[usize; 3]>) -> Self {
-        let complex =
-            SimplicialComplex::new(vertices.len(), &faces).unwrap_or_else(|e| panic!("{e}"));
-        let edges = complex.simplices(1).map(|e| [e[0], e[1]]).collect();
+        let topology = Topology::new(vertices.len(), &faces).unwrap_or_else(|e| panic!("{e}"));
+        let edges = topology.simplices(1).map(|e| [e[0], e[1]]).collect();
         let face_edges = (0..faces.len())
-            .map(|f| core::array::from_fn(|k| complex.faces(2, f)[k].0))
+            .map(|f| core::array::from_fn(|k| topology.faces(2, f)[k].0))
             .collect();
         let face_edge_orientation = (0..faces.len())
-            .map(|f| core::array::from_fn(|k| f64::from(complex.faces(2, f)[k].1)))
+            .map(|f| core::array::from_fn(|k| f64::from(topology.faces(2, f)[k].1)))
             .collect();
         Mesh {
             vertices,
@@ -95,7 +94,7 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
             edges,
             face_edges,
             face_edge_orientation,
-            complex,
+            topology,
         }
     }
 
@@ -115,32 +114,32 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
             edges: self.edges.clone(),
             face_edges: self.face_edges.clone(),
             face_edge_orientation: self.face_edge_orientation.clone(),
-            complex: self.complex.clone(),
+            topology: self.topology.clone(),
         }
     }
 
     /// `[E, V]`: the difference along each edge, its higher vertex less its lower.
     #[must_use]
     pub fn d0(&self) -> SparseMap<ScalarOf<V>> {
-        self.complex.d(0)
+        self.topology.d(0)
     }
 
     /// `[F, E]`: the oriented circulation around each face.
     #[must_use]
     pub fn d1(&self) -> SparseMap<ScalarOf<V>> {
-        self.complex.d(1)
+        self.topology.d(1)
     }
 
     /// `[E, V]`: the mean of each edge's two vertices.
     #[must_use]
     pub fn edge_means(&self) -> SparseMap<ScalarOf<V>> {
-        self.complex.means(1)
+        self.topology.means(1)
     }
 
     /// `[F, V]`: the mean of each face's three corners.
     #[must_use]
     pub fn face_means(&self) -> SparseMap<ScalarOf<V>> {
-        self.complex.means(2)
+        self.topology.means(2)
     }
 
     /// The edges of only one face, in order.
@@ -366,7 +365,7 @@ impl Mesh<Vector3> {
     /// The mesh's metric (`gax::dec`): volumes, circumcentric duals, Hodge stars.
     #[must_use]
     pub fn geometry(&self) -> Geometry<f64, 3> {
-        Geometry::from_parts(&self.complex, &self.vertices)
+        Geometry::from_parts(&self.topology, &self.vertices)
     }
 
     /// `[E]`: dual over primal edge length, half the cotangents of the angles facing each edge:

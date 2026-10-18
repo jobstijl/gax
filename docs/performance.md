@@ -366,7 +366,7 @@ it is 16 to 26 times faster, and it solves the non-symmetric, indefinite and sad
 systems that CG cannot. Minimum degree leaves about a third of the fill of a banded (reverse
 Cuthill–McKee) order on the grid, and factors in about half the time.
 
-`SparseMap::eigh_with` (shift-invert block Lanczos, Rayleigh–Ritz on the pencil): 12 modes of the
+`SparseMap::eigh` (shift-invert block Lanczos, Rayleigh–Ritz on the pencil): 12 modes of the
 anchored 64 × 64 grid of points in 1.9 s; 12 and 30 modes of a free grid of vectors (12288
 unknowns) in 0.32 s and 1.1 s, residuals near `10⁻¹²`.
 
@@ -380,12 +380,12 @@ Measured in `f64` on this machine (one core), on a level-4 icosphere (2562 verti
 
 | operation | icosphere 4 | cube 8 |
 |---|---|---|
-| `Complex::new` (every face, orientations, the sorted index) | 3.4 ms | 5.0 ms |
+| `Topology::new` (every face, orientations, the sorted index) | 3.4 ms | 5.0 ms |
 | `Geometry::new` (volumes and circumcentric duals) | 17.6 ms | 109 ms |
 | `mass(1)` (the Whitney mass on edges) | | 32.5 ms |
 | `laplacian_form(0)` (the cotangent Laplacian) | 0.78 ms | |
 | one implicit heat step, `(M₀ + dt K) u = M₀ u` by CG | | 0.82 ms |
-| 16 Laplacian modes, `eigh_with` on `(⋆₀Δ₀, ⋆₀)` | 191 ms | |
+| 16 Laplacian modes, `eigh` on `(⋆₀Δ₀, ⋆₀)` | 191 ms | |
 
 The construction and the operators are linear in the mesh. The geometry is the one that costs:
 about 35 µs per tetrahedron, from the dual volumes, which walk every flag of faces in each top

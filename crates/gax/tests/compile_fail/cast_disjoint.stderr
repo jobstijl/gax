@@ -7,7 +7,7 @@ error[E0277]: `gax::pga3d::oriented::Point` and `Plane<(), f64, Intrinsic>` have
   = help: the trait `Cast<Plane<(), f64, Intrinsic>>` is not implemented for `gax::pga3d::oriented::Point`
   = note: a cast keeps the blades two kinds share; between these two it would always be zero
 help: `gax::pga3d::oriented::Point<(), f64, O>` implements trait `Cast<K>`
- --> src/algebras/pga3d/kinds.rs
+ --> src/algebras/pga3d/kinds_1.rs
   |
   | impl<O: gx::Orientation> gx::Cast<Point<(), f64, O>> for Point<(), f64, O> {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::oriented::Point<(), f64, O>>`
@@ -21,7 +21,7 @@ help: `gax::pga3d::oriented::Point<(), f64, O>` implements trait `Cast<K>`
       | impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Point<(), f64, O> {
       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::oriented::Multivector<(), f64, O>>`
 note: required by a bound in `gax::pga3d::oriented::Point::<S, T, O>::cast`
- --> src/algebras/pga3d/kinds.rs
+ --> src/algebras/pga3d/kinds_1.rs
   |
   |     pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
   |            ---- required by a bound in this associated function

@@ -515,7 +515,7 @@ fn fields_grid(c: &mut Criterion) {
     });
     let mass = SparseMap::from_diagonal(&Field::from_fn(sites, |_| Point::<(), f64>::slot()));
     g.bench_function("eigh: the 12 lowest modes", |b| {
-        b.iter(|| black_box(grid.eigh_with(black_box(&mass), 12)));
+        b.iter(|| black_box(grid.eigh(black_box(&mass), 12)));
     });
     g.finish();
 }

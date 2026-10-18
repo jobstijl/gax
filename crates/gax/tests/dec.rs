@@ -86,18 +86,14 @@ fn close(a: f64, b: f64) -> bool {
 }
 
 /// Compare a geometry's volumes, duals and stars with `PyDEC`'s, simplex by simplex.
-fn compare<const N: usize>(
-    fx: &Fixture,
-    mesh_complex: &gax::mesh::SimplicialComplex<N>,
-    g: &Geometry<f64, N>,
-) {
+fn compare<const N: usize>(fx: &Fixture, topology: &gax::mesh::Topology<N>, g: &Geometry<f64, N>) {
     for k in 0..N {
         let star: Vec<f64> = g
             .star::<gax::vga3d::Scalar<(), f64>>(k)
             .couplings()
             .map(|(_, _, c)| c.s())
             .collect();
-        for (i, s) in mesh_complex.simplices(k).enumerate() {
+        for (i, s) in topology.simplices(k).enumerate() {
             let mut key = s.to_vec();
             key.sort_unstable();
             let (primal, dual, want_star) = fx.values[k][&key];
@@ -131,7 +127,7 @@ fn volumes_and_stars_match_pydec() {
                 let tops: Vec<[usize; 3]> =
                     fx.simplices.iter().map(|s| [s[0], s[1], s[2]]).collect();
                 let mesh = Mesh::new(v, &tops).unwrap();
-                compare(&fx, mesh.complex(), &Geometry::new(&mesh));
+                compare(&fx, mesh.topology(), &Geometry::new(&mesh));
             }
             3 => {
                 use gax::vga3d::Vector;
@@ -146,7 +142,7 @@ fn volumes_and_stars_match_pydec() {
                     .map(|s| [s[0], s[1], s[2], s[3]])
                     .collect();
                 let mesh = Mesh::new(v, &tops).unwrap();
-                compare(&fx, mesh.complex(), &Geometry::new(&mesh));
+                compare(&fx, mesh.topology(), &Geometry::new(&mesh));
             }
             _ => unreachable!(),
         }
@@ -323,7 +319,7 @@ fn the_galerkin_stiffness_is_linear_finite_elements() {
                 .collect();
             let mesh = Mesh::new(v, &tops).unwrap();
             let g = Geometry::new(&mesh);
-            let d0: SparseMap<S2> = mesh.complex().d(0);
+            let d0: SparseMap<S2> = mesh.topology().d(0);
             assert_same(&sandwich(&d0, &g.mass(1)), &fem, &fx.name);
         }
     }
@@ -340,7 +336,7 @@ fn the_galerkin_stiffness_is_linear_finite_elements() {
         .collect();
     let mesh = Mesh::new(v, &[[0, 1, 2, 3]]).unwrap();
     let g = Geometry::new(&mesh);
-    let d0: SparseMap<S2> = mesh.complex().d(0);
+    let d0: SparseMap<S2> = mesh.topology().d(0);
     let points: Vec<Vec<f64>> = corners.iter().map(|c| c.to_vec()).collect();
     assert_same(
         &sandwich(&d0, &g.star(1)),
@@ -373,7 +369,7 @@ fn de_rham_commutes_with_the_derivative() {
                 de_rham::<_, _, _, $n, { $k + 2 }>(&mesh, Rule::degree(2), |x| {
                     curl(|y| field(&c, y), x).1
                 });
-            let d: SparseMap<gax::$alg::Scalar<(), Fp>> = mesh.complex().d($k);
+            let d: SparseMap<gax::$alg::Scalar<(), Fp>> = mesh.topology().d($k);
             assert_eq!(
                 &d * &r_k,
                 r_dk,
@@ -412,7 +408,7 @@ fn whitney_inverts_de_rham() {
             .collect();
         let mesh = Mesh::new(v, &tops).unwrap();
         let g = Geometry::new(&mesh);
-        let c = mesh.complex();
+        let c = mesh.topology();
         let cochain: Field<Scalar<(), f64>> = (0..c.len(1))
             .map(|e| Scalar::new((e as f64 * 0.37).sin()))
             .collect();
@@ -579,7 +575,7 @@ fn codifferential_is_the_adjoint_and_dirac_squares_to_the_laplacian() {
     let field = |n: usize, seed: f64| -> Field<S3> {
         (0..n).map(|i| S3::new((i as f64 * seed).sin())).collect()
     };
-    let c = sphere.complex();
+    let c = sphere.topology();
     for k in 0..2 {
         let (a, b) = (field(c.len(k), 0.37), field(c.len(k + 1), 0.53));
         let da = &c.d::<S3>(k) * &a;
@@ -611,7 +607,7 @@ fn codifferential_is_the_adjoint_and_dirac_squares_to_the_laplacian() {
 fn spectrum(g: &Geometry<f64, 3>, k: usize, count: usize) -> Vec<f64> {
     let form = &g.laplacian_form::<S3>(k) * S3::slot();
     let star = &g.star::<S3>(k) * S3::slot();
-    form.eigh_with(&star, count).0
+    form.eigh(&star, count).0
 }
 
 /// The harmonic cochains, the null space of `Δ_k`, have the Betti numbers' dimensions: a sphere
@@ -624,7 +620,7 @@ fn harmonic_cochains_count_the_holes() {
     ] {
         let g = Geometry::new(&mesh);
         assert!(g.is_well_centered());
-        assert_eq!(mesh.complex().betti_numbers(), betti);
+        assert_eq!(mesh.topology().betti_numbers(), betti);
         for (k, &b) in betti.iter().enumerate() {
             let values = spectrum(&g, k, b + 3);
             let zeros = values.iter().filter(|v| v.abs() < 1e-8).count();
@@ -655,7 +651,7 @@ fn the_sphere_spectrum_converges() {
         diagonal.push(error(&spectrum(&g, 0, 16)));
         let stiffness = &g.stiffness::<S3>(0) * S3::slot();
         let mass = &g.mass::<S3>(0) * S3::slot();
-        galerkin.push(error(&stiffness.eigh_with(&mass, 16).0));
+        galerkin.push(error(&stiffness.eigh(&mass, 16).0));
     }
     for errors in [&diagonal, &galerkin] {
         for w in errors.windows(2) {

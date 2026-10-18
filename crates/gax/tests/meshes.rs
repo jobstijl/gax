@@ -7,7 +7,7 @@ mod support {
     pub mod complex_checks;
 }
 
-use gax::mesh::{MeshError, SimplicialComplex};
+use gax::mesh::{MeshError, Topology};
 use std::collections::BTreeMap;
 use support::complex_checks::check;
 
@@ -58,7 +58,7 @@ fn grid(n: usize, m: usize, glue: Glue) -> (usize, Vec<[usize; 3]>) {
 #[test]
 fn errors_name_the_simplex() {
     assert_eq!(
-        SimplicialComplex::new(3, &[[0, 1, 3]]),
+        Topology::new(3, &[[0, 1, 3]]),
         Err(MeshError::VertexOutOfRange {
             simplex: 0,
             vertex: 3,
@@ -66,7 +66,7 @@ fn errors_name_the_simplex() {
         })
     );
     assert_eq!(
-        SimplicialComplex::new(4, &[[0, 1, 2], [2, 3, 2]]),
+        Topology::new(4, &[[0, 1, 2], [2, 3, 2]]),
         Err(MeshError::RepeatedVertex {
             simplex: 1,
             vertex: 2
@@ -74,22 +74,20 @@ fn errors_name_the_simplex() {
     );
     // The same triangle twice, in another order.
     assert_eq!(
-        SimplicialComplex::new(4, &[[0, 1, 2], [1, 2, 3], [2, 0, 1]]),
+        Topology::new(4, &[[0, 1, 2], [1, 2, 3], [2, 0, 1]]),
         Err(MeshError::DuplicateSimplex {
             first: 0,
             second: 2
         })
     );
-    let message = SimplicialComplex::new(3, &[[0, 1, 3]])
-        .unwrap_err()
-        .to_string();
+    let message = Topology::new(3, &[[0, 1, 3]]).unwrap_err().to_string();
     assert_eq!(message, "simplex 0 names vertex 3, outside the 3 vertices");
 }
 
 #[test]
 fn faces_are_sorted_and_oriented() {
     // One triangle given clockwise in vertex numbers.
-    let c = SimplicialComplex::new(3, &[[0, 2, 1]]).unwrap();
+    let c = Topology::new(3, &[[0, 2, 1]]).unwrap();
     assert_eq!(c.simplices(1).collect::<Vec<_>>(), [[0, 1], [0, 2], [1, 2]]);
     // The faces opposite vertices 0, 2 and 1 in turn: the edges (2, 1), (0, 1) with the sign
     // (−1)¹, and (0, 2). As stored, sorted: −[1, 2], −[0, 1], +[0, 2], the cycle 0 → 2 → 1 → 0.
@@ -122,7 +120,7 @@ fn betti_numbers_of_surfaces() {
     ];
     for (glue, betti, oriented, euler) in cases {
         let (n, faces) = grid(4, 5, glue);
-        let c = SimplicialComplex::new(n, &faces).unwrap();
+        let c = Topology::new(n, &faces).unwrap();
         assert_eq!(c.betti_numbers(), betti);
         assert_eq!(c.is_oriented(), oriented);
         assert_eq!(c.euler_characteristic(), euler);
@@ -132,12 +130,12 @@ fn betti_numbers_of_surfaces() {
     // The torus is closed; the disk's boundary is its rim.
     let (n, faces) = grid(4, 5, Glue::Torus);
     assert_eq!(
-        SimplicialComplex::new(n, &faces).unwrap().boundary(),
+        Topology::new(n, &faces).unwrap().boundary(),
         Vec::<usize>::new()
     );
     let (n, faces) = grid(4, 5, Glue::Disk);
     assert_eq!(
-        SimplicialComplex::new(n, &faces).unwrap().boundary().len(),
+        Topology::new(n, &faces).unwrap().boundary().len(),
         2 * (4 + 5)
     );
 }
@@ -155,14 +153,14 @@ fn the_octahedron_is_a_sphere() {
         [3, 1, 5],
         [0, 3, 5],
     ];
-    let c = SimplicialComplex::new(6, &faces).unwrap();
+    let c = Topology::new(6, &faces).unwrap();
     assert_eq!(c.betti_numbers(), [1, 0, 1]);
     assert_eq!(c.euler_characteristic(), 2);
     assert!(c.is_oriented());
     // One face turned over breaks the orientation, not the topology.
     let mut flipped = faces;
     flipped[3] = [0, 3, 4];
-    let c = SimplicialComplex::new(6, &flipped).unwrap();
+    let c = Topology::new(6, &flipped).unwrap();
     assert!(!c.is_oriented() && c.betti_numbers() == [1, 0, 1]);
     check(6, &faces);
 }
@@ -189,7 +187,7 @@ fn solids_and_spheres_in_higher_dimensions() {
         path
     })
     .collect();
-    let c = SimplicialComplex::new(8, &tets).unwrap();
+    let c = Topology::new(8, &tets).unwrap();
     assert_eq!(c.betti_numbers(), [1, 0, 0, 0]);
     assert_eq!(c.boundary().len(), 12); // two triangles on each face of the cube
     assert_eq!(c.len(1), 19); // 12 edges, 6 face diagonals, the long diagonal
@@ -201,13 +199,13 @@ fn solids_and_spheres_in_higher_dimensions() {
             [v[0], v[1], v[2], v[3]]
         })
         .collect();
-    let c = SimplicialComplex::new(5, &sphere).unwrap();
+    let c = Topology::new(5, &sphere).unwrap();
     assert_eq!(c.betti_numbers(), [1, 0, 0, 1]);
     assert_eq!(c.boundary(), Vec::<usize>::new());
     check(5, &sphere);
     // And two disjoint triangles: two pieces.
     assert_eq!(
-        SimplicialComplex::new(6, &[[0, 1, 2], [3, 4, 5]])
+        Topology::new(6, &[[0, 1, 2], [3, 4, 5]])
             .unwrap()
             .betti_numbers(),
         [2, 0, 0]
@@ -216,7 +214,7 @@ fn solids_and_spheres_in_higher_dimensions() {
 
 #[test]
 fn three_triangles_on_an_edge_are_not_a_pseudomanifold() {
-    let c = SimplicialComplex::new(5, &[[0, 1, 2], [0, 1, 3], [0, 1, 4]]).unwrap();
+    let c = Topology::new(5, &[[0, 1, 2], [0, 1, 3], [0, 1, 4]]).unwrap();
     assert!(!c.is_pseudomanifold() && !c.is_oriented());
     assert_eq!(c.coface_counts(1)[0], 3);
 }

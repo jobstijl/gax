@@ -101,7 +101,7 @@ mod fresnel {
         let volumes = map.outermorphism::<Trivector>();
         let incidence: intrinsic::Scalar<(Vector, Trivector), f64> =
             Vector::slot() & Trivector::slot();
-        incidence.solve_pairing(Vector::slot() & volumes)
+        incidence.solve(Vector::slot() & volumes)
     }
 
     /// The Fresnel quartic of a wavevector, for its nonzero frequency as the unit timelike
@@ -350,14 +350,14 @@ mod tests {
     /// `b`.
     fn adjoint(map: VectorMap) -> VectorMap {
         let metric = Vector::slot() | Vector::slot();
-        metric.solve_pairing(Vector::slot() | map)
+        metric.solve(Vector::slot() | map)
     }
 
     /// The adjoint of a field map under the metric: `F*(B) · a = B · F(a)` for every bivector
     /// `B` and vector `a`.
     fn field_adjoint(map: FieldMap) -> Vector<(Bivector,), f64> {
         let metric = Vector::slot() | Vector::slot();
-        metric.solve_pairing(Bivector::slot() | map)
+        metric.solve(Bivector::slot() | map)
     }
 
     /// The medium seen moved by a rotor: conjugated by it.
@@ -464,7 +464,7 @@ mod tests {
                 }
             }
             let metric = Bivector::slot() | Bivector::slot();
-            let response_adjoint: Response = metric.solve_pairing(Bivector::slot() | response);
+            let response_adjoint: Response = metric.solve(Bivector::slot() | response);
             assert!(near(response_adjoint, response, 1e-12));
         }
     }

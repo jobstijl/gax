@@ -72,7 +72,7 @@ fn identity(n: usize) -> FieldMap<f64> {
 
 /// The lowest eigenvalue of a symmetric field map.
 fn lowest(map: &FieldMap<f64>) -> f64 {
-    map.eigh_with(&identity(map.shape().0), 1).0[0]
+    map.eigh(&identity(map.shape().0), 1).0[0]
 }
 
 /// The derivatives through the dipoles' solve: gax's field derivatives of the energy.

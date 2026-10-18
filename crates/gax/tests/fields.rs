@@ -467,7 +467,7 @@ fn eigh_free_chain() {
     let n = 40;
     let k = free_chain(n);
     let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
-    let (values, modes) = k.eigh_with(&mass, 9);
+    let (values, modes) = k.eigh(&mass, 9);
     for (i, v) in values.iter().enumerate() {
         let wave = (i / 3) as f64;
         let want = 2.0 - 2.0 * (wave * std::f64::consts::PI / n as f64).cos();
@@ -492,7 +492,7 @@ fn eigh_free_chain() {
 fn eigh_eigenvectors_across_a_small_gap() {
     let n = 400;
     let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
-    let (values, modes) = free_chain(n).eigh_with(&mass, 6);
+    let (values, modes) = free_chain(n).eigh(&mass, 6);
     for (i, (value, mode)) in values.iter().zip(&modes).enumerate() {
         let wave = (i / 3) as f64;
         let exact = |j: usize| (((j as f64 + 0.5) * wave * std::f64::consts::PI) / n as f64).cos();
@@ -526,8 +526,8 @@ fn eigh_is_scale_invariant() {
     let unit = free_chain(n);
     let stiff = unit.map_cells(|c| c.gp(stiffness));
     let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
-    let (values, _) = unit.eigh_with(&mass, 12);
-    let (stiff_values, _) = stiff.eigh_with(&mass, 12);
+    let (values, _) = unit.eigh(&mass, 12);
+    let (stiff_values, _) = stiff.eigh(&mass, 12);
     for (v, s) in values.iter().zip(&stiff_values) {
         assert!(
             (s / stiffness - v).abs() < 1e-12,
@@ -599,7 +599,7 @@ fn eigh_generalized_and_degenerate() {
             SparseMap::from_diagonal(&Field::from_fn(n, |i| id(1.0 + (i % 5) as f64 * 0.25))),
         ),
     ] {
-        let (values, modes) = grid.eigh_with(&mass, 12);
+        let (values, modes) = grid.eigh(&mass, 12);
         for (v, x) in values.iter().zip(&modes) {
             let r = &grid.of(x) - &mass.of(x).scaled(*v);
             assert!(

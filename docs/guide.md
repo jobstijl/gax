@@ -333,7 +333,7 @@ the same coefficients through `as_map`, for `svd`, `pinv` or `det`. `of_both(p, 
 slots of a two-slot map with maps at once (`M <- (A, B)` with `p: A <- (X,)`, `q: B <- (Y,)` gives
 `M <- (X, Y)`): a cost form pulled back through a step's dynamics and actuation.
 
-`eigh_with` needs a positive definite metric. Against one that is only semidefinite, such as
+A form's `eigh` needs a positive definite metric. Against one that is only semidefinite, such as
 PGA's point weight (which does not see ideal points), `eigh_semidefinite` lists the finite
 eigenvalues first and the directions the metric cannot measure as `+∞`: fitting a point to
 samples is the smallest finite mode of the misfit against the weight.
@@ -397,15 +397,18 @@ let x: Point<(Point,), f64> = join.lstsq_dyad(p & q);
 assert!(join.of_dyad(x).approx_eq(&(p & q), 1e-12));
 ```
 
-Forms (`Scalar<(A, A)>`) have `eigh_with(metric)` for the generalized eigenproblem between two
-forms. The eigenvectors come back as values of the slot kind. For vibration modes of a rigid body
+Forms (`Scalar<(A, A)>`) have `eigh(metric)` for the generalized eigenproblem between two
+forms. A form's eigenproblem always names its metric, because its eigenvalues against the
+identity depend on the basis; where the coefficient basis is orthonormal (Euclidean vectors,
+rotors), `form.eigh(Scalar::identity())` is the plain symmetric eigenproblem of its coefficients.
+The eigenvectors come back as values of the slot kind. For vibration modes of a rigid body
 they are twists, each one a rotation about a point
 (example `rigid_body_modes`):
 
 ```rust,ignore
 let kinetic: Scalar<(Point, Point), f64> = Point::slot() & inertia;     // forms from maps: pair with an open twist
 let potential: Scalar<(Point, Point), f64> = Point::slot() & stiffness;
-let (values, modes) = potential.eigh_with(kinetic);                      // modes: [Point; 3], twists
+let (values, modes) = potential.eigh(kinetic);                           // modes: [Point; 3], twists
 ```
 
 **There is no transpose.** A transpose identifies a space with its dual by coefficient index, which is
@@ -424,7 +427,7 @@ let eye = Point::<(), f64>::xyz(0.0, 0.0, 5.0);
 let screen = Plane::<(), f64>::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
 let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
 let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
-let on_planes: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & projection);
+let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & projection);
 // on_planes.of(l) & p == l & projection.of(p) for every plane l and point p
 ```
 
@@ -861,8 +864,8 @@ The derivative with respect to a gax value is itself an extensor, as in numga:
 * `hessian(f, x)` returns the value, the gradient and the second derivative, the symmetric form
   `Scalar <- (A, A)`.
 
-They are ordinary maps and forms, so `of`, `solve_pairing`, `lstsq` and `eigh` apply to them. A
-Newton step is `x - hessian.solve_pairing(gradient)`. Here it recovers a rigid motion from where it
+They are ordinary maps and forms, so `of`, `solve`, `lstsq` and `eigh` apply to them. A
+Newton step is `x - hessian.solve(gradient)`. Here it recovers a rigid motion from where it
 took three points, iterating on the motion's twist `b` (the motion is `exp(b)`):
 
 ```rust
@@ -891,7 +894,7 @@ let mut b = Line::<(), f64>::zero();
 for _ in 0..8 {
     // gradient: Scalar <- Line; curvature: Scalar <- (Line, Line)
     let (_, gradient, curvature) = hessian(|b| misfit(b, &pairs), b);
-    b = b - curvature.solve_pairing(gradient); // the Newton step, a twist
+    b = b - curvature.solve(gradient); // the Newton step, a twist
 }
 assert!(b.approx_eq(&truth, 1e-12));
 ```

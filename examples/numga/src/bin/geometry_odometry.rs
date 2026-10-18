@@ -102,7 +102,7 @@ macro_rules! odometry_core {
         /// in its own form.
         pub fn modes(uncertainty: Covariance) -> Vec<Tw> {
             let spread = forques() & uncertainty;
-            let (_, lines) = spread.eigh_with(spread);
+            let (_, lines) = spread.eigh(spread);
             lines.as_ref().iter().map(|l| uncertainty.of(*l)).collect()
         }
 
@@ -489,7 +489,7 @@ mod plane {
     pub fn ellipse(pose: M, uncertainty: Covariance) -> Quadric {
         let here = position(pose);
         let shift = twists().commutator(here).of(pose >> twists());
-        let readout = (forques() & twists()).solve_pairing(Line::slot() & shift);
+        let readout = (forques() & twists()).solve(Line::slot() & shift);
         let moment = here * (Line::slot() & here) + shift.of(uncertainty.of(readout));
         let w = Line::new(0.0, 0.0, 1.0);
         moment.inverse() - (w * (w & Point::slot())).gp(1.0 + SIGMAS * SIGMAS)

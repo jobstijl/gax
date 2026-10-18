@@ -2,7 +2,7 @@
 //! squares and the pseudo-inverse.
 //!
 //! These are blanket traits over every generated kind, so they work for any algebra. The
-//! generated types expose them as inherent methods (`map.inverse()`, `form.eigh_with(m)`),
+//! generated types expose them as inherent methods (`map.inverse()`, `form.eigh(metric)`),
 //! which forward here. Results are typed: the inverse of a `B <- A` map is an `A <- B` map,
 //! singular vectors and eigenvectors are values of the slot kinds.
 
@@ -43,7 +43,7 @@ pub trait SquareMap: Extensor<Coef: Real> {
     /// map's coefficient matrix, taken as symmetric (its symmetric part): numga's `eigh` on a
     /// map. For an endomorphism that is self-adjoint under the coefficient inner product, as
     /// on Euclidean vectors, even elements of VGA or STA spinors; a map self-adjoint under
-    /// another metric is better paired with that metric as a form (`Form::eigh_with`).
+    /// another metric is better paired with that metric as a form (`Form::eigh`).
     #[allow(clippy::type_complexity)]
     fn eigh(
         self,
@@ -67,7 +67,8 @@ pub trait SquareMap: Extensor<Coef: Real> {
         <Self::Kind as Kind>::Arr<<Self::Input as Kind>::Mv<(), Complex<Self::Coef>>>,
     );
     /// Solve `self(x) = rhs` for `x`. A right-hand side with slots of its own keeps them: the
-    /// solution is then a map with those slots.
+    /// solution is then a map with those slots. (A pairing's [`Pairing::solve`] solves
+    /// against one slot of a two-slot form instead.)
     fn solve<X>(self, rhs: X) -> <Self::Input as Kind>::Mv<X::Slots, Self::Coef>
     where
         X: Extensor<Kind = Self::Kind, Coef = Self::Coef>;
@@ -210,7 +211,7 @@ where
 ///     k += l * l;
 ///     m += (l * l).gp(2.0);
 /// }
-/// let (values, modes) = k.eigh_with(m); // modes are values of the slot kind
+/// let (values, modes) = k.eigh(m); // modes are values of the slot kind
 /// assert!(values.iter().all(|v| (v - 0.5).abs() < 1e-10));
 /// let _: Point<(), f64> = modes[0];
 /// ```
@@ -222,10 +223,14 @@ pub trait Form: Extensor<Coef: Real> {
     /// `self(x, ·) = λ metric(x, ·)`. Returns the eigenvalues in ascending order and the
     /// eigenvectors as values of the slot kind, normalized to `metric(x, x) = 1`.
     ///
-    /// This is how vibration modes come out as motions: `stiffness.eigh_with(inertia)`
-    /// returns twists. If `metric` is not positive definite the results are NaN.
+    /// A form's eigenproblem always names its metric: against the identity, the eigenvalues
+    /// of a form change with the basis (a form transforms as `Pᵀ F P`, not `P⁻¹ F P`), so
+    /// only a metric makes them geometric. This is how vibration modes come out as motions:
+    /// `stiffness.eigh(inertia)` returns twists. Where the coefficient basis is orthonormal
+    /// (Euclidean vectors, rotors), [`identity`](Self::identity) is that metric. If `metric`
+    /// is not positive definite the results are NaN.
     #[allow(clippy::type_complexity)]
-    fn eigh_with(
+    fn eigh(
         self,
         metric: Self,
     ) -> (
@@ -233,17 +238,13 @@ pub trait Form: Extensor<Coef: Real> {
         <Self::Slot as Kind>::Arr<<Self::Slot as Kind>::Mv<(), Self::Coef>>,
     );
 
-    /// Symmetric eigenproblem in the coefficient basis (identity metric). Meaningful when the
-    /// slot's metric is the identity in its layout, as for Euclidean vectors and rotors.
-    #[allow(clippy::type_complexity)]
-    fn eigh(
-        self,
-    ) -> (
-        <Self::Slot as Kind>::Arr<Self::Coef>,
-        <Self::Slot as Kind>::Arr<<Self::Slot as Kind>::Mv<(), Self::Coef>>,
-    );
+    /// The identity form `δᵢⱼ` in the coefficient basis, `x, y ↦ Σᵢ xᵢ yᵢ`: the metric of the
+    /// coefficient inner product, Euclidean where the layout is orthonormal (VGA vectors and
+    /// rotors) and a choice of basis elsewhere. `form.eigh(Scalar::identity())` is the
+    /// symmetric eigenproblem of the coefficient matrix, as `form.as_map().eigh()`.
+    fn identity() -> Self;
 
-    /// [`eigh_with`](Self::eigh_with) against a metric that is only positive *semi*definite
+    /// [`eigh`](Self::eigh) against a metric that is only positive *semi*definite
     /// (PGA's point weight, a norm blind to translations): the directions the metric does not
     /// measure have infinite eigenvalues, listed last as `+∞`; the finite ones come first,
     /// ascending, with eigenvectors normalized to `metric(x, x) = 1`. Solved exactly as
@@ -268,7 +269,7 @@ where
 {
     type Slot = A;
 
-    fn eigh_with(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
+    fn eigh(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
         let a = &self.coeffs().as_ref()[0];
         let b = &metric.coeffs().as_ref()[0];
         let n = <A::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
@@ -318,8 +319,20 @@ where
         (vals, vecs)
     }
 
-    fn eigh(self) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
-        eigh_pairs::<_, _, A, A>(&self.coeffs().as_ref()[0])
+    fn identity() -> M {
+        let n = A::N;
+        M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|k| {
+            <M::Slots as Slots>::from_flat(
+                &mut |f| {
+                    if k == 0 && f / n == f % n {
+                        M::Coef::one()
+                    } else {
+                        M::Coef::zero()
+                    }
+                },
+                0,
+            )
+        }))
     }
 }
 
@@ -331,7 +344,7 @@ where
 /// let m = Motor::<(), f64>::translation(Point::direction(1.0, 0.0, 0.0));
 /// let t: Point<(Point,), f64> = m >> Point::slot();
 /// let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
-/// let on_planes: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & t);
+/// let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & t);
 /// let (l, p) = (Plane::new(1.0, 0.0, 0.0, -2.0), Point::xyz(3.0, 1.0, 0.0));
 /// assert!(((on_planes.of(l) & p).s() - (l & t.of(p)).s()).abs() < 1e-12);
 /// ```
@@ -345,8 +358,9 @@ pub trait Pairing: Extensor<Coef: Real> {
     ///
     /// With `rhs` a linear form (one slot) the solution is a value; with leading slots it is
     /// a map on them. The induced map of a point map `t` on planes, which exists even when `t`
-    /// is singular, is `(Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & t)`.
-    fn solve_pairing<R>(
+    /// is singular, is `(Plane::slot() & Point::slot()).solve(Plane::slot() & t)`. (A square
+    /// map's [`SquareMap::solve`] inverts the map itself, `self.of(x) == rhs`.)
+    fn solve<R>(
         self,
         rhs: R,
     ) -> <Self::First as Kind>::Mv<<R::Slots as SplitLast>::Init, Self::Coef>
@@ -366,7 +380,7 @@ where
     type First = A;
     type Second = B;
 
-    fn solve_pairing<R>(self, rhs: R) -> A::Mv<<R::Slots as SplitLast>::Init, M::Coef>
+    fn solve<R>(self, rhs: R) -> A::Mv<<R::Slots as SplitLast>::Init, M::Coef>
     where
         R: Extensor<Kind = M::Kind, Coef = M::Coef>,
         R::Slots: SplitLast<Last = B>,

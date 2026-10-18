@@ -136,7 +136,7 @@ mod pga3d_moments {
         pub fn of_mesh(mesh: &crate::mesh::Mesh<Point<(), T>, 3>) -> Self {
             let v = mesh.vertices.sites();
             Self::of_triangles(
-                mesh.complex()
+                mesh.topology()
                     .simplices(2)
                     .map(|t| [v[t[0]], v[t[1]], v[t[2]]]),
                 Point::xyz(T::zero(), T::zero(), T::zero()),
@@ -370,7 +370,7 @@ mod pga2d_moments {
         pub fn of_mesh(mesh: &crate::mesh::Mesh<Point<(), T>, 2>) -> Self {
             let v = mesh.vertices.sites();
             Self::of_edges(
-                mesh.complex().simplices(1).map(|e| [v[e[0]], v[e[1]]]),
+                mesh.topology().simplices(1).map(|e| [v[e[0]], v[e[1]]]),
                 Point::xy(T::zero(), T::zero()),
             )
         }

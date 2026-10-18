@@ -10,7 +10,7 @@ error[E0277]: a `gax::pga3d::oriented::Line` does not fit a slot of kind `gax::p
   = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::oriented::Point>()` if dropping blades is intended
   = note: and of the slot's orientation (ADR-051): a join of points is intrinsic, a meet of planes extrinsic. Take a slot of the value's orientation (`intrinsic::Kind::slot()`, `extrinsic::Kind::slot()`), or declare the coefficients' orientation with `.with_orientation()` if they mean the other
 help: `gax::pga3d::oriented::Line<(), f64, O>` implements trait `SubKind<K>`
- --> src/algebras/pga3d/kinds.rs
+ --> src/algebras/pga3d/kinds_1.rs
   |
   | impl<O: gx::Orientation> gx::SubKind<Line<(), f64, O>> for Line<(), f64, O> {}
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::oriented::Line<(), f64, O>>`

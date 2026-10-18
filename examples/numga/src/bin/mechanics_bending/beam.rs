@@ -117,7 +117,7 @@ pub fn pull(stiffness: Stiffness, p: P2) -> Strain {
 pub fn principal_axes(stiffness: Stiffness) -> [Strain; 2] {
     let metric = pga2d::Line::slot() | pga2d::Line::slot();
     let energy = pga2d::Line::slot() & stiffness;
-    let (_, axes) = metric.eigh_with(energy);
+    let (_, axes) = metric.eigh(energy);
     [axes[2], axes[1]]
 }
 

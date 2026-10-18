@@ -54,7 +54,7 @@ to `estimation`, `cyclides` to `quadrics`, and `qem`, `skinning` and `surface_cu
   weighted dual's `linprog` and SLSQP are a log barrier on gax's sparse solves.
 * **Missing tools in gax** are written locally: polynomial roots (cyclides), quadrature (lensing,
   curvature, spin transformations). Generalized eigenproblems against a singular metric are
-  solved exactly with the forms' roles swapped in `eigh_with`. Complex coefficients and the
+  solved exactly with the forms' roles swapped in `eigh`. Complex coefficients and the
   eigenvalues of non-symmetric maps, first written locally, are now gax's (`gax::Complex`,
   `eigvals`; ADR-042).
 * **Found on the way.** numga's Kalman prediction adds the motion noise inside the conjugation

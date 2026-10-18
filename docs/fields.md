@@ -146,7 +146,7 @@ assert!((beads.site(0).e1() + 1.5).abs() < 1e-12 && (beads.site(3).e1() - 1.5).a
 
 ### Eigenproblems
 
-`eigh_with(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, for a
+`eigh(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, for a
 symmetric field map and a symmetric positive definite metric: the vibration modes of a mesh, or
 the lowest states of a lattice Hamiltonian. The values come ascending, and the fields are
 orthonormal in the metric. Free meshes have a null space (their rigid motions), which comes
@@ -160,7 +160,7 @@ its copies.
 # let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1, 2, 2], vec![0, 1, 1, 2, 2, 3], (3, 4));
 let laplacian = &(&ends.reverse() * &ends) * Vector::slot(); // the free string
 let mass = SparseMap::from_diagonal(&Field::from_fn(4, |_| Vector::<(), f64>::slot()));
-let (values, modes) = laplacian.eigh_with(&mass, 6);
+let (values, modes) = laplacian.eigh(&mass, 6);
 assert!(values[..3].iter().all(|v| v.abs() < 1e-12)); // translations along x, y and z
 let wave = 2.0 - 2.0 * (std::f64::consts::PI / 4.0).cos(); // the half wave, on each axis
 assert!(values[3..].iter().all(|v| (v - wave).abs() < 1e-12));
@@ -171,7 +171,7 @@ The search space comes from block Lanczos on `(A − σM)⁻¹ M`, with σ just 
 sparse LU of `A − σM`. The eigenpairs come from `A` and `M` themselves on that space, and the
 space grows until each pair's residual `‖A x − λ M x‖` is at the level of rounding. Blocks of
 `2 K::N + 2` vectors cover values repeated on every coefficient and doubled by a symmetry of the
-sites; `eigh_with_block` takes larger blocks for more symmetric meshes.
+sites; `eigh_block` takes larger blocks for more symmetric meshes.
 
 ## On SIMD lanes
 

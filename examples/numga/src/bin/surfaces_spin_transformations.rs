@@ -104,7 +104,7 @@ mod spin {
     /// the field of least energy per unit of vertex area, divided by its area-weighted mean,
     /// spinning the edges.
     pub fn spin_transform_deform(mesh: &Mesh, rho: &Field<Scalar3>) -> Mesh {
-        let (_, modes) = energy(mesh, rho).eigh_with(&area_metric(mesh), 1);
+        let (_, modes) = energy(mesh, rho).eigh(&area_metric(mesh), 1);
         let areas = mesh.vertex_areas();
         let weighted = areas.zip_with(&modes[0], |a, q| a * q).sum();
         let mean = weighted * (1.0 / areas.sum().s());
@@ -119,7 +119,7 @@ mod spin {
     /// fields are taken as they come, at unit size per unit of vertex area, their mean zero.
     pub fn dirac_spheres(mesh: &Mesh, eigenvalue: i32, count: usize) -> (Vec<f64>, Vec<Mesh>) {
         let rho = Field::from_fn(mesh.faces.len(), |_| Scalar3::new(f64::from(eigenvalue)));
-        let (energies, fields) = energy(mesh, &rho).eigh_with(&area_metric(mesh), count);
+        let (energies, fields) = energy(mesh, &rho).eigh(&area_metric(mesh), count);
         let spheres = fields
             .iter()
             .map(|q| mesh.with_vertices(matching(mesh, &spun_edges(mesh, q))))

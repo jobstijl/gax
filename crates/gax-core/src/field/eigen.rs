@@ -43,7 +43,7 @@ where
     /// The blocks have `2 K::N + 2` vectors, so an eigenvalue repeated on every coefficient of
     /// the kind (a field map of isotropic cells repeats each one `K::N` times), and doubled by a
     /// symmetry of the sites, is found with its whole eigenspace
-    /// ([`eigh_with_block`](Self::eigh_with_block) for more).
+    /// ([`eigh_block`](Self::eigh_block) for more).
     ///
     /// ```
     /// use gax::field::{Field, SparseMap};
@@ -62,7 +62,7 @@ where
     /// );
     /// let laplacian = &(&ends.reverse() * &ends) * Plane::slot();
     /// let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Plane::<(), f64>::slot()));
-    /// let (values, modes) = laplacian.eigh_with(&mass, 6);
+    /// let (values, modes) = laplacian.eigh(&mass, 6);
     /// assert!(values[..4].iter().all(|v| v.abs() < 1e-12));
     /// let half_wave = 2.0 - 2.0 * (std::f64::consts::PI / 5.0).cos();
     /// assert!(values[4..].iter().all(|v| (v - half_wave).abs() < 1e-12));
@@ -75,41 +75,37 @@ where
     #[must_use]
     #[track_caller]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with(
-        &self,
-        metric: &SparseMap<C>,
-        count: usize,
-    ) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
-        self.eigh_with_block(metric, count, 2 * K::N + 2)
+    pub fn eigh(&self, metric: &SparseMap<C>, count: usize) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
+        self.eigh_block(metric, count, 2 * K::N + 2)
     }
 
-    /// [`eigh_with`](Self::eigh_with) with Lanczos blocks of `block` vectors. A block finds an
+    /// [`eigh`](Self::eigh) with Lanczos blocks of `block` vectors. A block finds an
     /// eigenvalue with up to `block` copies at once; the default, `2 K::N + 2`, covers a value
     /// repeated on every coefficient of the kind and doubled by a symmetry of the sites (a square
     /// grid's modes along its two axes). Use a larger block for more symmetric meshes.
     ///
     /// # Panics
-    /// As [`eigh_with`](Self::eigh_with), and if `block` is zero.
+    /// As [`eigh`](Self::eigh), and if `block` is zero.
     #[must_use]
     #[track_caller]
     #[allow(clippy::type_complexity)]
-    pub fn eigh_with_block(
+    pub fn eigh_block(
         &self,
         metric: &SparseMap<C>,
         count: usize,
         block: usize,
     ) -> (Vec<T>, Vec<Field<K::Mv<(), T>>>) {
-        assert!(block > 0, "eigh_with: a Lanczos block of zero vectors");
+        assert!(block > 0, "eigh: a Lanczos block of zero vectors");
         assert!(
             self.shape.0 == self.shape.1 && metric.shape == self.shape,
-            "eigh_with needs square field maps over the same sites: {:?} and {:?}",
+            "eigh needs square field maps over the same sites: {:?} and {:?}",
             self.shape,
             metric.shape
         );
         let n = self.shape.0 * K::N;
         assert!(
             count > 0 && count <= n,
-            "eigh_with: {count} eigenpairs asked of {n} unknowns"
+            "eigh: {count} eigenpairs asked of {n} unknowns"
         );
         // The scales: the ∞-norms, which bound the spectral radii. (Not the diagonals: a
         // Hamiltonian of hops alone has none.)
@@ -198,7 +194,7 @@ where
     match shifted.factor() {
         Ok(lu) => lu,
         Err(e) => panic!(
-            "SparseMap::eigh_with: the shifted pencil is singular ({e}); the metric must be positive definite"
+            "SparseMap::eigh: the shifted pencil is singular ({e}); the metric must be positive definite"
         ),
     }
 }

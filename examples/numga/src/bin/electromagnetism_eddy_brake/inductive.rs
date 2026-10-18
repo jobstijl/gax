@@ -172,7 +172,7 @@ pub fn current_modes(
     let pulled = &adjoint * &coulomb_integrals(mesh, permeability);
     let inductance = symmetric(&pulled.compose(&current));
     // The eigenfields are orthonormal in magnetic energy; their eigenvalues are decay rates.
-    let (decay, modes) = resistance.eigh_with(&inductance, count);
+    let (decay, modes) = resistance.eigh(&inductance, count);
     let cells = modes.iter().flat_map(|m| m.iter()).collect();
     CurrentModes {
         decay: decay.into_iter().map(Scalar3::new).collect(),

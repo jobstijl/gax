@@ -200,7 +200,7 @@ mod top {
         let project = d.cast::<Point>() - normal * ((tangent & d) / (tangent & normal).s());
         let hessian = surface & Point::slot();
         let second = hessian.of_both(project, project) / length(normal);
-        let (values, _) = second.eigh_with(d.dual() | d.dual());
+        let (values, _) = second.eigh(d.dual() | d.dual());
         // The two values that are not the zero.
         let mut v = values;
         v.sort_by(|a, b| a.abs().total_cmp(&b.abs()));

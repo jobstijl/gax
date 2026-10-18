@@ -210,7 +210,7 @@ mod koebe {
         let mut s = vga3d::Vector::<(), f64>::zero();
         for _ in 0..NEWTON_STEPS {
             let (value, gradient, curvature) = gax::jet::hessian(|s| imbalance(points, s), s);
-            let newton = -curvature.solve_pairing(gradient);
+            let newton = -curvature.solve(gradient);
             let mut length = 1.0;
             let worse = |step: vga3d::Vector<(), f64>| {
                 (s + step).norm_squared() >= 1.0 || imbalance(points, s + step) > value

@@ -41,7 +41,7 @@ extern crate std;
 use crate::coef::Real;
 use crate::field::{Field, SparseMap};
 use crate::kind::{Extensor, Kind};
-use crate::mesh::{Mesh, SimplicialComplex};
+use crate::mesh::{Mesh, Topology};
 use crate::ops::{Reverse, ScalarProduct};
 use crate::simplex::{Measure, Position, Rule, Simplex};
 use std::vec::Vec;
@@ -195,7 +195,7 @@ fn barycentric_distances<T: Real>(points: &[Vec<T>], d: &[T]) -> Vec<T> {
 /// The metric of a mesh: its primal and circumcentric dual volumes, and its Hodge stars.
 #[derive(Clone, Debug)]
 pub struct Geometry<T, const N: usize> {
-    complex: SimplicialComplex<N>,
+    topology: Topology<N>,
     /// The squared distances between the vertices of each top simplex, row-major `N × N`.
     distances: Vec<Vec<T>>,
     volumes: Vec<Vec<T>>,
@@ -206,11 +206,11 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     /// The geometry of a mesh, from the squared distances of its model.
     #[must_use]
     pub fn new<V: Distance<Coef = T> + Extensor<Slots = ()>>(mesh: &Mesh<V, N>) -> Self {
-        Self::build(mesh.complex().clone(), mesh.vertices.sites())
+        Self::build(mesh.topology().clone(), mesh.vertices.sites())
     }
 
-    /// The geometry of a complex with the vertices `v`.
-    fn build<V: Distance<Coef = T>>(complex: SimplicialComplex<N>, v: &[V]) -> Self {
+    /// The geometry of a topology with the vertices `v`.
+    fn build<V: Distance<Coef = T>>(topology: Topology<N>, v: &[V]) -> Self {
         let distances_of = |s: &[usize]| -> Vec<T> {
             s.iter()
                 .flat_map(|&a| s.iter().map(move |&b| V::distance_squared(&v[a], &v[b])))
@@ -218,24 +218,24 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         };
         let volumes: Vec<Vec<T>> = (0..N)
             .map(|k| {
-                complex
+                topology
                     .simplices(k)
                     .map(|s| volume(&distances_of(s), k))
                     .collect()
             })
             .collect();
-        let distances: Vec<Vec<T>> = complex.simplices(N - 1).map(distances_of).collect();
+        let distances: Vec<Vec<T>> = topology.simplices(N - 1).map(distances_of).collect();
         let mut dual_volumes: Vec<Vec<T>> = (0..N)
-            .map(|k| std::vec![T::zero(); complex.len(k)])
+            .map(|k| std::vec![T::zero(); topology.len(k)])
             .collect();
-        for (t, top) in complex.simplices(N - 1).enumerate() {
+        for (t, top) in topology.simplices(N - 1).enumerate() {
             let d = &distances[t];
             // Every flag from the top simplex down to each face: (local vertices, its
             // circumcentre in the top simplex's barycentric coordinates).
             let local: Vec<usize> = (0..N).collect();
             let centre = circumcentre(d, N - 1);
             let mut flags = Flags {
-                complex: &complex,
+                topology: &topology,
                 top,
                 d,
                 flag: std::vec![centre.clone()],
@@ -244,7 +244,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             flags.descend(&local, &centre, T::one());
         }
         Geometry {
-            complex,
+            topology,
             distances,
             volumes,
             dual_volumes,
@@ -304,7 +304,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         }
         let n = N - 1;
         let mut triples = Vec::new();
-        for (t, top) in self.complex.simplices(N - 1).enumerate() {
+        for (t, top) in self.topology.simplices(N - 1).enumerate() {
             let h = gradients(&self.distances[t], n);
             let vol = self.volumes[N - 1][t];
             let pair = |a: usize, b: usize| -> T {
@@ -325,9 +325,9 @@ impl<T: Real, const N: usize> Geometry<T, N> {
                         let local: Vec<usize> = order.iter().map(|&i| local[i]).collect();
                         global.sort_unstable();
                         let index = self
-                            .complex
+                            .topology
                             .index_of(k, &global)
-                            .expect("a face of the complex");
+                            .expect("a face of the topology");
                         (local, index)
                     })
                     .collect()
@@ -362,7 +362,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             }
         }
         let cell = |x: T| C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| x));
-        let m = self.complex.len(k);
+        let m = self.topology.len(k);
         // Repeated couplings add: each top simplex's share of an entry.
         let triples = triples.into_iter().map(|(r, c, x)| (r, c, cell(x)));
         SparseMap::from_triples(triples, (m, m))
@@ -394,11 +394,11 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         );
         assert_eq!(
             cochain.len(),
-            self.complex.len(1),
+            self.topology.len(1),
             "a 1-cochain has a value on each edge"
         );
         let n = N - 1;
-        let s = self.complex.simplex(n, top);
+        let s = self.topology.simplex(n, top);
         let v = mesh.vertices.sites();
         // The inverse Gram matrix, and the gradients as model vectors.
         let inv = inverse_gram(&gram(&self.distances[top], n), n);
@@ -424,9 +424,9 @@ impl<T: Real, const N: usize> Geometry<T, N> {
                 let mut key = [s[a], s[b]];
                 key.sort_unstable();
                 let e = self
-                    .complex
+                    .topology
                     .index_of(1, &key)
-                    .expect("an edge of the complex");
+                    .expect("an edge of the topology");
                 // The edge runs from its lower vertex to its higher.
                 let (lo, hi) = if s[a] < s[b] { (a, b) } else { (b, a) };
                 let c = cochain.sites()[e].coeffs().as_ref()[0];
@@ -445,17 +445,17 @@ impl<T: Real, const N: usize> Geometry<T, N> {
 /// the codifferential `δ`, the Laplace–de Rham operator `Δ = dδ + δd` and the Dirac operator
 /// `d + δ`; with the Galerkin star, the stiffness `dᵀ M d`.
 impl<T: Real, const N: usize> Geometry<T, N> {
-    /// The geometry of a complex with these vertices (as [`Geometry::new`] of their mesh).
+    /// The geometry of a topology with these vertices (as [`Geometry::new`] of their mesh).
     ///
     /// # Panics
-    /// If there is not one vertex for each of the complex's.
+    /// If there is not one vertex for each of the topology's.
     #[must_use]
     pub fn from_parts<V: Distance<Coef = T> + Extensor<Slots = ()>>(
-        complex: &SimplicialComplex<N>,
+        topology: &Topology<N>,
         vertices: &Field<V>,
     ) -> Self {
-        assert_eq!(vertices.len(), complex.len(0), "one vertex for each");
-        Self::build(complex.clone(), vertices.sites())
+        assert_eq!(vertices.len(), topology.len(0), "one vertex for each");
+        Self::build(topology.clone(), vertices.sites())
     }
 
     /// The diagonal map of `x`, as scalar cells.
@@ -479,7 +479,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             (Some(u), Some(d)) => &u + &d,
             (Some(u), None) => u,
             (None, Some(d)) => d,
-            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.complex.len(k))),
+            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.topology.len(k))),
         }
     }
 
@@ -509,7 +509,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
     {
         assert!(k >= 1 && k < N, "δ_{k} is defined for 1 ≤ k < {N}");
-        let dt = self.complex.d::<C>(k - 1).transpose_with(|c| c);
+        let dt = self.topology.d::<C>(k - 1).transpose_with(|c| c);
         &self.star_inverse::<C>(k - 1) * &(&dt * &self.star::<C>(k))
     }
 
@@ -526,14 +526,14 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     where
         C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
     {
-        let up = (k + 1 < N).then(|| &self.codifferential::<C>(k + 1) * &self.complex.d::<C>(k));
-        let down = (k >= 1).then(|| &self.complex.d::<C>(k - 1) * &self.codifferential::<C>(k));
+        let up = (k + 1 < N).then(|| &self.codifferential::<C>(k + 1) * &self.topology.d::<C>(k));
+        let down = (k >= 1).then(|| &self.topology.d::<C>(k - 1) * &self.codifferential::<C>(k));
         self.up_and_down(k, up, down)
     }
 
     /// The symmetric form of the Laplacian, `⋆_k Δ_k = d_kᵀ ⋆_{k+1} d_k + ⋆_k d_{k−1} ⋆_{k−1}⁻¹
     /// d_{k−1}ᵀ ⋆_k`: with the star it makes the pencil `(⋆Δ, ⋆)` whose eigenpairs are those of
-    /// `Δ`, for [`SparseMap::eigh_with`] (a positive star, on a well-centred mesh). On 0-cochains
+    /// `Δ`, for [`SparseMap::eigh`] (a positive star, on a well-centred mesh). On 0-cochains
     /// it is the cotangent Laplacian `d₀ᵀ ⋆₁ d₀`.
     ///
     /// # Panics
@@ -545,11 +545,11 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
     {
         let up = (k + 1 < N).then(|| {
-            let d = self.complex.d::<C>(k);
+            let d = self.topology.d::<C>(k);
             &d.transpose_with(|c| c) * &(&self.star::<C>(k + 1) * &d)
         });
         let down = (k >= 1).then(|| {
-            &self.star::<C>(k) * &(&self.complex.d::<C>(k - 1) * &self.codifferential::<C>(k))
+            &self.star::<C>(k) * &(&self.topology.d::<C>(k - 1) * &self.codifferential::<C>(k))
         });
         self.up_and_down(k, up, down)
     }
@@ -567,7 +567,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             "the stiffness on {k}-cochains needs {}-simplices",
             k + 1
         );
-        let d = self.complex.d::<C>(k);
+        let d = self.topology.d::<C>(k);
         &d.transpose_with(|c| c) * &(&self.mass::<C>(k + 1) * &d)
     }
 
@@ -577,7 +577,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     pub fn offsets(&self) -> Vec<usize> {
         let mut out = std::vec![0];
         for k in 0..N {
-            out.push(out[k] + self.complex.len(k));
+            out.push(out[k] + self.topology.len(k));
         }
         out
     }
@@ -599,7 +599,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         // Each block's couplings, moved to its rows and columns.
         let mut triples = Vec::new();
         for k in 0..N - 1 {
-            let d = (self.complex.d::<C>(k), at[k + 1], at[k]);
+            let d = (self.topology.d::<C>(k), at[k + 1], at[k]);
             let delta = (self.codifferential::<C>(k + 1), at[k], at[k + 1]);
             for (m, row, col) in [d, delta] {
                 triples.extend(m.couplings().map(|(r, c, x)| (row + r, col + c, x)));
@@ -650,10 +650,10 @@ fn subsets(n: usize, size: usize) -> Vec<Vec<usize>> {
 }
 
 /// What the circumcentric dual volumes of one top simplex's faces are computed from, along its
-/// flags ([`Flags::descend`]): the complex, the top simplex's vertices and squared distances,
+/// flags ([`Flags::descend`]): the topology, the top simplex's vertices and squared distances,
 /// the circumcentres from the top down to the current face, and the volumes being summed.
 struct Flags<'a, T, const N: usize> {
-    complex: &'a SimplicialComplex<N>,
+    topology: &'a Topology<N>,
     top: &'a [usize],
     d: &'a [T],
     flag: Vec<Vec<T>>,
@@ -671,9 +671,9 @@ impl<T: Real, const N: usize> Flags<'_, T, N> {
         let mut global: Vec<usize> = face.iter().map(|&l| self.top[l]).collect();
         global.sort_unstable();
         let index = self
-            .complex
+            .topology
             .index_of(k, &global)
-            .expect("a face of the complex");
+            .expect("a face of the topology");
         let m = self.flag.len() - 1;
         let piece = volume(&barycentric_distances(&self.flag, d), m);
         self.duals[k][index] = self.duals[k][index] + sign * piece;
@@ -724,7 +724,7 @@ where
     S: Extensor,
 {
     let v = mesh.vertices.sites();
-    mesh.complex()
+    mesh.topology()
         .simplices(M - 1)
         .map(|s| {
             let s = Simplex::<V, M>(core::array::from_fn(|i| v[s[i]]));

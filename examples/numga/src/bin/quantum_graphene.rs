@@ -30,7 +30,7 @@ use std::sync::OnceLock;
 
 mod graphene {
     use gax::Unit;
-    use gax::vga3d::{Bivector, Pseudoscalar, Rotor, Vector};
+    use gax::vga3d::{Bivector, Pseudoscalar, Rotor, Scalar, Vector};
 
     pub type V = Vector<(), f64>;
     pub type R = Rotor<(), f64>;
@@ -92,7 +92,7 @@ mod graphene {
     /// it is paired with the open reverse into a form and that form's eigenproblem solved.
     pub fn eigh(h: Hamiltonian) -> ([f64; 4], [R; 4]) {
         let form = Rotor::slot().reverse().scalar_product(h);
-        form.eigh()
+        form.eigh(Scalar::identity())
     }
 
     /// The pseudospin direction of a state: `psi z ~psi` over `psi ~psi`.

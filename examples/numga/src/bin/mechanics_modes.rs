@@ -122,7 +122,7 @@ mod modes {
     pub fn normal_modes(stiffness: Response, inertia: Response) -> ([Q; 3], [f64; 3]) {
         let pe: Energy = Twist::slot() & stiffness;
         let ke: Energy = Twist::slot() & inertia;
-        let (values, modes) = pe.eigh_with(ke);
+        let (values, modes) = pe.eigh(ke);
         let frequencies = values.map(|v| v.max(0.0).sqrt() / core::f64::consts::TAU);
         (modes, frequencies)
     }

@@ -12,7 +12,7 @@
 //!
 //! Directions are the slot kind of the forms: PGA3D's `Direction`, the ideal points, widened
 //! into points where a form on points reads them. On directions the metric is definite, so
-//! `eigh_with` applies as in numga's `eigvalsh(metric)`.
+//! `eigh` applies as in numga's `eigvalsh(metric)`.
 
 use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
 use gax_numga_examples::measure::roots;
@@ -137,7 +137,7 @@ mod curvature {
                 .at::<1>()
                 .of(project)
                 .gp(-1.0 / length);
-            pair(second.eigh_with(self.metric).0)
+            pair(second.eigh(self.metric).0)
         }
 
         /// The parameters of the confocal quadrics through a point: the eigenvalues of the
@@ -148,7 +148,7 @@ mod curvature {
             let position = (p.unitized() - self.centre).dual();
             let through_point =
                 Direction::<(), f64>::slot() & (self.shape - position * (position & direction()));
-            pair(through_point.eigh_with(self.metric).0)
+            pair(through_point.eigh(self.metric).0)
         }
     }
 

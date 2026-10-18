@@ -83,7 +83,7 @@ mod station {
     /// reading the error itself with `on_readouts(l)`. Solved from the incidence pairing against
     /// `Line & dynamics`; in matrix notation, the transpose.
     pub fn on_readouts(dynamics: Dynamics) -> Readouts {
-        (Readout::slot() & Twist::slot()).solve_pairing(Readout::slot() & dynamics)
+        (Readout::slot() & Twist::slot()).solve(Readout::slot() & dynamics)
     }
 
     /// The rate of change of the covariance: the dynamics on its twists, on its lines, and the
@@ -161,7 +161,7 @@ mod station {
     /// covariance gives a symmetric form on lines, whose eigenpairs are the ellipse's axes.
     pub fn position_spread(covariance: Covariance) -> Spread {
         let shift = Twist::slot().commutator(origin());
-        let readout = (Readout::slot() & Twist::slot()).solve_pairing(Line::slot() & shift);
+        let readout = (Readout::slot() & Twist::slot()).solve(Line::slot() & shift);
         readout & covariance.of(readout)
     }
 
@@ -172,7 +172,11 @@ mod station {
     /// through the map that stretches each axis to twice its deviation: a sum of dyads.
     pub fn ellipse(spread: Spread, n: usize) -> Vec<P> {
         let through: Line<(vga2d::Vector,), f64> = Line::from(vga2d::Vector::slot());
-        let (variances, axes) = spread.of(through).at::<1>().of(through).eigh();
+        let (variances, axes) = spread
+            .of(through)
+            .at::<1>()
+            .of(through)
+            .eigh(Scalar::identity());
         gax_numga_examples::plot::ellipse(origin(), variances, axes, n)
     }
 

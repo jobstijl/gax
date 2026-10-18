@@ -56,7 +56,7 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * **Linear algebra on maps and forms, with typed results:**
   * `inverse`, `det`, `solve` and `trace` on maps;
   * `svd`, `pinv` and `lstsq` on maps of any shape, and `lstsq` for one slot of a map with several;
-  * `eigh_with(metric)` on forms, whose modes come back as values of the slot kind, such as twists;
+  * `eigh(metric)` on forms, whose modes come back as values of the slot kind, such as twists;
   * pairing solves for induced maps.
 * **Closed forms on values:** `inverse`, `normalized` (to a certified `Unit` versor), `exp`, `log` and
   `sqrt`, derived symbolically per type; `exp` and `log` of the full conformal group of CSTA and of

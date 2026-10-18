@@ -50,7 +50,7 @@ mod hopf {
     /// `direction | HOPF`, whose eigenvalues are minus one twice and plus one twice.
     pub fn fibre_start(direction: V) -> R {
         let form: Scalar<(Rotor, Rotor), f64> = direction | hopf();
-        form.eigh().1[3]
+        form.eigh(Scalar::identity()).1[3]
     }
 
     /// The rotor that turns on the right in the xy plane by an angle.
@@ -330,7 +330,7 @@ fn main() {
 mod tests {
     use super::hopf::*;
     use gax::ApproxEq;
-    use gax::vga3d::Vector;
+    use gax::vga3d::{Scalar, Vector};
 
     /// numga's test: `(direction | HOPF)` has eigenvalues -1, -1, 1, 1, and both spinors of the
     /// top pair point along the direction; turning a spinor on the right in the xy plane keeps
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn the_fibre_is_the_top_eigenspace_of_the_paired_form() {
         let direction: V = Vector::new(0.3, -0.5, 0.8).normalized();
-        let (values, spinors) = (direction | hopf()).eigh();
+        let (values, spinors) = (direction | hopf()).eigh(Scalar::identity());
         for (v, want) in values.iter().zip([-1.0, -1.0, 1.0, 1.0]) {
             assert!((v - want).abs() < 1e-12, "{values:?}");
         }

@@ -118,7 +118,7 @@ macro_rules! principal_frame {
         pub fn principal_planes(moment: Moment) -> [(f64, Pl); N] {
             let metric = Plane::slot() | Plane::slot();
             let form = Plane::slot() & moment;
-            let (values, planes) = metric.eigh_with(form);
+            let (values, planes) = metric.eigh(form);
             let mut pairs: [(f64, Pl); N] = core::array::from_fn(|k| (values[k], planes[k]));
             // numga's `argsort()[::-1]`: a stable ascending sort, reversed.
             pairs.sort_by(|a, b| a.1.norm().total_cmp(&b.1.norm()));

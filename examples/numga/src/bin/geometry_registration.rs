@@ -71,7 +71,7 @@ mod registration {
             .zip(target)
             .map(|(s, t)| t.scalar_product((Rotor::slot() * *s) * Rotor::slot().reverse()))
             .sum();
-        let (_, rotors) = alignment.eigh();
+        let (_, rotors) = alignment.eigh(Scalar::identity());
         rotors[3].unit()
     }
 

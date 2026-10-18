@@ -219,7 +219,7 @@ macro_rules! signature {
                             Scalar::new(self.blades[i].of(map).trace() / d)
                         }));
                     let pairing = Full::<(), f64>::slot().scalar_product(Full::<(), f64>::slot());
-                    pairing.solve_pairing(form)
+                    pairing.solve(form)
                 }
             }
 

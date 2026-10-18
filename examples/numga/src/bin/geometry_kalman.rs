@@ -103,7 +103,7 @@ mod kalman {
         // The velocity of `here` under a body-frame twist.
         let shift = B::slot().commutator(here).of(estimate >> B::slot());
         let pairing = Readout::slot() & B::slot();
-        let readout = pairing.solve_pairing(Line::slot() & shift);
+        let readout = pairing.solve(Line::slot() & shift);
         readout & sigma.of(readout)
     }
 
@@ -119,7 +119,7 @@ mod kalman {
             .of(through)
             .at::<1>()
             .of(through);
-        let (variances, axes) = form.eigh();
+        let (variances, axes) = form.eigh(Scalar::identity());
         (estimate >> origin(), variances, axes)
     }
 
@@ -144,7 +144,7 @@ mod kalman {
     /// carry independent unit normal draws, and the twists they select have covariance `cov`.
     pub fn sample(cov: Covariance, rng: &mut Rng) -> B {
         let readouts = Readout::slot() & cov;
-        let (_, lines) = readouts.eigh_with(readouts);
+        let (_, lines) = readouts.eigh(readouts);
         lines.iter().map(|l| cov.of(*l).gp(rng.normal())).sum()
     }
 
