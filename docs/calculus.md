@@ -315,3 +315,20 @@ assert!(values[0].abs() < 1e-12 && values[1] > 0.5);
 assert_eq!(g.offsets(), [0, 6, 18, 26]);
 assert_eq!(g.dirac::<Scalar<(), f64>>().shape(), (26, 26));
 ```
+
+## Examples
+
+Three programs in `crates/gax/examples` use the whole chain, and each checks what it shows:
+
+* `heat_tetrahedra`: heat spreading through a cube of tetrahedra by the Galerkin pencil, stepped
+  by implicit Euler. The total heat stays what it was to `10⁻¹³`, and the temperatures even out.
+* `hodge_torus`: a random field on the edges of a torus split into its gradient, curl and harmonic
+  parts. The torus has two harmonic 1-forms, one per loop; the parts are orthogonal to
+  `10⁻¹²`, the curl part co-closed, the harmonic part closed and co-closed.
+* `cavity_modes`: the transverse-electric modes of a square cavity. In spacetime algebra each
+  is one bivector field, and `nabla` checks Maxwell's `∇F = 0`; their frequencies come from the
+  discrete Laplacian on a triangulated square, to second order with both stars.
+
+```sh
+cargo run --release -p gax --features all-algebras --example cavity_modes
+```

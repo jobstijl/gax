@@ -186,7 +186,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] M3: `Complex<N>` and `Mesh<V, N>` in `gax_core::mesh`; construction errors, pseudomanifold and orientation queries, boundary, Euler characteristic, Betti numbers over `Fp`; `d∘d = 0`; `Moments::of_mesh(&Mesh)`; the 19 numga ports on `gax::mesh` with unchanged output; a fuzz target
 - [x] M4: the intrinsic metric (`Distance`; volumes, circumcentres, gradients from edge lengths); diagonal and Galerkin (Whitney) Hodge stars; the de Rham map and the Whitney map on edges; Stokes on `Fp`, `R ∘ W = id`, the Galerkin stiffness as linear finite elements (the circumcentric one agrees on triangles only, a finding); PyDEC fixtures in 2D and 3D
 - [x] M5: `δ`, `Δ`, the Dirac operator `d + δ` on all degrees; Galerkin stiffness pencils; `D² = Δ`, Hodge decomposition, harmonic dimensions as Betti numbers, sphere spectra; the mesh ports on the library operators
-- [ ] M6: `docs/calculus.md`; examples (heat flow on tetrahedra, Hodge decomposition on a torus, Maxwell through DEC against `∇`); benchmarks of assembly and solves; kernel costs; miri, MSRV, docs.rs
+- [x] M6: `docs/calculus.md`; examples (`heat_tetrahedra`, `hodge_torus`, `cavity_modes`: Maxwell's `∇F = 0` in STA and the DEC frequencies); benchmarks of assembly and solves (performance.md); top simplices found by a sorted index; miri, MSRV, docs.rs in the CI run
+- [ ] Later: cache circumcentres per face in `Geometry::new` (about half its cost on solids)
 
 ## Phase 11: orientation types (after Phase 10)
 - [ ] Research first: pull numga upstream and read its `docs/why_orientation.md` (input, not a spec; our own decisions)

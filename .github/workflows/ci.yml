@@ -54,7 +54,7 @@ jobs:
         run: cargo build -p gax-core --no-default-features
 
   laws:
-    name: slow law proofs (--ignored)
+    name: slow law proofs (--ignored) and the calculus examples
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -70,6 +70,11 @@ jobs:
               grep -E -A3 "panicked|^error|FAILED|law failed" test.log | head -40 | sed 's/^/::error::/'
               exit 1
             }
+          done
+      - name: the calculus examples check what they show
+        run: |
+          for e in heat_tetrahedra hodge_torus cavity_modes; do
+            cargo run -q -p gax --features all-algebras --example "$e"
           done
 
   asteroids:

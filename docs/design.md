@@ -1801,6 +1801,9 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       ends in its order (the first `−1`), a simplex of two or more dimensions the face opposite
       each vertex in turn.
     * `means(k)`: the mean over each `k`-simplex's vertices, in its order.
+    * `index_of(k, vertices)`: a simplex by its vertices, by binary search, below the top in
+      the stored order and at the top through a sorted index the construction keeps (a linear
+      scan there made `Geometry::new` quadratic in the number of top simplices).
   * `Mesh<V, N>`: a complex with its vertices, a `Field<V>` of any kind (VGA vectors, PGA
     points), generic over the coefficient type, with `d`, `means` and `with_vertices`. Metric
     quantities are ADR-050's.

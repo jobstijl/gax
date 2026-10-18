@@ -90,3 +90,15 @@ required-features = ["pga3d"]
 [[example]]
 name = "batch_particles"
 required-features = ["pga3d", "batch"]
+
+[[example]]
+name = "heat_tetrahedra"
+required-features = ["std", "vga3d"]
+
+[[example]]
+name = "hodge_torus"
+required-features = ["std", "vga3d"]
+
+[[example]]
+name = "cavity_modes"
+required-features = ["std", "vga2d", "sta"]

@@ -63,7 +63,7 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 | [`examples/warp`](examples/warp) | a neon twin-stick shooter on warping space: gax motors, traced kernels on CPU and GPU, the WGSL modules, synthesized audio (its own crate) |
 | [`examples/numga`](examples/numga) | all of numga's examples ported to gax: 105 animations (window, GIF or PNG), each with numga's tests (its own crate) |
 | [`examples/asteroids`](examples/asteroids) | a small windowed game on PGA2D motors (its own crate, outside the workspace) |
-| [`fuzz`](fuzz) | fuzzing of the algebra declaration parser |
+| [`fuzz`](fuzz) | fuzzing of the algebra declaration parser, the solvers, the tracer and the mesh complexes |
 
 ## Development
 
@@ -74,6 +74,7 @@ cargo run --release -p gax-gen --bin gax-regen                 # regenerate the 
 cargo run --release -p gax-gen --bin gax-regen -- --check      # CI: are they up to date?
 RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench      # benchmarks
 cd examples/asteroids && cargo run --release                    # the game
+cargo run --release -p gax --features all-algebras --example hodge_torus   # calculus on meshes
 ```
 
 The minimum supported Rust version is 1.89, which the `wide` and `batch` features need; without

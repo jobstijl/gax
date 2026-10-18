@@ -8,7 +8,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-gax = { path = "../gax", features = ["wide", "batch", "cga3d", "csta"] }
+gax = { path = "../gax", features = ["wide", "batch", "cga3d", "csta", "vga3d"] }
 glam = "0.30"
 ultraviolet = "0.10"
 nalgebra = "0.34"
@@ -32,6 +32,10 @@ harness = false
 
 [[bench]]
 name = "batch"
+harness = false
+
+[[bench]]
+name = "dec"
 harness = false
 
 [lints]

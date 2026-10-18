@@ -101,6 +101,9 @@ pub struct Complex<const N: usize> {
     /// `faces[k]` for `k ≥ 1`: for each `k`-simplex, the `(k−1)`-face opposite each of its
     /// vertices in turn, with the orientation the simplex induces on it (`±1`).
     faces: Vec<Vec<(usize, i8)>>,
+    /// The top simplices' vertices sorted, in lexicographic order, with each one's index: to find
+    /// a top simplex by its vertices.
+    tops: Vec<(Vec<usize>, usize)>,
 }
 
 /// The sign of the permutation that sorts `v`.
@@ -202,7 +205,15 @@ impl<const N: usize> Complex<N> {
             }
             faces[k] = out;
         }
-        Ok(Complex { simplices, faces })
+        let tops = sorted
+            .into_iter()
+            .map(|(key, s)| (key.to_vec(), s))
+            .collect();
+        Ok(Complex {
+            simplices,
+            faces,
+            tops,
+        })
     }
 
     /// The number of `k`-simplices.
@@ -235,11 +246,11 @@ impl<const N: usize> Complex<N> {
         if k + 1 == N {
             let mut key = vertices.to_vec();
             key.sort_unstable();
-            return self.simplices(k).position(|s| {
-                let mut t = s.to_vec();
-                t.sort_unstable();
-                t == key
-            });
+            return self
+                .tops
+                .binary_search_by(|(t, _)| t.as_slice().cmp(&key))
+                .ok()
+                .map(|i| self.tops[i].1);
         }
         let n = self.len(k);
         let (mut lo, mut hi) = (0, n);
