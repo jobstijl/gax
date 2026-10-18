@@ -5,7 +5,7 @@
 #[allow(dead_code)]
 mod kernels;
 
-use gax::pga2d::{Motor, Point};
+use gax::pga2d::{Motor, Twist};
 use gax::trace::{Sym, Tracer};
 use std::path::Path;
 use wesl::CompileOptions;
@@ -24,7 +24,7 @@ fn main() {
     t.wgsl(true);
     t.kernel(
         "particle_step",
-        |m: Motor<(), Sym>, r: Point<(), Sym>, dt: Sym| kernels::particle_step(m, r, dt),
+        |m: Motor<(), Sym>, r: Twist<(), Sym>, dt: Sym| kernels::particle_step(m, r, dt),
     );
     t.write_out_dir("fused.rs");
     for r in t.reports() {

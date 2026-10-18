@@ -4,7 +4,7 @@
 use crate::gfx::{Gfx, Instance, MAX_PARTICLES, MatrixInstance, Particle};
 use crate::scene::{Rng, rate};
 use gax::Unit;
-use gax::pga2d::{Motor, Point};
+use gax::pga2d::{Motor, Point, Twist};
 use rand::Rng as _;
 use std::time::Instant;
 
@@ -110,7 +110,7 @@ pub fn run(gfx: &mut Gfx) {
     );
 
     // Particles: 2^20 steps of the traced kernel.
-    let rates: Vec<Point<(), f32>> = (0..n)
+    let rates: Vec<Twist<(), f32>> = (0..n)
         .map(|_| rate(rng.random_range(0.5..6.0), rng.random_range(-6.0..6.0)))
         .collect();
     let dt = [1.0f32 / 60.0];

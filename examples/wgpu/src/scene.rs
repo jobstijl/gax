@@ -3,7 +3,7 @@
 //! can be compared (`Scene::check`).
 
 use crate::gfx::{Gfx, Instance, MAX_PARTICLES, Particle};
-use gax::pga2d::{Motor, Point};
+use gax::pga2d::{Motor, Point, Twist};
 use rand::Rng as _;
 
 /// The origin of the plane.
@@ -14,13 +14,13 @@ pub type Rng = rand::rngs::StdRng;
 
 /// A rate `B` with `exp(dt B)` moving forward (along the local x axis) at `speed` and turning
 /// at `spin` radians per second: twists add.
-pub fn rate(speed: f32, spin: f32) -> Point<(), f32> {
+pub fn rate(speed: f32, spin: f32) -> Twist<(), f32> {
     Point::translation_twist(speed, 0.0) + Point::rotation_twist(ORIGIN, spin)
 }
 
 struct Ship {
     motor: Motor<(), f32>,
-    rate: Point<(), f32>,
+    rate: Twist<(), f32>,
     color: [f32; 4],
     hue: f32,
 }
@@ -29,7 +29,7 @@ struct Ship {
 struct Probe {
     index: usize,
     cpu: Motor<(), f32>,
-    rate: Point<(), f32>,
+    rate: Twist<(), f32>,
     age: f32,
     lifetime: f32,
 }
