@@ -202,8 +202,7 @@ pub fn ray(psi: Twistor, phi: Twistor) -> B {
 /// image lies in its kernel; null-separated points anticommute, so the image of their
 /// product lies in both kernels.
 pub fn through(first: V, second: V) -> Twistor {
-    let (_, _, images) = representation(first * second).svd_thin();
-    images[0]
+    representation(first * second).svd().outputs[0]
 }
 
 /// The event where a conformal light ray meets the slice of constant time `time`.

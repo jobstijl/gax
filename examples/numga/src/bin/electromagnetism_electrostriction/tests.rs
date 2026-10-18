@@ -6,8 +6,8 @@ use super::lattice::*;
 use super::pairs::is_self_adjoint;
 use gax::ApproxEq;
 use gax::Real;
-use gax::dual::Dual;
 use gax::field::{Field, SparseMap, gradient, hessian};
+use gax::jet::Dual;
 use gax::vga2d::{Pseudoscalar, Scalar};
 use gax_numga_examples::rng::{Draw, rng};
 use std::sync::OnceLock;
@@ -72,7 +72,7 @@ fn identity(n: usize) -> FieldMap<f64> {
 
 /// The lowest eigenvalue of a symmetric field map.
 fn lowest(map: &FieldMap<f64>) -> f64 {
-    map.eigh(&identity(map.shape().0), 1).0[0]
+    map.eigh_with(&identity(map.shape().0), 1).0[0]
 }
 
 /// The derivatives through the dipoles' solve: gax's field derivatives of the energy.
@@ -112,8 +112,8 @@ fn the_chain_rule_gives_the_derivatives_through_the_solve() {
     assert!(difference(&chained.gradient, &solved.gradient) < 1e-11);
     for seed in 0..3 {
         let step = displacement(seed, lattice.particles(), 1.0);
-        let a = stiffness(&chained.curvature).apply(&step);
-        let b = stiffness(&solved.curvature).apply(&step);
+        let a = stiffness(&chained.curvature).of(&step);
+        let b = stiffness(&solved.curvature).of(&step);
         assert!(largest(&(&a - &b)) < 1e-10);
     }
 }
@@ -129,7 +129,7 @@ fn polarization_minimizes_the_full_electrical_energy() {
         let response = lattice.response(position);
         let dipoles = lattice.dipoles(position, *field);
         let applied = Field::from_fn(lattice.particles(), |_| *field);
-        assert!(largest(&(&response.apply(&dipoles) - &applied)) < ROUND_OFF);
+        assert!(largest(&(&response.of(&dipoles) - &applied)) < ROUND_OFF);
         assert!(is_self_adjoint(&response, ROUND_OFF));
         // The electrical energy of any dipoles at this shape, least at the solved ones.
         let electrical = |p: &Field<Vt<_>>| held_energy(lattice, &lifted(position), p, *field);
@@ -155,7 +155,7 @@ fn held_energy<T: Real>(
     dipoles: &Field<Vt<T>>,
     field: V,
 ) -> T {
-    let image = lattice.response(shape).apply(dipoles);
+    let image = lattice.response(shape).of(dipoles);
     let field = lift::<T>(field);
     let half = T::from_f64(0.5);
     dipoles
@@ -229,7 +229,7 @@ fn typed_derivatives_predict_changes_of_energy_and_response() {
     let energy_change = (energy(&upper) - energy(&lower)) / (2.0 * probe.increment);
     assert!(close(bound(&gradient, step), energy_change, 3e-9, 1e-6));
     let k = stiffness(&curvature);
-    let symmetric = step.dot(&k.apply(&probe.other)) - probe.other.dot(&k.apply(step));
+    let symmetric = step.dot(&k.of(&probe.other)) - probe.other.dot(&k.of(step));
     assert!(symmetric.abs() < ROUND_OFF);
 
     // The response's change with the shape, bound to the dipoles and a displacement: along the
@@ -241,9 +241,9 @@ fn typed_derivatives_predict_changes_of_energy_and_response() {
     });
     let image = lattice
         .response(&moving)
-        .apply(&lifted::<Dual<f64, 1>>(&dipoles));
+        .of(&lifted::<Dual<f64, 1>>(&dipoles));
     let predicted = image.map(|v| v.map_coefs(|d| d.du[0]));
-    let measured = probe.change(|x| lattice.response(x).apply(&dipoles));
+    let measured = probe.change(|x| lattice.response(x).of(&dipoles));
     assert!(all_close(&predicted, &measured));
 }
 
@@ -253,7 +253,7 @@ fn the_curvature_predicts_the_change_of_the_gradient() {
     let probe = Probe::new();
     let (lattice, field) = (probe.lattice, probe.field);
     let curvature = lattice.derivatives(probe.position, field).curvature;
-    let predicted = stiffness(&curvature).apply(&probe.step);
+    let predicted = stiffness(&curvature).of(&probe.step);
     let measured = probe.change(|x| lattice.derivatives(x, field).gradient.map(through_metric));
     assert!(all_close(&predicted, &measured));
 }
@@ -283,7 +283,7 @@ fn dipole_readjustment_changes_stiffness_but_not_the_stationary_first_derivative
     );
     let compression = position.map(|p| -X * (X | p).s());
     let pair =
-        |curvature: &SparseMap<Form2>| compression.dot(&stiffness(curvature).apply(&compression));
+        |curvature: &SparseMap<Form2>| compression.dot(&stiffness(curvature).of(&compression));
     // Allowing an internal degree of freedom to relax softens the mechanical response.
     assert!(pair(&frozen) - pair(&full) > 0.1);
 }

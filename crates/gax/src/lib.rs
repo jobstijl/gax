@@ -39,7 +39,8 @@ pub mod wgsl;
 #[cfg(feature = "macros")]
 pub use gax_macros::algebra;
 
-/// Build-time tracing: run generic kernels on symbolic coefficients and emit fused code.
+/// Build-time tracing: run generic kernels on symbolic coefficients and emit fused code. The
+/// module also holds [`Traceable`](trace::Traceable); without the feature, only that trait.
 #[cfg(feature = "trace")]
 pub use gax_gen::trace;
 

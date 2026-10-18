@@ -3,7 +3,7 @@
 /// The homomorphism from `vga2d` to `vga3d`: the plane as the `xy` plane of space.
 #[cfg(all(feature = "vga2d", feature = "vga3d"))]
 mod vga2d_to_vga3d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::vga2d::oriented::Scalar<S, T, O>> for crate::vga3d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `vga2d` to `vga3d`, of the same orientation: a
@@ -70,7 +70,7 @@ mod vga2d_to_vga3d {
 /// The homomorphism from `vga2d` to `pga2d`: vectors as lines through the origin, rotors as rotations about it.
 #[cfg(all(feature = "vga2d", feature = "pga2d"))]
 mod vga2d_to_pga2d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::vga2d::oriented::Scalar<S, T, O>> for crate::pga2d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `vga2d` to `pga2d`, of the same orientation: a
@@ -137,7 +137,7 @@ mod vga2d_to_pga2d {
 /// The homomorphism from `vga3d` to `pga3d`: vectors as planes through the origin, rotors as rotations about it.
 #[cfg(all(feature = "vga3d", feature = "pga3d"))]
 mod vga3d_to_pga3d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::vga3d::oriented::Scalar<S, T, O>> for crate::pga3d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `vga3d` to `pga3d`, of the same orientation: a
@@ -240,7 +240,7 @@ mod vga3d_to_pga3d {
 /// The homomorphism from `pga2d` to `pga3d`: the plane as the `xy` plane of space: lines as vertical planes, points as vertical lines, motors as motions about vertical axes.
 #[cfg(all(feature = "pga2d", feature = "pga3d"))]
 mod pga2d_to_pga3d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga2d::oriented::Scalar<S, T, O>> for crate::pga3d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `pga2d` to `pga3d`, of the same orientation: a
@@ -367,7 +367,7 @@ mod pga2d_to_pga3d {
 /// The homomorphism from `pga3d` to `stap`: space in spacetime: planes as hyperplanes containing the time axis, motors as motions at every time.
 #[cfg(all(feature = "pga3d", feature = "stap"))]
 mod pga3d_to_stap {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga3d::oriented::Scalar<S, T, O>> for crate::stap::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `pga3d` to `stap`, of the same orientation: a
@@ -506,7 +506,7 @@ mod pga3d_to_stap {
 /// The homomorphism from `vga2d` to `cga2d`: the Euclidean subalgebra.
 #[cfg(all(feature = "vga2d", feature = "cga2d"))]
 mod vga2d_to_cga2d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::vga2d::oriented::Scalar<S, T, O>> for crate::cga2d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `vga2d` to `cga2d`, of the same orientation: a
@@ -573,7 +573,7 @@ mod vga2d_to_cga2d {
 /// The homomorphism from `vga3d` to `cga3d`: the Euclidean subalgebra.
 #[cfg(all(feature = "vga3d", feature = "cga3d"))]
 mod vga3d_to_cga3d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::vga3d::oriented::Scalar<S, T, O>> for crate::cga3d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `vga3d` to `cga3d`, of the same orientation: a
@@ -676,7 +676,7 @@ mod vga3d_to_cga3d {
 /// The homomorphism from `pga2d` to `cga2d`: plane-based PGA in CGA (`e0` to `-ei`): a line `ax + by + c = 0` to the dual line whose points `X` have `X·l = 0`, motors to motors.
 #[cfg(all(feature = "pga2d", feature = "cga2d"))]
 mod pga2d_to_cga2d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga2d::oriented::Scalar<S, T, O>> for crate::cga2d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `pga2d` to `cga2d`, of the same orientation: a
@@ -803,7 +803,7 @@ mod pga2d_to_cga2d {
 /// The homomorphism from `pga3d` to `cga3d`: plane-based PGA in CGA (`e0` to `-ei`): a plane `ax + by + cz + d = 0` to the dual plane whose points `X` have `X·π = 0`, motors to motors.
 #[cfg(all(feature = "pga3d", feature = "cga3d"))]
 mod pga3d_to_cga3d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga3d::oriented::Scalar<S, T, O>> for crate::cga3d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `pga3d` to `cga3d`, of the same orientation: a
@@ -942,7 +942,7 @@ mod pga3d_to_cga3d {
 /// The homomorphism from `cga2d` to `cga3d`: the plane as the `xy` plane of space.
 #[cfg(all(feature = "cga2d", feature = "cga3d"))]
 mod cga2d_to_cga3d {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::cga2d::oriented::Scalar<S, T, O>> for crate::cga3d::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `cga2d` to `cga3d`, of the same orientation: a
@@ -1069,7 +1069,7 @@ mod cga2d_to_cga3d {
 /// The homomorphism from `cga3d` to `csta`: conformal space in conformal spacetime, at time zero.
 #[cfg(all(feature = "cga3d", feature = "csta"))]
 mod cga3d_to_csta {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::cga3d::oriented::Scalar<S, T, O>> for crate::csta::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `cga3d` to `csta`, of the same orientation: a
@@ -1208,7 +1208,7 @@ mod cga3d_to_csta {
 /// The homomorphism from `vga3d` to `sta`: the spacetime split for the observer `e0`: vectors as relative vectors `eₖ e0` (bivectors), and space's algebra as the even subalgebra.
 #[cfg(all(feature = "vga3d", feature = "sta"))]
 mod vga3d_to_sta {
-    use crate::{Coef, SlotArr, Slots};
+    use crate::{Coef, Slots, __private::SlotArr};
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::vga3d::oriented::Scalar<S, T, O>> for crate::sta::oriented::Scalar<S, T, O> {
         /// The image under the homomorphism from `vga3d` to `sta`, of the same orientation: a

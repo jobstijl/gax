@@ -5,7 +5,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
-use gax::mesh::{Complex, Mesh};
+use gax::mesh::{Mesh, SimplicialComplex};
 use gax::vga3d::{Scalar, Vector};
 use std::collections::BTreeMap;
 use std::hint::black_box;
@@ -123,10 +123,10 @@ fn bench(c: &mut Criterion) {
     let mut g = c.benchmark_group("dec");
     g.sample_size(20);
     g.bench_function("complex: icosphere 4 (5120 triangles)", |b| {
-        b.iter(|| Complex::new(sv.len(), black_box(&sf)));
+        b.iter(|| SimplicialComplex::new(sv.len(), black_box(&sf)));
     });
     g.bench_function("complex: cube 8 (3072 tetrahedra)", |b| {
-        b.iter(|| Complex::new(cv.len(), black_box(&ct)));
+        b.iter(|| SimplicialComplex::new(cv.len(), black_box(&ct)));
     });
     g.bench_function("geometry: icosphere 4", |b| {
         b.iter(|| Geometry::new(black_box(&sphere)));
@@ -153,7 +153,7 @@ fn bench(c: &mut Criterion) {
     );
     g.sample_size(10);
     g.bench_function("16 Laplacian modes: icosphere 4", |b| {
-        b.iter(|| form.eigh(black_box(&star), 16));
+        b.iter(|| form.eigh_with(black_box(&star), 16));
     });
     g.finish();
 }

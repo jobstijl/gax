@@ -10,13 +10,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t3 = v[0].mul_add(v[0], t1);
         let t4 = v[2].mul_add(v[2], t3);
         let t5 = xv[0] * t4;
-            return Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t5]), [false]) };
+            return Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t5]), [false]) };
         }
         let m1 = v[1] * v[1];
         let m3 = v[0].mul_add(v[0], m1);
         let m4 = v[2].mul_add(v[2], m3);
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m4)).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m4)).0], [false]) }
     }
 }
 
@@ -45,8 +45,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
     }
 }
 
@@ -55,7 +55,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Scalar<(), f64, O
     #[inline]
     fn from(p: gx::Prepared<Plane, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Scalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+        Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Scalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 1> for Scalar<(), f64, O> {
+    type Output = Scalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Scalar<(), f64, O>, T, 1>) -> Scalar<(Scalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -109,13 +117,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t3 = v[0].mul_add(v[0], t1);
         let t4 = v[2].mul_add(v[2], t3);
         let t5 = xv[0] * t4;
-            return Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t5]), [false]) };
+            return Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t5]), [false]) };
         }
         let m1 = v[1] * v[1];
         let m3 = v[0].mul_add(v[0], m1);
         let m4 = v[2].mul_add(v[2], m3);
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m4)).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m4)).0], [false]) }
     }
 }
 
@@ -152,8 +160,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
     }
 }
 
@@ -162,7 +170,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Scalar<
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Scalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Scalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+        Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Scalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 1> for Scalar<(), f64, O> {
+    type Output = Scalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Scalar<(), f64, O>, T, 1>) -> Scalar<(Scalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -232,7 +248,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t36 = xv[3].mul_add(t7, t24);
         let t37 = v[3].mul_add(t8, t23);
         let t39 = t37.mul_add(T::from_i64(2), -t36);
-            return Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t28, t32, t35, t39]), [true, true, true, true]) };
+            return Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t28, t32, t35, t39]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -257,8 +273,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m20 = m8 * T::from_i64(2);
         let m21 = m2 + m10;
         let m22 = -m21;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m11) + x[1].scale(m12) + x[2].scale(m13)).0, (x[0].scale(m12) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m13) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m18) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m22)).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m11) + x[1].scale(m12) + x[2].scale(m13)).0, (x[0].scale(m12) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m13) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m18) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m22)).0], [true, true, true, true]) }
     }
 }
 
@@ -307,8 +323,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>
     #[inline(always)]
     fn transform(self, x: Plane<S, T, O>) -> Plane<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0], [true, true, true, true]) }
     }
 }
 
@@ -317,7 +333,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Plane<(), f64, O>
     #[inline]
     fn from(p: gx::Prepared<Plane, Plane<(), f64, O>, T, 10>) -> Self {
         let m = p.m;
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Plane<(), f64, O>,), T, 4>([[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [m[6], m[7], m[8], m[9]]], [true, true, true, true]) }
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Plane<(), f64, O>,), T, 4>([[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [m[6], m[7], m[8], m[9]]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 10> for Plane<(), f64, O> {
+    type Output = Plane<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Plane<(), f64, O>, T, 10>) -> Plane<(Plane<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -385,7 +409,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t22 = (-xv[2]).mul_add(t14, t20);
         let t23 = t8 * T::from_i64(2);
         let t25 = (-xv[3]).mul_add(t14, t23);
-            return Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t16, t19, t22, t25]), [true, true, true, true]) };
+            return Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t16, t19, t22, t25]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -410,8 +434,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m20 = m8 * T::from_i64(2);
         let m21 = m2 + m10;
         let m22 = -m21;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m11) + x[1].scale(m12) + x[2].scale(m13)).0, (x[0].scale(m12) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m13) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m18) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m22)).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m11) + x[1].scale(m12) + x[2].scale(m13)).0, (x[0].scale(m12) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m13) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m18) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m22)).0], [true, true, true, true]) }
     }
 }
 
@@ -468,8 +492,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Plane<S, T, O>
     #[inline(always)]
     fn transform(self, x: Plane<S, T, O>) -> Plane<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0], [true, true, true, true]) }
     }
 }
 
@@ -478,7 +502,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Plane<(
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Plane<(), f64, O>, T, 10>) -> Self {
         let m = p.m;
-        Plane { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Plane<(), f64, O>,), T, 4>([[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [m[6], m[7], m[8], m[9]]], [true, true, true, true]) }
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Plane<(), f64, O>,), T, 4>([[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [m[6], m[7], m[8], m[9]]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 10> for Plane<(), f64, O> {
+    type Output = Plane<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Plane<(), f64, O>, T, 10>) -> Plane<(Plane<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -567,7 +599,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t59 = t57 - t58;
         let t60 = t59 * T::from_i64(2);
         let t61 = xv[5].mul_add(t13, t60);
-            return Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t40, t43, t46, t51, t56, t61]), [false, false, false, false, false, false]) };
+            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t40, t43, t46, t51, t56, t61]), [false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -598,8 +630,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m26 = -m18;
         let m27 = -m21;
         let m28 = -m13;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 6>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m18)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m13)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m11) + x[4].scale(m22) + x[5].scale(m23)).0, (x[0].scale(m19) + x[2].scale(m25) + x[3].scale(m22) + x[4].scale(m12) + x[5].scale(m26)).0, (x[0].scale(m27) + x[1].scale(m24) + x[3].scale(m23) + x[4].scale(m26) + x[5].scale(m28)).0], [false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m18)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m13)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m11) + x[4].scale(m22) + x[5].scale(m23)).0, (x[0].scale(m19) + x[2].scale(m25) + x[3].scale(m22) + x[4].scale(m12) + x[5].scale(m26)).0, (x[0].scale(m27) + x[1].scale(m24) + x[3].scale(m23) + x[4].scale(m26) + x[5].scale(m28)).0], [false, false, false, false, false, false]) }
     }
 }
 
@@ -654,8 +686,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>>
     #[inline(always)]
     fn transform(self, x: Line<S, T, O>) -> Line<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 6>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10])).0, (x[0].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[9]) + x[4].scale(m[13]) + x[5].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[3].scale(m[10]) + x[4].scale(m[14]) + x[5].scale(m[17])).0], [false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10])).0, (x[0].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[9]) + x[4].scale(m[13]) + x[5].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[3].scale(m[10]) + x[4].scale(m[14]) + x[5].scale(m[17])).0], [false, false, false, false, false, false]) }
     }
 }
 
@@ -664,7 +696,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Line<(), f64, O>,
     #[inline]
     fn from(p: gx::Prepared<Plane, Line<(), f64, O>, T, 18>) -> Self {
         let m = p.m;
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Line<(), f64, O>,), T, 6>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[9], m[10]], [m[11], T::zero(), m[12], m[9], m[13], m[14]], [m[15], m[16], T::zero(), m[10], m[14], m[17]]], [false, false, false, false, false, false]) }
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Line<(), f64, O>,), T, 6>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[9], m[10]], [m[11], T::zero(), m[12], m[9], m[13], m[14]], [m[15], m[16], T::zero(), m[10], m[14], m[17]]], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 18> for Line<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Line<(), f64, O>, T, 18>) -> Line<(Line<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -750,7 +790,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t50 = (-v[2]).mul_add(t9, t49);
         let t52 = xv[5] * t30;
         let t53 = t50.mul_add(T::from_i64(2), t52);
-            return Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t32, t35, t38, t43, t48, t53]), [false, false, false, false, false, false]) };
+            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t32, t35, t38, t43, t48, t53]), [false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -781,8 +821,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m26 = -m18;
         let m27 = -m21;
         let m28 = -m13;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 6>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m18)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m13)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m11) + x[4].scale(m22) + x[5].scale(m23)).0, (x[0].scale(m19) + x[2].scale(m25) + x[3].scale(m22) + x[4].scale(m12) + x[5].scale(m26)).0, (x[0].scale(m27) + x[1].scale(m24) + x[3].scale(m23) + x[4].scale(m26) + x[5].scale(m28)).0], [false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m18)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m13)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m11) + x[4].scale(m22) + x[5].scale(m23)).0, (x[0].scale(m19) + x[2].scale(m25) + x[3].scale(m22) + x[4].scale(m12) + x[5].scale(m26)).0, (x[0].scale(m27) + x[1].scale(m24) + x[3].scale(m23) + x[4].scale(m26) + x[5].scale(m28)).0], [false, false, false, false, false, false]) }
     }
 }
 
@@ -845,8 +885,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Line<S, T, O>>
     #[inline(always)]
     fn transform(self, x: Line<S, T, O>) -> Line<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 6>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10])).0, (x[0].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[9]) + x[4].scale(m[13]) + x[5].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[3].scale(m[10]) + x[4].scale(m[14]) + x[5].scale(m[17])).0], [false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10])).0, (x[0].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[9]) + x[4].scale(m[13]) + x[5].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[3].scale(m[10]) + x[4].scale(m[14]) + x[5].scale(m[17])).0], [false, false, false, false, false, false]) }
     }
 }
 
@@ -855,7 +895,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Line<()
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Line<(), f64, O>, T, 18>) -> Self {
         let m = p.m;
-        Line { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Line<(), f64, O>,), T, 6>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[9], m[10]], [m[11], T::zero(), m[12], m[9], m[13], m[14]], [m[15], m[16], T::zero(), m[10], m[14], m[17]]], [false, false, false, false, false, false]) }
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Line<(), f64, O>,), T, 6>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[9], m[10]], [m[11], T::zero(), m[12], m[9], m[13], m[14]], [m[15], m[16], T::zero(), m[10], m[14], m[17]]], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 18> for Line<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Line<(), f64, O>, T, 18>) -> Line<(Line<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -929,7 +977,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t37 = xv[0].mul_add(t4, t24);
         let t38 = xv[3].mul_add(t8, t37);
         let t40 = (-t38).mul_add(T::from_i64(2), t25);
-            return Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t32, t36, t40, t27]), [true, true, true, true]) };
+            return Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t32, t36, t40, t27]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -958,8 +1006,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m24 = m8 * T::from_i64(2);
         let m25 = -m24;
         let m26 = m2 + m10;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m15) + x[3].scale(m17)).0, (x[0].scale(m13) + x[1].scale(m18) + x[2].scale(m20) + x[3].scale(m22)).0, (x[0].scale(m15) + x[1].scale(m20) + x[2].scale(m23) + x[3].scale(m25)).0, (x[3].scale(m26)).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m15) + x[3].scale(m17)).0, (x[0].scale(m13) + x[1].scale(m18) + x[2].scale(m20) + x[3].scale(m22)).0, (x[0].scale(m15) + x[1].scale(m20) + x[2].scale(m23) + x[3].scale(m25)).0, (x[3].scale(m26)).0], [true, true, true, true]) }
     }
 }
 
@@ -1012,8 +1060,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>
     #[inline(always)]
     fn transform(self, x: Point<S, T, O>) -> Point<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3].scale(m[9])).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3].scale(m[9])).0], [true, true, true, true]) }
     }
 }
 
@@ -1022,7 +1070,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Point<(), f64, O>
     #[inline]
     fn from(p: gx::Prepared<Plane, Point<(), f64, O>, T, 10>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Point<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), m[9]]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Point<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), m[9]]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 10> for Point<(), f64, O> {
+    type Output = Point<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Point<(), f64, O>, T, 10>) -> Point<(Point<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1090,7 +1146,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t22 = xv[2] * t15;
         let t23 = (-t9).mul_add(T::from_i64(2), t22);
         let t24 = xv[3] * t15;
-            return Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t17, t20, t23, t24]), [true, true, true, true]) };
+            return Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t17, t20, t23, t24]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1119,8 +1175,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m24 = m8 * T::from_i64(2);
         let m25 = -m24;
         let m26 = m2 + m22;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m10) + x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m16)).0, (x[0].scale(m12) + x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m14) + x[1].scale(m19) + x[2].scale(m23) + x[3].scale(m25)).0, (x[3].scale(m26)).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m10) + x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m16)).0, (x[0].scale(m12) + x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m14) + x[1].scale(m19) + x[2].scale(m23) + x[3].scale(m25)).0, (x[3].scale(m26)).0], [true, true, true, true]) }
     }
 }
 
@@ -1181,8 +1237,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Point<S, T, O>
     #[inline(always)]
     fn transform(self, x: Point<S, T, O>) -> Point<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3].scale(m[9])).0], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3].scale(m[9])).0], [true, true, true, true]) }
     }
 }
 
@@ -1191,7 +1247,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Point<(
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Point<(), f64, O>, T, 10>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Point<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), m[9]]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Point<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), m[9]]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 10> for Point<(), f64, O> {
+    type Output = Point<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Point<(), f64, O>, T, 10>) -> Point<(Point<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1257,7 +1321,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t26 = (-t24).mul_add(T::from_i64(2), t15);
         let t27 = xv[0].mul_add(t4, t18);
         let t29 = (-t27).mul_add(T::from_i64(2), t19);
-            return Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t23, t26, t29, T::from_i64(0)]), [true, true, true, true]) };
+            return Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t23, t26, t29, T::from_i64(0)]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1276,8 +1340,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m14 = -m13;
         let m15 = m0 + m1;
         let m16 = m15 - m2;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m7) + x[1].scale(m9) + x[2].scale(m11)).0, (x[0].scale(m9) + x[1].scale(m12) + x[2].scale(m14)).0, (x[0].scale(m11) + x[1].scale(m14) + x[2].scale(m16)).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m7) + x[1].scale(m9) + x[2].scale(m11)).0, (x[0].scale(m9) + x[1].scale(m12) + x[2].scale(m14)).0, (x[0].scale(m11) + x[1].scale(m14) + x[2].scale(m16)).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
     }
 }
 
@@ -1320,8 +1384,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T
     #[inline(always)]
     fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
     }
 }
 
@@ -1330,7 +1394,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Direction<(), f64
     #[inline]
     fn from(p: gx::Prepared<Plane, Direction<(), f64, O>, T, 6>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 6> for Direction<(), f64, O> {
+    type Output = Point<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Direction<(), f64, O>, T, 6>) -> Point<(Direction<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1395,7 +1467,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t18 = (-t6).mul_add(T::from_i64(2), t17);
         let t20 = xv[2] * t13;
         let t21 = (-t7).mul_add(T::from_i64(2), t20);
-            return Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t15, t18, t21, T::from_i64(0)]), [true, true, true, true]) };
+            return Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t15, t18, t21, T::from_i64(0)]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1414,8 +1486,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m14 = -m13;
         let m15 = m0 + m1;
         let m16 = m15 - m2;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m7) + x[1].scale(m9) + x[2].scale(m11)).0, (x[0].scale(m9) + x[1].scale(m12) + x[2].scale(m14)).0, (x[0].scale(m11) + x[1].scale(m14) + x[2].scale(m16)).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m7) + x[1].scale(m9) + x[2].scale(m11)).0, (x[0].scale(m9) + x[1].scale(m12) + x[2].scale(m14)).0, (x[0].scale(m11) + x[1].scale(m14) + x[2].scale(m16)).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
     }
 }
 
@@ -1466,8 +1538,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T
     #[inline(always)]
     fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
     }
 }
 
@@ -1476,7 +1548,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Directi
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Direction<(), f64, O>, T, 6>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 6> for Direction<(), f64, O> {
+    type Output = Point<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Direction<(), f64, O>, T, 6>) -> Point<(Direction<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1523,14 +1603,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t4 = v[2].mul_add(v[2], t3);
         let t5 = xv[0] * t4;
         let t6 = -t5;
-            return Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t6]), [false]) };
+            return Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t6]), [false]) };
         }
         let m1 = v[1] * v[1];
         let m3 = v[0].mul_add(v[0], m1);
         let m4 = v[2].mul_add(v[2], m3);
         let m5 = -m4;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m5)).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m5)).0], [false]) }
     }
 }
 
@@ -1560,8 +1640,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
     }
 }
 
@@ -1570,7 +1650,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Pseudoscalar<(), 
     #[inline]
     fn from(p: gx::Prepared<Plane, Pseudoscalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Pseudoscalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Pseudoscalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 1> for Pseudoscalar<(), f64, O> {
+    type Output = Pseudoscalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Pseudoscalar<(), f64, O>, T, 1>) -> Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1625,14 +1713,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t4 = v[0].mul_add(v[0], t2);
         let t5 = v[2].mul_add(v[2], t4);
         let t6 = t0 * t5;
-            return Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t6]), [false]) };
+            return Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t6]), [false]) };
         }
         let m1 = v[1] * v[1];
         let m3 = v[0].mul_add(v[0], m1);
         let m4 = v[2].mul_add(v[2], m3);
         let m5 = -m4;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m5)).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m5)).0], [false]) }
     }
 }
 
@@ -1670,8 +1758,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m[0])).0], [false]) }
     }
 }
 
@@ -1680,7 +1768,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Pseudos
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Pseudoscalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Pseudoscalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+        Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Pseudoscalar<(), f64, O>,), T, 1>([[m[0]]], [false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 1> for Pseudoscalar<(), f64, O> {
+    type Output = Pseudoscalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Pseudoscalar<(), f64, O>, T, 1>) -> Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1759,7 +1855,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t43 = t42 * T::from_i64(2);
         let t44 = (-xv[1]).mul_add(t7, t30);
         let t45 = t44 * T::from_i64(2);
-            return Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t15, t33, t36, t39, t41, t43, t45, T::from_i64(0)]), [false, false, false, false, false, false, false, false]) };
+            return Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t15, t33, t36, t39, t41, t43, t45, T::from_i64(0)]), [false, false, false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1786,8 +1882,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m22 = m5 * T::from_i64(2);
         let m23 = -m22;
         let m24 = -m21;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m11)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m17) + x[3].scale(m18)).0, (x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m19) + x[3].scale(m23)).0, (x[1].scale(m24) + x[2].scale(m22)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m11)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m17) + x[3].scale(m18)).0, (x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m19) + x[3].scale(m23)).0, (x[1].scale(m24) + x[2].scale(m22)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -1838,8 +1934,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>
     #[inline(always)]
     fn transform(self, x: Rotor<S, T, O>) -> Motor<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[3].scale(m[10])).0, (x[1].scale(m[11]) + x[2].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[3].scale(m[10])).0, (x[1].scale(m[11]) + x[2].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -1848,7 +1944,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Rotor<(), f64, O>
     #[inline]
     fn from(p: gx::Prepared<Plane, Rotor<(), f64, O>, T, 13>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Rotor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), m[7], m[8]], [T::zero(), m[9], T::zero(), m[10]], [T::zero(), m[11], m[12], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Rotor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), m[7], m[8]], [T::zero(), m[9], T::zero(), m[10]], [T::zero(), m[11], m[12], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 13> for Rotor<(), f64, O> {
+    type Output = Motor<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Rotor<(), f64, O>, T, 13>) -> Motor<(Rotor<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1926,7 +2030,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t35 = (-xv[1]).mul_add(t6, t15);
         let t36 = t35 * T::from_i64(2);
         let t37 = xv[0] * t22;
-            return Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t37, t24, t27, t30, t32, t34, t36, T::from_i64(0)]), [false, false, false, false, false, false, false, false]) };
+            return Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t37, t24, t27, t30, t32, t34, t36, T::from_i64(0)]), [false, false, false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1953,8 +2057,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m22 = m5 * T::from_i64(2);
         let m23 = -m22;
         let m24 = -m21;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m11)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m17) + x[3].scale(m18)).0, (x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m19) + x[3].scale(m23)).0, (x[1].scale(m24) + x[2].scale(m22)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m11)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m17) + x[3].scale(m18)).0, (x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m19) + x[3].scale(m23)).0, (x[1].scale(m24) + x[2].scale(m22)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2013,8 +2117,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>
     #[inline(always)]
     fn transform(self, x: Rotor<S, T, O>) -> Motor<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[3].scale(m[10])).0, (x[1].scale(m[11]) + x[2].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[3].scale(m[10])).0, (x[1].scale(m[11]) + x[2].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2023,7 +2127,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Rotor<(
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Rotor<(), f64, O>, T, 13>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Rotor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), m[7], m[8]], [T::zero(), m[9], T::zero(), m[10]], [T::zero(), m[11], m[12], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Rotor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), m[7], m[8]], [T::zero(), m[9], T::zero(), m[10]], [T::zero(), m[11], m[12], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 13> for Rotor<(), f64, O> {
+    type Output = Motor<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Rotor<(), f64, O>, T, 13>) -> Motor<(Rotor<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2091,7 +2203,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t28 = (-t26).mul_add(T::from_i64(2), t17);
         let t29 = xv[1].mul_add(t4, t20);
         let t31 = (-t29).mul_add(T::from_i64(2), t21);
-            return Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t12, t25, t28, t31]), [false, false, false, false]) };
+            return Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t12, t25, t28, t31]), [false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2111,8 +2223,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m15 = m5 * T::from_i64(2);
         let m16 = -m15;
         let m17 = m7 - m2;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m11) + x[3].scale(m13)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m16)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0], [false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m11) + x[3].scale(m13)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m16)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0], [false, false, false, false]) }
     }
 }
 
@@ -2156,8 +2268,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, 
     #[inline(always)]
     fn transform(self, x: Translator<S, T, O>) -> Translator<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0], [false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0], [false, false, false, false]) }
     }
 }
 
@@ -2166,7 +2278,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Translator<(), f6
     #[inline]
     fn from(p: gx::Prepared<Plane, Translator<(), f64, O>, T, 7>) -> Self {
         let m = p.m;
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Translator<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]], [false, false, false, false]) }
+        Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Translator<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]], [false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 7> for Translator<(), f64, O> {
+    type Output = Translator<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Translator<(), f64, O>, T, 7>) -> Translator<(Translator<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2232,7 +2352,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t20 = xv[3] * t13;
         let t21 = (-t7).mul_add(T::from_i64(2), t20);
         let t22 = xv[0] * t13;
-            return Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t22, t15, t18, t21]), [false, false, false, false]) };
+            return Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t22, t15, t18, t21]), [false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2252,8 +2372,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m15 = m0 + m1;
         let m16 = m15 - m2;
         let m17 = m2 + m15;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m17)).0, (x[1].scale(m7) + x[2].scale(m9) + x[3].scale(m11)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m16)).0], [false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m17)).0, (x[1].scale(m7) + x[2].scale(m9) + x[3].scale(m11)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m16)).0], [false, false, false, false]) }
     }
 }
 
@@ -2305,8 +2425,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Translator<S, 
     #[inline(always)]
     fn transform(self, x: Translator<S, T, O>) -> Translator<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 4>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0], [false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0], [false, false, false, false]) }
     }
 }
 
@@ -2315,7 +2435,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Transla
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Translator<(), f64, O>, T, 7>) -> Self {
         let m = p.m;
-        Translator { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Translator<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]], [false, false, false, false]) }
+        Translator { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Translator<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]], [false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 7> for Translator<(), f64, O> {
+    type Output = Translator<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Translator<(), f64, O>, T, 7>) -> Translator<(Translator<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2408,7 +2536,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t63 = t62 * T::from_i64(2);
         let t64 = xv[6].mul_add(t14, t63);
         let t65 = -t40;
-            return Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t15, t43, t46, t49, t54, t59, t64, t65]), [false, false, false, false, false, false, false, false]) };
+            return Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t15, t43, t46, t49, t54, t59, t64, t65]), [false, false, false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2441,8 +2569,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m28 = -m22;
         let m29 = -m13;
         let m30 = -m14;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m19)).0, (x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m13)).0, (x[2].scale(m21) + x[3].scale(m22) + x[4].scale(m11) + x[5].scale(m23) + x[6].scale(m24)).0, (x[1].scale(m20) + x[3].scale(m26) + x[4].scale(m23) + x[5].scale(m12) + x[6].scale(m27)).0, (x[1].scale(m28) + x[2].scale(m25) + x[4].scale(m24) + x[5].scale(m27) + x[6].scale(m29)).0, (x[7].scale(m30)).0], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m19)).0, (x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m13)).0, (x[2].scale(m21) + x[3].scale(m22) + x[4].scale(m11) + x[5].scale(m23) + x[6].scale(m24)).0, (x[1].scale(m20) + x[3].scale(m26) + x[4].scale(m23) + x[5].scale(m12) + x[6].scale(m27)).0, (x[1].scale(m28) + x[2].scale(m25) + x[4].scale(m24) + x[5].scale(m27) + x[6].scale(m29)).0, (x[7].scale(m30)).0], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2499,8 +2627,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>
     #[inline(always)]
     fn transform(self, x: Motor<S, T, O>) -> Motor<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[10]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[4].scale(m[11]) + x[5].scale(m[15]) + x[6].scale(m[18])).0, (x[7].scale(m[19])).0], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[10]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[4].scale(m[11]) + x[5].scale(m[15]) + x[6].scale(m[18])).0, (x[7].scale(m[19])).0], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2509,7 +2637,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Motor<(), f64, O>
     #[inline]
     fn from(p: gx::Prepared<Plane, Motor<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Motor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], T::zero(), m[13], m[10], m[14], m[15], T::zero()], [T::zero(), m[16], m[17], T::zero(), m[11], m[15], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Motor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], T::zero(), m[13], m[10], m[14], m[15], T::zero()], [T::zero(), m[16], m[17], T::zero(), m[11], m[15], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [false, false, false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 20> for Motor<(), f64, O> {
+    type Output = Motor<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Motor<(), f64, O>, T, 20>) -> Motor<(Motor<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2598,7 +2734,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t54 = -xv[7];
         let t55 = xv[0] * t30;
         let t56 = t30 * t54;
-            return Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t55, t32, t35, t38, t43, t48, t53, t56]), [false, false, false, false, false, false, false, false]) };
+            return Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t55, t32, t35, t38, t43, t48, t53, t56]), [false, false, false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2631,8 +2767,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m28 = -m22;
         let m29 = -m13;
         let m30 = -m14;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m19)).0, (x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m13)).0, (x[2].scale(m21) + x[3].scale(m22) + x[4].scale(m11) + x[5].scale(m23) + x[6].scale(m24)).0, (x[1].scale(m20) + x[3].scale(m26) + x[4].scale(m23) + x[5].scale(m12) + x[6].scale(m27)).0, (x[1].scale(m28) + x[2].scale(m25) + x[4].scale(m24) + x[5].scale(m27) + x[6].scale(m29)).0, (x[7].scale(m30)).0], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m19)).0, (x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m13)).0, (x[2].scale(m21) + x[3].scale(m22) + x[4].scale(m11) + x[5].scale(m23) + x[6].scale(m24)).0, (x[1].scale(m20) + x[3].scale(m26) + x[4].scale(m23) + x[5].scale(m12) + x[6].scale(m27)).0, (x[1].scale(m28) + x[2].scale(m25) + x[4].scale(m24) + x[5].scale(m27) + x[6].scale(m29)).0, (x[7].scale(m30)).0], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2697,8 +2833,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Motor<S, T, O>
     #[inline(always)]
     fn transform(self, x: Motor<S, T, O>) -> Motor<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[10]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[4].scale(m[11]) + x[5].scale(m[15]) + x[6].scale(m[18])).0, (x[7].scale(m[19])).0], [false, false, false, false, false, false, false, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[10]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[4].scale(m[11]) + x[5].scale(m[15]) + x[6].scale(m[18])).0, (x[7].scale(m[19])).0], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2707,7 +2843,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Motor<(
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Motor<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Motor { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Motor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], T::zero(), m[13], m[10], m[14], m[15], T::zero()], [T::zero(), m[16], m[17], T::zero(), m[11], m[15], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [false, false, false, false, false, false, false, false]) }
+        Motor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Motor<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], T::zero(), m[13], m[10], m[14], m[15], T::zero()], [T::zero(), m[16], m[17], T::zero(), m[11], m[15], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [false, false, false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 20> for Motor<(), f64, O> {
+    type Output = Motor<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Motor<(), f64, O>, T, 20>) -> Motor<(Motor<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2797,7 +2941,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t61 = t60 * T::from_i64(2);
         let t62 = xv[6].mul_add(t13, t61);
         let t63 = -t62;
-            return Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t44, t47, t49, t52, t56, t59, t63, t41]), [true, true, true, true, true, true, true, true]) };
+            return Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t44, t47, t49, t52, t56, t59, t63, t41]), [true, true, true, true, true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2830,8 +2974,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m28 = -m21;
         let m29 = -m13;
         let m30 = -m22;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m15) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m19)).0, (x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m13)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m23)).0, (x[4].scale(m11) + x[5].scale(m24) + x[6].scale(m25) + x[7].scale(m26)).0, (x[4].scale(m24) + x[5].scale(m12) + x[6].scale(m27) + x[7].scale(m28)).0, (x[4].scale(m25) + x[5].scale(m27) + x[6].scale(m29) + x[7].scale(m30)).0, (x[7].scale(m14)).0], [true, true, true, true, true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m15) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m19)).0, (x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m13)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m23)).0, (x[4].scale(m11) + x[5].scale(m24) + x[6].scale(m25) + x[7].scale(m26)).0, (x[4].scale(m24) + x[5].scale(m12) + x[6].scale(m27) + x[7].scale(m28)).0, (x[4].scale(m25) + x[5].scale(m27) + x[6].scale(m29) + x[7].scale(m30)).0, (x[7].scale(m14)).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2888,8 +3032,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, 
     #[inline(always)]
     fn transform(self, x: Flector<S, T, O>) -> Flector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[10]) + x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13])).0, (x[4].scale(m[11]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[12]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[10]) + x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13])).0, (x[4].scale(m[11]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[12]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2898,7 +3042,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Flector<(), f64, 
     #[inline]
     fn from(p: gx::Prepared<Plane, Flector<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Flector<(), f64, O>,), T, 8>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [true, true, true, true, true, true, true, true]) }
+        Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Flector<(), f64, O>,), T, 8>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [true, true, true, true, true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 20> for Flector<(), f64, O> {
+    type Output = Flector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Flector<(), f64, O>, T, 20>) -> Flector<(Flector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2981,7 +3133,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t43 = xv[6] * t24;
         let t44 = (-t18).mul_add(T::from_i64(2), t43);
         let t45 = xv[7] * t24;
-            return Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t26, t29, t32, t35, t38, t41, t44, t45]), [true, true, true, true, true, true, true, true]) };
+            return Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t26, t29, t32, t35, t38, t41, t44, t45]), [true, true, true, true, true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -3014,8 +3166,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m28 = -m21;
         let m29 = -m13;
         let m30 = -m22;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m15) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m19)).0, (x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m13)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m23)).0, (x[4].scale(m11) + x[5].scale(m24) + x[6].scale(m25) + x[7].scale(m26)).0, (x[4].scale(m24) + x[5].scale(m12) + x[6].scale(m27) + x[7].scale(m28)).0, (x[4].scale(m25) + x[5].scale(m27) + x[6].scale(m29) + x[7].scale(m30)).0, (x[7].scale(m14)).0], [true, true, true, true, true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m15) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m19)).0, (x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m13)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m23)).0, (x[4].scale(m11) + x[5].scale(m24) + x[6].scale(m25) + x[7].scale(m26)).0, (x[4].scale(m24) + x[5].scale(m12) + x[6].scale(m27) + x[7].scale(m28)).0, (x[4].scale(m25) + x[5].scale(m27) + x[6].scale(m29) + x[7].scale(m30)).0, (x[7].scale(m14)).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -3080,8 +3232,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Flector<S, T, 
     #[inline(always)]
     fn transform(self, x: Flector<S, T, O>) -> Flector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[10]) + x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13])).0, (x[4].scale(m[11]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[12]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[10]) + x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13])).0, (x[4].scale(m[11]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[12]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -3090,7 +3242,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Flector
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Flector<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Flector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Flector<(), f64, O>,), T, 8>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [true, true, true, true, true, true, true, true]) }
+        Flector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Flector<(), f64, O>,), T, 8>([[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]], [true, true, true, true, true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 20> for Flector<(), f64, O> {
+    type Output = Flector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Flector<(), f64, O>, T, 20>) -> Flector<(Flector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -3217,7 +3377,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t112 = xv[14].mul_add(t18, t111);
         let t114 = (-t112).mul_add(T::from_i64(2), t66);
         let t115 = -t68;
-            return Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t21, t71, t74, t77, t79, t84, t89, t94, t97, t100, t103, t107, t110, t114, t67, t115]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
+            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t21, t71, t74, t77, t79, t84, t89, t94, t97, t100, t103, t107, t110, t114, t67, t115]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -3250,8 +3410,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m28 = -m16;
         let m29 = -m13;
         let m30 = -m17;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 16>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17) + x[4].scale(m18)).0, (x[2].scale(m19) + x[3].scale(m20) + x[4].scale(m21)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m23)).0, (x[2].scale(m21) + x[3].scale(m23) + x[4].scale(m13)).0, (x[5].scale(m11) + x[6].scale(m24) + x[7].scale(m25) + x[8].scale(m17) + x[9].scale(m26)).0, (x[5].scale(m24) + x[6].scale(m12) + x[7].scale(m27) + x[8].scale(m28) + x[10].scale(m18)).0, (x[5].scale(m25) + x[6].scale(m27) + x[7].scale(m29) + x[9].scale(m16) + x[10].scale(m30)).0, (x[8].scale(m13) + x[9].scale(m23) + x[10].scale(m21)).0, (x[8].scale(m23) + x[9].scale(m22) + x[10].scale(m20)).0, (x[8].scale(m21) + x[9].scale(m20) + x[10].scale(m19)).0, (x[11].scale(m29) + x[12].scale(m27) + x[13].scale(m25) + x[14].scale(m26)).0, (x[11].scale(m27) + x[12].scale(m12) + x[13].scale(m24) + x[14].scale(m30)).0, (x[11].scale(m25) + x[12].scale(m24) + x[13].scale(m11) + x[14].scale(m28)).0, (x[14].scale(m14)).0, (x[15].scale(m15)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17) + x[4].scale(m18)).0, (x[2].scale(m19) + x[3].scale(m20) + x[4].scale(m21)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m23)).0, (x[2].scale(m21) + x[3].scale(m23) + x[4].scale(m13)).0, (x[5].scale(m11) + x[6].scale(m24) + x[7].scale(m25) + x[8].scale(m17) + x[9].scale(m26)).0, (x[5].scale(m24) + x[6].scale(m12) + x[7].scale(m27) + x[8].scale(m28) + x[10].scale(m18)).0, (x[5].scale(m25) + x[6].scale(m27) + x[7].scale(m29) + x[9].scale(m16) + x[10].scale(m30)).0, (x[8].scale(m13) + x[9].scale(m23) + x[10].scale(m21)).0, (x[8].scale(m23) + x[9].scale(m22) + x[10].scale(m20)).0, (x[8].scale(m21) + x[9].scale(m20) + x[10].scale(m19)).0, (x[11].scale(m29) + x[12].scale(m27) + x[13].scale(m25) + x[14].scale(m26)).0, (x[11].scale(m27) + x[12].scale(m12) + x[13].scale(m24) + x[14].scale(m30)).0, (x[11].scale(m25) + x[12].scale(m24) + x[13].scale(m11) + x[14].scale(m28)).0, (x[14].scale(m14)).0, (x[15].scale(m15)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3308,8 +3468,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     #[inline(always)]
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[7]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13]) + x[8].scale(m[3]) + x[9].scale(m[14])).0, (x[5].scale(m[12]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[8].scale(m[17]) + x[10].scale(m[4])).0, (x[5].scale(m[13]) + x[6].scale(m[16]) + x[7].scale(m[18]) + x[9].scale(m[2]) + x[10].scale(m[19])).0, (x[8].scale(m[10]) + x[9].scale(m[9]) + x[10].scale(m[7])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[5])).0, (x[11].scale(m[18]) + x[12].scale(m[16]) + x[13].scale(m[13]) + x[14].scale(m[14])).0, (x[11].scale(m[16]) + x[12].scale(m[15]) + x[13].scale(m[12]) + x[14].scale(m[19])).0, (x[11].scale(m[13]) + x[12].scale(m[12]) + x[13].scale(m[11]) + x[14].scale(m[17])).0, (x[14].scale(m[0])).0, (x[15].scale(m[1])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[7]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13]) + x[8].scale(m[3]) + x[9].scale(m[14])).0, (x[5].scale(m[12]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[8].scale(m[17]) + x[10].scale(m[4])).0, (x[5].scale(m[13]) + x[6].scale(m[16]) + x[7].scale(m[18]) + x[9].scale(m[2]) + x[10].scale(m[19])).0, (x[8].scale(m[10]) + x[9].scale(m[9]) + x[10].scale(m[7])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[5])).0, (x[11].scale(m[18]) + x[12].scale(m[16]) + x[13].scale(m[13]) + x[14].scale(m[14])).0, (x[11].scale(m[16]) + x[12].scale(m[15]) + x[13].scale(m[12]) + x[14].scale(m[19])).0, (x[11].scale(m[13]) + x[12].scale(m[12]) + x[13].scale(m[11]) + x[14].scale(m[17])).0, (x[14].scale(m[0])).0, (x[15].scale(m[1])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3318,7 +3478,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Plane, Multivector<(), f
     #[inline]
     fn from(p: gx::Prepared<Plane, Multivector<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[12], m[13], m[3], m[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[16], m[17], T::zero(), m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[16], m[18], T::zero(), m[2], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[9], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[16], m[13], m[14], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[15], m[12], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[12], m[11], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[12], m[13], m[3], m[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[16], m[17], T::zero(), m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[16], m[18], T::zero(), m[2], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[9], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[16], m[13], m[14], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[15], m[12], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[12], m[11], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Plane, 20> for Multivector<(), f64, O> {
+    type Output = Multivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Plane, Multivector<(), f64, O>, T, 20>) -> Multivector<(Multivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -3437,7 +3605,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t95 = xv[0] * t49;
         let t96 = xv[14] * t49;
         let t97 = t49 * t94;
-            return Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t95, t51, t54, t57, t60, t65, t70, t75, t78, t81, t84, t87, t90, t93, t96, t97]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
+            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t95, t51, t54, t57, t60, t65, t70, t75, t78, t81, t84, t87, t90, t93, t96, t97]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -3470,8 +3638,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m28 = -m16;
         let m29 = -m13;
         let m30 = -m17;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 16>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17) + x[4].scale(m18)).0, (x[2].scale(m19) + x[3].scale(m20) + x[4].scale(m21)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m23)).0, (x[2].scale(m21) + x[3].scale(m23) + x[4].scale(m13)).0, (x[5].scale(m11) + x[6].scale(m24) + x[7].scale(m25) + x[8].scale(m17) + x[9].scale(m26)).0, (x[5].scale(m24) + x[6].scale(m12) + x[7].scale(m27) + x[8].scale(m28) + x[10].scale(m18)).0, (x[5].scale(m25) + x[6].scale(m27) + x[7].scale(m29) + x[9].scale(m16) + x[10].scale(m30)).0, (x[8].scale(m13) + x[9].scale(m23) + x[10].scale(m21)).0, (x[8].scale(m23) + x[9].scale(m22) + x[10].scale(m20)).0, (x[8].scale(m21) + x[9].scale(m20) + x[10].scale(m19)).0, (x[11].scale(m29) + x[12].scale(m27) + x[13].scale(m25) + x[14].scale(m26)).0, (x[11].scale(m27) + x[12].scale(m12) + x[13].scale(m24) + x[14].scale(m30)).0, (x[11].scale(m25) + x[12].scale(m24) + x[13].scale(m11) + x[14].scale(m28)).0, (x[14].scale(m14)).0, (x[15].scale(m15)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17) + x[4].scale(m18)).0, (x[2].scale(m19) + x[3].scale(m20) + x[4].scale(m21)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m23)).0, (x[2].scale(m21) + x[3].scale(m23) + x[4].scale(m13)).0, (x[5].scale(m11) + x[6].scale(m24) + x[7].scale(m25) + x[8].scale(m17) + x[9].scale(m26)).0, (x[5].scale(m24) + x[6].scale(m12) + x[7].scale(m27) + x[8].scale(m28) + x[10].scale(m18)).0, (x[5].scale(m25) + x[6].scale(m27) + x[7].scale(m29) + x[9].scale(m16) + x[10].scale(m30)).0, (x[8].scale(m13) + x[9].scale(m23) + x[10].scale(m21)).0, (x[8].scale(m23) + x[9].scale(m22) + x[10].scale(m20)).0, (x[8].scale(m21) + x[9].scale(m20) + x[10].scale(m19)).0, (x[11].scale(m29) + x[12].scale(m27) + x[13].scale(m25) + x[14].scale(m26)).0, (x[11].scale(m27) + x[12].scale(m12) + x[13].scale(m24) + x[14].scale(m30)).0, (x[11].scale(m25) + x[12].scale(m24) + x[13].scale(m11) + x[14].scale(m28)).0, (x[14].scale(m14)).0, (x[15].scale(m15)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3536,8 +3704,8 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     #[inline(always)]
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[7]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13]) + x[8].scale(m[3]) + x[9].scale(m[14])).0, (x[5].scale(m[12]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[8].scale(m[17]) + x[10].scale(m[4])).0, (x[5].scale(m[13]) + x[6].scale(m[16]) + x[7].scale(m[18]) + x[9].scale(m[2]) + x[10].scale(m[19])).0, (x[8].scale(m[10]) + x[9].scale(m[9]) + x[10].scale(m[7])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[5])).0, (x[11].scale(m[18]) + x[12].scale(m[16]) + x[13].scale(m[13]) + x[14].scale(m[14])).0, (x[11].scale(m[16]) + x[12].scale(m[15]) + x[13].scale(m[12]) + x[14].scale(m[19])).0, (x[11].scale(m[13]) + x[12].scale(m[12]) + x[13].scale(m[11]) + x[14].scale(m[17])).0, (x[14].scale(m[0])).0, (x[15].scale(m[1])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[7]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13]) + x[8].scale(m[3]) + x[9].scale(m[14])).0, (x[5].scale(m[12]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[8].scale(m[17]) + x[10].scale(m[4])).0, (x[5].scale(m[13]) + x[6].scale(m[16]) + x[7].scale(m[18]) + x[9].scale(m[2]) + x[10].scale(m[19])).0, (x[8].scale(m[10]) + x[9].scale(m[9]) + x[10].scale(m[7])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[5])).0, (x[11].scale(m[18]) + x[12].scale(m[16]) + x[13].scale(m[13]) + x[14].scale(m[14])).0, (x[11].scale(m[16]) + x[12].scale(m[15]) + x[13].scale(m[12]) + x[14].scale(m[19])).0, (x[11].scale(m[13]) + x[12].scale(m[12]) + x[13].scale(m[11]) + x[14].scale(m[17])).0, (x[14].scale(m[0])).0, (x[15].scale(m[1])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3546,7 +3714,15 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Plane>, Multive
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Plane>, Multivector<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::orientation::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[12], m[13], m[3], m[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[16], m[17], T::zero(), m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[16], m[18], T::zero(), m[2], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[9], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[16], m[13], m[14], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[15], m[12], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[12], m[11], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[12], m[13], m[3], m[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[16], m[17], T::zero(), m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[16], m[18], T::zero(), m[2], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[9], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[16], m[13], m[14], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[15], m[12], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[12], m[11], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Plane>, 20> for Multivector<(), f64, O> {
+    type Output = Multivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Multivector<(), f64, O>, T, 20>) -> Multivector<(Multivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 

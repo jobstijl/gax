@@ -124,6 +124,7 @@ pub type Oriented<K, O> = <K as Reorient<O>>::Out;
 /// The same value, map or kind with orientation `O`: the coefficients kept, their orientation
 /// declared anew. Generated for every kind; [`cast`](crate::cast) and the dual use it to keep or
 /// flip an orientation, and values call it as `with_orientation::<O>()`.
+#[doc(hidden)]
 pub trait Reorient<O: Orientation> {
     /// The same type with orientation `O`.
     type Out;
@@ -137,6 +138,7 @@ pub trait Reorient<O: Orientation> {
 /// reflections call it with constant arguments, so it folds to a negation of some coefficients.
 #[inline(always)]
 #[must_use]
+#[doc(hidden)]
 pub fn reflect<O: Orientation, S: crate::slots::Slots, T: crate::coef::Coef, const N: usize>(
     mut c: [S::Arr<T>; N],
     odd: [bool; N],

@@ -6,8 +6,8 @@
 #![allow(clippy::needless_range_loop)]
 
 use gax::Real;
-use gax::dual::hessian;
 use gax::field::{Field, SparseMap};
+use gax::jet::hessian;
 use gax::vga3d::{Bivector, Scalar, Vector};
 
 type V = Vector<(), f64>;
@@ -93,7 +93,7 @@ fn ends() -> SparseMap<S> {
 fn forces_displacements_composition() {
     let k = stiffness();
     let loads = vectors(&fixture("loads"));
-    assert_field(&k.apply(&loads), &fixture("forces"), 0.0);
+    assert_field(&k.of(&loads), &fixture("forces"), 0.0);
     assert_field(&k.solve(&loads), &fixture("displacements"), 1e-15);
     let composed = blocks(&k.compose(&k));
     let want = fixture("composed");
@@ -243,7 +243,7 @@ fn packed_apply_agrees() {
     for n in [1, 15, 16, 17, 37, 100] {
         let map = ragged(n);
         let x = Field::from_fn(n, |i| Vector::new((i as f64).sin(), 1.0, i as f64 * 0.1));
-        let (scalar, packed) = (map.apply(&x), map.packed().apply(&x));
+        let (scalar, packed) = (map.of(&x), map.packed().of(&x));
         for (a, b) in scalar.sites().iter().zip(packed.sites()) {
             assert!(a.approx_eq(b, 1e-13), "{n}: {a:?} vs {b:?}");
         }
@@ -257,7 +257,7 @@ fn packed_padding_is_masked() {
     let map = ragged(37);
     let mut x = Field::from_fn(37, |i| Vector::new(1.0, i as f64, 0.0));
     x.sites_mut()[0] = Vector::new(f64::NAN, 0.0, 0.0);
-    let y = map.packed().apply(&x);
+    let y = map.packed().of(&x);
     for (r, v) in y.sites().iter().enumerate() {
         let touches = map.couplings().any(|(row, col, _)| row == r && col == 0);
         assert_eq!(v.c.iter().any(|c| c.is_nan()), touches, "row {r}");
@@ -266,7 +266,7 @@ fn packed_padding_is_masked() {
 
 /// The residual `‖A x − b‖²` of a solve.
 fn residual(map: &SparseMap<Vector<(Vector,), f64>>, x: &Field<V>, b: &Field<V>) -> f64 {
-    let r = &map.apply(x) - b;
+    let r = &map.of(x) - b;
     r.dot(&r)
 }
 
@@ -414,9 +414,9 @@ fn transpose_and_compose() {
     let b = ragged(19).transpose();
     let x = Field::from_fn(19, |i| Vector::new(1.0, (i as f64).cos(), -2.0));
     let y = Field::from_fn(19, |i| Vector::new((i as f64).sin(), 0.5, 1.0));
-    let (left, right) = (y.dot(&a.apply(&x)), a.transpose().apply(&y).dot(&x));
+    let (left, right) = (y.dot(&a.of(&x)), a.transpose().of(&y).dot(&x));
     assert!((left - right).abs() < 1e-12 * left.abs().max(1.0));
-    let (ab, seq) = (a.compose(&b).apply(&x), a.apply(&b.apply(&x)));
+    let (ab, seq) = (a.compose(&b).of(&x), a.of(&b.of(&x)));
     for (p, q) in ab.sites().iter().zip(seq.sites()) {
         assert!(
             (*p - *q).c.iter().all(|d| d.abs() < 1e-12),
@@ -445,7 +445,7 @@ fn field_operations() {
 #[test]
 #[should_panic(expected = "a field map with 4 input sites applied to a field over 3 sites")]
 fn site_counts_must_match() {
-    let _ = stiffness().apply(&Field::<V>::zeros(3));
+    let _ = stiffness().of(&Field::<V>::zeros(3));
 }
 
 /// A free chain of `n` sites: the Laplacian of its `n − 1` springs, map cells `Vector <- Vector`.
@@ -467,7 +467,7 @@ fn eigh_free_chain() {
     let n = 40;
     let k = free_chain(n);
     let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
-    let (values, modes) = k.eigh(&mass, 9);
+    let (values, modes) = k.eigh_with(&mass, 9);
     for (i, v) in values.iter().enumerate() {
         let wave = (i / 3) as f64;
         let want = 2.0 - 2.0 * (wave * std::f64::consts::PI / n as f64).cos();
@@ -479,7 +479,7 @@ fn eigh_free_chain() {
     for (i, a) in modes.iter().enumerate() {
         for (j, b) in modes.iter().enumerate() {
             let want = if i == j { 1.0 } else { 0.0 };
-            assert!((a.dot(&mass.apply(b)) - want).abs() < 1e-9, "{i} {j}");
+            assert!((a.dot(&mass.of(b)) - want).abs() < 1e-9, "{i} {j}");
         }
     }
 }
@@ -492,7 +492,7 @@ fn eigh_free_chain() {
 fn eigh_eigenvectors_across_a_small_gap() {
     let n = 400;
     let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
-    let (values, modes) = free_chain(n).eigh(&mass, 6);
+    let (values, modes) = free_chain(n).eigh_with(&mass, 6);
     for (i, (value, mode)) in values.iter().zip(&modes).enumerate() {
         let wave = (i / 3) as f64;
         let exact = |j: usize| (((j as f64 + 0.5) * wave * std::f64::consts::PI) / n as f64).cos();
@@ -526,8 +526,8 @@ fn eigh_is_scale_invariant() {
     let unit = free_chain(n);
     let stiff = unit.map_cells(|c| c.gp(stiffness));
     let mass = SparseMap::from_diagonal(&Field::from_fn(n, |_| Vector::<(), f64>::slot()));
-    let (values, _) = unit.eigh(&mass, 12);
-    let (stiff_values, _) = stiff.eigh(&mass, 12);
+    let (values, _) = unit.eigh_with(&mass, 12);
+    let (stiff_values, _) = stiff.eigh_with(&mass, 12);
     for (v, s) in values.iter().zip(&stiff_values) {
         assert!(
             (s / stiffness - v).abs() < 1e-12,
@@ -545,8 +545,8 @@ fn products_into_an_existing_field() {
     let k = free_chain(n);
     let x = Field::from_fn(n, |i| Vector::<(), f64>::new(i as f64, (i * i) as f64, 1.0));
     let mut y = Field::from_fn(n, |_| Vector::<(), f64>::new(9.0, 9.0, 9.0));
-    k.apply_into(&x, &mut y);
-    assert_eq!(y, k.apply(&x));
+    k.of_into(&x, &mut y);
+    assert_eq!(y, k.of(&x));
     let s = Scalar::<(), f64>::new;
     let ends = SparseMap::new(vec![s(-1.0), s(1.0)], vec![0, 0], vec![0, 1], (1, n));
     let mut d = Field::from_fn(1, |_| Vector::<(), f64>::new(5.0, 5.0, 5.0));
@@ -599,15 +599,15 @@ fn eigh_generalized_and_degenerate() {
             SparseMap::from_diagonal(&Field::from_fn(n, |i| id(1.0 + (i % 5) as f64 * 0.25))),
         ),
     ] {
-        let (values, modes) = grid.eigh(&mass, 12);
+        let (values, modes) = grid.eigh_with(&mass, 12);
         for (v, x) in values.iter().zip(&modes) {
-            let r = &grid.apply(x) - &mass.apply(x).scaled(*v);
+            let r = &grid.of(x) - &mass.of(x).scaled(*v);
             assert!(
                 r.dot(&r).sqrt() < 1e-7,
                 "{name}: residual {} at {v}",
                 r.dot(&r).sqrt()
             );
-            assert!((x.dot(&mass.apply(x)) - 1.0).abs() < 1e-9);
+            assert!((x.dot(&mass.of(x)) - 1.0).abs() < 1e-9);
         }
         // The rigid shifts (three), then the first wave along each axis (six together).
         assert!(
@@ -658,7 +658,7 @@ fn lstsq_cases() {
     // Over-determined and consistent.
     let tall = rectangular(30, 12);
     let truth = Field::from_fn(12, |i| Bivector::new(1.0, -(i as f64) * 0.1, 0.5));
-    let b = tall.apply(&truth);
+    let b = tall.of(&truth);
     let x = tall.lstsq(&b);
     let d = &x - &truth;
     assert!(d.dot(&d) < 1e-20, "{}", d.dot(&d));
@@ -666,7 +666,7 @@ fn lstsq_cases() {
     let noisy = Field::from_fn(30, |i| Vector::new((i as f64).cos(), 1.0, -0.5));
     let x = tall.lstsq(&noisy);
     let normal = tall.transpose().compose(&tall);
-    let want = normal.solve_direct(&tall.transpose().apply(&noisy));
+    let want = normal.solve_direct(&tall.transpose().of(&noisy));
     let d = &x - &want;
     assert!(d.dot(&d) < 1e-18 * want.dot(&want), "{}", d.dot(&d));
     // Under-determined: the least-norm solution is Aᵀ (A Aᵀ)⁻¹ b.
@@ -674,7 +674,7 @@ fn lstsq_cases() {
     let b = Field::from_fn(8, |i| Vector::new(1.0, i as f64, 0.0));
     let x = wide.lstsq(&b);
     let y = wide.compose(&wide.transpose()).solve_direct(&b);
-    let want = wide.transpose().apply(&y);
+    let want = wide.transpose().of(&y);
     let d = &x - &want;
     assert!(d.dot(&d) < 1e-18 * want.dot(&want), "{}", d.dot(&d));
     // Singular: a free chain's Laplacian, its rigid shifts left at zero.
@@ -689,6 +689,6 @@ fn lstsq_cases() {
     let b = &b - &Field::from_fn(15, |_| b.mean()); // in the range: zero mean
     let x = k.lstsq(&b);
     assert!(x.mean().c.iter().all(|c| c.abs() < 1e-10), "{:?}", x.mean());
-    let r = &k.apply(&x) - &b;
+    let r = &k.of(&x) - &b;
     assert!(r.dot(&r) < 1e-18);
 }

@@ -102,13 +102,13 @@ macro_rules! principal_frame {
         ///
         /// The construction `Point & [Plane.dual(), Line]` has slots (Point, Plane, Line) and
         /// gives a forque; the inertia matches its Line slot, leaving the second moment, a
-        /// tensor on (Point, Plane), as the unknown. `lstsq_pair` unbinds both slots at once,
+        /// tensor on (Point, Plane), as the unknown. `lstsq_dyad` unbinds both slots at once,
         /// as numga's `lstsq` does. The system is overdetermined yet consistent, and singular
         /// (the construction only sees the moment's symmetric part): the pseudo-inverse gives
         /// the least-norm solution, as numga's.
         pub fn second_moment(inertia: Inertia) -> Moment {
             let construction = Point::slot() & Plane::slot().dual().commutator(Line::slot());
-            construction.lstsq_pair(inertia)
+            construction.lstsq_dyad(inertia)
         }
 
         /// The principal planes of a second moment, with their eigenvalues: the generalized

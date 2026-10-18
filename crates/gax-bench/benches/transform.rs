@@ -238,8 +238,8 @@ fn motors(c: &mut Criterion) {
     g.bench_function("gax build map m >> Point::slot()", |b| {
         b.iter(|| black_box(m1) >> Point::slot());
     });
-    g.bench_function("gax build map m.prepare().to_map()", |b| {
-        b.iter(|| -> Point<(Point,), f32> { black_box(m1).prepare::<Point>().to_map() });
+    g.bench_function("gax build map m.prepare().to_dense()", |b| {
+        b.iter(|| -> Point<(Point,), f32> { black_box(m1).prepare::<Point>().to_dense() });
     });
     g.bench_function("glam Affine3A::from_rotation_translation", |b| {
         b.iter(|| {

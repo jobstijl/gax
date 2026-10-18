@@ -396,11 +396,11 @@ fn fields(c: &mut Criterion) {
     let one = cells[1];
     let mut g = c.benchmark_group(format!("fields: {couplings} couplings over {n} sites"));
     g.bench_function("sparse apply, scalar loop", |b| {
-        b.iter(|| black_box(map.apply(black_box(&field))));
+        b.iter(|| black_box(map.of(black_box(&field))));
     });
     let packed = map.packed();
     g.bench_function("sparse packed apply (cells packed once, auto)", |b| {
-        b.iter(|| black_box(packed.apply(black_box(&field))));
+        b.iter(|| black_box(packed.of(black_box(&field))));
     });
     g.bench_function(
         "dense batch path: one map, of_slice over as many values",
@@ -451,10 +451,10 @@ fn fields_string(c: &mut Criterion) {
         b.iter(|| black_box(lu.solve(black_box(&load))));
     });
     g.bench_function("one product, scalar", |b| {
-        b.iter(|| black_box(stiffness.apply(black_box(&x))));
+        b.iter(|| black_box(stiffness.of(black_box(&x))));
     });
     g.bench_function("one product, packed (auto)", |b| {
-        b.iter(|| black_box(packed.apply(black_box(&x))));
+        b.iter(|| black_box(packed.of(black_box(&x))));
     });
     g.bench_function("cg", |b| {
         b.iter(|| black_box(stiffness.solve(black_box(&load))));
@@ -515,7 +515,7 @@ fn fields_grid(c: &mut Criterion) {
     });
     let mass = SparseMap::from_diagonal(&Field::from_fn(sites, |_| Point::<(), f64>::slot()));
     g.bench_function("eigh: the 12 lowest modes", |b| {
-        b.iter(|| black_box(grid.eigh(black_box(&mass), 12)));
+        b.iter(|| black_box(grid.eigh_with(black_box(&mass), 12)));
     });
     g.finish();
 }

@@ -14,13 +14,13 @@
 //! * **Maps are built** from couplings ([`SparseMap::from_triples`], [`SparseMap::new`]), from the input sites of each row
 //!   ([`SparseMap::from_columns`]: a mesh's edges or faces), or on the diagonal
 //!   ([`SparseMap::from_diagonal`]).
-//! * **Map cells apply** ([`SparseMap::apply`], or [`SparseMap::apply_into`] a kept field, with
+//! * **Map cells apply** ([`SparseMap::of`], or [`SparseMap::of_into`] a kept field, with
 //!   no allocation), compose ([`SparseMap::compose`]), transpose ([`SparseMap::transpose`]) and
 //!   solve: [`SparseMap::solve`] (preconditioned conjugate gradients, for symmetric positive
 //!   definite couplings), [`SparseMap::cg`] (the same with a report), [`SparseMap::solve_direct`]
 //!   and [`SparseMap::factor`] (sparse LU after a minimum-degree ordering, for any nonsingular
 //!   map; the factors solve again for every right-hand side), [`SparseMap::lstsq`] (least
-//!   squares, LSQR, any shape) and [`SparseMap::eigh`] (the eigenpairs nearest zero of a
+//!   squares, LSQR, any shape) and [`SparseMap::eigh_with`] (the eigenpairs nearest zero of a
 //!   pencil).
 //! * **Batch kernels** (feature `batch`): `SparseMap::packed` lays the cells out for SIMD
 //!   once, so that a map applied many times (a stiffness inside an iteration) runs on lanes.

@@ -101,7 +101,7 @@ mod fresnel {
         let volumes = map.outermorphism::<Trivector>();
         let incidence: intrinsic::Scalar<(Vector, Trivector), f64> =
             Vector::slot() & Trivector::slot();
-        incidence.solve(Vector::slot() & volumes)
+        incidence.solve_pairing(Vector::slot() & volumes)
     }
 
     /// The Fresnel quartic of a wavevector, for its nonzero frequency as the unit timelike
@@ -350,14 +350,14 @@ mod tests {
     /// `b`.
     fn adjoint(map: VectorMap) -> VectorMap {
         let metric = Vector::slot() | Vector::slot();
-        metric.solve(Vector::slot() | map)
+        metric.solve_pairing(Vector::slot() | map)
     }
 
     /// The adjoint of a field map under the metric: `F*(B) · a = B · F(a)` for every bivector
     /// `B` and vector `a`.
     fn field_adjoint(map: FieldMap) -> Vector<(Bivector,), f64> {
         let metric = Vector::slot() | Vector::slot();
-        metric.solve(Bivector::slot() | map)
+        metric.solve_pairing(Bivector::slot() | map)
     }
 
     /// The medium seen moved by a rotor: conjugated by it.
@@ -418,7 +418,7 @@ mod tests {
                     let wave = potential_map(medium, k);
                     // The two potentials the map loses, besides none: its smallest singular
                     // vectors, and the fields they give.
-                    let (_, potentials, _) = wave.svd_thin();
+                    let potentials = wave.svd().inputs;
                     let fields = [potentials[2], potentials[3]].map(|a| k ^ a);
                     let residual = polynomial(medium, T, k);
                     assert!(residual.abs() < 1e-9, "{residual}");
@@ -464,7 +464,7 @@ mod tests {
                 }
             }
             let metric = Bivector::slot() | Bivector::slot();
-            let response_adjoint: Response = metric.solve(Bivector::slot() | response);
+            let response_adjoint: Response = metric.solve_pairing(Bivector::slot() | response);
             assert!(near(response_adjoint, response, 1e-12));
         }
     }

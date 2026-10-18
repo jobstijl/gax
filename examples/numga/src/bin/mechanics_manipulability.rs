@@ -225,7 +225,7 @@ mod render {
     pub fn prepare(body: gax::pga3d::Point<(Point,), f64>) -> BoxShape {
         let to_box = body.inverse();
         // A world plane `F` with `F & x == slab & to_box(x)`: the slab's plane in the world.
-        let on_planes = (Plane::slot() & Point::slot()).solve(Plane::slot() & to_box);
+        let on_planes = (Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & to_box);
         BoxShape {
             to_box,
             faces: slabs().map(|s| on_planes.of(s)),

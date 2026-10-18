@@ -94,8 +94,8 @@ mod kitaev {
         /// slightly negative).
         pub fn modes(&self, generator: &Generator, count: usize) -> (Vec<f64>, Vec<Modes>) {
             let normal = generator.transpose().compose(generator);
-            let (_, modes) = normal.eigh(&self.identity(), count);
-            let energies = modes.iter().map(|m| generator.apply(m).norm()).collect();
+            let (_, modes) = normal.eigh_with(&self.identity(), count);
+            let energies = modes.iter().map(|m| generator.of(m).norm()).collect();
             (energies, modes)
         }
 
@@ -124,7 +124,7 @@ mod kitaev {
         pub fn step(&self, state: &Modes, potential: &Potential, dt: f64) -> Modes {
             let half = self.generator(potential).map_cells(|c| c * (dt / 2.0));
             let behind = &self.identity() + &half.map_cells(|c| -c);
-            behind.solve_direct(&(state + &half.apply(state)))
+            behind.solve_direct(&(state + &half.of(state)))
         }
     }
 
@@ -564,12 +564,12 @@ mod tests {
             c[k] = 1.0;
             let basis = majoranas::Vector::from_coeffs(c);
             let want = b.commutator(basis);
-            let got = joined(&g.apply(&split(basis)));
+            let got = joined(&g.of(&split(basis)));
             assert!(
                 (got - want).c.iter().all(|d| d.abs() < ROUND_OFF),
                 "{k}: {got:?} vs {want:?}"
             );
-            assert!(largest(&skew.apply(&split(basis))) < ROUND_OFF);
+            assert!(largest(&skew.of(&split(basis))) < ROUND_OFF);
         }
     }
 
@@ -586,8 +586,8 @@ mod tests {
         let end = |site: usize, v: Vector<(), f64>| {
             Field::from_fn(sites, |s| if s == site { v } else { Vector::zero() })
         };
-        assert!(largest(&g.apply(&end(0, Vector::new(1.0, 0.0)))) < ROUND_OFF);
-        assert!(largest(&g.apply(&end(sites - 1, Vector::new(0.0, 1.0)))) < ROUND_OFF);
+        assert!(largest(&g.of(&end(0, Vector::new(1.0, 0.0)))) < ROUND_OFF);
+        assert!(largest(&g.of(&end(sites - 1, Vector::new(0.0, 1.0)))) < ROUND_OFF);
         let (energies, _) = sweet.modes(&g, count);
         for (k, e) in energies.iter().enumerate() {
             let want = if k < 2 { 0.0 } else { 2.0 * hopping };

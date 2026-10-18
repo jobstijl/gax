@@ -1,6 +1,6 @@
 //! Structured maps as maps (ADR-044): `PrincipalInertia`, a `Forque <- Line` (twists to
 //! momenta, ADR-051) stored as four numbers, composes, binds into other maps and forms, and
-//! solves without `to_map()`, with the results of its dense form.
+//! solves without `to_dense()`, with the results of its dense form.
 
 #![cfg(feature = "pga3d")]
 
@@ -9,7 +9,7 @@ mod rng;
 use rng::{Draw, rng};
 
 use gax::ApproxEq;
-use gax::map::{LinearMap, SquareLinearMap};
+use gax::map::SquareLinearMap;
 use gax::pga3d::{Forque, Line, Point, PrincipalInertia, PrincipalMobility, Scalar};
 
 fn random_body(rng: &mut impl Draw) -> PrincipalInertia<f64> {
@@ -38,7 +38,7 @@ fn composes_and_binds() {
     let mut rng = rng(0x5a1e);
     for _ in 0..100 {
         let body = random_body(&mut rng);
-        let dense = body.to_map();
+        let dense = body.to_dense();
         let m = random_map(&mut rng);
         assert_eq!(m.of(body), m.of(dense)); // m ∘ body
         assert_eq!(body.of(m), dense.of(m)); // body ∘ m
@@ -51,7 +51,7 @@ fn composes_and_binds() {
         let p = Point::xyz(rng.next_f64(), rng.next_f64(), rng.next_f64());
         let velocity: Point<(Line,), f64> = Line::slot().commutator(p);
         let mobility = body.inverse();
-        assert_eq!(velocity.of(mobility), velocity.of(mobility.to_map()));
+        assert_eq!(velocity.of(mobility), velocity.of(mobility.to_dense()));
     }
 }
 
@@ -61,14 +61,14 @@ fn solves_and_inverts() {
     let mut rng = rng(0x501e);
     for _ in 0..100 {
         let body = random_body(&mut rng);
-        let dense = body.to_map();
+        let dense = body.to_dense();
         let f = random_momentum(&mut rng);
         assert!(SquareLinearMap::solve(body, f).approx_eq(&dense.solve(f), 1e-13));
         let mobility: PrincipalMobility<f64> = SquareLinearMap::inverse(body);
         assert!(mobility.to_dense().approx_eq(&dense.inverse(), 1e-13));
         assert!(
             SquareLinearMap::inverse(mobility)
-                .to_map()
+                .to_dense()
                 .approx_eq(&dense, 1e-13)
         );
     }
@@ -91,19 +91,19 @@ fn generic_code_takes_either() {
         let f = random_momentum(&mut rng);
         let (compact, dense) = (
             energy_of_momentum(body, f),
-            energy_of_momentum(body.to_map(), f),
+            energy_of_momentum(body.to_dense(), f),
         );
         assert!((compact - dense).abs() < 1e-12 * compact.abs().max(1.0));
     }
 }
 
-/// A dense map's `apply` is its `of`, bit for bit.
+/// A dense map's `SquareLinearMap::of` is its inherent `of`, bit for bit.
 #[test]
-fn dense_apply_is_of() {
+fn square_linear_map_of_is_inherent_of() {
     let mut rng = rng(0xa991);
     for _ in 0..100 {
         let m = random_map(&mut rng);
         let b = random_momentum(&mut rng);
-        assert_eq!(SquareLinearMap::apply(m, b), m.of(b));
+        assert_eq!(SquareLinearMap::of(m, b), m.of(b));
     }
 }

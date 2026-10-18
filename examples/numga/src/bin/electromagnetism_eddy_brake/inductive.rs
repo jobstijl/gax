@@ -172,7 +172,7 @@ pub fn current_modes(
     let pulled = &adjoint * &coulomb_integrals(mesh, permeability);
     let inductance = symmetric(&pulled.compose(&current));
     // The eigenfields are orthonormal in magnetic energy; their eigenvalues are decay rates.
-    let (decay, modes) = resistance.eigh(&inductance, count);
+    let (decay, modes) = resistance.eigh_with(&inductance, count);
     let cells = modes.iter().flat_map(|m| m.iter()).collect();
     CurrentModes {
         decay: decay.into_iter().map(Scalar3::new).collect(),
@@ -192,7 +192,7 @@ impl CurrentModes {
     /// The work rate of a face electric field `[F]` on each pattern's current, `[modes]`.
     pub fn drive(&self, mesh: &Mesh, electric: &Field<Vector3>) -> Field<Scalar3> {
         let sheet = electric.zip_with(&mesh.triangle_areas(), |e, a| e * a.s());
-        &self.projection * &self.current.transpose().apply(&sheet)
+        &self.projection * &self.current.transpose().of(&sheet)
     }
 
     /// The streamfunction on the interior of mode amplitudes `[modes]`.
@@ -202,7 +202,7 @@ impl CurrentModes {
 
     /// The sheet current `[F]` of mode amplitudes `[modes]`.
     pub fn currents(&self, amplitudes: &Field<Scalar3>) -> Field<Vector3> {
-        self.current.apply(&self.interior_stream(amplitudes))
+        self.current.of(&self.interior_stream(amplitudes))
     }
 
     /// The streamfunction `[V]` of mode amplitudes `[modes]`.

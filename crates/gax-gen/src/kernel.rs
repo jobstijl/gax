@@ -403,7 +403,7 @@ impl Kernel {
     /// # Panics
     /// If a program reads a variable without a source.
     pub fn eval(&self, args: &[Vec<f64>]) -> Vec<f64> {
-        use gax_core::study;
+        use gax_core::__private::study;
         let mut locals: Vec<(String, f64)> = Vec::new();
         let mut outs: Vec<Vec<f64>> = Vec::new();
         for step in &self.steps {

@@ -154,7 +154,7 @@ mod collision {
     /// line, its last singular vector) and the contact point.
     pub fn contact(q1: Quadric, q2: Quadric) -> (f64, L, P) {
         let (lambda, _) = peak(q1, q2);
-        let (_, _, lines) = blend(q1, q2, lambda).dual().svd();
+        let lines = blend(q1, q2, lambda).dual().svd().inputs;
         let line = lines[2].normalized();
         (lambda, line, q1.of(line).normalized())
     }

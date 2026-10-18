@@ -354,7 +354,11 @@ pub const RESERVED: &[&str] = &[
     "Widen",
 ];
 
-/// Qualify every bare reference to a core item with the private `gx` alias.
+/// The reserved names that live in `gax_core::__private`: machinery only generated code names.
+const PRIVATE: &[&str] = &["SlotArr", "Reorient", "SplitLast"];
+
+/// Qualify every bare reference to a core item with the private `gx` alias (and the hidden
+/// `__private` module for the items in [`PRIVATE`]).
 fn qualify(src: &str) -> String {
     let mut out = String::with_capacity(src.len() + src.len() / 8);
     let bytes = src.as_bytes();
@@ -381,7 +385,11 @@ fn qualify(src: &str) -> String {
                 && !rest.starts_with("==")
                 && (before.ends_with('<') || before.ends_with(','));
             if RESERVED.contains(&word) && !out.ends_with("type ") && !binding {
-                out.push_str("gx::");
+                out.push_str(if PRIVATE.contains(&word) {
+                    "gx::__private::"
+                } else {
+                    "gx::"
+                });
             }
             out.push_str(word);
         } else {

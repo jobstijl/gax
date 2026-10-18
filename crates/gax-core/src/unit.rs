@@ -114,7 +114,7 @@ pub trait Widen<N> {}
 /// is off by `O(e²)`, with no square root. See [`Unit::renormalize_fast`].
 ///
 /// ```
-/// use gax::NewtonStep;
+/// use gax::__private::NewtonStep;
 /// use gax::pga3d::Motor;
 /// let drifted = Motor::<(), f64>::rotation_about(1.0, 2.0, 3.0, 0.9).into_inner().gp(1.001);
 /// let fixed = drifted.newton_step();
@@ -122,6 +122,7 @@ pub trait Widen<N> {}
 /// assert!((drifted.norm_squared() - 1.0).abs() > 1e-3);
 /// assert!((fixed.norm_squared() - 1.0).abs() < 1e-5);
 /// ```
+#[doc(hidden)]
 pub trait NewtonStep {
     /// `(3 − x ~x) x / 2`.
     fn newton_step(self) -> Self;

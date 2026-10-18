@@ -4,9 +4,9 @@ error[E0277]: the coefficients `[[f64; 6]; 4]` are not square: the map's input a
 5 |     let _ = m.solve(b);
   |               ^^^^^ needs a map between kinds of the same size
   |
-  = note: a map `B <- A` stores `[[T; size of A]; size of B]`; `inverse`, `solve`, `det`, `eigh`, `eig` and `svd` need the two sizes equal
-  = note: for a map of another shape, `pinv()` is the pseudo-inverse, `lstsq(b)` the least-squares solution and `svd_thin()` the singular value decomposition
-help: the trait `SquareArr<f64>` is not implemented for `[[f64; 6]; 4]`
+  = note: a map `B <- A` stores `[[T; size of A]; size of B]`; `inverse`, `solve`, `det`, `eigh` and `eig` need the two sizes equal
+  = note: for a map of another shape, `pinv()` is the pseudo-inverse, `lstsq(b)` the least-squares solution and `svd()` the singular value decomposition
+help: the trait `gax::__private::linalg::SquareArr<f64>` is not implemented for `[[f64; 6]; 4]`
       but it is implemented for `[[f64; 6]; 6]`
  --> $WORKSPACE/crates/gax-core/src/linalg.rs
   |

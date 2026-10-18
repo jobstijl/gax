@@ -135,15 +135,15 @@ mod hanging_chain {
     /// The force each bead feels unbalanced: minus the energy's gradient, read as vectors.
     pub fn unbalanced(beads: &Chain) -> Chain {
         let (_, gradient) = gax::field::gradient(energy, beads);
-        gradient.map(|g| -metric().solve(g))
+        gradient.map(|g| -metric().solve_pairing(g))
     }
 
     /// One Newton step of the whole chain: the curvature solved against the gradient, both
     /// read through the metric, in one sparse direct solve.
     pub fn newton(beads: &Chain) -> Chain {
         let (_, gradient, curvature) = gax::field::hessian(energy, beads);
-        let curvature = curvature.map_cells(|h| metric().solve(h));
-        let step = curvature.solve_direct(&gradient.map(|g| metric().solve(g)));
+        let curvature = curvature.map_cells(|h| metric().solve_pairing(h));
+        let step = curvature.solve_direct(&gradient.map(|g| metric().solve_pairing(g)));
         beads - &step
     }
 

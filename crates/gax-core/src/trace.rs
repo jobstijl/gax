@@ -1,8 +1,9 @@
 //! What build-time tracing needs to know about kernel arguments and results.
 //!
-//! The tracer itself (the symbolic coefficient type and the code emitter) lives in `gax-gen`
-//! and is exposed as `gax::trace`. This trait is implemented here, for every value of a
-//! generated kind and for [`Unit`] values, so that `gax-gen` can stay generic.
+//! The tracer itself (the symbolic coefficient type and the code emitter) lives in `gax-gen`;
+//! `gax::trace` holds both, the tracer with the feature `trace` and this trait in any case. The
+//! trait is implemented here, for every value of a generated kind and for [`Unit`] values, so
+//! that `gax-gen` can stay generic.
 
 use crate::coef::Coef;
 use crate::kind::{Extensor, Kind};
@@ -120,10 +121,7 @@ fn algebra_module<K: Kind>() -> &'static str {
 /// `::gax::pga3d::Point` in the kind's default orientation, `::gax::pga3d::extrinsic::Point` in
 /// the other (ADR-052), and `crate::path::Point` for algebras declared in the user's crate. Its
 /// parameters are the slots and the coefficient type.
-///
-/// # Errors
-/// Propagates the formatter's errors.
-pub fn write_kind_path<K: Kind>(w: &mut dyn Write) -> fmt::Result {
+fn write_kind_path<K: Kind>(w: &mut dyn Write) -> fmt::Result {
     let module = algebra_module::<K>();
     let (first, rest) = module.split_once("::").unwrap_or((module, ""));
     if first == "gax" {

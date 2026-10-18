@@ -99,7 +99,7 @@ reciprocal of `eo` is `−e∞`. So are the metrics of `algebra!` declarations.
 A kind that holds a null direction (PGA's `e0`, which squares to zero) has a singular Gram matrix:
 no element of the kind pairs to one with `e0`, so a derivative cannot be taken back to an element.
 Calling `nabla` on a PGA plane is a compile error that says so. There, the derivative is the form
-that `gax::dual::gradient` returns (guide, section 15), which needs no metric.
+that `gax::jet::gradient` returns (guide, section 15), which needs no metric.
 
 ## Integration over simplices
 
@@ -179,10 +179,10 @@ assert!((inside - around).c.iter().all(|c| c.abs() < 1e-15));
 A mesh is a chain of simplices that share faces. `gax::mesh` (feature `std`) holds the topology of
 one of any dimension and its boundary maps, the discrete exterior derivative (ADR-049).
 
-* `Complex<N>` is built from its top simplices, `N` vertex indices each (triangles for a surface,
-  tetrahedra for a solid). It derives every face: the `k`-simplices for `k` from 0 (the vertices)
-  to `N − 1`. The top simplices keep their order, which orients them; below the top a simplex's
-  vertices are sorted, and each dimension is in lexicographic order.
+* `SimplicialComplex<N>` is built from its top simplices, `N` vertex indices each (triangles for a
+  surface, tetrahedra for a solid). It derives every face: the `k`-simplices for `k` from 0 (the
+  vertices) to `N − 1`. The top simplices keep their order, which orients them; below the top a
+  simplex's vertices are sorted, and each dimension is in lexicographic order.
 * `d(k)` maps fields on the `k`-simplices to fields on the `(k+1)`-simplices, a `SparseMap` with
   cells `±1`: the difference along each edge for `k = 0`, the circulation around each triangle for
   `k = 1`. Each row lists a simplex's faces with the orientations they get from it, so
@@ -201,7 +201,7 @@ them apart:
   prime field.
 
 ```rust
-use gax::mesh::Complex;
+use gax::mesh::SimplicialComplex;
 
 // A torus: a 4 × 4 grid of squares, two triangles each, with opposite sides glued.
 let id = |i: usize, j: usize| (i % 4) * 4 + j % 4;
@@ -210,7 +210,7 @@ let faces: Vec<[usize; 3]> = (0..4)
         [[id(i, j), id(i + 1, j), id(i + 1, j + 1)], [id(i, j), id(i + 1, j + 1), id(i, j + 1)]]
     }))
     .collect();
-let torus = Complex::new(16, &faces).unwrap();
+let torus = SimplicialComplex::new(16, &faces).unwrap();
 assert_eq!(torus.betti_numbers(), [1, 2, 1]); // one piece, two loops, one cavity
 assert_eq!(torus.euler_characteristic(), 0);
 assert!(torus.is_oriented() && torus.boundary().is_empty());
@@ -282,8 +282,8 @@ With the stars, `Geometry` gives the operators of calculus on cochains (ADR-050)
 * `laplacian(k)`: the Laplace–de Rham operator `Δ_k = dδ + δd`. Its null space holds the harmonic
   cochains, as many as the `k`-th Betti number.
 * `laplacian_form(k)`: the symmetric form `⋆_k Δ_k`, which with `star(k)` makes the pencil whose
-  eigenpairs are `Δ`'s (`SparseMap::eigh`, on a well-centred mesh, whose stars are positive). On
-  vertices it is the cotangent Laplacian.
+  eigenpairs are `Δ`'s (`SparseMap::eigh_with`, on a well-centred mesh, whose stars are
+  positive). On vertices it is the cotangent Laplacian.
 * `dirac()`: the Dirac operator `D = d + δ` on cochains of every degree at once, one field over all
   the simplices (`offsets()` says where each degree starts). `D² = Δ` degree by degree: it is
   the discrete counterpart of `∇ = ∇∧ + ∇⌋`.
@@ -309,7 +309,7 @@ assert!(g.is_well_centered());
 // The Laplacian on vertices has one zero eigenvalue: the surface is one piece.
 let form = &g.laplacian_form::<Scalar<(), f64>>(0) * Scalar::<(), f64>::slot();
 let star = &g.star::<Scalar<(), f64>>(0) * Scalar::<(), f64>::slot();
-let (values, _) = form.eigh(&star, 3);
+let (values, _) = form.eigh_with(&star, 3);
 assert!(values[0].abs() < 1e-12 && values[1] > 0.5);
 // The Dirac operator acts on the cochains of all 26 simplices at once (D² = Δ, laws.md §R).
 assert_eq!(g.offsets(), [0, 6, 18, 26]);

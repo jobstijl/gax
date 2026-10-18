@@ -13,7 +13,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         }
         let m1 = v[1] * v[1];
         let m2 = v[0].mul_add(v[0], m1);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: [(x[0].scale(m2)).0] }
     }
 }
@@ -42,7 +42,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0] }
     }
 }
@@ -53,6 +53,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Rotor, Scalar<(), f64, O
     fn from(p: gx::Prepared<Rotor, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Scalar { o: core::marker::PhantomData, c: [[m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Rotor, 1> for Scalar<(), f64, O> {
+    type Output = Scalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Rotor, Scalar<(), f64, O>, T, 1>) -> Scalar<(Scalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -108,7 +116,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         }
         let m1 = v[1] * v[1];
         let m2 = v[0].mul_add(v[0], m1);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: [(x[0].scale(m2)).0] }
     }
 }
@@ -144,7 +152,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0] }
     }
 }
@@ -155,6 +163,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Rotor>, Scalar<
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Scalar { o: core::marker::PhantomData, c: [[m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Rotor>, 1> for Scalar<(), f64, O> {
+    type Output = Scalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar<(), f64, O>, T, 1>) -> Scalar<(Scalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -212,7 +228,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Vector { o: core::marker::PhantomData, c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0] }
     }
 }
@@ -244,7 +260,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     #[inline(always)]
     fn transform(self, x: Vector<S, T, O>) -> Vector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Vector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0] }
     }
 }
@@ -255,6 +271,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Rotor, Vector<(), f64, O
     fn from(p: gx::Prepared<Rotor, Vector<(), f64, O>, T, 3>) -> Self {
         let m = p.m;
         Vector { o: core::marker::PhantomData, c: [[m[0], m[1]], [m[2], m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Rotor, 3> for Vector<(), f64, O> {
+    type Output = Vector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Rotor, Vector<(), f64, O>, T, 3>) -> Vector<(Vector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -319,7 +343,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Vector { o: core::marker::PhantomData, c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0] }
     }
 }
@@ -358,7 +382,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     #[inline(always)]
     fn transform(self, x: Vector<S, T, O>) -> Vector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Vector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0] }
     }
 }
@@ -369,6 +393,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Rotor>, Vector<
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Vector<(), f64, O>, T, 3>) -> Self {
         let m = p.m;
         Vector { o: core::marker::PhantomData, c: [[m[0], m[1]], [m[2], m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Rotor>, 3> for Vector<(), f64, O> {
+    type Output = Vector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Vector<(), f64, O>, T, 3>) -> Vector<(Vector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -417,7 +449,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         }
         let m1 = v[1] * v[1];
         let m2 = v[0].mul_add(v[0], m1);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Pseudoscalar { o: core::marker::PhantomData, c: [(x[0].scale(m2)).0] }
     }
 }
@@ -446,7 +478,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Pseudoscalar { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0] }
     }
 }
@@ -457,6 +489,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Rotor, Pseudoscalar<(), 
     fn from(p: gx::Prepared<Rotor, Pseudoscalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Pseudoscalar { o: core::marker::PhantomData, c: [[m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Rotor, 1> for Pseudoscalar<(), f64, O> {
+    type Output = Pseudoscalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Rotor, Pseudoscalar<(), f64, O>, T, 1>) -> Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -512,7 +552,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         }
         let m1 = v[1] * v[1];
         let m2 = v[0].mul_add(v[0], m1);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Pseudoscalar { o: core::marker::PhantomData, c: [(x[0].scale(m2)).0] }
     }
 }
@@ -548,7 +588,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Pseudoscalar<S
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Pseudoscalar { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0] }
     }
 }
@@ -559,6 +599,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Rotor>, Pseudos
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Pseudoscalar { o: core::marker::PhantomData, c: [[m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Rotor>, 1> for Pseudoscalar<(), f64, O> {
+    type Output = Pseudoscalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar<(), f64, O>, T, 1>) -> Pseudoscalar<(Pseudoscalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -608,7 +656,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         }
         let m1 = v[1] * v[1];
         let m2 = v[0].mul_add(v[0], m1);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Rotor { o: core::marker::PhantomData, c: [(x[0].scale(m2)).0, (x[1].scale(m2)).0] }
     }
 }
@@ -637,7 +685,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>
     #[inline(always)]
     fn transform(self, x: Rotor<S, T, O>) -> Rotor<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Rotor { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0] }
     }
 }
@@ -648,6 +696,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Rotor, Rotor<(), f64, O>
     fn from(p: gx::Prepared<Rotor, Rotor<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Rotor { o: core::marker::PhantomData, c: [[m[0], T::zero()], [T::zero(), m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Rotor, 1> for Rotor<(), f64, O> {
+    type Output = Rotor<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Rotor, Rotor<(), f64, O>, T, 1>) -> Rotor<(Rotor<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -704,7 +760,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         }
         let m1 = v[1] * v[1];
         let m2 = v[0].mul_add(v[0], m1);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Rotor { o: core::marker::PhantomData, c: [(x[0].scale(m2)).0, (x[1].scale(m2)).0] }
     }
 }
@@ -740,7 +796,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Rotor<S, T, O>
     #[inline(always)]
     fn transform(self, x: Rotor<S, T, O>) -> Rotor<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Rotor { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0] }
     }
 }
@@ -751,6 +807,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Rotor>, Rotor<(
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Rotor { o: core::marker::PhantomData, c: [[m[0], T::zero()], [T::zero(), m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Rotor>, 1> for Rotor<(), f64, O> {
+    type Output = Rotor<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor<(), f64, O>, T, 1>) -> Rotor<(Rotor<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -814,7 +878,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m4 = m0 + m1;
         let m5 = m2 * T::from_i64(2);
         let m6 = -m5;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Multivector { o: core::marker::PhantomData, c: [(x[0].scale(m4)).0, (x[1].scale(m3) + x[2].scale(m5)).0, (x[1].scale(m6) + x[2].scale(m3)).0, (x[3].scale(m4)).0] }
     }
 }
@@ -848,7 +912,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     #[inline(always)]
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Multivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[1])).0, (x[3].scale(m[0])).0] }
     }
 }
@@ -859,6 +923,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Rotor, Multivector<(), f
     fn from(p: gx::Prepared<Rotor, Multivector<(), f64, O>, T, 4>) -> Self {
         let m = p.m;
         Multivector { o: core::marker::PhantomData, c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], T::zero()], [T::zero(), m[3], m[1], T::zero()], [T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Rotor, 4> for Multivector<(), f64, O> {
+    type Output = Multivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Rotor, Multivector<(), f64, O>, T, 4>) -> Multivector<(Multivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -929,7 +1001,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let m6 = m0 + m2;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Multivector { o: core::marker::PhantomData, c: [(x[0].scale(m6)).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m5) + x[2].scale(m3)).0, (x[3].scale(m6)).0] }
     }
 }
@@ -970,7 +1042,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     #[inline(always)]
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Multivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[1])).0, (x[3].scale(m[0])).0] }
     }
 }
@@ -981,6 +1053,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Rotor>, Multive
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Multivector<(), f64, O>, T, 4>) -> Self {
         let m = p.m;
         Multivector { o: core::marker::PhantomData, c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], T::zero()], [T::zero(), m[3], m[1], T::zero()], [T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Rotor>, 4> for Multivector<(), f64, O> {
+    type Output = Multivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector<(), f64, O>, T, 4>) -> Multivector<(Multivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 

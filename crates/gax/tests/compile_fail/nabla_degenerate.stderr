@@ -8,7 +8,7 @@ error[E0277]: `Plane` has no reciprocal frame
   |
   = help: the trait `Reciprocal` is not implemented for `Plane`
   = note: the Gram matrix of the kind's blades under the scalar product is singular: the kind holds a null direction (such as PGA's `e0`), so a derivative cannot be taken back to an element of it
-  = note: `gax::dual::gradient` and `jacobian` give the derivative as the form or map it is, which needs no metric
+  = note: `gax::jet::gradient` and `jacobian` give the derivative as the form or map it is, which needs no metric
 note: required by a bound in `nabla`
  --> $WORKSPACE/crates/gax-core/src/calculus.rs
   |

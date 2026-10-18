@@ -488,7 +488,7 @@ mod plane {
     pub fn ellipse(pose: M, uncertainty: Covariance) -> Quadric {
         let here = position(pose);
         let shift = twists().commutator(here).of(pose >> twists());
-        let readout = (forques() & twists()).solve(Line::slot() & shift);
+        let readout = (forques() & twists()).solve_pairing(Line::slot() & shift);
         let moment = here * (Line::slot() & here) + shift.of(uncertainty.of(readout));
         let w = Line::new(0.0, 0.0, 1.0);
         moment.inverse() - (w * (w & Point::slot())).gp(1.0 + SIGMAS * SIGMAS)
@@ -750,7 +750,7 @@ mod tests {
                 }
             }
         }
-        let inverse = gax::linalg::inverse(&h);
+        let inverse = gax::__private::linalg::inverse(&h);
         (0..count)
             .map(|p| {
                 core::array::from_fn(|i| core::array::from_fn(|j| inverse[p * 6 + i][p * 6 + j]))

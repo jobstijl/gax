@@ -396,7 +396,7 @@ pub fn study2<T: Real>(
 /// ```
 /// // A rotation (B² = -θ², no I part): exp(B) = cos θ + (sin θ / θ) B.
 /// let th = 0.6f64;
-/// let [c0, _, s0, _] = gax_core::study::exp_coeffs(-1, -th * th, 0.0);
+/// let [c0, _, s0, _] = gax_core::__private::study::exp_coeffs(-1, -th * th, 0.0);
 /// assert!((c0 - th.cos()).abs() < 1e-15 && (s0 - th.sin() / th).abs() < 1e-15);
 /// ```
 #[inline(always)]
@@ -410,7 +410,7 @@ pub fn exp_coeffs<T: Real>(isq: i8, lambda: T, mu: T) -> [T; 4] {
 /// pseudoscalar parts are `c = c0 + c1 I` and whose bivector part squares to `u0 + u1 I`.
 ///
 /// ```
-/// use gax_core::study::{exp_coeffs, log_coeffs};
+/// use gax_core::__private::study::{exp_coeffs, log_coeffs};
 /// // A rotation R = exp(B) with B² = -θ²: its scalar part c0 = cos θ, and its bivector part
 /// // P = s0 B squares to s0² B². The logarithm recovers B = h0 P.
 /// let th = 0.6f64;
@@ -427,7 +427,7 @@ pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
 /// `(a + b I)^(-1/2)` as a Study number `[r0, r1]`.
 ///
 /// ```
-/// use gax_core::study::rsqrt;
+/// use gax_core::__private::study::rsqrt;
 /// // (4 + I)^(-1/2) with I² = 0: 4^(-1/2) - (1/2) 4^(-3/2) I = 1/2 - I/16.
 /// assert_eq!(rsqrt(0, 4.0f64, 1.0), [0.5, -0.0625]);
 /// ```
@@ -445,7 +445,7 @@ pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
 /// finite where `a + X` has eigenvalues of both signs (`q ≥ a²`).
 ///
 /// ```
-/// use gax_core::study::rsqrt_q;
+/// use gax_core::__private::study::rsqrt_q;
 /// // (5 + X)^(-1/2) with X² = 16: the eigenvalues 9 and 1 give 1/3 and 1, so
 /// // r0 = (1/3 + 1)/2 and r1 = (1/3 − 1)/(2·4).
 /// let [r0, r1] = rsqrt_q(5.0f64, 16.0);
@@ -918,7 +918,7 @@ fn cbrt<T: Real>(x: T) -> T {
 /// // A rotation in one plane by half-angle θ: roots cos²θ, 1, 1.
 /// let th = 0.7f64;
 /// let c2 = th.cos() * th.cos();
-/// let [a0, a1, a2] = gax_core::study::log_coeffs_6d(c2 + 2.0, 2.0 * c2 + 1.0, c2);
+/// let [a0, a1, a2] = gax_core::__private::study::log_coeffs_6d(c2 + 2.0, 2.0 * c2 + 1.0, c2);
 /// // At u = cos²θ the interpolant is φ = cos θ · θ / sin θ.
 /// let at = a2 * c2 * c2 + a1 * c2 + a0;
 /// assert!((at - th.cos() * th / th.sin()).abs() < 1e-14);

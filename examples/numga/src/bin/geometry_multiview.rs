@@ -101,7 +101,7 @@ macro_rules! multiview_core {
         /// The map on planes induced by a map on points, through incidence: `on_planes(t)(l) & p
         /// == l & t(p)` for every plane and point, whether or not `t` is invertible.
         pub fn on_planes(collineation: Camera) -> Plane<(Plane,), f64> {
-            (Plane::slot() & Point::slot()).solve(Plane::slot() & collineation)
+            (Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & collineation)
         }
 
         /// A sensor disc pulled back through the camera into a perspective cone.
@@ -271,7 +271,7 @@ macro_rules! multiview_core {
                         let polar = row[c].of(moving);
                         let cross = polar & moved[c];
                         // The point's displacement per camera step, then its compliance.
-                        let response = h_pt.solve(cross);
+                        let response = h_pt.solve_pairing(cross);
                         information[c] -= polar & (*m << embed().of(response));
                     }
                 }
@@ -478,7 +478,8 @@ mod plane {
     /// A pose's covariance from its information form: the form as a map from twists to
     /// forques (solved from the incidence pairing), pseudo-inverted with numga's cutoff.
     pub fn pose_covariance(information: Information) -> Twist<(Forque,), f64> {
-        let map: Forque<(Twist,), f64> = (Forque::slot() & Twist::slot()).solve(information);
+        let map: Forque<(Twist,), f64> =
+            (Forque::slot() & Twist::slot()).solve_pairing(information);
         map.pinv_with(1e-4)
     }
 }
@@ -644,7 +645,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
     // The centre moves by the commutator of a local twist with the origin; reading that
     // displacement with a line is reading the twist with a forque.
     let shift = Twist::slot().commutator(origin);
-    let readout = (Forque::slot() & Twist::slot()).solve(Line::slot() & shift);
+    let readout = (Forque::slot() & Twist::slot()).solve_pairing(Line::slot() & shift);
     // The line at infinity, the join of two directions, reads a twist's rotation.
     let w = Point::direction(1.0, 0.0) & Point::direction(0.0, 1.0);
     for (k, (m, info)) in motors.iter().zip(information).enumerate() {

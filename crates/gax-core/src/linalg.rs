@@ -20,7 +20,7 @@
 //! Veselić) and because a fixed number of sweeps makes them branch free.
 //!
 //! ```
-//! use gax_core::linalg::{eigh, inverse, matmul};
+//! use gax_core::__private::linalg::{eigh, inverse, matmul};
 //! let a: [[f64; 2]; 2] = [[2.0, 1.0], [1.0, 2.0]];
 //! let (values, _vectors) = eigh(&a, 8);
 //! assert!((values[0] * values[1] - 3.0).abs() < 1e-12); // the determinant
@@ -38,8 +38,8 @@ use core::ops::{Index, IndexMut};
 #[diagnostic::on_unimplemented(
     message = "the coefficients `{Self}` are not square: the map's input and output kinds have different sizes",
     label = "needs a map between kinds of the same size",
-    note = "a map `B <- A` stores `[[T; size of A]; size of B]`; `inverse`, `solve`, `det`, `eigh`, `eig` and `svd` need the two sizes equal",
-    note = "for a map of another shape, `pinv()` is the pseudo-inverse, `lstsq(b)` the least-squares solution and `svd_thin()` the singular value decomposition"
+    note = "a map `B <- A` stores `[[T; size of A]; size of B]`; `inverse`, `solve`, `det`, `eigh` and `eig` need the two sizes equal",
+    note = "for a map of another shape, `pinv()` is the pseudo-inverse, `lstsq(b)` the least-squares solution and `svd()` the singular value decomposition"
 )]
 pub trait SquareArr<T: Real>: Copy + Index<usize, Output = Self::Vector> + IndexMut<usize> {
     /// Dimension.

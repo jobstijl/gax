@@ -1439,7 +1439,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for Line<S, T, 
     #[inline]
     fn involute(self) -> Line<S, T, O> {
         let a = self.c;
-        Line { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0] }
+        Line { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
     }
 }
 
@@ -1448,7 +1448,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Line<S, T,
     #[inline]
     fn conjugate(self) -> Line<S, T, O> {
         let a = self.c;
-        Line { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0] }
+        Line { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
     }
 }
 
@@ -1475,7 +1475,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Point<S, T, 
     #[inline]
     fn reverse(self) -> Point<S, T, O> {
         let a = self.c;
-        Point { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0] }
+        Point { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
     }
 }
 
@@ -1493,7 +1493,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Point<S, T
     #[inline]
     fn conjugate(self) -> Point<S, T, O> {
         let a = self.c;
-        Point { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0] }
+        Point { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
     }
 }
 
@@ -1520,7 +1520,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Direction<S,
     #[inline]
     fn reverse(self) -> Point<S, T, O> {
         let a = self.c;
-        Point { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Point { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
 
@@ -1538,7 +1538,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Direction<
     #[inline]
     fn conjugate(self) -> Point<S, T, O> {
         let a = self.c;
-        Point { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Point { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
 
@@ -1565,7 +1565,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Pseudoscalar
     #[inline]
     fn reverse(self) -> Pseudoscalar<S, T, O> {
         let a = self.c;
-        Pseudoscalar { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0] }
+        Pseudoscalar { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0] }
     }
 }
 
@@ -1574,7 +1574,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for Pseudoscala
     #[inline]
     fn involute(self) -> Pseudoscalar<S, T, O> {
         let a = self.c;
-        Pseudoscalar { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0] }
+        Pseudoscalar { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0] }
     }
 }
 
@@ -1610,7 +1610,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Rotor<S, T, 
     #[inline]
     fn reverse(self) -> Rotor<S, T, O> {
         let a = self.c;
-        Rotor { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0] }
+        Rotor { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0] }
     }
 }
 
@@ -1628,7 +1628,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Rotor<S, T
     #[inline]
     fn conjugate(self) -> Rotor<S, T, O> {
         let a = self.c;
-        Rotor { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0] }
+        Rotor { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0] }
     }
 }
 
@@ -1655,7 +1655,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Translator<S
     #[inline]
     fn reverse(self) -> Translator<S, T, O> {
         let a = self.c;
-        Translator { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0] }
+        Translator { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
     }
 }
 
@@ -1673,7 +1673,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Translator
     #[inline]
     fn conjugate(self) -> Translator<S, T, O> {
         let a = self.c;
-        Translator { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0] }
+        Translator { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
     }
 }
 
@@ -1700,7 +1700,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Motor<S, T, 
     #[inline]
     fn reverse(self) -> Motor<S, T, O> {
         let a = self.c;
-        Motor { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0] }
+        Motor { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
     }
 }
 
@@ -1718,7 +1718,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Motor<S, T
     #[inline]
     fn conjugate(self) -> Motor<S, T, O> {
         let a = self.c;
-        Motor { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0] }
+        Motor { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
     }
 }
 
@@ -1745,7 +1745,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Flector<S, T
     #[inline]
     fn reverse(self) -> Flector<S, T, O> {
         let a = self.c;
-        Flector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], (-gx::SlotArr::<S, T>(a[3])).0] }
+        Flector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], (-gx::__private::SlotArr::<S, T>(a[3])).0] }
     }
 }
 
@@ -1754,7 +1754,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for Flector<S, 
     #[inline]
     fn involute(self) -> Flector<S, T, O> {
         let a = self.c;
-        Flector { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0] }
+        Flector { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
     }
 }
 
@@ -1763,7 +1763,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Flector<S,
     #[inline]
     fn conjugate(self) -> Flector<S, T, O> {
         let a = self.c;
-        Flector { o: core::marker::PhantomData, c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, a[3]] }
+        Flector { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, a[3]] }
     }
 }
 
@@ -1790,7 +1790,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Multivector<
     #[inline]
     fn reverse(self) -> Multivector<S, T, O> {
         let a = self.c;
-        Multivector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], (-gx::SlotArr::<S, T>(a[4])).0, (-gx::SlotArr::<S, T>(a[5])).0, (-gx::SlotArr::<S, T>(a[6])).0, (-gx::SlotArr::<S, T>(a[7])).0] }
+        Multivector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, (-gx::__private::SlotArr::<S, T>(a[6])).0, (-gx::__private::SlotArr::<S, T>(a[7])).0] }
     }
 }
 
@@ -1799,7 +1799,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for Multivector
     #[inline]
     fn involute(self) -> Multivector<S, T, O> {
         let a = self.c;
-        Multivector { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0, a[4], a[5], a[6], (-gx::SlotArr::<S, T>(a[7])).0] }
+        Multivector { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0, a[4], a[5], a[6], (-gx::__private::SlotArr::<S, T>(a[7])).0] }
     }
 }
 
@@ -1808,7 +1808,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Multivecto
     #[inline]
     fn conjugate(self) -> Multivector<S, T, O> {
         let a = self.c;
-        Multivector { o: core::marker::PhantomData, c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0, (-gx::SlotArr::<S, T>(a[4])).0, (-gx::SlotArr::<S, T>(a[5])).0, (-gx::SlotArr::<S, T>(a[6])).0, a[7]] }
+        Multivector { o: core::marker::PhantomData, c: [a[0], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0, (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, (-gx::__private::SlotArr::<S, T>(a[6])).0, a[7]] }
     }
 }
 

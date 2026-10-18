@@ -227,7 +227,7 @@ pub fn emit_hom(
     );
     let _ = writeln!(
         out,
-        "#[cfg(all(feature = \"{}\", feature = \"{}\"))]\nmod {}_to_{} {{\n    use crate::{{Coef, SlotArr, Slots}};\n",
+        "#[cfg(all(feature = \"{}\", feature = \"{}\"))]\nmod {}_to_{} {{\n    use crate::{{Coef, Slots, __private::SlotArr}};\n",
         hom.from, hom.to, hom.from, hom.to
     );
     // Proved here, exactly: the image of the product of two symbolic values of every pair of

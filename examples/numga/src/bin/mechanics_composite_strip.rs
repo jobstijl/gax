@@ -205,7 +205,7 @@ mod strip {
         }
         // Free edges let the width contract until its force vanishes.
         let relaxed = energy - coupling * coupling * (1.0 / width_stiffness);
-        let state: St = relaxed.solve(extension() * tension);
+        let state: St = relaxed.solve_pairing(extension() * tension);
         (state, -coupling.of(state).s() / width_stiffness)
     }
 
@@ -517,7 +517,7 @@ mod tests {
             }
         }
         let pull = [tension, 0.0, 0.0, 0.0, 0.0, 0.0];
-        gax::linalg::lu_solve(&gax::linalg::lu(&system), &pull)
+        gax::__private::linalg::lu_solve(&gax::__private::linalg::lu(&system), &pull)
     }
 
     /// numga's `test_tension_response_matches_full_laminate_and_reverses_with_stack`: the strip

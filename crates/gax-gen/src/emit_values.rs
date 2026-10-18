@@ -422,9 +422,15 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                     &call,
                     |a| {
                         if rotation {
-                            format!("gx::study::exp_coeffs_rotation({}, {})", a[0], a[1])
+                            format!(
+                                "gx::__private::study::exp_coeffs_rotation({}, {})",
+                                a[0], a[1]
+                            )
                         } else {
-                            format!("gx::study::exp_coeffs({isq}, {}, {})", a[0], a[1])
+                            format!(
+                                "gx::__private::study::exp_coeffs({isq}, {}, {})",
+                                a[0], a[1]
+                            )
                         }
                     },
                     kernel,
@@ -472,7 +478,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if let Some(on) = &meta.log {
         let _ = write!(
             body_ext,
-            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.unit().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T, gx::Extrinsic>\n    where\n        Self: gx::LogNeedsUnit<{on}<(), T, gx::Extrinsic>>,\n    {{\n        gx::LogNeedsUnit::log(self)\n    }}\n\n"
+            "    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor\n    /// (`self.unit().log()`). This method only makes the compile error say so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn log(self) -> {on}<(), T, gx::Extrinsic>\n    where\n        Self: gx::__private::LogNeedsUnit<{on}<(), T, gx::Extrinsic>>,\n    {{\n        gx::__private::LogNeedsUnit::log(self)\n    }}\n\n"
         );
     }
 
@@ -754,8 +760,8 @@ fn emit_normalized(
         &call,
         |a| match (study.blade, study.isq) {
             (None, _) => format!("({}).abs().sqrt().recip()", a[0]),
-            (Some(_), 0) => format!("gx::study::rsqrt_nil({}, {})", a[0], a[1]),
-            (Some(_), isq) => format!("gx::study::rsqrt({isq}, {}, {})", a[0], a[1]),
+            (Some(_), 0) => format!("gx::__private::study::rsqrt_nil({}, {})", a[0], a[1]),
+            (Some(_), isq) => format!("gx::__private::study::rsqrt({isq}, {}, {})", a[0], a[1]),
         },
         func,
         "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`±1` when the norm is negative).",
@@ -800,7 +806,7 @@ fn emit_normalized_q(
     emit_normalized_by(
         k,
         &call,
-        |a| format!("gx::study::rsqrt_q({}, {})", a[0], a[1]),
+        |a| format!("gx::__private::study::rsqrt_q({}, {})", a[0], a[1]),
         StudyFn::RsqrtQ,
         "Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector\nwhose square is a scalar, so that `x ~x = 1` (`−1` when `a` is negative).",
         body,
@@ -848,7 +854,7 @@ fn emit_newton_step(
     let name = &k.name;
     let _ = write!(
         traits,
-        "impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for {name}<(), T, O> {{\n    /// `(3 − x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
+        "impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for {name}<(), T, O> {{\n    /// `(3 − x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
         outs.join(", ")
     );
 }
@@ -946,12 +952,12 @@ fn emit_log(
         |r| {
             if rotation {
                 format!(
-                    "gx::study::log_coeffs_rotation(({}, {}), ({}, {}))",
+                    "gx::__private::study::log_coeffs_rotation(({}, {}), ({}, {}))",
                     r[0], r[1], r[2], r[3]
                 )
             } else {
                 format!(
-                    "gx::study::log_coeffs({isq}, ({}, {}), ({}, {}))",
+                    "gx::__private::study::log_coeffs({isq}, ({}, {}), ({}, {}))",
                     r[0], r[1], r[2], r[3]
                 )
             }
@@ -1013,7 +1019,7 @@ fn emit_exp_general(
     let (lets, outs) = study_method(
         k,
         &call,
-        |a| format!("gx::study::exp_coeffs_q({}, {})", a[0], a[1]),
+        |a| format!("gx::__private::study::exp_coeffs_q({}, {})", a[0], a[1]),
         Some((
             format!("{}_exp", snake(&k.name)),
             format!(
@@ -1080,7 +1086,7 @@ fn emit_log_general(
     let (lets, outs) = study_method(
         k,
         &call,
-        |a| format!("gx::study::log_coeffs_q({}, {})", a[0], a[1]),
+        |a| format!("gx::__private::study::log_coeffs_q({}, {})", a[0], a[1]),
         Some((
             format!("unit_{}_log", snake(&k.name)),
             format!(
@@ -1218,8 +1224,8 @@ fn emit_log_fallback(
 
 /// The closed-form logarithm of a 6D even versor (docs/log6d.md): the invariants and the three
 /// bivectors `G1 = ⟨R⟩₂`, `G2 = r0 ⟨R₄ R₂⟩₂`, `G3 = r0 ⟨R₆ R₄⟩₂` as one straight-line program,
-/// the interpolant from `gx::study::log_coeffs_6d`, and near a half turn the planes turned by
-/// `gx::study::log_turn_6d` first. Also the WGSL kernels `unit_{e}_log_closed` and
+/// the interpolant from `study::log_coeffs_6d`, and near a half turn the planes turned by
+/// `study::log_turn_6d` first. Also the WGSL kernels `unit_{e}_log_closed` and
 /// `unit_{e}_log_turning`.
 #[allow(clippy::too_many_lines)]
 fn emit_log_6d(
@@ -1406,7 +1412,7 @@ fn emit_log_6d(
     #[inline]
     pub fn log_closed(self) -> {bn}<(), T> {{
         let ([r0, p1, p2, p3], [g1, g2, g3]) = self.log_invariants();
-        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
+        let [w1, w2, w3] = gx::__private::study::log_weights_6d(p1, p2, p3, r0);
         {bn}::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]))
     }}
 }}
@@ -1418,9 +1424,9 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
     /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
     /// `r0⁻¹ (α2 Q2 + α1 Q1 + α0 ⟨R⟩₂)` for bivectors `Q` from `R`'s grade parts and the
     /// quadratic `α` interpolating `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots
-    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Below
+    /// (`study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Below
     /// `⟨R⟩₀ = 1/16` (near or past a half turn in some plane), the lanes there first turn the
-    /// planes near a half turn by a quarter turn (`gx::study::log_turn_6d`): `log R =
+    /// planes near a half turn by a quarter turn (`study::log_turn_6d`): `log R =
     /// log(R E) + (π/2) Z`, with `Z` the sum of their unit bivectors and `E = ∏(−b̂)`. The
     /// principal logarithm: rotations below a half turn in each invariant plane where
     /// `⟨R⟩₀ > 0`, boosts and dilations of any size.
@@ -1429,19 +1435,19 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
         T::vectorize(#[inline(always)] move || {{
         let x = unit.into_inner();
         let ([r0, p1, p2, p3], [g1, g2, g3]) = x.log_invariants();
-        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
+        let [w1, w2, w3] = gx::__private::study::log_weights_6d(p1, p2, p3, r0);
         let closed: [T; {n}] = core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]);
         let limit = T::from_ratio(1, 16);
         if T::all_lt(limit, r0) {{
             return {bn}::from_coeffs(closed);
         }}
-        let [a0, a1, a2, n] = gx::study::log_turn_6d(p1, p2, p3, r0);
+        let [a0, a1, a2, n] = gx::__private::study::log_turn_6d(p1, p2, p3, r0);
         let z: [T; {n}] = core::array::from_fn(|i| {{
             let q1 = g3[i] - g2[i] + p3 * g1[i];
             let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
             a2 * q2 + a1 * q1 + a0 * g1[i]
         }});
-        let [e0, e1, e2, e3] = gx::study::turn_polynomial(n);
+        let [e0, e1, e2, e3] = gx::__private::study::turn_polynomial(n);
         let ze = {en}::<(), T>::from_coeffs([{}]);
         let z2 = ze * ze;
         let mut e = ze.gp(e1) + z2.gp(e2) + (z2 * ze).gp(e3);
@@ -1469,7 +1475,7 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
 
 /// The closed-form logarithm of an 8D or 9D even versor (four invariant planes;
 /// docs/log6d.md §9): `log R = Σ wₘ Gₘ` with `G1 = ⟨R⟩₂` and `Gₘ = r0 ⟨R₂ₘ R₂ₘ₋₂⟩₂`, the
-/// weights from `gx::study::log_weights_8d`, and planes near a half turn turned first
+/// weights from `study::log_weights_8d`, and planes near a half turn turned first
 /// (`log_turn_8d`). Rust only: the even kind has more coefficients than the WGSL modules take.
 #[allow(clippy::too_many_lines)]
 fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut String) {
@@ -1530,7 +1536,7 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     #[inline]
     pub fn log_closed(self) -> {bn}<(), T> {{
         let ([r0, p1, p2, p3, p4], g) = self.log_invariants();
-        let w = gx::study::log_weights_8d([p1, p2, p3, p4], r0);
+        let w = gx::__private::study::log_weights_8d([p1, p2, p3, p4], r0);
         {bn}::from_coeffs(core::array::from_fn(|i| {closed_sum}))
     }}
 }}
@@ -1541,10 +1547,10 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
     /// (docs/log6d.md §9): `u_j = cosh²(μ_j)` of the four commuting planes are the roots of a
     /// quartic in the scalar parts of `R`'s grade parts squared, and `log R` is
     /// `r0⁻¹ Σ αᵢ Qᵢ` for bivectors `Q` from `R`'s grade parts and the cubic `α` interpolating
-    /// `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots (`gx::study::log_coeffs_8d`, folded into
+    /// `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots (`study::log_coeffs_8d`, folded into
     /// four weights by `log_weights_8d`). Below `⟨R⟩₀ = 1/16` (near or past a half turn in some
     /// plane), the lanes there first turn the planes near a half turn by a quarter turn
-    /// (`gx::study::log_turn_8d`): `log R = log(R E) + (π/2) Z`, with `Z` the sum of their unit
+    /// (`study::log_turn_8d`): `log R = log(R E) + (π/2) Z`, with `Z` the sum of their unit
     /// bivectors and `E = ∏(−b̂)`. The principal logarithm: rotations below a half turn in each
     /// invariant plane where `⟨R⟩₀ > 0`, boosts and dilations of any size.
     #[inline]
@@ -1553,18 +1559,18 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
         let x = unit.into_inner();
         let ([r0, p1, p2, p3, p4], g) = x.log_invariants();
         let p = [p1, p2, p3, p4];
-        let w = gx::study::log_weights_8d(p, r0);
+        let w = gx::__private::study::log_weights_8d(p, r0);
         let closed: [T; {nb}] = core::array::from_fn(|i| {closed_sum});
         let limit = T::from_ratio(1, 16);
         if T::all_lt(limit, r0) {{
             return {bn}::from_coeffs(closed);
         }}
-        let [a0, a1, a2, a3, n] = gx::study::log_turn_8d(p, r0);
-        let wz = gx::study::q_weights_8d([a0, a1, a2, a3], p, T::one());
+        let [a0, a1, a2, a3, n] = gx::__private::study::log_turn_8d(p, r0);
+        let wz = gx::__private::study::q_weights_8d([a0, a1, a2, a3], p, T::one());
         let z: [T; {nb}] = core::array::from_fn(|i| {z_sum});
         let zb = {bn}::<(), T>::from_coeffs(z);
         // R E = Σ eₖ R Zᵏ, E = ∏(−b̂) as a polynomial in Z: products by the bivector only.
-        let e = gx::study::turn_polynomial_8d(n);
+        let e = gx::__private::study::turn_polynomial_8d(n);
         let mut power = x;
         let mut turned = x.gp(e[0]);
         for ek in &e[1..] {{
@@ -1597,7 +1603,7 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
 /// docs/log6d.md §12), for the full grade-2 kind of an algebra with a full even kind. The
 /// invariants are one straight-line program from the product tables: the wedge powers
 /// `Wₘ = B^∧m/m!`, `eₘ = ⟨Wₘ²⟩₀` and `Hₘ = ⟨Wₘ Wₘ₋₁⟩₂`. Then `exp B = C (1 + T + W₂(T) + …)`
-/// with `T = Σ wₘ Hₘ` (`gax::study::exp_weights_6d`), turning rotations beyond a quarter turn
+/// with `T = Σ wₘ Hₘ` (`gax_core::study::exp_weights_6d`), turning rotations beyond a quarter turn
 /// back by one and halving beyond three quarters. For three planes, also the WGSL kernels
 /// `{k}_exp_reach`, `{k}_exp_from` and `{k}_exp_turning`, which the module's `{k}_exp` composes
 /// (`emit_wgsl::closed_exp`).
@@ -1904,9 +1910,9 @@ fn emit_exp_closed(
     let (en, bn) = (&e.name, &k.name);
     let suffix = if planes == 3 { "6d" } else { "8d" };
     let tp = if planes == 3 {
-        "gx::study::turn_polynomial(n)"
+        "gx::__private::study::turn_polynomial(n)"
     } else {
-        "gx::study::turn_polynomial_8d(n)"
+        "gx::__private::study::turn_polynomial_8d(n)"
     };
     let sum_h = |w: &str| {
         (0..planes)
@@ -1938,7 +1944,7 @@ fn emit_exp_closed(
     #[inline]
     pub fn exp_from(e: [T; {planes}], h: [[T; {nb}]; {planes}]) -> {en}<(), T> {{
         // T and C = ∏ cosh μⱼ (from the trace of ln cosh √λ: no cancellation for boosts).
-        let wt = gx::study::exp_weights_{suffix}(e);
+        let wt = gx::__private::study::exp_weights_{suffix}(e);
         let c = wt[{planes}];
         let t = {bn}::<(), T>::from_coeffs(core::array::from_fn(|i| {t_sum}));
         let (_, _, {}) = t.exp_invariants();
@@ -1949,7 +1955,7 @@ fn emit_exp_closed(
     /// `λⱼ = μⱼ²` of the {planes} commuting planes are the roots of a polynomial whose
     /// coefficients are `⟨Wₘ²⟩₀`, `Wₘ = B^∧m/m!`, and `exp B = C (1 + T + T∧T/2 + …)` with
     /// `T = Σ tanh(μⱼ) b̂ⱼ`, an interpolant of `tanh(√λ)/√λ` at the roots applied to
-    /// bivectors from `B`'s wedge powers (`gax::study::exp_weights_{suffix}`), and
+    /// bivectors from `B`'s wedge powers (`gax_core::study::exp_weights_{suffix}`), and
     /// `C = ∏ cosh μⱼ` from the trace of `ln cosh √λ`. Rotations beyond a quarter turn are
     /// turned back by one first (`exp_turn_{suffix}`: `exp B = exp B' · ∏ êⱼ`, a polynomial in
     /// their sum), and beyond three quarters `B` is halved and the result squared.
@@ -1958,7 +1964,7 @@ fn emit_exp_closed(
         T::vectorize(#[inline(always)] move || {{
         let half = T::from_ratio(1, 2);
         let (e, h, ..) = self.exp_invariants();
-        let [reach, turn] = gx::study::exp_reach_{suffix}(e);
+        let [reach, turn] = gx::__private::study::exp_reach_{suffix}(e);
         let (mut scale, mut s) = (T::one(), 0u32);
         while s < 64 && !T::all_lt(reach * scale, T::one()) {{
             scale = scale * half;
@@ -1974,7 +1980,7 @@ fn emit_exp_closed(
         let mut r = if T::all_lt(turn * scale, T::one()) {{
             Self::exp_from(e, h)
         }} else {{
-            let tz = gx::study::exp_turn_{suffix}(e);
+            let tz = gx::__private::study::exp_turn_{suffix}(e);
             let n = tz[{planes}];
             let wz = [{zw}];
             let z = {bn}::<(), T>::from_coeffs(core::array::from_fn(|i| {z_sum}));

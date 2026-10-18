@@ -1,4 +1,4 @@
-//! Typed derivatives (`gax::dual::{jacobian, gradient, hessian}`): the derivative of a function
+//! Typed derivatives (`gax::jet::{jacobian, gradient, hessian}`): the derivative of a function
 //! of a gax value as an extensor, against central differences, against the loose-parameter
 //! forms, and against numga's `derivative` (JAX).
 
@@ -12,7 +12,7 @@
 mod rng;
 use rng::{Draw, rng};
 
-use gax::dual::{gradient, gradient_array, hessian, jacobian};
+use gax::jet::{gradient, gradient_array, hessian, jacobian};
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
 use gax::{ApproxEq, Extensor, Kind, Real, Retype};
 
@@ -175,7 +175,7 @@ fn newton_step_on_a_quadratic() {
     }
     let x0 = Plane::<(), f64>::new(0.3, 0.1, -0.7, 2.0);
     let (_, g, h) = hessian(energy, x0);
-    let x = x0 - h.solve(g);
+    let x = x0 - h.solve_pairing(g);
     let (_, g_at, _) = hessian(energy, x);
     assert!(g_at.c[0].iter().all(|v| v.abs() < 1e-12), "{g_at:?}");
 }

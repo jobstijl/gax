@@ -31,7 +31,8 @@ use crate::poly::{Poly, Var};
 use crate::slp::{Cost, Operand, Target, render, render_to};
 pub use crate::sym::Sym;
 use crate::sym::{ConstKind, NodeOp, VarDef};
-use gax_core::{Coef, Traceable};
+use gax_core::Coef;
+pub use gax_core::trace::Traceable;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 

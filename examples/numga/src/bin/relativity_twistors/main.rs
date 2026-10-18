@@ -17,7 +17,7 @@
 //!
 //! An event's action on twistors has a kernel: the twistors of the light rays through it. Two
 //! null-separated events share one ray, the image of the action of their product (by
-//! `svd_thin`). From a twistor, the ray's null plane is a bilinear map of twistors,
+//! `svd`). From a twistor, the ray's null plane is a bilinear map of twistors,
 //! `Bivector<(Twistor, Twistor)>`: the plane whose scalar product with every bivector `B` is the
 //! pairing of the twistor with the volume times `B`'s action on it. Its meet with infinity is
 //! the ray's direction, and with a slice of constant time, where the ray crosses it.

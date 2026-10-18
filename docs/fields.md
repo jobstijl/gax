@@ -64,10 +64,10 @@ assert_eq!(stretches.site(1), Vector::new(1.0, 0.0, 0.0));
 let anchors = SparseMap::from_diagonal(&Field::from_fn(4, |_| s(1.0)));
 let stiffness = &(&(&ends.reverse() * &ends) + &anchors) * Vector::slot(); // cells Vector <- Vector
 let loads = Field::from_fn(4, |i| Vector::new(0.0, 0.0, if i == 1 || i == 2 { -1.0 } else { 0.0 }));
-let forces = stiffness.apply(&loads);
+let forces = stiffness.of(&loads);
 let displacements = stiffness.solve(&loads); // the coupled system over every site and blade
 assert!((displacements.site(1).e3() + 2.0 / 3.0).abs() < 1e-15);
-assert!((stiffness.apply(&displacements) - &loads).dot(&(stiffness.apply(&displacements) - &loads)) < 1e-28);
+assert!((stiffness.of(&displacements) - &loads).dot(&(stiffness.of(&displacements) - &loads)) < 1e-28);
 # let _ = forces;
 ```
 
@@ -83,11 +83,11 @@ let ends = SparseMap::from_columns(&springs, 4, |_, end| Scalar::<(), f64>::new(
 assert_eq!(ends.shape(), (3, 4));
 ```
 
-Cells that are maps *apply* to the values: `apply` is the block matrix-vector product, `compose`
+Cells that are maps *apply* to the values: `of` is the block matrix-vector product, `compose`
 the block matrix product (summed along the paths through the shared sites), and `transpose` runs
 every coupling back with its cell's matrix transposed, the adjoint under the fields' coefficient
 inner product. A simulation that steps a field every tick writes the products into a field it
-keeps, with `apply_into` (map cells) and `mul_into` (multivector cells), and allocates nothing.
+keeps, with `of_into` (map cells) and `mul_into` (multivector cells), and allocates nothing.
 
 ### Solving
 
@@ -146,7 +146,7 @@ assert!((beads.site(0).e1() + 1.5).abs() < 1e-12 && (beads.site(3).e1() - 1.5).a
 
 ### Eigenproblems
 
-`eigh(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, for a
+`eigh_with(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, for a
 symmetric field map and a symmetric positive definite metric: the vibration modes of a mesh, or
 the lowest states of a lattice Hamiltonian. The values come ascending, and the fields are
 orthonormal in the metric. Free meshes have a null space (their rigid motions), which comes
@@ -160,11 +160,11 @@ its copies.
 # let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1, 2, 2], vec![0, 1, 1, 2, 2, 3], (3, 4));
 let laplacian = &(&ends.reverse() * &ends) * Vector::slot(); // the free string
 let mass = SparseMap::from_diagonal(&Field::from_fn(4, |_| Vector::<(), f64>::slot()));
-let (values, modes) = laplacian.eigh(&mass, 6);
+let (values, modes) = laplacian.eigh_with(&mass, 6);
 assert!(values[..3].iter().all(|v| v.abs() < 1e-12)); // translations along x, y and z
 let wave = 2.0 - 2.0 * (std::f64::consts::PI / 4.0).cos(); // the half wave, on each axis
 assert!(values[3..].iter().all(|v| (v - wave).abs() < 1e-12));
-assert!((modes[3].dot(&mass.apply(&modes[3])) - 1.0).abs() < 1e-12);
+assert!((modes[3].dot(&mass.of(&modes[3])) - 1.0).abs() < 1e-12);
 ```
 
 The search space comes from block Lanczos on `(A − σM)⁻¹ M`, with σ just below zero and one
@@ -176,7 +176,7 @@ sites; `eigh_with_block` takes larger blocks for more symmetric meshes.
 ## On SIMD lanes
 
 `stiffness.packed()` lays out a field map of square map cells for the batch kernels (feature
-`batch`), once. Its `apply` runs on SIMD lanes, at the best level the CPU has. The layout is sliced
+`batch`), once. Its `of` runs on SIMD lanes, at the best level the CPU has. The layout is sliced
 ELLPACK: the rows are taken 16 at a time, each lane works on one row, the cell coefficients are
 vector loads, and only the values at the columns are gathered.
 
@@ -196,8 +196,8 @@ products, and a packed solve measured no faster ([performance.md](performance.md
 # let positions = Field::from_fn(4, |i| Vector::new(i as f32, 0.0, 0.0));
 # #[cfg(feature = "batch")] {
 let packed = stiffness.packed();
-let forces = packed.apply(&positions); // the same as stiffness.apply(&positions), on lanes
-let difference = &forces - &stiffness.apply(&positions);
+let forces = packed.of(&positions); // the same as stiffness.of(&positions), on lanes
+let difference = &forces - &stiffness.of(&positions);
 assert!(difference.dot(&difference) < 1e-10);
 # }
 ```
@@ -208,7 +208,7 @@ The derivative of a scalar function of a field keeps the sites in the step's slo
 couples to every other. `gax::field::gradient` gives a field of linear forms `Scalar <- Vector`,
 one per site, and `gax::field::hessian` adds the second derivative as a sparse field map of form
 cells `Scalar <- (Vector, Vector)`. Blocks that come out exactly zero are not stored. The function
-is written generic over the coefficient type, as for `gax::dual`. Solving the one against the
+is written generic over the coefficient type, as for `gax::jet`. Solving the one against the
 other is the coupled Newton step of the whole string:
 
 ```rust
@@ -249,7 +249,7 @@ assembles in one pass:
 
 1. Let `D` be the sparse map from the field to the terms' arguments (`ends` here, the differences
    of neighbours).
-2. Take `gax::dual::hessian` of each term at its argument (`ends * x`). That gives each term's
+2. Take `gax::jet::hessian` of each term at its argument (`ends * x`). That gives each term's
    gradient form and Hessian form.
 3. The gradient is `~D * g`, a field of forms.
 4. The Hessian is `~D * diag(H) * D`, with `diag(H)` the terms' Hessians as diagonal cells.

@@ -1,9 +1,9 @@
 //! The invariants of a simplicial complex, shared by `tests/meshes.rs` and the `mesh_complex`
-//! fuzz target: built from any list of top simplices, `Complex::new` returns an error or a
-//! complex whose boundary maps compose to zero, whose faces are its own, and whose Betti numbers
-//! and Euler characteristic agree (Euler–Poincaré).
+//! fuzz target: built from any list of top simplices, `SimplicialComplex::new` returns an error
+//! or a complex whose boundary maps compose to zero, whose faces are its own, and whose Betti
+//! numbers and Euler characteristic agree (Euler–Poincaré).
 
-use gax::mesh::{Complex, MeshError};
+use gax::mesh::{MeshError, SimplicialComplex};
 use gax::pga3d::Scalar;
 
 type S = Scalar<(), f64>;
@@ -11,7 +11,7 @@ type S = Scalar<(), f64>;
 /// Check every invariant of the complex of `vertices` vertices and `top` simplices, or that its
 /// construction failed for a reason that holds.
 pub fn check<const N: usize>(vertices: usize, top: &[[usize; N]]) {
-    let complex = match Complex::new(vertices, top) {
+    let complex = match SimplicialComplex::new(vertices, top) {
         Ok(c) => c,
         Err(MeshError::VertexOutOfRange {
             simplex, vertex, ..

@@ -32,7 +32,7 @@ Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench tran
 | normalize a motor (Study-number `rsqrt`) | 4.4 ns | `Quat::normalize`: 1.8 ns |
 | motor exponential `Line::exp` (rotation and translation): one call / per argument over 256 | 18 / 9.2 ns | `Quat::from_scaled_axis` (rotation only, the same work of finding the angle): 5.0 / 4.6 ns; `Quat::from_axis_angle` (angle given): 2.8 ns |
 | motor logarithm `Unit<Motor>::log`: one call / per argument over 256 | 17 / 16 ns | — |
-| build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 4.6 / 9.7 ns | `Affine3A::from_rotation_translation`: 5.0 ns |
+| build the point map: `m.prepare::<Point>().to_dense()` / `m >> Point::slot()` | 4.6 / 9.7 ns | `Affine3A::from_rotation_translation`: 5.0 ns |
 
 **The prepared map passed by value** takes 7.7 ns, and 3.1 ns read from memory (from an array,
 or through a reference). Its 13 entries (52 bytes) are passed through memory, and the kernel,
@@ -347,7 +347,7 @@ A string of 1024 sites; rustc 1.99.0 on an idle machine (ADR-046).
 
 | | default target | `target-cpu=native` |
 |---|---|---|
-| `SparseMap::apply`, 3070 couplings, each its own `Point <- Point` (`f32`): scalar loop | 7.04 µs | 7.98 µs |
+| `SparseMap::of`, 3070 couplings, each its own `Point <- Point` (`f32`): scalar loop | 7.04 µs | 7.98 µs |
 | the same, `packed()` (sliced ELLPACK, one row per lane) | **5.44 µs** | **5.23 µs** |
 | the dense batch path, one map `of_slice` over as many values | 2.85 µs | 2.94 µs |
 | one product of the string's stiffness (`f64`): scalar / packed | 8.30 / 8.51 µs | 7.83 / 8.89 µs |
@@ -366,7 +366,7 @@ it is 16 to 26 times faster, and it solves the non-symmetric, indefinite and sad
 systems that CG cannot. Minimum degree leaves about a third of the fill of a banded (reverse
 Cuthill–McKee) order on the grid, and factors in about half the time.
 
-`SparseMap::eigh` (shift-invert block Lanczos, Rayleigh–Ritz on the pencil): 12 modes of the
+`SparseMap::eigh_with` (shift-invert block Lanczos, Rayleigh–Ritz on the pencil): 12 modes of the
 anchored 64 × 64 grid of points in 1.9 s; 12 and 30 modes of a free grid of vectors (12288
 unknowns) in 0.32 s and 1.1 s, residuals near `10⁻¹²`.
 
@@ -385,7 +385,7 @@ Measured in `f64` on this machine (one core), on a level-4 icosphere (2562 verti
 | `mass(1)` (the Whitney mass on edges) | | 32.5 ms |
 | `laplacian_form(0)` (the cotangent Laplacian) | 0.78 ms | |
 | one implicit heat step, `(M₀ + dt K) u = M₀ u` by CG | | 0.82 ms |
-| 16 Laplacian modes, `eigh` on `(⋆₀Δ₀, ⋆₀)` | 191 ms | |
+| 16 Laplacian modes, `eigh_with` on `(⋆₀Δ₀, ⋆₀)` | 191 ms | |
 
 The construction and the operators are linear in the mesh. The geometry is the one that costs:
 about 35 µs per tetrahedron, from the dual volumes, which walk every flag of faces in each top

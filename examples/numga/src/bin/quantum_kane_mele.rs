@@ -276,7 +276,7 @@ mod kane_mele {
         K: Kind,
     {
         let identity = SparseMap::from_diagonal(&Field::from_fn(energy.shape().0, |_| unit));
-        energy.eigh(&identity, count)
+        energy.eigh_with(&identity, count)
     }
 
     /// The `count` spin-up levels nearest zero (each held twice, by a state and the state times
@@ -602,7 +602,7 @@ mod tests {
             triples.into_iter().map(|(r, c, x)| (r, (c, x))).unzip();
         let complex = &SparseMap::new(cells, rows, cols, (2 * n, 2 * n)) * Scalar::slot();
         let identity = SparseMap::from_diagonal(&Field::from_fn(2 * n, |_| Scalar::slot()));
-        let (expected, _) = complex.eigh(&identity, 2 * count);
+        let (expected, _) = complex.eigh_with(&identity, 2 * count);
         let (energies, _) = up_levels(&hamiltonian(&f, spin_orbit, mass), 2 * count);
         for (got, want) in energies.iter().zip(expected) {
             assert!((got - want).abs() < 1e-10, "{got} vs {want}");

@@ -158,19 +158,16 @@ impl<'a> Conductor<'a> {
         let emf = pushed.zip_with(&mesh.edge_vectors(), |f, e| f | e);
         // Whitney vectors reconstruct edge circulations at each face's centroid, where the
         // conductivity acts on the drive.
-        let drive = self.reconstruction.apply(&emf);
-        let source = self
-            .gradient
-            .transpose()
-            .apply(&self.material.apply(&drive));
+        let drive = self.reconstruction.of(&emf);
+        let source = self.gradient.transpose().of(&self.material.of(&drive));
         let potential = self.balance.solve(&source);
-        let voltage = &emf - &self.derivative.apply(&potential);
-        let electric = self.reconstruction.apply(&voltage);
+        let voltage = &emf - &self.derivative.of(&potential);
+        let electric = self.reconstruction.of(&voltage);
         let current = self.conductivity.zip_with(&electric, |c, e| c.of(e));
         // The reconstruction's adjoint returns the conserved dual-edge fluxes, and the same skew
         // map gives the magnetic force on them.
         let sheet = current.zip_with(&self.areas, |j, a| j * a.s());
-        let flux = self.reconstruction.transpose().apply(&sheet);
+        let flux = self.reconstruction.transpose().of(&sheet);
         let skew = mesh.edge_vectors().zip_with(&lorentz, |e, l| l.of(e));
         let force = flux.zip_with(&skew, |f, l| l * f.s());
         let torque = mesh.edge_midpoints().zip_with(&force, |p, f| p ^ f).sum();

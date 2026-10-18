@@ -13,7 +13,7 @@
 //!     after `B`'s own (numga's `derivative`);
 //!   * [`gradient`]: of a scalar function of `A`, the linear form `Scalar <- (A,)`;
 //!   * [`hessian`]: its second derivative, the form `Scalar <- (A, A)`, so a Newton step is
-//!     `-hessian.solve(gradient)`.
+//!     `-hessian.solve_pairing(gradient)`.
 //! * [`Dual<T, N>`] is `Jet<T, Params<N>>`, `N` loose parameters:
 //!   * [`derivative`]: `f'(x)` of a function of one variable;
 //!   * [`gradient_array`]: `∇f` of a scalar function of `N` variables;
@@ -25,7 +25,7 @@
 //! differentiated piece by piece (one-sided at a switch point).
 //!
 //! ```
-//! use gax::dual::gradient;
+//! use gax::jet::gradient;
 //! use gax::pga3d::{Line, Point};
 //! use gax::Real;
 //!
@@ -385,7 +385,7 @@ impl<T: Real, D: Directions> Real for Jet<T, D> {
 /// `(f(x), f'(x))`.
 ///
 /// ```
-/// use gax::dual::derivative;
+/// use gax::jet::derivative;
 /// use gax::Real;
 /// let (v, d) = derivative(|t| (t * t).sin(), 0.5f64);
 /// assert!((v - 0.25f64.sin()).abs() < 1e-15 && (d - 0.25f64.cos()).abs() < 1e-15);
@@ -469,7 +469,7 @@ type ScalarOf<X, S> =
 ///
 /// ```
 /// use gax::ApproxEq;
-/// use gax::dual::jacobian;
+/// use gax::jet::jacobian;
 /// use gax::pga3d::{Line, Motor, Point};
 /// use gax::Real;
 ///
@@ -538,7 +538,7 @@ where
 /// `derivative` of a scalar function), not an element of `A`. One evaluation of `f`.
 ///
 /// ```
-/// use gax::dual::gradient;
+/// use gax::jet::gradient;
 /// use gax::pga3d::Plane;
 /// let x = Plane::<(), f64>::new(1.0, 2.0, 3.0, 4.0);
 /// let (e, g) = gradient(|x: Plane<(), _>| x.norm_squared(), x);
@@ -558,12 +558,12 @@ where
 
 /// `(f(x), ∇f(x), ∇²f(x))` for a scalar function of a value of kind `A`: the gradient as the
 /// form `Scalar <- (A,)` and the Hessian as the symmetric bilinear form `Scalar <- (A, A)`. A
-/// Newton step is `-hessian.solve(gradient)`, a value of `A`. One evaluation of `f` on jets of
-/// jets, `(1 + A::N)²` numbers per coefficient: written generic over the coefficient type, the
-/// same `f` serves [`gradient`] and `hessian`.
+/// Newton step is `-hessian.solve_pairing(gradient)`, a value of `A`. One evaluation of `f` on
+/// jets of jets, `(1 + A::N)²` numbers per coefficient: written generic over the coefficient
+/// type, the same `f` serves [`gradient`] and `hessian`.
 ///
 /// ```
-/// use gax::dual::hessian;
+/// use gax::jet::hessian;
 /// use gax::pga3d::Plane;
 /// use gax::Real;
 ///
@@ -574,7 +574,7 @@ where
 /// let mut x = Plane::<(), f64>::zero();
 /// for _ in 0..12 {
 ///     let (_, g, h) = hessian(energy, x); // Scalar <- Plane, Scalar <- (Plane, Plane)
-///     x = x - h.solve(g); // a Newton step
+///     x = x - h.solve_pairing(g); // a Newton step
 /// }
 /// assert!((x.c[3] - 4f64.ln()).abs() < 1e-14);
 /// ```

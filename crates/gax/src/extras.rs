@@ -266,8 +266,8 @@ mod pga3d_extras {
     /// It is the compact representation of `Σ m X ∨ (X × B)` over the body's mass points: the
     /// translation part of a twist maps to linear momentum through the mass, and the rotation
     /// part to angular momentum through the principal moments. Anything a dense map offers is
-    /// available through [`PrincipalInertia::to_map`], for example moving the body with
-    /// `m >> inertia.to_map().of(m << Line::slot())`.
+    /// available through [`PrincipalInertia::to_dense`], for example moving the body with
+    /// `m >> inertia.to_dense().of(m << Line::slot())`.
     ///
     /// ```
     /// use gax::pga3d::{Line, PrincipalInertia};
@@ -354,10 +354,10 @@ mod pga3d_extras {
         /// use gax::pga3d::{Line, PrincipalInertia};
         /// let body = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
         /// let b = Line::new(0.1, 0.2, 0.3, 1.0, -1.0, 0.5);
-        /// assert_eq!(body.to_map().of(b), body.of(b));
+        /// assert_eq!(body.to_dense().of(b), body.of(b));
         /// ```
         #[inline]
-        pub fn to_map(self) -> Forque<(Line,), T> {
+        pub fn to_dense(self) -> Forque<(Line,), T> {
             self.of(Line::slot())
         }
 
@@ -373,7 +373,7 @@ mod pga3d_extras {
         /// ```
         #[inline]
         pub fn energy_form(self) -> crate::pga3d::Scalar<(Line, Line), T> {
-            Line::slot() & self.to_map()
+            Line::slot() & self.to_dense()
         }
     }
 
@@ -423,7 +423,7 @@ mod pga3d_extras {
 
         /// The dense map `Line <- Forque`, from momenta to twists.
         #[inline]
-        pub fn to_map(self) -> Line<(Forque,), T> {
+        pub fn to_dense(self) -> Line<(Forque,), T> {
             self.of(Forque::slot())
         }
     }
@@ -437,7 +437,7 @@ mod pga3d_extras {
         type Coef = T;
         #[inline]
         fn to_dense(self) -> Dense<Self> {
-            self.to_map()
+            Self::to_dense(self)
         }
     }
 
@@ -447,7 +447,7 @@ mod pga3d_extras {
         type Coef = T;
         #[inline]
         fn to_dense(self) -> Dense<Self> {
-            self.to_map()
+            Self::to_dense(self)
         }
     }
 
@@ -455,7 +455,7 @@ mod pga3d_extras {
         type Input = Line;
         type Inverse = PrincipalMobility<T>;
         #[inline]
-        fn apply(self, x: Line<(), T>) -> Forque<(), T> {
+        fn of(self, x: Line<(), T>) -> Forque<(), T> {
             self.of(x)
         }
         #[inline]
@@ -472,7 +472,7 @@ mod pga3d_extras {
         type Input = Forque;
         type Inverse = PrincipalInertia<T>;
         #[inline]
-        fn apply(self, x: Forque<(), T>) -> Line<(), T> {
+        fn of(self, x: Forque<(), T>) -> Line<(), T> {
             self.of(x)
         }
         #[inline]
@@ -1215,7 +1215,7 @@ mod tests {
             dense += p & p.commutator(Line::slot()); // Σ m X ∨ (X × B), in extensor form
         }
         let compact = PrincipalInertia::new(6.0, [26.0, 20.0, 10.0]);
-        assert_eq!(compact.to_map(), dense);
+        assert_eq!(compact.to_dense(), dense);
         let b = Line::new(0.3, -0.2, 0.1, 1.0, 2.0, -0.5);
         assert_eq!(compact.of(b), dense.of(b));
         let back = compact.inverse_of(compact.of(b));

@@ -151,7 +151,7 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
 /// displacement that twist causes. A pairing solve.
 fn forque_of(cell: RigidCell) -> Forque<(Direction,), f64> {
     let pairing = Forque::slot() & Twist::slot();
-    pairing.solve(work().of_both(Direction::slot(), cell))
+    pairing.solve_pairing(work().of_both(Direction::slot(), cell))
 }
 
 /// The load a force puts on a mode through a modal coupling: the work it does along the mode's
@@ -293,17 +293,17 @@ pub fn project(
         .iter()
         .zip(spring_load.iter().zip(&terms.response))
     {
-        target = &target - &modal.apply(&times(response, spring));
+        target = &target - &modal.of(&times(response, spring));
     }
     let reactions = system.solve_direct(&target);
-    let displacement: Field<R> = inverse.apply(&forques.apply(&reactions));
+    let displacement: Field<R> = inverse.of(&forques.of(&reactions));
     let mut moved = bodies.clone();
     for (motor, twist) in moved.motor.iter_mut().zip(displacement.iter()) {
         *motor = *motor * (twist * -0.5).exp();
     }
     for m in modes {
         // The mode's load from the reactions, and its spring's reaction to the whole.
-        let mode_load = loads[m].apply(&reactions);
+        let mode_load = loads[m].of(&reactions);
         let change = times(&terms.response[m], &(&spring_load[m] - &mode_load));
         moved.amplitudes[m] = &(&moved.amplitudes[m] + &mode_load) + &change;
     }

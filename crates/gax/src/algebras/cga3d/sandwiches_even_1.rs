@@ -168,7 +168,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m101 = m99 + m100;
         let m102 = m98 - m101;
         let m103 = m102 * T::from_i64(2);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Even { o: core::marker::PhantomData, c: [(x[0].scale(m63)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m71)).0, (x[0].scale(m79)).0, (x[0].scale(m87)).0, (x[0].scale(m95)).0, (x[0].scale(m103)).0] }
     }
 }
@@ -272,7 +272,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Even<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Even { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[1])).0, (x[0].scale(m[2])).0, (x[0].scale(m[3])).0, (x[0].scale(m[4])).0, (x[0].scale(m[5])).0] }
     }
 }
@@ -283,6 +283,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Even, Scalar<(), f64, O>
     fn from(p: gx::Prepared<Even, Scalar<(), f64, O>, T, 6>) -> Self {
         let m = p.m;
         Even { o: core::marker::PhantomData, c: [[m[0]], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [m[1]], [m[2]], [m[3]], [m[4]], [m[5]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Even, 6> for Scalar<(), f64, O> {
+    type Output = Even<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Even, Scalar<(), f64, O>, T, 6>) -> Even<(Scalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -442,7 +450,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m20 = v[6].mul_add(v[9], m11);
         let m21 = m19 + m20;
         let m23 = (-m21).mul_add(T::from_i64(2), m18);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: [(x[0].scale(m23)).0] }
     }
 }
@@ -567,7 +575,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Scalar<S, T, O
     #[inline(always)]
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0] }
     }
 }
@@ -578,6 +586,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Even>, Scalar<(
     fn from(p: gx::Prepared<gx::Unit<Even>, Scalar<(), f64, O>, T, 1>) -> Self {
         let m = p.m;
         Scalar { o: core::marker::PhantomData, c: [[m[0]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Even>, 1> for Scalar<(), f64, O> {
+    type Output = Scalar<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Even>, Scalar<(), f64, O>, T, 1>) -> Scalar<(Scalar<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1107,7 +1123,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m280 = v[5].mul_add(m5, m122);
         let m281 = m279 - m280;
         let m282 = m281 * T::from_i64(2);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Odd { o: core::marker::PhantomData, c: [(x[0].scale(m159) + x[1].scale(m161) + x[2].scale(m167) + x[3].scale(m171) + x[4].scale(m175)).0, (x[0].scale(m177) + x[1].scale(m181) + x[2].scale(m187) + x[3].scale(m191) + x[4].scale(m195)).0, (x[0].scale(m199) + x[1].scale(m203) + x[2].scale(m211) + x[3].scale(m215) + x[4].scale(m219)).0, (x[0].scale(m223) + x[1].scale(m227) + x[2].scale(m231) + x[3].scale(m233) + x[4].scale(m237)).0, (x[0].scale(m241) + x[1].scale(m245) + x[2].scale(m249) + x[3].scale(m253) + x[4].scale(m254)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m260) + x[1].scale(m266) + x[2].scale(m274) + x[3].scale(m278) + x[4].scale(m282)).0] }
     }
 }
@@ -1368,7 +1384,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     #[inline(always)]
     fn transform(self, x: Vector<S, T, O>) -> Odd<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Odd { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[0].scale(m[5]) + x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[18]) + x[4].scale(m[19])).0, (x[0].scale(m[20]) + x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[24])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[25]) + x[1].scale(m[26]) + x[2].scale(m[27]) + x[3].scale(m[28]) + x[4].scale(m[29])).0] }
     }
 }
@@ -1379,6 +1395,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Even, Vector<(), f64, O>
     fn from(p: gx::Prepared<Even, Vector<(), f64, O>, T, 30>) -> Self {
         let m = p.m;
         Odd { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4]], [m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14]], [m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[25], m[26], m[27], m[28], m[29]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Even, 30> for Vector<(), f64, O> {
+    type Output = Odd<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Even, Vector<(), f64, O>, T, 30>) -> Odd<(Vector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -1882,7 +1906,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m224 = m222 + m223;
         let m225 = m224 * T::from_i64(2);
         let m226 = m126 + m204;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Vector { o: core::marker::PhantomData, c: [(x[0].scale(m143) + x[1].scale(m145) + x[2].scale(m147) + x[3].scale(m151) + x[4].scale(m155)).0, (x[0].scale(m157) + x[1].scale(m161) + x[2].scale(m163) + x[3].scale(m167) + x[4].scale(m171)).0, (x[0].scale(m173) + x[1].scale(m175) + x[2].scale(m183) + x[3].scale(m187) + x[4].scale(m191)).0, (x[0].scale(m195) + x[1].scale(m199) + x[2].scale(m203) + x[3].scale(m205) + x[4].scale(m209)).0, (x[0].scale(m213) + x[1].scale(m217) + x[2].scale(m221) + x[3].scale(m225) + x[4].scale(m226)).0] }
     }
 }
@@ -2172,7 +2196,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     #[inline(always)]
     fn transform(self, x: Vector<S, T, O>) -> Vector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Vector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[0].scale(m[5]) + x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[18]) + x[4].scale(m[19])).0, (x[0].scale(m[20]) + x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[24])).0] }
     }
 }
@@ -2183,6 +2207,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Even>, Vector<(
     fn from(p: gx::Prepared<gx::Unit<Even>, Vector<(), f64, O>, T, 25>) -> Self {
         let m = p.m;
         Vector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4]], [m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14]], [m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Even>, 25> for Vector<(), f64, O> {
+    type Output = Vector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Even>, Vector<(), f64, O>, T, 25>) -> Vector<(Vector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -2911,7 +2943,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m368 = m45 + m69;
         let m369 = m367 - m368;
         let m370 = m369 * T::from_i64(2);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m194) + x[1].scale(m196) + x[2].scale(m202) + x[3].scale(m204) + x[4].scale(m207) + x[5].scale(m211)).0, (x[0].scale(m214) + x[1].scale(m217) + x[2].scale(m223) + x[3].scale(m225) + x[4].scale(m227) + x[5].scale(m231)).0, (x[0].scale(m235) + x[1].scale(m239) + x[2].scale(m244) + x[3].scale(m247) + x[4].scale(m249) + x[5].scale(m253)).0, (x[0].scale(m255) + x[1].scale(m257) + x[2].scale(m259) + x[3].scale(m261) + x[4].scale(m263) + x[5].scale(m266)).0, (x[0].scale(m268) + x[1].scale(m271) + x[2].scale(m273) + x[3].scale(m276) + x[4].scale(m278) + x[5].scale(m280)).0, (x[0].scale(m282) + x[1].scale(m284) + x[2].scale(m288) + x[3].scale(m290) + x[4].scale(m293) + x[5].scale(m297)).0, (x[0].scale(m299) + x[1].scale(m301) + x[2].scale(m303) + x[3].scale(m308) + x[4].scale(m310) + x[5].scale(m312)).0, (x[0].scale(m314) + x[1].scale(m317) + x[2].scale(m319) + x[3].scale(m321) + x[4].scale(m324) + x[5].scale(m326)).0, (x[0].scale(m328) + x[1].scale(m330) + x[2].scale(m334) + x[3].scale(m336) + x[4].scale(m338) + x[5].scale(m341)).0, (x[0].scale(m347) + x[1].scale(m353) + x[2].scale(m361) + x[3].scale(m364) + x[4].scale(m366) + x[5].scale(m370)).0] }
     }
 }
@@ -3270,7 +3302,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>
     #[inline(always)]
     fn transform(self, x: Twist<S, T, O>) -> Bivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[27]) + x[4].scale(m[28]) + x[5].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35])).0, (x[0].scale(m[36]) + x[1].scale(m[37]) + x[2].scale(m[38]) + x[3].scale(m[39]) + x[4].scale(m[40]) + x[5].scale(m[41])).0, (x[0].scale(m[42]) + x[1].scale(m[43]) + x[2].scale(m[44]) + x[3].scale(m[45]) + x[4].scale(m[46]) + x[5].scale(m[47])).0, (x[0].scale(m[48]) + x[1].scale(m[49]) + x[2].scale(m[50]) + x[3].scale(m[51]) + x[4].scale(m[52]) + x[5].scale(m[53])).0, (x[0].scale(m[54]) + x[1].scale(m[55]) + x[2].scale(m[56]) + x[3].scale(m[57]) + x[4].scale(m[58]) + x[5].scale(m[59])).0] }
     }
 }
@@ -3281,6 +3313,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Even, Twist<(), f64, O>,
     fn from(p: gx::Prepared<Even, Twist<(), f64, O>, T, 60>) -> Self {
         let m = p.m;
         Bivector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[21], m[22], m[23]], [m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35]], [m[36], m[37], m[38], m[39], m[40], m[41]], [m[42], m[43], m[44], m[45], m[46], m[47]], [m[48], m[49], m[50], m[51], m[52], m[53]], [m[54], m[55], m[56], m[57], m[58], m[59]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Even, 60> for Twist<(), f64, O> {
+    type Output = Bivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Even, Twist<(), f64, O>, T, 60>) -> Bivector<(Twist<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -4028,7 +4068,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m346 = m40 + m54;
         let m347 = m345 - m346;
         let m348 = m347 * T::from_i64(2);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m188) + x[1].scale(m190) + x[2].scale(m193) + x[3].scale(m197) + x[4].scale(m200) + x[5].scale(m204)).0, (x[0].scale(m207) + x[1].scale(m210) + x[2].scale(m212) + x[3].scale(m214) + x[4].scale(m217) + x[5].scale(m221)).0, (x[0].scale(m223) + x[1].scale(m226) + x[2].scale(m231) + x[3].scale(m234) + x[4].scale(m236) + x[5].scale(m239)).0, (x[0].scale(m242) + x[1].scale(m244) + x[2].scale(m246) + x[3].scale(m248) + x[4].scale(m250) + x[5].scale(m253)).0, (x[0].scale(m255) + x[1].scale(m258) + x[2].scale(m260) + x[3].scale(m263) + x[4].scale(m265) + x[5].scale(m267)).0, (x[0].scale(m269) + x[1].scale(m271) + x[2].scale(m274) + x[3].scale(m276) + x[4].scale(m279) + x[5].scale(m283)).0, (x[0].scale(m286) + x[1].scale(m288) + x[2].scale(m290) + x[3].scale(m295) + x[4].scale(m297) + x[5].scale(m299)).0, (x[0].scale(m301) + x[1].scale(m304) + x[2].scale(m306) + x[3].scale(m308) + x[4].scale(m311) + x[5].scale(m313)).0, (x[0].scale(m315) + x[1].scale(m317) + x[2].scale(m320) + x[3].scale(m322) + x[4].scale(m324) + x[5].scale(m327)).0, (x[0].scale(m331) + x[1].scale(m335) + x[2].scale(m339) + x[3].scale(m342) + x[4].scale(m344) + x[5].scale(m348)).0] }
     }
 }
@@ -4439,7 +4479,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Twist<S, T, O>
     #[inline(always)]
     fn transform(self, x: Twist<S, T, O>) -> Bivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[27]) + x[4].scale(m[28]) + x[5].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35])).0, (x[0].scale(m[36]) + x[1].scale(m[37]) + x[2].scale(m[38]) + x[3].scale(m[39]) + x[4].scale(m[40]) + x[5].scale(m[41])).0, (x[0].scale(m[42]) + x[1].scale(m[43]) + x[2].scale(m[44]) + x[3].scale(m[45]) + x[4].scale(m[46]) + x[5].scale(m[47])).0, (x[0].scale(m[48]) + x[1].scale(m[49]) + x[2].scale(m[50]) + x[3].scale(m[51]) + x[4].scale(m[52]) + x[5].scale(m[53])).0, (x[0].scale(m[54]) + x[1].scale(m[55]) + x[2].scale(m[56]) + x[3].scale(m[57]) + x[4].scale(m[58]) + x[5].scale(m[59])).0] }
     }
 }
@@ -4450,6 +4490,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Even>, Twist<()
     fn from(p: gx::Prepared<gx::Unit<Even>, Twist<(), f64, O>, T, 60>) -> Self {
         let m = p.m;
         Bivector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[21], m[22], m[23]], [m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35]], [m[36], m[37], m[38], m[39], m[40], m[41]], [m[42], m[43], m[44], m[45], m[46], m[47]], [m[48], m[49], m[50], m[51], m[52], m[53]], [m[54], m[55], m[56], m[57], m[58], m[59]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Even>, 60> for Twist<(), f64, O> {
+    type Output = Bivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Even>, Twist<(), f64, O>, T, 60>) -> Bivector<(Twist<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -5574,7 +5622,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m541 = m539 - m540;
         let m542 = m185 + m197;
         let m544 = m542.mul_add(T::from_i64(2), m541);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m265) + x[1].scale(m267) + x[2].scale(m271) + x[3].scale(m273) + x[4].scale(m276) + x[5].scale(m280) + x[6].scale(m282) + x[7].scale(m285) + x[8].scale(m289) + x[9].scale(m293)).0, (x[0].scale(m296) + x[1].scale(m300) + x[2].scale(m304) + x[3].scale(m306) + x[4].scale(m308) + x[5].scale(m312) + x[6].scale(m314) + x[7].scale(m316) + x[8].scale(m320) + x[9].scale(m324)).0, (x[0].scale(m328) + x[1].scale(m332) + x[2].scale(m336) + x[3].scale(m339) + x[4].scale(m341) + x[5].scale(m345) + x[6].scale(m348) + x[7].scale(m350) + x[8].scale(m354) + x[9].scale(m356)).0, (x[0].scale(m358) + x[1].scale(m360) + x[2].scale(m362) + x[3].scale(m366) + x[4].scale(m368) + x[5].scale(m370) + x[6].scale(m372) + x[7].scale(m374) + x[8].scale(m377) + x[9].scale(m379)).0, (x[0].scale(m381) + x[1].scale(m384) + x[2].scale(m386) + x[3].scale(m388) + x[4].scale(m390) + x[5].scale(m392) + x[6].scale(m395) + x[7].scale(m397) + x[8].scale(m399) + x[9].scale(m401)).0, (x[0].scale(m405) + x[1].scale(m409) + x[2].scale(m413) + x[3].scale(m415) + x[4].scale(m417) + x[5].scale(m419) + x[6].scale(m421) + x[7].scale(m424) + x[8].scale(m428) + x[9].scale(m432)).0, (x[0].scale(m434) + x[1].scale(m436) + x[2].scale(m438) + x[3].scale(m440) + x[4].scale(m442) + x[5].scale(m445) + x[6].scale(m450) + x[7].scale(m452) + x[8].scale(m454) + x[9].scale(m456)).0, (x[0].scale(m458) + x[1].scale(m461) + x[2].scale(m463) + x[3].scale(m466) + x[4].scale(m468) + x[5].scale(m470) + x[6].scale(m472) + x[7].scale(m475) + x[8].scale(m477) + x[9].scale(m479)).0, (x[0].scale(m483) + x[1].scale(m487) + x[2].scale(m491) + x[3].scale(m493) + x[4].scale(m496) + x[5].scale(m500) + x[6].scale(m502) + x[7].scale(m504) + x[8].scale(m507) + x[9].scale(m511)).0, (x[0].scale(m515) + x[1].scale(m519) + x[2].scale(m521) + x[3].scale(m523) + x[4].scale(m525) + x[5].scale(m529) + x[6].scale(m532) + x[7].scale(m534) + x[8].scale(m538) + x[9].scale(m544)).0] }
     }
 }
@@ -6122,7 +6170,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T,
     #[inline(always)]
     fn transform(self, x: Bivector<S, T, O>) -> Bivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6]) + x[7].scale(m[7]) + x[8].scale(m[8]) + x[9].scale(m[9])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[14]) + x[5].scale(m[15]) + x[6].scale(m[16]) + x[7].scale(m[17]) + x[8].scale(m[18]) + x[9].scale(m[19])).0, (x[0].scale(m[20]) + x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[24]) + x[5].scale(m[25]) + x[6].scale(m[26]) + x[7].scale(m[27]) + x[8].scale(m[28]) + x[9].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35]) + x[6].scale(m[36]) + x[7].scale(m[37]) + x[8].scale(m[38]) + x[9].scale(m[39])).0, (x[0].scale(m[40]) + x[1].scale(m[41]) + x[2].scale(m[42]) + x[3].scale(m[43]) + x[4].scale(m[44]) + x[5].scale(m[45]) + x[6].scale(m[46]) + x[7].scale(m[47]) + x[8].scale(m[48]) + x[9].scale(m[49])).0, (x[0].scale(m[50]) + x[1].scale(m[51]) + x[2].scale(m[52]) + x[3].scale(m[53]) + x[4].scale(m[54]) + x[5].scale(m[55]) + x[6].scale(m[56]) + x[7].scale(m[57]) + x[8].scale(m[58]) + x[9].scale(m[59])).0, (x[0].scale(m[60]) + x[1].scale(m[61]) + x[2].scale(m[62]) + x[3].scale(m[63]) + x[4].scale(m[64]) + x[5].scale(m[65]) + x[6].scale(m[66]) + x[7].scale(m[67]) + x[8].scale(m[68]) + x[9].scale(m[69])).0, (x[0].scale(m[70]) + x[1].scale(m[71]) + x[2].scale(m[72]) + x[3].scale(m[73]) + x[4].scale(m[74]) + x[5].scale(m[75]) + x[6].scale(m[76]) + x[7].scale(m[77]) + x[8].scale(m[78]) + x[9].scale(m[79])).0, (x[0].scale(m[80]) + x[1].scale(m[81]) + x[2].scale(m[82]) + x[3].scale(m[83]) + x[4].scale(m[84]) + x[5].scale(m[85]) + x[6].scale(m[86]) + x[7].scale(m[87]) + x[8].scale(m[88]) + x[9].scale(m[89])).0, (x[0].scale(m[90]) + x[1].scale(m[91]) + x[2].scale(m[92]) + x[3].scale(m[93]) + x[4].scale(m[94]) + x[5].scale(m[95]) + x[6].scale(m[96]) + x[7].scale(m[97]) + x[8].scale(m[98]) + x[9].scale(m[99])).0] }
     }
 }
@@ -6133,6 +6181,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Even, Bivector<(), f64, 
     fn from(p: gx::Prepared<Even, Bivector<(), f64, O>, T, 100>) -> Self {
         let m = p.m;
         Bivector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14], m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35], m[36], m[37], m[38], m[39]], [m[40], m[41], m[42], m[43], m[44], m[45], m[46], m[47], m[48], m[49]], [m[50], m[51], m[52], m[53], m[54], m[55], m[56], m[57], m[58], m[59]], [m[60], m[61], m[62], m[63], m[64], m[65], m[66], m[67], m[68], m[69]], [m[70], m[71], m[72], m[73], m[74], m[75], m[76], m[77], m[78], m[79]], [m[80], m[81], m[82], m[83], m[84], m[85], m[86], m[87], m[88], m[89]], [m[90], m[91], m[92], m[93], m[94], m[95], m[96], m[97], m[98], m[99]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Even, 100> for Bivector<(), f64, O> {
+    type Output = Bivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Even, Bivector<(), f64, O>, T, 100>) -> Bivector<(Bivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -7268,7 +7324,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m522 = m520 - m521;
         let m523 = m183 + m191;
         let m525 = m523.mul_add(T::from_i64(2), m522);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m250) + x[1].scale(m252) + x[2].scale(m255) + x[3].scale(m259) + x[4].scale(m262) + x[5].scale(m266) + x[6].scale(m270) + x[7].scale(m273) + x[8].scale(m277) + x[9].scale(m280)).0, (x[0].scale(m283) + x[1].scale(m287) + x[2].scale(m289) + x[3].scale(m291) + x[4].scale(m294) + x[5].scale(m298) + x[6].scale(m300) + x[7].scale(m303) + x[8].scale(m307) + x[9].scale(m310)).0, (x[0].scale(m312) + x[1].scale(m315) + x[2].scale(m319) + x[3].scale(m322) + x[4].scale(m324) + x[5].scale(m327) + x[6].scale(m330) + x[7].scale(m332) + x[8].scale(m335) + x[9].scale(m338)).0, (x[0].scale(m341) + x[1].scale(m343) + x[2].scale(m345) + x[3].scale(m349) + x[4].scale(m351) + x[5].scale(m353) + x[6].scale(m355) + x[7].scale(m357) + x[8].scale(m360) + x[9].scale(m362)).0, (x[0].scale(m364) + x[1].scale(m367) + x[2].scale(m369) + x[3].scale(m371) + x[4].scale(m373) + x[5].scale(m375) + x[6].scale(m378) + x[7].scale(m380) + x[8].scale(m382) + x[9].scale(m384)).0, (x[0].scale(m388) + x[1].scale(m392) + x[2].scale(m395) + x[3].scale(m397) + x[4].scale(m399) + x[5].scale(m401) + x[6].scale(m403) + x[7].scale(m406) + x[8].scale(m410) + x[9].scale(m414)).0, (x[0].scale(m417) + x[1].scale(m419) + x[2].scale(m421) + x[3].scale(m423) + x[4].scale(m425) + x[5].scale(m428) + x[6].scale(m433) + x[7].scale(m435) + x[8].scale(m437) + x[9].scale(m439)).0, (x[0].scale(m441) + x[1].scale(m444) + x[2].scale(m446) + x[3].scale(m449) + x[4].scale(m451) + x[5].scale(m453) + x[6].scale(m455) + x[7].scale(m458) + x[8].scale(m460) + x[9].scale(m462)).0, (x[0].scale(m466) + x[1].scale(m470) + x[2].scale(m473) + x[3].scale(m475) + x[4].scale(m478) + x[5].scale(m482) + x[6].scale(m484) + x[7].scale(m486) + x[8].scale(m489) + x[9].scale(m493)).0, (x[0].scale(m496) + x[1].scale(m499) + x[2].scale(m502) + x[3].scale(m504) + x[4].scale(m506) + x[5].scale(m510) + x[6].scale(m513) + x[7].scale(m515) + x[8].scale(m519) + x[9].scale(m525)).0] }
     }
 }
@@ -7868,7 +7924,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Bivector<S, T,
     #[inline(always)]
     fn transform(self, x: Bivector<S, T, O>) -> Bivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Bivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6]) + x[7].scale(m[7]) + x[8].scale(m[8]) + x[9].scale(m[9])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[14]) + x[5].scale(m[15]) + x[6].scale(m[16]) + x[7].scale(m[17]) + x[8].scale(m[18]) + x[9].scale(m[19])).0, (x[0].scale(m[20]) + x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[24]) + x[5].scale(m[25]) + x[6].scale(m[26]) + x[7].scale(m[27]) + x[8].scale(m[28]) + x[9].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35]) + x[6].scale(m[36]) + x[7].scale(m[37]) + x[8].scale(m[38]) + x[9].scale(m[39])).0, (x[0].scale(m[40]) + x[1].scale(m[41]) + x[2].scale(m[42]) + x[3].scale(m[43]) + x[4].scale(m[44]) + x[5].scale(m[45]) + x[6].scale(m[46]) + x[7].scale(m[47]) + x[8].scale(m[48]) + x[9].scale(m[49])).0, (x[0].scale(m[50]) + x[1].scale(m[51]) + x[2].scale(m[52]) + x[3].scale(m[53]) + x[4].scale(m[54]) + x[5].scale(m[55]) + x[6].scale(m[56]) + x[7].scale(m[57]) + x[8].scale(m[58]) + x[9].scale(m[59])).0, (x[0].scale(m[60]) + x[1].scale(m[61]) + x[2].scale(m[62]) + x[3].scale(m[63]) + x[4].scale(m[64]) + x[5].scale(m[65]) + x[6].scale(m[66]) + x[7].scale(m[67]) + x[8].scale(m[68]) + x[9].scale(m[69])).0, (x[0].scale(m[70]) + x[1].scale(m[71]) + x[2].scale(m[72]) + x[3].scale(m[73]) + x[4].scale(m[74]) + x[5].scale(m[75]) + x[6].scale(m[76]) + x[7].scale(m[77]) + x[8].scale(m[78]) + x[9].scale(m[79])).0, (x[0].scale(m[80]) + x[1].scale(m[81]) + x[2].scale(m[82]) + x[3].scale(m[83]) + x[4].scale(m[84]) + x[5].scale(m[85]) + x[6].scale(m[86]) + x[7].scale(m[87]) + x[8].scale(m[88]) + x[9].scale(m[89])).0, (x[0].scale(m[90]) + x[1].scale(m[91]) + x[2].scale(m[92]) + x[3].scale(m[93]) + x[4].scale(m[94]) + x[5].scale(m[95]) + x[6].scale(m[96]) + x[7].scale(m[97]) + x[8].scale(m[98]) + x[9].scale(m[99])).0] }
     }
 }
@@ -7879,6 +7935,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Even>, Bivector
     fn from(p: gx::Prepared<gx::Unit<Even>, Bivector<(), f64, O>, T, 100>) -> Self {
         let m = p.m;
         Bivector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14], m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35], m[36], m[37], m[38], m[39]], [m[40], m[41], m[42], m[43], m[44], m[45], m[46], m[47], m[48], m[49]], [m[50], m[51], m[52], m[53], m[54], m[55], m[56], m[57], m[58], m[59]], [m[60], m[61], m[62], m[63], m[64], m[65], m[66], m[67], m[68], m[69]], [m[70], m[71], m[72], m[73], m[74], m[75], m[76], m[77], m[78], m[79]], [m[80], m[81], m[82], m[83], m[84], m[85], m[86], m[87], m[88], m[89]], [m[90], m[91], m[92], m[93], m[94], m[95], m[96], m[97], m[98], m[99]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Even>, 100> for Bivector<(), f64, O> {
+    type Output = Bivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Even>, Bivector<(), f64, O>, T, 100>) -> Bivector<(Bivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 
@@ -9002,7 +9066,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m540 = m538 - m539;
         let m541 = m185 + m197;
         let m543 = m541.mul_add(T::from_i64(2), m540);
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Trivector { o: core::marker::PhantomData, c: [(x[0].scale(m265) + x[1].scale(m267) + x[2].scale(m269) + x[3].scale(m271) + x[4].scale(m273) + x[5].scale(m275) + x[6].scale(m277) + x[7].scale(m279) + x[8].scale(m281) + x[9].scale(m283)).0, (x[0].scale(m285) + x[1].scale(m287) + x[2].scale(m289) + x[3].scale(m291) + x[4].scale(m294) + x[5].scale(m296) + x[6].scale(m298) + x[7].scale(m301) + x[8].scale(m303) + x[9].scale(m305)).0, (x[0].scale(m307) + x[1].scale(m309) + x[2].scale(m311) + x[3].scale(m313) + x[4].scale(m315) + x[5].scale(m319) + x[6].scale(m323) + x[7].scale(m327) + x[8].scale(m331) + x[9].scale(m335)).0, (x[0].scale(m337) + x[1].scale(m339) + x[2].scale(m341) + x[3].scale(m346) + x[4].scale(m348) + x[5].scale(m350) + x[6].scale(m352) + x[7].scale(m355) + x[8].scale(m358) + x[9].scale(m360)).0, (x[0].scale(m362) + x[1].scale(m365) + x[2].scale(m367) + x[3].scale(m369) + x[4].scale(m372) + x[5].scale(m374) + x[6].scale(m376) + x[7].scale(m378) + x[8].scale(m381) + x[9].scale(m383)).0, (x[0].scale(m385) + x[1].scale(m387) + x[2].scale(m391) + x[3].scale(m393) + x[4].scale(m395) + x[5].scale(m398) + x[6].scale(m402) + x[7].scale(m406) + x[8].scale(m410) + x[9].scale(m414)).0, (x[0].scale(m416) + x[1].scale(m419) + x[2].scale(m423) + x[3].scale(m425) + x[4].scale(m427) + x[5].scale(m431) + x[6].scale(m435) + x[7].scale(m437) + x[8].scale(m441) + x[9].scale(m445)).0, (x[0].scale(m447) + x[1].scale(m449) + x[2].scale(m453) + x[3].scale(m455) + x[4].scale(m458) + x[5].scale(m462) + x[6].scale(m465) + x[7].scale(m469) + x[8].scale(m473) + x[9].scale(m477)).0, (x[0].scale(m480) + x[1].scale(m482) + x[2].scale(m486) + x[3].scale(m488) + x[4].scale(m490) + x[5].scale(m494) + x[6].scale(m498) + x[7].scale(m502) + x[8].scale(m506) + x[9].scale(m508)).0, (x[0].scale(m511) + x[1].scale(m513) + x[2].scale(m517) + x[3].scale(m520) + x[4].scale(m522) + x[5].scale(m526) + x[6].scale(m530) + x[7].scale(m534) + x[8].scale(m537) + x[9].scale(m543)).0] }
     }
 }
@@ -9549,7 +9613,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Trivector<S, T
     #[inline(always)]
     fn transform(self, x: Trivector<S, T, O>) -> Trivector<S, T, O> {
         let m = self.m;
-        let x = x.c.map(gx::SlotArr::<S, T>);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Trivector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6]) + x[7].scale(m[7]) + x[8].scale(m[8]) + x[9].scale(m[9])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[14]) + x[5].scale(m[15]) + x[6].scale(m[16]) + x[7].scale(m[17]) + x[8].scale(m[18]) + x[9].scale(m[19])).0, (x[0].scale(m[20]) + x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[24]) + x[5].scale(m[25]) + x[6].scale(m[26]) + x[7].scale(m[27]) + x[8].scale(m[28]) + x[9].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35]) + x[6].scale(m[36]) + x[7].scale(m[37]) + x[8].scale(m[38]) + x[9].scale(m[39])).0, (x[0].scale(m[40]) + x[1].scale(m[41]) + x[2].scale(m[42]) + x[3].scale(m[43]) + x[4].scale(m[44]) + x[5].scale(m[45]) + x[6].scale(m[46]) + x[7].scale(m[47]) + x[8].scale(m[48]) + x[9].scale(m[49])).0, (x[0].scale(m[50]) + x[1].scale(m[51]) + x[2].scale(m[52]) + x[3].scale(m[53]) + x[4].scale(m[54]) + x[5].scale(m[55]) + x[6].scale(m[56]) + x[7].scale(m[57]) + x[8].scale(m[58]) + x[9].scale(m[59])).0, (x[0].scale(m[60]) + x[1].scale(m[61]) + x[2].scale(m[62]) + x[3].scale(m[63]) + x[4].scale(m[64]) + x[5].scale(m[65]) + x[6].scale(m[66]) + x[7].scale(m[67]) + x[8].scale(m[68]) + x[9].scale(m[69])).0, (x[0].scale(m[70]) + x[1].scale(m[71]) + x[2].scale(m[72]) + x[3].scale(m[73]) + x[4].scale(m[74]) + x[5].scale(m[75]) + x[6].scale(m[76]) + x[7].scale(m[77]) + x[8].scale(m[78]) + x[9].scale(m[79])).0, (x[0].scale(m[80]) + x[1].scale(m[81]) + x[2].scale(m[82]) + x[3].scale(m[83]) + x[4].scale(m[84]) + x[5].scale(m[85]) + x[6].scale(m[86]) + x[7].scale(m[87]) + x[8].scale(m[88]) + x[9].scale(m[89])).0, (x[0].scale(m[90]) + x[1].scale(m[91]) + x[2].scale(m[92]) + x[3].scale(m[93]) + x[4].scale(m[94]) + x[5].scale(m[95]) + x[6].scale(m[96]) + x[7].scale(m[97]) + x[8].scale(m[98]) + x[9].scale(m[99])).0] }
     }
 }
@@ -9560,6 +9624,14 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Even, Trivector<(), f64,
     fn from(p: gx::Prepared<Even, Trivector<(), f64, O>, T, 100>) -> Self {
         let m = p.m;
         Trivector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14], m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35], m[36], m[37], m[38], m[39]], [m[40], m[41], m[42], m[43], m[44], m[45], m[46], m[47], m[48], m[49]], [m[50], m[51], m[52], m[53], m[54], m[55], m[56], m[57], m[58], m[59]], [m[60], m[61], m[62], m[63], m[64], m[65], m[66], m[67], m[68], m[69]], [m[70], m[71], m[72], m[73], m[74], m[75], m[76], m[77], m[78], m[79]], [m[80], m[81], m[82], m[83], m[84], m[85], m[86], m[87], m[88], m[89]], [m[90], m[91], m[92], m[93], m[94], m[95], m[96], m[97], m[98], m[99]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Even, 100> for Trivector<(), f64, O> {
+    type Output = Trivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Even, Trivector<(), f64, O>, T, 100>) -> Trivector<(Trivector<(), f64, O>,), T, O> {
+        p.into()
     }
 }
 

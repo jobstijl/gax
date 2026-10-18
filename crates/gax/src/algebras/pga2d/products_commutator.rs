@@ -5,10 +5,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -26,10 +26,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -47,10 +47,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Direction<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -68,10 +68,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -89,10 +89,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Translator<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -110,10 +110,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -131,10 +131,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -152,10 +152,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -178,10 +178,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -199,10 +199,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -220,10 +220,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Direction<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -241,10 +241,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -262,10 +262,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Translator<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -283,10 +283,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -304,10 +304,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -325,10 +325,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -351,10 +351,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -372,10 +372,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -393,10 +393,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -414,10 +414,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -435,10 +435,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -456,10 +456,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -482,10 +482,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -503,10 +503,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -524,10 +524,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Direction<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -545,10 +545,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Translator<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -566,10 +566,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -587,10 +587,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -608,10 +608,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -634,10 +634,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -655,10 +655,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -676,10 +676,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -697,10 +697,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -718,10 +718,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -739,10 +739,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -765,10 +765,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -786,10 +786,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -807,10 +807,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Direction<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -828,10 +828,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -849,10 +849,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Translator<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -870,10 +870,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -891,10 +891,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -912,10 +912,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -938,10 +938,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -959,10 +959,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -980,10 +980,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Direction<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -1001,10 +1001,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -1022,10 +1022,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Translator<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -1043,10 +1043,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Line {
             o: core::marker::PhantomData,
@@ -1064,10 +1064,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Point {
             o: core::marker::PhantomData,
@@ -1085,10 +1085,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1111,10 +1111,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Line<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1137,10 +1137,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Point<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1163,10 +1163,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Direction<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1189,10 +1189,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1215,10 +1215,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Translator<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1241,10 +1241,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1267,10 +1267,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Flector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,
@@ -1293,10 +1293,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
-            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             o: core::marker::PhantomData,

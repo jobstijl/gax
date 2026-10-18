@@ -103,7 +103,7 @@ mod kalman {
         // The velocity of `here` under a body-frame twist.
         let shift = B::slot().commutator(here).of(estimate >> B::slot());
         let pairing = Readout::slot() & B::slot();
-        let readout = pairing.solve(Line::slot() & shift);
+        let readout = pairing.solve_pairing(Line::slot() & shift);
         readout & sigma.of(readout)
     }
 

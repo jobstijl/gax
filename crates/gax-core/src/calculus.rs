@@ -7,7 +7,7 @@
 //! vector it is the vector derivative `∇F`, whose grade parts are the divergence `∇·F` and the
 //! curl `∇∧F`: in spacetime algebra Maxwell's equations are `∇F = J`.
 //!
-//! [`jacobian`](crate::dual::jacobian) gives the derivative as a map, which needs no metric.
+//! [`jacobian`](crate::jet::jacobian) gives the derivative as a map, which needs no metric.
 //! Taking its blades back to elements does: the reciprocal frame inverts the Gram matrix of the
 //! kind's blades. A kind holding a null direction, such as any PGA kind with `e0` in a blade,
 //! has a singular Gram matrix and no frame, so these functions do not exist for it (a compile
@@ -32,7 +32,7 @@
 //! ```
 
 use crate::coef::Coef;
-use crate::dual::{At, J1, J2, variables, variables2};
+use crate::jet::{At, J1, J2, variables, variables2};
 use crate::kind::{Extensor, Kind, Retype};
 use crate::ops::{Gp, Lc, Wedge};
 use core::ops::Add;
@@ -53,7 +53,7 @@ use core::ops::Add;
     message = "`{Self}` has no reciprocal frame",
     label = "no reciprocal frame",
     note = "the Gram matrix of the kind's blades under the scalar product is singular: the kind holds a null direction (such as PGA's `e0`), so a derivative cannot be taken back to an element of it",
-    note = "`gax::dual::gradient` and `jacobian` give the derivative as the form or map it is, which needs no metric"
+    note = "`gax::jet::gradient` and `jacobian` give the derivative as the form or map it is, which needs no metric"
 )]
 pub trait Reciprocal: Kind {
     /// The reciprocal blades: `FRAME[i]` lists `e^i` as `(coefficient index, numerator,
@@ -140,7 +140,7 @@ where
 /// reciprocal blades on the left. With respect to a vector, the vector derivative `∇f`. Its kind
 /// is that of the geometric product of `x` and `f(x)`.
 ///
-/// `f` sees its argument with [`Jet`](crate::dual::Jet) coefficients, as for [`jacobian`](crate::dual::jacobian),
+/// `f` sees its argument with [`Jet`](crate::jet::Jet) coefficients, as for [`jacobian`](crate::jet::jacobian),
 /// so it is written generic over the coefficient type, or as a closure over the jet type.
 ///
 /// ```
@@ -210,7 +210,7 @@ where
 
 /// `(f(x), ∂_X ∗ ∂_X f(x))`: the second derivative contracted by the scalar product,
 /// `Σ_{I,J} (e^I ∗ e^J) ∂_I ∂_J f`. With respect to a vector, the Laplacian `∇²f = ∇·∇f`, of the
-/// kind of `f`. One evaluation of `f` on jets of jets, as [`hessian`](crate::dual::hessian).
+/// kind of `f`. One evaluation of `f` on jets of jets, as [`hessian`](crate::jet::hessian).
 ///
 /// ```
 /// use gax::calculus::laplacian;

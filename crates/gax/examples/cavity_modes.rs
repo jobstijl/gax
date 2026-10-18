@@ -95,12 +95,12 @@ fn main() {
             &g.laplacian_form::<S>(0) * S::slot(),
             &g.star::<S>(0) * S::slot(),
         );
-        let diagonal = form.eigh(&star, exact.len()).0;
+        let diagonal = form.eigh_with(&star, exact.len()).0;
         let (stiffness, mass) = (
             &g.stiffness::<S>(0) * S::slot(),
             &g.mass::<S>(0) * S::slot(),
         );
-        let galerkin = stiffness.eigh(&mass, exact.len()).0;
+        let galerkin = stiffness.eigh_with(&mass, exact.len()).0;
         let error = |v: &[f64]| {
             v.iter()
                 .zip(&exact)

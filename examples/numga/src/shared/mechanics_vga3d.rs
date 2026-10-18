@@ -43,7 +43,7 @@ pub fn adjoint<O: Orientation>(
 ) -> oriented::Vector<(oriented::Vector<(), f64, O>,), f64, O> {
     let open = <oriented::Vector<(), f64, O> as Slot>::slot;
     let metric = open() | open();
-    metric.solve(open() | map)
+    metric.solve_pairing(open() | map)
 }
 
 /// The curl of a map whose first slot takes a direction, `Σ e_i ^ map(e_i)`: the bivector whose

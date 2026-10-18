@@ -54,14 +54,14 @@ mod crystal {
     /// the solve of `k' · A(x) = k · x` for every `x`.
     pub fn carried_wavevector(deformation: Linear, k: V) -> V {
         let pairing = Vector::slot() | deformation.of(Vector::slot());
-        pairing.solve(k | Vector::slot())
+        pairing.solve_pairing(k | Vector::slot())
     }
 
     /// The phase plane whose incidence with every deformed position is the old one's with the
     /// position: the same solve against the regressive pairing, `P' ∨ A(x) = P ∨ x`.
     pub fn carried_plane(deformation: Linear, plane: B) -> B {
         let incidence = B::slot() & deformation.of(Vector::slot());
-        incidence.solve(plane & Vector::slot())
+        incidence.solve_pairing(plane & Vector::slot())
     }
 
     impl Crystal {

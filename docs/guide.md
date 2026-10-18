@@ -287,17 +287,18 @@ map once and apply it: for 1024 points that is about 25% faster, see
 
 ## 6. Solving, eigenproblems, and pairings
 
-Maps between kinds of the same size have `inverse`, `det`, `solve`, `svd` and, for maps from a kind
-to itself, `trace`. A map between kinds of different sizes has no `inverse`, and the compiler says
+Maps between kinds of the same size have `inverse`, `det`, `solve` and, for maps from a kind to
+itself, `trace`. A map between kinds of different sizes has no `inverse`, and the compiler says
 so. Right-hand sides keep their slots: solving against a map returns a map. The right-hand side
 has the map's output kind, orientation included (§5): an inertia, from twists to momenta, solves
 against a momentum, and a pairing `forques & twists` (an extrinsic scalar) against an extrinsic
 reading.
 
-Maps of any shape have their singular values: `svdvals` (descending) and `svd_thin`, which adds
-the right singular vectors (values of the input kind; those of zero singular values span the
-null space) and the left ones. A form `Scalar<(A, B)>` is the map `A <- (B,)` with the same
-coefficients through `as_map`, for `svd_thin`, `pinv` or `det`. `of_both(p, q)` fills both
+Maps of any shape have their singular values: `svdvals` (descending) and `svd`, a `gax::Svd`
+that adds the right singular vectors as `inputs` (values of the input kind; those of zero
+singular values span the null space) and the left ones as `outputs`, with
+`m.of(inputs[i]) == values[i] * outputs[i]`. A form `Scalar<(A, B)>` is the map `A <- (B,)` with
+the same coefficients through `as_map`, for `svd`, `pinv` or `det`. `of_both(p, q)` fills both
 slots of a two-slot map with maps at once (`M <- (A, B)` with `p: A <- (X,)`, `q: B <- (Y,)` gives
 `M <- (X, Y)`): a cost form pulled back through a step's dynamics and actuation.
 
@@ -348,10 +349,10 @@ assert!((x ^ floor).approx_eq(&l, 1e-12));
 let back: Plane<(Line,), f64> = meet.pinv();
 ```
 
-When the unknown itself has two slots (a dyad, a covariance, a second moment), `lstsq_pair`
+When the unknown itself has two slots (a dyad, a covariance, a second moment), `lstsq_dyad`
 solves for both of the map's first two slots at once, as numga's `lstsq` does when it unbinds
-two slots, and `of_pair` binds such a value back in: for `m: K <- (A, B, R…)` the result is the
-least-norm `x: A<(B,)>` with `m.of_pair(x) ≈ rhs`. The examples `geometry_pose_diffusion`
+two slots, and `of_dyad` binds such a value back in: for `m: K <- (A, B, R…)` the result is the
+least-norm `x: A<(B,)>` with `m.of_dyad(x) ≈ rhs`. The examples `geometry_pose_diffusion`
 (a Lyapunov equation) and `mechanics_inertia` (a second moment from its inertia) use it:
 
 ```rust
@@ -361,8 +362,8 @@ use gax::pga3d::{Line, Point, intrinsic};
 // A dyad on points whose joins sum to a given line: the least-norm one is antisymmetric.
 let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
 let join: intrinsic::Line<(Point, Point), f64> = Point::slot() & Point::slot();
-let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
-assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
+let x: Point<(Point,), f64> = join.lstsq_dyad(p & q);
+assert!(join.of_dyad(x).approx_eq(&(p & q), 1e-12));
 ```
 
 Forms (`Scalar<(A, A)>`) have `eigh_with(metric)` for the generalized eigenproblem between two
@@ -392,7 +393,7 @@ let eye = Point::<(), f64>::xyz(0.0, 0.0, 5.0);
 let screen = Plane::<(), f64>::from_normal([0.0, 0.0, 1.0], 0.0);
 let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
 let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
-let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & projection);
+let on_planes: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & projection);
 // on_planes.of(l) & p == l & projection.of(p) for every plane l and point p
 ```
 
@@ -787,7 +788,7 @@ representation and uses the fast path where there is one (ADR-044):
 
 ```rust
 use gax::pga3d::{Forque, Line, PrincipalInertia};
-use gax::{LinearMap, SquareLinearMap};
+use gax::SquareLinearMap;
 
 /// The twist a momentum gives the body, for any representation of its inertia: from momenta
 /// (intrinsic lines, `Forque`) to twists (extrinsic, `Line`).
@@ -801,7 +802,7 @@ let fast = twist(body, f); // four reciprocals and six products
 let dense = twist(body.to_dense(), f); // LU on the 6 × 6
 assert!((fast - dense).c.iter().all(|x| x.abs() < 1e-15));
 
-// It binds into dense maps and forms as they are, with no `to_map()`:
+// It binds into dense maps and forms as they are, with no `to_dense()`:
 let energy = Line::slot() & body.of(Line::slot()); // the kinetic energy form, Scalar <- (Line, Line)
 assert!((energy.of(fast).of(fast).s() - (fast & body.of(fast)).s()).abs() < 1e-15);
 ```
@@ -819,7 +820,7 @@ out exact to rounding, in one pass.
 
 The derivative with respect to a gax value is itself an extensor, as in numga:
 
-* `gax::dual::jacobian(f, x)` of `f: A -> B` returns `f(x)` and the map `B <- (A,)`. Binding a
+* `gax::jet::jacobian(f, x)` of `f: A -> B` returns `f(x)` and the map `B <- (A,)`. Binding a
   small step gives the first-order change: `f(x + dx) ≈ f(x) + df.of(dx)`. A function that
   returns a map `B <- (S,)` gets `A`'s slot after its own: `B <- (S, A)`.
 * `gradient(f, x)` of a scalar function returns the linear form `Scalar <- (A,)`, not an element
@@ -827,12 +828,12 @@ The derivative with respect to a gax value is itself an extensor, as in numga:
 * `hessian(f, x)` returns the value, the gradient and the second derivative, the symmetric form
   `Scalar <- (A, A)`.
 
-They are ordinary maps and forms, so `of`, `solve`, `lstsq` and `eigh` apply to them. A Newton
-step is `x - hessian.solve(gradient)`. Here it recovers a rigid motion from where it took three
-points, iterating on the motion's twist `b` (the motion is `exp(b)`):
+They are ordinary maps and forms, so `of`, `solve_pairing`, `lstsq` and `eigh` apply to them. A
+Newton step is `x - hessian.solve_pairing(gradient)`. Here it recovers a rigid motion from where it
+took three points, iterating on the motion's twist `b` (the motion is `exp(b)`):
 
 ```rust
-use gax::dual::hessian;
+use gax::jet::hessian;
 use gax::pga3d::{Line, Point};
 use gax::{ApproxEq, Real};
 
@@ -857,13 +858,13 @@ let mut b = Line::<(), f64>::zero();
 for _ in 0..8 {
     // gradient: Scalar <- Line; curvature: Scalar <- (Line, Line)
     let (_, gradient, curvature) = hessian(|b| misfit(b, &pairs), b);
-    b = b - curvature.solve(gradient); // the Newton step, a twist
+    b = b - curvature.solve_pairing(gradient); // the Newton step, a twist
 }
 assert!(b.approx_eq(&truth, 1e-12));
 ```
 
 On a quadratic energy one Newton step lands on the minimizer. The value `f` sees has jets as its
-coefficients (`gax::dual::Jet<T, A>`: a value and one derivative per coefficient of `A`). For the
+coefficients (`gax::jet::Jet<T, A>`: a value and one derivative per coefficient of `A`). For the
 Hessian they are jets of jets. A function written over `T: Real` accepts both; constants enter
 with `map_coefs(T::from_f64)`.
 
@@ -871,7 +872,7 @@ For derivatives along loose parameters rather than a gax value, `Dual<T, N>` car
 and `derivative`, `gradient_array` and `jacobian_array` set them up:
 
 ```rust
-use gax::dual::{Dual, gradient_array};
+use gax::jet::{Dual, gradient_array};
 use gax::pga3d::{Motor, Point};
 
 type D = Dual<f64, 2>;

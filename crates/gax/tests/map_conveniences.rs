@@ -1,5 +1,5 @@
 //! Conveniences on maps from numga's ports: singular values of maps of any shape (`svdvals`,
-//! `svd_thin`) against the eigenvalues of `AᵀA`, `A v = σ u` for every pair, null vectors where
+//! `svd`) against the eigenvalues of `AᵀA`, `A v = σ u` for every pair, null vectors where
 //! the value is zero; a form's `as_map`; and `of_both`, both slots filled with maps at once.
 
 #![cfg(all(feature = "pga3d", feature = "sta"))]
@@ -39,8 +39,14 @@ fn tall_and_wide_maps() {
         let tall = Line::<(Point,), f64>::from_coeffs(core::array::from_fn(|_| {
             core::array::from_fn(|_| rng.next_f64())
         }));
-        let (s, right, left) = tall.svd_thin();
-        check_pairs(tall.c, &s, &right.map(|v| v.c), &left.map(|u| u.c));
+        let svd = tall.svd();
+        let s = svd.values;
+        check_pairs(
+            tall.c,
+            &s,
+            &svd.inputs.map(|v| v.c),
+            &svd.outputs.map(|u| u.c),
+        );
         // The squares are the eigenvalues of AᵀA (a symmetric form on points).
         let ata = tall.c.iter().fold([[0.0; 4]; 4], |mut m, r| {
             for (row, ri) in m.iter_mut().zip(r) {
@@ -59,8 +65,9 @@ fn tall_and_wide_maps() {
         let wide = Point::<(Line,), f64>::from_coeffs(core::array::from_fn(|_| {
             core::array::from_fn(|_| rng.next_f64())
         }));
-        let (s, right, left) = wide.svd_thin();
-        check_pairs(wide.c, &s, &right.map(|v| v.c), &left.map(|u| u.c));
+        let svd = wide.svd();
+        let (s, right) = (svd.values, svd.inputs);
+        check_pairs(wide.c, &s, &right.map(|v| v.c), &svd.outputs.map(|u| u.c));
         assert!(s[4].abs() < 1e-12 && s[5].abs() < 1e-12 && s[3] > 1e-8);
         for v in &right[4..] {
             assert!(wide.of(*v).c.iter().all(|x| x.abs() < 1e-12));
@@ -79,8 +86,7 @@ fn a_mixed_grade_map_s_null_space() {
     let s = wave.svdvals();
     assert!(s[2] > 1e-8, "{s:?}");
     assert!(s[3..].iter().all(|x| x.abs() < 1e-12), "{s:?}");
-    let (_, right, _) = wave.svd_thin();
-    for v in &right[3..] {
+    for v in &wave.svd().inputs[3..] {
         // Each null bivector is k ^ a: it wedges to zero with k.
         assert!((k ^ *v).c.iter().all(|x| x.abs() < 1e-12));
     }

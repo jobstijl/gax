@@ -1,8 +1,8 @@
 error[E0277]: a `gax::pga3d::oriented::Line` does not fit a slot of kind `gax::pga3d::oriented::Point`
- --> tests/compile_fail/field_wrong_cells.rs:9:25
+ --> tests/compile_fail/field_wrong_cells.rs:9:22
   |
-9 |     let _ = cells.apply(&lines);
-  |                   ----- ^^^^^^ not a blade of `gax::pga3d::oriented::Point`, or not of its orientation
+9 |     let _ = cells.of(&lines);
+  |                   -- ^^^^^^ not a blade of `gax::pga3d::oriented::Point`, or not of its orientation
   |                   |
   |                   required by a bound introduced by this call
   |
@@ -21,11 +21,11 @@ help: `gax::pga3d::oriented::Line<(), f64, O>` implements trait `SubKind<K>`
       | impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Line<(), f64, O> {}
       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::oriented::Multivector<(), f64, O>>`
       = note: required for `gax::pga3d::oriented::Point<(gax::pga3d::oriented::Point,)>` to implement `Of<gax::pga3d::oriented::Line>`
-note: required by a bound in `SparseMap::<C>::apply`
+note: required by a bound in `SparseMap::<C>::of`
  --> $WORKSPACE/crates/gax-core/src/field/sparse.rs
   |
-  |     pub fn apply<X, Y>(&self, x: &Field<X>) -> Field<Y>
-  |            ----- required by a bound in this associated function
+  |     pub fn of<X, Y>(&self, x: &Field<X>) -> Field<Y>
+  |            -- required by a bound in this associated function
   |     where
   |         C: Of<X, Output = Y>,
-  |            ^^^^^^^^^^^^^^^^^ required by this bound in `SparseMap::<C>::apply`
+  |            ^^^^^^^^^^^^^^^^^ required by this bound in `SparseMap::<C>::of`

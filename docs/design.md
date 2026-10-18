@@ -2043,18 +2043,30 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   is `unit()`. `Log` has an associated output, so `m.log()` needs no annotation; it is implemented
   on the versor kind (`M::log(unit)`), since `impl Log for Unit<M>` would implement a foreign trait
   for a foreign type. A map is applied
-  with `of` everywhere (`SparseMap`, `SquareLinearMap`, structured maps) and densified with
-  `to_dense`. The tracer's facade and `gax_core::trace` become one module. The jet module is
-  `jet`, the simplicial complex `SimplicialComplex`, the study internals private.
-* **Linear algebra results and failures.** `Svd { values, inputs, outputs }` and
-  `Eigen { values, vectors }` replace positional tuples (whose orders differed); every metric
-  eigenproblem is `eigh_with`; a pairing's solve is `solve_pairing`, its dyad binding `of_dyad` and
-  `lstsq_dyad`. Plain methods return NaN on failure as documented, `try_*` methods an `Option`.
+  with `of` everywhere (`SparseMap`, with `of_into` for a kept field, `PackedSparseMap`,
+  `SquareLinearMap`, structured maps) and densified with `to_dense`: `Prepared` is a
+  `LinearMap` (its output kind comes from a hidden trait on the input kind, which the algebra
+  owns; `impl LinearMap for Prepared<..>` in generated code would break the orphan rule), so it
+  binds into dense maps, and it and the structured maps keep an inherent `to_dense` that needs
+  no import. The tracer's facade re-exports `Traceable`, so `gax::trace` is one module with or
+  without the feature. The jet module is `jet`, the simplicial complex `SimplicialComplex`, the
+  study internals private.
+* **Linear algebra results and failures.** `Svd { values, inputs, outputs }` replaces the
+  positional tuples of `svd` (`(u, σ, v)`) and `svd_thin` (`(σ, v, u)`): one `svd`, for maps of
+  any shape, one triple per input blade with `m.of(inputs[i]) = values[i] outputs[i]` (on a
+  square map the same factorization as the square `svd` was). The eigenproblems keep their
+  `(values, vectors)` tuples, which agree. Every metric eigenproblem is `eigh_with`, the sparse
+  one included (`eigh_with_block` stays for larger Lanczos blocks); a pairing's solve is
+  `solve_pairing` (the trait method too), its dyad binding `of_dyad` and `lstsq_dyad`
+  (`OfDyad`, `LeastSquaresDyad`). Plain methods return NaN on failure as documented, `try_*`
+  methods an `Option` (still open).
 * **A smaller visible surface.** Items only generated code needs (`True`, `False`, `FillList`,
   `KindEq`, `SplitLast`, `MoveToFront`, `HasCat`, `SlotArr`, `Reorient`, `NewtonStep`,
-  `LogNeedsUnit`, `orientation::reflect`, `slots::by_entries`, `trace::write_kind_path`, the
-  `linalg` kernels) move to a hidden `gx::__private`; methods are emitted only where their bounds
-  can hold.
+  `LogNeedsUnit`, `PreparedDense`, `orientation::reflect`, `slots::by_entries`, the `linalg`
+  kernels and the `study` functions) move to a hidden `gx::__private`, which the generator
+  names; `fill`, `permute`, `linalg` and `study` become private modules, the items that stay in
+  public ones are `#[doc(hidden)]`, and `trace::write_kind_path` is private. Methods are emitted
+  only where their bounds can hold.
 * **Geometry in gax types, evenly across algebras.** Constructors take gax values, not float
   tuples (`Motor::translation(d: Direction)`, `Plane::with_normal(n, d)`); every algebra gets the
   same roles (`Twist`, `Forque`, `Even`, `Odd`) and the same helper set where it has the geometry

@@ -133,7 +133,7 @@ pub fn girder(
     let vertex_mass = density * length * height / vertices as f64;
     let masses = Field::from_fn(vertices, |_| S::new(vertex_mass));
     let weights = SparseMap::from_diagonal(&masses.map(|m| Direction::slot() * m.s()));
-    let (values, fields) = stiffness(&truss, bar_stiffness).eigh(&weights, RIGID + modes);
+    let (values, fields) = stiffness(&truss, bar_stiffness).eigh_with(&weights, RIGID + modes);
     // Centred on the mass: the points' mean, as the masses are equal.
     let centre = truss.positions.mean();
     let to_centre = Motor::between(centre, origin());

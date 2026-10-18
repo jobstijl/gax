@@ -492,7 +492,7 @@ fn phi_pair_cx<T: Real>(s: Complex<T>, p: Complex<T>) -> [Complex<T>; 2] {
 /// // Rotations in two planes by half-angles 0.4 and 0.9: roots cos²0.4, cos²0.9, 1, 1.
 /// let (c1, c2) = (0.4f64.cos().powi(2), 0.9f64.cos().powi(2));
 /// let p = [c1 + c2 + 2.0, c1 * c2 + 2.0 * (c1 + c2) + 1.0, 2.0 * c1 * c2 + c1 + c2, c1 * c2];
-/// let [a0, a1, a2, a3] = gax_core::study::log_coeffs_8d(p);
+/// let [a0, a1, a2, a3] = gax_core::__private::study::log_coeffs_8d(p);
 /// let at = |u: f64| ((a3 * u + a2) * u + a1) * u + a0;
 /// // At u = cos²θ the interpolant is φ = cos θ · θ / sin θ, and 1 at u = 1.
 /// assert!((at(c1) - 0.4f64.cos() * 0.4 / 0.4f64.sin()).abs() < 1e-13);

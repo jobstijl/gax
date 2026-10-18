@@ -61,7 +61,7 @@ where
         );
     }
 
-    /// Solve `self.apply(x) == b` by conjugate gradients with a Jacobi (diagonal)
+    /// Solve `self.of(x) == b` by conjugate gradients with a Jacobi (diagonal)
     /// preconditioner, the whole coupled system at once, starting from zero.
     ///
     /// The couplings must be symmetric positive definite under the coefficient inner product
@@ -98,7 +98,7 @@ where
         }
     }
 
-    /// Solve `self.apply(x) == b` for `x`: [`cg`](Self::cg) to a relative residual of `16 ε`,
+    /// Solve `self.of(x) == b` for `x`: [`cg`](Self::cg) to a relative residual of `16 ε`,
     /// for at most four iterations per unknown.
     ///
     /// For symmetric positive definite couplings. For any other nonsingular map,

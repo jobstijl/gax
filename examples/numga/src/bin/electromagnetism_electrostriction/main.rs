@@ -17,7 +17,7 @@
 //! about 60 ms a Newton step, too slow to animate. The animation's Newton steps take the same
 //! derivatives by the chain rule instead, in about 0.6 ms. With the dipoles held fixed the
 //! energy is a sum of terms each of the difference of two sites (a bond, a pair of dipoles),
-//! whose derivatives `gax::dual::hessian` gives and the differences carry to the sites, as
+//! whose derivatives `gax::jet::hessian` gives and the differences carry to the sites, as
 //! `docs/fields.md` describes. Letting the dipoles readjust
 //! keeps the first derivative (they are at their minimum) and softens the second by
 //! `Jᵀ R⁻¹ J`, `J` the change of the response's image of the dipoles with the shape (numga's

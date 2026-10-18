@@ -83,7 +83,7 @@ mod station {
     /// reading the error itself with `on_readouts(l)`. Solved from the incidence pairing against
     /// `Line & dynamics`; in matrix notation, the transpose.
     pub fn on_readouts(dynamics: Dynamics) -> Readouts {
-        (Readout::slot() & Twist::slot()).solve(Readout::slot() & dynamics)
+        (Readout::slot() & Twist::slot()).solve_pairing(Readout::slot() & dynamics)
     }
 
     /// The rate of change of the covariance: the dynamics on its twists, on its lines, and the
@@ -143,16 +143,16 @@ mod station {
     /// Matching its line input against the noise and solving for the coefficients on the two
     /// twist inputs gives the settled covariance, `sum x_ij e_i (e_j & l)`.
     ///
-    /// Solved for both twist slots at once with `lstsq_pair`, as numga's `lstsq` does: the
-    /// dyad coefficients `x` with `lyapunov.of_pair(x) = −noise`, put back together by the map
+    /// Solved for both twist slots at once with `lstsq_dyad`, as numga's `lstsq` does: the
+    /// dyad coefficients `x` with `lyapunov.of_dyad(x) = −noise`, put back together by the map
     /// that builds the dyads.
     pub fn settled(dynamics: Dynamics, noise: Covariance) -> Covariance {
         let (t, l) = (Twist::slot(), Readout::slot());
         // Twist <- (Twist, Twist, Line): the dynamics applied to t, and applied to s.
         let lyapunov = dynamics.of(t) * (t & l) + t * (dynamics.of(t) & l);
-        let x: Dynamics = lyapunov.lstsq_pair(-noise);
+        let x: Dynamics = lyapunov.lstsq_dyad(-noise);
         let dyads = t * (t & l);
-        dyads.of_pair(x)
+        dyads.of_dyad(x)
     }
 
     /// The covariance of readings of the vessel's position. An error moves the set point by its
@@ -161,7 +161,7 @@ mod station {
     /// covariance gives a symmetric form on lines, whose eigenpairs are the ellipse's axes.
     pub fn position_spread(covariance: Covariance) -> Spread {
         let shift = Twist::slot().commutator(origin());
-        let readout = (Readout::slot() & Twist::slot()).solve(Line::slot() & shift);
+        let readout = (Readout::slot() & Twist::slot()).solve_pairing(Line::slot() & shift);
         readout & covariance.of(readout)
     }
 

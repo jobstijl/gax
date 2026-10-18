@@ -83,7 +83,8 @@ fn main() {
     let exact: Field<S> = &d0 * &alpha;
 
     // The harmonic part: the null space of Δ₁, projected on in the star's inner product.
-    let (values, modes) = (&g.laplacian_form::<S>(1) * S::slot()).eigh(&(&star1 * S::slot()), 4);
+    let (values, modes) =
+        (&g.laplacian_form::<S>(1) * S::slot()).eigh_with(&(&star1 * S::slot()), 4);
     println!(
         "the smallest eigenvalues of Δ₁: {:.2e} {:.2e} {:.3} {:.3}",
         values[0], values[1], values[2], values[3]

@@ -317,14 +317,14 @@ mod tests {
             let dipoles = dipoles(&response, applied);
             // Each atom's dipole is its polarizability times the field at it: the applied field
             // plus the coupled fields of all the other atoms' dipoles.
-            let coupled = coupling(&positions).apply(&dipoles);
+            let coupled = coupling(&positions).of(&dipoles);
             let local = coupled.map(|f| (f + applied) * ALPHA);
             assert!(largest(&(&dipoles - &local)) < 1e-13);
             assert!(is_self_adjoint(&response, 1e-13));
             // Far from the polarization catastrophe: every eigenvalue of the response keeps more
             // than half of the one over the polarizability an isolated atom has.
             let identity = restoring(positions.len()).map_cells(|c| c * ALPHA);
-            let (lowest, _) = response.eigh(&identity, 1);
+            let (lowest, _) = response.eigh_with(&identity, 1);
             assert!(ALPHA * lowest[0] > 0.5, "{}", lowest[0]);
             gain(&dipoles, applied)
         });

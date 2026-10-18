@@ -71,16 +71,6 @@ pub trait SquareMap: Extensor<Coef: Real> {
     fn solve<X>(self, rhs: X) -> <Self::Input as Kind>::Mv<X::Slots, Self::Coef>
     where
         X: Extensor<Kind = Self::Kind, Coef = Self::Coef>;
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) = sigma[i] * u[i]`,
-    /// singular values descending.
-    #[allow(clippy::type_complexity)]
-    fn svd(
-        self,
-    ) -> (
-        <Self::Kind as Kind>::Arr<<Self::Kind as Kind>::Mv<(), Self::Coef>>,
-        <Self::Kind as Kind>::Arr<Self::Coef>,
-        <Self::Input as Kind>::Arr<<Self::Input as Kind>::Mv<(), Self::Coef>>,
-    );
 }
 
 /// The number of Jacobi sweeps used for eigen and singular value problems of size `n`.
@@ -182,25 +172,6 @@ where
         );
         let solutions = A::arr_from_fn(|i| <X::Slots as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
         <A::Mv<X::Slots, M::Coef> as Extensor>::from_coeffs(solutions)
-    }
-
-    fn svd(
-        self,
-    ) -> (
-        <M::Kind as Kind>::Arr<<M::Kind as Kind>::Mv<(), M::Coef>>,
-        <M::Kind as Kind>::Arr<M::Coef>,
-        A::Arr<A::Mv<(), M::Coef>>,
-    ) {
-        // `svd_thin`'s factorization, with `V` stored in the map's own square matrix type.
-        type Square<M, A> =
-            <<M as Extensor>::Kind as Kind>::Arr<<A as Kind>::Arr<<M as Extensor>::Coef>>;
-        let (s, v, u) = svd_thin::<M::Kind, A, M::Coef, Square<M, A>>(self.coeffs());
-        let (s, u) = (s.as_ref(), u.as_ref());
-        (
-            <M::Kind as Kind>::arr_from_fn(|k| u[k]),
-            <M::Kind as Kind>::arr_from_fn(|k| s[k]),
-            v,
-        )
     }
 }
 
@@ -360,7 +331,7 @@ where
 /// let m = Motor::<(), f64>::translation(1.0, 0.0, 0.0);
 /// let t: Point<(Point,), f64> = m >> Point::slot();
 /// let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
-/// let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & t);
+/// let on_planes: Plane<(Plane,), f64> = pairing.solve_pairing(Plane::slot() & t);
 /// let (l, p) = (Plane::new(1.0, 0.0, 0.0, -2.0), Point::xyz(3.0, 1.0, 0.0));
 /// assert!(((on_planes.of(l) & p).s() - (l & t.of(p)).s()).abs() < 1e-12);
 /// ```
@@ -374,8 +345,8 @@ pub trait Pairing: Extensor<Coef: Real> {
     ///
     /// With `rhs` a linear form (one slot) the solution is a value; with leading slots it is
     /// a map on them. The induced map of a point map `t` on planes, which exists even when `t`
-    /// is singular, is `(Plane::slot() & Point::slot()).solve(Plane::slot() & t)`.
-    fn solve<R>(
+    /// is singular, is `(Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & t)`.
+    fn solve_pairing<R>(
         self,
         rhs: R,
     ) -> <Self::First as Kind>::Mv<<R::Slots as SplitLast>::Init, Self::Coef>
@@ -395,7 +366,7 @@ where
     type First = A;
     type Second = B;
 
-    fn solve<R>(self, rhs: R) -> A::Mv<<R::Slots as SplitLast>::Init, M::Coef>
+    fn solve_pairing<R>(self, rhs: R) -> A::Mv<<R::Slots as SplitLast>::Init, M::Coef>
     where
         R: Extensor<Kind = M::Kind, Coef = M::Coef>,
         R::Slots: SplitLast<Last = B>,
@@ -620,9 +591,9 @@ where
 /// // Points to the lines joining them to `q`: rank 3, and `q` spans the null space.
 /// let q = Point::<(), f64>::xyz(0.0, 0.0, 1.0);
 /// let through_q: intrinsic::Line<(Point,), f64> = q & Point::slot();
-/// let (sigma, right, _) = through_q.svd_thin();
-/// assert!(sigma[3].abs() < 1e-12 && sigma[2] > 1e-6);
-/// let null = right[3];
+/// let svd = through_q.svd();
+/// assert!(svd.values[3].abs() < 1e-12 && svd.values[2] > 1e-6);
+/// let null = svd.inputs[3];
 /// assert!(null.c.iter().zip(q.c).all(|(a, b)| (a.abs() - b.abs() / 2f64.sqrt()).abs() < 1e-12));
 /// ```
 pub trait SingularValues: Extensor<Coef: Real> {
@@ -630,17 +601,39 @@ pub trait SingularValues: Extensor<Coef: Real> {
     type Input: Kind;
     /// The singular values, descending.
     fn svdvals(self) -> <Self::Input as Kind>::Arr<Self::Coef>;
-    /// The singular values (descending), the right singular vectors (unit values of the input
-    /// kind; those of zero singular values span the null space), and the left ones (unit values
-    /// of the output kind, zero where the singular value is): `self.of(v[i]) = σ[i] u[i]`.
-    #[allow(clippy::type_complexity)]
-    fn svd_thin(
-        self,
-    ) -> (
-        <Self::Input as Kind>::Arr<Self::Coef>,
-        <Self::Input as Kind>::Arr<<Self::Input as Kind>::Mv<(), Self::Coef>>,
-        <Self::Input as Kind>::Arr<<Self::Kind as Kind>::Mv<(), Self::Coef>>,
-    );
+    /// The singular value decomposition, one triple per input blade.
+    fn svd(self) -> Svd<Self::Input, Self::Kind, Self::Coef>;
+}
+
+/// A singular value decomposition of a map `K <- (H,)` ([`SingularValues::svd`]), one triple per
+/// input blade: `map.of(inputs[i]) = values[i] * outputs[i]`.
+///
+/// ```
+/// use gax::ApproxEq;
+/// use gax::pga3d::{Plane, Point};
+/// // A map from points to planes, its rows the planes' coefficients.
+/// let t = Plane::<(Point,), f64>::from_coeffs([
+///     [2.0, 0.0, 1.0, 0.0],
+///     [0.0, 1.0, 0.0, 3.0],
+///     [1.0, 0.0, 2.0, 0.0],
+///     [0.0, 0.5, 0.0, 1.0],
+/// ]);
+/// let svd = t.svd();
+/// assert!(svd.values.windows(2).all(|w| w[0] >= w[1]));
+/// for i in 0..4 {
+///     assert!(t.of(svd.inputs[i]).approx_eq(&(svd.outputs[i] * svd.values[i]), 1e-12));
+/// }
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Svd<H: Kind, K: Kind, T: Coef> {
+    /// The singular values, descending.
+    pub values: H::Arr<T>,
+    /// The right singular vectors: unit values of the input kind, those of zero singular values
+    /// spanning the null space.
+    pub inputs: H::Arr<H::Mv<(), T>>,
+    /// The left singular vectors: unit values of the output kind, zero where the singular value
+    /// is.
+    pub outputs: H::Arr<K::Mv<(), T>>,
 }
 
 impl<M, H> SingularValues for M
@@ -652,26 +645,17 @@ where
     type Input = H;
 
     fn svdvals(self) -> H::Arr<M::Coef> {
-        self.svd_thin().0
+        self.svd().values
     }
 
-    fn svd_thin(
-        self,
-    ) -> (
-        H::Arr<M::Coef>,
-        H::Arr<H::Mv<(), M::Coef>>,
-        H::Arr<<M::Kind as Kind>::Mv<(), M::Coef>>,
-    ) {
-        svd_thin::<M::Kind, H, M::Coef, Sq<H, M::Coef>>(self.coeffs())
+    fn svd(self) -> Svd<H, M::Kind, M::Coef> {
+        svd::<M::Kind, H, M::Coef, Sq<H, M::Coef>>(self.coeffs())
     }
 }
 
-/// [`SingularValues::svd_thin`] of the map `K <- (H,)` with coefficient rows `rows`, by
-/// one-sided Jacobi on its columns, `V` kept in the square matrix type `V` (`H::N` rows).
-#[allow(clippy::type_complexity)]
-fn svd_thin<K: Kind, H: Kind, T: Real, V: SquareArr<T>>(
-    rows: &K::Arr<H::Arr<T>>,
-) -> (H::Arr<T>, H::Arr<H::Mv<(), T>>, H::Arr<K::Mv<(), T>>) {
+/// [`SingularValues::svd`] of the map `K <- (H,)` with coefficient rows `rows`, by one-sided
+/// Jacobi on its columns, `V` kept in the square matrix type `V` (`H::N` rows).
+fn svd<K: Kind, H: Kind, T: Real, V: SquareArr<T>>(rows: &K::Arr<H::Arr<T>>) -> Svd<H, K, T> {
     let rows = rows.as_ref();
     let cols: H::Arr<Col<K, (), T>> =
         H::arr_from_fn(|h| Col(K::arr_from_fn(|k| rows[k].as_ref()[h])));
@@ -708,7 +692,11 @@ fn svd_thin<K: Kind, H: Kind, T: Real, V: SquareArr<T>>(
         let inv = T::select_lt(T::zero(), len, len.recip(), T::zero());
         value_from::<K, T>(|k| w.as_ref()[r].0.as_ref()[k] * inv)
     });
-    (s, right, left)
+    Svd {
+        values: s,
+        inputs: right,
+        outputs: left,
+    }
 }
 
 /// Both slots of a two-slot extensor `M <- (A, B)` filled with maps at once: with
@@ -1034,7 +1022,7 @@ impl<A: Kind, B: Kind, T: Real> SquareArr<T> for PairSq<A, B, T> {
     }
 }
 
-/// The dispatch behind [`LeastSquaresPair`] on a slot list `(A, B, R…)`: the map's columns, one
+/// The dispatch behind [`LeastSquaresDyad`] on a slot list `(A, B, R…)`: the map's columns, one
 /// per pair of blades of its first two slots, each a `K` over the remaining slots `R…`.
 pub trait PairSlots<K: Kind, T: Real>: Slots {
     /// The first slot.
@@ -1086,34 +1074,34 @@ pair_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
 
 /// A map `K <- (A, B, R…)` with a two-slot value `x: A<(B,)>` bound into its first two slots:
 /// `Σᵢⱼ xᵢⱼ self(aᵢ, bⱼ)`, a `K` over `R…` (numga's binding of a tensor to two slots at once).
-pub trait OfPair: Extensor<Coef: Real> {
+pub trait OfDyad: Extensor<Coef: Real> {
     /// The two-slot value, `A<(B,)>`.
-    type Pair: Extensor;
+    type Dyad: Extensor;
     /// The result, `K` over `R…`.
     type Image: Extensor;
     /// `Σᵢⱼ xᵢⱼ self(aᵢ, bⱼ)`.
-    fn of_pair(self, x: Self::Pair) -> Self::Image;
+    fn of_dyad(self, x: Self::Dyad) -> Self::Image;
 }
 
-impl<M> OfPair for M
+impl<M> OfDyad for M
 where
     M: Extensor<Coef: Real>,
     M::Slots: PairSlots<M::Kind, M::Coef>,
 {
-    type Pair = <<M::Slots as PairSlots<M::Kind, M::Coef>>::First as Kind>::Mv<
+    type Dyad = <<M::Slots as PairSlots<M::Kind, M::Coef>>::First as Kind>::Mv<
         (<M::Slots as PairSlots<M::Kind, M::Coef>>::Second,),
         M::Coef,
     >;
     type Image = <M::Kind as Kind>::Mv<<M::Slots as PairSlots<M::Kind, M::Coef>>::Rest, M::Coef>;
 
-    fn of_pair(self, x: Self::Pair) -> Self::Image {
-        of_pair::<M::Kind, M::Slots, M::Coef>(self.coeffs(), &x)
+    fn of_dyad(self, x: Self::Dyad) -> Self::Image {
+        of_dyad::<M::Kind, M::Slots, M::Coef>(self.coeffs(), &x)
     }
 }
 
 /// Least squares for an unknown in a map's first *two* slots, as numga's `lstsq` unbinding two
 /// slots at once: for `self: K <- (A, B, R…)` and `rhs: K` over `R…`, the `x: A<(B,)>` of least
-/// norm with `self.of_pair(x) ≈ rhs` ([`OfPair`]). The columns stay nested (no flat array of
+/// norm with `self.of_dyad(x) ≈ rhs` ([`OfDyad`]). The columns stay nested (no flat array of
 /// `A::N · B::N` is needed), and the factorization is [`PseudoInverse::pinv`]'s one-sided
 /// Jacobi.
 ///
@@ -1124,39 +1112,39 @@ where
 /// // antisymmetric one (a symmetric part joins to zero).
 /// let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
 /// let join: intrinsic::Line<(Point, Point), f64> = Point::slot() & Point::slot();
-/// let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
-/// assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
+/// let x: Point<(Point,), f64> = join.lstsq_dyad(p & q);
+/// assert!(join.of_dyad(x).approx_eq(&(p & q), 1e-12));
 /// for i in 0..4 {
 ///     for j in 0..4 {
 ///         assert!((x.c[i][j] + x.c[j][i]).abs() < 1e-12);
 ///     }
 /// }
 /// ```
-pub trait LeastSquaresPair<X>: OfPair {
+pub trait LeastSquaresDyad<X>: OfDyad {
     /// With the default cutoff (see [`PseudoInverse::pinv`]).
-    fn lstsq_pair(self, rhs: X) -> Self::Pair;
+    fn lstsq_dyad(self, rhs: X) -> Self::Dyad;
     /// With the cutoff `rcond` relative to the largest singular value.
-    fn lstsq_pair_with(self, rhs: X, rcond: Self::Coef) -> Self::Pair;
+    fn lstsq_dyad_with(self, rhs: X, rcond: Self::Coef) -> Self::Dyad;
 }
 
-impl<M, X> LeastSquaresPair<X> for M
+impl<M, X> LeastSquaresDyad<X> for M
 where
     M: Extensor<Coef: Real>,
     M::Slots: PairSlots<M::Kind, M::Coef>,
     X: Extensor<Coef = M::Coef, Slots = <M::Slots as PairSlots<M::Kind, M::Coef>>::Rest>,
     X::Kind: SubKind<M::Kind>,
 {
-    fn lstsq_pair(self, rhs: X) -> Self::Pair {
-        lstsq_pair::<M::Kind, M::Slots, M::Coef, X>(self.coeffs(), &rhs, None)
+    fn lstsq_dyad(self, rhs: X) -> Self::Dyad {
+        lstsq_dyad::<M::Kind, M::Slots, M::Coef, X>(self.coeffs(), &rhs, None)
     }
 
-    fn lstsq_pair_with(self, rhs: X, rcond: M::Coef) -> Self::Pair {
-        lstsq_pair::<M::Kind, M::Slots, M::Coef, X>(self.coeffs(), &rhs, Some(rcond))
+    fn lstsq_dyad_with(self, rhs: X, rcond: M::Coef) -> Self::Dyad {
+        lstsq_dyad::<M::Kind, M::Slots, M::Coef, X>(self.coeffs(), &rhs, Some(rcond))
     }
 }
 
 #[inline]
-fn lstsq_pair<K, S, T, X>(
+fn lstsq_dyad<K, S, T, X>(
     m: &K::Arr<S::Arr<T>>,
     rhs: &X,
     rcond: Option<T>,
@@ -1182,7 +1170,7 @@ where
 }
 
 #[inline]
-fn of_pair<K, S, T>(
+fn of_dyad<K, S, T>(
     m: &K::Arr<S::Arr<T>>,
     x: &<S::First as Kind>::Mv<(S::Second,), T>,
 ) -> K::Mv<S::Rest, T>

@@ -25,7 +25,7 @@ mod disks;
 use core::ops::{Add, Mul, Sub};
 use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
-use gax::mesh::Complex;
+use gax::mesh::SimplicialComplex;
 use gax::vga3d::{Bivector, Scalar, Vector, intrinsic};
 use gax::{Extensor, Kind};
 
@@ -70,7 +70,7 @@ pub struct Mesh<V = Vector3> {
     /// against it (`-1`).
     pub face_edge_orientation: Vec<[f64; 3]>,
     /// The topology, from which the edges and the incidence maps come.
-    complex: Complex<3>,
+    complex: SimplicialComplex<3>,
 }
 
 impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
@@ -80,7 +80,8 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     /// If a face names a vertex that is not there.
     #[must_use]
     pub fn new(vertices: Field<V>, faces: Vec<[usize; 3]>) -> Self {
-        let complex = Complex::new(vertices.len(), &faces).unwrap_or_else(|e| panic!("{e}"));
+        let complex =
+            SimplicialComplex::new(vertices.len(), &faces).unwrap_or_else(|e| panic!("{e}"));
         let edges = complex.simplices(1).map(|e| [e[0], e[1]]).collect();
         let face_edges = (0..faces.len())
             .map(|f| core::array::from_fn(|k| complex.faces(2, f)[k].0))
@@ -567,7 +568,7 @@ mod tests {
             let cochain: Field<Scalar3> = (0..mesh.edges.len())
                 .map(|e| Scalar3::new(((e * 37) % 11) as f64 * 0.2 - 1.0))
                 .collect();
-            let reconstructed = mesh.reconstruction().apply(&cochain);
+            let reconstructed = mesh.reconstruction().of(&cochain);
             for f in 0..mesh.faces.len() {
                 let w = g.whitney_1(&lib, &cochain, f, &[1.0 / 3.0; 3]);
                 let r = reconstructed.site(f);
@@ -597,7 +598,7 @@ mod tests {
                     .all(|(_, _, c)| c.s() == 0.0)
             );
             assert!(squared_size(&(&mesh.d1() * &differences)) < 1e-24);
-            let reconstructed = mesh.reconstruction().apply(&differences);
+            let reconstructed = mesh.reconstruction().of(&differences);
             assert!(reconstructed.iter().all(|g| (g - gradient).norm() < 1e-12));
 
             // The cotangent Hodge measures the energy of integrating the squared gradient.

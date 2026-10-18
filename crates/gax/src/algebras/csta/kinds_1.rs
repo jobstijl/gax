@@ -116,13 +116,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Scalar<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Scalar<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -163,49 +163,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Scalar<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Scalar<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Scalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Scalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Scalar`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Scalar<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Scalar<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Scalar<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Scalar<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -222,13 +222,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Scalar<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Scalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Scalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Scalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -376,7 +376,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Scalar<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Scalar<S, T, O> {
     type Out = Scalar<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Scalar<S, T, O2> {
@@ -469,7 +469,7 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T, O> {
     /// This form `Scalar <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
-    /// methods of maps (`svd_thin`, `pinv`, `svdvals`, `det`).
+    /// methods of maps (`svd`, `pinv`, `svdvals`, `det`).
     #[inline]
     pub fn as_map(self) -> <A as gx::Kind>::Mv<(B,), T> {
         gx::FormAsMap::as_map(self)
@@ -504,15 +504,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Scalar<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Scalar<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Scalar<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -555,16 +554,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Scalar<(), f64, O> as gx::Kind>::Arr<Scalar<(), T, O>>, <Scalar<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Scalar<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Scalar`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -605,13 +594,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Scalar<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Scalar<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -654,7 +643,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Scalar<S,
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -662,7 +651,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Scalar<S,
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Scalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -692,7 +681,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Scalar<S,
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Scalar { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Scalar { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -700,7 +689,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Scalar<S, T, O
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Scalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Scalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -709,7 +698,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Scalar<S, T
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Scalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Scalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -863,7 +852,7 @@ impl<T: gx::Real> Scalar<(), T, gx::Extrinsic> {
 
 }
 
-impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Scalar<(), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Scalar<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
@@ -1031,13 +1020,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Vector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Vector<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -1078,49 +1067,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Vector<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Vector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Vector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Vector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Vector`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Vector<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Vector<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Vector<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Vector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -1137,13 +1126,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Vector<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Vector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Vector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Vector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -1291,7 +1280,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Vector<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Vector<S, T, O> {
     type Out = Vector<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Vector<S, T, O2> {
@@ -1440,15 +1429,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Vector<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Vector<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Vector<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -1491,16 +1479,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Vector<(), f64, O> as gx::Kind>::Arr<Vector<(), T, O>>, <Vector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Vector<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Vector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -1541,13 +1519,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Vector<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Vector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Vector<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -1590,7 +1568,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Vector<S,
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -1598,7 +1576,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Vector<S,
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Vector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -1628,7 +1606,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Vector<S,
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Vector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Vector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -1636,7 +1614,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Vector<S, T, O
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Vector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Vector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -1645,7 +1623,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Vector<S, T
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Vector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Vector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -1839,7 +1817,7 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
 
 }
 
-impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Vector<(), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Vector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
@@ -2015,13 +1993,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Twist<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Twist<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -2062,49 +2040,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Twist<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Twist<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Twist { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Twist { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Twist`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Twist<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Twist<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Twist<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Twist<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -2121,13 +2099,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Twist<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Twist<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Twist { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Twist { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -2275,7 +2253,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Twist<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Twist<S, T, O> {
     type Out = Twist<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Twist<S, T, O2> {
@@ -2448,15 +2426,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Twist<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Twist<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Twist<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -2499,16 +2476,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Twist<(), f64, O> as gx::Kind>::Arr<Twist<(), T, O>>, <Twist<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Twist<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Twist`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -2549,13 +2516,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Twist<(A, B), T,
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Twist<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Twist<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Twist<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -2598,7 +2565,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Twist<S, 
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -2606,7 +2573,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Twist<S, 
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Twist { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -2636,7 +2603,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Twist<S, 
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Twist { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Twist { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -2644,7 +2611,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Twist<S, T, O>
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Twist { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Twist { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -2653,7 +2620,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Twist<S, T,
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Twist { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Twist { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -2941,7 +2908,7 @@ impl<T: gx::Real, O: gx::Orientation> Twist<(), T, O> {
         let p25 = p24 * T::from_i64(8);
         let p26 = p21.mul_add(T::from_i64(4), p25);
         let p27 = -p26;
-        let [s0, s1] = gx::study::rsqrt_q(p19, p27);
+        let [s0, s1] = gx::__private::study::rsqrt_q(p19, p27);
         let t0 = x[0] * x[3];
         let t2 = x[1] * x[4];
         let t3 = s1 * t2;
@@ -3048,7 +3015,7 @@ impl<T: gx::Real> Twist<(), T, gx::Extrinsic> {
         let p25 = p24 * T::from_i64(8);
         let p26 = p21.mul_add(T::from_i64(4), p25);
         let p27 = -p26;
-        let [c0, c1, s0, s1] = gx::study::exp_coeffs_q(p19, p27);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_q(p19, p27);
         let t0 = x[0] * x[3];
         let t2 = x[1] * x[4];
         let t3 = s1 * t2;
@@ -3150,7 +3117,7 @@ impl<T: gx::Real> Twist<(), T, gx::Extrinsic> {
 
 }
 
-impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Twist<(), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Twist<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
@@ -3416,13 +3383,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Bivector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Bivector<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -3463,49 +3430,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Bivector<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Bivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Bivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Bivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Bivector`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Bivector<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Bivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Bivector<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Bivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -3522,13 +3489,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Bivector<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Bivector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Bivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Bivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -3676,7 +3643,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Bivector<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Bivector<S, T, O> {
     type Out = Bivector<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Bivector<S, T, O2> {
@@ -3879,15 +3846,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Bivector<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Bivector<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Bivector<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -3930,16 +3896,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Bivector<(), f64, O> as gx::Kind>::Arr<Bivector<(), T, O>>, <Bivector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Bivector<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Bivector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -3980,13 +3936,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A, B),
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Bivector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Bivector<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -4029,7 +3985,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Bivector<
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -4037,7 +3993,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Bivector<
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Bivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -4067,7 +4023,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Bivector<
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Bivector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Bivector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -4075,7 +4031,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Bivector<S, T,
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Bivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Bivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -4084,7 +4040,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Bivector<S,
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Bivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Bivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -4632,7 +4588,7 @@ impl<T: gx::Real> Bivector<(), T, gx::Extrinsic> {
     #[inline]
     pub fn exp_from(e: [T; 3], h: [[T; 15]; 3]) -> Even<(), T> {
         // T and C = â cosh Î¼â±¼ (from the trace of ln cosh âÎ»: no cancellation for boosts).
-        let wt = gx::study::exp_weights_6d(e);
+        let wt = gx::__private::study::exp_weights_6d(e);
         let c = wt[3];
         let t = Bivector::<(), T>::from_coeffs(core::array::from_fn(|i| wt[0] * h[0][i] + wt[1] * h[1][i] + wt[2] * h[2][i]));
         let (_, _, w2, w3) = t.exp_invariants();
@@ -4643,7 +4599,7 @@ impl<T: gx::Real> Bivector<(), T, gx::Extrinsic> {
     /// `Î»â±¼ = Î¼â±¼Â²` of the 3 commuting planes are the roots of a polynomial whose
     /// coefficients are `â¨WâÂ²â©â`, `Wâ = B^â§m/m!`, and `exp B = C (1 + T + Tâ§T/2 + â¦)` with
     /// `T = Î£ tanh(Î¼â±¼) bÌâ±¼`, an interpolant of `tanh(âÎ»)/âÎ»` at the roots applied to
-    /// bivectors from `B`'s wedge powers (`gax::study::exp_weights_6d`), and
+    /// bivectors from `B`'s wedge powers (`gax_core::study::exp_weights_6d`), and
     /// `C = â cosh Î¼â±¼` from the trace of `ln cosh âÎ»`. Rotations beyond a quarter turn are
     /// turned back by one first (`exp_turn_6d`: `exp B = exp B' Â· â Ãªâ±¼`, a polynomial in
     /// their sum), and beyond three quarters `B` is halved and the result squared.
@@ -4652,7 +4608,7 @@ impl<T: gx::Real> Bivector<(), T, gx::Extrinsic> {
         T::vectorize(#[inline(always)] move || {
         let half = T::from_ratio(1, 2);
         let (e, h, ..) = self.exp_invariants();
-        let [reach, turn] = gx::study::exp_reach_6d(e);
+        let [reach, turn] = gx::__private::study::exp_reach_6d(e);
         let (mut scale, mut s) = (T::one(), 0u32);
         while s < 64 && !T::all_lt(reach * scale, T::one()) {
             scale = scale * half;
@@ -4668,7 +4624,7 @@ impl<T: gx::Real> Bivector<(), T, gx::Extrinsic> {
         let mut r = if T::all_lt(turn * scale, T::one()) {
             Self::exp_from(e, h)
         } else {
-            let tz = gx::study::exp_turn_6d(e);
+            let tz = gx::__private::study::exp_turn_6d(e);
             let n = tz[3];
             let wz = [tz[0], tz[1], tz[2]];
             let z = Bivector::<(), T>::from_coeffs(core::array::from_fn(|i| wz[0] * h[0][i] + wz[1] * h[1][i] + wz[2] * h[2][i]));
@@ -4678,7 +4634,7 @@ impl<T: gx::Real> Bivector<(), T, gx::Extrinsic> {
             // â Ãªâ±¼ = (â1)â¿ â(âÃªâ±¼), a polynomial in Z, applied by products with Z.
             let one = T::one();
             let odd = T::select_lt(n, half, one, T::select_lt(n, T::from_f64(1.5), -one, T::select_lt(n, T::from_f64(2.5), one, T::select_lt(n, T::from_f64(3.5), -one, one))));
-            let coeffs = gx::study::turn_polynomial(n);
+            let coeffs = gx::__private::study::turn_polynomial(n);
             let mut power = r;
             let mut out = r.gp(coeffs[0] * odd);
             for ck in &coeffs[1..] {
@@ -4839,13 +4795,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Trivector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Trivector<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -4886,49 +4842,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Trivector<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Trivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Trivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Trivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Trivector`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Trivector<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Trivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Trivector<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Trivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -4945,13 +4901,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Trivector<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Trivector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Trivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Trivector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -5099,7 +5055,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Trivector<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Trivector<S, T, O> {
     type Out = Trivector<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Trivector<S, T, O2> {
@@ -5332,15 +5288,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Trivector<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Trivector<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Trivector<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -5383,16 +5338,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Trivector<(), f64, O> as gx::Kind>::Arr<Trivector<(), T, O>>, <Trivector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Trivector<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Trivector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -5433,13 +5378,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A, B)
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Trivector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Trivector<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -5482,7 +5427,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Trivector
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -5490,7 +5435,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Trivector
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Trivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -5520,7 +5465,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Trivector
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Trivector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Trivector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -5528,7 +5473,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Trivector<S, T
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Trivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Trivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -5537,7 +5482,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Trivector<S
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Trivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Trivector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -5865,13 +5810,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Quadvector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Quadvector<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -5912,49 +5857,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Quadvector<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Quadvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Quadvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Quadvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Quadvector`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Quadvector<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Quadvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Quadvector<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Quadvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -5971,13 +5916,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Quadvector<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Quadvector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Quadvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Quadvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -6125,7 +6070,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Quadvector<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Quadvector<S, T, O> {
     type Out = Quadvector<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Quadvector<S, T, O2> {
@@ -6328,15 +6273,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quadvector<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Quadvector<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Quadvector<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -6379,16 +6323,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Quadvector<(), f64, O> as gx::Kind>::Arr<Quadvector<(), T, O>>, <Quadvector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Quadvector<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Quadvector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -6429,13 +6363,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A, B
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Quadvector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Quadvector<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -6478,7 +6412,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Quadvecto
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -6486,7 +6420,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Quadvecto
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Quadvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -6516,7 +6450,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Quadvecto
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Quadvector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Quadvector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -6524,7 +6458,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Quadvector<S, 
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Quadvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Quadvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -6533,7 +6467,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Quadvector<
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Quadvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Quadvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -6852,13 +6786,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Quintvector<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Quintvector<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -6899,49 +6833,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Quintvector<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Quintvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Quintvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Quintvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Quintvector`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Quintvector<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Quintvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Quintvector<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Quintvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -6958,13 +6892,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Quintvector<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Quintvector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Quintvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Quintvector { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -7112,7 +7046,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Quintvector<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Quintvector<S, T, O> {
     type Out = Quintvector<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Quintvector<S, T, O2> {
@@ -7261,15 +7195,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quintvector<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Quintvector<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Quintvector<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -7312,16 +7245,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Quintvector<(), f64, O> as gx::Kind>::Arr<Quintvector<(), T, O>>, <Quintvector<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Quintvector<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Quintvector`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -7362,13 +7285,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quintvector<(A, 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Quintvector<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Quintvector<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Quintvector<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -7411,7 +7334,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Quintvect
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -7419,7 +7342,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Quintvect
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Quintvector { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -7449,7 +7372,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Quintvect
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Quintvector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Quintvector { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -7457,7 +7380,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Quintvector<S,
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Quintvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Quintvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -7466,7 +7389,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Quintvector
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Quintvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Quintvector { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -7660,7 +7583,7 @@ impl<T: gx::Real, O: gx::Orientation> Quintvector<(), T, O> {
 
 }
 
-impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Quintvector<(), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Quintvector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
@@ -7836,13 +7759,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Pseudoscalar<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Pseudoscalar<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -7883,49 +7806,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Pseudoscalar<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Pseudoscalar`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Pseudoscalar<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Pseudoscalar<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -7942,13 +7865,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -8096,7 +8019,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Pseudoscalar<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Pseudoscalar<S, T, O> {
     type Out = Pseudoscalar<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Pseudoscalar<S, T, O2> {
@@ -8215,15 +8138,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Pseudoscalar<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Pseudoscalar<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Pseudoscalar<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -8266,16 +8188,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Pseudoscalar<(), f64, O> as gx::Kind>::Arr<Pseudoscalar<(), T, O>>, <Pseudoscalar<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Pseudoscalar`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -8316,13 +8228,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Pseudoscalar<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Pseudoscalar<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Pseudoscalar<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -8365,7 +8277,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Pseudosca
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -8373,7 +8285,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Pseudosca
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Pseudoscalar { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -8403,7 +8315,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Pseudosca
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -8411,7 +8323,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Pseudoscalar<S
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -8420,7 +8332,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Pseudoscala
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Pseudoscalar { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -8564,7 +8476,7 @@ impl<T: gx::Real, O: gx::Orientation> Pseudoscalar<(), T, O> {
 
 }
 
-impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Pseudoscalar<(), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Pseudoscalar<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
@@ -8724,13 +8636,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Motor<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Motor<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -8771,49 +8683,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Motor<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Motor<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Motor { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Motor { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Motor`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Motor<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Motor<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Motor<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Motor<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -8830,13 +8742,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Motor<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Motor<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Motor { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Motor { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -8984,7 +8896,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Motor<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Motor<S, T, O> {
     type Out = Motor<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Motor<S, T, O2> {
@@ -9193,15 +9105,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Motor<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Motor<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Motor<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -9244,16 +9155,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Motor<(), f64, O> as gx::Kind>::Arr<Motor<(), T, O>>, <Motor<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Motor<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Motor`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -9294,13 +9195,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Motor<(A, B), T,
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Motor<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Motor<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Motor<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -9343,7 +9244,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Motor<S, 
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -9351,7 +9252,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Motor<S, 
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Motor { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -9381,7 +9282,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Motor<S, 
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Motor { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Motor { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -9389,7 +9290,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Motor<S, T, O>
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Motor { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Motor { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -9398,7 +9299,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Motor<S, T,
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Motor { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Motor { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -9854,7 +9755,7 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
         let p38 = p37 * T::from_i64(8);
         let p39 = p31.mul_add(T::from_i64(4), p38);
         let p40 = -p39;
-        let [s0, s1] = gx::study::rsqrt_q(p28, p40);
+        let [s0, s1] = gx::__private::study::rsqrt_q(p28, p40);
         let t0 = x[0] * x[15];
         let t2 = x[1] * x[4];
         let t3 = s1 * t2;
@@ -10035,9 +9936,9 @@ impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
     #[inline(always)]
     pub fn log(self) -> Twist<(), T, gx::Extrinsic>
     where
-        Self: gx::LogNeedsUnit<Twist<(), T, gx::Extrinsic>>,
+        Self: gx::__private::LogNeedsUnit<Twist<(), T, gx::Extrinsic>>,
     {
-        gx::LogNeedsUnit::log(self)
+        gx::__private::LogNeedsUnit::log(self)
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
@@ -10050,7 +9951,7 @@ impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
 
 }
 
-impl<T: gx::Coef, O: gx::Orientation> gx::NewtonStep for Motor<(), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Motor<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
@@ -10337,7 +10238,7 @@ impl<T: gx::Real> gx::Log for Motor<(), T, gx::Extrinsic> {
         let x = unit.into_inner().c;
         let p0 = x[15] * x[15];
         let p1 = -p0;
-        let [h0, h1] = gx::study::log_coeffs_q(x[0], p1);
+        let [h0, h1] = gx::__private::study::log_coeffs_q(x[0], p1);
         let t0 = x[15] * h1;
         let t1 = x[11] * h1;
         let t2 = x[12] * h1;
@@ -10530,13 +10431,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        Even<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Even<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -10577,49 +10478,49 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     }
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> Even<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> Even<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {
-        Even { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+        Even { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
     }
 
     /// Contract the output with open slot `I` (which must be of kind `Even`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Even<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <Even<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        Even<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        Even<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
@@ -10636,13 +10537,13 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Even<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> Even<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {
         let xc = x.coeffs();
-        Even { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+        Even { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
     }
 
     /// See [`gx::Gp`].
@@ -10790,7 +10691,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for Even<S, T, O> {
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Even<S, T, O> {
     type Out = Even<S, T, O2>;
     #[inline(always)]
     fn reorient(self) -> Even<S, T, O2> {
@@ -11095,15 +10996,14 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
         gx::SingularValues::svdvals(self)
     }
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Even<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, Even<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = Even<(), f64, O>>,
     {
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -11146,16 +11046,6 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
         gx::SquareMap::solve(self, rhs)
     }
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Even<(), f64, O> as gx::Kind>::Arr<Even<(), T, O>>, <Even<(), f64, O> as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Even<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
     /// The MooreâPenrose pseudo-inverse, `A <- Even`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) â b`.
     #[inline]
@@ -11196,13 +11086,13 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A, B), T, 
 impl<A: gx::Kind, B: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A, B), T, O> {
     /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::__private::SplitLast>::Init, T>
     where
         Self: gx::Pairing<Coef = T, Kind = Even<(), f64, O>, First = A, Second = B>,
         R: gx::Extensor<Kind = Even<(), f64, O>, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
+        R::Slots: gx::__private::SplitLast<Last = B>,
     {
-        gx::Pairing::solve(self, rhs)
+        gx::Pairing::solve_pairing(self, rhs)
     }
 }
 
@@ -11245,7 +11135,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Even<S, T
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -11253,7 +11143,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Even<S, T
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+        Even { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
     }
 }
 
@@ -11283,7 +11173,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Even<S, T
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Even { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+        Even { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
     }
 }
 
@@ -11291,7 +11181,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Even<S, T, O> 
     type Output = Self;
     #[inline(always)]
     fn gp(self, rhs: T) -> Self {
-        Even { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+        Even { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
     }
 }
 
@@ -11300,7 +11190,7 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Even<S, T, 
     #[inline(always)]
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
-        Even { o: core::marker::PhantomData, c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+        Even { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
     }
 }
 
@@ -11528,9 +11418,9 @@ impl<T: gx::Real> Even<(), T, gx::Extrinsic> {
     #[inline(always)]
     pub fn log(self) -> Bivector<(), T, gx::Extrinsic>
     where
-        Self: gx::LogNeedsUnit<Bivector<(), T, gx::Extrinsic>>,
+        Self: gx::__private::LogNeedsUnit<Bivector<(), T, gx::Extrinsic>>,
     {
-        gx::LogNeedsUnit::log(self)
+        gx::__private::LogNeedsUnit::log(self)
     }
 
 }

@@ -174,13 +174,13 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
     where
-        K: gx::Reorient<O>,
-        <K as gx::Reorient<O>>::Out: gx::Kind,
-        {name}<(), f64, O>: gx::Cast<<K as gx::Reorient<O>>::Out>,
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        {name}<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
     {{
-        gx::cast::cast::<Self, <K as gx::Reorient<O>>::Out>(&self)
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
     }}
 
     /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
@@ -221,38 +221,38 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     }}
 
     /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_pair(x) ≈ rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    /// `self.of_dyad(x) ≈ rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
     #[inline]
-    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X>,
+        Self: gx::LeastSquaresDyad<X>,
     {{
-        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
     }}
 
-    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
     #[inline]
-    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
     where
-        Self: gx::LeastSquaresPair<X, Coef = T>,
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
     {{
-        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
     }}
 
     /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Σᵢⱼ xᵢⱼ self(aᵢ, bⱼ)`.
     #[inline]
-    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
     where
-        Self: gx::OfPair,
+        Self: gx::OfDyad,
     {{
-        gx::OfPair::of_pair(self, x)
+        gx::OfDyad::of_dyad(self, x)
     }}
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
-    pub fn at<const I: usize>(self) -> {name}<<S as gx::MoveToFront<I>>::Moved, T, O>
+    pub fn at<const I: usize>(self) -> {name}<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
     where
-        S: gx::MoveToFront<I>,
+        S: gx::__private::MoveToFront<I>,
     {{
         {moved}
     }}
@@ -260,10 +260,10 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
     /// Contract the output with open slot `I` (which must be of kind `{name}`): a trace with no
     /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
     #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <{name}<<S as gx::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    pub fn trace_at<const I: usize>(self) -> <{name}<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
     where
-        S: gx::MoveToFront<I>,
-        {name}<<S as gx::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+        S: gx::__private::MoveToFront<I>,
+        {name}<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {{
         gx::TraceFirst::trace_first(self.at::<I>())
     }}
@@ -280,18 +280,19 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
-    pub fn fill<X>(self, x: X) -> {name}<<S as gx::FillList<X::Kind>>::Out, T, O>
+    pub fn fill<X>(self, x: X) -> {name}<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
     where
         X: Extensor<Slots = (), Coef = T>,
-        S: gx::FillList<X::Kind>,
+        S: gx::__private::FillList<X::Kind>,
     {{
         let xc = x.coeffs();
         {filled}
     }}
 ",
             zero = lit(&format!("[{}; {n}]", zero_slots("S"))),
-            moved = lit("self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col))"),
-            filled = lit("self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc))"),
+            moved = lit("self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col))"),
+            filled =
+                lit("self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc))"),
         );
         self.w(&s);
 
@@ -344,7 +345,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         // A value, map or kind of another orientation, the coefficients kept (ADR-051).
         let _ = write!(
             self.out,
-            "impl<S: Slots, T: Coef, O: gx::Orientation, O2: gx::Orientation> gx::Reorient<O2> for {name}<S, T, O> {{\n    type Out = {name}<S, T, O2>;\n    #[inline(always)]\n    fn reorient(self) -> {name}<S, T, O2> {{\n        {same}\n    }}\n}}\n\n"
+            "impl<S: Slots, T: Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for {name}<S, T, O> {{\n    type Out = {name}<S, T, O2>;\n    #[inline(always)]\n    fn reorient(self) -> {name}<S, T, O2> {{\n        {same}\n    }}\n}}\n\n"
         );
     }
 
@@ -437,7 +438,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
                 self.out,
                 r"impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// This form `{name} <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
-    /// methods of maps (`svd_thin`, `pinv`, `svdvals`, `det`).
+    /// methods of maps (`svd`, `pinv`, `svdvals`, `det`).
     #[inline]
     pub fn as_map(self) -> <A as Kind>::Mv<(B,), T> {{
         gx::FormAsMap::as_map(self)
@@ -479,15 +480,14 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         gx::SingularValues::svdvals(self)
     }}
 
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
     #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>, <A as Kind>::Arr<{name}<(), T, O>>)
+    pub fn svd(self) -> gx::Svd<A, {name}<(), f64, O>, T>
     where
         Self: gx::SingularValues<Coef = T, Input = A, Kind = {name}<(), f64, O>>,
     {{
-        gx::SingularValues::svd_thin(self)
+        gx::SingularValues::svd(self)
     }}
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -530,16 +530,6 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         SquareMap::solve(self, rhs)
     }}
 
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<{name}<(), f64, O> as Kind>::Arr<{name}<(), T, O>>, <{name}<(), f64, O> as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
-    where
-        Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
-    {{
-        SquareMap::svd(self)
-    }}
-
     /// The Moore–Penrose pseudo-inverse, `A <- {name}`, of a map of any shape: it sends `b` to
     /// the least-norm least-squares solution of `self.of(x) ≈ b`.
     #[inline]
@@ -580,13 +570,13 @@ impl<A: Kind, B: Kind, T: Coef, O: gx::Orientation> {name}<(A, B), T, O> {{
 impl<A: Kind, B: Kind, T: Real, O: gx::Orientation> {name}<(A, B), T, O> {{
     /// Solve `self(x, ·) == rhs(l, ·)` for `x`; leading slots of `rhs` become slots of `x`.
     #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
+    pub fn solve_pairing<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
     where
         Self: Pairing<Coef = T, Kind = {name}<(), f64, O>, First = A, Second = B>,
         R: Extensor<Kind = {name}<(), f64, O>, Coef = T>,
         R::Slots: SplitLast<Last = B>,
     {{
-        Pairing::solve(self, rhs)
+        Pairing::solve_pairing(self, rhs)
     }}
 }}
 
@@ -901,11 +891,11 @@ pub(super) fn kind_eqs(spec: &AlgebraSpec, out: &mut String) {
             let eq = if a.name == b.name {
                 "gx::orientation::Same<OA, OB>"
             } else {
-                "gx::False"
+                "gx::__private::False"
             };
             let _ = writeln!(
                 out,
-                "impl<OA: gx::Orientation, OB: gx::Orientation> gx::KindEq<{}<(), f64, OB>> for {}<(), f64, OA> {{\n    type Out = {eq};\n}}\n",
+                "impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<{}<(), f64, OB>> for {}<(), f64, OA> {{\n    type Out = {eq};\n}}\n",
                 b.name, a.name
             );
         }

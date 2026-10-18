@@ -186,8 +186,8 @@ mod constitutive {
 
     /// The singular values (descending) and right singular vectors of a wave map (8 x 6).
     pub fn svd(w: WaveMap) -> ([f64; 6], [B; 6]) {
-        let (values, right, _) = w.svd_thin();
-        (values, right)
+        let svd = w.svd();
+        (svd.values, svd.inputs)
     }
 
     /// The smallest singular value of the wave map over trial phase speeds, for waves along

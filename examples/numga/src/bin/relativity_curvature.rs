@@ -641,7 +641,7 @@ mod tests {
         let (plus, cross) = polarizations();
         for (a, b) in [(1.0, 0.0), (0.0, 1.0), (0.6, -0.8)] {
             let curvature = plus * a + cross * b;
-            let (_, sigma, _) = curvature.svd();
+            let sigma = curvature.svd().values;
             let rank = sigma.iter().filter(|s| **s > sigma[0] * 1e-12).count();
             assert_eq!(rank, 2, "{sigma:?}");
             assert!(largest(curvature.of(curvature)) <= 1e-14);

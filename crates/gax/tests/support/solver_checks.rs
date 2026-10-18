@@ -19,7 +19,11 @@ macro_rules! square {
         let inv = a.inverse();
         let det = a.det();
         let x = a.solve(b);
-        let (u, sigma, v) = a.svd();
+        let gax::Svd {
+            values: sigma,
+            inputs: v,
+            outputs: u,
+        } = a.svd();
         let am = matrix(&a);
         let scale = am.iter().flatten().fold(0.0f64, |m, x| m.max(x.abs()));
         let finite = |m: &[Vec<f64>]| m.iter().flatten().all(|x| x.is_finite());

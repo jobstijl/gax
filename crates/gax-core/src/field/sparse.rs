@@ -218,7 +218,7 @@ impl<C: Copy> SparseMap<C> {
     /// If `x` is not over the map's input sites.
     #[must_use]
     #[track_caller]
-    pub fn apply<X, Y>(&self, x: &Field<X>) -> Field<Y>
+    pub fn of<X, Y>(&self, x: &Field<X>) -> Field<Y>
     where
         C: Of<X, Output = Y>,
         X: Extensor,
@@ -227,7 +227,7 @@ impl<C: Copy> SparseMap<C> {
         self.combine(x, Of::of)
     }
 
-    /// [`apply`](Self::apply) into an existing field over the map's output sites, which it
+    /// [`of`](Self::of) into an existing field over the map's output sites, which it
     /// overwrites: no allocation, for loops that step a field every tick.
     ///
     /// ```
@@ -239,14 +239,14 @@ impl<C: Copy> SparseMap<C> {
     /// let ends = &ends * Plane::slot();
     /// let x = Field::from_fn(3, |i| Plane::new(i as f64, 0.0, 0.0, 0.0));
     /// let mut steps = Field::zeros(2);
-    /// ends.apply_into(&x, &mut steps);
-    /// assert_eq!(steps, ends.apply(&x));
+    /// ends.of_into(&x, &mut steps);
+    /// assert_eq!(steps, ends.of(&x));
     /// ```
     ///
     /// # Panics
     /// If `x` is not over the map's input sites or `y` over its output sites.
     #[track_caller]
-    pub fn apply_into<X, Y>(&self, x: &Field<X>, y: &mut Field<Y>)
+    pub fn of_into<X, Y>(&self, x: &Field<X>, y: &mut Field<Y>)
     where
         C: Of<X, Output = Y>,
         X: Extensor,
@@ -391,7 +391,7 @@ where
 {
     /// The transpose: the couplings run back and each map cell `K <- A` transposed to
     /// `A <- K` (its coefficient matrix transposed). It is the adjoint under the coefficient
-    /// inner product of the fields ([`Field::dot`]): `y.dot(m.apply(x)) == m.transpose().apply(y).dot(x)`.
+    /// inner product of the fields ([`Field::dot`]): `y.dot(m.of(x)) == m.transpose().of(y).dot(x)`.
     #[must_use]
     pub fn transpose(&self) -> SparseMap<A::Mv<(C::Kind,), C::Coef>> {
         self.transpose_with(|cell| {

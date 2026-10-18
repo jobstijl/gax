@@ -1,11 +1,11 @@
 //! Simplicial complexes and meshes (ADR-049): the topology of a mesh of any dimension, its
 //! boundary maps as field maps, and its vertices.
 //!
-//! A [`Complex`] is built from its top simplices, `N` vertex indices each: triangles for a
-//! surface (`N = 3`), tetrahedra for a solid (`N = 4`). It derives every face of every dimension:
-//! the `k`-simplices for `k` from 0 (the vertices) to `N − 1` (the top simplices, kept in the
-//! order and orientation given). Below the top, a simplex is stored with its vertices in
-//! increasing order, and the simplices of each dimension in lexicographic order.
+//! A [`SimplicialComplex`] is built from its top simplices, `N` vertex indices each: triangles
+//! for a surface (`N = 3`), tetrahedra for a solid (`N = 4`). It derives every face of every
+//! dimension: the `k`-simplices for `k` from 0 (the vertices) to `N − 1` (the top simplices,
+//! kept in the order and orientation given). Below the top, a simplex is stored with its
+//! vertices in increasing order, and the simplices of each dimension in lexicographic order.
 //!
 //! Quantities on a mesh are [`Field`]s over its simplices of one dimension, and its boundary maps
 //! `d(k)`, from the `k`-simplices to the `(k+1)`-simplices, are [`SparseMap`]s with cells `±1`:
@@ -95,7 +95,7 @@ impl std::error::Error for MeshError {}
 
 /// A simplicial complex: the top simplices of `N` vertices each, and all their faces.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Complex<const N: usize> {
+pub struct SimplicialComplex<const N: usize> {
     /// `simplices[k]`: the `k`-simplices, `k + 1` vertices each, one after another.
     simplices: Vec<Vec<usize>>,
     /// `faces[k]` for `k ≥ 1`: for each `k`-simplex, the `(k−1)`-face opposite each of its
@@ -124,7 +124,7 @@ fn without(s: &[usize], i: usize) -> Vec<usize> {
         .collect()
 }
 
-impl<const N: usize> Complex<N> {
+impl<const N: usize> SimplicialComplex<N> {
     /// The complex of `vertices` vertices (some may be in no simplex) and the top simplices
     /// `top`, each oriented by the order of its vertices.
     ///
@@ -209,7 +209,7 @@ impl<const N: usize> Complex<N> {
             .into_iter()
             .map(|(key, s)| (key.to_vec(), s))
             .collect();
-        Ok(Complex {
+        Ok(SimplicialComplex {
             simplices,
             faces,
             tops,
@@ -434,7 +434,7 @@ pub type ScalarOf<V> =
 pub struct Mesh<V, const N: usize> {
     /// The vertices.
     pub vertices: Field<V>,
-    complex: Complex<N>,
+    complex: SimplicialComplex<N>,
 }
 
 impl<V: Extensor<Slots = ()>, const N: usize> Mesh<V, N> {
@@ -443,13 +443,13 @@ impl<V: Extensor<Slots = ()>, const N: usize> Mesh<V, N> {
     /// # Errors
     /// A [`MeshError`] if the top simplices do not make a complex on these vertices.
     pub fn new(vertices: Field<V>, top: &[[usize; N]]) -> Result<Self, MeshError> {
-        let complex = Complex::new(vertices.len(), top)?;
+        let complex = SimplicialComplex::new(vertices.len(), top)?;
         Ok(Mesh { vertices, complex })
     }
 
     /// The complex.
     #[must_use]
-    pub fn complex(&self) -> &Complex<N> {
+    pub fn complex(&self) -> &SimplicialComplex<N> {
         &self.complex
     }
 
@@ -466,13 +466,14 @@ impl<V: Extensor<Slots = ()>, const N: usize> Mesh<V, N> {
         }
     }
 
-    /// The boundary map `d(k)` with scalar cells of the vertices' algebra ([`Complex::d`]).
+    /// The boundary map `d(k)` with scalar cells of the vertices' algebra
+    /// ([`SimplicialComplex::d`]).
     #[must_use]
     pub fn d(&self, k: usize) -> SparseMap<ScalarOf<V>> {
         self.complex.d(k)
     }
 
-    /// The means over the `k`-simplices' vertices ([`Complex::means`]).
+    /// The means over the `k`-simplices' vertices ([`SimplicialComplex::means`]).
     #[must_use]
     pub fn means(&self, k: usize) -> SparseMap<ScalarOf<V>> {
         self.complex.means(k)

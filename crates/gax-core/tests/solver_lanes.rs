@@ -13,9 +13,9 @@
 // float comparisons are the point.
 #![allow(clippy::needless_range_loop, clippy::float_cmp)]
 
+use gax_core::__private::linalg::*;
 use gax_core::Real;
 use gax_core::batch::Lanes;
-use gax_core::linalg::*;
 use proptest::prelude::*;
 
 type L = Lanes<f64, 4>;
@@ -142,7 +142,7 @@ fn check_eigh<const N: usize>(v: &[f64], gaps: [f64; 4]) {
 
 /// The singular value decomposition `A vᵢ = σᵢ uᵢ` (vectors as rows, `σ` descending) from the
 /// one-sided Jacobi of `A`'s columns: the rotated columns' lengths, sorted lane by lane with the
-/// right vectors and the normalized columns, as `SquareMap::svd` does.
+/// right vectors and the normalized columns, as `SingularValues::svd` does.
 fn svd<T: Real, const N: usize>(
     a: &[[T; N]; N],
     sweeps: usize,

@@ -1,4 +1,4 @@
-//! `lstsq_pair`: least squares for an unknown in a map's first two slots, and `of_pair`, the
+//! `lstsq_dyad`: least squares for an unknown in a map's first two slots, and `of_dyad`, the
 //! map with a two-slot value bound in. Checked by the normal equations (the residual is
 //! orthogonal to the image of every pair of blades), and for least norm where the map has a
 //! kernel.
@@ -33,11 +33,11 @@ fn normal_equations() {
         let rhs = Line::<(Plane,), f64>::from_coeffs(core::array::from_fn(|_| {
             core::array::from_fn(|_| rng.next_f64())
         }));
-        let x = m.lstsq_pair(rhs);
-        let r = m.of_pair(x) - rhs;
+        let x = m.lstsq_dyad(rhs);
+        let r = m.of_dyad(x) - rhs;
         for i in 0..4 {
             for j in 0..4 {
-                let col = m.of_pair(unit_dyad(i, j));
+                let col = m.of_dyad(unit_dyad(i, j));
                 let dot: f64 = col
                     .c
                     .iter()
@@ -52,7 +52,7 @@ fn normal_equations() {
         let y = Point::<(Point,), f64>::from_coeffs(core::array::from_fn(|_| {
             core::array::from_fn(|_| rng.next_f64())
         }));
-        let back = m.lstsq_pair(m.of_pair(y));
+        let back = m.lstsq_dyad(m.of_dyad(y));
         for (a, b) in back.c.iter().flatten().zip(y.c.iter().flatten()) {
             assert!((a - b).abs() < 1e-10, "{a} vs {b}");
         }
@@ -76,8 +76,8 @@ fn least_norm_on_a_kernel() {
             rng.next_f64(),
         )
         .with_orientation::<gax::Intrinsic>();
-        let x = join.lstsq_pair(l);
-        let back = join.of_pair(x);
+        let x = join.lstsq_dyad(l);
+        let back = join.of_dyad(x);
         assert!(back.approx_eq(&l, 1e-12));
         for i in 0..4 {
             for j in 0..4 {

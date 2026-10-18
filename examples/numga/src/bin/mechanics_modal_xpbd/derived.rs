@@ -1,12 +1,12 @@
 //! numga's `derived.py`: the couplings found by differentiation. The gaps are written once, as
 //! a function of how far each body moves and each mode deforms over the step, and the couplings
-//! are its derivatives (`gax::dual::jacobian`, forward-mode jets through the motor's
+//! are its derivatives (`gax::jet::jacobian`, forward-mode jets through the motor's
 //! exponential and sandwich), in place of the commutators and mode shapes built by hand.
 
 use crate::girder::P;
 use crate::xpbd::{Bodies, Constraints, Coupling, M, SIDES, per_side};
 use gax::Real;
-use gax::dual::jacobian;
+use gax::jet::jacobian;
 use gax::pga2d::{Direction, Point, Scalar, Twist};
 
 /// A side's anchor in the world: its point in the body's frame moved by the motor after a twist

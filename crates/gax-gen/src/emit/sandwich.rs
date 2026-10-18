@@ -346,7 +346,7 @@ impl<'a> Sandwich<'a> {
     fn new(vk: &'a KindSpec, xk: &'a KindSpec, out: &'a KindSpec, unit: bool) -> Self {
         let vn = vk.name.as_str();
         // An odd versor reflects: its result takes a sign per blade by the passenger's
-        // orientation (ADR-051, `gx::orientation::reflect`). Even versors keep the sandwich.
+        // orientation (ADR-051, `gx::__private::reflect`). Even versors keep the sandwich.
         let parity = |m: u32| m.count_ones() % 2 == 1;
         let odd = vk.layout.blades.iter().all(|&(m, _)| parity(m));
         assert!(
@@ -397,7 +397,7 @@ impl<'a> Sandwich<'a> {
     fn result(&self, slots: &str, c: &str) -> String {
         let c = match &self.odd_mask {
             Some(mask) => format!(
-                "gx::orientation::reflect::<O, {slots}, T, {}>({c}, [{mask}])",
+                "gx::__private::reflect::<O, {slots}, T, {}>({c}, [{mask}])",
                 self.nout
             ),
             None => c.to_string(),
@@ -751,6 +751,10 @@ fn sandwich_prepared(sw: &Sandwich, check: &str, m: &MapEntries, s: &mut String)
             &format!("({xn}<(), f64, O>,)"),
             &format!("[{}]", m.dense(sw.nxv).join(", "))
         )
+    );
+    let _ = write!(
+        s,
+        "impl<O: gx::Orientation> gx::__private::PreparedDense<{vkind}, {nst}> for {xn}<(), f64, O> {{\n    type Output = {on}<(), f64, O>;\n    #[inline]\n    fn to_dense<T: Coef>(p: {prep_ty}) -> {on}<({xn}<(), f64, O>,), T, O> {{\n        p.into()\n    }}\n}}\n\n"
     );
     prep_ty
 }

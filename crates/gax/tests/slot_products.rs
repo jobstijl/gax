@@ -1,5 +1,5 @@
 //! Products of maps large enough to run once per pair of slot entries
-//! (`gax::slots::by_entries`, above `SLOT_UNROLL_MAX`) agree with the products of the values
+//! (`gax::__private::by_entries`, above `SLOT_UNROLL_MAX`) agree with the products of the values
 //! they are applied to, with the slots in order: `(a * X).of(x) = a * x`, `(X * b).of(x) = x * b`,
 //! and `(X * Y).of(x).of(y) = x * y`.
 

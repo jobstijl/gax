@@ -84,7 +84,7 @@ struct Csc<T> {
 /// let lu = map.factor().expect("nonsingular");
 /// let b = Field::from_fn(3, |i| Plane::new(1.0, i as f64, 0.0, 0.0));
 /// let x = lu.solve(&b);
-/// let r = &map.apply(&x) - &b;
+/// let r = &map.of(&x) - &b;
 /// assert!(r.dot(&r) < 1e-28);
 /// ```
 #[derive(Clone, Debug)]
@@ -211,7 +211,7 @@ where
         })
     }
 
-    /// Solve `self.apply(x) == b` exactly, by [`factor`](Self::factor) and
+    /// Solve `self.of(x) == b` exactly, by [`factor`](Self::factor) and
     /// [`SparseLu::solve`]: any nonsingular square map. Factor once with `factor` to solve for
     /// several right-hand sides.
     ///

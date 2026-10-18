@@ -9,7 +9,7 @@
 // The checks index rows, columns and lanes of several matrices at once.
 #![allow(clippy::needless_range_loop)]
 
-use gax_core::linalg::*;
+use gax_core::__private::linalg::*;
 use proptest::prelude::*;
 
 const TOL: f64 = 1e-11;

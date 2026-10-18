@@ -67,7 +67,7 @@ impl Map for Spectra {
     #[inline(always)]
     fn call<T: Real>(&self, x: Multivector<(), T>) -> Multivector<(), T> {
         let a = matrix(x);
-        let (_, sigma, _) = a.svd();
+        let sigma = a.svd().values;
         let form = Scalar::<(Point, Point), T>::from_coeffs([core::array::from_fn(|i| {
             core::array::from_fn(|j| x.c[4 * i + j] + x.c[4 * j + i])
         })]);

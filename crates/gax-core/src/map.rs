@@ -76,7 +76,7 @@ impl<M: Extensor> LinearMap for M {
 /// }
 /// let compact = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
 /// let f = Forque::from_coeffs([1.0, 0.0, -1.0, 0.5, 0.25, 2.0]);
-/// assert!(twist_of(compact, f).approx_eq(&twist_of(compact.to_map(), f), 1e-15));
+/// assert!(twist_of(compact, f).approx_eq(&twist_of(compact.to_dense(), f), 1e-15));
 /// ```
 pub trait SquareLinearMap: LinearMap<Coef: Real> {
     /// The input kind.
@@ -84,11 +84,11 @@ pub trait SquareLinearMap: LinearMap<Coef: Real> {
     /// The inverse map's representation.
     type Inverse: LinearMap<Kind = Self::Input, Slots = (Self::Kind,), Coef = Self::Coef>;
     /// The image of a value.
-    fn apply(
+    fn of(
         self,
         x: <Self::Input as Kind>::Mv<(), Self::Coef>,
     ) -> <Self::Kind as Kind>::Mv<(), Self::Coef>;
-    /// Solve `self.apply(x) == b` for `x`.
+    /// Solve `self.of(x) == b` for `x`.
     fn solve(
         self,
         b: <Self::Kind as Kind>::Mv<(), Self::Coef>,
@@ -105,10 +105,7 @@ where
     type Inverse = <M as SquareMap>::Inverse;
 
     #[inline]
-    fn apply(
-        self,
-        x: <Self::Input as Kind>::Mv<(), M::Coef>,
-    ) -> <M::Kind as Kind>::Mv<(), M::Coef> {
+    fn of(self, x: <Self::Input as Kind>::Mv<(), M::Coef>) -> <M::Kind as Kind>::Mv<(), M::Coef> {
         // Σᵢ xᵢ colᵢ per output coefficient, in the order and rounding of `of`.
         let xc = x.coeffs().as_ref();
         Extensor::from_coeffs(<M::Kind as Kind>::arr_map(self.coeffs(), |col| {

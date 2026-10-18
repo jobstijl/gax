@@ -74,7 +74,7 @@ mod lens {
     /// point `q`, `on_planes(collineation)(p) & q == p & collineation(q)`. It exists for a
     /// singular map too, such as a central projection.
     pub fn on_planes(collineation: PointMap) -> Plane<(Plane,), f64> {
-        (Plane::slot() & Point::slot()).solve(Plane::slot() & collineation)
+        (Plane::slot() & Point::slot()).solve_pairing(Plane::slot() & collineation)
     }
 
     /// One exposure: the lens train's collineation, the camera map, the sensor frame, the image

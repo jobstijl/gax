@@ -155,7 +155,7 @@ impl Oracle {
                     [(0, c)] if c.abs() == 1 => *c as i8,
                     _ => return None,
                 };
-                let [r0, r1] = gax::study::rsqrt(isq, a, n[*b]);
+                let [r0, r1] = gax::__private::study::rsqrt(isq, a, n[*b]);
                 s[0] = r0;
                 s[*b] = r1;
             }

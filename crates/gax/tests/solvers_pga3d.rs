@@ -72,7 +72,11 @@ fn solve_inverts_application_for_values_and_maps() {
 fn svd_of_a_map_between_kinds() {
     let mut rng = Rng::new(23);
     let t: Plane<(Point,), f64> = random_map(&mut rng);
-    let (u, s, v) = t.svd();
+    let gax::Svd {
+        values: s,
+        inputs: v,
+        outputs: u,
+    } = t.svd();
     for i in 0..4 {
         assert_close(&flat(&t.of(v[i])), &flat(&(u[i] * s[i])), "t(v) = s u");
     }
@@ -110,7 +114,7 @@ fn generalized_eigenproblem_returns_modes_of_the_slot_kind() {
     // A form solve: stiffness(x, .) == stiffness(y, .) recovers y.
     let y: Line<(), f64> = random(&mut rng);
     assert_close(
-        &flat(&stiffness.solve(stiffness.of(y))),
+        &flat(&stiffness.solve_pairing(stiffness.of(y))),
         &flat(&y),
         "form solve",
     );
@@ -121,14 +125,14 @@ fn prepared_maps_convert_to_dense_maps() {
     let mut rng = Rng::new(25);
     for _ in 0..5 {
         let m = unit_motor(&mut rng);
-        let dense: Point<(Point,), f64> = m.prepare::<Point>().to_map();
+        let dense: Point<(Point,), f64> = m.prepare::<Point>().to_dense();
         assert_close(
             &flat(&dense),
             &flat(&(m >> Point::slot())),
-            "to_map == m >> slot",
+            "to_dense == m >> slot",
         );
         let l: Line<(), f64> = random(&mut rng);
-        let lines: Line<(Line,), f64> = m.prepare::<Line>().to_map();
+        let lines: Line<(Line,), f64> = m.prepare::<Line>().to_dense();
         assert_close(&flat(&lines.of(l)), &flat(&(m >> l)), "line map");
     }
 }

@@ -1,4 +1,4 @@
-//! Forward-mode derivatives (`gax::dual`): through products, sandwiches, `exp`, `log`,
+//! Forward-mode derivatives (`gax::jet`): through products, sandwiches, `exp`, `log`,
 //! normalization and the solvers, against analytic derivatives and central differences, and
 //! exactly over the prime field for polynomial kernels.
 
@@ -8,8 +8,8 @@
 mod rng;
 use rng::{Draw, rng};
 
-use gax::dual::{Dual, derivative, gradient_array, jacobian_array};
 use gax::fp::Fp;
+use gax::jet::{Dual, derivative, gradient_array, jacobian_array};
 use gax::pga3d::{Line, Motor, Point, intrinsic};
 use gax::{Coef, Real};
 

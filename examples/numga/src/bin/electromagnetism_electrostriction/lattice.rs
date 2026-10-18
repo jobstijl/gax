@@ -3,8 +3,8 @@
 
 use super::pairs::between_others;
 use gax::Real;
-use gax::dual::hessian;
 use gax::field::{Field, SparseLu, SparseMap};
+use gax::jet::hessian;
 use gax::vga2d::{Scalar, Vector};
 
 pub type V = Vector<(), f64>;
@@ -199,7 +199,7 @@ impl Lattice {
     /// two fields over the particles, from one evaluation with the site's coordinates as
     /// the derivatives' directions.
     fn response_change(&self, positions: &Field<V>, dipoles: &Field<V>, k: usize) -> [Field<V>; 2] {
-        type D = gax::dual::Dual<f64, 2>;
+        type D = gax::jet::Dual<f64, 2>;
         let seeded: Field<Vt<D>> = Field::from_fn(positions.len(), |i| {
             let v = positions.site(i);
             let coefficient = |c: usize| {
@@ -211,7 +211,7 @@ impl Lattice {
             };
             Vt::<D>::new(coefficient(0), coefficient(1))
         });
-        let image: Field<Vt<D>> = self.response(&seeded).apply(&dipoles.map(lift::<D>));
+        let image: Field<Vt<D>> = self.response(&seeded).of(&dipoles.map(lift::<D>));
         [0, 1].map(|c| image.map(|v| v.map_coefs(|d| d.du[c])))
     }
 

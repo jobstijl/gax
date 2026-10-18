@@ -39,7 +39,7 @@ use std::vec::Vec;
 /// let map = SparseMap::new(cells, rows, cols, (n, n));
 /// let x = Field::from_fn(n, |i| Point::xyz(i as f32, 1.0, 0.0));
 /// let packed = map.packed();
-/// let (a, b) = (map.apply(&x), packed.apply(&x));
+/// let (a, b) = (map.of(&x), packed.of(&x));
 /// assert!(a.sites().iter().zip(b.sites()).all(|(p, q)| (*p - *q).c.iter().all(|d| d.abs() < 1e-4)));
 /// ```
 #[derive(Clone, Debug)]
@@ -143,15 +143,15 @@ where
         &self.map
     }
 
-    /// [`SparseMap::apply`] on SIMD lanes of the current batch level, one row per lane. The
+    /// [`SparseMap::of`] on SIMD lanes of the current batch level, one row per lane. The
     /// kernels fuse multiply-adds where the level has them, so the last bits can differ from
-    /// `apply`.
+    /// `of`.
     ///
     /// # Panics
     /// If `x` is not over the map's input sites.
     #[must_use]
     #[track_caller]
-    pub fn apply(&self, x: &Field<Mv<K, E>>) -> Field<Mv<K, E>> {
+    pub fn of(&self, x: &Field<Mv<K, E>>) -> Field<Mv<K, E>> {
         self.map.check_input(x.len());
         let mut out = vec![crate::field::zero::<Mv<K, E>>(); self.map.shape.0];
         self.run_kernel(x.sites(), &mut out);

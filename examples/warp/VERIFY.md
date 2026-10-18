@@ -246,7 +246,7 @@ The only exception is a test that checks a phasor against `sin`.
     (older replays are from another build), not their play: of ten bot runs of 300 s, nine
     ended with the same score, and the tenth 0.4% higher.
 20. **Field products allocated.** Stepping the Tunnel's wall as fields (`Field` of directions,
-    a `SparseMap` for the springs) needed `map.apply(&field)` every tick, a new field each
+    a `SparseMap` for the springs) needed `map.of(&field)` every tick, a new field each
     time, where a simulation wants to write into a field it keeps. **Fixed in gax:**
-    `apply_into` and `mul_into`, the field map products into an existing field, through the
+    `of_into` and `mul_into`, the field map products into an existing field, through the
     same loop as the allocating forms. The wall steps without allocating.

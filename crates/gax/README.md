@@ -54,8 +54,8 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
   * `form.swap()` exchanges a form's two slots;
   * `x.cast::<K>()` and `x.grade::<G>()` project and embed between kinds.
 * **Linear algebra on maps and forms, with typed results:**
-  * `inverse`, `det`, `solve`, `svd` and `trace` on maps;
-  * `pinv` and `lstsq` on maps of any shape, and `lstsq` for one slot of a map with several;
+  * `inverse`, `det`, `solve` and `trace` on maps;
+  * `svd`, `pinv` and `lstsq` on maps of any shape, and `lstsq` for one slot of a map with several;
   * `eigh_with(metric)` on forms, whose modes come back as values of the slot kind, such as twists;
   * pairing solves for induced maps.
 * **Closed forms on values:** `inverse`, `normalized` (to a certified `Unit` versor), `exp`, `log` and
@@ -67,7 +67,7 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * **Mass properties:** volume, centre of mass and inertia of meshes and polygons from their
   boundary (`pga3d::Moments`, `pga2d::Moments`), as one extensor that adds over parts and moves
   with the body.
-* **Derivatives:** `gax::dual::Dual<T, N>` is a coefficient type, so every operation above runs
+* **Derivatives:** `gax::jet::Dual<T, N>` is a coefficient type, so every operation above runs
   on dual numbers and returns its derivatives (`gradient`, `jacobian`).
 * **Shaders:** WGSL modules of the standard algebras (feature `wgsl`) and GPU layouts (feature
   `bytemuck`).

@@ -209,8 +209,8 @@ mod pga3d_moments {
                     (d - c2[r][s]) * density
                 })
             });
-            let (mut values, mut vectors) = crate::linalg::eigh(&i, 10);
-            crate::linalg::sort_pairs(&mut values, &mut vectors);
+            let (mut values, mut vectors) = crate::__private::linalg::eigh(&i, 10);
+            crate::__private::linalg::sort_pairs(&mut values, &mut vectors);
             // A right-handed frame: the third axis the cross product of the first two.
             let [a, b, _] = vectors;
             let c = super::cross3(a, b);

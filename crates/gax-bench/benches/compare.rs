@@ -322,7 +322,7 @@ fn conformal(c: &mut Criterion) {
 /// The general inverse (ADR-037), least squares (ADR-038) and forward-mode derivatives
 /// (ADR-039), in `f64`.
 fn numerics(c: &mut Criterion) {
-    use gax::dual::Dual;
+    use gax::jet::Dual;
     type D6 = Dual<f64, 6>;
     fn coeffs<const N: usize>() -> [f64; N] {
         core::array::from_fn(|i| ((i as f64 + 1.0) * 0.37).sin())
@@ -390,13 +390,13 @@ fn numerics(c: &mut Criterion) {
     // The typed forms (ADR-043): the same exp with its derivative as a `Motor <- Line`, and the
     // Hessian of a scalar of the moved point, `Scalar <- (Line<(), f32>, Line<(), f32>)`.
     g.bench_function("gax jacobian of Line::exp (Motor <- Line)", |b| {
-        b.iter(|| gax::dual::jacobian(|b| b.exp().into_inner(), black_box(bl)));
+        b.iter(|| gax::jet::jacobian(|b| b.exp().into_inner(), black_box(bl)));
     });
     g.bench_function(
         "gax hessian of a coordinate of exp(B) >> p (Scalar <- (Line<(), f32>, Line<(), f32>))",
         |b| {
             b.iter(|| {
-                gax::dual::hessian(
+                gax::jet::hessian(
                     |b| (b.exp() >> black_box(p).map_coefs(gax::Coef::from_f64)).e032(),
                     black_box(bl),
                 )

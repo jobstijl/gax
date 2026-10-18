@@ -88,7 +88,7 @@ fn close(a: f64, b: f64) -> bool {
 /// Compare a geometry's volumes, duals and stars with `PyDEC`'s, simplex by simplex.
 fn compare<const N: usize>(
     fx: &Fixture,
-    mesh_complex: &gax::mesh::Complex<N>,
+    mesh_complex: &gax::mesh::SimplicialComplex<N>,
     g: &Geometry<f64, N>,
 ) {
     for k in 0..N {
@@ -611,7 +611,7 @@ fn codifferential_is_the_adjoint_and_dirac_squares_to_the_laplacian() {
 fn spectrum(g: &Geometry<f64, 3>, k: usize, count: usize) -> Vec<f64> {
     let form = &g.laplacian_form::<S3>(k) * S3::slot();
     let star = &g.star::<S3>(k) * S3::slot();
-    form.eigh(&star, count).0
+    form.eigh_with(&star, count).0
 }
 
 /// The harmonic cochains, the null space of `Δ_k`, have the Betti numbers' dimensions: a sphere
@@ -655,7 +655,7 @@ fn the_sphere_spectrum_converges() {
         diagonal.push(error(&spectrum(&g, 0, 16)));
         let stiffness = &g.stiffness::<S3>(0) * S3::slot();
         let mass = &g.mass::<S3>(0) * S3::slot();
-        galerkin.push(error(&stiffness.eigh(&mass, 16).0));
+        galerkin.push(error(&stiffness.eigh_with(&mass, 16).0));
     }
     for errors in [&diagonal, &galerkin] {
         for w in errors.windows(2) {

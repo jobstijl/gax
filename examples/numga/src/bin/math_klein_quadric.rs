@@ -97,7 +97,7 @@ mod klein {
         // The Klein form of two axes is a signed volume, intrinsic, and so are the misses.
         let misses: intrinsic::Line<(Line,), f64> =
             lines.iter().map(|l| *l * klein().of(*l).dual()).sum();
-        let (_, _, right) = misses.svd();
+        let right = misses.svd().inputs;
         [right[4], right[5]]
     }
 

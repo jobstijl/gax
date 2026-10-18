@@ -264,7 +264,7 @@ fn annular_fibres_lose_mesh_orientation_bias_under_uniform_refinement() {
                 let electric = motional(&mesh, &magnet(1.0), turned);
                 let drive = current
                     .transpose()
-                    .apply(&electric.zip_with(&areas, |e, a| e * a.s()));
+                    .of(&electric.zip_with(&areas, |e, a| e * a.s()));
                 materials.map(|shares| {
                     let conductivity = fibre_conductivity(
                         &mesh,
@@ -371,7 +371,7 @@ fn free_rotation_converts_kinetic_energy_into_heat_with_closed_currents() {
         assert!(energy.iter().all(|e| (e - energy[0]).abs() < 1e-12));
         for state in &states {
             let sheet = state.current.zip_with(&areas, |j, a| j * a.s());
-            let flux = reconstruction.transpose().apply(&sheet);
+            let flux = reconstruction.transpose().of(&sheet);
             assert!(largest(&charge_balance(&mesh, &flux), Scalar3::new(0.0)) < 1e-9);
         }
         let speeds: Vec<f64> = states.iter().map(|s| speed(s.spin)).collect();

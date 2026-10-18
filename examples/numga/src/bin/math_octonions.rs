@@ -125,10 +125,10 @@ mod octonions {
     /// below the tolerance.
     pub fn symmetry_generators(tolerance: f64) -> Vec<B> {
         let constraint: Trivector<(Bivector,), f64> = Bivector::slot().commutator(orientation());
-        let (sigma, right, _) = constraint.svd_thin();
-        sigma
+        let svd = constraint.svd();
+        svd.values
             .iter()
-            .zip(right)
+            .zip(svd.inputs)
             .filter(|(s, _)| **s < tolerance)
             .map(|(_, v)| v)
             .collect()

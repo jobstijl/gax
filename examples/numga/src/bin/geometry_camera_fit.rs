@@ -3,13 +3,13 @@
 //! projection onto the plane `z = 1`; the rig moves it by conjugation, `rig >> camera(rig << X)`,
 //! and the rig is the exponential of a bivector. The image misfit is differentiated with respect
 //! to that bivector through `exp`, the sandwiches, the bind and the unitization. numga uses
-//! JAX's reverse mode; here `gax::dual::gradient` runs it on forward-mode jets over the bivector
+//! JAX's reverse mode; here `gax::jet::gradient` runs it on forward-mode jets over the bivector
 //! (`Jet<f64, Line>`, one derivative per coefficient), so the same generic code returns the
 //! misfit and its gradient, a linear form on bivectors, in one pass. Nothing is linearized by hand. The animation replays the descent:
 //! the estimated camera (red) flies onto the true one (blue), its images onto the observed ones,
 //! and the misfit falls.
 
-use gax::dual::gradient;
+use gax::jet::gradient;
 use gax::pga3d::{Line, Plane, Point};
 use gax::{Real, Unit};
 

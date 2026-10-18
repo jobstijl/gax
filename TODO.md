@@ -141,7 +141,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Kind tables (ADR-036): `cast::<K>()` (projection and embedding by blade), `grade::<G>()`, and binding a smaller kind into a slot (`SubKind`), proved for every standard algebra (law M); slot lists up to 12
 - [x] General inverse (ADR-037): Shirokov's characteristic-polynomial method in the product closure, for every kind without a closed form that has invertible values (CGA's and CSTA's `Even`, every `Multivector`); its degree counts null directions (`Algebra::signature`) (law N)
 - [x] Least squares (ADR-038): `pinv` and `lstsq` on maps of any shape by one-sided Jacobi, and `lstsq` for the first slot of maps with several slots; Penrose conditions in the solver checks and fuzz target, per-lane and per-level agreement
-- [x] Dual numbers (ADR-039): `gax::dual::Dual<T, N>` as a coefficient type, with `derivative`, `gradient` and `jacobian`; through closed-form exp and log, solvers and sandwiches, exact over `Fp`
+- [x] Dual numbers (ADR-039): `gax::jet::Dual<T, N>` as a coefficient type, with `derivative`, `gradient` and `jacobian`; through closed-form exp and log, solvers and sandwiches, exact over `Fp`
 - [x] Value methods as traits (`Exp`, `Inverse`, `Norm`, `Normalize`, `Sqrt`), so `extras` has one body for PGA2D and PGA3D
 - [x] Determinism per value (ADR-040): `Strict<T>` coefficients, on scalars and every SIMD level; the lanes' `exp` made the scalar's (a determinism bug with the feature)
 - [x] Mass properties (ADR-041): `pga3d::Moments` and `pga2d::Moments` from boundary meshes and polygons, after *Clean up your Mesh!*; the asteroids example breaks rocks into the pieces of their outlines with momentum conserved
@@ -168,7 +168,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Compile errors that explain themselves: `log` on a plain versor names `Unit`, a non-square `inverse`/`solve` names the sizes and `pinv`/`lstsq`; `reassoc` documented where generic bracketing fails; MSRV table in ADR-002
 - [x] numga examples: reductions as `.map(..).sum()` (bit-identical)
 - [x] Typed derivatives (ADR-043): `jacobian`, `gradient`, `hessian` return extensors, on `Jet<T, D>` (a dual number over a kind's own array); checked against numga's JAX `derivative`
-- [x] Structured maps (ADR-044): `LinearMap` beside `Extensor`, `SquareLinearMap` fast paths without specialization; `PrincipalInertia` and `PrincipalMobility` compose, bind and solve without `to_map()`; dense code unchanged (release instructions and build times measured)
+- [x] Structured maps (ADR-044): `LinearMap` beside `Extensor`, `SquareLinearMap` fast paths without specialization; `PrincipalInertia` and `PrincipalMobility` compose, bind and solve without `to_dense()`; dense code unchanged (release instructions and build times measured)
 - [x] Fields over run-time sites (ADR-046, docs/fields.md): `Field`, `SparseMap` (CSR, typed cells), solves (preconditioned CG, sparse LU), derivatives with respect to a field, sliced-ELLPACK batch products; numga's bead string matched
 - [x] Fields over a fixed number of sites as kinds (ADR-045): `Sites<K, N>` with a flat view (`FlatKind`, checked under miri), field maps that bind, compose and solve as extensors, products site by site; numga's bead string matched against the sparse solvers
 - [x] Sparse direct solves on field maps: sparse LU (Gilbert–Peierls, threshold pivoting) after a minimum-degree ordering, reusable factors, singularity reported
@@ -202,7 +202,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 ## Phase 12: API consolidation (ADR-052)
 - [x] Internal cleanups: the generator (output byte-identical: shared emission helpers, split modules, data structures) and gax-core (one SVD, the study series over `Channel`, shared sparse and DEC kernels, iterator style)
 - [x] Batch 1, generator and types: orientation by name (`oriented::`, `intrinsic::`, `extrinsic::`), orientation arithmetic that reduces, `f64` default, `gx::Slot`, `Oriented<K, O>`, `Log` with an associated output, `normalized()`/`unit()`; everything migrated
-- [ ] Batch 2, names and linear algebra: `of`/`to_dense` everywhere, one trace module, `jet`, `SimplicialComplex`, `Svd`/`Eigen` results, `eigh_with`, `solve_pairing`, `of_dyad`, `try_*`, `gx::__private`
+- [x] Batch 2, names and linear algebra: `of` (and `of_into`) to apply every map, `to_dense` to densify (`Prepared` a `LinearMap`), one `gax::trace`, `jet`, `SimplicialComplex`, one `svd` for every shape returning `Svd { values, inputs, outputs }`, `eigh_with` for every metric eigenproblem, `solve_pairing`, `of_dyad`/`lstsq_dyad`, generated-code internals in a hidden `gx::__private`; everything migrated
+- [ ] `try_*` methods (an `Option` on failure) beside the plain ones that return NaN
 - [ ] Batch 3, geometry: gax types in constructors, uniform roles and helpers across algebras (`Line::direction`, `Plane::normal`, `Point::distance`, PGA2D `Line::through`, VGA rotations, CGA motors, STA boosts)
 
 ## Decisions for the project owner

@@ -266,7 +266,7 @@ nilpotent rest by a finite series; the first is repaired by Newton–Schulz step
 come back within `10⁻⁹` times the condition `‖x‖ ‖x⁻¹‖` in the standard algebras (law N) and
 within `4·10⁻¹¹` in 7D to 9D. Kinds with a closed form keep it.
 
-**Derivatives** (`gax::dual`, ADR-039) are exact to rounding for the computation as written:
+**Derivatives** (`gax::jet`, ADR-039) are exact to rounding for the computation as written:
 `Dual<T, N>` differentiates every operation, so a series or a select differentiates as the
 series or the selected branch, not as the function it approximates. Where a closed form switches
 between a series and a direct formula, the derivative switches with it (both approximate the

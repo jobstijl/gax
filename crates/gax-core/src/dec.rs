@@ -41,7 +41,7 @@ extern crate std;
 use crate::coef::Real;
 use crate::field::{Field, SparseMap};
 use crate::kind::{Extensor, Kind};
-use crate::mesh::{Complex, Mesh};
+use crate::mesh::{Mesh, SimplicialComplex};
 use crate::ops::{Reverse, ScalarProduct};
 use crate::simplex::{Measure, Position, Rule, Simplex};
 use std::vec::Vec;
@@ -195,7 +195,7 @@ fn barycentric_distances<T: Real>(points: &[Vec<T>], d: &[T]) -> Vec<T> {
 /// The metric of a mesh: its primal and circumcentric dual volumes, and its Hodge stars.
 #[derive(Clone, Debug)]
 pub struct Geometry<T, const N: usize> {
-    complex: Complex<N>,
+    complex: SimplicialComplex<N>,
     /// The squared distances between the vertices of each top simplex, row-major `N × N`.
     distances: Vec<Vec<T>>,
     volumes: Vec<Vec<T>>,
@@ -210,7 +210,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     }
 
     /// The geometry of a complex with the vertices `v`.
-    fn build<V: Distance<Coef = T>>(complex: Complex<N>, v: &[V]) -> Self {
+    fn build<V: Distance<Coef = T>>(complex: SimplicialComplex<N>, v: &[V]) -> Self {
         let distances_of = |s: &[usize]| -> Vec<T> {
             s.iter()
                 .flat_map(|&a| s.iter().map(move |&b| V::distance_squared(&v[a], &v[b])))
@@ -451,7 +451,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     /// If there is not one vertex for each of the complex's.
     #[must_use]
     pub fn from_parts<V: Distance<Coef = T> + Extensor<Slots = ()>>(
-        complex: &Complex<N>,
+        complex: &SimplicialComplex<N>,
         vertices: &Field<V>,
     ) -> Self {
         assert_eq!(vertices.len(), complex.len(0), "one vertex for each");
@@ -533,8 +533,8 @@ impl<T: Real, const N: usize> Geometry<T, N> {
 
     /// The symmetric form of the Laplacian, `⋆_k Δ_k = d_kᵀ ⋆_{k+1} d_k + ⋆_k d_{k−1} ⋆_{k−1}⁻¹
     /// d_{k−1}ᵀ ⋆_k`: with the star it makes the pencil `(⋆Δ, ⋆)` whose eigenpairs are those of
-    /// `Δ`, for [`SparseMap::eigh`] (a positive star, on a well-centred mesh). On 0-cochains it is
-    /// the cotangent Laplacian `d₀ᵀ ⋆₁ d₀`.
+    /// `Δ`, for [`SparseMap::eigh_with`] (a positive star, on a well-centred mesh). On 0-cochains
+    /// it is the cotangent Laplacian `d₀ᵀ ⋆₁ d₀`.
     ///
     /// # Panics
     /// If a `(k−1)`-simplex has a dual volume of zero.
@@ -653,7 +653,7 @@ fn subsets(n: usize, size: usize) -> Vec<Vec<usize>> {
 /// flags ([`Flags::descend`]): the complex, the top simplex's vertices and squared distances,
 /// the circumcentres from the top down to the current face, and the volumes being summed.
 struct Flags<'a, T, const N: usize> {
-    complex: &'a Complex<N>,
+    complex: &'a SimplicialComplex<N>,
     top: &'a [usize],
     d: &'a [T],
     flag: Vec<Vec<T>>,

@@ -6,7 +6,8 @@
 
 mod law_suite;
 
-use gax::{Coef, Extensor, Kind, NewtonStep, Unit};
+use gax::__private::NewtonStep;
+use gax::{Coef, Extensor, Kind, Unit};
 use law_suite::{Sym, T, fresh, reset};
 
 /// For any `m` with a norm `n = m ~m` whose powers are self-reverse (a Study number, or a

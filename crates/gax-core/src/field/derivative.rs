@@ -5,7 +5,7 @@ extern crate std;
 
 use super::{Field, SparseMap};
 use crate::coef::{Coef, Real};
-use crate::dual::{IntoScalar, Jet, variables};
+use crate::jet::{IntoScalar, Jet, variables};
 use crate::kind::{Extensor, Kind, Retype};
 use std::vec::Vec;
 
@@ -22,7 +22,7 @@ type ScalarOf<X, S> =
 /// step at each site and summing over the sites gives the first-order change.
 ///
 /// `f` sees the field with [`Jet`] coefficients, so it is written generic over the coefficient
-/// type, as for [`dual::gradient`](crate::dual::gradient). It is evaluated once per site, each
+/// type, as for [`jet::gradient`](crate::jet::gradient). It is evaluated once per site, each
 /// time with derivatives along that site's coefficients only, so the cost is `n` evaluations of
 /// `f` carrying `A::N` derivatives.
 ///
@@ -77,7 +77,7 @@ where
 /// springs of a string, the elements of a mesh) has a sparse Hessian that the chain rule
 /// assembles in one pass: with `D` the sparse map from the field to the terms' arguments
 /// (differences of neighbours, a triangle's corners), the gradient is `~D * g` and the Hessian
-/// `~D * diag(H) * D`, from [`dual::hessian`](crate::dual::hessian) on each term (see the guide,
+/// `~D * diag(H) * D`, from [`jet::hessian`](crate::jet::hessian) on each term (see the guide,
 /// section "Fields").
 ///
 /// ```

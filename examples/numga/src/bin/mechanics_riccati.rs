@@ -53,7 +53,7 @@ mod riccati {
                 let control_cost: EffortCost = effort_cost + value.of_both(actuation, actuation);
                 // The push that cancels the cost's derivative, for every error at once.
                 let cross: Scalar<(Twist, Forque), f64> = value.of_both(dynamics, actuation);
-                let feedback: Feedback = -control_cost.solve(cross);
+                let feedback: Feedback = -control_cost.solve_pairing(cross);
                 // The error's cost now, and its future cost through the step that feedback takes.
                 let closed: Dynamics = dynamics + actuation.of(feedback);
                 value = state_cost + value.of_both(dynamics, closed);

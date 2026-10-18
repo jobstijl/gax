@@ -6,6 +6,9 @@
 //! pattern, and `prepared >> p` applies them sparsely. Use it to transform many objects
 //! with one versor.
 
+use crate::coef::Coef;
+use crate::kind::Kind;
+use crate::map::{Dense, LinearMap};
 use core::marker::PhantomData;
 
 /// The action of versor `V` on kind `X`, stored as the `N` non-constant entries of its matrix.
@@ -17,7 +20,7 @@ use core::marker::PhantomData;
 /// let p = Point::xyz(1.0, 2.0, 3.0);
 /// let (a, b) = ((t >> p).to_euclidean(), (m >> p).to_euclidean());
 /// assert!(a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-12)); // same result
-/// let dense: Point<(Point,), f64> = t.to_map();
+/// let dense: Point<(Point,), f64> = t.to_dense();
 /// # let _ = dense;
 /// ```
 ///
@@ -44,21 +47,46 @@ impl<V, X, T, const N: usize> Prepared<V, X, T, N> {
     }
 
     /// The dense map of this action (for composing it with other maps): the entries written in
-    /// place, without multiplying through an identity map.
+    /// place, without multiplying through an identity map. The same as [`LinearMap::to_dense`],
+    /// with no trait to import.
     ///
     /// ```
     /// use gax::ApproxEq;
     /// use gax::pga3d::{Motor, Point};
     /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.3);
-    /// let map: Point<(Point,), f64> = m.prepare::<Point>().to_map();
+    /// let map = m.prepare::<Point>().to_dense();
     /// assert!(map.approx_eq(&(m >> Point::slot()), 1e-12));
     /// ```
     #[inline(always)]
-    pub fn to_map<M>(self) -> M
+    pub fn to_dense(self) -> Dense<Self>
     where
-        M: From<Self>,
+        Self: LinearMap,
     {
-        self.into()
+        LinearMap::to_dense(self)
+    }
+}
+
+/// The dense map of a prepared action of `V` on the kind that implements it, `N` entries
+/// (implemented by the generated algebras: the kind is theirs, which [`Prepared`] is not).
+#[doc(hidden)]
+pub trait PreparedDense<V, const N: usize>: Kind {
+    /// The output kind of the action.
+    type Output: Kind;
+    /// The dense map.
+    fn to_dense<T: Coef>(p: Prepared<V, Self, T, N>) -> <Self::Output as Kind>::Mv<(Self,), T>;
+}
+
+impl<V, X, T, const N: usize> LinearMap for Prepared<V, X, T, N>
+where
+    X: PreparedDense<V, N>,
+    T: Coef,
+{
+    type Kind = X::Output;
+    type Slots = (X,);
+    type Coef = T;
+    #[inline(always)]
+    fn to_dense(self) -> Dense<Self> {
+        X::to_dense(self)
     }
 }
 

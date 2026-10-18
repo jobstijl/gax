@@ -17,6 +17,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 pub const MAX_SLOTS: usize = 12;
 
 /// Concatenation of slot lists. Implemented for every [`Slots`] type.
+#[doc(hidden)]
 pub trait HasCat {
     /// `Self` followed by `R`.
     type Cat<R: Slots>: Slots;
@@ -172,6 +173,7 @@ pub const SLOT_UNROLL_MAX: usize = 4096;
 /// slot entries of `a` and `b`, collected with slots `Cat<S1, S2>` (`a`'s first). Generated
 /// products of maps call it above [`SLOT_UNROLL_MAX`].
 #[inline]
+#[doc(hidden)]
 pub fn by_entries<M1, M2, R, F>(
     a: &M1,
     b: &M2,
@@ -413,6 +415,7 @@ tuple_slots!(12; A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11; overflow);
 /// elementwise, and `*` between two wrappers is the outer product, whose slots are the
 /// concatenation. For values (`S = ()`) every operation is a single scalar operation.
 #[repr(transparent)]
+#[doc(hidden)]
 pub struct SlotArr<S: Slots, T: Coef>(pub S::Arr<T>);
 
 #[allow(clippy::expl_impl_clone_on_copy)]

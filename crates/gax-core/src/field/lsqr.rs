@@ -50,7 +50,7 @@ where
         }
     }
 
-    /// The least-squares solution of `self.apply(x) ≈ b` of least norm: the `x` over the input
+    /// The least-squares solution of `self.of(x) ≈ b` of least norm: the `x` over the input
     /// sites that minimizes `‖A x − b‖`, and among those the smallest, both in coefficient
     /// norms. A singular system's gauge (a translation of a free mesh, a constant potential)
     /// is left at zero. Maps of any shape: more output sites than input ones (fitting), fewer
