@@ -3,7 +3,7 @@
 extern crate std;
 
 use super::solve::{flatten, unflatten};
-use super::{Field, Solved, SparseMap};
+use super::{Field, Solved, SparseMap, axpy, dot};
 use crate::coef::Real;
 use crate::kind::{Extensor, Kind};
 use std::vec;
@@ -107,19 +107,20 @@ where
             b.len()
         );
         let (m, n) = (self.shape.0 * <C::Kind as Kind>::N, self.shape.1 * A::N);
-        let norm = |v: &[T]| v.iter().fold(T::zero(), |s, x| x.mul_add(*x, s)).sqrt();
+        let norm = |v: &[T]| dot(v, v).sqrt();
         let scale = |v: &mut [T], f: T| v.iter_mut().for_each(|x| *x = *x * f);
+        let solved = |x: &[T], iterations, residual, converged| Solved {
+            x: unflatten(x),
+            iterations,
+            residual,
+            converged,
+        };
         let mut x = vec![T::zero(); n];
         let mut u = flatten(b);
         let mut beta = norm(&u);
         let zero = T::zero();
         if beta == zero {
-            return Solved {
-                x: unflatten(&x),
-                iterations: 0,
-                residual: zero,
-                converged: true,
-            };
+            return solved(&x, 0, zero, true);
         }
         let b_norm = beta;
         scale(&mut u, beta.recip());
@@ -128,12 +129,7 @@ where
         let mut alpha = norm(&v);
         if alpha == zero {
             // b is orthogonal to the range: x = 0 is the least-norm solution.
-            return Solved {
-                x: unflatten(&x),
-                iterations: 0,
-                residual: zero,
-                converged: true,
-            };
+            return solved(&x, 0, zero, true);
         }
         scale(&mut v, alpha.recip());
         let mut w = v.clone();
@@ -170,9 +166,9 @@ where
             let phi = c * phi_bar;
             phi_bar = s * phi_bar;
             let (step, turn) = (phi / rho, theta / rho);
-            for k in 0..n {
-                x[k] = step.mul_add(w[k], x[k]);
-                w[k] = (-turn).mul_add(w[k], v[k]);
+            axpy(step, &w, &mut x);
+            for (wi, vi) in w.iter_mut().zip(&v) {
+                *wi = (-turn).mul_add(*wi, *vi);
             }
             // ‖r‖ = φ̄, ‖Aᵀ r‖ = φ̄ α |c|.
             let normal = phi_bar * alpha * c.abs();
@@ -180,19 +176,9 @@ where
             let residual_rel = phi_bar / b_norm;
             relative = normal_rel.min(residual_rel);
             if T::all_lt(relative, tolerance) || relative == zero || alpha == zero {
-                return Solved {
-                    x: unflatten(&x),
-                    iterations: it,
-                    residual: relative,
-                    converged: true,
-                };
+                return solved(&x, it, relative, true);
             }
         }
-        Solved {
-            x: unflatten(&x),
-            iterations: max_iterations,
-            residual: relative,
-            converged: false,
-        }
+        solved(&x, max_iterations, relative, false)
     }
 }

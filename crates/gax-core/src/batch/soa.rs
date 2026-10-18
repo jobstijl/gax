@@ -272,14 +272,8 @@ pub fn soa_map2<A: Kind, B: Kind, Y: Kind, L: Batch>(
     for ((ab, bb), yb) in blocks.zip(out.data.chunks_exact_mut(Y::N * BLOCK)) {
         let mut j = 0;
         while j < BLOCK {
-            let x: Mv<A, L> =
-                Extensor::from_coeffs(A::arr_from_fn(|k| L::load(&ab[k * BLOCK + j..])));
-            let z: Mv<B, L> =
-                Extensor::from_coeffs(B::arr_from_fn(|k| L::load(&bb[k * BLOCK + j..])));
-            let y = f(x, z);
-            for (k, c) in y.coeffs().as_ref().iter().enumerate() {
-                c.store(&mut yb[k * BLOCK + j..]);
-            }
+            let y = f(load_block::<A, L>(ab, j), load_block::<B, L>(bb, j));
+            store_block::<Y, L>(yb, j, &y);
             j += L::LANES;
         }
     }

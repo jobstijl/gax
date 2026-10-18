@@ -45,43 +45,39 @@ pub struct SparseMap<C> {
 }
 
 impl<C: Copy> SparseMap<C> {
-    /// Couplings `cells[k]` from input site `cols[k]` to output site `rows[k]`, `shape` the
-    /// numbers of output and input sites. The couplings may come in any order and may repeat.
+    /// The couplings `(row, column, cell)`, each from its input site (column) to its output site
+    /// (row), `shape` the numbers of output and input sites. The couplings may come in any order
+    /// and may repeat; within a row they keep their order.
+    ///
+    /// ```
+    /// use gax::field::SparseMap;
+    /// use gax::pga3d::Scalar;
+    /// let s = Scalar::<(), f64>::new;
+    /// let ends = SparseMap::from_triples([(0, 0, s(-1.0)), (0, 1, s(1.0)), (1, 1, s(-1.0)), (1, 2, s(1.0))], (2, 3));
+    /// assert_eq!(ends.couplings_len(), 4);
+    /// ```
     ///
     /// # Panics
-    /// If the three lists differ in length, or an index is outside `shape`.
+    /// If a row or column is outside `shape`.
     #[must_use]
     #[track_caller]
-    pub fn new(cells: Vec<C>, rows: Vec<usize>, cols: Vec<usize>, shape: (usize, usize)) -> Self {
-        assert!(
-            cells.len() == rows.len() && cells.len() == cols.len(),
-            "SparseMap::new: {} cells, {} rows, {} columns",
-            cells.len(),
-            rows.len(),
-            cols.len()
-        );
-        if let Some(r) = rows.iter().find(|&&r| r >= shape.0) {
-            panic!("SparseMap::new: row {r} outside {} output sites", shape.0);
-        }
-        if let Some(c) = cols.iter().find(|&&c| c >= shape.1) {
-            panic!("SparseMap::new: column {c} outside {} input sites", shape.1);
-        }
-        Self::from_triples(
-            cells
-                .into_iter()
-                .zip(rows)
-                .zip(cols)
-                .map(|((c, r), k)| (r, k, c)),
-            shape,
-        )
-    }
-
-    /// From `(row, column, cell)` triples within `shape`, kept in order within each row.
-    pub(super) fn from_triples(
+    pub fn from_triples(
         triples: impl IntoIterator<Item = (usize, usize, C)>,
         shape: (usize, usize),
     ) -> Self {
         let mut triples: Vec<(usize, usize, C)> = triples.into_iter().collect();
+        for &(r, c, _) in &triples {
+            assert!(
+                r < shape.0,
+                "SparseMap: row {r} outside {} output sites",
+                shape.0
+            );
+            assert!(
+                c < shape.1,
+                "SparseMap: column {c} outside {} input sites",
+                shape.1
+            );
+        }
         // Stable: the order within a row is kept.
         triples.sort_by_key(|t| t.0);
         let mut starts = Vec::with_capacity(shape.0 + 1);
@@ -98,6 +94,25 @@ impl<C: Copy> SparseMap<C> {
             starts,
             shape,
         }
+    }
+
+    /// Couplings `cells[k]` from input site `cols[k]` to output site `rows[k]`:
+    /// [`from_triples`](Self::from_triples) with the three parts in their own lists.
+    ///
+    /// # Panics
+    /// If the three lists differ in length, or an index is outside `shape`.
+    #[must_use]
+    #[track_caller]
+    pub fn new(cells: Vec<C>, rows: Vec<usize>, cols: Vec<usize>, shape: (usize, usize)) -> Self {
+        assert!(
+            cells.len() == rows.len() && cells.len() == cols.len(),
+            "SparseMap::new: {} cells, {} rows, {} columns",
+            cells.len(),
+            rows.len(),
+            cols.len()
+        );
+        let triples = rows.into_iter().zip(cols).zip(cells);
+        Self::from_triples(triples.map(|((r, c), cell)| (r, c, cell)), shape)
     }
 
     /// Each value of a field on its own site, as a cell: weights such as masses or areas,
@@ -139,13 +154,12 @@ impl<C: Copy> SparseMap<C> {
         inputs: usize,
         mut cell: impl FnMut(usize, usize) -> C,
     ) -> Self {
-        let cells = (0..columns.len())
-            .flat_map(|r| (0..N).map(move |k| (r, k)))
-            .map(|(r, k)| cell(r, k))
-            .collect();
-        let rows = (0..columns.len()).flat_map(|r| [r; N]).collect();
-        let cols = columns.iter().flatten().copied().collect();
-        SparseMap::new(cells, rows, cols, (columns.len(), inputs))
+        let triples = columns
+            .iter()
+            .enumerate()
+            .flat_map(|(r, cols)| cols.iter().enumerate().map(move |(k, &c)| (r, k, c)))
+            .map(|(r, k, c)| (r, c, cell(r, k)));
+        SparseMap::from_triples(triples, (columns.len(), inputs))
     }
 
     /// The numbers of output and input sites.

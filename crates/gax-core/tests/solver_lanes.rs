@@ -13,6 +13,7 @@
 // float comparisons are the point.
 #![allow(clippy::needless_range_loop, clippy::float_cmp)]
 
+use gax_core::Real;
 use gax_core::batch::Lanes;
 use gax_core::linalg::*;
 use proptest::prelude::*;
@@ -137,6 +138,25 @@ fn check_eigh<const N: usize>(v: &[f64], gaps: [f64; 4]) {
             }
         }
     }
+}
+
+/// The singular value decomposition `A vᵢ = σᵢ uᵢ` (vectors as rows, `σ` descending) from the
+/// one-sided Jacobi of `A`'s columns: the rotated columns' lengths, sorted lane by lane with the
+/// right vectors and the normalized columns, as `SquareMap::svd` does.
+fn svd<T: Real, const N: usize>(
+    a: &[[T; N]; N],
+    sweeps: usize,
+) -> ([[T; N]; N], [T; N], [[T; N]; N]) {
+    let (mut u, mut v): ([[T; N]; N], [[T; N]; N]) = orthogonalize(&transpose(a), sweeps);
+    let mut neg: [T; N] = core::array::from_fn(|i| -u[i].dot(&u[i]).sqrt());
+    for (row, &n) in u.iter_mut().zip(&neg) {
+        let inv = T::select_lt(n, T::zero(), (-n).recip(), T::zero());
+        *row = row.map(|x| x * inv);
+    }
+    let mut neg_v = neg;
+    sort_pairs(&mut neg, &mut u);
+    sort_pairs(&mut neg_v, &mut v);
+    (u, neg.map(|x| -x), v)
 }
 
 fn check_svd<const N: usize>(v: &[f64], deltas: [f64; 4]) {

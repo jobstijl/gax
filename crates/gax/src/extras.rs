@@ -313,15 +313,7 @@ mod pga3d_extras {
         #[inline]
         pub fn of<S: Slots>(self, b: Line<S, T>) -> Forque<S, T> {
             let (m, i) = (self.mass, self.moments);
-            let c = &b.c;
-            Forque::from_coeffs([
-                scale::<S, T>(m, &c[3]),
-                scale::<S, T>(m, &c[4]),
-                scale::<S, T>(m, &c[5]),
-                scale::<S, T>(i[0], &c[0]),
-                scale::<S, T>(i[1], &c[1]),
-                scale::<S, T>(i[2], &c[2]),
-            ])
+            Forque::from_coeffs(swap_scaled::<S, T>(&b.c, [m, m, m, i[0], i[1], i[2]]))
         }
 
         /// The twist of a momentum, the inverse map: four reciprocals and six products.
@@ -364,16 +356,7 @@ mod pga3d_extras {
         /// ```
         #[inline]
         pub fn to_map(self) -> Forque<(Line,), T> {
-            let z = T::zero();
-            let (m, i) = (self.mass, self.moments);
-            Forque::from_coeffs([
-                [z, z, z, m, z, z],
-                [z, z, z, z, m, z],
-                [z, z, z, z, z, m],
-                [i[0], z, z, z, z, z],
-                [z, i[1], z, z, z, z],
-                [z, z, i[2], z, z, z],
-            ])
+            self.of(Line::oriented_slot())
         }
 
         /// The kinetic energy form `B & I[B]` on twists (twice the kinetic energy): a twist joined
@@ -392,10 +375,11 @@ mod pga3d_extras {
         }
     }
 
-    /// Every coefficient of a slot array scaled by `k`.
+    /// The coefficients of a line with its two halves swapped (the Euclidean part to the ideal
+    /// one and back) and row `r` scaled by `k[r]`: the action of the principal maps.
     #[inline(always)]
-    fn scale<S: Slots, T: Real>(k: T, c: &S::Arr<T>) -> S::Arr<T> {
-        S::map(c, &mut |x: &T| k * *x)
+    fn swap_scaled<S: Slots, T: Real>(c: &[S::Arr<T>; 6], k: [T; 6]) -> [S::Arr<T>; 6] {
+        core::array::from_fn(|r| S::map(&c[(r + 3) % 6], &mut |x: &T| k[r] * *x))
     }
 
     /// The inverse of a [`PrincipalInertia`]: a map from momenta (forques) to twists, stored as
@@ -423,15 +407,7 @@ mod pga3d_extras {
         #[inline]
         pub fn of<S: Slots>(self, f: Forque<S, T>) -> Line<S, T> {
             let (r, i) = (self.inverse_mass, self.inverse_moments);
-            let c = &f.c;
-            Line::from_coeffs([
-                scale::<S, T>(i[0], &c[3]),
-                scale::<S, T>(i[1], &c[4]),
-                scale::<S, T>(i[2], &c[5]),
-                scale::<S, T>(r, &c[0]),
-                scale::<S, T>(r, &c[1]),
-                scale::<S, T>(r, &c[2]),
-            ])
+            Line::from_coeffs(swap_scaled::<S, T>(&f.c, [i[0], i[1], i[2], r, r, r]))
         }
 
         /// The inertia this is the inverse of.
@@ -482,7 +458,7 @@ mod pga3d_extras {
         }
         #[inline]
         fn solve(self, b: Forque<(), T>) -> Line<(), T> {
-            self.inverse().of(b)
+            self.inverse_of(b)
         }
         #[inline]
         fn inverse(self) -> PrincipalMobility<T> {

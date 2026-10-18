@@ -10,11 +10,13 @@
 
 extern crate std;
 
+use super::solve::{flatten, unflatten};
 use super::{Field, SparseMap};
 use crate::coef::Real;
 use crate::kind::{Extensor, Kind};
 use core::fmt;
 use core::marker::PhantomData;
+use core::ops::Range;
 use std::vec;
 use std::vec::Vec;
 
@@ -126,15 +128,7 @@ impl<K: Kind, T: Real> SparseLu<K, T> {
             self.sites,
             b.len()
         );
-        let flat: Vec<T> = b
-            .sites()
-            .iter()
-            .flat_map(|v| v.coeffs().as_ref().iter().copied())
-            .collect();
-        let x = self.solve_flat(&flat);
-        Field::from_fn(self.sites, |s| {
-            Extensor::from_coeffs(K::arr_from_fn(|i| x[s * K::N + i]))
-        })
+        unflatten(&self.solve_flat(&flatten(b)))
     }
 }
 
@@ -452,7 +446,8 @@ fn lu<T: Real>(
 /// Depth-first search for the nonzero pattern of a sparse triangular solve.
 struct Reach {
     marked: Vec<bool>,
-    stack: Vec<(usize, usize)>,
+    /// The rows on the path, each with the entries of its column of `L` still to visit.
+    stack: Vec<(usize, Range<usize>)>,
 }
 
 impl Reach {
@@ -480,24 +475,17 @@ impl Reach {
                 continue;
             }
             self.marked[start] = true;
-            self.stack.push((start, first(l, pinv, start)));
-            while let Some(&mut (j, ref mut next)) = self.stack.last_mut() {
-                let end = last(l, pinv, j);
-                let mut descended = false;
-                while *next < end {
-                    let i = l.i[*next];
-                    *next += 1;
-                    if !self.marked[i] {
-                        self.marked[i] = true;
-                        let f = first(l, pinv, i);
-                        self.stack.push((i, f));
-                        descended = true;
-                        break;
-                    }
-                }
-                if !descended {
+            self.stack.push((start, below(l, pinv, start)));
+            while let Some((j, rest)) = self.stack.last_mut() {
+                let marked = &mut self.marked;
+                // Descend into the next unmarked row, or finish `j`.
+                if let Some(p) = rest.find(|&p| !marked[l.i[p]]) {
+                    let i = l.i[p];
+                    marked[i] = true;
+                    self.stack.push((i, below(l, pinv, i)));
+                } else {
+                    pattern.push(*j);
                     self.stack.pop();
-                    pattern.push(j);
                 }
             }
         }
@@ -507,18 +495,10 @@ impl Reach {
     }
 }
 
-/// The first entry of row `j`'s column of `L` past its diagonal (none if `j` is not pivotal).
-fn first<T>(l: &Csc<T>, pinv: &[usize], j: usize) -> usize {
+/// The entries of row `j`'s column of `L` past its diagonal (none if `j` is not pivotal).
+fn below<T>(l: &Csc<T>, pinv: &[usize], j: usize) -> Range<usize> {
     match pinv.get(j) {
-        Some(&jj) if jj != usize::MAX => l.p[jj] + 1,
-        _ => 0,
-    }
-}
-
-/// The end of row `j`'s column of `L` (none if `j` is not pivotal).
-fn last<T>(l: &Csc<T>, pinv: &[usize], j: usize) -> usize {
-    match pinv.get(j) {
-        Some(&jj) if jj != usize::MAX => l.p[jj + 1],
-        _ => 0,
+        Some(&jj) if jj != usize::MAX => l.p[jj] + 1..l.p[jj + 1],
+        _ => 0..0,
     }
 }

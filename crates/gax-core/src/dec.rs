@@ -52,10 +52,12 @@ pub trait Distance: Position {
     fn distance_squared(a: &Self, b: &Self) -> Self::Coef;
 }
 
-/// Solve `A x = b` for a small dense `A` (row-major `n × n`), by Gaussian elimination with
-/// partial pivoting. `None` if `A` is singular to working precision.
-fn solve<T: Real>(mut a: Vec<T>, mut b: Vec<T>) -> Option<Vec<T>> {
-    let n = b.len();
+/// Gaussian elimination with partial pivoting of the small dense `n × n` matrix `a` (row-major)
+/// to upper triangular form, with the same row operations on the right-hand side `b`, if any.
+/// Whether the rows were exchanged an odd number of times; `None` if a pivot is zero (`a` is
+/// singular to working precision).
+fn eliminate<T: Real>(a: &mut [T], mut b: Option<&mut [T]>, n: usize) -> Option<bool> {
+    let mut odd = false;
     for c in 0..n {
         let p = (c..n).max_by(|&i, &j| {
             if T::all_lt(a[i * n + c].abs(), a[j * n + c].abs()) {
@@ -71,7 +73,10 @@ fn solve<T: Real>(mut a: Vec<T>, mut b: Vec<T>) -> Option<Vec<T>> {
             for k in 0..n {
                 a.swap(p * n + k, c * n + k);
             }
-            b.swap(p, c);
+            if let Some(b) = b.as_deref_mut() {
+                b.swap(p, c);
+            }
+            odd = !odd;
         }
         let inv = a[c * n + c].recip();
         for r in c + 1..n {
@@ -79,15 +84,22 @@ fn solve<T: Real>(mut a: Vec<T>, mut b: Vec<T>) -> Option<Vec<T>> {
             for k in c..n {
                 a[r * n + k] = a[r * n + k] - f * a[c * n + k];
             }
-            b[r] = b[r] - f * b[c];
+            if let Some(b) = b.as_deref_mut() {
+                b[r] = b[r] - f * b[c];
+            }
         }
     }
+    Some(odd)
+}
+
+/// Solve `A x = b` for a small dense `A` (row-major `n × n`), by Gaussian elimination with
+/// partial pivoting. `None` if `A` is singular to working precision.
+fn solve<T: Real>(mut a: Vec<T>, mut b: Vec<T>) -> Option<Vec<T>> {
+    let n = b.len();
+    eliminate(&mut a, Some(&mut b), n)?;
     let mut x = std::vec![T::zero(); n];
     for r in (0..n).rev() {
-        let mut s = b[r];
-        for k in r + 1..n {
-            s = s - a[r * n + k] * x[k];
-        }
+        let s = (r + 1..n).fold(b[r], |s, k| s - a[r * n + k] * x[k]);
         x[r] = s * a[r * n + r].recip();
     }
     Some(x)
@@ -95,36 +107,28 @@ fn solve<T: Real>(mut a: Vec<T>, mut b: Vec<T>) -> Option<Vec<T>> {
 
 /// The determinant of a small dense matrix, by elimination with partial pivoting.
 fn determinant<T: Real>(mut a: Vec<T>, n: usize) -> T {
-    let mut det = T::one();
-    for c in 0..n {
-        let Some(p) = (c..n).max_by(|&i, &j| {
-            if T::all_lt(a[i * n + c].abs(), a[j * n + c].abs()) {
-                core::cmp::Ordering::Less
-            } else {
-                core::cmp::Ordering::Greater
-            }
-        }) else {
-            return T::one();
-        };
-        if a[p * n + c] == T::zero() {
-            return T::zero();
-        }
-        if p != c {
-            for k in 0..n {
-                a.swap(p * n + k, c * n + k);
-            }
-            det = -det;
-        }
-        det = det * a[c * n + c];
-        let inv = a[c * n + c].recip();
-        for r in c + 1..n {
-            let f = a[r * n + c] * inv;
-            for k in c..n {
-                a[r * n + k] = a[r * n + k] - f * a[c * n + k];
-            }
+    match eliminate(&mut a, None, n) {
+        None => T::zero(),
+        Some(odd) => {
+            let det = (0..n).fold(T::one(), |det, c| det * a[c * n + c]);
+            if odd { -det } else { det }
         }
     }
-    det
+}
+
+/// The inverse of a simplex's Gram matrix `g` (`n × n`, row-major), column by column.
+fn inverse_gram<T: Real>(g: &[T], n: usize) -> Vec<T> {
+    let mut inv = std::vec![T::zero(); n * n];
+    for c in 0..n {
+        let e = (0..n)
+            .map(|r| if r == c { T::one() } else { T::zero() })
+            .collect();
+        let col = solve(g.to_vec(), e).expect("a simplex of positive volume");
+        for (r, x) in col.into_iter().enumerate() {
+            inv[r * n + c] = x;
+        }
+    }
+    inv
 }
 
 /// The Gram matrix `Gᵢⱼ = ½(d₀ᵢ + d₀ⱼ − dᵢⱼ)` of a simplex's edges from its first vertex, from the
@@ -230,17 +234,14 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             // circumcentre in the top simplex's barycentric coordinates).
             let local: Vec<usize> = (0..N).collect();
             let centre = circumcentre(d, N - 1);
-            let mut flag: Vec<Vec<T>> = std::vec![centre.clone()];
-            descend(
-                &complex,
+            let mut flags = Flags {
+                complex: &complex,
                 top,
-                &local,
-                &centre,
-                T::one(),
                 d,
-                &mut flag,
-                &mut dual_volumes,
-            );
+                flag: std::vec![centre.clone()],
+                duals: &mut dual_volumes,
+            };
+            flags.descend(&local, &centre, T::one());
         }
         Geometry {
             complex,
@@ -275,16 +276,8 @@ impl<T: Real, const N: usize> Geometry<T, N> {
                 "the cells of a Hodge star are scalars"
             );
         }
-        let n = self.complex.len(k);
-        let cell = |x: T| C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| x));
-        SparseMap::new(
-            (0..n)
-                .map(|i| cell(self.dual_volumes[k][i] * self.volumes[k][i].recip()))
-                .collect(),
-            (0..n).collect(),
-            (0..n).collect(),
-            (n, n),
-        )
+        let duals = self.dual_volumes[k].iter().zip(&self.volumes[k]);
+        Self::diagonal(duals.map(|(&d, &p)| d * p.recip()))
     }
 
     /// Whether every simplex contains its circumcentre strictly inside (every barycentric
@@ -371,12 +364,8 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         let cell = |x: T| C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| x));
         let m = self.complex.len(k);
         // Repeated couplings add: each top simplex's share of an entry.
-        SparseMap::new(
-            triples.iter().map(|&(_, _, x)| cell(x)).collect(),
-            triples.iter().map(|&(r, _, _)| r).collect(),
-            triples.iter().map(|&(_, c, _)| c).collect(),
-            (m, m),
-        )
+        let triples = triples.into_iter().map(|(r, c, x)| (r, c, cell(x)));
+        SparseMap::from_triples(triples, (m, m))
     }
 }
 
@@ -412,20 +401,16 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         let s = self.complex.simplex(n, top);
         let v = mesh.vertices.sites();
         // The inverse Gram matrix, and the gradients as model vectors.
-        let g = gram(&self.distances[top], n);
+        let inv = inverse_gram(&gram(&self.distances[top], n), n);
         let edges: Vec<V> = (1..N).map(|j| v[s[j]] - v[s[0]]).collect();
-        let mut grads: Vec<V> = Vec::with_capacity(N);
-        for i in 0..n {
-            let e = (0..n)
-                .map(|r| if r == i { T::one() } else { T::zero() })
-                .collect();
-            let row = solve(g.clone(), e).expect("a simplex of positive volume");
-            let grad = (0..n)
-                .map(|j| edges[j].gp(row[j]))
-                .reduce(|a, b| a + b)
-                .expect("an edge");
-            grads.push(grad);
-        }
+        let mut grads: Vec<V> = (0..n)
+            .map(|i| {
+                (0..n)
+                    .map(|j| edges[j].gp(inv[j * n + i]))
+                    .reduce(|a, b| a + b)
+                    .expect("an edge")
+            })
+            .collect();
         let first = grads
             .iter()
             .copied()
@@ -474,17 +459,28 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     }
 
     /// The diagonal map of `x`, as scalar cells.
-    fn diagonal<C: Extensor<Slots = (), Coef = T>>(
-        x: impl ExactSizeIterator<Item = T>,
-    ) -> SparseMap<C> {
-        let n = x.len();
+    fn diagonal<C: Extensor<Slots = (), Coef = T>>(x: impl IntoIterator<Item = T>) -> SparseMap<C> {
         let cell = |x: T| C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| x));
-        SparseMap::new(
-            x.map(cell).collect(),
-            (0..n).collect(),
-            (0..n).collect(),
-            (n, n),
-        )
+        SparseMap::from_diagonal(&x.into_iter().map(cell).collect())
+    }
+
+    /// `up + down` where both exist, either one alone, or the zero map on `k`-cochains: the two
+    /// halves of a Laplacian.
+    fn up_and_down<C>(
+        &self,
+        k: usize,
+        up: Option<SparseMap<C>>,
+        down: Option<SparseMap<C>>,
+    ) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T> + core::ops::Add<Output = C>,
+    {
+        match (up, down) {
+            (Some(u), Some(d)) => &u + &d,
+            (Some(u), None) => u,
+            (None, Some(d)) => d,
+            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.complex.len(k))),
+        }
     }
 
     /// The inverse of the diagonal star on `k`-cochains.
@@ -497,7 +493,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             assert!(d != T::zero(), "a {k}-simplex has a dual volume of zero: the diagonal star on {k}-cochains has no inverse");
             p * d.recip()
         });
-        Self::diagonal(ratios.collect::<Vec<_>>().into_iter())
+        Self::diagonal(ratios)
     }
 
     /// The codifferential `δ_k = ⋆_{k−1}⁻¹ d_{k−1}ᵀ ⋆_k`, from `k`-cochains to `(k−1)`-cochains
@@ -532,12 +528,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     {
         let up = (k + 1 < N).then(|| &self.codifferential::<C>(k + 1) * &self.complex.d::<C>(k));
         let down = (k >= 1).then(|| &self.complex.d::<C>(k - 1) * &self.codifferential::<C>(k));
-        match (up, down) {
-            (Some(u), Some(d)) => &u + &d,
-            (Some(u), None) => u,
-            (None, Some(d)) => d,
-            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.complex.len(k))),
-        }
+        self.up_and_down(k, up, down)
     }
 
     /// The symmetric form of the Laplacian, `⋆_k Δ_k = d_kᵀ ⋆_{k+1} d_k + ⋆_k d_{k−1} ⋆_{k−1}⁻¹
@@ -560,12 +551,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         let down = (k >= 1).then(|| {
             &self.star::<C>(k) * &(&self.complex.d::<C>(k - 1) * &self.codifferential::<C>(k))
         });
-        match (up, down) {
-            (Some(u), Some(d)) => &u + &d,
-            (Some(u), None) => u,
-            (None, Some(d)) => d,
-            (None, None) => Self::diagonal(core::iter::repeat_n(T::zero(), self.complex.len(k))),
-        }
+        self.up_and_down(k, up, down)
     }
 
     /// The Galerkin stiffness on `k`-cochains, `d_kᵀ M_{k+1} d_k` (`k + 1 < N`): with the mass
@@ -610,38 +596,23 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         C: Extensor<Slots = (), Coef = T> + core::ops::Mul<Output = C> + core::ops::Add<Output = C>,
     {
         let at = self.offsets();
-        let mut cells = Vec::new();
-        let mut rows = Vec::new();
-        let mut cols = Vec::new();
-        let mut push = |m: SparseMap<C>, row: usize, col: usize| {
-            for (r, c, x) in m.couplings() {
-                cells.push(x);
-                rows.push(row + r);
-                cols.push(col + c);
-            }
-        };
+        // Each block's couplings, moved to its rows and columns.
+        let mut triples = Vec::new();
         for k in 0..N - 1 {
-            push(self.complex.d::<C>(k), at[k + 1], at[k]);
-            push(self.codifferential::<C>(k + 1), at[k], at[k + 1]);
+            let d = (self.complex.d::<C>(k), at[k + 1], at[k]);
+            let delta = (self.codifferential::<C>(k + 1), at[k], at[k + 1]);
+            for (m, row, col) in [d, delta] {
+                triples.extend(m.couplings().map(|(r, c, x)| (row + r, col + c, x)));
+            }
         }
-        SparseMap::new(cells, rows, cols, (at[N], at[N]))
+        SparseMap::from_triples(triples, (at[N], at[N]))
     }
 }
 
 /// The inner products `⟨dλₐ, dλ_b⟩` of the barycentric gradients of a simplex of dimension `n`,
 /// `(n+1) × (n+1)`: the inverse Gram matrix for `a, b ≥ 1`, and `dλ₀ = −Σ dλᵢ`.
 fn gradients<T: Real>(d: &[T], n: usize) -> Vec<T> {
-    let g = gram(d, n);
-    let mut inv = std::vec![T::zero(); n * n];
-    for c in 0..n {
-        let e = (0..n)
-            .map(|r| if r == c { T::one() } else { T::zero() })
-            .collect();
-        let col = solve(g.clone(), e).expect("a simplex of positive volume");
-        for r in 0..n {
-            inv[r * n + c] = col[r];
-        }
-    }
+    let inv = inverse_gram(&gram(d, n), n);
     let m = n + 1;
     let mut h = std::vec![T::zero(); m * m];
     for a in 0..m {
@@ -678,60 +649,62 @@ fn subsets(n: usize, size: usize) -> Vec<Vec<usize>> {
         .collect()
 }
 
-/// The circumcentric dual volume pieces of a face of a top simplex and of its faces below it,
-/// along one flag (`PyDEC`'s `__compute_dual_volume`, intrinsically). `face` holds local vertices
-/// of the top simplex, `flag` the circumcentres from the top down to this face, `sign` the
-/// product of the side signs so far.
-#[allow(clippy::too_many_arguments)]
-fn descend<T: Real, const N: usize>(
-    complex: &Complex<N>,
-    top: &[usize],
-    face: &[usize],
-    centre: &[T],
-    sign: T,
-    d: &[T],
-    flag: &mut Vec<Vec<T>>,
-    duals: &mut [Vec<T>],
-) {
-    let k = face.len() - 1;
-    let mut global: Vec<usize> = face.iter().map(|&l| top[l]).collect();
-    global.sort_unstable();
-    let index = complex.index_of(k, &global).expect("a face of the complex");
-    let m = flag.len() - 1;
-    let piece = volume(&barycentric_distances(flag, d), m);
-    duals[k][index] = duals[k][index] + sign * piece;
-    if k == 0 {
-        return;
-    }
-    for (o, &opposite) in face.iter().enumerate() {
-        let below: Vec<usize> = face.iter().copied().filter(|&l| l != opposite).collect();
-        // Its circumcentre, in its own barycentric coordinates, then in the top simplex's.
-        let sub: Vec<T> = below
-            .iter()
-            .flat_map(|&a| below.iter().map(move |&b| d[a * N + b]))
-            .collect();
-        let own = circumcentre(&sub, k - 1);
-        let mut c = std::vec![T::zero(); N];
-        for (&l, &x) in below.iter().zip(&own) {
-            c[l] = x;
-        }
-        // The side: the sign of this face's centre's coordinate at the opposite vertex, as seen
-        // from the parent's own barycentric coordinates.
-        let side = if T::all_lt(centre_in(face, centre, o), T::zero()) {
-            -T::one()
-        } else {
-            T::one()
-        };
-        flag.push(c.clone());
-        descend(complex, top, &below, &c, sign * side, d, flag, duals);
-        flag.pop();
-    }
+/// What the circumcentric dual volumes of one top simplex's faces are computed from, along its
+/// flags ([`Flags::descend`]): the complex, the top simplex's vertices and squared distances,
+/// the circumcentres from the top down to the current face, and the volumes being summed.
+struct Flags<'a, T, const N: usize> {
+    complex: &'a Complex<N>,
+    top: &'a [usize],
+    d: &'a [T],
+    flag: Vec<Vec<T>>,
+    duals: &'a mut [Vec<T>],
 }
 
-/// The barycentric coordinate, in `face`, of a point of `face`'s span given in the top simplex's
-/// coordinates, at `face`'s `o`-th vertex.
-fn centre_in<T: Real>(face: &[usize], centre: &[T], o: usize) -> T {
-    centre[face[o]]
+impl<T: Real, const N: usize> Flags<'_, T, N> {
+    /// The circumcentric dual volume pieces of a face of the top simplex and of its faces below
+    /// it, along one flag (`PyDEC`'s `__compute_dual_volume`, intrinsically). `face` holds local
+    /// vertices of the top simplex, `centre` its circumcentre (the last of the flag), `sign` the
+    /// product of the side signs so far.
+    fn descend(&mut self, face: &[usize], centre: &[T], sign: T) {
+        let d = self.d;
+        let k = face.len() - 1;
+        let mut global: Vec<usize> = face.iter().map(|&l| self.top[l]).collect();
+        global.sort_unstable();
+        let index = self
+            .complex
+            .index_of(k, &global)
+            .expect("a face of the complex");
+        let m = self.flag.len() - 1;
+        let piece = volume(&barycentric_distances(&self.flag, d), m);
+        self.duals[k][index] = self.duals[k][index] + sign * piece;
+        if k == 0 {
+            return;
+        }
+        for &opposite in face {
+            let below: Vec<usize> = face.iter().copied().filter(|&l| l != opposite).collect();
+            // Its circumcentre, in its own barycentric coordinates, then in the top simplex's.
+            let sub: Vec<T> = below
+                .iter()
+                .flat_map(|&a| below.iter().map(move |&b| d[a * N + b]))
+                .collect();
+            let own = circumcentre(&sub, k - 1);
+            let mut c = std::vec![T::zero(); N];
+            for (&l, &x) in below.iter().zip(&own) {
+                c[l] = x;
+            }
+            // The side: the sign of this face's centre's coordinate at the opposite vertex, as
+            // seen from the parent's own barycentric coordinates (a point of the face's span,
+            // in the top simplex's coordinates, has the face's coordinates at its vertices).
+            let side = if T::all_lt(centre[opposite], T::zero()) {
+                -T::one()
+            } else {
+                T::one()
+            };
+            self.flag.push(c.clone());
+            self.descend(&below, &c, sign * side);
+            self.flag.pop();
+        }
+    }
 }
 
 /// The de Rham map: the `k`-cochain of a `k`-vector field `F`, its integral over each

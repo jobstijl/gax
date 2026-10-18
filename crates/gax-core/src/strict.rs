@@ -46,24 +46,26 @@ impl<T> Strict<T> {
     pub fn get(self) -> T {
         self.0
     }
+
+    /// The numbers inside a slice, without copying.
+    #[inline(always)]
+    fn inner(s: &[Self]) -> &[T] {
+        // SAFETY: `Strict<T>` is `repr(transparent)` over `T`, so a slice of one is a slice of
+        // the other, with the same length.
+        unsafe { core::slice::from_raw_parts(s.as_ptr().cast::<T>(), s.len()) }
+    }
 }
 
 impl<T: Coef> Strict<T> {
     /// A value, map or form with `T` coefficients, as one with `Strict<T>` coefficients.
     #[inline]
-    pub fn wrap<M: Extensor<Coef = T>>(m: M) -> Retype<M, M::Slots, Strict<T>>
-    where
-        Strict<T>: Coef,
-    {
+    pub fn wrap<M: Extensor<Coef = T>>(m: M) -> Retype<M, M::Slots, Strict<T>> {
         m.map_coefs(Strict)
     }
 
     /// The reverse of [`Strict::wrap`]: `T` coefficients again.
     #[inline]
-    pub fn unwrap<M: Extensor<Coef = Strict<T>>>(m: M) -> Retype<M, M::Slots, T>
-    where
-        Strict<T>: Coef,
-    {
+    pub fn unwrap<M: Extensor<Coef = Strict<T>>>(m: M) -> Retype<M, M::Slots, T> {
         m.map_coefs(|x| x.0)
     }
 }
@@ -120,11 +122,10 @@ impl<T: Coef> Coef for Strict<T> {
     fn from_ratio(num: i64, den: i64) -> Self {
         Strict(T::from_ratio(num, den))
     }
+    /// The whole slice at once, so that a failure names its part.
     #[inline(always)]
     fn check_unit(deviations: &[Self]) {
-        for d in deviations {
-            T::check_unit(&[d.0]);
-        }
+        T::check_unit(Self::inner(deviations));
     }
     #[inline(always)]
     fn note_renormalize() {
@@ -335,4 +336,17 @@ mod batch_lanes {
 
     per_lane!(@[const N: usize] Lanes<f32, N>, f32, |x: Lanes<f32, N>| x.v, Lanes::new);
     per_lane!(@[const N: usize] Lanes<f64, N>, f64, |x: Lanes<f64, N>| x.v, Lanes::new);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Strict;
+    use crate::coef::Coef;
+
+    /// A failure names its part of the whole slice.
+    #[test]
+    #[should_panic(expected = "part 2 of u ~u - 1")]
+    fn check_unit_names_the_part() {
+        Strict::<f64>::check_unit(&[Strict(0.0), Strict(0.0), Strict(1.0)]);
+    }
 }

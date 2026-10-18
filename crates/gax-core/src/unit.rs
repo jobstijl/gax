@@ -186,27 +186,26 @@ impl<M> Deref for Unit<M> {
     }
 }
 
-impl<M, R> core::ops::Shr<R> for Unit<M>
-where
-    Unit<M>: crate::ops::Transform<R>,
-{
-    type Output = <Unit<M> as crate::ops::Transform<R>>::Output;
-    #[inline(always)]
-    fn shr(self, rhs: R) -> Self::Output {
-        <Self as crate::ops::Transform<R>>::transform(self, rhs)
-    }
+/// The operator `$Op` (`>>` or `<<`) on a versor wrapper `$ty` (generic over `$g`), forwarding
+/// to the action `$Tr` (`Transform` or `TransformInv`).
+macro_rules! forward_shift {
+    ([$($g:tt)*] $ty:ty, $Op:ident, $op:ident, $Tr:ident, $tr:ident) => {
+        impl<$($g)*, R> core::ops::$Op<R> for $ty
+        where
+            Self: crate::ops::$Tr<R>,
+        {
+            type Output = <Self as crate::ops::$Tr<R>>::Output;
+            #[inline(always)]
+            fn $op(self, rhs: R) -> Self::Output {
+                <Self as crate::ops::$Tr<R>>::$tr(self, rhs)
+            }
+        }
+    };
 }
+pub(crate) use forward_shift;
 
-impl<M, R> core::ops::Shl<R> for Unit<M>
-where
-    Unit<M>: crate::ops::TransformInv<R>,
-{
-    type Output = <Unit<M> as crate::ops::TransformInv<R>>::Output;
-    #[inline(always)]
-    fn shl(self, rhs: R) -> Self::Output {
-        <Self as crate::ops::TransformInv<R>>::transform_inv(self, rhs)
-    }
-}
+forward_shift!([M] Unit<M>, Shr, shr, Transform, transform);
+forward_shift!([M] Unit<M>, Shl, shl, TransformInv, transform_inv);
 
 impl<M: crate::ops::Reverse<Output = M>> Unit<M> {
     /// The inverse of a unit versor: its reverse (no arithmetic).

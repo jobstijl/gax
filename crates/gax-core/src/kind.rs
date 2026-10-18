@@ -1,7 +1,7 @@
 //! Kinds (typed subspaces) and the [`Extensor`] trait shared by all generated types.
 
 use crate::coef::{Coef, Elem};
-use crate::slots::Slots;
+use crate::slots::{Slots, fold_all, fold_all_pairs};
 use core::fmt::Debug;
 
 /// A typed subspace of an algebra, such as `Point` or `Motor`: an ordered list of oriented
@@ -107,13 +107,10 @@ pub trait Extensor: Copy + Debug + PartialEq + 'static {
     {
         use crate::coef::Real;
         let one = <Self::Coef as crate::coef::Coef>::one();
-        self.coeffs().as_ref().iter().all(|col| {
-            (0..<Self::Slots as Slots>::SIZE).all(|k| {
-                let x = <Self::Slots as Slots>::get_flat(col, k);
-                #[allow(clippy::eq_op)] // `x - x` is zero exactly when `x` is finite
-                let zero_if_finite = x - x;
-                Self::Coef::all_lt(zero_if_finite.abs(), one)
-            })
+        fold_all::<Self::Slots, _, _>(self.coeffs().as_ref(), true, |finite, x| {
+            #[allow(clippy::eq_op)] // `x - x` is zero exactly when `x` is finite
+            let zero_if_finite = x - x;
+            finite && Self::Coef::all_lt(zero_if_finite.abs(), one)
         })
     }
 
@@ -192,34 +189,25 @@ where
     M::Coef: Into<f64>,
 {
     fn approx_eq(&self, other: &Self, tol: f64) -> bool {
-        let scale = flat(self)
-            .chain(flat(other))
-            .fold(1.0f64, |m, x| m.max(x.abs()));
+        let largest = |m: f64, x: M::Coef| m.max(x.into().abs());
+        let scale = fold_all::<M::Slots, _, _>(self.coeffs().as_ref(), 1.0, largest);
+        let scale = fold_all::<M::Slots, _, _>(other.coeffs().as_ref(), scale, largest);
         self.max_abs_diff(other) <= tol * scale
     }
 
     fn max_abs_diff(&self, other: &Self) -> f64 {
+        let (a, b) = (self.coeffs().as_ref(), other.coeffs().as_ref());
         // NaN propagates (`f64::max` would drop it), so a NaN coefficient is never close.
-        flat(self).zip(flat(other)).fold(0.0f64, |m, (x, y)| {
-            let d = (x - y).abs();
+        fold_all_pairs::<M::Slots, _, _>(a, b, 0.0, |m, x, y| {
+            let d = (x.into() - y.into()).abs();
             if d.is_nan() || d > m { d } else { m }
         })
     }
 }
 
-/// Every coefficient of `m`, output first, as `f64`.
-fn flat<M: Extensor>(m: &M) -> impl Iterator<Item = f64> + '_
-where
-    M::Coef: Into<f64>,
-{
-    m.coeffs().as_ref().iter().flat_map(|col| {
-        (0..<M::Slots as Slots>::SIZE).map(move |k| <M::Slots as Slots>::get_flat(col, k).into())
-    })
-}
-
 /// The zero value, map or form of `M`'s type.
 #[inline(always)]
-pub(crate) fn zero<M: Extensor>() -> M {
+pub fn zero<M: Extensor>() -> M {
     M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|_| {
         <M::Slots as Slots>::from_flat(&mut |_| M::Coef::zero(), 0)
     }))

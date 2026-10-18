@@ -216,9 +216,7 @@ impl<K: FlatKind, const N: usize, S: Slots, T: Coef> SiteField<K, N, S, T> {
     /// The field from its sites' values (or maps).
     #[must_use]
     pub fn from_sites(sites: [K::Mv<S, T>; N]) -> Self {
-        SiteField {
-            c: SiteArr(sites.map(|v| *v.coeffs())),
-        }
+        from_values(sites)
     }
 
     /// Zero at every site.

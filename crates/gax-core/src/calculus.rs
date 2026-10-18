@@ -32,7 +32,7 @@
 //! ```
 
 use crate::coef::Coef;
-use crate::dual::{Jet, variables};
+use crate::dual::{At, J1, J2, variables, variables2};
 use crate::kind::{Extensor, Kind, Retype};
 use crate::ops::{Gp, Lc, Wedge};
 use core::ops::Add;
@@ -75,12 +75,6 @@ where
     X::from_coeffs(c)
 }
 
-/// First-order jets with respect to `X`'s kind.
-type J1<X> = Jet<<X as Extensor>::Coef, <X as Extensor>::Kind>;
-/// Second-order jets with respect to `X`'s kind.
-type J2<X> = Jet<J1<X>, <X as Extensor>::Kind>;
-/// `X`'s kind with coefficients `C`.
-type At<X, C> = Retype<X, (), C>;
 /// A value of `Y`'s kind with the coefficients of `X`.
 type ValueOf<Y, X> = Retype<Y, (), <X as Extensor>::Coef>;
 
@@ -238,12 +232,7 @@ where
     X::Kind: Reciprocal,
     Y: Extensor<Slots = (), Coef = J2<X>>,
 {
-    let c = x.coeffs().as_ref();
-    // The outer and inner directions are the same coefficients.
-    let vars = <X::Kind as Kind>::arr_from_fn(|i| {
-        Jet::<J1<X>, X::Kind>::variable(Jet::variable(c[i], i), i)
-    });
-    let y = f(Extensor::from_coeffs(vars));
+    let y = f(variables2(x));
     let value = Extensor::from_coeffs(<Y::Kind as Kind>::arr_map(y.coeffs(), |j: &J2<X>| j.re.re));
     // e^I ∗ e^J is the coefficient of e_J in e^I: the frame is the inverse Gram matrix.
     let lap = <Y::Kind as Kind>::arr_map(y.coeffs(), |j: &J2<X>| {

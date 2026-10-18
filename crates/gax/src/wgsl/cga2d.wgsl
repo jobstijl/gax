@@ -7291,7 +7291,7 @@ fn cx_div(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
 }
 
 // The principal root without cancellation: the larger part `t = sqrt((|z| + |a|) / 2)`, the
-// other `b / (2t)` (the form of gax_core::study::Cx::sqrt).
+// other `b / (2t)` (the form of gax_core's `Channel::sqrt` for `Complex`).
 fn cx_sqrt(z: vec2<f32>) -> vec2<f32> {
     let r = sqrt(z.x * z.x + z.y * z.y);
     let t = sqrt(max((r + abs(z.x)) * 0.5, 0.0));

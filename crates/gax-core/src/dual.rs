@@ -267,9 +267,18 @@ impl<T: Coef, D: Directions> Coef for Jet<T, D> {
     fn from_ratio(num: i64, den: i64) -> Self {
         Self::constant(T::from_ratio(num, den))
     }
-    /// The values' check: derivatives say nothing about whether a versor is unit.
+    /// The values' check: derivatives say nothing about whether a versor is unit. The values
+    /// go as one slice, so that a failure names its part (without `std`, one by one: a
+    /// failure then reports part 0).
     #[inline(always)]
     fn check_unit(deviations: &[Self]) {
+        #[cfg(feature = "std")]
+        {
+            extern crate std;
+            let values: std::vec::Vec<T> = deviations.iter().map(|d| d.re).collect();
+            T::check_unit(&values);
+        }
+        #[cfg(not(feature = "std"))]
         for d in deviations {
             T::check_unit(&[d.re]);
         }
@@ -421,11 +430,27 @@ where
     Extensor::from_coeffs(<X::Kind as Kind>::arr_from_fn(|i| Jet::variable(c[i], i)))
 }
 
-/// The value of a function of a gax value, at the variables of kind `A`: the derivatives taken
-/// with respect to a value of `A`.
-type At<X, C> = Retype<X, (), C>;
+/// The coefficients of a value of kind `A` as second-order variables: jets of jets whose outer
+/// and inner directions are the same coefficients. What [`hessian`] and the Laplacian
+/// (`gax::calculus::laplacian`) pass to the function.
+#[inline]
+pub(crate) fn variables2<X>(x: X) -> At<X, J2<X>>
+where
+    X: Extensor<Slots = ()>,
+{
+    let c = x.coeffs().as_ref();
+    Extensor::from_coeffs(<X::Kind as Kind>::arr_from_fn(|i| {
+        Jet::<J1<X>, X::Kind>::variable(Jet::variable(c[i], i), i)
+    }))
+}
+
+/// The argument of a function of a gax value `X`, with coefficients `C` (jets: the derivatives
+/// taken with respect to a value of `X`'s kind).
+pub(crate) type At<X, C> = Retype<X, (), C>;
 /// First-order jets with respect to `X`'s kind.
-type J1<X> = Jet<<X as Extensor>::Coef, <X as Extensor>::Kind>;
+pub(crate) type J1<X> = Jet<<X as Extensor>::Coef, <X as Extensor>::Kind>;
+/// Second-order jets with respect to `X`'s kind: a jet of jets.
+pub(crate) type J2<X> = Jet<J1<X>, <X as Extensor>::Kind>;
 /// The scalar kind of `X`'s algebra.
 type ScalarKind<X> = <<X as Extensor>::Kind as Kind>::Scalar;
 /// The scalar kind of `X`'s algebra with slots `S`.
@@ -470,15 +495,15 @@ where
     Y: Extensor<Coef = J1<X>>,
 {
     let y = f(variables(x));
-    let n = <X::Kind as Kind>::N;
     let value = <Y::Kind as Kind>::arr_map(y.coeffs(), |col| {
         <Y::Slots as Slots>::map(col, &mut |j: &J1<X>| j.re)
     });
+    // Each jet's derivatives as the new last slot: the outer product with its indices.
+    let index = <X::Kind as Kind>::arr_from_fn(|i| i);
     let slope = <Y::Kind as Kind>::arr_map(y.coeffs(), |col| {
-        <Cat<Y::Slots, (X::Kind,)> as Slots>::from_flat(
-            &mut |flat| <Y::Slots as Slots>::get_flat(col, flat / n).du.as_ref()[flat % n],
-            0,
-        )
+        <Y::Slots as Slots>::outer::<(X::Kind,), _, _, _>(col, &index, &mut |j: &J1<X>, &i| {
+            j.du.as_ref()[i]
+        })
     });
     (Extensor::from_coeffs(value), Extensor::from_coeffs(slope))
 }
@@ -531,9 +556,6 @@ where
     (y.re, Extensor::from_coeffs(form))
 }
 
-/// Second-order jets with respect to `X`'s kind: a jet of jets.
-type J2<X> = Jet<J1<X>, <X as Extensor>::Kind>;
-
 /// `(f(x), ∇f(x), ∇²f(x))` for a scalar function of a value of kind `A`: the gradient as the
 /// form `Scalar <- (A,)` and the Hessian as the symmetric bilinear form `Scalar <- (A, A)`. A
 /// Newton step is `-hessian.solve(gradient)`, a value of `A`. One evaluation of `f` on jets of
@@ -570,12 +592,7 @@ where
     X: Extensor<Slots = ()>,
     Y: IntoScalar<J2<X>>,
 {
-    let c = x.coeffs().as_ref();
-    // The outer and inner directions are the same coefficients.
-    let vars = <X::Kind as Kind>::arr_from_fn(|i| {
-        Jet::<J1<X>, X::Kind>::variable(Jet::variable(c[i], i), i)
-    });
-    let y = f(Extensor::from_coeffs(vars)).into_scalar();
+    let y = f(variables2(x)).into_scalar();
     let grad = y.re.du;
     let hess = <X::Kind as Kind>::arr_map(&y.du, |row: &J1<X>| row.du);
     (
@@ -583,4 +600,18 @@ where
         Extensor::from_coeffs(<ScalarKind<X> as Kind>::arr_from_fn(|_| grad)),
         Extensor::from_coeffs(<ScalarKind<X> as Kind>::arr_from_fn(|_| hess)),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Dual;
+    use crate::coef::Coef;
+
+    /// A failure names its part of the whole slice.
+    #[test]
+    #[should_panic(expected = "part 2 of u ~u - 1")]
+    fn check_unit_names_the_part() {
+        let parts = [0.0, 0.0, 1.0].map(Dual::<f64>::constant);
+        Dual::<f64>::check_unit(&parts);
+    }
 }

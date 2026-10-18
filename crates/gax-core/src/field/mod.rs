@@ -11,7 +11,7 @@
 //!   value at its column and sums at the rows; `&ends.reverse() * &ends` multiplies the cells
 //!   along every path through the shared sites (a mesh Laplacian); `&cells * Vector::slot()`
 //!   turns the cells into maps.
-//! * **Maps are built** from couplings ([`SparseMap::new`]), from the input sites of each row
+//! * **Maps are built** from couplings ([`SparseMap::from_triples`], [`SparseMap::new`]), from the input sites of each row
 //!   ([`SparseMap::from_columns`]: a mesh's edges or faces), or on the diagonal
 //!   ([`SparseMap::from_diagonal`]).
 //! * **Map cells apply** ([`SparseMap::apply`], or [`SparseMap::apply_into`] a kept field, with
@@ -60,7 +60,7 @@ pub use sparse::SparseMap;
 
 use crate::coef::{Coef, Real};
 use crate::kind::Extensor;
-use crate::slots::Slots;
+use crate::slots::fold_all_pairs;
 use core::ops::{Add, Neg, Sub};
 use std::vec::Vec;
 
@@ -218,16 +218,11 @@ impl<M: Extensor> Field<M> {
         self.sites
             .iter()
             .zip(&other.sites)
-            .flat_map(|(a, b)| coefficients(a).zip(coefficients(b)))
-            .fold(M::Coef::zero(), |sum, (x, y)| x.mul_add(y, sum))
+            .fold(M::Coef::zero(), |sum, (a, b)| {
+                let (a, b) = (a.coeffs().as_ref(), b.coeffs().as_ref());
+                fold_all_pairs::<M::Slots, _, _>(a, b, sum, |sum, x, y| x.mul_add(y, sum))
+            })
     }
-}
-
-/// Every coefficient of `m`, output first, each slot array in its flat order.
-fn coefficients<M: Extensor>(m: &M) -> impl Iterator<Item = M::Coef> + '_ {
-    m.coeffs().as_ref().iter().flat_map(|col| {
-        (0..<M::Slots as Slots>::SIZE).map(move |k| <M::Slots as Slots>::get_flat(col, k))
-    })
 }
 
 impl<M: Extensor<Coef: Real>> Field<M> {
@@ -243,6 +238,28 @@ impl<M: Extensor<Coef: Real>> Field<M> {
     #[must_use]
     pub fn norm(&self) -> M::Coef {
         self.dot(self).sqrt()
+    }
+}
+
+/// `Σ aᵢ bᵢ` of two coefficient vectors, with four independent accumulators, so that the
+/// multiply-adds overlap instead of waiting on one another.
+pub(crate) fn dot<T: Real>(a: &[T], b: &[T]) -> T {
+    let mut s = [T::zero(); 4];
+    let (ca, ra) = a.as_chunks::<4>();
+    let (cb, rb) = b.as_chunks::<4>();
+    for (x, y) in ca.iter().zip(cb) {
+        for ((s, x), y) in s.iter_mut().zip(x).zip(y) {
+            *s = x.mul_add(*y, *s);
+        }
+    }
+    let t = (s[0] + s[1]) + (s[2] + s[3]);
+    ra.iter().zip(rb).fold(t, |t, (x, y)| x.mul_add(*y, t))
+}
+
+/// `y ← a x + y` on coefficient vectors.
+pub(crate) fn axpy<T: Real>(a: T, x: &[T], y: &mut [T]) {
+    for (yi, xi) in y.iter_mut().zip(x) {
+        *yi = a.mul_add(*xi, *yi);
     }
 }
 

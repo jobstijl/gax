@@ -32,7 +32,7 @@
 //!
 //! An algebra declared with `gax::algebra!` gets an implementation from [`motions!`](crate::motions!).
 
-use crate::{Coef, Extensor, Kind, Of, Real, Slots};
+use crate::{Coef, Extensor, Of, Real};
 use core::ops::{Add, AddAssign, Mul, Neg, Shl, Shr, Sub, SubAssign};
 
 /// Values that add, subtract, scale by a coefficient and have a zero: the linear structure of
@@ -64,9 +64,7 @@ where
 {
     #[inline]
     fn zero() -> Self {
-        X::from_coeffs(<X::Kind as Kind>::arr_from_fn(|_| {
-            <X::Slots as Slots>::from_flat(&mut |_| T::zero(), 0)
-        }))
+        crate::kind::zero()
     }
 }
 
@@ -169,58 +167,78 @@ pub trait Motions<T: Real>: Copy + 'static {
 /// Inside `point` and `coords` the module's kinds are in scope and `T` is the coefficient
 /// type. Where motions commute (the rotations of the plane, whose bivectors have no
 /// commutator), write `commutative struct` instead of `struct`. An optional last entry,
-/// `mobility(i) = …`, replaces the inverse of the inertia `i` (the conformal algebras invert it
-/// on the forques proper, see [`Cga3d`]).
+/// `mobility(i) = …`, replaces the inverse of the inertia `i`; `mobility = proper` inverts it
+/// on the forques proper, the ones that pair with twists (the conformal algebras, see
+/// [`Cga3d`]).
 #[macro_export]
 macro_rules! motions {
+    ($(#[$meta:meta])* $vis:vis commutative struct $($rest:tt)*) => {
+        $crate::motions! { @front commutative ($(#[$meta])*) $vis $($rest)* }
+    };
+    ($(#[$meta:meta])* $vis:vis struct $($rest:tt)*) => {
+        $crate::motions! { @front lie ($(#[$meta])*) $vis $($rest)* }
+    };
     (
-        $(#[$meta:meta])*
-        $vis:vis struct $name:ident in $($m:ident)::+ {
+        @front $brackets:ident ($(#[$meta:meta])*) $vis:vis $name:ident in $($m:ident)::+ {
             Motor = $Motor:ident, Twist = $Twist:ident, Forque = $Forque:ident, Point = $Point:ident,
             Coords = [T; $n:expr],
             point($c:ident) = $point:expr,
             coords($p:ident) = $coords:expr
-            $(, mobility($mi:ident) = $mob:expr)? $(,)?
+            $(, mobility($mi:ident) = $mob:expr)?
+            $(, mobility = $proper:ident)? $(,)?
         }
     ) => {
-        $crate::motions! { @impl ($(#[$meta])*) $vis $name ($($m)::+)
-            $Motor $Twist $Forque $Point $n $c $point $p $coords [$($mi = $mob)?]
-            commutator(a, b) = a.commutator(b);
-            coadjoint(f, b) = f.commutator(b);
-            ad(h) = h.commutator($Twist::oriented_slot());
+        $crate::motions! { @impl $brackets ($(#[$meta])*) $vis $name ($($m)::+)
+            $Motor $Twist $Forque $Point $n $c $point $p $coords [$($mi = $mob)? $($proper)?]
         }
     };
-    (
-        $(#[$meta:meta])*
-        $vis:vis commutative struct $name:ident in $($m:ident)::+ {
-            Motor = $Motor:ident, Twist = $Twist:ident, Forque = $Forque:ident, Point = $Point:ident,
-            Coords = [T; $n:expr],
-            point($c:ident) = $point:expr,
-            coords($p:ident) = $coords:expr
-            $(, mobility($mi:ident) = $mob:expr)? $(,)?
+    // The brackets: the commutator, or zero where motions commute.
+    (@brackets lie $Twist:ident $Forque:ident) => {
+        #[inline]
+        fn commutator(a: Self::Twist, b: Self::Twist) -> Self::Twist {
+            a.commutator(b)
         }
-    ) => {
-        $crate::motions! { @impl ($(#[$meta])*) $vis $name ($($m)::+)
-            $Motor $Twist $Forque $Point $n $c $point $p $coords [$($mi = $mob)?]
-            commutator(a, b) = { let _ = (a, b); $Twist::zero() };
-            coadjoint(f, b) = { let _ = (f, b); $Forque::zero() };
-            ad(h) = { let _ = h; $Twist::<($Twist,), T>::zero() };
+        #[inline]
+        fn coadjoint(f: Self::Forque, b: Self::Twist) -> Self::Forque {
+            f.commutator(b)
+        }
+        #[inline]
+        fn ad(h: Self::Twist) -> Self::TwistMap {
+            h.commutator($Twist::oriented_slot())
         }
     };
-    (@mobility $i:ident []) => {
+    (@brackets commutative $Twist:ident $Forque:ident) => {
+        #[inline]
+        fn commutator(_: Self::Twist, _: Self::Twist) -> Self::Twist {
+            $Twist::zero()
+        }
+        #[inline]
+        fn coadjoint(_: Self::Forque, _: Self::Twist) -> Self::Forque {
+            $Forque::zero()
+        }
+        #[inline]
+        fn ad(_: Self::Twist) -> Self::TwistMap {
+            $Twist::<($Twist,), T>::zero()
+        }
+    };
+    (@mobility $i:ident $Twist:ident $Forque:ident []) => {
         $i.inverse()
     };
-    (@mobility $i:ident [$mi:ident = $mob:expr]) => {{
+    (@mobility $i:ident $Twist:ident $Forque:ident [proper]) => {{
+        // Dualized, the forques proper are the twists; the rest leaves the twist kind.
+        // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
+        let proper: $Twist<($Forque<(), f32, $crate::Intrinsic>,), T> =
+            $Forque::<(), T, $crate::Intrinsic>::oriented_slot().dual().cast::<$Twist>();
+        $i.dual().cast::<$Twist>().inverse().of(proper)
+    }};
+    (@mobility $i:ident $Twist:ident $Forque:ident [$mi:ident = $mob:expr]) => {{
         let $mi = $i;
         $mob
     }};
     (
-        @impl ($(#[$meta:meta])*) $vis:vis $name:ident ($($m:ident)::+)
+        @impl $brackets:ident ($(#[$meta:meta])*) $vis:vis $name:ident ($($m:ident)::+)
         $Motor:ident $Twist:ident $Forque:ident $Point:ident $n:tt
         $c:ident $point:tt $p:ident $coords:tt $mobility:tt
-        commutator($a:ident, $b:ident) = $comm:expr;
-        coadjoint($f:ident, $fb:ident) = $coad:expr;
-        ad($h:ident) = $ad:expr;
     ) => {
         $(#[$meta])*
         #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -243,6 +261,8 @@ macro_rules! motions {
                 type Coords = [T; $n];
                 const DIM: usize = $n;
 
+                $crate::motions!(@brackets $brackets $Twist $Forque);
+
                 #[inline]
                 fn identity() -> Self::Motor {
                     $Twist::<(), T>::zero().exp()
@@ -264,20 +284,8 @@ macro_rules! motions {
                     m.renormalize_fast()
                 }
                 #[inline]
-                fn commutator($a: Self::Twist, $b: Self::Twist) -> Self::Twist {
-                    $comm
-                }
-                #[inline]
-                fn coadjoint($f: Self::Forque, $fb: Self::Twist) -> Self::Forque {
-                    $coad
-                }
-                #[inline]
                 fn pair(f: Self::Forque, b: Self::Twist) -> T {
                     (f & b).s()
-                }
-                #[inline]
-                fn ad($h: Self::Twist) -> Self::TwistMap {
-                    $ad
                 }
                 #[inline]
                 fn identity_map() -> Self::TwistMap {
@@ -289,7 +297,7 @@ macro_rules! motions {
                 }
                 #[inline]
                 fn mobility(inertia: Self::Inertia) -> Self::Mobility {
-                    $crate::motions!(@mobility inertia $mobility)
+                    $crate::motions!(@mobility inertia $Twist $Forque $mobility)
                 }
                 #[inline]
                 fn point($c: Self::Coords) -> Self::Point {
@@ -394,13 +402,7 @@ motions! {
         Coords = [T; 2],
         point(c) = Vector::<(), T>::up(c[0], c[1]).dual(),
         coords(p) = p.undual().down(),
-        mobility(i) = {
-            // Dualized, the forques proper are the twists; the rest leaves the twist kind.
-            // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
-            let proper: Twist<(Bivector<(), f32, crate::Intrinsic>,), T> =
-                Bivector::<(), T, crate::Intrinsic>::oriented_slot().dual().cast::<Twist>();
-            i.dual().cast::<Twist>().inverse().of(proper)
-        },
+        mobility = proper,
     }
 }
 
@@ -419,13 +421,7 @@ motions! {
         Coords = [T; 3],
         point(c) = Vector::<(), T>::up(c[0], c[1], c[2]).dual(),
         coords(p) = p.undual().down(),
-        mobility(i) = {
-            // Dualized, the forques proper are the twists; the rest leaves the twist kind.
-            // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
-            let proper: Twist<(Trivector<(), f32, crate::Intrinsic>,), T> =
-                Trivector::<(), T, crate::Intrinsic>::oriented_slot().dual().cast::<Twist>();
-            i.dual().cast::<Twist>().inverse().of(proper)
-        },
+        mobility = proper,
     }
 }
 
@@ -447,12 +443,6 @@ motions! {
             let w = v.c[4].recip();
             [v.c[0] * w, v.c[1] * w, v.c[2] * w, v.c[3] * w]
         },
-        mobility(i) = {
-            // Dualized, the forques proper are the twists; the rest leaves the twist kind.
-            // The identity on forques (intrinsic), dualized: twists (extrinsic) <- forques.
-            let proper: Twist<(Quadvector<(), f32, crate::Intrinsic>,), T> =
-                Quadvector::<(), T, crate::Intrinsic>::oriented_slot().dual().cast::<Twist>();
-            i.dual().cast::<Twist>().inverse().of(proper)
-        },
+        mobility = proper,
     }
 }

@@ -15,6 +15,7 @@
 //! (negative squares) and boosts (positive squares) alike, without branches.
 
 use crate::coef::Real;
+use crate::complex::Complex;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
 mod expk;
@@ -24,76 +25,8 @@ pub use expk::{
 };
 pub use log8::{log_coeffs_8d, log_turn_8d, log_weights_8d, q_weights_8d, turn_polynomial_8d};
 
-/// A complex number.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Cx<T> {
-    /// Real part.
-    pub re: T,
-    /// Imaginary part.
-    pub im: T,
-}
-
-impl<T: Real> Cx<T> {
-    /// A real number.
-    #[inline(always)]
-    pub fn real(re: T) -> Self {
-        Cx { re, im: T::zero() }
-    }
-}
-
-impl<T: Real> Add for Cx<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn add(self, o: Self) -> Self {
-        Cx {
-            re: self.re + o.re,
-            im: self.im + o.im,
-        }
-    }
-}
-impl<T: Real> Sub for Cx<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn sub(self, o: Self) -> Self {
-        Cx {
-            re: self.re - o.re,
-            im: self.im - o.im,
-        }
-    }
-}
-impl<T: Real> Neg for Cx<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn neg(self) -> Self {
-        Cx {
-            re: -self.re,
-            im: -self.im,
-        }
-    }
-}
-impl<T: Real> Mul for Cx<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn mul(self, o: Self) -> Self {
-        Cx {
-            re: self.re * o.re - self.im * o.im,
-            im: self.re * o.im + self.im * o.re,
-        }
-    }
-}
-impl<T: Real> Div for Cx<T> {
-    type Output = Self;
-    #[inline(always)]
-    fn div(self, o: Self) -> Self {
-        let d = (o.re * o.re + o.im * o.im).recip();
-        Cx {
-            re: (self.re * o.re + self.im * o.im) * d,
-            im: (self.im * o.re - self.re * o.im) * d,
-        }
-    }
-}
-
-/// Numbers the channel functions are evaluated in: [`Cx`] and dual numbers over [`Cx`].
+/// Numbers the channel functions are evaluated in: real numbers, [`Complex`] numbers, and dual
+/// numbers over either.
 pub trait Channel<T: Real>:
     Copy
     + Add<Output = Self>
@@ -123,10 +56,44 @@ pub trait Channel<T: Real>:
     fn select(x: T, t: T, a: Self, b: Self) -> Self;
 }
 
-impl<T: Real> Channel<T> for Cx<T> {
+impl<T: Real> Channel<T> for T {
     #[inline(always)]
     fn real(x: T) -> Self {
-        Cx::real(x)
+        x
+    }
+    #[inline(always)]
+    fn sqrt(self) -> Self {
+        Real::sqrt(self)
+    }
+    #[inline(always)]
+    fn ln(self) -> Self {
+        Real::ln(self)
+    }
+    #[inline(always)]
+    fn sinh(self) -> Self {
+        Real::sinh(self)
+    }
+    #[inline(always)]
+    fn cosh(self) -> Self {
+        Real::cosh(self)
+    }
+    #[inline(always)]
+    fn norm2(self) -> T {
+        self * self
+    }
+    #[inline(always)]
+    fn select(x: T, t: T, a: Self, b: Self) -> Self {
+        T::select_lt(x, t, a, b)
+    }
+}
+
+/// The channel forms of `√` and `ln`, which differ from [`Complex::sqrt`] and [`Complex::ln`]:
+/// no overflow guard, and the logarithm's real part from the squared magnitude. Concrete
+/// complex code in this module calls them as `Channel::sqrt(z)`.
+impl<T: Real> Channel<T> for Complex<T> {
+    #[inline(always)]
+    fn real(x: T) -> Self {
+        Complex::real(x)
     }
     #[inline(always)]
     fn sqrt(self) -> Self {
@@ -141,7 +108,7 @@ impl<T: Real> Channel<T> for Cx<T> {
         let safe = T::select_lt(zero, t, t, one); // z = 0: t = 0 and b = 0, so b / 2 = 0
         let other = b / (safe + safe);
         let signed = T::select_lt(b, zero, -t, t);
-        Cx {
+        Complex {
             re: T::select_lt(a, zero, other.abs(), t),
             im: T::select_lt(a, zero, signed, other),
         }
@@ -149,15 +116,15 @@ impl<T: Real> Channel<T> for Cx<T> {
     #[inline(always)]
     fn ln(self) -> Self {
         let half = T::from_f64(0.5);
-        Cx {
-            re: (self.re * self.re + self.im * self.im).ln() * half,
-            im: self.im.atan2(self.re),
+        Complex {
+            re: self.norm_sqr().ln() * half,
+            im: self.arg(),
         }
     }
     #[inline(always)]
     fn sinh(self) -> Self {
         let (s, c) = self.im.sin_cos();
-        Cx {
+        Complex {
             re: self.re.sinh() * c,
             im: self.re.cosh() * s,
         }
@@ -165,18 +132,18 @@ impl<T: Real> Channel<T> for Cx<T> {
     #[inline(always)]
     fn cosh(self) -> Self {
         let (s, c) = self.im.sin_cos();
-        Cx {
+        Complex {
             re: self.re.cosh() * c,
             im: self.re.sinh() * s,
         }
     }
     #[inline(always)]
     fn norm2(self) -> T {
-        self.re * self.re + self.im * self.im
+        self.norm_sqr()
     }
     #[inline(always)]
     fn select(x: T, t: T, a: Self, b: Self) -> Self {
-        Cx {
+        Complex {
             re: T::select_lt(x, t, a.re, b.re),
             im: T::select_lt(x, t, a.im, b.im),
         }
@@ -349,27 +316,32 @@ pub fn log_factor<T: Real, N: Channel<T>>(c: N, u: N) -> N {
 /// Evaluate a function of one Study number `a + b I` (with `I² = isq`) through its channels,
 /// returning the Study number `f0 + f1 I`.
 #[inline(always)]
-pub fn study1<T: Real>(isq: i8, a: T, b: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (T, T) {
+pub fn study1<T: Real>(
+    isq: i8,
+    a: T,
+    b: T,
+    f: impl Fn(Dual<Complex<T>>) -> Dual<Complex<T>>,
+) -> (T, T) {
     let zero = T::zero();
     match isq {
         0 => {
             // Dual numbers: f(a) + b f'(a) I.
             let r = f(Dual {
-                p: Cx::real(a),
-                d: Cx::real(b),
+                p: Complex::real(a),
+                d: Complex::real(b),
             });
             (r.p.re, r.d.re)
         }
         1 => {
-            let lift = <Dual<Cx<T>> as Channel<T>>::real;
+            let lift = <Dual<Complex<T>> as Channel<T>>::real;
             let (fp, fm) = (f(lift(a + b)).p.re, f(lift(a - b)).p.re);
             let half = T::from_f64(0.5);
             ((fp + fm) * half, (fp - fm) * half)
         }
         _ => {
             let r = f(Dual {
-                p: Cx { re: a, im: b },
-                d: Cx::real(zero),
+                p: Complex { re: a, im: b },
+                d: Complex::real(zero),
             });
             (r.p.re, r.p.im)
         }
@@ -382,7 +354,7 @@ pub fn study2<T: Real>(
     isq: i8,
     x: (T, T),
     y: (T, T),
-    f: impl Fn(Dual<Cx<T>>, Dual<Cx<T>>) -> Dual<Cx<T>>,
+    f: impl Fn(Dual<Complex<T>>, Dual<Complex<T>>) -> Dual<Complex<T>>,
 ) -> (T, T) {
     let zero = T::zero();
     match isq {
@@ -390,18 +362,18 @@ pub fn study2<T: Real>(
             // f(x0 + x1 ε, y0 + y1 ε) = f + (x1 ∂x f + y1 ∂y f) ε: one dual evaluation.
             let r = f(
                 Dual {
-                    p: Cx::real(x.0),
-                    d: Cx::real(x.1),
+                    p: Complex::real(x.0),
+                    d: Complex::real(x.1),
                 },
                 Dual {
-                    p: Cx::real(y.0),
-                    d: Cx::real(y.1),
+                    p: Complex::real(y.0),
+                    d: Complex::real(y.1),
                 },
             );
             (r.p.re, r.d.re)
         }
         1 => {
-            let lift = <Dual<Cx<T>> as Channel<T>>::real;
+            let lift = <Dual<Complex<T>> as Channel<T>>::real;
             let fp = f(lift(x.0 + x.1), lift(y.0 + y.1)).p.re;
             let fm = f(lift(x.0 - x.1), lift(y.0 - y.1)).p.re;
             let half = T::from_f64(0.5);
@@ -409,8 +381,8 @@ pub fn study2<T: Real>(
         }
         _ => {
             let lift = |v: (T, T)| Dual {
-                p: Cx { re: v.0, im: v.1 },
-                d: Cx::real(zero),
+                p: Complex { re: v.0, im: v.1 },
+                d: Complex::real(zero),
             };
             let r = f(lift(x), lift(y));
             (r.p.re, r.p.im)
@@ -462,7 +434,7 @@ pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
 #[inline(always)]
 pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     let (r0, r1) = study1(isq, a, b, |z| {
-        <Dual<Cx<T>> as Channel<T>>::real(T::one()) / z.sqrt()
+        <Dual<Complex<T>> as Channel<T>>::real(T::one()) / z.sqrt()
     });
     [r0, r1]
 }
@@ -497,16 +469,20 @@ pub fn rsqrt_q<T: Real>(a: T, q: T) -> [T; 2] {
 /// `w = √q` (a complex root), `f0 = (f(a+w) + f(a−w))/2` and `f1 = (f(a+w) − f(a−w))/(2w)`;
 /// near `q = 0`, Simpson's rule on `f'` over `[a − w, a + w]` instead of the quotient.
 #[inline(always)]
-pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (T, T) {
-    let w = Cx::real(q).sqrt(); // real for q > 0, imaginary for q < 0
+pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Complex<T>>) -> Dual<Complex<T>>) -> (T, T) {
+    let w = Channel::sqrt(Complex::real(q)); // real for q > 0, imaginary for q < 0
     // f and f' (dual evaluation) at a − w, a and a + w.
-    let at = |z: Cx<T>| {
+    let at = |z: Complex<T>| {
         f(Dual {
             p: z,
-            d: Cx::real(T::one()),
+            d: Complex::real(T::one()),
         })
     };
-    let (minus, mid, plus) = (at(Cx::real(a) - w), at(Cx::real(a)), at(Cx::real(a) + w));
+    let (minus, mid, plus) = (
+        at(Complex::real(a) - w),
+        at(Complex::real(a)),
+        at(Complex::real(a) + w),
+    );
     // f0 = Σ f⁽²ᵏ⁾(a) qᵏ/(2k)! is the mean of f(a ± w): a sum, exact for every q.
     let f0 = (plus.p.re + minus.p.re) * T::from_f64(0.5);
     // f1 = (f(a + w) − f(a − w))/(2w), the mean of f' over [a − w, a + w]. The quotient cancels
@@ -514,7 +490,8 @@ pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (
     // q² f⁽⁵⁾/180), written to give f'(a) exactly at q = 0. The two errors meet where
     // ε/√q = q²/180: 4e-6 in f64 (both then about 1e-13), 1e-2 in f32.
     let quotient = (plus.p - minus.p) / (w + w);
-    let simpson = mid.d + (minus.d + plus.d - mid.d - mid.d) * Cx::real(T::from_f64(1.0 / 6.0));
+    let simpson =
+        mid.d + (minus.d + plus.d - mid.d - mid.d) * Complex::real(T::from_f64(1.0 / 6.0));
     let small = T::select_lt(
         T::epsilon(),
         T::from_f64(1e-10),
@@ -706,8 +683,8 @@ const LOG6_TERMS: usize = 26;
 
 type Series<T> = [T; LOG6_TERMS];
 
-fn series_mul<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
-    let mut out = [T::zero(); LOG6_TERMS];
+fn series_mul<T: Real, N: Channel<T>>(a: &Series<N>, b: &Series<N>) -> Series<N> {
+    let mut out = [N::real(T::zero()); LOG6_TERMS];
     for i in 0..LOG6_TERMS {
         for j in 0..LOG6_TERMS - i {
             out[i + j] = out[i + j] + a[i] * b[j];
@@ -716,9 +693,9 @@ fn series_mul<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
     out
 }
 
-fn series_div<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
-    let mut q = [T::zero(); LOG6_TERMS];
-    let inv = b[0].recip();
+fn series_div<T: Real, N: Channel<T>>(a: &Series<N>, b: &Series<N>) -> Series<N> {
+    let mut q = [N::real(T::zero()); LOG6_TERMS];
+    let inv = N::real(T::one()) / b[0];
     for k in 0..LOG6_TERMS {
         let mut s = a[k];
         for j in 1..=k {
@@ -729,18 +706,22 @@ fn series_div<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
     q
 }
 
-/// `(c + σ ρ s)^(1/2)` or `(c + σ ρ s)^(−1/2)` as a series in `s` (`σ = ±1`, `c > 0`, the
-/// scale `ρ` at most about `c`).
-fn series_sqrt<T: Real>(c: T, sigma: f64, inverse: bool, rho: T) -> Series<T> {
+/// `(c + σ ρ s)^(1/2)` or `(c + σ ρ s)^(−1/2)` as a series in `s` (`σ = ±1`, the scale `ρ` at
+/// most about `|c|`), principal at `c` (real `c > 0`, or complex).
+fn series_sqrt<T: Real, N: Channel<T>>(c: N, sigma: f64, inverse: bool, rho: T) -> Series<N> {
     let e = if inverse { -0.5 } else { 0.5 };
     let root = c.sqrt();
-    let lead = if inverse { root.recip() } else { root };
-    let step = T::from_f64(sigma) * rho / c;
-    let mut out = [T::zero(); LOG6_TERMS];
-    let (mut binom, mut power) = (T::one(), T::one());
+    let lead = if inverse {
+        N::real(T::one()) / root
+    } else {
+        root
+    };
+    let step = N::real(T::from_f64(sigma) * rho) / c;
+    let mut out = [N::real(T::zero()); LOG6_TERMS];
+    let (mut binom, mut power) = (1.0f64, N::real(T::one()));
     for (k, o) in out.iter_mut().enumerate() {
-        *o = lead * binom * power;
-        binom = binom * T::from_f64((e - k as f64) / (k as f64 + 1.0));
+        *o = lead * N::real(T::from_f64(binom)) * power;
+        binom *= (e - k as f64) / (k as f64 + 1.0);
         power = power * step;
     }
     out
@@ -760,57 +741,40 @@ fn f_maclaurin<const N: usize>() -> [f64; N] {
 
 /// The power series `c` (in `x`, `M` terms) shifted to `x0` and rescaled, in `s = (x − x0)/ρ`:
 /// repeated Horner steps, the `i`-th coefficient scaled by `ρⁱ`. Its first `LOG6_TERMS`
-/// coefficients, for real or complex series (`real` embeds `ρⁱ`).
-fn taylor_shift<T: Real, F, const M: usize>(
-    mut c: [F; M],
-    x0: F,
-    rho: T,
-    zero: F,
-    real: impl Fn(T) -> F,
-) -> [F; LOG6_TERMS]
-where
-    F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>,
-{
-    let mut out = [zero; LOG6_TERMS];
+/// coefficients.
+fn taylor_shift<T: Real, N: Channel<T>, const M: usize>(mut c: [N; M], x0: N, rho: T) -> Series<N> {
+    let mut out = [N::real(T::zero()); LOG6_TERMS];
     let mut power = T::one();
     for (i, o) in out.iter_mut().enumerate() {
         for j in (i..M - 1).rev() {
             c[j] = c[j] + x0 * c[j + 1];
         }
-        *o = c[i] * real(power);
+        *o = c[i] * N::real(power);
         power = power * rho;
     }
     out
 }
 
 /// The series of the derivative, `(s')ₖ = (k + 1) sₖ₊₁` (its last coefficient zero).
-fn derivative<T: Real, F>(s: &[F; LOG6_TERMS], zero: F, real: impl Fn(T) -> F) -> [F; LOG6_TERMS]
-where
-    F: Copy + core::ops::Mul<Output = F>,
-{
-    let mut d = [zero; LOG6_TERMS];
-    for k in 1..LOG6_TERMS {
-        d[k - 1] = s[k] * real(T::from_i64(k as i64));
-    }
-    d
+fn derivative<T: Real, N: Channel<T>>(s: &Series<N>) -> Series<N> {
+    core::array::from_fn(|k| {
+        if k + 1 < LOG6_TERMS {
+            s[k + 1] * N::real(T::from_i64(k as i64 + 1))
+        } else {
+            N::real(T::zero())
+        }
+    })
 }
 
 /// The series whose derivative is `d` and whose value at 0 is `a0`.
-fn integral<T: Real, F>(
-    d: &[F; LOG6_TERMS],
-    a0: F,
-    zero: F,
-    real: impl Fn(T) -> F,
-) -> [F; LOG6_TERMS]
-where
-    F: Copy + core::ops::Mul<Output = F>,
-{
-    let mut a = [zero; LOG6_TERMS];
-    a[0] = a0;
-    for k in 1..LOG6_TERMS {
-        a[k] = d[k - 1] * real(T::from_i64(k as i64).recip());
-    }
-    a
+fn integral<T: Real, N: Channel<T>>(d: &Series<N>, a0: N) -> Series<N> {
+    core::array::from_fn(|k| {
+        if k == 0 {
+            a0
+        } else {
+            d[k - 1] * N::real(T::from_i64(k as i64).recip())
+        }
+    })
 }
 
 /// A guard against division by zero that holds in every precision: `1e-300` where the
@@ -837,13 +801,7 @@ fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
         zero
     } else {
         let x = T::select_lt(x0.abs(), quarter, x0, T::zero());
-        taylor_shift(
-            f_maclaurin::<90>().map(T::from_f64),
-            x,
-            rho,
-            T::zero(),
-            |p| p,
-        )
+        taylor_shift(f_maclaurin::<90>().map(T::from_f64), x, rho)
     };
     // x0 > 0: v = √(x0 + t), asinh(v)' = v' / √(m + t), F = asinh(v) / v.
     let skip_above = T::all_lt(x0, quarter);
@@ -854,9 +812,9 @@ fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
         let mm = x + one;
         let v = series_sqrt(x, 1.0, false, rho);
         let r = series_sqrt(mm, 1.0, true, rho);
-        let d = series_mul(&derivative(&v, T::zero(), |k| k), &r);
+        let d = series_mul(&derivative(&v), &r);
         let a0 = (v[0] + (v[0] * v[0] + one).sqrt()).ln();
-        series_div(&integral(&d, a0, T::zero(), |k| k), &v)
+        series_div(&integral(&d, a0), &v)
     };
     // x0 < 0: w = √(−x0 − t), asin(w)' = w' / √(m + t), F = asin(w) / w.
     let skip_below = T::all_lt(-quarter, x0);
@@ -867,8 +825,8 @@ fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
         let mm = (one - x).max(tiny());
         let w = series_sqrt(x, -1.0, false, rho);
         let r = series_sqrt(mm, 1.0, true, rho);
-        let d = series_mul(&derivative(&w, T::zero(), |k| k), &r);
-        series_div(&integral(&d, w[0].atan2(mm.sqrt()), T::zero(), |k| k), &w)
+        let d = series_mul(&derivative(&w), &r);
+        series_div(&integral(&d, w[0].atan2(mm.sqrt())), &w)
     };
     let f: Series<T> = core::array::from_fn(|k| {
         let far = T::select_lt(x0, T::zero(), below[k], above[k]);
@@ -895,8 +853,8 @@ fn phi_real<T: Real>(u: T) -> T {
 }
 
 /// `φ(u)` at a complex `u` (a conjugate pair of roots far apart).
-fn phi_complex<T: Real>(u: Cx<T>) -> Cx<T> {
-    let one = Cx::real(T::one());
+fn phi_complex<T: Real, N: Channel<T>>(u: N) -> N {
+    let one = N::real(T::one());
     let s = (u - one).sqrt();
     let asinh = (s + (s * s + one).sqrt()).ln();
     u.sqrt() * asinh / s
@@ -923,22 +881,22 @@ fn reduce3<T: Real>(ph: &Series<T>, c: T, rho: T, e2: T, e3: T) -> [T; 3] {
     [sa * c * c - sb * c + sd, sb - (sa + sa) * c, sa]
 }
 
-/// The line `[l0, l1]` of a series at centre `c` in `s = t/ρ`, reduced modulo `t² − d2` (two
-/// nodes).
-fn reduce2<T: Real>(ph: &Series<T>, c: T, rho: T, d2: T) -> [T; 2] {
-    let d2 = d2 / (rho * rho);
-    let (mut b, mut d) = (T::zero(), T::one());
-    let (mut sb, mut sd) = (T::zero(), T::zero());
+/// The line `[l0, l1]` through a function at the roots `c ± √d2` (two nodes) from its series
+/// `ph` at `c` in `s = t/ρ`: `Σ φₖ sᵏ` modulo `s² − d2/ρ²`, where `s (b s + e) = b d2/ρ² + e s`.
+/// Real, or complex (a pair of close complex roots).
+fn reduce2<T: Real, N: Channel<T>>(ph: &Series<N>, c: N, rho: T, d2: N) -> [N; 2] {
+    let d2 = d2 / N::real(rho * rho);
+    let (mut b, mut e) = (N::real(T::zero()), N::real(T::one()));
+    let (mut sb, mut se) = (b, b);
     for p in ph {
         sb = sb + *p * b;
-        sd = sd + *p * d;
-        // t (b t + d) = b t² + d t = b d2 + d t.
-        let (nb, nd) = (d, b * d2);
+        se = se + *p * e;
+        let (nb, ne) = (e, b * d2);
         b = nb;
-        d = nd;
+        e = ne;
     }
-    let sb = sb / rho;
-    [sd - sb * c, sb]
+    let sb = sb / N::real(rho);
+    [se - sb * c, sb]
 }
 
 /// `sign(x) |x|^(1/3)`.
@@ -1015,7 +973,7 @@ fn phi_pair<T: Real>(mid: T, d2: T, d: T) -> [T; 2] {
         [fa - slope * a, slope]
     };
     let conj_far = {
-        let f = phi_complex(Cx { re: mid, im: d });
+        let f = phi_complex(Complex::new(mid, d));
         let slope = f.im / d.max(tiny());
         [f.re - slope * mid, slope]
     };
@@ -1408,7 +1366,7 @@ mod tests {
         ignore = "miri perturbs std's float functions by a few ulp on purpose"
     )]
     fn study_q_is_accurate_for_every_q() {
-        let exp = |x: Dual<Cx<f64>>| x.cosh() + x.sinh();
+        let exp = |x: Dual<Complex<f64>>| x.cosh() + x.sinh();
         for a in [-0.7, 0.0, 0.3, 1.2] {
             for q in [
                 0.0, 1e-14, 1e-11, 1e-9, 3e-7, 1e-6, 2e-6, 1e-4, 1e-2, 0.1, -1e-12, -1e-8, -5e-7,

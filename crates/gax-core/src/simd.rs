@@ -5,6 +5,8 @@
 //! all lanes at once without change.
 
 use crate::coef::{Coef, Real};
+#[cfg(feature = "deterministic")]
+use crate::strict::StrictElementary;
 use wide::{f32x4, f32x8, f64x2, f64x4};
 
 macro_rules! lanes {
@@ -90,39 +92,32 @@ macro_rules! lanes {
             #[cfg(feature = "deterministic")]
             #[inline(always)]
             fn sin_cos(self) -> (Self, Self) {
-                let a = self.to_array();
-                (
-                    $t::new(a.map(crate::coef::elementary::$s::sin)),
-                    $t::new(a.map(crate::coef::elementary::$s::cos)),
-                )
+                StrictElementary::strict_sin_cos(self)
             }
             #[cfg(feature = "deterministic")]
             #[inline(always)]
             fn sinh(self) -> Self {
-                $t::new(self.to_array().map(crate::coef::elementary::$s::sinh))
+                StrictElementary::strict_sinh(self)
             }
             #[cfg(feature = "deterministic")]
             #[inline(always)]
             fn cosh(self) -> Self {
-                $t::new(self.to_array().map(crate::coef::elementary::$s::cosh))
+                StrictElementary::strict_cosh(self)
             }
             #[cfg(feature = "deterministic")]
             #[inline(always)]
             fn atan2(self, x: Self) -> Self {
-                let (a, b) = (self.to_array(), x.to_array());
-                $t::new(core::array::from_fn(|i| {
-                    crate::coef::elementary::$s::atan2(a[i], b[i])
-                }))
+                StrictElementary::strict_atan2(self, x)
             }
             #[cfg(feature = "deterministic")]
             #[inline(always)]
             fn ln(self) -> Self {
-                $t::new(self.to_array().map(crate::coef::elementary::$s::ln))
+                StrictElementary::strict_ln(self)
             }
             #[cfg(feature = "deterministic")]
             #[inline(always)]
             fn exp(self) -> Self {
-                $t::new(self.to_array().map(crate::coef::elementary::$s::exp))
+                StrictElementary::strict_exp(self)
             }
             #[inline(always)]
             fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self {

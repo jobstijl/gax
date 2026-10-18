@@ -292,25 +292,19 @@ impl<const N: usize> Complex<N> {
             "d({k}) maps to {}-simplices, above the top of a complex of {N}-vertex simplices",
             k + 1
         );
-        let mut cells = Vec::new();
-        let mut rows = Vec::new();
-        let mut cols = Vec::new();
-        for r in 0..self.len(k + 1) {
+        let cell = |sign: i8| {
+            C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| {
+                C::Coef::from_i64(sign.into())
+            }))
+        };
+        let triples = (0..self.len(k + 1)).flat_map(|r| {
             let faces = self.faces(k + 1, r);
-            let mut push = |&(face, sign): &(usize, i8)| {
-                cells.push(C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| {
-                    C::Coef::from_i64(sign.into())
-                })));
-                rows.push(r);
-                cols.push(face);
-            };
-            if k == 0 {
-                faces.iter().rev().for_each(&mut push);
-            } else {
-                faces.iter().for_each(&mut push);
-            }
-        }
-        SparseMap::new(cells, rows, cols, (self.len(k + 1), self.len(k)))
+            let n = faces.len();
+            // An edge's faces (its vertices) in reverse, every other face in order.
+            (0..n).map(move |i| (r, faces[if k == 0 { n - 1 - i } else { i }]))
+        });
+        let triples = triples.map(|(r, (face, sign))| (r, face, cell(sign)));
+        SparseMap::from_triples(triples, (self.len(k + 1), self.len(k)))
     }
 
     /// The map from fields on the vertices to fields on the `k`-simplices that takes the mean
@@ -326,15 +320,10 @@ impl<const N: usize> Complex<N> {
         let w = C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| {
             C::Coef::from_ratio(1, k as i64 + 1)
         }));
-        let n = self.len(k);
-        SparseMap::new(
-            core::iter::repeat_n(w, self.simplices[k].len()).collect(),
-            (0..n)
-                .flat_map(|r| core::iter::repeat_n(r, k + 1))
-                .collect(),
-            self.simplices[k].clone(),
-            (n, self.len(0)),
-        )
+        // The simplices' vertices, k + 1 to a row.
+        let vertices = self.simplices[k].iter().enumerate();
+        let triples = vertices.map(|(i, &v)| (i / (k + 1), v, w));
+        SparseMap::from_triples(triples, (self.len(k), self.len(0)))
     }
 
     /// The number of `(k+1)`-simplices each `k`-simplex is a face of. For `k = 0`, the valences.

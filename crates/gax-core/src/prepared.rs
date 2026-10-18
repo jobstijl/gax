@@ -58,7 +58,7 @@ impl<V, X, T, const N: usize> Prepared<V, X, T, N> {
     where
         M: From<Self>,
     {
-        M::from(self)
+        self.into()
     }
 }
 
@@ -84,16 +84,7 @@ pub trait Prepare<X> {
     fn prepare(self) -> Self::Output;
 }
 
-impl<V, X, T, const N: usize, R> core::ops::Shr<R> for Prepared<V, X, T, N>
-where
-    Self: crate::ops::Transform<R>,
-{
-    type Output = <Self as crate::ops::Transform<R>>::Output;
-    #[inline(always)]
-    fn shr(self, rhs: R) -> Self::Output {
-        <Self as crate::ops::Transform<R>>::transform(self, rhs)
-    }
-}
+crate::unit::forward_shift!([V, X, T, const N: usize] Prepared<V, X, T, N>, Shr, shr, Transform, transform);
 
 impl<M> crate::unit::Unit<M> {
     /// Prepare this versor's action on kind `X`, for applying it to many objects:

@@ -4,7 +4,7 @@
 extern crate std;
 
 use super::solve::unflatten;
-use super::{Field, SparseMap};
+use super::{Field, SparseMap, axpy, dot};
 use crate::coef::Real;
 use crate::kind::{Extensor, Kind};
 use core::cmp::Ordering;
@@ -117,8 +117,8 @@ where
         let mut space = Space::new(
             n,
             sigma,
-            |x: &[T], y: &mut [T]| metric.apply_flat(x, y),
-            |x: &[T], y: &mut [T]| self.apply_flat(x, y),
+            |x: &[T], y: &mut [T]| metric.apply_rect(x, y),
+            |x: &[T], y: &mut [T]| self.apply_rect(x, y),
         );
         space.extend_random(p);
         let mut progress = Progress::new();
@@ -340,10 +340,7 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
         // qᵢ · M v = (M qᵢ) · v: the stored images give the coefficients without a product.
         for _ in 0..2 {
             for (q, mq) in self.basis.iter().zip(&self.metric_images) {
-                let c = dot(mq, v);
-                for (vi, qi) in v.iter_mut().zip(q) {
-                    *vi = (-c).mul_add(*qi, *vi);
-                }
+                axpy(-dot(mq, v), q, v);
             }
         }
     }
@@ -517,9 +514,7 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             .map(|(value, z)| {
                 let mut c = vec![T::zero(); m];
                 for (y, &zi) in chosen.iter().zip(&z) {
-                    for (ci, yi) in c.iter_mut().zip(y.iter()) {
-                        *ci = zi.mul_add(*yi, *ci);
-                    }
+                    axpy(zi, y, &mut c);
                 }
                 (value, c)
             })
@@ -567,9 +562,7 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
     fn combine(&self, coefficients: &[T]) -> Vec<T> {
         let mut x = vec![T::zero(); self.n];
         for (q, &c) in self.basis.iter().zip(coefficients) {
-            for (xi, qi) in x.iter_mut().zip(q) {
-                *xi = c.mul_add(*qi, *xi);
-            }
+            axpy(c, q, &mut x);
         }
         x
     }
@@ -625,10 +618,8 @@ impl<T: Real, M: FnMut(&[T], &mut [T]), A: FnMut(&[T], &mut [T])> Space<T, M, A>
             .iter()
             .zip(self.operator_images.iter().zip(&self.metric_images))
         {
-            for ((a, m), (aqi, mqi)) in ax.iter_mut().zip(mx.iter_mut()).zip(aq.iter().zip(mq)) {
-                *a = c.mul_add(*aqi, *a);
-                *m = c.mul_add(*mqi, *m);
-            }
+            axpy(c, aq, &mut ax);
+            axpy(c, mq, &mut mx);
         }
         ax.iter()
             .zip(&mx)
@@ -653,12 +644,6 @@ fn order<T: Real>(a: T, b: T) -> Ordering {
 /// `P y` for a square `m × m` matrix `P`, row by row.
 fn mat_vec<T: Real>(p: &[T], y: &[T], m: usize) -> Vec<T> {
     p.chunks(m).map(|row| dot(row, y)).collect()
-}
-
-fn dot<T: Real>(a: &[T], b: &[T]) -> T {
-    a.iter()
-        .zip(b)
-        .fold(T::zero(), |s, (x, y)| x.mul_add(*y, s))
 }
 
 /// A deterministic pseudo-random vector with every coefficient in `[0.5, 1.5)`, different for

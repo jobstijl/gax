@@ -97,16 +97,18 @@ pub trait SquareLinearMap: LinearMap<Coef: Real> {
     fn inverse(self) -> Self::Inverse;
 }
 
-impl<M, A> SquareLinearMap for M
+impl<M> SquareLinearMap for M
 where
-    M: SquareMap<Input = A> + Extensor<Slots = (A,)>,
-    A: Kind,
+    M: SquareMap + Extensor<Slots = (<M as SquareMap>::Input,)>,
 {
-    type Input = A;
+    type Input = <M as SquareMap>::Input;
     type Inverse = <M as SquareMap>::Inverse;
 
     #[inline]
-    fn apply(self, x: A::Mv<(), M::Coef>) -> <M::Kind as Kind>::Mv<(), M::Coef> {
+    fn apply(
+        self,
+        x: <Self::Input as Kind>::Mv<(), M::Coef>,
+    ) -> <M::Kind as Kind>::Mv<(), M::Coef> {
         // Σᵢ xᵢ colᵢ per output coefficient, in the order and rounding of `of`.
         let xc = x.coeffs().as_ref();
         Extensor::from_coeffs(<M::Kind as Kind>::arr_map(self.coeffs(), |col| {
@@ -116,7 +118,10 @@ where
     }
 
     #[inline]
-    fn solve(self, b: <M::Kind as Kind>::Mv<(), M::Coef>) -> A::Mv<(), M::Coef> {
+    fn solve(
+        self,
+        b: <M::Kind as Kind>::Mv<(), M::Coef>,
+    ) -> <Self::Input as Kind>::Mv<(), M::Coef> {
         SquareMap::solve(self, b)
     }
 

@@ -173,10 +173,16 @@ impl<T: Real> Mul for Complex<T> {
 
 impl<T: Real> Div for Complex<T> {
     type Output = Self;
+    /// `self · conj(o) / |o|²`: the products first, then one scale by `1/|o|²` (the form the
+    /// Study channels use, [`crate::study::Channel`]).
     #[inline]
     #[allow(clippy::suspicious_arithmetic_impl)]
     fn div(self, o: Self) -> Self {
-        self * o.recip()
+        let d = o.norm_sqr().recip();
+        Complex {
+            re: (self.re * o.re + self.im * o.im) * d,
+            im: (self.im * o.re - self.re * o.im) * d,
+        }
     }
 }
 

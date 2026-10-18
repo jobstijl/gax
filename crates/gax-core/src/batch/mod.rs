@@ -220,99 +220,75 @@ pub fn with_level<R>(level: Option<Level>, f: impl FnOnce() -> R) -> R {
     f()
 }
 
-/// Every level this CPU can run, lowest first, starting with `None` (portable code).
-#[must_use]
-pub fn levels() -> Vec<Option<Level>> {
-    let best = Level::new();
-    #[allow(unused_mut)]
-    let mut out = std::vec![None];
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    {
-        out.extend(best.as_sse2().map(|t| Some(Level::Sse2(t))));
-        out.extend(best.as_sse4_2().map(|t| Some(Level::Sse4_2(t))));
-        out.extend(best.as_avx2().map(|t| Some(Level::Avx2(t))));
-        out.extend(best.as_avx512().map(|t| Some(Level::Avx512(t))));
-    }
-    #[cfg(target_arch = "aarch64")]
-    out.extend(best.as_neon().map(|t| Some(Level::Neon(t))));
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-    out.extend(best.as_wasm_simd128().map(|t| Some(Level::WasmSimd128(t))));
-    let _ = best;
-    out
-}
-
-/// A short name of a level, for reports.
-#[must_use]
-pub fn level_name(level: Option<Level>) -> &'static str {
-    #[allow(unreachable_patterns)]
-    match level {
-        None => "portable",
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        Some(Level::Sse2(_)) => "sse2",
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        Some(Level::Sse4_2(_)) => "sse4.2",
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        Some(Level::Avx2(_)) => "avx2",
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        Some(Level::Avx512(_)) => "avx512",
-        #[cfg(target_arch = "aarch64")]
-        Some(Level::Neon(_)) => "neon",
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-        Some(Level::WasmSimd128(_)) => "simd128",
-        Some(_) => "other",
-    }
-}
-
-/// Run `k` on the lanes of the current [`level`], inside a function compiled for it.
-#[inline]
-pub fn run<E: LaneElem, K: Kernel<E>>(k: K) -> K::Output {
-    #[allow(unused_imports)]
-    use fearless_simd::Simd;
-    let Some(level) = level() else {
-        return k.run::<E::Lanes<Portable>>();
+/// The SIMD levels [`run`] dispatches to, highest first, each with its target, its `Level`
+/// variant, the test for it, its name and its token type: given to `$then`, which writes
+/// [`levels`], [`level_name`] and [`run`] from the one list.
+macro_rules! with_simd_levels {
+    ($then:ident) => {
+        $then! {
+            [any(target_arch = "x86", target_arch = "x86_64")] Avx512, as_avx512, "avx512", fearless_simd::x86::Avx512;
+            [any(target_arch = "x86", target_arch = "x86_64")] Avx2, as_avx2, "avx2", fearless_simd::x86::Avx2;
+            [any(target_arch = "x86", target_arch = "x86_64")] Sse4_2, as_sse4_2, "sse4.2", fearless_simd::x86::Sse4_2;
+            [any(target_arch = "x86", target_arch = "x86_64")] Sse2, as_sse2, "sse2", fearless_simd::x86::Sse2;
+            [target_arch = "aarch64"] Neon, as_neon, "neon", fearless_simd::aarch64::Neon;
+            [all(target_arch = "wasm32", target_feature = "simd128")] WasmSimd128, as_wasm_simd128, "simd128", fearless_simd::wasm32::WasmSimd128;
+        }
     };
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    {
-        use fearless_simd::x86::{Avx2, Avx512, Sse2, Sse4_2};
-        if let Some(t) = level.as_avx512() {
-            return t.vectorize(
-                #[inline(always)]
-                || k.run::<E::Lanes<Proof<Avx512>>>(),
-            );
-        }
-        if let Some(t) = level.as_avx2() {
-            return t.vectorize(
-                #[inline(always)]
-                || k.run::<E::Lanes<Proof<Avx2>>>(),
-            );
-        }
-        if let Some(t) = level.as_sse4_2() {
-            return t.vectorize(
-                #[inline(always)]
-                || k.run::<E::Lanes<Proof<Sse4_2>>>(),
-            );
-        }
-        if let Some(t) = level.as_sse2() {
-            return t.vectorize(
-                #[inline(always)]
-                || k.run::<E::Lanes<Proof<Sse2>>>(),
-            );
-        }
-    }
-    #[cfg(target_arch = "aarch64")]
-    if let Some(t) = level.as_neon() {
-        return t.vectorize(
-            #[inline(always)]
-            || k.run::<E::Lanes<Proof<fearless_simd::aarch64::Neon>>>(),
-        );
-    }
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-    if let Some(t) = level.as_wasm_simd128() {
-        return t.vectorize(
-            #[inline(always)]
-            || k.run::<E::Lanes<Proof<fearless_simd::wasm32::WasmSimd128>>>(),
-        );
-    }
-    let _ = level;
-    k.run::<E::Lanes<Portable>>()
 }
+
+macro_rules! dispatch {
+    ($([$($cfg:tt)*] $level:ident, $test:ident, $name:literal, $token:ty;)*) => {
+        /// Every level this CPU can run, lowest first, starting with `None` (portable code).
+        #[must_use]
+        pub fn levels() -> Vec<Option<Level>> {
+            let best = Level::new();
+            #[allow(unused_mut)]
+            let mut found: Vec<Option<Level>> = Vec::new();
+            $(
+                #[cfg($($cfg)*)]
+                found.extend(best.$test().map(|t| Some(Level::$level(t))));
+            )*
+            let _ = best;
+            core::iter::once(None).chain(found.into_iter().rev()).collect()
+        }
+
+        /// A short name of a level, for reports.
+        #[must_use]
+        pub fn level_name(level: Option<Level>) -> &'static str {
+            let Some(level) = level else {
+                return "portable";
+            };
+            $(
+                #[cfg($($cfg)*)]
+                if let Level::$level(_) = level {
+                    return $name;
+                }
+            )*
+            let _ = level;
+            "other"
+        }
+
+        /// Run `k` on the lanes of the current [`level`], inside a function compiled for it.
+        #[inline]
+        pub fn run<E: LaneElem, K: Kernel<E>>(k: K) -> K::Output {
+            #[allow(unused_imports)]
+            use fearless_simd::Simd;
+            let Some(level) = level() else {
+                return k.run::<E::Lanes<Portable>>();
+            };
+            $(
+                #[cfg($($cfg)*)]
+                if let Some(t) = level.$test() {
+                    return t.vectorize(
+                        #[inline(always)]
+                        || k.run::<E::Lanes<Proof<$token>>>(),
+                    );
+                }
+            )*
+            let _ = level;
+            k.run::<E::Lanes<Portable>>()
+        }
+    };
+}
+
+with_simd_levels!(dispatch);

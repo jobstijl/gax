@@ -16,11 +16,11 @@
 //! of differences between roots that are apart.
 
 use super::{
-    Channel, Cx, LOG6_TERMS, Real, Series, cbrt, cubic6, derivative, f_maclaurin, g_series,
-    integral, log_coeffs_6d, phi_complex, phi_pair, phi_real, phi_series, reduce2, split6,
-    taylor_shift, turn_alpha3,
+    Channel, LOG6_TERMS, Real, Series, cbrt, cubic6, derivative, f_maclaurin, g_series, integral,
+    log_coeffs_6d, phi_complex, phi_pair, phi_real, phi_series, reduce2, series_div, series_mul,
+    series_sqrt, split6, taylor_shift, turn_alpha3,
 };
-use core::ops::{Add, Div, Mul, Neg, Sub};
+use crate::complex::Complex;
 
 /// The quartic in `t = u − m` (`m = p1/4`, the roots' mean): `t⁴ + a t² + b t + c`, and its
 /// regime: close roots where `bound < limit` (their spread, bounded from `a`, `b` and `c`,
@@ -98,31 +98,18 @@ pub(super) fn reduce4<T: Real>(ph: &Series<T>, q: &Quartic8<T>, rho: T) -> [T; 4
     shift(s, q.m)
 }
 
-/// Arithmetic shared by real and complex numbers, for the parts used in both.
-pub(super) trait Field:
-    Copy
-    + Add<Output = Self>
-    + Sub<Output = Self>
-    + Mul<Output = Self>
-    + Div<Output = Self>
-    + Neg<Output = Self>
-{
-}
-impl<F> Field for F where
-    F: Copy
-        + Add<Output = F>
-        + Sub<Output = F>
-        + Mul<Output = F>
-        + Div<Output = F>
-        + Neg<Output = F>
-{
-}
-
 /// The cubic through the line `la` at the roots of `u² − sa u + pa` and the line `lb` at the
 /// roots of `u² − sb u + pb` (Chinese remaindering: `la + qa K`, `K = (lb − la) qa⁻¹` modulo
 /// `qb`). It divides by the resultant `qa(b₁) qa(b₂)`, the product of the four differences
 /// between the two pairs' roots.
-pub(super) fn crt22<F: Field>(la: [F; 2], sa: F, pa: F, lb: [F; 2], sb: F, pb: F) -> [F; 4] {
+pub(super) fn crt22<T: Real, F: Channel<T>>(
+    la: [F; 2],
+    sa: F,
+    pa: F,
+    lb: [F; 2],
+    sb: F,
+    pb: F,
+) -> [F; 4] {
     // qa ≡ g1 u + g0 modulo qb, and its inverse (−g1 u + g1 sb + g0) / n.
     let (g1, g0) = (sb - sa, pa - pb);
     let n = g0 * g0 + g0 * g1 * sb + g1 * g1 * pb;
@@ -144,7 +131,7 @@ pub(super) fn add_root<T: Real>(l3: [T; 3], q: [T; 3], fr: T, r: T) -> [T; 4] {
 }
 
 /// The roots of `t² + u t + v` without cancellation (a conjugate pair when complex).
-fn quad_roots<T: Real>(u: T, v: T) -> [Cx<T>; 2] {
+fn quad_roots<T: Real>(u: T, v: T) -> [Complex<T>; 2] {
     let (zero, half) = (T::zero(), T::from_f64(0.5));
     let disc = u * u - T::from_i64(4) * v;
     let sq = disc.abs().sqrt();
@@ -153,10 +140,9 @@ fn quad_roots<T: Real>(u: T, v: T) -> [Cx<T>; 2] {
     let q_safe = T::select_lt(q.abs(), tiny, T::one(), q);
     let other = T::select_lt(q.abs(), tiny, zero, v / q_safe);
     let (re, im) = (-u * half, sq * half);
-    let real = |x: T| Cx { re: x, im: zero };
     [
-        Cx::select(disc, zero, Cx { re, im }, real(q)),
-        Cx::select(disc, zero, Cx { re, im: -im }, real(other)),
+        Complex::select(disc, zero, Complex::new(re, im), Complex::real(q)),
+        Complex::select(disc, zero, Complex::new(re, -im), Complex::real(other)),
     ]
 }
 
@@ -165,7 +151,7 @@ fn quad_roots<T: Real>(u: T, v: T) -> [Cx<T>; 2] {
 /// division, and its derivatives from the remainder `s1 x + s0` of the quotient. Converges
 /// quadratically where the factor's roots are apart from the cofactor's. Returns the step, the
 /// Jacobian's determinant and the quotient `x² + q1 x + q0`.
-fn bairstow<F: Field>(a: [F; 4], u: F, v: F) -> (F, F, F, F, F) {
+fn bairstow<T: Real, F: Channel<T>>(a: [F; 4], u: F, v: F) -> (F, F, F, F, F) {
     let [a3, a2, a1, a0] = a;
     let q1 = a3 - u;
     let q0 = a2 - u * q1 - v;
@@ -183,7 +169,7 @@ fn bairstow<F: Field>(a: [F; 4], u: F, v: F) -> (F, F, F, F, F) {
 /// The roots `[y₁, y₂, y₃]` of the resolvent cubic `y³ + b2 y² + b1 y + b0`, `y₁` real: three
 /// real roots from the trigonometric form (`y₁` the largest), or one from Cardano's formula and
 /// the conjugate pair of the quadratic that remains. The real ones are polished by Newton steps.
-fn resolvent<T: Real>(b2: T, b1: T, b0: T) -> [Cx<T>; 3] {
+fn resolvent<T: Real>(b2: T, b1: T, b0: T) -> [Complex<T>; 3] {
     let (zero, one) = (T::zero(), T::one());
     let tiny = T::from_f64(1e-30);
     let three = T::from_i64(3);
@@ -224,22 +210,22 @@ fn resolvent<T: Real>(b2: T, b1: T, b0: T) -> [Cx<T>; 3] {
     let ang = (one - arg * arg).max(zero).sqrt().atan2(arg) * three.recip();
     let third = T::from_f64(2.0 * core::f64::consts::PI / 3.0);
     let trig = [zero, one, T::from_i64(2)]
-        .map(|k| Cx::real(polish(polish((rad + rad) * (ang - third * k).cos() - sh))));
-    let one_real = [Cx::real(y1), y2, y3];
-    core::array::from_fn(|k| Cx::select(disc, zero, trig[k], one_real[k]))
+        .map(|k| Complex::real(polish(polish((rad + rad) * (ang - third * k).cos() - sh))));
+    let one_real = [Complex::real(y1), y2, y3];
+    core::array::from_fn(|k| Complex::select(disc, zero, trig[k], one_real[k]))
 }
 
 /// The resolvent roots `[y₁, y₂, y₃]` (one per pairing of the roots, `(t₁ + t₂)²`) and the roots
 /// `t` of the shifted quartic `t⁴ + a t² + b t + c` by Euler's form
 /// `t = (±√y₁ ± √y₂ ± √y₃)/2` with `√y₁ √y₂ √y₃ = −b`, which holds up where roots coincide (a
 /// multiple resolvent root).
-pub(super) fn euler<T: Real>(q: &Quartic8<T>) -> ([Cx<T>; 3], [Cx<T>; 4]) {
+pub(super) fn euler<T: Real>(q: &Quartic8<T>) -> ([Complex<T>; 3], [Complex<T>; 4]) {
     let (a, b, c) = (q.a, q.b, q.c);
     let y = resolvent(a + a, a * a - T::from_i64(4) * c, -(b * b));
     let mut s = y.map(Channel::sqrt);
     let prod = s[0] * s[1] * s[2];
-    s[0] = Cx::select(prod.re * b, T::zero(), s[0], -s[0]);
-    let h = Cx::real(T::from_f64(0.5));
+    s[0] = Complex::select(prod.re * b, T::zero(), s[0], -s[0]);
+    let h = Complex::real(T::from_f64(0.5));
     let t = [
         (s[0] + s[1] + s[2]) * h,
         (s[0] - s[1] - s[2]) * h,
@@ -261,7 +247,7 @@ pub(super) struct Split8<T> {
     pub(super) pair_b: (T, T),
     pub(super) gap_pairs: T,
     /// A complex quadratic (with its conjugate): `(s, p)`.
-    pub(super) conj: (Cx<T>, Cx<T>),
+    pub(super) conj: (Complex<T>, Complex<T>),
     pub(super) gap_conj: T,
     /// 1 where all four roots are (nearly) real.
     pub(super) real: T,
@@ -280,9 +266,9 @@ pub(super) fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
     // complex conjugate factors. Euler: the roots are (±√y₁ ± √y₂ ± √y₃)/2 with
     // √y₁ √y₂ √y₃ = −b, which holds up where roots coincide (a multiple resolvent root).
     let (y, t) = euler(q);
-    let mc = Cx::real(m);
+    let mc = Complex::real(m);
     let roots = t.map(|x| x + mc);
-    let dist = |x: Cx<T>, y: Cx<T>| {
+    let dist = |x: Complex<T>, y: Complex<T>| {
         let (dr, di) = (x.re - y.re, x.im - y.im);
         (dr * dr + di * di).sqrt()
     };
@@ -293,7 +279,7 @@ pub(super) fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
     let others = [[2, 3], [1, 3], [1, 2]];
     let tol = T::epsilon() * T::from_f64(1e4) * (one + a.abs());
     let (mut gap_pairs, mut u, mut v) = (zero, zero, zero);
-    let (mut gap_conj, mut cu, mut cv) = (zero, Cx::real(zero), Cx::real(zero));
+    let (mut gap_conj, mut cu, mut cv) = (zero, Complex::real(zero), Complex::real(zero));
     for k in 0..3 {
         let [i, j] = others[k];
         let pair = [roots[0], roots[k + 1]];
@@ -307,13 +293,9 @@ pub(super) fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
         let real = is_real * T::select_lt(-tol, y[k].re, one, zero);
         // Conjugate factors: the other two roots are the pair's conjugates (a rounding error
         // in the resolvent's sign would pair real roots as if they were).
-        let bar = |z: Cx<T>| Cx {
-            re: z.re,
-            im: -z.im,
-        };
         let (i, j) = (roots[i], roots[j]);
-        let mismatch = (dist(bar(pair[0]), i) + dist(bar(pair[1]), j))
-            .min(dist(bar(pair[0]), j) + dist(bar(pair[1]), i));
+        let mismatch = (dist(pair[0].conj(), i) + dist(pair[1].conj(), j))
+            .min(dist(pair[0].conj(), j) + dist(pair[1].conj(), i));
         let conj = is_real * (one - real) * T::select_lt(mismatch, gap * half, one, zero);
         let (sum, prd) = (pair[0] + pair[1], pair[0] * pair[1]);
         let better = T::select_lt(gap_pairs, gap * real, one, zero);
@@ -321,8 +303,8 @@ pub(super) fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
         v = T::select_lt(half, better, prd.re, v);
         gap_pairs = gap_pairs.max(gap * real);
         let better = T::select_lt(gap_conj, gap * conj, one, zero);
-        cu = Cx::select(better, half, cu, -sum);
-        cv = Cx::select(better, half, cv, prd);
+        cu = Complex::select(better, half, cu, -sum);
+        cv = Complex::select(better, half, cv, prd);
         gap_conj = gap_conj.max(gap * conj);
     }
     // Newton steps on the factorization, which converge where the factors are apart.
@@ -341,13 +323,13 @@ pub(super) fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
     let backward = T::select_lt(quot.1.abs(), v.abs(), one, zero);
     let pb = T::select_lt(half, backward, p4 / safe(v), quot.1);
     let sb = T::select_lt(half, backward, (p3 + u * pb) / safe(v), -quot.0);
-    let coef_cx = coef.map(Cx::real);
+    let coef_cx = coef.map(Complex::real);
     for _ in 0..3 {
         let (du, dv, det, _, _) = bairstow(coef_cx, cu, cv);
         let ok = T::select_lt(det.norm2(), T::from_f64(1e-35), zero, one);
         let ok = ok * T::select_lt(du.norm2() + dv.norm2(), big, one, zero);
-        cu = Cx::select(ok, half, cu, cu + du);
-        cv = Cx::select(ok, half, cv, cv + dv);
+        cu = Complex::select(ok, half, cu, cu + du);
+        cv = Complex::select(ok, half, cv, cv + dv);
     }
 
     // The most isolated (nearly) real root, polished by Newton steps on the quartic in u.
@@ -438,128 +420,65 @@ pub(super) fn grouping_apart<T: Real>(sp: &Split8<T>) -> (T, T, T) {
 // ---------------------------------------------------------------------------------------------
 // Complex series, for a pair of close complex roots.
 
-pub(super) type CxSeries<T> = [Cx<T>; LOG6_TERMS];
-
-/// The line `[l0, l1]` through a function at the roots `mid ± √d2` from its series `ph` at
-/// `mid` (in `s = t/ρ`): `Σ φₖ sᵏ` modulo `s² − d2/ρ²`, where `s (b s + e) = b d2/ρ² + e s`.
-pub(super) fn reduce_pair_cx<T: Real>(
-    ph: &CxSeries<T>,
-    mid: Cx<T>,
-    rho: T,
-    d2: Cx<T>,
-) -> [Cx<T>; 2] {
-    let d2s = d2 / Cx::real(rho * rho);
-    let (mut b, mut e) = (Cx::real(T::zero()), Cx::real(T::one()));
-    let (mut sb, mut se) = (b, Cx::real(T::zero()));
-    for f in ph {
-        sb = sb + *f * b;
-        se = se + *f * e;
-        let (nb, ne) = (e, b * d2s);
-        b = nb;
-        e = ne;
-    }
-    let sb = sb / Cx::real(rho);
-    [se - sb * mid, sb]
-}
-
-pub(super) fn cx_mul<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
-    let mut out = [Cx::real(T::zero()); LOG6_TERMS];
-    for i in 0..LOG6_TERMS {
-        for j in 0..LOG6_TERMS - i {
-            out[i + j] = out[i + j] + a[i] * b[j];
-        }
-    }
-    out
-}
-
-pub(super) fn cx_div<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
-    let mut q = [Cx::real(T::zero()); LOG6_TERMS];
-    let inv = Cx::real(T::one()) / b[0];
-    for k in 0..LOG6_TERMS {
-        let mut s = a[k];
-        for j in 1..=k {
-            s = s - b[j] * q[k - j];
-        }
-        q[k] = s * inv;
-    }
-    q
-}
-
-/// `(c + ρ s)^(1/2)` or `(c + ρ s)^(−1/2)` as a series in `s`, principal at `c`.
-pub(super) fn cx_sqrt<T: Real>(c: Cx<T>, inverse: bool, rho: T) -> CxSeries<T> {
-    let e = if inverse { -0.5 } else { 0.5 };
-    let root = c.sqrt();
-    let one = Cx::real(T::one());
-    let lead = if inverse { one / root } else { root };
-    let step = Cx::real(rho) / c;
-    let mut out = [Cx::real(T::zero()); LOG6_TERMS];
-    let (mut binom, mut power) = (1.0f64, one);
-    for (k, o) in out.iter_mut().enumerate() {
-        *o = lead * Cx::real(T::from_f64(binom)) * power;
-        binom *= (e - k as f64) / (k as f64 + 1.0);
-        power = power * step;
-    }
-    out
-}
-
 /// The Taylor series of `φ(u) = √u · F(u − 1)` at a complex `u = m` (principal `√u`) in
 /// `s = (u − m)/ρ`, as [`phi_series`] does at a real one: `F`'s Maclaurin series shifted to
 /// `x0 = m − 1` where `|x0| < 1/4`, else composed from `v = √(x0 + t)`,
 /// `asinh(v)' = v'/√(m + t)`, `F = asinh(v)/v`.
-fn phi_series_cx<T: Real>(m: Cx<T>, rho: T) -> CxSeries<T> {
-    let one = Cx::real(T::one());
-    let zero = [Cx::real(T::zero()); LOG6_TERMS];
+fn phi_series_cx<T: Real>(m: Complex<T>, rho: T) -> Series<Complex<T>> {
+    let one = Complex::real(T::one());
+    let zero = [Complex::real(T::zero()); LOG6_TERMS];
     let x0 = m - one;
     let ax = x0.norm2().sqrt();
     let quarter = T::from_f64(0.25);
     let near = if T::all_lt(quarter, ax) {
         zero
     } else {
-        let c = f_maclaurin::<90>().map(|f| Cx::real(T::from_f64(f)));
-        let x = Cx::select(ax, quarter, x0, Cx::real(T::zero()));
-        taylor_shift(c, x, rho, Cx::real(T::zero()), Cx::real)
+        let c = f_maclaurin::<90>().map(|f| Complex::real(T::from_f64(f)));
+        let x = Complex::select(ax, quarter, x0, Complex::real(T::zero()));
+        taylor_shift(c, x, rho)
     };
     let far = if T::all_lt(ax, quarter) {
         zero
     } else {
-        let x = Cx::select(ax, quarter, Cx::real(quarter), x0);
+        let x = Complex::select(ax, quarter, Complex::real(quarter), x0);
         let mm = x + one;
-        let v = cx_sqrt(x, false, rho);
-        let r = cx_sqrt(mm, true, rho);
-        let cz = Cx::real(T::zero());
-        let d = cx_mul(&derivative(&v, cz, Cx::real), &r);
-        cx_div(&integral(&d, (v[0] + mm.sqrt()).ln(), cz, Cx::real), &v)
+        let v = series_sqrt(x, 1.0, false, rho);
+        let r = series_sqrt(mm, 1.0, true, rho);
+        let d = series_mul(&derivative(&v), &r);
+        let a0 = Channel::ln(v[0] + Channel::sqrt(mm));
+        series_div(&integral(&d, a0), &v)
     };
-    let f: CxSeries<T> = core::array::from_fn(|k| Cx::select(ax, quarter, near[k], far[k]));
-    cx_mul(&cx_sqrt(m, false, rho), &f)
+    let f: Series<Complex<T>> =
+        core::array::from_fn(|k| Complex::select(ax, quarter, near[k], far[k]));
+    series_mul(&series_sqrt(m, 1.0, false, rho), &f)
 }
 
 /// The line `[l0, l1]` through `φ` at the roots of `u² − s u + p` (complex): its series at the
 /// midpoint where the roots are within a quarter of its distance to φ's branch cut `u ≤ 0`,
 /// else the chord.
-fn phi_pair_cx<T: Real>(s: Cx<T>, p: Cx<T>) -> [Cx<T>; 2] {
-    let half = Cx::real(T::from_f64(0.5));
+fn phi_pair_cx<T: Real>(s: Complex<T>, p: Complex<T>) -> [Complex<T>; 2] {
+    let half = Complex::real(T::from_f64(0.5));
     let mid = s * half;
     let d2 = mid * mid - p;
-    let d = d2.sqrt();
+    let d = Channel::sqrt(d2);
     let ad = d.norm2().sqrt();
     let reach =
         T::select_lt(mid.re, T::zero(), mid.im.abs(), mid.norm2().sqrt()) * T::from_f64(0.25);
     let close = if T::all_lt(reach, ad) {
-        [Cx::real(T::zero()); 2]
+        [Complex::real(T::zero()); 2]
     } else {
         // In s = t/ρ, ρ the distance to the cut.
         let rho = (reach * T::from_i64(4)).max(T::from_f64(1e-30));
-        reduce_pair_cx(&phi_series_cx(mid, rho), mid, rho, d2)
+        reduce2(&phi_series_cx(mid, rho), mid, rho, d2)
     };
     let (z, w) = (mid + d, mid - d);
     let (fz, fw) = (phi_complex(z), phi_complex(w));
-    let d_safe = Cx::select(ad, T::from_f64(1e-30), Cx::real(T::one()), d + d);
+    let d_safe = Complex::select(ad, T::from_f64(1e-30), Complex::real(T::one()), d + d);
     let slope = (fz - fw) / d_safe;
     let chord = [fz - slope * z, slope];
     [
-        Cx::select(ad, reach, close[0], chord[0]),
-        Cx::select(ad, reach, close[1], chord[1]),
+        Complex::select(ad, reach, close[0], chord[0]),
+        Complex::select(ad, reach, close[1], chord[1]),
     ]
 }
 
@@ -621,12 +540,8 @@ pub fn log_coeffs_8d<T: Real>(p: [T; 4]) -> [T; 4] {
         [zero; 4]
     } else {
         let (s, p) = sp.conj;
-        let bar = |x: Cx<T>| Cx {
-            re: x.re,
-            im: -x.im,
-        };
         let l = phi_pair_cx(s, p);
-        crt22(l, s, p, [bar(l[0]), bar(l[1])], bar(s), bar(p)).map(|x| x.re)
+        crt22(l, s, p, l.map(Complex::conj), s.conj(), p.conj()).map(|x| x.re)
     };
     core::array::from_fn(|k| {
         let spread = T::select_lt(
@@ -1034,13 +949,13 @@ mod tests {
     use super::*;
 
     /// The elementary symmetric functions `[p1, p2, p3, p4]` of four (complex) roots.
-    fn coeffs(roots: [Cx<f64>; 4]) -> [f64; 4] {
+    fn coeffs(roots: [Complex<f64>; 4]) -> [f64; 4] {
         let mut e = [
-            Cx::real(1.0),
-            Cx::real(0.0),
-            Cx::real(0.0),
-            Cx::real(0.0),
-            Cx::real(0.0),
+            Complex::real(1.0),
+            Complex::real(0.0),
+            Complex::real(0.0),
+            Complex::real(0.0),
+            Complex::real(0.0),
         ];
         for x in roots {
             for k in (1..5).rev() {
@@ -1050,17 +965,18 @@ mod tests {
         [e[1].re, e[2].re, e[3].re, e[4].re]
     }
 
-    fn at(a: [f64; 4], u: Cx<f64>) -> Cx<f64> {
-        ((Cx::real(a[3]) * u + Cx::real(a[2])) * u + Cx::real(a[1])) * u + Cx::real(a[0])
+    fn at(a: [f64; 4], u: Complex<f64>) -> Complex<f64> {
+        ((Complex::real(a[3]) * u + Complex::real(a[2])) * u + Complex::real(a[1])) * u
+            + Complex::real(a[0])
     }
 
     /// The interpolant matches φ at every root, relative to its size.
-    fn check(roots: [Cx<f64>; 4], tol: f64) {
+    fn check(roots: [Complex<f64>; 4], tol: f64) {
         let a = log_coeffs_8d(coeffs(roots));
         for &u in &roots {
             // φ at a real root through `phi_real`, which takes u = 1 (a 0/0 in the formula).
             let want = if u.im == 0.0 {
-                Cx::real(phi_real(u.re))
+                Complex::real(phi_real(u.re))
             } else {
                 phi_complex(u)
             };
@@ -1070,8 +986,8 @@ mod tests {
         }
     }
 
-    fn real(r: [f64; 4]) -> [Cx<f64>; 4] {
-        r.map(Cx::real)
+    fn real(r: [f64; 4]) -> [Complex<f64>; 4] {
+        r.map(Complex::real)
     }
 
     #[test]
@@ -1097,11 +1013,8 @@ mod tests {
 
     #[test]
     fn loxodromic_pairs() {
-        let z = |re: f64, im: f64| Cx { re, im };
-        let bar = |x: Cx<f64>| Cx {
-            re: x.re,
-            im: -x.im,
-        };
+        let z = Complex::new;
+        let bar = Complex::conj;
         for (a, b) in [
             (z(1.6, 2.2), z(0.4, 0.0)),
             (z(-0.9, 0.003), z(1.1, 0.7)),
@@ -1132,7 +1045,7 @@ mod tests {
             let p = coeffs(real(roots)).map(|x| x as f32);
             let a = log_coeffs_8d(p).map(f64::from);
             for u in roots {
-                let (got, want) = (at(a, Cx::real(u)).re, phi_real(u));
+                let (got, want) = (at(a, Complex::real(u)).re, phi_real(u));
                 assert!(
                     (got - want).abs() < 1e-4 * (1.0 + want),
                     "{roots:?}: {got} vs {want}"
@@ -1163,7 +1076,7 @@ mod tests {
             } else {
                 0.0
             };
-            let got = at(alpha, Cx::real(u)).re;
+            let got = at(alpha, Complex::real(u)).re;
             assert!(
                 (got - want).abs() < 1e-9 * (1.0 + want),
                 "root {u}: {got} vs {want}"

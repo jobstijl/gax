@@ -12,9 +12,9 @@
 //! * [`cholesky`]: `A = L Lᵀ` for symmetric positive definite `A`; [`cholesky_solve`].
 //! * [`eigh`]: cyclic Jacobi eigen-decomposition of a symmetric matrix.
 //! * [`eigh_generalized`]: `A x = λ B x` with `B` positive definite, by Cholesky reduction.
-//! * [`svd`]: one-sided (Hestenes) Jacobi singular value decomposition.
-//! * [`orthogonalize`] and [`pinv_apply`]: least squares and the pseudo-inverse of a matrix of
-//!   any shape, by the same one-sided Jacobi on its columns ([`Column`]).
+//! * [`orthogonalize`]: one-sided (Hestenes) Jacobi on the columns of a matrix of any shape
+//!   ([`Column`]), the singular value decomposition `A V = W`; [`pinv_weights`] and
+//!   [`pinv_apply`]: least squares and the pseudo-inverse from it.
 //!
 //! Jacobi methods are chosen over QR for their accuracy on small symmetric problems (Demmel &
 //! Veselić) and because a fixed number of sweeps makes them branch free.
@@ -568,88 +568,6 @@ pub fn eigh_generalized<T: Real, M: SquareArr<T>>(a: &M, b: &M, sweeps: usize) -
             }
             sort_pairs(&mut values, &mut xs);
             (values, xs)
-        },
-    )
-}
-
-/// Singular value decomposition `A = U diag(σ) Vᵀ` by one-sided (Hestenes) Jacobi.
-///
-/// Returns `(u, sigma, v)` with the singular vectors as *rows*: `A vᵢ = σᵢ uᵢ`. Singular
-/// values are non-negative and sorted in descending order. For a zero singular value the
-/// corresponding `u` row is zero.
-#[inline]
-pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) {
-    T::vectorize(
-        #[inline(always)]
-        || {
-            let n = M::N;
-            // Work on the columns of A: orthogonalize them pairwise with right rotations.
-            let mut u = transpose(a); // rows of u = columns of A
-            let mut v: M = identity(); // rows of v accumulate the right rotations
-            // The Gram entries of columns `p` and `q`: `(|u_p|², |u_q|², u_p · u_q)`.
-            let gram = |u: &M, p: usize, q: usize| {
-                let (mut alpha, mut beta, mut gamma) =
-                    (u[p][0] * u[p][0], u[q][0] * u[q][0], u[p][0] * u[q][0]);
-                for k in 1..n {
-                    alpha = alpha + u[p][k] * u[p][k];
-                    beta = beta + u[q][k] * u[q][k];
-                    gamma = gamma + u[p][k] * u[q][k];
-                }
-                (alpha, beta, gamma)
-            };
-            for _ in 0..sweeps {
-                // Converged when every pair of columns is orthogonal to working precision,
-                // relative to its own lengths, in every lane.
-                let mut open = T::zero();
-                for p in 0..n {
-                    for q in p + 1..n {
-                        let (alpha, beta, gamma) = gram(&u, p, q);
-                        open = open + not_orthogonal(alpha, beta, gamma);
-                    }
-                }
-                if T::all_lt(open, T::from_f64(0.5)) {
-                    break;
-                }
-                for p in 0..n {
-                    for q in p + 1..n {
-                        let (alpha, beta, gamma) = gram(&u, p, q);
-                        let (c, s) = hestenes_rotation(alpha, beta, gamma);
-                        for k in 0..n {
-                            let (x, y) = (u[p][k], u[q][k]);
-                            u[p][k] = c * x - s * y;
-                            u[q][k] = s * x + c * y;
-                            let (x, y) = (v[p][k], v[q][k]);
-                            v[p][k] = c * x - s * y;
-                            v[q][k] = s * x + c * y;
-                        }
-                    }
-                }
-            }
-            let mut sigma = M::zero_vector();
-            for i in 0..n {
-                let mut s = u[i][0] * u[i][0];
-                for k in 1..n {
-                    s = s + u[i][k] * u[i][k];
-                }
-                let norm = s.sqrt();
-                sigma[i] = norm;
-                let inv = T::select_lt(T::zero(), norm, norm.recip(), T::zero());
-                for k in 0..n {
-                    u[i][k] = u[i][k] * inv;
-                }
-            }
-            // Sort descending: sort ascending on -sigma, permuting u and v together.
-            let mut neg = M::zero_vector();
-            for i in 0..n {
-                neg[i] = -sigma[i];
-            }
-            let mut neg_v = neg;
-            sort_pairs(&mut neg, &mut u);
-            sort_pairs(&mut neg_v, &mut v);
-            for i in 0..n {
-                sigma[i] = -neg[i];
-            }
-            (u, sigma, v)
         },
     )
 }
@@ -1259,15 +1177,18 @@ mod tests {
     }
 
     #[test]
-    fn svd_reconstructs() {
+    fn orthogonalize_reconstructs() {
+        // The columns of `a` (the rows of its transpose) rotated into W = A V, orthogonal.
         let a = [[1.0, 2.0, 0.0], [0.0, 1.0, 3.0], [1.0, 0.0, 1.0]];
-        let (u, s, v) = svd(&a, 12);
+        let (w, v): (_, [[f64; 3]; 3]) = orthogonalize(&transpose(&a), 12);
         for k in 0..3 {
             let av = matvec(&a, &v[k]);
             for i in 0..3 {
-                assert!(close(av[i], s[k] * u[k][i]));
+                assert!(close(av[i], w[k][i]));
+            }
+            for j in k + 1..3 {
+                assert!(close(w[k].dot(&w[j]), 0.0));
             }
         }
-        assert!(s[0] >= s[1] && s[1] >= s[2]);
     }
 }

@@ -141,18 +141,19 @@ fn check_generalized<const N: usize>(v: &[f64], b: &[f64]) {
 
 fn check_svd<const N: usize>(v: &[f64], _b: &[f64]) {
     let a: [[f64; N]; N] = mat(v);
-    let (u, s, vv) = svd(&a, 14);
+    // One-sided Jacobi on the columns of `a`: W = A V with orthogonal columns.
+    let (w, vv): ([[f64; N]; N], [[f64; N]; N]) = orthogonalize(&transpose(&a), 14);
+    let scale = norm(&a).max(1.0);
     for k in 0..N {
         let av = matvec(&a, &vv[k]);
         for i in 0..N {
-            assert!(
-                (av[i] - s[k] * u[k][i]).abs() <= TOL * norm(&a).max(1.0),
-                "A v = σ u n={N}"
-            );
+            assert!((av[i] - w[k][i]).abs() <= TOL * scale, "A v = w n={N}");
         }
-        assert!(s[k] >= -TOL);
-        if k > 0 {
-            assert!(s[k - 1] + TOL >= s[k], "descending");
+        for j in k + 1..N {
+            assert!(
+                w[k].dot(&w[j]).abs() <= TOL * scale * scale,
+                "orthogonal n={N}"
+            );
         }
     }
 }

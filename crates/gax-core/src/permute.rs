@@ -26,18 +26,16 @@ pub trait MoveToFront<const I: usize>: Slots {
 #[inline(always)]
 fn permute<S: Slots, D: Slots, X: Elem>(a: &S::Arr<X>, dims: &[usize], i: usize) -> D::Arr<X> {
     let n = dims.len();
+    // The dimensions in the moved order: (d_i, d_0, ..., d_{i-1}, d_{i+1}, ...).
+    let mut moved_dims = [0usize; MAX_SLOTS];
+    let others = dims.iter().enumerate().filter(|&(d, _)| d != i);
+    let moved = core::iter::once(dims[i]).chain(others.map(|(_, &dim)| dim));
+    for (m, dim) in moved_dims.iter_mut().zip(moved) {
+        *m = dim;
+    }
     D::from_flat(
         &mut |flat| {
             // Multi-index in the moved order: (j_i, j_0, ..., j_{i-1}, j_{i+1}, ...).
-            let mut moved_dims = [0usize; MAX_SLOTS];
-            moved_dims[0] = dims[i];
-            let mut k = 1;
-            for (d, &dim) in dims.iter().enumerate() {
-                if d != i {
-                    moved_dims[k] = dim;
-                    k += 1;
-                }
-            }
             let mut rem = flat;
             let mut idx = [0usize; MAX_SLOTS];
             for p in (0..n).rev() {

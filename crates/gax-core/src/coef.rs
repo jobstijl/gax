@@ -240,65 +240,57 @@ float_impl!(f32);
 float_impl!(f64);
 
 /// The elementary functions of `f32` and `f64`: the platform's (through `std`) by default; with
-/// the `deterministic` feature, pure Rust everywhere: `crate::math` for `f32` (the functions the
-/// SIMD lanes use) and the `libm` crate for `f64`.
+/// the `deterministic` feature, pure Rust everywhere: those of
+/// [`StrictElementary`](crate::strict::StrictElementary) (`crate::math` for `f32`, the functions
+/// the SIMD lanes use, and the `libm` crate for `f64`).
 pub(crate) mod elementary {
+    #[cfg(not(feature = "deterministic"))]
     pub mod f32 {
-        #[cfg(not(feature = "deterministic"))]
         pub use super::super::libm_shim::f32::{atan2, cos, cosh, exp, ln, sin, sinh};
-        #[cfg(feature = "deterministic")]
-        mod det {
-            use crate::math;
-            #[inline(always)]
-            pub fn sin(x: f32) -> f32 {
-                math::sin_cos(x).0
-            }
-            #[inline(always)]
-            pub fn cos(x: f32) -> f32 {
-                math::sin_cos(x).1
-            }
-            #[inline(always)]
-            pub fn sinh(x: f32) -> f32 {
-                math::sinh(x)
-            }
-            #[inline(always)]
-            pub fn cosh(x: f32) -> f32 {
-                math::cosh(x)
-            }
-            #[inline(always)]
-            pub fn atan2(y: f32, x: f32) -> f32 {
-                math::atan2(y, x)
-            }
-            #[inline(always)]
-            pub fn ln(x: f32) -> f32 {
-                math::ln(x)
-            }
-            #[inline(always)]
-            pub fn exp(x: f32) -> f32 {
-                math::exp(x)
-            }
-        }
-        #[cfg(feature = "deterministic")]
-        pub use det::{atan2, cos, cosh, exp, ln, sin, sinh};
     }
+    #[cfg(not(feature = "deterministic"))]
     pub mod f64 {
-        #[cfg(not(feature = "deterministic"))]
         pub use super::super::libm_shim::f64::{atan2, cos, cosh, exp, ln, sin, sinh};
-        #[cfg(feature = "deterministic")]
-        mod det {
-            macro_rules! libm_fns {
-                ($($f:ident => $lf:ident ($($a:ident),*)),*) => {$(
-                    #[inline(always)]
-                    pub fn $f($($a: f64),*) -> f64 {
-                        libm::Libm::<f64>::$lf($($a),*)
-                    }
-                )*};
-            }
-            libm_fns!(sin => sin(x), cos => cos(x), sinh => sinh(x), cosh => cosh(x), atan2 => atan2(y, x), ln => log(x), exp => exp(x));
-        }
-        #[cfg(feature = "deterministic")]
-        pub use det::{atan2, cos, cosh, exp, ln, sin, sinh};
     }
+
+    #[cfg(feature = "deterministic")]
+    macro_rules! strict {
+        ($($t:ident),*) => {$(
+            pub mod $t {
+                use crate::strict::StrictElementary;
+                #[inline(always)]
+                pub fn sin(x: $t) -> $t {
+                    x.strict_sin_cos().0
+                }
+                #[inline(always)]
+                pub fn cos(x: $t) -> $t {
+                    x.strict_sin_cos().1
+                }
+                #[inline(always)]
+                pub fn sinh(x: $t) -> $t {
+                    x.strict_sinh()
+                }
+                #[inline(always)]
+                pub fn cosh(x: $t) -> $t {
+                    x.strict_cosh()
+                }
+                #[inline(always)]
+                pub fn atan2(y: $t, x: $t) -> $t {
+                    y.strict_atan2(x)
+                }
+                #[inline(always)]
+                pub fn ln(x: $t) -> $t {
+                    x.strict_ln()
+                }
+                #[inline(always)]
+                pub fn exp(x: $t) -> $t {
+                    x.strict_exp()
+                }
+            }
+        )*};
+    }
+    #[cfg(feature = "deterministic")]
+    strict!(f32, f64);
 }
 
 #[cfg_attr(feature = "deterministic", allow(dead_code))]

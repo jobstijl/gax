@@ -354,20 +354,31 @@ mod pga2d_moments {
         #[cfg(feature = "std")]
         pub fn of_mesh(mesh: &crate::mesh::Mesh<Point<(), T>, 2>) -> Self {
             let v = mesh.vertices.sites();
-            let o = Point::xy(T::zero(), T::zero());
-            let mut m = Self::default();
-            for e in mesh.complex().simplices(1) {
-                m.add_edge([v[e[0]], v[e[1]]], o);
-            }
-            m
+            Self::of_edges(
+                mesh.complex().simplices(1).map(|e| [v[e[0]], v[e[1]]]),
+                Point::xy(T::zero(), T::zero()),
+            )
         }
 
         /// The moments of the region inside a closed polygon, its vertices counterclockwise.
         pub fn of_polygon(vertices: &[Point<(), T>]) -> Self {
-            let o = Point::xy(T::zero(), T::zero());
+            let next = vertices.iter().cycle().skip(1);
+            Self::of_edges(
+                vertices.iter().zip(next).map(|(&a, &b)| [a, b]),
+                Point::xy(T::zero(), T::zero()),
+            )
+        }
+
+        /// The moments of the region bounded by `edges` (counterclockwise around it) and closed,
+        /// if they are not, by a line through `apex`: the edges below a water line, with the
+        /// apex on that line, give the submerged region's moments.
+        pub fn of_edges(
+            edges: impl IntoIterator<Item = [Point<(), T>; 2]>,
+            apex: Point<(), T>,
+        ) -> Self {
             let mut m = Self::default();
-            for (i, &a) in vertices.iter().enumerate() {
-                m.add_edge([a, vertices[(i + 1) % vertices.len()]], o);
+            for e in edges {
+                m.add_edge(e, apex);
             }
             m
         }

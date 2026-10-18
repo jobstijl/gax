@@ -2,7 +2,7 @@
 
 extern crate std;
 
-use super::{Field, SparseMap};
+use super::{Field, SparseMap, axpy, dot};
 use crate::coef::Real;
 use crate::kind::{Extensor, Kind};
 use std::vec;
@@ -28,24 +28,6 @@ where
     K: Kind,
     T: Real,
 {
-    /// `y = A x` on flattened coefficients (`site * K::N + blade`), each row's couplings in
-    /// order: the block matrix-vector product, with the rounding of `apply`.
-    pub(super) fn apply_flat(&self, x: &[T], y: &mut [T]) {
-        let n = K::N;
-        for r in 0..self.shape.0 {
-            let out = &mut y[r * n..(r + 1) * n];
-            out.fill(T::zero());
-            for k in self.starts[r]..self.starts[r + 1] {
-                let xs = &x[self.cols[k] * n..(self.cols[k] + 1) * n];
-                let cell = self.cells[k].coeffs().as_ref();
-                for (o, row) in cell.iter().enumerate() {
-                    let row = row.as_ref();
-                    out[o] = out[o] + (1..n).fold(xs[0] * row[0], |acc, i| acc + xs[i] * row[i]);
-                }
-            }
-        }
-    }
-
     /// The diagonal of the block matrix: the diagonal coefficients of the cells on the site
     /// diagonal, summed.
     pub(super) fn diagonal_flat(&self) -> Vec<T> {
@@ -102,7 +84,7 @@ where
         let flat = flatten(b);
         let diag = self.diagonal_flat();
         let (x, iterations, residual, converged) = pcg(
-            |x, y| self.apply_flat(x, y),
+            |x, y| self.apply_rect(x, y),
             &diag,
             &flat,
             tolerance,
@@ -157,24 +139,6 @@ pub(super) fn unflatten<X: Extensor<Slots = ()>>(c: &[X::Coef]) -> Field<X> {
     })
 }
 
-/// `Σ aᵢ bᵢ` with four independent accumulators, so that the multiply-adds overlap instead of
-/// waiting on one another.
-fn dot<T: Real>(a: &[T], b: &[T]) -> T {
-    let mut s = [T::zero(); 4];
-    let (ca, ra) = a.as_chunks::<4>();
-    let (cb, rb) = b.as_chunks::<4>();
-    for (x, y) in ca.iter().zip(cb) {
-        for ((s, x), y) in s.iter_mut().zip(x).zip(y) {
-            *s = x.mul_add(*y, *s);
-        }
-    }
-    let mut t = (s[0] + s[1]) + (s[2] + s[3]);
-    for (x, y) in ra.iter().zip(rb) {
-        t = x.mul_add(*y, t);
-    }
-    t
-}
-
 /// Preconditioned conjugate gradients from zero: `(x, iterations, relative residual,
 /// converged)`. The preconditioner is the inverse of `diag` where it is positive, else 1.
 fn pcg<T: Real>(
@@ -212,10 +176,10 @@ fn pcg<T: Real>(
             return (x, it, (rr / bb).sqrt(), false);
         }
         let alpha = rz / pap;
-        for k in 0..m {
-            x[k] = alpha.mul_add(p[k], x[k]);
-            r[k] = (-alpha).mul_add(ap[k], r[k]);
-            z[k] = r[k] * inv[k];
+        axpy(alpha, &p, &mut x);
+        axpy(-alpha, &ap, &mut r);
+        for ((z, r), i) in z.iter_mut().zip(&r).zip(&inv) {
+            *z = *r * *i;
         }
         rr = dot(&r, &r);
         let rz_new = dot(&r, &z);

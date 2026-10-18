@@ -74,6 +74,8 @@ pub trait Slots: HasCat<Cat<()> = Self> + Copy + 'static {
         b: &Self::Arr<Y>,
         f: &mut impl FnMut(&X, &Y) -> Z,
     ) -> Self::Arr<Z>;
+    /// Fold the elements in their flat (row-major) order.
+    fn fold<X: Elem, B>(a: &Self::Arr<X>, init: B, f: &mut impl FnMut(B, &X) -> B) -> B;
     /// Outer product: every element of `a` combined with every element of `b`.
     fn outer<R: Slots, A: Elem, B: Elem, C: Elem>(
         a: &Self::Arr<A>,
@@ -134,6 +136,32 @@ where
     }))
 }
 
+/// Fold every element of the slot arrays `cols` (a kind's coefficients: output first, each
+/// slot array in its flat order).
+#[inline(always)]
+pub(crate) fn fold_all<S: Slots, X: Elem, B>(
+    cols: &[S::Arr<X>],
+    init: B,
+    mut f: impl FnMut(B, X) -> B,
+) -> B {
+    cols.iter()
+        .fold(init, |acc, col| S::fold(col, acc, &mut |b, x| f(b, *x)))
+}
+
+/// [`fold_all`] over the pairs of elements of `a` and `b`, which have the same shape.
+#[inline(always)]
+pub(crate) fn fold_all_pairs<S: Slots, X: Elem, B>(
+    a: &[S::Arr<X>],
+    b: &[S::Arr<X>],
+    init: B,
+    mut f: impl FnMut(B, X, X) -> B,
+) -> B {
+    a.iter().zip(b).fold(init, |acc, (x, y)| {
+        let pairs = S::zip(x, y, &mut |p, q| (*p, *q));
+        S::fold(&pairs, acc, &mut |b, &(p, q)| f(b, p, q))
+    })
+}
+
 /// Products of maps above this much work (terms of the value product times the slot entries
 /// of the result) run as the value product once per pair of slot entries ([`by_entries`])
 /// instead of unrolled across the slot arrays: unrolled, a 6D product with a 15-entry slot is
@@ -155,24 +183,18 @@ where
     R: Extensor<Slots = (), Coef = M1::Coef>,
     F: Fn(Retype<M1, (), M1::Coef>, Retype<M2, (), M1::Coef>) -> R,
 {
-    type V<M> = Retype<M, (), <M as Extensor>::Coef>;
-    // Each operand as a slot array of plain values.
-    let av: <M1::Slots as Slots>::Arr<V<M1>> = <M1::Slots as Slots>::from_flat(
-        &mut |k| {
-            V::<M1>::from_coeffs(<M1::Kind as Kind>::arr_map(a.coeffs(), |col| {
-                <M1::Slots as Slots>::get_flat(col, k)
-            }))
-        },
-        0,
-    );
-    let bv: <M2::Slots as Slots>::Arr<V<M2>> = <M2::Slots as Slots>::from_flat(
-        &mut |k| {
-            V::<M2>::from_coeffs(<M2::Kind as Kind>::arr_map(b.coeffs(), |col| {
-                <M2::Slots as Slots>::get_flat(col, k)
-            }))
-        },
-        0,
-    );
+    /// An operand as a slot array of plain values.
+    fn values_of<M: Extensor>(m: &M) -> <M::Slots as Slots>::Arr<Retype<M, (), M::Coef>> {
+        <M::Slots as Slots>::from_flat(
+            &mut |k| {
+                Extensor::from_coeffs(<M::Kind as Kind>::arr_map(m.coeffs(), |col| {
+                    <M::Slots as Slots>::get_flat(col, k)
+                }))
+            },
+            0,
+        )
+    }
+    let (av, bv) = (values_of(a), values_of(b));
     let prod = <M1::Slots as Slots>::outer::<M2::Slots, _, _, R>(&av, &bv, &mut |x, y| f(*x, *y));
     // Back to output-first coefficients.
     let c = <R::Kind as Kind>::arr_from_fn(|o| {
@@ -210,6 +232,10 @@ impl Slots for () {
     #[inline(always)]
     fn zip<X: Elem, Y: Elem, Z: Elem>(a: &X, b: &Y, f: &mut impl FnMut(&X, &Y) -> Z) -> Z {
         f(a, b)
+    }
+    #[inline(always)]
+    fn fold<X: Elem, B>(a: &X, init: B, f: &mut impl FnMut(B, &X) -> B) -> B {
+        f(init, a)
     }
     #[inline(always)]
     fn outer<R: Slots, A: Elem, B: Elem, C: Elem>(
@@ -252,6 +278,9 @@ impl Slots for TooManySlots {
     }
     fn map<X: Elem, Y: Elem>((): &(), _: &mut impl FnMut(&X) -> Y) {}
     fn zip<X: Elem, Y: Elem, Z: Elem>((): &(), (): &(), _: &mut impl FnMut(&X, &Y) -> Z) {}
+    fn fold<X: Elem, B>((): &(), init: B, _: &mut impl FnMut(B, &X) -> B) -> B {
+        init
+    }
     fn outer<R: Slots, A: Elem, B: Elem, C: Elem>(
         (): &(),
         _: &R::Arr<B>,
@@ -317,6 +346,10 @@ macro_rules! tuple_slots {
                 f: &mut impl FnMut(&X, &Y) -> Z,
             ) -> Self::Arr<Z> {
                 $H::arr_zip(a, b, |x, y| <($($T,)*) as Slots>::zip(x, y, f))
+            }
+            #[inline(always)]
+            fn fold<X: Elem, B>(a: &Self::Arr<X>, init: B, f: &mut impl FnMut(B, &X) -> B) -> B {
+                a.as_ref().iter().fold(init, |acc, t| <($($T,)*) as Slots>::fold(t, acc, f))
             }
             #[inline(always)]
             fn outer<R: Slots, A: Elem, B: Elem, C: Elem>(

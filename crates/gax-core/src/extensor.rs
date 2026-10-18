@@ -12,7 +12,7 @@ use crate::complex::Complex;
 use crate::fill::SplitLast;
 use crate::kind::{Extensor, Kind};
 use crate::linalg::{self, Column, SquareArr};
-use crate::slots::{Slots, SplitFirst};
+use crate::slots::{Slots, SplitFirst, fold_all_pairs};
 
 /// A map `B <- A` between kinds with the same number of coefficients.
 ///
@@ -165,33 +165,22 @@ where
         X: Extensor<Kind = M::Kind, Coef = M::Coef>,
     {
         let f = linalg::lu(self.coeffs());
-        let n = <M::Kind as Kind>::N;
-        let size = <X::Slots as Slots>::SIZE;
         let cols = rhs.coeffs().as_ref();
-        // One solve per entry of the right-hand side's slot arrays.
-        let mut solutions: A::Arr<<X::Slots as Slots>::Arr<M::Coef>> =
-            A::arr_from_fn(|_| <X::Slots as Slots>::from_flat(&mut |_| M::Coef::zero(), 0));
-        for flat in 0..size {
-            let mut b =
-                <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
-            for i in 0..n {
-                b[i] = <X::Slots as Slots>::get_flat(&cols[i], flat);
-            }
-            let x = linalg::lu_solve(&f, &b);
-            for (i, s) in solutions.as_mut().iter_mut().enumerate() {
-                let prev = *s;
-                *s = <X::Slots as Slots>::from_flat(
-                    &mut |k| {
-                        if k == flat {
-                            x[i]
-                        } else {
-                            <X::Slots as Slots>::get_flat(&prev, k)
-                        }
-                    },
-                    0,
-                );
-            }
-        }
+        // One solve per entry of the right-hand side's slot arrays, then the solutions'
+        // coefficients gathered output first.
+        let xs = <X::Slots as Slots>::from_flat(
+            &mut |flat| {
+                let mut b =
+                    <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
+                for (i, col) in cols.iter().enumerate() {
+                    b[i] = <X::Slots as Slots>::get_flat(col, flat);
+                }
+                let x = linalg::lu_solve(&f, &b);
+                A::arr_from_fn(|i| x[i])
+            },
+            0,
+        );
+        let solutions = A::arr_from_fn(|i| <X::Slots as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
         <A::Mv<X::Slots, M::Coef> as Extensor>::from_coeffs(solutions)
     }
 
@@ -202,12 +191,15 @@ where
         <M::Kind as Kind>::Arr<M::Coef>,
         A::Arr<A::Mv<(), M::Coef>>,
     ) {
-        let n = <M::Kind as Kind>::N;
-        let (u, s, v) = linalg::svd(self.coeffs(), sweeps(n));
+        // `svd_thin`'s factorization, with `V` stored in the map's own square matrix type.
+        type Square<M, A> =
+            <<M as Extensor>::Kind as Kind>::Arr<<A as Kind>::Arr<<M as Extensor>::Coef>>;
+        let (s, v, u) = svd_thin::<M::Kind, A, M::Coef, Square<M, A>>(self.coeffs());
+        let (s, u) = (s.as_ref(), u.as_ref());
         (
-            <M::Kind as Kind>::arr_from_fn(|k| value_from::<M::Kind, M::Coef>(|i| u[k][i])),
+            <M::Kind as Kind>::arr_from_fn(|k| u[k]),
             <M::Kind as Kind>::arr_from_fn(|k| s[k]),
-            A::arr_from_fn(|k| value_from::<A, M::Coef>(|i| v[k][i])),
+            v,
         )
     }
 }
@@ -319,11 +311,9 @@ where
         let b = symmetrize(&metric.coeffs().as_ref()[0]);
         let n = <A::Arr<A::Arr<T<M>>> as SquareArr<T<M>>>::N;
         // A shift that makes `a + σ b` comparable in scale with `b`: the ratio of their traces.
-        let (mut ta, mut tb) = (T::<M>::zero(), T::<M>::zero());
-        for i in 0..n {
-            ta = ta + a[i][i].abs();
-            tb = tb + b[i][i].abs();
-        }
+        let (ta, tb) = (0..n).fold((T::<M>::zero(), T::<M>::zero()), |(ta, tb), i| {
+            (ta + a[i][i].abs(), tb + b[i][i].abs())
+        });
         let sigma = if T::<M>::all_lt(T::<M>::zero(), tb) {
             ta / tb
         } else {
@@ -334,8 +324,9 @@ where
         let (mus, xs) = linalg::eigh_generalized(&b, &shifted, sweeps(n));
         let tiny = T::<M>::epsilon() * T::<M>::from_i64(64);
         let largest = (0..n).fold(T::<M>::zero(), |m, k| m.max(mus[k].abs()));
+        let finite = |k: usize| T::<M>::all_lt(tiny * largest, mus[k]);
         let lambda = |k: usize| {
-            if T::<M>::all_lt(tiny * largest, mus[k]) {
+            if finite(k) {
                 mus[k].recip() - sigma
             } else {
                 T::<M>::from_f64(f64::INFINITY)
@@ -346,7 +337,7 @@ where
         let vals = A::arr_from_fn(|r| lambda(n - 1 - r));
         let vecs = A::arr_from_fn(|r| {
             let k = n - 1 - r;
-            let scale = if T::<M>::all_lt(tiny * largest, mus[k]) {
+            let scale = if finite(k) {
                 mus[k].sqrt().recip()
             } else {
                 T::<M>::one()
@@ -423,7 +414,15 @@ where
             }
             linalg::lu_solve(&lu, &b)
         };
-        let coeffs = A::arr_from_fn(|i| <Init<R> as Slots>::from_flat(&mut |l| solve_at(l)[i], 0));
+        // One solve per value of the leading slots, then gathered output first.
+        let xs = <Init<R> as Slots>::from_flat(
+            &mut |l| {
+                let x = solve_at(l);
+                A::arr_from_fn(|i| x[i])
+            },
+            0,
+        );
+        let coeffs = A::arr_from_fn(|i| <Init<R> as Slots>::map(&xs, &mut |x| x.as_ref()[i]));
         <A::Mv<Init<R>, M::Coef> as Extensor>::from_coeffs(coeffs)
     }
 }
@@ -516,13 +515,7 @@ impl<K: Kind, S: Slots, T: Real> Column<T> for Col<K, S, T> {
     #[inline(always)]
     fn dot(&self, other: &Self) -> T {
         let (a, b) = (self.0.as_ref(), other.0.as_ref());
-        let mut s = T::zero();
-        for k in 0..K::N {
-            for f in 0..S::SIZE {
-                s = S::get_flat(&a[k], f).mul_add(S::get_flat(&b[k], f), s);
-            }
-        }
-        s
+        fold_all_pairs::<S, _, _>(a, b, T::zero(), |s, x, y| x.mul_add(y, s))
     }
 
     #[inline(always)]
@@ -537,36 +530,39 @@ impl<K: Kind, S: Slots, T: Real> Column<T> for Col<K, S, T> {
 /// `H × H` coefficient matrices.
 type Sq<H, T> = <H as Kind>::Arr<<H as Kind>::Arr<T>>;
 
-/// The least-squares factorization of a map's first slot `H` (columns: the images of `H`'s
-/// blades, each a `K` over the remaining slots `R`): the rotated columns, `V`, and the weights
-/// `1/σᵢ²` above the cutoff.
-#[allow(clippy::type_complexity)]
+/// The columns of a map's first slot `H`: the images of `H`'s blades, each a `K` over the
+/// remaining slots `R`.
 #[inline]
-fn factor<K, H, R, S, T>(
-    m: &K::Arr<S::Arr<T>>,
-    rcond: Option<T>,
-) -> (
-    H::Arr<Col<K, R, T>>,
-    Sq<H, T>,
-    <Sq<H, T> as SquareArr<T>>::Vector,
-)
+fn first_columns<K, H, R, S, T>(m: &K::Arr<S::Arr<T>>) -> H::Arr<Col<K, R, T>>
 where
     K: Kind,
     H: Kind,
     R: Slots,
     S: SplitFirst<Head = H, Tail = R>,
     T: Real,
-    Sq<H, T>: SquareArr<T>,
 {
     let rows = m.as_ref();
-    let cols: H::Arr<Col<K, R, T>> =
-        H::arr_from_fn(|h| Col(K::arr_from_fn(|k| S::split(&rows[k]).as_ref()[h])));
-    let n = H::N;
-    let (w, v): (H::Arr<Col<K, R, T>>, Sq<H, T>) = linalg::orthogonalize(&cols, sweeps(n));
+    H::arr_from_fn(|h| Col(K::arr_from_fn(|k| S::split(&rows[k]).as_ref()[h])))
+}
+
+/// The least-squares factorization of the columns `cols` (each a `K` over the slots `R`): the
+/// rotated columns, `V`, and the weights `1/σᵢ²` above the cutoff.
+#[allow(clippy::type_complexity)]
+#[inline]
+fn factor<K, R, T, A, V>(cols: &A, rcond: Option<T>) -> (A, V, V::Vector)
+where
+    K: Kind,
+    R: Slots,
+    T: Real,
+    A: Copy + linalg::Columns<Col<K, R, T>>,
+    V: SquareArr<T>,
+{
+    let n = V::N;
+    let (w, v): (A, V) = linalg::orthogonalize(cols, sweeps(n));
     // NumPy's default cutoff for `lstsq`: machine epsilon times the larger dimension.
     let size = (K::N * R::SIZE).max(n);
     let cut = rcond.unwrap_or_else(|| T::epsilon() * T::from_i64(size as i64));
-    let weights = linalg::pinv_weights::<T, Col<K, R, T>, _, Sq<H, T>>(&w, cut);
+    let weights = linalg::pinv_weights::<T, Col<K, R, T>, A, V>(&w, cut);
     (w, v, weights)
 }
 
@@ -666,73 +662,53 @@ where
         H::Arr<H::Mv<(), M::Coef>>,
         H::Arr<<M::Kind as Kind>::Mv<(), M::Coef>>,
     ) {
-        type T<M> = <M as Extensor>::Coef;
-        type Cols<M, H> = <H as Kind>::Arr<Col<<M as Extensor>::Kind, (), T<M>>>;
-        let rows = self.coeffs().as_ref();
-        let cols: H::Arr<Col<M::Kind, (), T<M>>> = H::arr_from_fn(|h| {
-            Col(<M::Kind as Kind>::arr_from_fn(|k| {
-                <(H,) as Slots>::get_flat(&rows[k], h)
-            }))
-        });
-        let n = H::N;
-        let (w, v): (Cols<M, H>, Sq<H, T<M>>) = linalg::orthogonalize(&cols, sweeps(n));
-        let wc = w.as_ref();
-        let sigma: alloc_free::Order<H, T<M>> = alloc_free::Order::by(|i| wc[i].dot(&wc[i]).sqrt());
-        let s = H::arr_from_fn(|r| sigma.value(r));
-        let right = H::arr_from_fn(|r| {
-            let i = sigma.index(r);
-            value_from::<H, T<M>>(|h| v[i][h])
-        });
-        let left = H::arr_from_fn(|r| {
-            let i = sigma.index(r);
-            let len = sigma.value(r);
-            // A zero singular value has no left vector: zero (in any precision).
-            let zero = T::<M>::zero();
-            let inv = T::<M>::select_lt(zero, len, len.recip(), zero);
-            value_from::<M::Kind, T<M>>(|k| wc[i].0.as_ref()[k] * inv)
-        });
-        (s, right, left)
+        svd_thin::<M::Kind, H, M::Coef, Sq<H, M::Coef>>(self.coeffs())
     }
 }
 
-/// A sort order computed without allocating: the indices of `H::N` values, descending.
-mod alloc_free {
-    use crate::coef::Real;
-    use crate::kind::Kind;
-
-    /// The values and their order.
-    pub struct Order<H: Kind, T: Real> {
-        values: H::Arr<T>,
-        order: H::Arr<usize>,
-    }
-
-    impl<H: Kind, T: Real> Order<H, T> {
-        /// The values `f(i)`, ordered descending (NaN last).
-        pub fn by(f: impl Fn(usize) -> T) -> Self {
-            let values = H::arr_from_fn(&f);
-            let mut order = H::arr_from_fn(|i| i);
-            let o = order.as_mut();
-            let v = values.as_ref();
-            for i in 1..o.len() {
-                let mut j = i;
-                while j > 0 && T::all_lt(v[o[j - 1]], v[o[j]]) {
-                    o.swap(j - 1, j);
-                    j -= 1;
-                }
+/// [`SingularValues::svd_thin`] of the map `K <- (H,)` with coefficient rows `rows`, by
+/// one-sided Jacobi on its columns, `V` kept in the square matrix type `V` (`H::N` rows).
+#[allow(clippy::type_complexity)]
+fn svd_thin<K: Kind, H: Kind, T: Real, V: SquareArr<T>>(
+    rows: &K::Arr<H::Arr<T>>,
+) -> (H::Arr<T>, H::Arr<H::Mv<(), T>>, H::Arr<K::Mv<(), T>>) {
+    let rows = rows.as_ref();
+    let cols: H::Arr<Col<K, (), T>> =
+        H::arr_from_fn(|h| Col(K::arr_from_fn(|k| rows[k].as_ref()[h])));
+    let (mut w, mut v): (H::Arr<Col<K, (), T>>, V) = linalg::orthogonalize(&cols, sweeps(H::N));
+    let mut s = H::arr_from_fn(|i| w.as_ref()[i].dot(&w.as_ref()[i]).sqrt());
+    // Descending, lane by lane: a bubble sort of selects (as `linalg::sort_pairs`), the values
+    // with their right vectors (the rows of `V`) and their columns of `W`.
+    let n = H::N;
+    for i in 0..n {
+        for j in 0..n - 1 - i {
+            let (a, b) = (s.as_ref()[j], s.as_ref()[j + 1]);
+            let swap = |x: &mut T, y: &mut T| {
+                let (p, q) = (*x, *y);
+                *x = T::select_lt(a, b, q, p);
+                *y = T::select_lt(a, b, p, q);
+            };
+            let (lo, hi) = s.as_mut().split_at_mut(j + 1);
+            swap(&mut lo[j], &mut hi[0]);
+            for k in 0..n {
+                let (mut p, mut q) = (v[j][k], v[j + 1][k]);
+                swap(&mut p, &mut q);
+                (v[j][k], v[j + 1][k]) = (p, q);
             }
-            Order { values, order }
-        }
-
-        /// The index of the `r`-th largest.
-        pub fn index(&self, r: usize) -> usize {
-            self.order.as_ref()[r]
-        }
-
-        /// The `r`-th largest value.
-        pub fn value(&self, r: usize) -> T {
-            self.values.as_ref()[self.order.as_ref()[r]]
+            let (lo, hi) = w.as_mut().split_at_mut(j + 1);
+            for (x, y) in lo[j].0.as_mut().iter_mut().zip(hi[0].0.as_mut()) {
+                swap(x, y);
+            }
         }
     }
+    let right = H::arr_from_fn(|r| value_from::<H, T>(|h| v[r][h]));
+    let left = H::arr_from_fn(|r| {
+        let len = s.as_ref()[r];
+        // A zero singular value has no left vector: zero (in any precision).
+        let inv = T::select_lt(T::zero(), len, len.recip(), T::zero());
+        value_from::<K, T>(|k| w.as_ref()[r].0.as_ref()[k] * inv)
+    });
+    (s, right, left)
 }
 
 /// Both slots of a two-slot extensor `M <- (A, B)` filled with maps at once: with
@@ -772,22 +748,20 @@ where
             p.coeffs().as_ref(),
             q.coeffs().as_ref(),
         );
+        // Σ_ab m[a][b] p[a][x] q[b][y], for every output coefficient and pair (x, y).
         let c = <M::Kind as Kind>::arr_from_fn(|k| {
-            <(X, Y) as Slots>::from_flat(
-                &mut |f| {
-                    let (x, y) = (f / Y::N, f % Y::N);
-                    let mut sum = M::Coef::zero();
-                    for (a, pa) in pc.iter().enumerate() {
-                        let pa = <(X,) as Slots>::get_flat(pa, x);
-                        for (b, qb) in qc.iter().enumerate() {
-                            let mab = <(A, B) as Slots>::get_flat(&m[k], a * B::N + b);
-                            sum = sum + mab * pa * <(Y,) as Slots>::get_flat(qb, y);
-                        }
-                    }
-                    sum
-                },
-                0,
-            )
+            let rows = m[k].as_ref();
+            X::arr_from_fn(|x| {
+                Y::arr_from_fn(|y| {
+                    rows.iter().zip(pc).fold(M::Coef::zero(), |sum, (row, pa)| {
+                        let pa = pa.as_ref()[x];
+                        row.as_ref()
+                            .iter()
+                            .zip(qc)
+                            .fold(sum, |sum, (&mab, qb)| sum + mab * pa * qb.as_ref()[y])
+                    })
+                })
+            })
         });
         <Self::Output as Extensor>::from_coeffs(c)
     }
@@ -818,10 +792,7 @@ where
                 "as_map is for forms (scalar-valued)"
             );
         };
-        let c = &self.coeffs().as_ref()[0];
-        <Self::Map as Extensor>::from_coeffs(A::arr_from_fn(|a| {
-            <(B,) as Slots>::from_flat(&mut |b| <(A, B) as Slots>::get_flat(c, a * B::N + b), 0)
-        }))
+        <Self::Map as Extensor>::from_coeffs(self.coeffs().as_ref()[0])
     }
 }
 
@@ -835,7 +806,8 @@ where
     M::Coef::vectorize(
         #[inline(always)]
         || {
-            let (w, v, weights) = factor::<M::Kind, H, (), (H,), M::Coef>(m.coeffs(), rcond);
+            let cols = first_columns::<M::Kind, H, (), (H,), M::Coef>(m.coeffs());
+            let (w, v, weights) = factor::<M::Kind, (), M::Coef, _, Sq<H, M::Coef>>(&cols, rcond);
             let cols = w.as_ref();
             let p = H::arr_from_fn(|h| {
                 <M::Kind as Kind>::arr_from_fn(|k| {
@@ -934,18 +906,12 @@ where
                 );
                 let b = crate::cast::cast::<X, K>(rhs);
                 let (p, b) = (p.coeffs().as_ref(), b.coeffs().as_ref());
+                let zero = <X::Slots as Slots>::from_flat(&mut |_| T::zero(), 0);
+                // x = P b, each slot entry of `b` in turn.
                 let x = H::arr_from_fn(|h| {
-                    <X::Slots as Slots>::from_flat(
-                        &mut |f| {
-                            let mut s = T::zero();
-                            for (k, bk) in b.iter().enumerate() {
-                                s = p[h].as_ref()[k]
-                                    .mul_add(<X::Slots as Slots>::get_flat(bk, f), s);
-                            }
-                            s
-                        },
-                        0,
-                    )
+                    p[h].as_ref().iter().zip(b).fold(zero, |s, (&phk, bk)| {
+                        <X::Slots as Slots>::zip(&s, bk, &mut |s, x| phk.mul_add(*x, *s))
+                    })
                 });
                 <H::Mv<X::Slots, T> as Extensor>::from_coeffs(x)
             },
@@ -971,7 +937,8 @@ macro_rules! lstsq_slots {
                 T::vectorize(
                     #[inline(always)]
                     || {
-                        let (w, v, weights) = factor::<K, H, ($($R,)+), Self, T>(m, rcond);
+                        let cols = first_columns::<K, H, ($($R,)+), Self, T>(m);
+                        let (w, v, weights) = factor::<K, ($($R,)+), T, _, Sq<H, T>>(&cols, rcond);
                         let b = crate::cast::cast::<X, K>(rhs);
                         let x = linalg::pinv_apply(&w, &v, &weights, &Col::<K, ($($R,)+), T>(*b.coeffs()));
                         <H::Mv<(), T> as Extensor>::from_coeffs(H::arr_from_fn(|h| x[h]))
@@ -1205,23 +1172,11 @@ where
         #[inline(always)]
         || {
             let cols = S::columns(m);
-            let n = <PairSq<S::First, S::Second, T> as SquareArr<T>>::N;
-            let (w, v): (_, PairSq<S::First, S::Second, T>) =
-                linalg::orthogonalize(&cols, sweeps(n));
-            let size = (K::N * <S::Rest as Slots>::SIZE).max(n);
-            let cut = rcond.unwrap_or_else(|| T::epsilon() * T::from_i64(size as i64));
-            let weights =
-                linalg::pinv_weights::<T, Col<K, S::Rest, T>, _, PairSq<S::First, S::Second, T>>(
-                    &w, cut,
-                );
+            let (w, v, weights) =
+                factor::<K, S::Rest, T, _, PairSq<S::First, S::Second, T>>(&cols, rcond);
             let b = crate::cast::cast::<X, K>(rhs);
             let x = linalg::pinv_apply(&w, &v, &weights, &Col::<K, S::Rest, T>(*b.coeffs()));
-            let x = x.0.as_ref();
-            <<S::First as Kind>::Mv<(S::Second,), T> as Extensor>::from_coeffs(
-                <S::First as Kind>::arr_from_fn(|i| {
-                    <(S::Second,) as Slots>::from_flat(&mut |j| x[i].as_ref()[j], 0)
-                }),
-            )
+            <<S::First as Kind>::Mv<(S::Second,), T> as Extensor>::from_coeffs(x.0)
         },
     )
 }

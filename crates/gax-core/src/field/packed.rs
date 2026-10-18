@@ -6,7 +6,6 @@ use super::{Field, SparseMap};
 use crate::batch::{BLOCK, Batch, Kernel, LaneElem, Mv, run, to_array};
 
 use crate::kind::{Extensor, Kind};
-use core::marker::PhantomData;
 use std::vec;
 use std::vec::Vec;
 
@@ -155,23 +154,20 @@ where
     pub fn apply(&self, x: &Field<Mv<K, E>>) -> Field<Mv<K, E>> {
         self.map.check_input(x.len());
         let mut out = vec![crate::field::zero::<Mv<K, E>>(); self.map.shape.0];
-        self.run_kernel(Values(x.sites()), ValuesMut(&mut out));
+        self.run_kernel(x.sites(), &mut out);
         Field::new(out)
     }
 
-    fn run_kernel<I: SiteRead<K, E>, O: SiteWrite<K, E>>(&self, x: I, y: O) {
-        struct Run<'a, K: Kind, E: LaneElem, I, O> {
+    fn run_kernel(&self, x: &[Mv<K, E>], y: &mut [Mv<K, E>]) {
+        struct Run<'a, K: Kind, E: LaneElem> {
             slices: &'a [(usize, usize, usize)],
             cells: &'a [E],
             cols: &'a [u32],
             lens: &'a [E],
-            x: I,
-            y: O,
-            marker: PhantomData<K>,
+            x: &'a [Mv<K, E>],
+            y: &'a mut [Mv<K, E>],
         }
-        impl<K: Kind, E: LaneElem, I: SiteRead<K, E>, O: SiteWrite<K, E>> Kernel<E>
-            for Run<'_, K, E, I, O>
-        {
+        impl<K: Kind, E: LaneElem> Kernel<E> for Run<'_, K, E> {
             type Output = ();
             #[inline(always)]
             fn run<L: Batch<Elem = E>>(self) {
@@ -181,11 +177,10 @@ where
                     cols,
                     lens,
                     x,
-                    mut y,
-                    ..
+                    y,
                 } = self;
                 let q = K::N * K::N;
-                let n = y.sites();
+                let n = y.len();
                 let mut cell_base = 0;
                 for (s, &(width, shortest, col_base)) in slices.iter().enumerate() {
                     for g in (0..BLOCK).step_by(L::LANES) {
@@ -206,8 +201,8 @@ where
                         for j in 0..shortest {
                             acc = K::arr_zip(
                                 &acc,
-                                &product::<K, E, L, I>(
-                                    &x,
+                                &product::<K, E, L>(
+                                    x,
                                     &cols[col_base + j * BLOCK + g..],
                                     &cells[cell_base + j * q * BLOCK + g..],
                                     &blades,
@@ -221,8 +216,8 @@ where
                             let at = L::splat(E::from_i64(j as i64));
                             acc = K::arr_zip(
                                 &acc,
-                                &product::<K, E, L, I>(
-                                    &x,
+                                &product::<K, E, L>(
+                                    x,
                                     &cols[col_base + j * BLOCK + g..],
                                     &cells[cell_base + j * q * BLOCK + g..],
                                     &blades,
@@ -237,69 +232,32 @@ where
                             |a| to_array(*a),
                         );
                         for l in 0..L::LANES.min(n - r0) {
-                            y.set(
-                                r0 + l,
+                            y[r0 + l] = Extensor::from_coeffs(K::arr_from_fn(
                                 #[inline(always)]
                                 |o| lanes.as_ref()[o][l],
-                            );
+                            ));
                         }
                     }
                     cell_base += width * q * BLOCK;
                 }
             }
         }
-        run(Run::<K, E, I, O> {
+        run(Run::<K, E> {
             slices: &self.slices,
             cells: &self.cells,
             cols: &self.cols,
             lens: &self.lens,
             x,
             y,
-            marker: PhantomData,
         });
-    }
-}
-
-/// Where a kernel reads the values at the sites.
-trait SiteRead<K: Kind, E> {
-    /// Coefficient `i` of the value at `site`.
-    fn get(&self, site: usize, i: usize) -> E;
-}
-
-/// Where a kernel writes the values at the sites.
-trait SiteWrite<K: Kind, E> {
-    /// The number of sites.
-    fn sites(&self) -> usize;
-    /// The value at `site`, coefficient `i` being `f(i)`.
-    fn set(&mut self, site: usize, f: impl FnMut(usize) -> E);
-}
-
-struct Values<'a, M>(&'a [M]);
-struct ValuesMut<'a, M>(&'a mut [M]);
-
-impl<K: Kind, E: LaneElem> SiteRead<K, E> for Values<'_, Mv<K, E>> {
-    #[inline(always)]
-    fn get(&self, site: usize, i: usize) -> E {
-        self.0[site].coeffs().as_ref()[i]
-    }
-}
-
-impl<K: Kind, E: LaneElem> SiteWrite<K, E> for ValuesMut<'_, Mv<K, E>> {
-    #[inline(always)]
-    fn sites(&self) -> usize {
-        self.0.len()
-    }
-    #[inline(always)]
-    fn set(&mut self, site: usize, f: impl FnMut(usize) -> E) {
-        self.0[site] = Extensor::from_coeffs(K::arr_from_fn(f));
     }
 }
 
 /// Coupling `j` of a lane group's rows: each cell times the value at its column. `cols` and
 /// `cell` start at the group's first lane of coupling `j`.
 #[inline(always)]
-fn product<K: Kind, E: LaneElem, L: Batch<Elem = E>, I: SiteRead<K, E>>(
-    x: &I,
+fn product<K: Kind, E: LaneElem, L: Batch<Elem = E>>(
+    x: &[Mv<K, E>],
     cols: &[u32],
     cell: &[E],
     blades: &K::Arr<usize>,
@@ -310,7 +268,7 @@ fn product<K: Kind, E: LaneElem, L: Batch<Elem = E>, I: SiteRead<K, E>>(
         |i| {
             L::from_fn(
                 #[inline(always)]
-                |l| x.get(cols[l] as usize, i),
+                |l| x[cols[l] as usize].coeffs().as_ref()[i],
             )
         },
     );

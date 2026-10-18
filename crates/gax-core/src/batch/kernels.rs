@@ -52,11 +52,7 @@ where
     let cols = <M::Kind as Kind>::arr_map(
         v.coeffs(),
         #[inline(always)]
-        |x| {
-            let mut col = [M::Coef::zero(); MAX_LANES];
-            x.store(&mut col);
-            col
-        },
+        |x| to_array(*x),
     );
     let cols = cols.as_ref();
     for (l, o) in out[..L::LANES].iter_mut().enumerate() {

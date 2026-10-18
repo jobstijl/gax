@@ -18,14 +18,12 @@
 //! caller, squaring afterwards; [`exp_reach_6d`]). The interpolants come from the same groupings
 //! of the roots as the logarithm's (`log8`), for any analytic data ([`Data`]).
 
-use super::log8::{
-    CxSeries, Quartic8, add_root, crt22, cx_div, cx_sqrt, euler, grouping_apart, quartic8,
-    reduce_pair_cx, reduce4, split8,
-};
+use super::log8::{Quartic8, add_root, crt22, euler, grouping_apart, quartic8, reduce4, split8};
 use super::{
-    Channel, Cx, LOG6_TERMS, Real, Series, add_isolated, cubic6, derivative, integral, reduce2,
+    Channel, LOG6_TERMS, Real, Series, add_isolated, cubic6, derivative, integral, reduce2,
     reduce3, series_div, series_sqrt, split6, taylor_shift,
 };
+use crate::complex::Complex;
 
 /// Terms of `τ`'s and `ln cosh √x`'s Maclaurin series (radius `π²/4`), shifted to centres within
 /// 1 of zero: the ratio is at most `0.41`, so 80 terms reach `10⁻³¹`.
@@ -69,48 +67,34 @@ const POLE: f64 = core::f64::consts::PI * core::f64::consts::PI / 4.0;
 /// `s = (x − c)/ρ`), and its distance from a centre to its nearest singularity.
 pub(super) trait Data<T: Real> {
     fn at(&self, x: T) -> T;
-    fn at_cx(&self, x: Cx<T>) -> Cx<T>;
+    fn at_cx(&self, x: Complex<T>) -> Complex<T>;
     fn series(&self, c: T, rho: T) -> Series<T>;
-    fn series_cx(&self, c: Cx<T>, rho: T) -> CxSeries<T>;
+    fn series_cx(&self, c: Complex<T>, rho: T) -> Series<Complex<T>>;
     fn reach(&self, c: T) -> T;
-    fn reach_cx(&self, c: Cx<T>) -> T;
-}
-
-/// `e^z` for a complex `z`.
-fn cx_exp<T: Real>(z: Cx<T>) -> Cx<T> {
-    let (s, c) = z.im.sin_cos();
-    let r = z.re.exp();
-    Cx {
-        re: r * c,
-        im: r * s,
-    }
+    fn reach_cx(&self, c: Complex<T>) -> T;
 }
 
 /// The exponential of a series with constant term `g₀`: `e^g₀ · Σ` by `E' = g' E`.
-fn cx_series_exp<T: Real>(g: &CxSeries<T>) -> CxSeries<T> {
-    let mut e = [Cx::real(T::zero()); LOG6_TERMS];
-    e[0] = cx_exp(g[0]);
+fn cx_series_exp<T: Real>(g: &Series<Complex<T>>) -> Series<Complex<T>> {
+    let mut e = [Complex::real(T::zero()); LOG6_TERMS];
+    e[0] = g[0].exp();
     for n in 1..LOG6_TERMS {
-        let mut acc = Cx::real(T::zero());
+        let mut acc = Complex::real(T::zero());
         for k in 1..=n {
-            acc = acc + Cx::real(T::from_i64(k as i64)) * g[k] * e[n - k];
+            acc = acc + Complex::real(T::from_i64(k as i64)) * g[k] * e[n - k];
         }
-        e[n] = acc * Cx::real(T::from_i64(n as i64).recip());
+        e[n] = acc * Complex::real(T::from_i64(n as i64).recip());
     }
     e
 }
 
 /// The first 16 terms of a Maclaurin series `table` at `x`, by Horner.
-fn horner16<F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>>(
-    table: &[f64; TAU_TERMS],
-    x: F,
-    k: impl Fn(f64) -> F,
-) -> F {
-    let mut acc = k(table[15]);
-    for i in (0..15).rev() {
-        acc = acc * x + k(table[i]);
-    }
-    acc
+fn horner16<T: Real, N: Channel<T>>(table: &[f64; TAU_TERMS], x: N) -> N {
+    let k = |v: f64| N::real(T::from_f64(v));
+    table[..15]
+        .iter()
+        .rev()
+        .fold(k(table[15]), |acc, &c| acc * x + k(c))
 }
 
 /// `τ(x) = tanh(√x)/√x`: the weight of `T` on `B`'s planes.
@@ -118,25 +102,13 @@ pub(super) struct Tau;
 
 impl Tau {
     /// `τ` by its Maclaurin series, for small `|x|`.
-    fn small<F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>>(
-        x: F,
-        k: impl Fn(f64) -> F,
-    ) -> F {
-        horner16(&TAU, x, k)
+    fn small<T: Real, N: Channel<T>>(x: N) -> N {
+        horner16(&TAU, x)
     }
 
     /// The Maclaurin series shifted to `x0` (`|x0| ≤ 1`), in `s = (x − x0)/ρ`.
-    fn near<T: Real, F>(
-        x0: F,
-        rho: T,
-        zero: F,
-        k: impl Fn(f64) -> F,
-        real: impl Fn(T) -> F,
-    ) -> [F; LOG6_TERMS]
-    where
-        F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>,
-    {
-        taylor_shift(TAU.map(k), x0, rho, zero, real)
+    fn near<T: Real, N: Channel<T>>(x0: N, rho: T) -> Series<N> {
+        taylor_shift(TAU.map(|v| N::real(T::from_f64(v))), x0, rho)
     }
 }
 
@@ -148,19 +120,19 @@ impl<T: Real> Data<T> for Tau {
         let above = (one - two / ((z + z).exp() + one)) / z;
         let (s, c) = z.sin_cos();
         let below = s / (c * z);
-        let series = Tau::small(x, |v| T::from_f64(v));
+        let series = Tau::small(x);
         let far = T::select_lt(x, zero, below, above);
         T::select_lt(x.abs(), T::from_f64(0.05), series, far)
     }
 
-    fn at_cx(&self, x: Cx<T>) -> Cx<T> {
-        let one = Cx::real(T::one());
-        let z = x.sqrt();
+    fn at_cx(&self, x: Complex<T>) -> Complex<T> {
+        let one = Complex::real(T::one());
+        let z = Channel::sqrt(x);
         // tanh z = (1 − e^−2z)/(1 + e^−2z), with Re z ≥ 0 (the principal root).
-        let w = cx_exp(Cx::real(T::from_i64(-2)) * z);
+        let w = (Complex::real(T::from_i64(-2)) * z).exp();
         let far = (one - w) / ((one + w) * z);
-        let series = Tau::small(x, |v| Cx::real(T::from_f64(v)));
-        Cx::select(x.norm2(), T::from_f64(0.0025), series, far)
+        let series = Tau::small(x);
+        Complex::select(x.norm2(), T::from_f64(0.0025), series, far)
     }
 
     fn series(&self, c: T, rho: T) -> Series<T> {
@@ -170,7 +142,7 @@ impl<T: Real> Data<T> for Tau {
             zero
         } else {
             let x0 = c.min(one);
-            Tau::near(x0, rho, T::zero(), |v| T::from_f64(v), |r| r)
+            Tau::near(x0, rho)
         };
         let far = if T::all_lt(c, one) {
             zero
@@ -178,7 +150,7 @@ impl<T: Real> Data<T> for Tau {
             // z = √(c + ρ s), w = e^(−2z), tanh z = (1 − w)/(1 + w), τ = tanh(z)/z.
             let cc = c.max(one);
             let z = series_sqrt(cc, 1.0, false, rho);
-            let g: CxSeries<T> = core::array::from_fn(|k| Cx::real(T::from_i64(-2) * z[k]));
+            let g = z.map(|z| Complex::real(T::from_i64(-2) * z));
             let w = cx_series_exp(&g);
             let num: Series<T> =
                 core::array::from_fn(|k| if k == 0 { one - w[0].re } else { -w[k].re });
@@ -189,42 +161,37 @@ impl<T: Real> Data<T> for Tau {
         core::array::from_fn(|k| T::select_lt(one, c, far[k], near[k]))
     }
 
-    fn series_cx(&self, c: Cx<T>, rho: T) -> CxSeries<T> {
-        let one = Cx::real(T::one());
-        let zero = [Cx::real(T::zero()); LOG6_TERMS];
+    fn series_cx(&self, c: Complex<T>, rho: T) -> Series<Complex<T>> {
+        let one = Complex::real(T::one());
+        let zero = [Complex::real(T::zero()); LOG6_TERMS];
         let ac = c.norm2().sqrt();
         let near = if T::all_lt(T::one(), ac) {
             zero
         } else {
-            Tau::near(
-                c,
-                rho,
-                Cx::real(T::zero()),
-                |v| Cx::real(T::from_f64(v)),
-                Cx::real,
-            )
+            Tau::near(c, rho)
         };
         let far = if T::all_lt(ac, T::one()) {
             zero
         } else {
-            let cc = Cx::select(ac, T::one(), one, c);
-            let z = cx_sqrt(cc, false, rho);
-            let g: CxSeries<T> = core::array::from_fn(|k| Cx::real(T::from_i64(-2)) * z[k]);
+            let cc = Complex::select(ac, T::one(), one, c);
+            let z = series_sqrt(cc, 1.0, false, rho);
+            let g = z.map(|z| Complex::real(T::from_i64(-2)) * z);
             let w = cx_series_exp(&g);
-            let num: CxSeries<T> =
+            let num: Series<Complex<T>> =
                 core::array::from_fn(|k| if k == 0 { one - w[0] } else { -w[k] });
-            let den: CxSeries<T> = core::array::from_fn(|k| if k == 0 { one + w[0] } else { w[k] });
-            cx_div(&cx_div(&num, &den), &z)
+            let den: Series<Complex<T>> =
+                core::array::from_fn(|k| if k == 0 { one + w[0] } else { w[k] });
+            series_div(&series_div(&num, &den), &z)
         };
-        core::array::from_fn(|k| Cx::select(T::one(), ac, far[k], near[k]))
+        core::array::from_fn(|k| Complex::select(T::one(), ac, far[k], near[k]))
     }
 
     fn reach(&self, c: T) -> T {
         (c + T::from_f64(POLE)).abs()
     }
 
-    fn reach_cx(&self, c: Cx<T>) -> T {
-        (c + Cx::real(T::from_f64(POLE))).norm2().sqrt()
+    fn reach_cx(&self, c: Complex<T>) -> T {
+        (c + Complex::real(T::from_f64(POLE))).norm2().sqrt()
     }
 }
 
@@ -261,28 +228,25 @@ const LNCOSH: [f64; TAU_TERMS] = lncosh_maclaurin();
 pub(super) struct LnCosh;
 
 /// The series of `ln(1 + w)` for a series `w` (`|w₀| < 1`): `L' = w'/(1 + w)`.
-fn cx_series_log1p<T: Real>(w: &CxSeries<T>) -> CxSeries<T> {
-    let (one, zero) = (Cx::real(T::one()), Cx::real(T::zero()));
+fn cx_series_log1p<T: Real>(w: &Series<Complex<T>>) -> Series<Complex<T>> {
+    let one = Complex::real(T::one());
     let mut den = *w;
     den[0] = den[0] + one;
-    let d = cx_div(&derivative(w, zero, Cx::real), &den);
-    integral(&d, (one + w[0]).ln(), zero, Cx::real)
+    let d = series_div(&derivative(w), &den);
+    integral(&d, Channel::ln(one + w[0]))
 }
 
 impl LnCosh {
-    fn small<F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>>(
-        x: F,
-        k: impl Fn(f64) -> F,
-    ) -> F {
-        horner16(&LNCOSH, x, k)
+    fn small<T: Real, N: Channel<T>>(x: N) -> N {
+        horner16(&LNCOSH, x)
     }
 
     /// `z + ln(1 + e^−2z) − ln 2` as a series, `z = √(c + ρ s)` (`Re z > 0`).
-    fn far<T: Real>(z: &CxSeries<T>) -> CxSeries<T> {
-        let g: CxSeries<T> = core::array::from_fn(|k| Cx::real(T::from_i64(-2)) * z[k]);
+    fn far<T: Real>(z: &Series<Complex<T>>) -> Series<Complex<T>> {
+        let g = z.map(|z| Complex::real(T::from_i64(-2)) * z);
         let w = cx_series_exp(&g);
         let l = cx_series_log1p(&w);
-        let ln2 = Cx::real(T::from_f64(core::f64::consts::LN_2));
+        let ln2 = Complex::real(T::from_f64(core::f64::consts::LN_2));
         core::array::from_fn(|k| {
             if k == 0 {
                 z[0] + l[0] - ln2
@@ -299,18 +263,18 @@ impl<T: Real> Data<T> for LnCosh {
         let z = x.abs().max(T::from_f64(1e-30)).sqrt();
         let above = z + (one + (-(z + z)).exp()).ln() - T::from_f64(core::f64::consts::LN_2);
         let below = z.cos().ln();
-        let series = LnCosh::small(x, |v| T::from_f64(v));
+        let series = LnCosh::small(x);
         let far = T::select_lt(x, T::zero(), below, above);
         T::select_lt(x.abs(), T::from_f64(0.05), series, far)
     }
 
-    fn at_cx(&self, x: Cx<T>) -> Cx<T> {
-        let one = Cx::real(T::one());
-        let z = x.sqrt();
-        let w = cx_exp(Cx::real(T::from_i64(-2)) * z);
-        let far = z + (one + w).ln() - Cx::real(T::from_f64(core::f64::consts::LN_2));
-        let series = LnCosh::small(x, |v| Cx::real(T::from_f64(v)));
-        Cx::select(x.norm2(), T::from_f64(0.0025), series, far)
+    fn at_cx(&self, x: Complex<T>) -> Complex<T> {
+        let one = Complex::real(T::one());
+        let z = Channel::sqrt(x);
+        let w = (Complex::real(T::from_i64(-2)) * z).exp();
+        let far = z + Channel::ln(one + w) - Complex::real(T::from_f64(core::f64::consts::LN_2));
+        let series = LnCosh::small(x);
+        Complex::select(x.norm2(), T::from_f64(0.0025), series, far)
     }
 
     fn series(&self, c: T, rho: T) -> Series<T> {
@@ -319,42 +283,41 @@ impl<T: Real> Data<T> for LnCosh {
         let near = if T::all_lt(one, c) {
             zero
         } else {
-            taylor_shift(LNCOSH.map(T::from_f64), c.min(one), rho, T::zero(), |p| p)
+            taylor_shift(LNCOSH.map(T::from_f64), c.min(one), rho)
         };
         let far = if T::all_lt(c, one) {
             zero
         } else {
-            let z = series_sqrt(c.max(one), 1.0, false, rho).map(Cx::real);
+            let z = series_sqrt(c.max(one), 1.0, false, rho).map(Complex::real);
             LnCosh::far(&z).map(|x| x.re)
         };
         core::array::from_fn(|k| T::select_lt(one, c, far[k], near[k]))
     }
 
-    fn series_cx(&self, c: Cx<T>, rho: T) -> CxSeries<T> {
-        let one = Cx::real(T::one());
-        let zero = [Cx::real(T::zero()); LOG6_TERMS];
+    fn series_cx(&self, c: Complex<T>, rho: T) -> Series<Complex<T>> {
+        let one = Complex::real(T::one());
+        let zero = [Complex::real(T::zero()); LOG6_TERMS];
         let ac = c.norm2().sqrt();
         let near = if T::all_lt(T::one(), ac) {
             zero
         } else {
-            let m = LNCOSH.map(|v| Cx::real(T::from_f64(v)));
-            taylor_shift(m, c, rho, Cx::real(T::zero()), Cx::real)
+            taylor_shift(LNCOSH.map(|v| Complex::real(T::from_f64(v))), c, rho)
         };
         let far = if T::all_lt(ac, T::one()) {
             zero
         } else {
-            let cc = Cx::select(ac, T::one(), one, c);
-            LnCosh::far(&cx_sqrt(cc, false, rho))
+            let cc = Complex::select(ac, T::one(), one, c);
+            LnCosh::far(&series_sqrt(cc, 1.0, false, rho))
         };
-        core::array::from_fn(|k| Cx::select(T::one(), ac, far[k], near[k]))
+        core::array::from_fn(|k| Complex::select(T::one(), ac, far[k], near[k]))
     }
 
     fn reach(&self, c: T) -> T {
         (c + T::from_f64(POLE)).abs()
     }
 
-    fn reach_cx(&self, c: Cx<T>) -> T {
-        (c + Cx::real(T::from_f64(POLE))).norm2().sqrt()
+    fn reach_cx(&self, c: Complex<T>) -> T {
+        (c + Complex::real(T::from_f64(POLE))).norm2().sqrt()
     }
 }
 
@@ -377,8 +340,8 @@ impl<T: Real> Data<T> for Beyond {
         T::select_lt(x, T::from_f64(QUARTER), v, T::zero())
     }
 
-    fn at_cx(&self, _: Cx<T>) -> Cx<T> {
-        Cx::real(T::zero())
+    fn at_cx(&self, _: Complex<T>) -> Complex<T> {
+        Complex::real(T::zero())
     }
 
     fn series(&self, c: T, rho: T) -> Series<T> {
@@ -391,8 +354,8 @@ impl<T: Real> Data<T> for Beyond {
         core::array::from_fn(|k| T::select_lt(c, T::from_f64(QUARTER), s[k], T::zero()))
     }
 
-    fn series_cx(&self, _: Cx<T>, _: T) -> CxSeries<T> {
-        [Cx::real(T::zero()); LOG6_TERMS]
+    fn series_cx(&self, _: Complex<T>, _: T) -> Series<Complex<T>> {
+        [Complex::real(T::zero()); LOG6_TERMS]
     }
 
     /// The distance to `0`, where `1/θ` is singular, or, near it, to the quarter turn: the data
@@ -402,7 +365,7 @@ impl<T: Real> Data<T> for Beyond {
         c.abs().max(c - T::from_f64(QUARTER))
     }
 
-    fn reach_cx(&self, c: Cx<T>) -> T {
+    fn reach_cx(&self, c: Complex<T>) -> T {
         c.norm2().sqrt()
     }
 }
@@ -424,7 +387,7 @@ fn pair_line<T: Real, D: Data<T>>(data: &D, mid: T, d2: T, d: T) -> [T; 2] {
     let (fa, fb) = (data.at(a), data.at(b));
     let slope = (fa - fb) / (a - b).max(tiny);
     let real_far = [fa - slope * a, slope];
-    let f = data.at_cx(Cx { re: mid, im: d });
+    let f = data.at_cx(Complex::new(mid, d));
     let slope = f.im / d.max(tiny);
     let conj_far = [f.re - slope * mid, slope];
     core::array::from_fn(|k| {
@@ -434,28 +397,28 @@ fn pair_line<T: Real, D: Data<T>>(data: &D, mid: T, d2: T, d: T) -> [T; 2] {
 }
 
 /// The line through the data at the roots of `u² − s u + p` (complex).
-fn pair_line_cx<T: Real, D: Data<T>>(data: &D, s: Cx<T>, p: Cx<T>) -> [Cx<T>; 2] {
-    let half = Cx::real(T::from_f64(0.5));
+fn pair_line_cx<T: Real, D: Data<T>>(data: &D, s: Complex<T>, p: Complex<T>) -> [Complex<T>; 2] {
+    let half = Complex::real(T::from_f64(0.5));
     let mid = s * half;
     let d2 = mid * mid - p;
-    let d = d2.sqrt();
+    let d = Channel::sqrt(d2);
     let ad = d.norm2().sqrt();
     let reach = data.reach_cx(mid);
     let quarter = reach * T::from_f64(0.25);
     let close = if T::all_lt(quarter, ad) {
-        [Cx::real(T::zero()); 2]
+        [Complex::real(T::zero()); 2]
     } else {
         let rho = reach.max(T::from_f64(1e-30));
-        reduce_pair_cx(&data.series_cx(mid, rho), mid, rho, d2)
+        reduce2(&data.series_cx(mid, rho), mid, rho, d2)
     };
     let (z, w) = (mid + d, mid - d);
     let (fz, fw) = (data.at_cx(z), data.at_cx(w));
-    let d_safe = Cx::select(ad, T::from_f64(1e-30), Cx::real(T::one()), d + d);
+    let d_safe = Complex::select(ad, T::from_f64(1e-30), Complex::real(T::one()), d + d);
     let slope = (fz - fw) / d_safe;
     let chord = [fz - slope * z, slope];
     [
-        Cx::select(ad, quarter, close[0], chord[0]),
-        Cx::select(ad, quarter, close[1], chord[1]),
+        Complex::select(ad, quarter, close[0], chord[0]),
+        Complex::select(ad, quarter, close[1], chord[1]),
     ]
 }
 
@@ -521,12 +484,8 @@ pub(super) fn interp4<T: Real, D: Data<T>>(p: [T; 4], data: &D) -> [T; 4] {
         [zero; 4]
     } else {
         let (s, p) = sp.conj;
-        let bar = |x: Cx<T>| Cx {
-            re: x.re,
-            im: -x.im,
-        };
         let l = pair_line_cx(data, s, p);
-        crt22(l, s, p, [bar(l[0]), bar(l[1])], bar(s), bar(p)).map(|x| x.re)
+        crt22(l, s, p, l.map(Complex::conj), s.conj(), p.conj()).map(|x| x.re)
     };
     core::array::from_fn(|k| {
         let spread = T::select_lt(
@@ -625,11 +584,11 @@ const BOOST: f64 = 8.0;
 /// rotation's angle over `3π/4` and a loxodromic pair's rotation over `π/4` (above 1, the caller
 /// halves `B` and squares the result), and the largest rotation over `1.1 π/4` (above 1, some
 /// plane needs turning).
-fn reach_of<T: Real>(roots: &[Cx<T>]) -> [T; 2] {
+fn reach_of<T: Real>(roots: &[Complex<T>]) -> [T; 2] {
     let tiny = T::from_f64(1e-12);
     let (mut worst, mut turn) = (T::zero(), T::zero());
     for &l in roots {
-        let mu = l.sqrt();
+        let mu = Channel::sqrt(l);
         let real = T::select_lt(
             l.im.abs(),
             tiny * (T::one() + l.re.abs()),
@@ -662,15 +621,9 @@ pub fn exp_reach_6d<T: Real>(e: [T; 3]) -> [T; 2] {
     let c = cubic6(e1, e2, e3);
     let sp = split6(&c, e1, e2, e3);
     let complex = T::select_lt(sp.d2, T::zero(), T::one(), T::zero());
-    let a = Cx {
-        re: sp.mid + sp.d * (T::one() - complex),
-        im: sp.d * complex,
-    };
-    let b = Cx {
-        re: sp.mid - sp.d * (T::one() - complex),
-        im: -(sp.d * complex),
-    };
-    reach_of(&[Cx::real(sp.r), a, b])
+    let a = Complex::new(sp.mid + sp.d * (T::one() - complex), sp.d * complex);
+    let b = Complex::new(sp.mid - sp.d * (T::one() - complex), -(sp.d * complex));
+    reach_of(&[Complex::real(sp.r), a, b])
 }
 
 /// [`exp_reach_6d`] for the roots of `λ⁴ − e₁λ³ + e₂λ² − e₃λ + e₄`.
@@ -678,7 +631,7 @@ pub fn exp_reach_6d<T: Real>(e: [T; 3]) -> [T; 2] {
 pub fn exp_reach_8d<T: Real>(e: [T; 4]) -> [T; 2] {
     let q: Quartic8<T> = quartic8(e);
     let (_, t) = euler(&q);
-    let m = Cx::real(q.m);
+    let m = Complex::real(q.m);
     reach_of(&t.map(|x| x + m))
 }
 
@@ -688,15 +641,15 @@ mod tests {
     extern crate std;
     use std::{vec, vec::Vec};
 
-    fn tau(mu: Cx<f64>) -> Cx<f64> {
+    fn tau(mu: Complex<f64>) -> Complex<f64> {
         // tanh(μ)/μ.
-        let e = cx_exp(Cx::real(-2.0) * mu);
-        (Cx::real(1.0) - e) / ((Cx::real(1.0) + e) * mu)
+        let e = (Complex::real(-2.0) * mu).exp();
+        (Complex::real(1.0) - e) / ((Complex::real(1.0) + e) * mu)
     }
 
-    fn e_of(l: &[Cx<f64>]) -> Vec<f64> {
-        let mut e = vec![Cx::real(1.0); 1];
-        e.resize(l.len() + 1, Cx::real(0.0));
+    fn e_of(l: &[Complex<f64>]) -> Vec<f64> {
+        let mut e = vec![Complex::real(1.0); 1];
+        e.resize(l.len() + 1, Complex::real(0.0));
         for x in l {
             for k in (1..=l.len()).rev() {
                 e[k] = e[k] + e[k - 1] * *x;
@@ -705,7 +658,7 @@ mod tests {
         e[1..].iter().map(|z| z.re).collect()
     }
 
-    fn check(l: &[Cx<f64>]) {
+    fn check(l: &[Complex<f64>]) {
         let e = e_of(l);
         let alpha: Vec<f64> = if l.len() == 3 {
             interp3([e[0], e[1], e[2]], &Tau).to_vec()
@@ -716,11 +669,11 @@ mod tests {
             let at = alpha
                 .iter()
                 .rev()
-                .fold(Cx::real(0.0), |at, a| at * x + Cx::real(*a));
+                .fold(Complex::real(0.0), |at, a| at * x + Complex::real(*a));
             let want = if x.norm2() < 1e-20 {
-                Cx::real(1.0)
+                Complex::real(1.0)
             } else {
-                tau(x.sqrt())
+                tau(Channel::sqrt(x))
             };
             let err = (at - want).norm2().sqrt();
             assert!(
@@ -732,8 +685,8 @@ mod tests {
 
     #[test]
     fn interpolates_tau() {
-        let r = Cx::real;
-        let z = |re, im| Cx { re, im };
+        let r = Complex::real;
+        let z = Complex::new;
         // Rotations within a quarter turn, boosts, null planes, clusters, conjugate pairs.
         for l in [
             vec![r(-0.3), r(-0.1), r(0.0)],
