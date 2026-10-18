@@ -43,7 +43,7 @@ impl Map for Pipeline {
 fn every_level_gives_the_scalar_bits() {
     let mut rng = rng(42);
     let n = 37;
-    let lines: Vec<Line> = (0..n)
+    let lines: Vec<Line<(), f32>> = (0..n)
         .map(|_| {
             Line::new(
                 rng.next_f32(),
@@ -55,15 +55,15 @@ fn every_level_gives_the_scalar_bits() {
             )
         })
         .collect();
-    let motors: Vec<Unit<Motor>> = lines.iter().map(|b| b.exp()).collect();
-    let points: Vec<Point> = (0..n)
+    let motors: Vec<Unit<Motor<(), f32>>> = lines.iter().map(|b| b.exp()).collect();
+    let points: Vec<Point<(), f32>> = (0..n)
         .map(|_| Point::xyz(rng.next_f32(), rng.next_f32(), rng.next_f32()))
         .collect();
 
-    let want_map: Vec<Line> = lines.iter().map(|&b| Pipeline.call(b)).collect();
-    let want_each: Vec<Point> = motors.iter().zip(&points).map(|(&m, &p)| m >> p).collect();
+    let want_map: Vec<Line<(), f32>> = lines.iter().map(|&b| Pipeline.call(b)).collect();
+    let want_each: Vec<Point<(), f32>> = motors.iter().zip(&points).map(|(&m, &p)| m >> p).collect();
     let prepared = motors[0].prepare::<Point>();
-    let want_slice: Vec<Point> = points.iter().map(|&p| prepared >> p).collect();
+    let want_slice: Vec<Point<(), f32>> = points.iter().map(|&p| prepared >> p).collect();
 
     for level in batch::levels() {
         batch::with_level(level, || {
