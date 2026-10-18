@@ -45,6 +45,38 @@ pub struct KindSpec {
     pub intrinsic: bool,
 }
 
+impl KindSpec {
+    /// Whether the WGSL modules take the kind: at most [`crate::emit::WGSL_MAX`] coefficients.
+    pub fn fits_wgsl(&self) -> bool {
+        self.layout.len() <= crate::emit::WGSL_MAX
+    }
+}
+
+/// A declared type alias of a kind.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Alias {
+    /// The alias.
+    pub name: String,
+    /// The kind it names.
+    pub kind: String,
+    /// The orientation: `Some(true)` for an intrinsic alias, `Some(false)` extrinsic, `None` the
+    /// kind's own default (ADR-051).
+    pub orientation: Option<bool>,
+}
+
+impl Alias {
+    /// The name of the orientation type the alias fixes ([`orientation_name`]), if it fixes one.
+    pub fn orientation_name(&self) -> Option<&'static str> {
+        self.orientation.map(orientation_name)
+    }
+}
+
+/// The name of the orientation type of `intrinsic` (or extrinsic) values: `Intrinsic` or
+/// `Extrinsic` (ADR-051).
+pub fn orientation_name(intrinsic: bool) -> &'static str {
+    if intrinsic { "Intrinsic" } else { "Extrinsic" }
+}
+
 /// A parsed algebra declaration.
 #[derive(Clone, Debug)]
 pub struct AlgebraSpec {
@@ -56,9 +88,18 @@ pub struct AlgebraSpec {
     pub algebra: Algebra,
     /// Declared kinds, in order.
     pub kinds: Vec<KindSpec>,
-    /// Type aliases `(alias, kind, orientation)`: the orientation `Some(true)` for an
-    /// intrinsic alias, `Some(false)` extrinsic, `None` the kind's own default (ADR-051).
-    pub aliases: Vec<(String, String, Option<bool>)>,
+    /// Type aliases, in order.
+    pub aliases: Vec<Alias>,
+}
+
+/// A kind as declared, before the algebra exists to parse its blades.
+struct RawKind {
+    name: String,
+    blades: Vec<String>,
+    versor: bool,
+    result: bool,
+    intrinsic: bool,
+    doc: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -172,6 +213,14 @@ impl Parser {
             ))),
         }
     }
+    /// Whether the next token is the name `word`, consumed if so.
+    fn eat_ident(&mut self, word: &str) -> bool {
+        let found = matches!(self.peek(), Some(Tok::Ident(w)) if w == word);
+        if found {
+            self.pos += 1;
+        }
+        found
+    }
     fn opt_str(&mut self) -> String {
         if let Some(Tok::Str(s)) = self.peek() {
             let s = s.clone();
@@ -211,7 +260,7 @@ impl AlgebraSpec {
         let mut basis: Vec<(char, i64)> = Vec::new();
         let mut basis_declared = false;
         let mut off_diagonal: Vec<(char, char, i64)> = Vec::new();
-        let mut raw_kinds: Vec<(String, Vec<String>, bool, bool, bool, String)> = Vec::new();
+        let mut raw_kinds: Vec<RawKind> = Vec::new();
         let mut aliases = Vec::new();
         while let Some(tok) = p.next() {
             let Tok::Ident(word) = tok else {
@@ -289,37 +338,35 @@ impl AlgebraSpec {
                             }
                         }
                     }
-                    let intrinsic = if p.peek() == Some(&Tok::Ident("intrinsic".into())) {
-                        p.next();
-                        true
-                    } else {
-                        false
-                    };
-                    let kdoc = p.opt_str();
+                    let intrinsic = p.eat_ident("intrinsic");
+                    let doc = p.opt_str();
                     p.expect_punct(';')?;
-                    raw_kinds.push((
-                        kname,
+                    raw_kinds.push(RawKind {
+                        name: kname,
                         blades,
-                        word == "versor",
-                        word != "part",
+                        versor: word == "versor",
+                        result: word != "part",
                         intrinsic,
-                        kdoc,
-                    ));
+                        doc,
+                    });
                 }
                 "alias" => {
-                    let a = p.ident()?;
+                    let name = p.ident()?;
                     p.expect_punct('=')?;
-                    let k = p.ident()?;
-                    let orientation = match p.peek() {
-                        Some(Tok::Ident(w)) if w == "intrinsic" => Some(true),
-                        Some(Tok::Ident(w)) if w == "extrinsic" => Some(false),
-                        _ => None,
+                    let kind = p.ident()?;
+                    let orientation = if p.eat_ident("intrinsic") {
+                        Some(true)
+                    } else if p.eat_ident("extrinsic") {
+                        Some(false)
+                    } else {
+                        None
                     };
-                    if orientation.is_some() {
-                        p.next();
-                    }
                     p.expect_punct(';')?;
-                    aliases.push((a, k, orientation));
+                    aliases.push(Alias {
+                        name,
+                        kind,
+                        orientation,
+                    });
                 }
                 other => return Err(AlgebraError(format!("unknown declaration `{other}`"))),
             }
@@ -353,20 +400,20 @@ impl AlgebraSpec {
         }
         let algebra = Algebra::new(&names, metric)?;
         let mut kinds: Vec<KindSpec> = Vec::new();
-        for (kname, blades, versor, result, intrinsic, kdoc) in raw_kinds {
-            if kinds.iter().any(|k| k.name == kname) {
-                return Err(AlgebraError(format!("duplicate kind {kname}")));
+        for raw in raw_kinds {
+            if kinds.iter().any(|k| k.name == raw.name) {
+                return Err(AlgebraError(format!("duplicate kind {}", raw.name)));
             }
-            let refs: Vec<&str> = blades.iter().map(String::as_str).collect();
+            let refs: Vec<&str> = raw.blades.iter().map(String::as_str).collect();
             let layout = Layout::parse(&algebra, &refs)?;
             kinds.push(KindSpec {
-                name: kname,
-                blades,
+                name: raw.name,
+                blades: raw.blades,
                 layout,
-                versor,
-                result,
-                doc: kdoc,
-                intrinsic,
+                versor: raw.versor,
+                result: raw.result,
+                doc: raw.doc,
+                intrinsic: raw.intrinsic,
             });
         }
         // Every algebra has a scalar kind and a kind holding every blade; add them (in the
@@ -413,7 +460,10 @@ impl AlgebraSpec {
                 intrinsic: false,
             });
         }
-        for (a, k, _) in &aliases {
+        for Alias {
+            name: a, kind: k, ..
+        } in &aliases
+        {
             if !kinds.iter().any(|x| &x.name == k) {
                 return Err(AlgebraError(format!(
                     "alias {a} refers to unknown kind {k}"
@@ -506,7 +556,11 @@ mod tests {
         assert_eq!(s.kinds[2].layout.blades[0].1, -1); // e20 = -e02
         assert_eq!(
             s.aliases,
-            vec![("Twist".to_string(), "Point".to_string(), None)]
+            vec![Alias {
+                name: "Twist".into(),
+                kind: "Point".into(),
+                orientation: None,
+            }]
         );
     }
 

@@ -63,6 +63,20 @@ impl Layout {
     pub fn grades(&self) -> BTreeSet<u32> {
         self.blades.iter().map(|b| b.0.count_ones()).collect()
     }
+
+    /// Per blade of this layout, its position in `to` and whether their orientations differ
+    /// (`None` where `to` lacks the blade).
+    pub fn positions_in(&self, to: &Layout) -> Vec<Option<(usize, bool)>> {
+        self.blades
+            .iter()
+            .map(|&(m, s)| to.position(m).map(|(j, t)| (j, s != t)))
+            .collect()
+    }
+
+    /// [`Layout::positions_in`] where `to` holds every blade of this layout, else `None`.
+    pub fn embed_in(&self, to: &Layout) -> Option<Vec<(usize, bool)>> {
+        self.positions_in(to).into_iter().collect()
+    }
 }
 
 /// The binary products the generator knows.
@@ -101,21 +115,6 @@ impl BinOp {
         BinOp::Commutator,
         BinOp::Anticommutator,
     ];
-
-    /// Snake-case name used in generated code.
-    pub fn name(self) -> &'static str {
-        match self {
-            BinOp::Gp => "gp",
-            BinOp::Wedge => "wedge",
-            BinOp::Vee => "vee",
-            BinOp::Lc => "lc",
-            BinOp::Rc => "rc",
-            BinOp::Dot => "dot",
-            BinOp::Scalar => "scalar",
-            BinOp::Commutator => "commutator",
-            BinOp::Anticommutator => "anticommutator",
-        }
-    }
 
     /// The gax trait, its method, and the operator's symbol in law listings.
     pub fn names(self) -> (&'static str, &'static str, &'static str) {

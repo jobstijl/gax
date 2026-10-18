@@ -149,6 +149,11 @@ pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Pol
     choose(candidates)
 }
 
+/// [`compile_best`] without passengers or relations.
+pub fn compile_plain(polys: &[Poly]) -> Program {
+    compile_best(polys, &BTreeSet::new(), &[])
+}
+
 /// The cheapest candidate, unless it saves at most one operation over another whose error
 /// bound is less than half its own: then the more accurate one (see `Program::error_score`).
 fn choose(candidates: Vec<Program>) -> Program {

@@ -14,7 +14,6 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let check = std::env::args().any(|a| a == "--check");
     let verbose = std::env::args().any(|a| a == "--verbose");
@@ -27,23 +26,11 @@ fn main() -> ExitCode {
         .and_then(|i| args.get(i + 1).cloned());
     let clock = std::time::Instant::now();
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../gax");
-    let mut specs: Vec<_> = std::fs::read_dir(root.join("specs"))
-        .expect("specs directory")
-        .filter_map(Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "gax"))
-        .collect();
-    specs.sort();
+    let mut specs = specs_in(&root.join("specs"));
     // Test-only algebras (declared with `algebra!` in the tests): only their law suites.
-    let mut test_specs: Vec<_> = std::fs::read_dir(root.join("tests/specs"))
-        .expect("tests/specs directory")
-        .filter_map(Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "gax"))
-        .collect();
-    test_specs.sort();
+    let mut test_specs = specs_in(&root.join("tests/specs"));
     if let Some(only) = &only {
-        let keep = |p: &std::path::PathBuf| p.file_stem().is_some_and(|s| s == only.as_str());
+        let keep = |p: &PathBuf| p.file_stem().is_some_and(|s| s == only.as_str());
         specs.retain(keep);
         test_specs.retain(keep);
     }
@@ -58,192 +45,33 @@ fn main() -> ExitCode {
     // Parse everything first, then generate the algebras one after another (each uses all
     // cores inside: running them side by side as well only oversubscribes), and write or check
     // the files in order.
-    let parse = |path: &PathBuf| -> Result<(String, AlgebraSpec), String> {
-        let src = std::fs::read_to_string(path).expect("read spec");
-        AlgebraSpec::parse(&src)
-            .map(|spec| (src, spec))
-            .map_err(|e| format!("{}: {e}", path.display()))
-    };
-    let parsed = |paths: &[PathBuf]| -> Result<Vec<(String, AlgebraSpec)>, String> {
-        paths.iter().map(parse).collect()
-    };
-    let (test_specs, specs) = match (parsed(&test_specs), parsed(&specs)) {
+    let (test_specs, specs) = match (parse_all(&test_specs), parse_all(&specs)) {
         (Ok(t), Ok(s)) => (t, s),
         (Err(e), _) | (_, Err(e)) => {
             eprintln!("{e}");
             return ExitCode::FAILURE;
         }
     };
-    // Test-only algebras: their law suites and law-factor tables.
-    let test_outputs: Vec<_> = test_specs
+    let test_outputs: Vec<AlgebraOutput> = test_specs
         .iter()
-        .map(|(src, spec)| {
-            let (_, stats) = emit(
-                spec,
-                &Config {
-                    core: "::gax".into(),
-                    batch: None,
-                    check_units: None,
-                    gpu: None,
-                },
-            );
-            let l = laws(spec, &stats);
-            let prelude = format!("gax::algebra! {{\n{src}}}\n\nuse {}::*;", spec.name);
-            let files = vec![(
-                root.join("tests").join(format!("laws_{}.rs", spec.name)),
-                emit_law_tests(spec, &l, "#![cfg(feature = \"macros\")]", &prelude),
-            )];
-            (files, factor_table(spec, &l), Vec::new())
-        })
+        .map(|(src, spec)| test_algebra(&root, src, spec))
         .collect();
-    let outputs: Vec<_> = specs
+    let outputs: Vec<AlgebraOutput> = specs
         .iter()
-        .map(|(_, spec)| {
-            let mut log = Vec::new();
-            let mut lap = |what: &str, since: std::time::Instant| {
-                if verbose {
-                    log.push(format!(
-                        "  {} {what}: {:.1} s",
-                        spec.name,
-                        since.elapsed().as_secs_f64()
-                    ));
-                }
-            };
-            let t = std::time::Instant::now();
-            let (code, stats) = emit(
-                spec,
-                &Config {
-                    core: "crate".into(),
-                    batch: Some("#[cfg(feature = \"batch\")]".into()),
-                    check_units: Some("#[cfg(feature = \"check-units\")]".into()),
-                    gpu: Some("#[cfg(feature = \"bytemuck\")]".into()),
-                },
-            );
-            lap("emit", t);
-            let tests = emit_tests(
-                spec,
-                &stats,
-                &format!("gax::{}", spec.name),
-                &format!("../specs/{}.gax", spec.name),
-            );
-            let t = std::time::Instant::now();
-            let l = laws(spec, &stats);
-            lap("laws", t);
-            let law_tests = emit_law_tests(
-                spec,
-                &l,
-                &format!("#![cfg(feature = \"{}\")]", spec.name),
-                &format!("use gax::{}::*;", spec.name),
-            );
-            let wgsl = gax_gen::emit_wgsl::module(spec, &stats, true);
-            let wgsl16 =
-                gax_gen::emit_wgsl::module_in(spec, &stats, true, gax_gen::kernel::Precision::F16);
-            log.push(format!(
-                "{}: {} lines, {} product impls, {} sandwich kernels",
-                spec.name,
-                code.lines().count(),
-                stats.binary_impls,
-                stats.sandwich_impls
-            ));
-            if verbose {
-                log.extend(stats.sandwich_costs.iter().map(|(v, x, unit, cost, _)| {
-                    format!("    {}{v} >> {x}: {cost}", if *unit { "Unit " } else { "" })
-                }));
-            }
-            // The module as an index of `include!`s and its parts (gax_gen::split).
-            let (index, parts) = gax_gen::split::split(&spec.name, &code, PART_BUDGET);
-            let part_dir = root.join("src/algebras").join(&spec.name);
-            let mut files = vec![
-                (
-                    root.join("tests").join(format!("ops_{}.rs", spec.name)),
-                    tests,
-                ),
-                (
-                    root.join("tests").join(format!("laws_{}.rs", spec.name)),
-                    law_tests,
-                ),
-                (
-                    root.join("src/wgsl").join(format!("{}.wgsl", spec.name)),
-                    wgsl,
-                ),
-                (
-                    root.join("src/wgsl")
-                        .join(format!("{}_f16.wgsl", spec.name)),
-                    wgsl16,
-                ),
-                (
-                    root.join("src/algebras").join(format!("{}.rs", spec.name)),
-                    index,
-                ),
-            ];
-            files.extend(parts.into_iter().map(|(f, c)| (part_dir.join(f), c)));
-            let gp: Vec<(String, String, String)> = stats
-                .products
-                .iter()
-                .filter(|p| p.0 == BinOp::Gp)
-                .map(|(_, a, b, c)| (a.clone(), b.clone(), c.clone()))
-                .collect();
-            // The operation count of every sandwich kernel, for docs/kernel-costs.md.
-            let mut costs = format!(
-                "## {}\n\n| kernel | value path | the map's matrix |\n|---|---|---|\n",
-                spec.name
-            );
-            for (v, x, unit, direct, matrix) in &stats.sandwich_costs {
-                let v = if *unit {
-                    format!("`Unit<{v}>`")
-                } else {
-                    format!("`{v}`")
-                };
-                let _ = writeln!(costs, "| {v} `>>` `{x}` | {direct} | {matrix} |");
-            }
-            costs.push('\n');
-            (files, factor_table(spec, &l), log, gp, costs)
-        })
+        .map(|(_, spec)| standard_algebra(&root, spec, verbose))
         .collect();
     // The homomorphisms between the standard algebras, and their tests.
     if only.is_none() {
-        let spec_of = |name: &str| specs.iter().map(|(_, s)| s).find(|s| s.name == name);
-        let products = |name: &str| {
-            specs
-                .iter()
-                .zip(&outputs)
-                .find(|((_, s), _)| s.name == name)
-                .map_or(&[][..], |(_, o)| o.3.as_slice())
-        };
-        let mut homs = String::from(
-            "// @generated by gax-regen from gax_gen::emit_homs::HOMS. Do not edit by hand.\n\n",
-        );
-        let mut tests = String::from(gax_gen::emit_homs::TEST_HEAD);
-        // Each homomorphism is derived and proved on its own core.
-        let derived = gax_gen::par::map(gax_gen::emit_homs::HOMS, |hom| {
-            let (Some(src), Some(tgt)) = (spec_of(hom.from), spec_of(hom.to)) else {
-                return Err(format!(
-                    "homomorphism {} -> {}: unknown algebra",
-                    hom.from, hom.to
-                ));
-            };
-            gax_gen::emit_homs::emit_hom(src, tgt, hom).map(|r| (src, tgt, r))
-        });
-        for (hom, result) in gax_gen::emit_homs::HOMS.iter().zip(derived) {
-            match result {
-                Ok((src, tgt, (code, kinds))) => {
-                    homs.push_str(&code);
-                    tests.push_str(&gax_gen::emit_homs::emit_hom_test(
-                        src,
-                        tgt,
-                        hom,
-                        &kinds,
-                        products(hom.from),
-                    ));
-                }
-                Err(e) => {
-                    eprintln!("{e}");
-                    return ExitCode::FAILURE;
-                }
+        match homomorphisms(&specs, &outputs) {
+            Ok((homs, tests)) => {
+                stale |= write_or_check(&root.join("src/algebras/homs.rs"), &homs, check);
+                stale |= write_or_check(&root.join("tests/homs.rs"), &tests, check);
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
             }
         }
-        stale |= write_or_check(&root.join("src/algebras/homs.rs"), &homs, check);
-        stale |= write_or_check(&root.join("tests/homs.rs"), &tests, check);
     }
     let mut costs = String::from(
         "<!-- @generated by gax-regen. Do not edit by hand. -->\n\n# Kernel costs\n\n\
@@ -253,17 +81,14 @@ fn main() -> ExitCode {
          algebras and checked by CI, so a change to the generator that changes any kernel's cost\n\
          shows up here, in review. See [performance.md](performance.md) for timings.\n\n",
     );
-    costs.extend(outputs.iter().map(|o| o.4.as_str()));
-    let outputs = outputs
-        .into_iter()
-        .map(|(files, table, log, _, _)| (files, table, log));
-    for (files, table, log) in test_outputs.into_iter().chain(outputs) {
-        stale |= remove_stale_parts(&files, check);
-        for (target, content) in files {
+    costs.extend(outputs.iter().map(|o| o.costs.as_str()));
+    for out in test_outputs.into_iter().chain(outputs) {
+        stale |= remove_stale_parts(&out.files, check);
+        for (target, content) in out.files {
             stale |= write_or_check(&target, &content, check);
         }
-        tables.push_str(&table);
-        for line in log {
+        tables.push_str(&out.factors);
+        for line in out.log {
             eprintln!("{line}");
         }
     }
@@ -281,13 +106,216 @@ fn main() -> ExitCode {
     }
 }
 
+/// What one algebra contributes: its files, its law-factor table, its log lines, and (for a
+/// standard algebra) its geometric products, for the homomorphism tests, and its section of
+/// docs/kernel-costs.md.
+struct AlgebraOutput {
+    files: Vec<(PathBuf, String)>,
+    factors: String,
+    log: Vec<String>,
+    gp: Vec<(String, String, String)>,
+    costs: String,
+}
+
+/// The algebra declarations (`.gax`) in a directory, sorted.
+fn specs_in(dir: &Path) -> Vec<PathBuf> {
+    let mut specs: Vec<PathBuf> = std::fs::read_dir(dir)
+        .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "gax"))
+        .collect();
+    specs.sort();
+    specs
+}
+
+/// Each declaration's source and parsed spec, or the first error.
+fn parse_all(paths: &[PathBuf]) -> Result<Vec<(String, AlgebraSpec)>, String> {
+    paths
+        .iter()
+        .map(|path| {
+            let src = std::fs::read_to_string(path).expect("read spec");
+            AlgebraSpec::parse(&src)
+                .map(|spec| (src, spec))
+                .map_err(|e| format!("{}: {e}", path.display()))
+        })
+        .collect()
+}
+
+/// A test-only algebra: its law suite and law-factor table.
+fn test_algebra(root: &Path, src: &str, spec: &AlgebraSpec) -> AlgebraOutput {
+    let (_, stats) = emit(
+        spec,
+        &Config {
+            core: "::gax".into(),
+            batch: None,
+            check_units: None,
+            gpu: None,
+        },
+    );
+    let l = laws(spec, &stats);
+    let prelude = format!("gax::algebra! {{\n{src}}}\n\nuse {}::*;", spec.name);
+    AlgebraOutput {
+        files: vec![(
+            root.join("tests").join(format!("laws_{}.rs", spec.name)),
+            emit_law_tests(spec, &l, "#![cfg(feature = \"macros\")]", &prelude),
+        )],
+        factors: factor_table(spec, &l),
+        log: Vec::new(),
+        gp: Vec::new(),
+        costs: String::new(),
+    }
+}
+
+/// A standard algebra: its module (an index of parts), its tests and law suite, its WGSL
+/// modules, and the rest of [`AlgebraOutput`].
+fn standard_algebra(root: &Path, spec: &AlgebraSpec, verbose: bool) -> AlgebraOutput {
+    let mut log = Vec::new();
+    let mut lap = |what: &str, since: std::time::Instant| {
+        if verbose {
+            log.push(format!(
+                "  {} {what}: {:.1} s",
+                spec.name,
+                since.elapsed().as_secs_f64()
+            ));
+        }
+    };
+    let t = std::time::Instant::now();
+    let (code, stats) = emit(
+        spec,
+        &Config {
+            core: "crate".into(),
+            batch: Some("#[cfg(feature = \"batch\")]".into()),
+            check_units: Some("#[cfg(feature = \"check-units\")]".into()),
+            gpu: Some("#[cfg(feature = \"bytemuck\")]".into()),
+        },
+    );
+    lap("emit", t);
+    let tests = emit_tests(
+        spec,
+        &stats,
+        &format!("gax::{}", spec.name),
+        &format!("../specs/{}.gax", spec.name),
+    );
+    let t = std::time::Instant::now();
+    let l = laws(spec, &stats);
+    lap("laws", t);
+    let law_tests = emit_law_tests(
+        spec,
+        &l,
+        &format!("#![cfg(feature = \"{}\")]", spec.name),
+        &format!("use gax::{}::*;", spec.name),
+    );
+    let wgsl = gax_gen::emit_wgsl::module(spec, &stats, true);
+    let wgsl16 = gax_gen::emit_wgsl::module_in(spec, &stats, true, gax_gen::kernel::Precision::F16);
+    log.push(format!(
+        "{}: {} lines, {} product impls, {} sandwich kernels",
+        spec.name,
+        code.lines().count(),
+        stats.products.len(),
+        stats.sandwiches.len()
+    ));
+    if verbose {
+        log.extend(stats.sandwiches.iter().map(|s| {
+            let unit = if s.unit { "Unit " } else { "" };
+            format!(
+                "    {unit}{} >> {}: {}",
+                s.versor, s.passenger, s.value_cost
+            )
+        }));
+    }
+    // The module as an index of `include!`s and its parts (gax_gen::split).
+    let (index, parts) = gax_gen::split::split(&spec.name, &code, PART_BUDGET);
+    let part_dir = root.join("src/algebras").join(&spec.name);
+    let name = &spec.name;
+    let mut files = vec![
+        (root.join(format!("tests/ops_{name}.rs")), tests),
+        (root.join(format!("tests/laws_{name}.rs")), law_tests),
+        (root.join(format!("src/wgsl/{name}.wgsl")), wgsl),
+        (root.join(format!("src/wgsl/{name}_f16.wgsl")), wgsl16),
+        (root.join(format!("src/algebras/{name}.rs")), index),
+    ];
+    files.extend(parts.into_iter().map(|(f, c)| (part_dir.join(f), c)));
+    let gp = stats
+        .products
+        .iter()
+        .filter(|p| p.0 == BinOp::Gp)
+        .map(|(_, a, b, c)| (a.clone(), b.clone(), c.clone()))
+        .collect();
+    AlgebraOutput {
+        files,
+        factors: factor_table(spec, &l),
+        log,
+        gp,
+        costs: kernel_costs(spec, &stats),
+    }
+}
+
+/// The operation count of every sandwich kernel of an algebra, for docs/kernel-costs.md.
+fn kernel_costs(spec: &AlgebraSpec, stats: &gax_gen::emit::Stats) -> String {
+    let mut costs = format!(
+        "## {}\n\n| kernel | value path | the map's matrix |\n|---|---|---|\n",
+        spec.name
+    );
+    for s in &stats.sandwiches {
+        let v = if s.unit {
+            format!("`Unit<{}>`", s.versor)
+        } else {
+            format!("`{}`", s.versor)
+        };
+        let _ = writeln!(
+            costs,
+            "| {v} `>>` `{}` | {} | {} |",
+            s.passenger, s.value_cost, s.map_cost
+        );
+    }
+    costs.push('\n');
+    costs
+}
+
+/// The homomorphisms between the standard algebras and their tests, each derived and proved on
+/// its own core.
+fn homomorphisms(
+    specs: &[(String, AlgebraSpec)],
+    outputs: &[AlgebraOutput],
+) -> Result<(String, String), String> {
+    use gax_gen::emit_homs::{HOMS, TEST_HEAD, emit_hom, emit_hom_test};
+    let spec_of = |name: &str| specs.iter().map(|(_, s)| s).find(|s| s.name == name);
+    let products = |name: &str| {
+        specs
+            .iter()
+            .zip(outputs)
+            .find(|((_, s), _)| s.name == name)
+            .map_or(&[][..], |(_, o)| o.gp.as_slice())
+    };
+    let mut homs = String::from(
+        "// @generated by gax-regen from gax_gen::emit_homs::HOMS. Do not edit by hand.\n\n",
+    );
+    let mut tests = String::from(TEST_HEAD);
+    let derived = gax_gen::par::map(HOMS, |hom| {
+        let (Some(src), Some(tgt)) = (spec_of(hom.from), spec_of(hom.to)) else {
+            return Err(format!(
+                "homomorphism {} -> {}: unknown algebra",
+                hom.from, hom.to
+            ));
+        };
+        emit_hom(src, tgt, hom).map(|r| (src, tgt, r))
+    });
+    for (hom, result) in HOMS.iter().zip(derived) {
+        let (src, tgt, (code, kinds)) = result?;
+        homs.push_str(&code);
+        tests.push_str(&emit_hom_test(src, tgt, hom, &kinds, products(hom.from)));
+    }
+    Ok((homs, tests))
+}
+
 /// The most bytes in one part file of an algebra's module (GitHub stops highlighting larger
 /// files); a larger section is cut at item boundaries.
 const PART_BUDGET: usize = 400_000;
 
 /// Part files left over in an algebra's part directory from an earlier split: deleted, or with
 /// `--check` reported as stale.
-fn remove_stale_parts(files: &[(std::path::PathBuf, String)], check: bool) -> bool {
+fn remove_stale_parts(files: &[(PathBuf, String)], check: bool) -> bool {
     let mut stale = false;
     let dirs: std::collections::BTreeSet<&Path> = files
         .iter()

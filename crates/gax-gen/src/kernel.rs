@@ -7,6 +7,7 @@
 
 use crate::poly::Var;
 use crate::slp::{Program, Target, render_to};
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 /// The floating-point type of a WGSL module: `f32`, or `f16` (the `shader-f16` feature). An
@@ -88,7 +89,7 @@ pub enum Source {
 
 /// The sources of parameters with `sizes` coefficients each, as consecutive program variables
 /// from 0.
-pub fn arg_vars(sizes: &[usize]) -> Vec<(Var, Source)> {
+pub fn arg_vars(sizes: &[usize]) -> BTreeMap<Var, Source> {
     sizes
         .iter()
         .enumerate()
@@ -190,7 +191,7 @@ pub enum Step {
         /// Prefix of its temporaries.
         prefix: String,
         /// The source of each variable it reads.
-        vars: Vec<(Var, Source)>,
+        vars: BTreeMap<Var, Source>,
     },
     /// `outs = func(args)`, where each argument is output `k` of the `Lets` step `step`.
     Study {
@@ -314,10 +315,9 @@ impl Kernel {
         // In an `f16` module, the programs before the last (which feed the `f32` Study helpers:
         // norms, squares) run in `f32` too, reading their arguments converted: a sum of squares
         // in `f16` underflows for coefficients below 1/128 and overflows above 256.
-        let leaf = |k: usize, vars: &[(Var, Source)], v: Var| -> String {
-            let (_, src) = vars
-                .iter()
-                .find(|(w, _)| *w == v)
+        let leaf = |k: usize, vars: &BTreeMap<Var, Source>, v: Var| -> String {
+            let src = vars
+                .get(&v)
                 .unwrap_or_else(|| panic!("{}: variable {v} has no source", self.name));
             match src {
                 Source::Arg { param, index } => {
@@ -328,9 +328,9 @@ impl Kernel {
                 Source::Output { .. } => panic!("{}: an output read by an output", self.name),
             }
         };
-        let var_at = |k: usize, vars: &[(Var, Source)], v: Var| -> String {
-            match vars.iter().find(|(w, _)| *w == v) {
-                Some((_, Source::Output { step, index })) => {
+        let var_at = |k: usize, vars: &BTreeMap<Var, Source>, v: Var| -> String {
+            match vars.get(&v) {
+                Some(Source::Output { step, index }) => {
                     // Earlier programs are `f32`.
                     let e = self.output(*step, *index, target, &|vs, w| leaf(*step, vs, w));
                     if k < last { e } else { prec.convert(&e) }
@@ -409,15 +409,10 @@ impl Kernel {
         for step in &self.steps {
             match step {
                 Step::Lets { prog, vars, .. } => {
-                    let get = |v: Var| {
-                        let (_, src) = vars.iter().find(|(w, _)| *w == v).expect("a source");
-                        match src {
-                            Source::Arg { param, index } => args[*param][*index],
-                            Source::Local(n) => {
-                                locals.iter().find(|(m, _)| m == n).expect("a local").1
-                            }
-                            Source::Output { step, index } => outs[*step][*index],
-                        }
+                    let get = |v: Var| match vars.get(&v).expect("a source") {
+                        Source::Arg { param, index } => args[*param][*index],
+                        Source::Local(n) => locals.iter().find(|(m, _)| m == n).expect("a local").1,
+                        Source::Output { step, index } => outs[*step][*index],
                     };
                     outs.push(prog.eval(&get));
                 }
@@ -463,12 +458,9 @@ impl Kernel {
         let [Step::Lets { prog, vars, .. }] = self.steps.as_slice() else {
             return None;
         };
-        let mag = |v: Var| {
-            let (_, src) = vars.iter().find(|(w, _)| *w == v).expect("a source");
-            match src {
-                Source::Arg { param, index } => args[*param][*index].abs(),
-                Source::Local(_) | Source::Output { .. } => f64::INFINITY,
-            }
+        let mag = |v: Var| match vars.get(&v).expect("a source") {
+            Source::Arg { param, index } => args[*param][*index].abs(),
+            Source::Local(_) | Source::Output { .. } => f64::INFINITY,
         };
         Some(prog.error_bound(&mag, u))
     }
@@ -478,7 +470,7 @@ impl Kernel {
         step: usize,
         o: usize,
         target: Target,
-        var_of: &impl Fn(&[(Var, Source)], Var) -> String,
+        var_of: &impl Fn(&BTreeMap<Var, Source>, Var) -> String,
     ) -> String {
         let Step::Lets { prog, prefix, vars } = &self.steps[step] else {
             panic!("{}: step {step} is not straight-line code", self.name);
@@ -517,7 +509,7 @@ mod tests {
                 Step::Lets {
                     prog: pre,
                     prefix: "p".into(),
-                    vars: vec![(0, arg(0)), (1, arg(1))],
+                    vars: BTreeMap::from([(0, arg(0)), (1, arg(1))]),
                 },
                 Step::Study {
                     func: StudyFn::RsqrtNil,
@@ -527,12 +519,12 @@ mod tests {
                 Step::Lets {
                     prog: post,
                     prefix: "t".into(),
-                    vars: vec![
+                    vars: BTreeMap::from([
                         (0, arg(0)),
                         (2, arg(2)),
                         (10, Source::Local("s0".into())),
                         (11, Source::Local("s1".into())),
-                    ],
+                    ]),
                 },
             ],
             entries: None,

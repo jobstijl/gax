@@ -199,5 +199,11 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [ ] Ergonomics found in the migration: a short spelling for a slot kind of the other orientation (`Line<(Line<(), f32, Intrinsic>,), …>`); orientation arithmetic that reduces for generic `O` (`Times<Times<O, E>, E>` is `O`); an intrinsic line-direction helper; a PGA2D extrinsic line through a point along a direction; a VGA3D rotation about an axis of either orientation
 - [ ] The numga ports synced to upstream `7dff347` (its newer content), with its four orientation examples ported (normals, mechanical work, mirror energy, conformal circle)
 
+## Phase 12: API consolidation (ADR-052)
+- [ ] Internal cleanups: the generator (output byte-identical: shared emission helpers, split modules, data structures) and gax-core (one SVD, the study series over `Channel`, shared sparse and DEC kernels, iterator style)
+- [ ] Batch 1, generator and types: orientation by name (`oriented::`, `intrinsic::`, `extrinsic::`), orientation arithmetic that reduces, `f64` default, `gx::Slot`, `Oriented<K, O>`, `Log` with an associated output, `normalized()`/`unit()`; everything migrated
+- [ ] Batch 2, names and linear algebra: `of`/`to_dense` everywhere, one trace module, `jet`, `SimplicialComplex`, `Svd`/`Eigen` results, `eigh_with`, `solve_pairing`, `of_dyad`, `try_*`, `gx::__private`
+- [ ] Batch 3, geometry: gax types in constructors, uniform roles and helpers across algebras (`Line::direction`, `Plane::normal`, `Point::distance`, PGA2D `Line::through`, VGA rotations, CGA motors, STA boosts)
+
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.

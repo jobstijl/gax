@@ -13,7 +13,7 @@
 //! Every function body is printed from the same verified [`Program`]s as the Rust code.
 
 use crate::cse;
-use crate::emit::{Stats, WGSL_MAX, blade_ident};
+use crate::emit::{Stats, blade_ident};
 use crate::kernel::{
     Kernel, Precision, Step, StudyFn, Ty, arg_vars, snake, vec4s, wgsl_coeff, wgsl_construct_in,
 };
@@ -1179,23 +1179,14 @@ fn study_rsqrt_q(a: f32, q: f32) -> vec2<f32> {
 /// orientation signs), zero where `from` lacks the blade; `None` if `from` has a blade that
 /// `to` lacks.
 fn embedding(from: &KindSpec, to: &KindSpec, x: &str) -> Option<Vec<String>> {
-    if from
-        .layout
-        .blades
-        .iter()
-        .any(|(m, _)| to.layout.position(*m).is_none())
-    {
-        return None;
-    }
+    from.layout.embed_in(&to.layout)?;
     Some(
         to.layout
-            .blades
-            .iter()
-            .map(|(m, s)| match from.layout.position(*m) {
-                Some((i, fs)) => {
-                    let e = wgsl_coeff(x, i);
-                    if fs * s > 0 { e } else { format!("-{e}") }
-                }
+            .positions_in(&from.layout)
+            .into_iter()
+            .map(|p| match p {
+                Some((i, false)) => wgsl_coeff(x, i),
+                Some((i, true)) => format!("-{}", wgsl_coeff(x, i)),
                 None => "0.0".into(),
             })
             .collect(),
@@ -1234,11 +1225,11 @@ fn product(
         return None;
     }
     let out = spec.kind_for_support(&support)?;
-    if out.layout.len() > WGSL_MAX {
+    if !out.fits_wgsl() {
         return None;
     }
     let coeffs = symbolic::to_coeffs(&out.layout, &res)?;
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let prog = cse::compile_plain(&coeffs);
     let vars = arg_vars(&[na, b.layout.len()]);
     Some(Kernel {
         name: name.into(),
@@ -1259,7 +1250,7 @@ fn product(
 
 /// A one-parameter kernel from coefficient polynomials of kind `out` in the input's variables.
 fn unary(k: &KindSpec, out: &KindSpec, coeffs: &[Poly], name: &str, doc: &str) -> Kernel {
-    let prog: Program = cse::compile_best(coeffs, &BTreeSet::new(), &[]);
+    let prog: Program = cse::compile_plain(coeffs);
     Kernel {
         name: name.into(),
         doc: doc.into(),
@@ -1539,8 +1530,17 @@ pub fn fallback_exps<'a>(
 /// The kinds of [`fallback_exps`] that also have the closed form `{k}_exp_closed`
 /// ([`closed_exp`]): those with the recorded `{k}_exp_from` kernel.
 pub fn closed_exps<'a>(spec: &'a AlgebraSpec, stats: &Stats) -> Vec<(&'a KindSpec, &'a KindSpec)> {
-    fallback_exps(spec, stats)
-        .into_iter()
+    closed_of(stats, &fallback_exps(spec, stats))
+}
+
+/// [`closed_exps`] among the given [`fallback_exps`].
+fn closed_of<'a>(
+    stats: &Stats,
+    fallbacks: &[(&'a KindSpec, &'a KindSpec)],
+) -> Vec<(&'a KindSpec, &'a KindSpec)> {
+    fallbacks
+        .iter()
+        .copied()
         .filter(|(k, _)| {
             let name = format!("{}_exp_from", snake(&k.name));
             stats
@@ -1591,11 +1591,7 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
 
 "
     );
-    let small: Vec<&KindSpec> = spec
-        .kinds
-        .iter()
-        .filter(|k| k.layout.len() <= WGSL_MAX)
-        .collect();
+    let small: Vec<&KindSpec> = spec.kinds.iter().filter(|k| k.fits_wgsl()).collect();
     for k in &spec.kinds {
         let n = k.layout.len();
         let _ = writeln!(s, "// `{}`: [{}]", k.name, k.blades.join(", "));
@@ -1605,8 +1601,8 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         }
         let _ = writeln!(s, "}}\n");
     }
-    for (alias, kind, _) in &spec.aliases {
-        let _ = writeln!(s, "alias {alias} = {kind};\n");
+    for a in &spec.aliases {
+        let _ = writeln!(s, "alias {} = {};\n", a.name, a.kind);
     }
     // Constructors.
     for k in &small {
@@ -1644,8 +1640,10 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
             }
         }
     }
-    let kernels = kernels(spec, stats);
     let fallbacks = fallback_exps(spec, stats);
+    let logs = fallback_logs(spec, stats);
+    let closed = closed_of(stats, &fallbacks);
+    let kernels = kernels_with(spec, stats, &fallbacks, &logs);
     let mut used: BTreeSet<&'static str> = BTreeSet::new();
     let mut helpers = Vec::new();
     for k in &kernels {
@@ -1658,8 +1656,6 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
             }
         }
     }
-    let logs = fallback_logs(spec, stats);
-    let closed = closed_exps(spec, stats);
     let mut arith: Vec<&str> = Vec::new();
     for x in fallbacks
         .iter()
@@ -1741,12 +1737,23 @@ fn {ks}_exp(x: {kn}) -> {en} {{
 /// versor kinds, the value methods and the sandwiches (constructors and embeddings, which are
 /// not programs, are not included).
 pub fn kernels(spec: &AlgebraSpec, stats: &Stats) -> Vec<Kernel> {
+    kernels_with(
+        spec,
+        stats,
+        &fallback_exps(spec, stats),
+        &fallback_logs(spec, stats),
+    )
+}
+
+/// [`kernels`] with the algebra's [`fallback_exps`] and [`fallback_logs`].
+fn kernels_with(
+    spec: &AlgebraSpec,
+    stats: &Stats,
+    fallbacks: &[(&KindSpec, &KindSpec)],
+    logs: &[(&KindSpec, &KindSpec)],
+) -> Vec<Kernel> {
     let alg = &spec.algebra;
-    let small: Vec<&KindSpec> = spec
-        .kinds
-        .iter()
-        .filter(|k| k.layout.len() <= WGSL_MAX)
-        .collect();
+    let small: Vec<&KindSpec> = spec.kinds.iter().filter(|k| k.fits_wgsl()).collect();
     let mut kernels: Vec<Kernel> = Vec::new();
     for k in &small {
         let x = symbolic::variables(&k.layout, 0);
@@ -1779,10 +1786,7 @@ pub fn kernels(spec: &AlgebraSpec, stats: &Stats) -> Vec<Kernel> {
     kernels.extend(stats.values.iter().flat_map(|v| v.kernels.iter().cloned()));
     kernels.extend(stats.kernels.iter().cloned());
     // The scaling-and-squaring loops (`fallback_exp`, `fallback_log`) need their kind's product.
-    for (_, e) in fallback_exps(spec, stats)
-        .into_iter()
-        .chain(fallback_logs(spec, stats))
-    {
+    for &(_, e) in fallbacks.iter().chain(logs) {
         let name = format!("{}_mul_{}", snake(&e.name), snake(&e.name));
         if !kernels.iter().any(|k| k.name == name) {
             kernels.extend(product(

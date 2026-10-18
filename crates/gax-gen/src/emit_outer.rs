@@ -3,7 +3,6 @@
 
 use crate::cse;
 use crate::poly::{Poly, Rational, Var};
-use crate::slp::render;
 use crate::spec::{AlgebraSpec, KindSpec};
 use crate::symbolic::{self, SymMv};
 use crate::table::{BinOp, UnOp, blade_unop};
@@ -30,9 +29,7 @@ pub fn terms(n: u32, k: u32) -> usize {
 fn full_grade(spec: &AlgebraSpec, k: &KindSpec) -> Option<u32> {
     let g: BTreeSet<u32> = k.layout.grades();
     let &g = g.iter().next().filter(|_| g.len() == 1)?;
-    let all = (0..spec.algebra.blade_count() as u32)
-        .filter(|m| m.count_ones() == g)
-        .count();
+    let all = spec.algebra.blades_of_grade(g).count();
     (k.layout.len() == all).then_some(g)
 }
 
@@ -144,17 +141,12 @@ fn outermorphism(
     let polys: Vec<Poly> = (0..nb)
         .flat_map(|o| columns.iter().map(move |c| c[o].clone()))
         .collect();
-    let prog = cse::compile_best(&polys, &BTreeSet::new(), &[]);
+    let prog = cse::compile_plain(&polys);
     let name = |var: Var| format!("t[{}][{}]", var as usize / nv, var as usize % nv);
-    let mut lets = String::new();
-    prog.emit_lets(&name, "m", &mut lets);
-    let rows: Vec<String> = (0..nb)
-        .map(|o| {
-            let row: Vec<String> = (0..nb)
-                .map(|a| render(&prog.outputs[o * nb + a], &name, "m"))
-                .collect();
-            format!("[{}]", row.join(", "))
-        })
+    let (lets, outs) = prog.lets_and_outputs(&name, "m");
+    let rows: Vec<String> = outs
+        .chunks(nb)
+        .map(|row| format!("[{}]", row.join(", ")))
         .collect();
     let (vn, bn) = (&v.name, &b.name);
     let how = if wedge { "∧" } else { "∨" };
@@ -167,8 +159,8 @@ fn outermorphism(
         (_, false) => "O",
     };
     let code = format!(
-        "impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<{bn}<(), f32, X>> for {vn}<({vn}<(), f32, O>,), T, O> {{\n    type Output = {bn}<({bn}<(), f32, {oo}>,), T, {oo}>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> Self::Output {{\n        let t = self.c;\n{lets}        {bn} {{ o: core::marker::PhantomData, c: [{}] }}\n    }}\n}}\n\n",
-        rows.join(", ")
+        "impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<{bn}<(), f32, X>> for {vn}<({vn}<(), f32, O>,), T, O> {{\n    type Output = {bn}<({bn}<(), f32, {oo}>,), T, {oo}>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> Self::Output {{\n        let t = self.c;\n{lets}        {}\n    }}\n}}\n\n",
+        crate::emit::kind_literal(bn, &format!("[{}]", rows.join(", ")))
     );
     Some((code, (vn.clone(), bn.clone(), k == n)))
 }

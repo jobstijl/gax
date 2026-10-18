@@ -2006,6 +2006,57 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   operations, casts, kind tables, sandwiches, batch, GPU, tracer) with the spec keyword; the
   library, tests and examples migrated; the laws; then the numga sync.
 
+## ADR-052: API consolidation: orientation by name, `f64` by default, one name per idea
+*Status: accepted (2026-10-18). Phase 12.*
+
+A review of the whole public API after ADR-051, with the migration of about 150 programs as
+evidence, found it sound in its core (slots, generated products, `Unit`, the laws, the
+diagnostics) and uneven around it. The changes below drop backward compatibility.
+
+* **Orientation by name.** The struct of a kind lives in `{alg}::oriented` with no default
+  orientation: `oriented::Line<S, T, O>`. The module root names the kind's default orientation by
+  an alias, `type Line<S = (), T = f64> = oriented::Line<S, T, Extrinsic>`, and the modules
+  `{alg}::intrinsic` and `{alg}::extrinsic` name every kind in that orientation (`Forque` is
+  `intrinsic::Line`, PGA2D's `Twist` is `extrinsic::Point`). Constructors (`new`, `xyz`, `slot`,
+  `from_images` and the extras) are emitted for both concrete orientations: a path through an alias
+  fixes `O`, so `Line::new(..)`, `Forque::new(..)` and `Forque::slot()` all resolve with no
+  annotation and stay `const` (verified on 1.89 and stable; a constructor generic over `O`, or
+  defined twice on one name with `O` open, is ambiguous, E0034/E0283). Slot kinds read
+  `Line<(intrinsic::Line,)>`. Generic code names `oriented::Line<S, T, O>` and gets slots from the
+  trait `gx::Slot`; `oriented_slot` goes. `gx::Oriented<K, O>` names a kind in another orientation
+  generically. The tracer prints `intrinsic::Line` where it printed `Line<(), T, Intrinsic>`.
+* **Orientation arithmetic that reduces for generic `O`.** The products and the flip move into a
+  sealed base trait, and `Orientation` states the sign laws as supertrait bindings
+  (`O·E = O`, `O·I = Flip<O>`, `O·O = E`, `Flip<Flip<O>> = O`), so helpers generic over `O`
+  typecheck (one binding per bound, as 1.89 requires).
+* **`f64` by default.** The default coefficient type becomes `f64` (and with it the kind markers,
+  `Kind for oriented::Line<(), f64, O>`): callers wrote `<(), f64>` some 16 000 times against about
+  100 for `f32`, and `Point::xyz(1.0, ..)` already inferred `f64` while the type `Point` meant
+  `f32`. GPU code names `f32` explicitly, as it does its `*Gpu` layouts.
+* **One name per idea, and one idea per name.** `normalized()` returns `Self`; the certified unit
+  is `unit()`. `Log` has an associated output, so `m.log()` needs no annotation. A map is applied
+  with `of` everywhere (`SparseMap`, `SquareLinearMap`, structured maps) and densified with
+  `to_dense`. The tracer's facade and `gax_core::trace` become one module. The jet module is
+  `jet`, the simplicial complex `SimplicialComplex`, the study internals private.
+* **Linear algebra results and failures.** `Svd { values, inputs, outputs }` and
+  `Eigen { values, vectors }` replace positional tuples (whose orders differed); every metric
+  eigenproblem is `eigh_with`; a pairing's solve is `solve_pairing`, its dyad binding `of_dyad` and
+  `lstsq_dyad`. Plain methods return NaN on failure as documented, `try_*` methods an `Option`.
+* **A smaller visible surface.** Items only generated code needs (`True`, `False`, `FillList`,
+  `KindEq`, `SplitLast`, `MoveToFront`, `HasCat`, `SlotArr`, `Reorient`, `NewtonStep`,
+  `LogNeedsUnit`, `orientation::reflect`, `slots::by_entries`, `trace::write_kind_path`, the
+  `linalg` kernels) move to a hidden `gx::__private`; methods are emitted only where their bounds
+  can hold.
+* **Geometry in gax types, evenly across algebras.** Constructors take gax values, not float
+  tuples (`Motor::translation(d: Direction)`, `Plane::with_normal(n, d)`); every algebra gets the
+  same roles (`Twist`, `Forque`, `Even`, `Odd`) and the same helper set where it has the geometry
+  (rotation, between, interpolate, `Line::direction`, `Plane::normal`, `Point::distance`, the
+  identity motor); redundant helpers (`Motor::from_rotor`, `rotation_between` beside `Between`) go.
+* **Plan.** Three batches, each merged when CI is green: (1) the generator and types (orientation
+  by name, the arithmetic, `f64`, `Slot`, `Log`, `normalized`/`unit`); (2) names and linear
+  algebra; (3) geometry helpers and uniform roles. Internal cleanups of the generator (output
+  byte-identical) and of gax-core go first.
+
 ## Hypotheses
 
 | # | hypothesis | verdict | evidence / decision |

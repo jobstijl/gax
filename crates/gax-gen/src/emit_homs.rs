@@ -332,22 +332,15 @@ fn kind_impl(
 /// `Σ c_k a[k]` as slot-array arithmetic (a copy, a negation, or a sum; zero when empty).
 fn combination(terms: &[(i128, usize)]) -> String {
     if terms.is_empty() {
-        return "<S as Slots>::from_flat(&mut |_| T::zero(), 0)".into();
+        return crate::emit::zero_slots("<S as Slots>");
     }
-    let term = |&(c, k): &(i128, usize)| match c.abs() {
-        1 => format!("a[{k}]"),
-        m => format!("a[{k}].scale(T::from_i64({m}))"),
-    };
-    let mut e = String::new();
-    for (i, t) in terms.iter().enumerate() {
-        let s = term(t);
-        e = match (i, t.0 < 0) {
-            (0, false) => s,
-            (0, true) => format!("-{s}"),
-            (_, false) => format!("{e} + {s}"),
-            (_, true) => format!("{e} - {s}"),
+    let e = crate::emit::signed_chain(terms.iter().map(|&(c, k)| {
+        let term = match c.abs() {
+            1 => format!("a[{k}]"),
+            m => format!("a[{k}].scale(T::from_i64({m}))"),
         };
-    }
+        (c < 0, term)
+    }));
     format!("({e}).0")
 }
 

@@ -205,6 +205,11 @@ impl Algebra {
         (0..self.dim()).all(|i| (0..self.dim()).all(|j| i == j || self.metric[i][j] == 0))
     }
 
+    /// The blades of grade `g`, in mask order.
+    pub fn blades_of_grade(&self, g: u32) -> impl Iterator<Item = u32> {
+        (0..self.blade_count() as u32).filter(move |m| m.count_ones() == g)
+    }
+
     /// Mask of the pseudoscalar.
     pub fn pseudoscalar(&self) -> u32 {
         (1u32 << self.dim()) - 1

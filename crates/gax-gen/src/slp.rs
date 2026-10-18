@@ -151,7 +151,9 @@ pub struct Cost {
 }
 
 impl Cost {
-    /// Scalar cost used to compare programs: `mul = add = 1`, `div = 4`, `call = 8`.
+    /// Scalar cost used to compare programs: `add = 1`, `div = 4`, `call = 8`, and as
+    /// tie-breaks `mul = 1.0001` (fewer multiplications win between programs otherwise equal)
+    /// and `neg = 0.01`.
     pub fn weight(&self) -> f64 {
         self.muls as f64 * 1.0001
             + self.adds as f64
@@ -402,6 +404,18 @@ impl Program {
             .iter()
             .map(|o| render(o, var, prefix))
             .collect()
+    }
+
+    /// [`Program::emit_lets`] and [`Program::render_outputs`] together: the `let` statements,
+    /// and the outputs as expressions.
+    pub fn lets_and_outputs(
+        &self,
+        var: &impl Fn(Var) -> String,
+        prefix: &str,
+    ) -> (String, Vec<String>) {
+        let mut lets = String::new();
+        self.emit_lets(var, prefix, &mut lets);
+        (lets, self.render_outputs(var, prefix))
     }
 
     /// Emit the instructions as `let` statements in the language `target`.

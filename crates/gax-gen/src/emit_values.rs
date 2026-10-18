@@ -11,7 +11,7 @@ use crate::algebra::Algebra;
 use crate::cse::{self, Stage, StageOp};
 use crate::kernel::{Kernel, Source, Step, StudyFn, Ty, arg_vars, snake};
 use crate::poly::{Poly, Rational, Var};
-use crate::slp::{Func, render};
+use crate::slp::Func;
 use crate::spec::{AlgebraSpec, KindSpec};
 use crate::symbolic::{self, SymMv, blade_mv, blade_square, coef, grade_part, scalar_mv, scale_mv};
 use crate::table::{BinOp, UnOp};
@@ -146,6 +146,11 @@ pub struct ValueMethods {
     pub kernels: Vec<Kernel>,
 }
 
+/// Input variable `v` of a value method: coefficient `v` of `let x = self.c;`.
+fn x_var(v: Var) -> String {
+    format!("x[{v}]")
+}
+
 /// A one-parameter kernel on kind `k`, or `None` when it is too large for the WGSL modules.
 fn value_kernel(
     k: &KindSpec,
@@ -154,7 +159,7 @@ fn value_kernel(
     result: Ty,
     steps: Vec<Step>,
 ) -> Option<Kernel> {
-    (k.layout.len() <= crate::emit::WGSL_MAX).then(|| Kernel {
+    k.fits_wgsl().then(|| Kernel {
         name: name.to_string(),
         doc: doc.to_string(),
         params: vec![("x".into(), Ty::Kind(k.name.clone()))],
@@ -218,14 +223,8 @@ fn study_method(
             ],
         ));
     }
-    let xvar = |v: Var| format!("x[{v}]");
-    let mut lets = String::new();
-    c.pre.emit_lets(&xvar, "p", &mut lets);
-    let args: Vec<String> = c
-        .args
-        .iter()
-        .map(|&i| render(&c.pre.outputs[i], &xvar, "p"))
-        .collect();
+    let (mut lets, pre) = c.pre.lets_and_outputs(&x_var, "p");
+    let args: Vec<String> = c.args.iter().map(|&i| pre[i].clone()).collect();
     let lhs = match c.outs {
         [one] => (*one).to_string(),
         many => format!("[{}]", many.join(", ")),
@@ -239,8 +238,68 @@ fn study_method(
             c.locals[v - nv].to_string()
         }
     };
-    c.post.emit_lets(&names, "t", &mut lets);
-    (lets, c.post.render_outputs(&names, "t"))
+    let (post, outs) = c.post.lets_and_outputs(&names, "t");
+    lets.push_str(&post);
+    (lets, outs)
+}
+
+/// `doc` as a method's doc comment, one `    /// ` line per line.
+fn method_doc(doc: &str) -> String {
+    doc.lines().fold(String::new(), |mut s, l| {
+        let _ = writeln!(s, "    /// {l}");
+        s
+    })
+}
+
+/// The method `exp` returning a unit `{on}`, from the lines `lets` after `let x = self.c;` and
+/// the result's coefficients `outs`.
+fn unit_exp_method(doc: &str, on: &str, lets: &str, outs: &[String]) -> String {
+    format!(
+        "{}    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
+        method_doc(doc),
+        outs.join(", ")
+    )
+}
+
+/// `gx::Log` of a unit `{name}` with the bivector kind `{on}`, from the lines `lets` after
+/// `let x = self.into_inner().c;` and the result's coefficients `outs`.
+fn log_impl(name: &str, on: &str, lets: &str, outs: &[String]) -> String {
+    format!(
+        "impl<T: gx::Real> gx::Log<{on}<(), T, gx::Extrinsic>> for gx::Unit<{name}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
+        outs.join(", ")
+    )
+}
+
+/// `normalized`, `(x ~x)^(-1/2) x` with the factor from the Study call `c` (whose call `call`
+/// writes from its arguments), and its kernel `{k}_normalized` of Study function `func`.
+fn emit_normalized_by(
+    k: &KindSpec,
+    c: &StudyCall,
+    call: impl FnOnce(&[String]) -> String,
+    func: StudyFn,
+    doc: &str,
+    body: &mut String,
+    kernels: &mut Vec<Kernel>,
+) {
+    let (lets, outs) = study_method(
+        k,
+        c,
+        call,
+        Some((
+            format!("{}_normalized", snake(&k.name)),
+            "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.".into(),
+            Ty::Kind(k.name.clone()),
+            func,
+        )),
+        kernels,
+    );
+    let _ = write!(
+        body,
+        "{}    #[inline(always)]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({}::from_coeffs([{}]))\n    }}\n\n",
+        method_doc(doc),
+        k.name,
+        outs.join(", ")
+    );
 }
 
 /// Emit the value methods of kind `k`, returning the code of an inherent impl block (and
@@ -258,7 +317,6 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     let x = symbolic::variables(&k.layout, 0);
     let rev = symbolic::unop(alg, UnOp::Reverse, &x);
     let norm = symbolic::binop(alg, BinOp::Gp, &x, &rev);
-    let xvar = |v: Var| format!("x[{v}]");
     let mut body = String::new();
     // `exp`, the `log` hint and `sqrt` exist for extrinsic values only (ADR-051): a force has
     // no exponential.
@@ -270,7 +328,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     meta.norm = !n0.is_zero();
     let ks = snake(name);
     if meta.norm {
-        let prog = cse::compile_best(std::slice::from_ref(&n0), &BTreeSet::new(), &[]);
+        let prog = cse::compile_plain(std::slice::from_ref(&n0));
         meta.kernels.extend(value_kernel(
             k,
             &format!("{ks}_norm_squared"),
@@ -282,12 +340,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 vars: arg_vars(&[n]),
             }],
         ));
-        let mut lets = String::new();
-        prog.emit_lets(&xvar, "t", &mut lets);
+        let (lets, outs) = prog.lets_and_outputs(&x_var, "t");
         let _ = write!(
             body,
             "    /// The squared norm: the scalar part of `x ~x`.\n    #[inline(always)]\n    pub fn norm_squared(self) -> T {{\n        let x = self.c;\n{lets}        {}\n    }}\n\n    /// The norm, `sqrt(|norm_squared|)`.\n    #[inline(always)]\n    pub fn norm(self) -> T {{\n        self.norm_squared().abs().sqrt()\n    }}\n\n",
-            render(&prog.outputs[0], &xvar, "t")
+            outs[0]
         );
     }
 
@@ -335,8 +392,8 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
                 let lam = coef(&bsq, 0);
                 let mu = study.blade.map_or_else(Poly::zero, |b| coef(&bsq, b));
-                let pre = cse::compile_best(&[lam, mu], &BTreeSet::new(), &[]);
-                let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+                let pre = cse::compile_plain(&[lam, mu]);
+                let prog = cse::compile_plain(&coeffs);
                 let call = StudyCall {
                     pre: &pre,
                     args: &[0, 1],
@@ -353,7 +410,8 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 let result = Ty::Kind(out_kind.name.clone());
                 // A rotation (the scalar part of B² is minus a sum of squares): real trig.
                 let kernel = if rotation {
-                    (out_kind.layout.len() <= crate::emit::WGSL_MAX)
+                    out_kind
+                        .fits_wgsl()
                         .then(|| (format!("{ks}_exp"), doc, result, StudyFn::ExpRotation))
                 } else {
                     Some((format!("{ks}_exp"), doc, result, StudyFn::Exp(study.isq)))
@@ -372,13 +430,13 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                     kernel,
                     &mut meta.kernels,
                 );
-                let on = &out_kind.name;
-                meta.exp = Some(on.clone());
-                let _ = write!(
-                    body_ext,
-                    "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B` with `B²` a Study number.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
-                    outs.join(", ")
-                );
+                body_ext.push_str(&unit_exp_method(
+                    "The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B` with `B²` a Study number.",
+                    &out_kind.name,
+                    &lets,
+                    &outs,
+                ));
+                meta.exp = Some(out_kind.name);
             }
         }
     }
@@ -492,10 +550,7 @@ fn emit_inverse_by(
     }];
     let relations = vec![&(d * &Poly::var(r)) - &Poly::constant(Rational::ONE)];
     let (prog, _) = cse::compile_staged_best(&coeffs, &stages, &relations);
-    let xvar = |v: Var| format!("x[{v}]");
-    let mut lets = String::new();
-    prog.emit_lets(&xvar, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&xvar, "t");
+    let (lets, outs) = prog.lets_and_outputs(&x_var, "t");
     let on = &out_kind.name;
     let _ = write!(
         body,
@@ -542,12 +597,7 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
         1u32 << ((p + q).div_ceil(2) + r)
     };
     let (en, name) = (&e.name, &k.name);
-    let mut embed = String::new();
-    for (i, &(m, sb)) in k.layout.blades.iter().enumerate() {
-        let (pos, se) = e.layout.position(m)?;
-        let sign = if sb * se > 0 { "" } else { "-" };
-        let _ = writeln!(embed, "        x.c[{pos}] = {sign}self.c[{i}] * scale;");
-    }
+    let embed = embed_lines(&k.layout.embed_in(&e.layout)?, "scale");
     let (one, one_sign) = e.layout.position(0)?;
     // `⟨u⟩₀` and `u − c` in `e`'s layout, whose scalar blade may be stored negated.
     let (get, put) = if one_sign > 0 { ("", "-") } else { ("-", "+") };
@@ -680,8 +730,8 @@ fn emit_normalized(
     };
     let n0 = coef(norm, 0);
     let nb = study.blade.map_or_else(Poly::zero, |b| coef(norm, b));
-    let pre = cse::compile_best(&[n0, nb], &BTreeSet::new(), &[]);
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let pre = cse::compile_plain(&[n0, nb]);
+    let prog = cse::compile_plain(&coeffs);
     let func = match (study.blade, study.isq) {
         (None, _) => StudyFn::RsqrtAbs,
         (Some(_), 0) => StudyFn::RsqrtNil,
@@ -699,28 +749,18 @@ fn emit_normalized(
         post: &prog,
         locals: &["s0", "s1"],
     };
-    let isq = study.isq;
-    let (lets, outs) = study_method(
+    emit_normalized_by(
         k,
         &call,
-        |a| match (study.blade, isq) {
+        |a| match (study.blade, study.isq) {
             (None, _) => format!("({}).abs().sqrt().recip()", a[0]),
             (Some(_), 0) => format!("gx::study::rsqrt_nil({}, {})", a[0], a[1]),
             (Some(_), isq) => format!("gx::study::rsqrt({isq}, {}, {})", a[0], a[1]),
         },
-        Some((
-            format!("{}_normalized", snake(&k.name)),
-            "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.".into(),
-            Ty::Kind(k.name.clone()),
-            func,
-        )),
-        kernels,
-    );
-    let name = &k.name;
-    let _ = write!(
+        func,
+        "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`±1` when the norm is negative).",
         body,
-        "    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`±1` when the norm is negative).\n    #[inline(always)]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({name}::from_coeffs([{}]))\n    }}\n\n",
-        outs.join(", ")
+        kernels,
     );
     true
 }
@@ -748,8 +788,8 @@ fn emit_normalized_q(
     let Some(coeffs) = symbolic::to_coeffs(&k.layout, &out) else {
         return false;
     };
-    let pre = cse::compile_best(&[n0.clone(), qq.clone()], &BTreeSet::new(), &[]);
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let pre = cse::compile_plain(&[n0.clone(), qq.clone()]);
+    let prog = cse::compile_plain(&coeffs);
     let call = StudyCall {
         pre: &pre,
         args: &[0, 1],
@@ -757,23 +797,14 @@ fn emit_normalized_q(
         post: &prog,
         locals: &["s0", "s1"],
     };
-    let (lets, outs) = study_method(
+    emit_normalized_by(
         k,
         &call,
         |a| format!("gx::study::rsqrt_q({}, {})", a[0], a[1]),
-        Some((
-            format!("{}_normalized", snake(&k.name)),
-            "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.".into(),
-            Ty::Kind(k.name.clone()),
-            StudyFn::RsqrtQ,
-        )),
-        kernels,
-    );
-    let name = &k.name;
-    let _ = write!(
+        StudyFn::RsqrtQ,
+        "Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector\nwhose square is a scalar, so that `x ~x = 1` (`−1` when `a` is negative).",
         body,
-        "    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector\n    /// whose square is a scalar, so that `x ~x = 1` (`−1` when `a` is negative).\n    #[inline(always)]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({name}::from_coeffs([{}]))\n    }}\n\n",
-        outs.join(", ")
+        kernels,
     );
     true
 }
@@ -801,7 +832,7 @@ fn emit_newton_step(
     let Some(coeffs) = symbolic::to_coeffs(&k.layout, &out) else {
         return;
     };
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let prog = cse::compile_plain(&coeffs);
     kernels.extend(value_kernel(
         k,
         &format!("{}_renormalize_fast", snake(&k.name)),
@@ -813,10 +844,7 @@ fn emit_newton_step(
             vars: arg_vars(&[k.layout.len()]),
         }],
     ));
-    let xvar = |v: Var| format!("x[{v}]");
-    let mut lets = String::new();
-    prog.emit_lets(&xvar, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&xvar, "t");
+    let (lets, outs) = prog.lets_and_outputs(&x_var, "t");
     let name = &k.name;
     let _ = write!(
         traits,
@@ -878,8 +906,8 @@ fn emit_log(
     let cb = blade.map_or_else(Poly::zero, |b| coef(x, b));
     let u0 = coef(&u, 0);
     let ub = blade.map_or_else(Poly::zero, |b| coef(&u, b));
-    let pre = cse::compile_best(&[c0, cb, u0, ub], &BTreeSet::new(), &[]);
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let pre = cse::compile_plain(&[c0, cb, u0, ub]);
+    let prog = cse::compile_plain(&coeffs);
     let call = StudyCall {
         pre: &pre,
         args: &[0, 1, 2, 3],
@@ -890,7 +918,7 @@ fn emit_log(
     let rotation = nonpositive(&coef(&u, 0)) && (isq == 0 || blade.is_none());
     let kernel_name = format!("unit_{}_log", snake(&k.name));
     let kernel = if rotation {
-        (out_kind.layout.len() <= crate::emit::WGSL_MAX).then(|| {
+        out_kind.fits_wgsl().then(|| {
             (
                 kernel_name,
                 format!(
@@ -931,13 +959,8 @@ fn emit_log(
         kernel,
         kernels,
     );
-    let (name, on) = (&k.name, &out_kind.name);
-    let _ = write!(
-        traits,
-        "impl<T: gx::Real> gx::Log<{on}<(), T, gx::Extrinsic>> for gx::Unit<{name}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
-        outs.join(", ")
-    );
-    Some(on.clone())
+    traits.push_str(&log_impl(&k.name, &out_kind.name, &lets, &outs));
+    Some(out_kind.name)
 }
 
 /// The grade-4 part of `mv` if everything else is scalar, it has several blades, and its
@@ -978,8 +1001,8 @@ fn emit_exp_general(
     );
     let out_kind = spec.kind_for_support(&symbolic::support(&out))?.clone();
     let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
-    let pre = cse::compile_best(&[coef(&bsq, 0), qpoly], &BTreeSet::new(), &[]);
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let pre = cse::compile_plain(&[coef(&bsq, 0), qpoly]);
+    let prog = cse::compile_plain(&coeffs);
     let call = StudyCall {
         pre: &pre,
         args: &[0, 1],
@@ -1002,13 +1025,13 @@ fn emit_exp_general(
         )),
         kernels,
     );
-    let on = &out_kind.name;
-    let _ = write!(
-        body,
-        "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B`, with `B² = λ + Q` and `Q² = q` a scalar.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
-        outs.join(", ")
-    );
-    Some(on.clone())
+    body.push_str(&unit_exp_method(
+        "The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B`, with `B² = λ + Q` and `Q² = q` a scalar.",
+        &out_kind.name,
+        &lets,
+        &outs,
+    ));
+    Some(out_kind.name)
 }
 
 fn emit_log_general(
@@ -1045,8 +1068,8 @@ fn emit_log_general(
         .collect();
     let out_kind = spec.kind_for_support(&symbolic::support(&out))?.clone();
     let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
-    let pre = cse::compile_best(&[coef(x, 0), coef(&cc, 0)], &BTreeSet::new(), &[]);
-    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let pre = cse::compile_plain(&[coef(x, 0), coef(&cc, 0)]);
+    let prog = cse::compile_plain(&coeffs);
     let call = StudyCall {
         pre: &pre,
         args: &[0, 1],
@@ -1069,13 +1092,8 @@ fn emit_log_general(
         )),
         kernels,
     );
-    let (name, on) = (&k.name, &out_kind.name);
-    let _ = write!(
-        traits,
-        "impl<T: gx::Real> gx::Log<{on}<(), T, gx::Extrinsic>> for gx::Unit<{name}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T, gx::Extrinsic> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
-        outs.join(", ")
-    );
-    Some(on.clone())
+    traits.push_str(&log_impl(&k.name, &out_kind.name, &lets, &outs));
+    Some(out_kind.name)
 }
 
 /// The logarithm of a unit versor by inverse scaling and squaring, for even kinds without a
@@ -1094,9 +1112,7 @@ fn emit_log_fallback(
     if !blades.contains(&0) || blades.iter().any(|m| m.count_ones() % 2 == 1) {
         return None;
     }
-    let grade2: BTreeSet<u32> = (0..alg.blade_count() as u32)
-        .filter(|m| m.count_ones() == 2)
-        .collect();
+    let grade2: BTreeSet<u32> = alg.blades_of_grade(2).collect();
     if !grade2.is_subset(&blades) {
         return None;
     }
@@ -1136,13 +1152,10 @@ fn emit_log_fallback(
     };
     let project: Vec<String> = bv
         .layout
-        .blades
-        .iter()
-        .map(|&(m, sb)| {
-            let (pos, se) = k.layout.position(m).expect("grade 2 is in the kind");
-            let sign = if sb * se > 0 { "" } else { "-" };
-            format!("{sign}l.c[{pos}] * f")
-        })
+        .embed_in(&k.layout)
+        .expect("grade 2 is in the kind")
+        .into_iter()
+        .map(|(pos, flip)| format!("{}l.c[{pos}] * f", if flip { "-" } else { "" }))
         .collect();
     let head = format!(
         "impl<T: gx::Real> gx::Log<{bn}<(), T, gx::Extrinsic>> for gx::Unit<{en}<(), T, gx::Extrinsic>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T, gx::Extrinsic> {{"
@@ -1244,7 +1257,7 @@ fn emit_log_6d(
     outs.extend(g1);
     outs.extend(g2);
     outs.extend(g3);
-    let prog = cse::compile_best(&outs, &BTreeSet::new(), &[]);
+    let prog = cse::compile_plain(&outs);
     // The WGSL kernel: this program, the weights (`study_log6`), and their combination, which
     // reads the `G`s as outputs of the first program. The module's `unit_{even}_log` calls it
     // above `⟨R⟩₀ = 1/16` (`emit_wgsl::fallback_log`).
@@ -1254,8 +1267,8 @@ fn emit_log_6d(
     let combined: Vec<Poly> = (0..n)
         .map(|i| &(&(&w(0) * &g(0, i)) + &(&w(1) * &g(1, i))) + &(&w(2) * &g(2, i)))
         .collect();
-    let post = cse::compile_best(&combined, &BTreeSet::new(), &[]);
-    let mut post_vars: Vec<(Var, Source)> = (0..3)
+    let post = cse::compile_plain(&combined);
+    let mut post_vars: BTreeMap<Var, Source> = (0..3)
         .map(|j| (base + j, Source::Local(format!("w{}", j + 1))))
         .collect();
     post_vars.extend((0..3 * n).map(|o| {
@@ -1308,8 +1321,8 @@ fn emit_log_6d(
             &(&(&w(2) * &q2) + &(&w(1) * &q1)) + &(&w(0) * &g(0, i))
         })
         .collect();
-    let turn = cse::compile_best(&zs, &BTreeSet::new(), &[]);
-    let mut turn_vars: Vec<(Var, Source)> = (0..3)
+    let turn = cse::compile_plain(&zs);
+    let mut turn_vars: BTreeMap<Var, Source> = (0..3)
         .map(|j| (base + j, Source::Local(format!("a{j}"))))
         .collect();
     turn_vars.extend((0..3 * n).map(|o| {
@@ -1321,14 +1334,14 @@ fn emit_log_6d(
             },
         )
     }));
-    turn_vars.push((
+    turn_vars.insert(
         base + 3 + (3 * n) as Var,
         Source::Output { step: 0, index: 1 },
-    ));
-    turn_vars.push((
+    );
+    turn_vars.insert(
         base + 4 + (3 * n) as Var,
         Source::Output { step: 0, index: 3 },
-    ));
+    );
     kernels.extend(value_kernel(
         k,
         &format!("unit_{}_log_turning", snake(&k.name)),
@@ -1355,31 +1368,18 @@ fn emit_log_6d(
             },
         ],
     ));
-    let xvar = |v: Var| format!("x[{v}]");
-    let mut lets = String::new();
-    prog.emit_lets(&xvar, "p", &mut lets);
-    let o: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|op| render(op, &xvar, "p"))
-        .collect();
+    let (lets, o) = prog.lets_and_outputs(&x_var, "p");
     let list = |from: usize| o[from..from + n].join(", ");
     let (en, bn) = (&k.name, &bv.name);
     // `Z` (a bivector) as an `{en}`, and the position of the scalar.
-    let embed: Vec<String> = (0..k.layout.len())
-        .map(|pos| {
-            let m = k.layout.blades[pos].0;
-            match bv.layout.position(m) {
-                Some((i, sb)) => {
-                    let se = k.layout.blades[pos].1;
-                    if sb * se > 0 {
-                        format!("z[{i}]")
-                    } else {
-                        format!("-z[{i}]")
-                    }
-                }
-                None => "T::zero()".into(),
-            }
+    let embed: Vec<String> = k
+        .layout
+        .positions_in(&bv.layout)
+        .into_iter()
+        .map(|p| match p {
+            Some((i, false)) => format!("z[{i}]"),
+            Some((i, true)) => format!("-z[{i}]"),
+            None => "T::zero()".into(),
         })
         .collect();
     let (one_pos, one_sign) = k.layout.position(0).expect("a scalar");
@@ -1495,15 +1495,8 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
         let prod = symbolic::binop(alg, BinOp::Gp, part, lower);
         outs.extend(bivectors(&scale_mv(&prod, &r0)));
     }
-    let prog = cse::compile_best(&outs, &BTreeSet::new(), &[]);
-    let xvar = |v: Var| format!("x[{v}]");
-    let mut lets = String::new();
-    prog.emit_lets(&xvar, "p", &mut lets);
-    let o: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|op| render(op, &xvar, "p"))
-        .collect();
+    let prog = cse::compile_plain(&outs);
+    let (lets, o) = prog.lets_and_outputs(&x_var, "p");
     let nb = bv.layout.len();
     let list = |j: usize| o[5 + j * nb..5 + (j + 1) * nb].join(", ");
     let (en, bn) = (&k.name, &bv.name);
@@ -1623,10 +1616,7 @@ fn emit_exp_closed(
     let planes = n / 2;
     let grade = |g: u32| -> Layout {
         Layout {
-            blades: (0..alg.blade_count() as u32)
-                .filter(|m| m.count_ones() == g)
-                .map(|m| (m, 1))
-                .collect(),
+            blades: alg.blades_of_grade(g).map(|m| (m, 1)).collect(),
         }
     };
     let even_blades: BTreeSet<u32> = (0..alg.blade_count() as u32)
@@ -1749,8 +1739,8 @@ fn emit_exp_closed(
                 .map(|o| (*o).to_string())
                 .collect(),
         };
-        let vars = |names: [&str; 4]| -> Vec<(Var, Source)> {
-            let mut v: Vec<(Var, Source)> = names
+        let vars = |names: [&str; 4]| -> BTreeMap<Var, Source> {
+            let mut v: BTreeMap<Var, Source> = names
                 .iter()
                 .enumerate()
                 .filter(|(_, n)| !n.is_empty())
@@ -1871,14 +1861,7 @@ fn emit_exp_closed(
             ],
         ));
     }
-    let xvar = |v: Var| format!("x[{v}]");
-    let mut lets = String::new();
-    prog.emit_lets(&xvar, "p", &mut lets);
-    let o: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|op| render(op, &xvar, "p"))
-        .collect();
+    let (lets, o) = prog.lets_and_outputs(&x_var, "p");
     let mut at = 0;
     let mut take = |len: usize| {
         let v = o[at..at + len].join(", ");
@@ -2025,6 +2008,19 @@ fn emit_exp_closed(
     Some(en.clone())
 }
 
+/// `x.c[pos] = ±self.c[i] * {scale};` per coefficient `i` of a value embedded in `x` (at
+/// `pos`, flipped where the orientations differ).
+fn embed_lines(embedding: &[(usize, bool)], scale: &str) -> String {
+    embedding
+        .iter()
+        .enumerate()
+        .fold(String::new(), |mut s, (i, &(pos, flip))| {
+            let sign = if flip { "-" } else { "" };
+            let _ = writeln!(s, "        x.c[{pos}] = {sign}self.c[{i}] * {scale};");
+            s
+        })
+}
+
 /// The support closure of `{1}` and the kind's blades under the geometric product.
 fn product_closure(alg: &Algebra, k: &KindSpec) -> BTreeSet<u32> {
     let mut closure = k.layout.support();
@@ -2054,12 +2050,7 @@ fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Opt
     let closure = product_closure(alg, k);
     let e = spec.kind_for_support(&closure)?.clone();
     let (en, name) = (&e.name, &k.name);
-    let mut embed = String::new();
-    for (i, &(m, sb)) in k.layout.blades.iter().enumerate() {
-        let (pos, se) = e.layout.position(m)?;
-        let sign = if sb * se > 0 { "" } else { "-" };
-        let _ = writeln!(embed, "        x.c[{pos}] = {sign}self.c[{i}] * h;");
-    }
+    let embed = embed_lines(&k.layout.embed_in(&e.layout)?, "h");
     let (one_pos, one_sign) = e.layout.position(0)?;
     let one = if one_sign > 0 {
         "T::one()"
