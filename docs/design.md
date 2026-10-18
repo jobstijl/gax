@@ -1915,6 +1915,92 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   spacetime, whose stars are indefinite, are left out. The spin Dirac operator stays an example,
   built from these pieces.
 
+## ADR-051: Orientation types: intrinsic and extrinsic
+*Status: proposed (2026-10-18). Phase 11.*
+
+* **The problem.** gax's `>>` is the plain sandwich `v x ~v`. It commutes with the geometric,
+  outer and inner products, but under an odd versor (a reflection) not with the join:
+  `(m >> a) & (m >> b) == −(m >> (a & b))` in even dimensions (law-factors.md). So a reflected
+  momentum, forque or plane comes out negated (ganja.js#180, kingdon#154, the workaround in
+  guide §10). Dorst (2024) explains why: every element carries one of two orientations, a sense
+  within itself (intrinsic: a point's weight, a join's direction along a line, a triangle's
+  winding) or a sense in the space around it (extrinsic: a plane's side, a meet's turn about a
+  line). A mirror reverses the space around things, so the two kinds reflect with opposite
+  signs, and no single sandwich serves both. numga adopted the distinction (upstream `7dff347`,
+  `docs/why_orientation.md`, `docs/orientation.md`): an orientation on every type, propagated by
+  the products, checked on sums and bindings, choosing the sign of `>>`.
+* **The rules** (numga's, which are Dorst's; reading extrinsic as `+` and intrinsic as `−`):
+  * `*`, `^`, `|`, `⌋`, `⌊`, the scalar product, the commutator and anticommutator, `a / b`: the
+    product of the signs. `&`: minus the product (it is the outer product of the duals,
+    dualized: three flips). `dual`, `undual`, `hodge`: flipped. `~a`, `a.involute()`, `-a`, `a * t`
+    for a number `t`, `a.inverse()`, casts: kept. `a + b`: equal orientations required.
+  * `versor >> x` keeps `x`'s orientation. An even versor is the sandwich. An odd versor is the
+    sandwich of the involute, negated for an intrinsic `x`: `±m x̂ m⁻¹`. Then every versor commutes
+    with every product, the join included, and (in a non-degenerate algebra) with the dual. The
+    versor's own orientation does not matter (it appears twice).
+  * Relative to gax's plain sandwich, the new `>>` of an odd versor multiplies a blade of grade
+    `k` by `(−1)ᵏ` for an extrinsic passenger and by `−(−1)ᵏ` for an intrinsic one: a sign per
+    blade, decided at compile time. Even versors are unchanged.
+  * Which orientation an element has is set by how it is made, not by its meaning. Vectors and
+    everything built from them by products are extrinsic; a dual of an extrinsic element is
+    intrinsic. In PGA the vectors are planes, so meets are extrinsic, and points, made as the
+    complements of coordinates, are intrinsic, and so are their joins. In gax's CGA the points are
+    null vectors, so they are extrinsic, and so are the circles wedged from them, which then
+    reflect by the twisted sandwich as Hamish Todd argues; their duals, the spheres-meet forms,
+    are intrinsic. In numga's plane-based CGA the encodings swap, and the same rules give the
+    same geometry.
+* **Options for carrying it in Rust.**
+  1. *Twin kinds* (`Line` and `Spear`) declared in the specs. Every result needs both twins, and
+     the product impls grow up to fourfold; cga3d and csta are already the slowest to compile.
+  2. *A run-time bit* on each value (Gunn's "complementarity bit"). Mixing kinds would be a
+     run-time panic, and every kernel would branch or multiply.
+  3. **Chosen: an orientation type parameter on every kind**, `Line<S, T, O>`, with `O` one of the
+     zero-sized markers `Extrinsic` and `Intrinsic`. One generated impl covers both orientations,
+     generic over them, with the result's orientation computed by a type-level product
+     (`<O1 as Orientation>::Times<O2>`), so compile time and code size barely move. The sign of a
+     reflection is a constant of the monomorphized impl. Mixing them is a type error: `twist +
+     momentum` does not compile, nor does binding a momentum into a slot that takes a twist, nor
+     `momentum.exp()`.
+* **Defaults.** numga's types carry no default; Rust needs one for writing types at all. Each
+  kind's default is the orientation of its own constructors, declared in the spec
+  (`kind Point = [...] intrinsic`): PGA's `Point` and `Direction` are intrinsic (`Point::xyz`,
+  `Point::direction`), everything else extrinsic. So `Point<(), f64>` is what `Point::xyz` returns,
+  and the meet of three planes is a `Point<(), f64, Extrinsic>`. A wrong default cannot pass
+  silently: every mismatch is a type error. `algebra!` declarations take the same keyword; without
+  it every kind is extrinsic.
+* **Relabelling.** Coefficients alone do not say which kind they hold. `x.with_orientation::<O>()`
+  keeps the coefficients and declares their orientation, for data from outside (a file, a GPU
+  buffer, a raw `new`).
+* **What follows from the types, with no extra code.**
+  * Sums need equal orientations (they need equal types already).
+  * Binding needs the slot's orientation: a slot is a kind, and the kind includes `O`.
+  * `det`, `eigh`, `solve` and the other square-map operations need an endomorphism, output and
+    slot of the same kind and orientation: an inertia `Line<(Line,), T, Intrinsic>` (twists to
+    momenta) is a correlation and has no eigenvalues of its own, as in numga.
+  * `exp`, `log`, `sqrt` exist for extrinsic kinds only: a force generates no motion.
+* **The rest of the library.**
+  * `Motions`: `Twist` stays `Line`; `Forque` becomes the intrinsic `Line`.
+  * `Plane::reflect` and `pga2d::Line::reflect` lose their hand-written signs: they become `>>`.
+    `tests/reflections.rs` becomes the orientation laws, and guide §10 the rules above.
+  * Batch kernels (`Soa<K, E>`): `K` includes `O`, and the sandwich kernels apply the sign.
+  * GPU layouts and WGSL modules carry no orientation: the conversions accept either, and the WGSL
+    odd-versor sandwiches stay the plain sandwich, documented, with the CPU's `>>` the reference.
+  * The tracer prints `O` where it is not the kind's default.
+* **Laws.**
+  * Every versor law factor becomes `‖m‖²` for every product, `&` included: the `−‖m‖²` entries of
+    law-factors.md disappear, proved on symbolic coefficients as now.
+  * `m >> a.dual() == (m >> a).dual()` for odd and even versors in the non-degenerate algebras.
+  * The issues' examples: a reflected momentum keeps its kinetic energy, a mirrored duck stays on
+    its side of the water, with no signs written by hand.
+  * Compile-fail tests for each refusal.
+* **The numga ports** follow upstream `7dff347`, whose examples were migrated to orientations
+  ("meets and joins by meaning"), and port its four orientation notebooks (surface normals,
+  mechanical work, a mirror's energy, a circle constructed twice), checked against numga's
+  numbers as before.
+* **Plan.** The markers and traits in `gax-core`; the generator (structs, products, unary
+  operations, casts, kind tables, sandwiches, batch, GPU, tracer) with the spec keyword; the
+  library, tests and examples migrated; the laws; then the numga sync.
+
 ## Hypotheses
 
 | # | hypothesis | verdict | evidence / decision |

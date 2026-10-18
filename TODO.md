@@ -189,11 +189,13 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] M6: `docs/calculus.md`; examples (`heat_tetrahedra`, `hodge_torus`, `cavity_modes`: Maxwell's `∇F = 0` in STA and the DEC frequencies); benchmarks of assembly and solves (performance.md); top simplices found by a sorted index; miri, MSRV, docs.rs in the CI run
 - [ ] Later: cache circumcentres per face in `Geometry::new` (about half its cost on solids)
 
-## Phase 11: orientation types (after Phase 10)
-- [ ] Research first: pull numga upstream and read its `docs/why_orientation.md` (input, not a spec; our own decisions)
-- [ ] ADR: intrinsic twins of kinds (Dorst 2024, MMA §5–6; Hamish Todd's elements-as-transformations): extrinsic kinds are transformations and move by the twisted sandwich; intrinsic ones (`Forque`, `Position`, joined lines) pick up `det V`. Tags add under `∧` and `*`, flip under the complement, add plus one under `&`. Decide: twins declared in the specs, which algebras, compile-time budget
-- [ ] PGA3D end to end: twin kinds in gax-gen, the sandwich per tag, `Motions` with `Forque` a type of its own, every versor law factor `‖m‖²` (the `−‖m‖²` of `&` gone), `tests/reflections.rs` without hand-written signs
-- [ ] The other algebras, warp, asteroids and the numga ports; raise it with numga's author
+## Phase 11: orientation types (ADR-051)
+- [x] Research: numga upstream `7dff347` (`docs/why_orientation.md`, `docs/orientation.md`, the four orientation notebooks), Dorst 2024, the Discord thread (Hamish Todd: CGA wedges of points reflect by the twisted sandwich); decision recorded in ADR-051
+- [ ] gax-core: the markers `Extrinsic`, `Intrinsic`, the `Orientation` trait (product, flip, sign), `with_orientation`
+- [ ] gax-gen: an orientation parameter on every kind with the spec's default (`intrinsic` keyword); products, unary operations, casts, kind tables, sandwiches (the odd-versor sign), batch, GPU conversions, tracer; regenerate
+- [ ] The library migrated: `Motions` (`Forque` intrinsic), `reflect` without hand-written signs, moments, calculus, simplex, mesh, dec; tests, examples, warp, asteroids
+- [ ] Laws: every versor law factor `‖m‖²`, the dual commuting with reflections, the issues' examples, compile-fail refusals; guide §10 and the docs
+- [ ] The numga ports synced to upstream `7dff347`, with its four orientation examples ported
 
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.
