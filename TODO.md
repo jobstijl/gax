@@ -211,7 +211,9 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 
 - [ ] The core blanket impls of `Form` and `Pairing` accept non-scalar output kinds through the trait and use coefficient 0 only: a const assert, as `FormAsMap` has
 - [ ] A value's geometric `inverse()` has no `try_` twin (it needs its own test, `x ~x` against `‖x‖²`)
-- [ ] The example crates cleaned up after ADR-052 (audits of warp, numga, asteroids and colour: new helpers, duplicated helpers into the shared libs, iterator style, dead code)
+- [x] The example crates cleaned up after ADR-052 (audits of warp, numga, asteroids and colour: new helpers, duplicated helpers into the shared libs, iterator style, dead code)
+- [ ] numga structure left from the cleanup: the overlong `draw` functions (one function per panel) and the 74 `static OnceLock` data globals (a `run_with(anim, setup, draw)` in app.rs)
+- [ ] Library friction from the cleanups: `const` constructors (`Point::origin()`, `Plane::infinity()`, `Unit::identity()` cannot be `const` for a generic `T: Real`; consts for `f32`/`f64`?); a length/normalize trait shared by the PGA directions of every dimension (warp's `geom::Direction`); VGA3D `Rotor::rotation_in(plane, angle)` beside the axis form; an absolute `ApproxEq` (the examples' `near`); a `motor.orbit(start, n)` iterator of chords (warp's `geom::orbit`)
 
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.
