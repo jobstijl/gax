@@ -31,7 +31,7 @@ mod proj;
 use super::LineInstance;
 use super::font::Align;
 use super::scene::{self, Stroke, palette};
-use crate::geom::{ORIGIN, lerp, orbit};
+use crate::geom::{ORIGIN, lerp};
 use crate::light::{self, Light};
 use crate::sim::body::Pose;
 use crate::sim::rng::Rng;
@@ -544,7 +544,7 @@ impl<'a> Sight<'a> {
             let base = (c.whitened(0.55 * heat)).faded(heat);
             let spin = time * (2.4 - 0.6 * k as f32);
             let radial = about_axis(spin) >> dir(r * grow, 0.0, 0.0);
-            for (radial, next) in orbit(radial, N, step) {
+            for (radial, next) in step.orbit(radial, N) {
                 let a = q + (tilt >> radial);
                 let b = q + (tilt >> next);
                 let velocity = tilt >> (quarter >> radial);

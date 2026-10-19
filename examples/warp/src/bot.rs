@@ -2,11 +2,12 @@
 //! yet, the headless shots and the tests.
 
 use crate::game::{Run, TunnelRun};
-use crate::geom::{ORIGIN, clamp_length, with_length};
+use crate::geom::ORIGIN;
 use crate::input::Flight;
 use crate::signal::wave;
 use crate::sim::body::turned;
 use crate::{sim, tunnel};
+use gax::IdealNorm;
 use gax::pga2d::Point;
 
 /// The bot's input for the run at time `t`: the Plane's controls, and the Tunnel's.
@@ -30,18 +31,18 @@ pub fn plane(w: &sim::World, t: f32) -> sim::Input {
     let mut go = Point::direction_from_angle(t * 0.9) * 0.6;
     if let Some(q) = near {
         let to = q - p;
-        input.aim = with_length(to, 1.0);
+        input.aim = to.with_ideal_norm(1.0);
         input.fire = true;
         if to.ideal_norm() < 8.0 {
             // Away and around: the way back from it, turned a little.
-            go = with_length(turned(-to, -0.6), 1.0);
+            go = turned(-to, -0.6).with_ideal_norm(1.0);
         }
         let crowd = w.enemies.iter().filter(|e| e.body.pos().distance(p) < 3.0);
         input.bomb = crowd.count() >= 5;
     }
     // Stay off the walls: pulled back towards the middle.
     let home = (ORIGIN - p) * (0.6 / 32.0);
-    input.movement = clamp_length(go + home, 1.0);
+    input.movement = (go + home).clamp_ideal_norm(1.0);
     input
 }
 

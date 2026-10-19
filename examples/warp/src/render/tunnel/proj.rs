@@ -3,7 +3,7 @@
 
 use super::super::LineInstance;
 use super::super::scene;
-use crate::geom::{ORIGIN3, orbit};
+use crate::geom::ORIGIN3;
 use crate::light::Light;
 use crate::sim::body::Pose;
 use crate::tunnel::track::{Frame, Track};
@@ -283,7 +283,7 @@ impl Proj {
         width: f32,
     ) {
         let spin = Motor::rotation(q & dir(0.0, 0.0, 1.0), core::f32::consts::TAU / n as f32);
-        for (a, b) in orbit(q + dir(r, 0.0, 0.0), n, spin) {
+        for (a, b) in spin.orbit(q + dir(r, 0.0, 0.0), n) {
             self.cam_line(out, view.of(a), view.of(b), color, width, Fog::Objects);
         }
     }

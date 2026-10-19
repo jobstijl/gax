@@ -3,7 +3,8 @@
 
 use super::rng::Rng;
 use super::{ARENA, DT, Event, Kind, P, Phase, SAFE_RADIUS, World, at, dir};
-use crate::geom::{ORIGIN, orbit, with_length};
+use crate::geom::ORIGIN;
+use gax::IdealNorm;
 use gax::pga2d::Motor;
 
 /// A telegraphed spawn.
@@ -51,7 +52,7 @@ impl World {
         }
         let away = p - s;
         let u = if away.ideal_norm() > 1e-3 {
-            with_length(away, need)
+            away.with_ideal_norm(need)
         } else {
             dir(need, 0.0)
         };
@@ -227,7 +228,7 @@ impl Director {
             let n = 6 + (i * 10.0) as usize;
             let d = P::direction_from_angle(rng.angle()) * 13.0;
             let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / n as f32);
-            orbit(d, n, step)
+            step.orbit(d, n)
                 .map(|(d, _)| (Kind::Chaser, ship + d))
                 .collect()
         } else if roll < 0.75 {

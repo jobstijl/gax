@@ -4,7 +4,8 @@
 use super::body::{Body, pose_at, turned};
 use super::shots::Bullet;
 use super::{DT, Event, Input, P, Phase, World};
-use crate::geom::{ORIGIN, with_length};
+use crate::geom::ORIGIN;
+use gax::IdealNorm;
 
 /// The ship's top speed.
 pub const SHIP_SPEED: f32 = 11.5;
@@ -96,7 +97,7 @@ impl World {
     /// quarter turn of it.
     fn fire(&mut self, aim: P) {
         let ship = &mut self.ship;
-        let u = with_length(aim, 1.0);
+        let u = aim.with_ideal_norm(1.0);
         let side = if ship.barrel { 0.14 } else { -0.14 };
         let across = turned(u, core::f32::consts::FRAC_PI_2);
         let o = ship.body.pos();

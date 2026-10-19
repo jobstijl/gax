@@ -1,57 +1,19 @@
 //! Constructions written once for both games: the Plane in PGA2D and the Tunnel and the colour
 //! space in PGA3D. The kinds in between, and the result's, follow from gax's product tables.
 
-use gax::{Dot, Wedge, pga2d, pga3d};
+use gax::{Dot, IdealNorm, Wedge, pga2d, pga3d};
 
 /// The origin of the plane: the centre of every turn in the Plane and the HUD.
-pub const ORIGIN: pga2d::Point<(), f32> = pga2d::Point::new(0.0, 0.0, 1.0);
+pub const ORIGIN: pga2d::Point<(), f32> = pga2d::Point::ORIGIN;
 
 /// The origin of space: the Tunnel's straightened origin, a camera's eye in its own frame, and
 /// the centre of a model.
-pub const ORIGIN3: pga3d::Point<(), f32> = pga3d::Point::new(0.0, 0.0, 0.0, 1.0);
-
-/// A direction of either game (a point at infinity, PGA2D or PGA3D) and its length, the ideal
-/// norm.
-pub trait Direction: Copy + core::ops::Mul<f32, Output = Self> {
-    /// The squared length.
-    fn length_squared(self) -> f32;
-    /// The length.
-    fn length(self) -> f32;
-}
-
-impl Direction for pga2d::Point<(), f32> {
-    fn length_squared(self) -> f32 {
-        self.ideal_norm_squared()
-    }
-    fn length(self) -> f32 {
-        self.ideal_norm()
-    }
-}
-
-impl Direction for pga3d::Point<(), f32> {
-    fn length_squared(self) -> f32 {
-        self.ideal_norm_squared()
-    }
-    fn length(self) -> f32 {
-        self.ideal_norm()
-    }
-}
-
-/// `d` scaled to length `len` (a zero direction stays zero).
-pub fn with_length<D: Direction>(d: D, len: f32) -> D {
-    d * (len / d.length().max(1e-9))
-}
-
-/// `d` shortened to length `max` if it is longer.
-pub fn clamp_length<D: Direction>(d: D, max: f32) -> D {
-    let n = d.length();
-    if n > max { d * (max / n) } else { d }
-}
+pub const ORIGIN3: pga3d::Point<(), f32> = pga3d::Point::ORIGIN;
 
 /// An inverse-square pull along the offset `d` towards its source, of strength `k`, with a
 /// core softened by `soft`: `k d / (|d|² + soft)^{3/2}`.
-pub fn inverse_square<D: Direction>(d: D, k: f32, soft: f32) -> D {
-    d * (k / length_cubed(d.length_squared() + soft))
+pub fn inverse_square<D: IdealNorm<Coef = f32>>(d: D, k: f32, soft: f32) -> D {
+    d.gp(k / length_cubed(d.ideal_norm_squared() + soft))
 }
 
 /// `a` to `b` by `t` (points of weight 1, or directions), in either game.
@@ -63,20 +25,6 @@ where
         + core::ops::Mul<f32, Output = X>,
 {
     a + (b - a) * t
-}
-
-/// `n` steps of `step` from `start`, as the pairs `(x, step x)`: the chords of a circle, the
-/// arms of a reticle, a spiral's turns.
-pub fn orbit<M, X>(start: X, n: usize, step: M) -> impl Iterator<Item = (X, X)>
-where
-    M: Copy + core::ops::Shr<X, Output = X>,
-    X: Copy,
-{
-    let mut a = start;
-    (0..n).map(move |_| {
-        let b = step >> a;
-        (core::mem::replace(&mut a, b), b)
-    })
 }
 
 /// The foot of `x` on the flat `onto`, up to weight: the meet of `onto` with the flat through

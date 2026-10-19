@@ -8,7 +8,7 @@
 
 use super::font::{self, Align};
 use super::{CameraUniform, LineInstance};
-use crate::geom::{ORIGIN, lerp, orbit};
+use crate::geom::{ORIGIN, lerp};
 use crate::light::{Light, light};
 use crate::sim::body::{Pose, pose_at};
 use crate::sim::ship::SHIP_SPEED;
@@ -202,7 +202,10 @@ pub fn circle(
     m: Pose,
 ) {
     let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / n as f32);
-    out.extend(orbit(polar(r, phase), n, step).map(|(a, b)| seg(a, b, color, style, m)));
+    out.extend(
+        step.orbit(polar(r, phase), n)
+            .map(|(a, b)| seg(a, b, color, style, m)),
+    );
 }
 
 const DIAMOND: [Point<(), f32>; 4] = [at(1.0, 0.0), at(0.0, 1.0), at(-1.0, 0.0), at(0.0, -1.0)];
@@ -318,7 +321,7 @@ pub fn draw_enemy(
             let shield = Stroke::new(0.06, 0.4, 0.4);
             let n = 12;
             let step = Motor::rotation(ORIGIN, 2.6 / n as f32);
-            let arc = orbit(polar(1.05 * radius, -1.3), n, step);
+            let arc = step.orbit(polar(1.05 * radius, -1.3), n);
             out.extend(arc.map(|(a, b)| seg(a, b, c.faded(1.3), shield, m)));
             outline(out, &TAIL, radius, c, THIN, m);
         }
@@ -354,7 +357,7 @@ pub fn draw_enemy(
             let size = |s: usize| radius * (1.35 - 1.2 * f(s));
             for arm in 0..5 {
                 let a0 = arm as f32 * core::f32::consts::TAU / 5.0 + t * 2.2;
-                let turns = orbit(polar(1.0, a0), 8, turn).enumerate();
+                let turns = turn.orbit(polar(1.0, a0), 8).enumerate();
                 out.extend(turns.map(|(s, (a, b))| {
                     let (a, b) = (scaled(a, size(s)), scaled(b, size(s + 1)));
                     seg(a, b, c.faded(0.55 * (1.0 - 0.5 * f(s + 1))), THIN, m)

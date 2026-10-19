@@ -497,10 +497,11 @@ fn wrap(p: Point) -> Point {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gax::ApproxEq;
 
     /// Points (or directions) with the same coefficients, to rounding.
     fn close(a: Point, b: Point) -> bool {
-        a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-4)
+        a.abs_diff_eq(&b, 1e-4)
     }
 
     #[test]

@@ -6,7 +6,8 @@ use super::kind::{Kind, SERPENT_GAP, SERPENT_LEN};
 use super::shots::Wreck;
 use super::wells::{Well, pull};
 use super::{DT, Event, P, Phase, World, dir};
-use crate::geom::{ORIGIN, clamp_length, orbit, with_length};
+use crate::geom::ORIGIN;
+use gax::IdealNorm;
 use gax::pga2d::{Motor, intrinsic};
 
 /// An enemy.
@@ -170,7 +171,7 @@ impl World {
             // Three fragments, flung apart: a direction turned a third at a time.
             Kind::Splitter => {
                 let third = Motor::rotation(ORIGIN, core::f32::consts::TAU / 3.0);
-                for (d, _) in orbit(P::direction_from_angle(self.rng.angle()), 3, third) {
+                for (d, _) in third.orbit(P::direction_from_angle(self.rng.angle()), 3) {
                     let f = self.spawn(Kind::Fragment, pos + d * 0.5);
                     f.intent = d * 9.0;
                     f.age = 0.25;
@@ -179,7 +180,7 @@ impl World {
             // A carrier's cargo: a ring of motes.
             Kind::Carrier => {
                 let tenth = Motor::rotation(ORIGIN, core::f32::consts::TAU / 10.0);
-                for (d, _) in orbit(dir(1.0, 0.0), 10, tenth) {
+                for (d, _) in tenth.orbit(dir(1.0, 0.0), 10) {
                     self.spawn(Kind::Mote, pos + d * 1.5).intent = d * 7.0;
                 }
                 self.events.push(Event::Burst { pos });
@@ -265,7 +266,7 @@ impl Enemy {
                 let wave = crate::signal::wave;
                 let (t, phase) = (view.time, self.phase);
                 let noise = (wave(t * 0.7 + phase) + wave(t * 1.3 + phase * 1.7)) * 0.9;
-                self.intent = with_length(turned(self.intent, noise * DT), stats.speed);
+                self.intent = turned(self.intent, noise * DT).with_ideal_norm(stats.speed);
             }
             Kind::Chaser
             | Kind::Mote
@@ -288,7 +289,7 @@ impl Enemy {
             }
             Kind::Carrier => {
                 // Drift, and launch a pair of motes every few seconds.
-                self.intent = with_length(self.intent, stats.speed);
+                self.intent = self.intent.with_ideal_norm(stats.speed);
                 self.timer -= DT;
                 if self.timer <= 0.0 && view.hunting {
                     self.timer = 4.5;
@@ -297,7 +298,7 @@ impl Enemy {
             }
             Kind::Singularity => {
                 // Slow drift towards the ship, damped; it grows with what it ate.
-                let towards = with_length(view.ship - p, 0.25 * DT);
+                let towards = (view.ship - p).with_ideal_norm(0.25 * DT);
                 self.intent = (self.intent + towards) * (1.0 - 0.3 * DT);
                 self.radius = stats.radius + 0.36 * gax::Real::sqrt(self.mass);
                 self.hp = self.hp.min(stats.hp + 4.0 * self.mass);
@@ -330,7 +331,7 @@ impl Enemy {
         // Turn towards the target at a limited rate: part of the rotation between.
         let limit = stats.turn_rate * DT;
         let d = (have.angle_to(to) + wind).clamp(-limit, limit);
-        let way = with_length(turned(have, d), 1.0);
+        let way = turned(have, d).with_ideal_norm(1.0);
         self.intent = way * (stats.speed * self.ramp());
         self.body.spin = if matches!(self.kind, Kind::Evader | Kind::Serpent) {
             // Face the way it goes.
@@ -339,7 +340,7 @@ impl Enemy {
             stats.hunting_spin
         };
         if self.kind == Kind::Evader {
-            self.intent = clamp_length(self.intent + dodge(p, view.shots), 11.0);
+            self.intent = (self.intent + dodge(p, view.shots)).clamp_ideal_norm(11.0);
         }
     }
 
@@ -384,7 +385,7 @@ fn dodge(p: P, shots: &[Shot]) -> P {
         .map(|away| (away, away.ideal_norm()))
         .filter(|&(_, off)| off < 1.8)
         .fold(P::zero(), |dodge, (away, off)| {
-            dodge + with_length(away, (1.8 - off) * 9.0)
+            dodge + away.with_ideal_norm((1.8 - off) * 9.0)
         })
 }
 

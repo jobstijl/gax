@@ -16,9 +16,9 @@ pub type Point2 = pga2d::Point<(), f32>;
 pub type Point3 = pga3d::Point<(), f32>;
 
 /// The origin of the plane.
-pub const ORIGIN2: Point2 = Point2::new(0.0, 0.0, 1.0);
+pub const ORIGIN2: Point2 = Point2::ORIGIN;
 /// The origin of space.
-pub const ORIGIN3: Point3 = Point3::new(0.0, 0.0, 0.0, 1.0);
+pub const ORIGIN3: Point3 = Point3::ORIGIN;
 
 /// A map of the plane on points, as gax holds it: a slot map from points to points.
 pub type Map2 = pga2d::Point<(pga2d::Point,), f32>;

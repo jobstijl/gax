@@ -35,9 +35,9 @@ pub use entities::{Enemy, Event, Flight, Foe, Gate, GateState, Pending, Roll, Sh
 pub use space::{P, about_axis, across, arc, around, at, dir, foot, off_axis};
 pub use wells::{PINCH, PINCH_REACH2, Wells};
 
-use crate::geom::clamp_length;
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Ledger, Phase};
+use gax::IdealNorm;
 use lattice::{Lattice, Source};
 use track::Track;
 
@@ -248,7 +248,7 @@ impl World {
     fn fly(&mut self, input: &Input, alive: bool, wells: &Wells) {
         // A singularity pulls the ship across the tunnel (not along it), capped so that it can
         // always be flown out of; and where it pinches the wall, the ship must stay further in.
-        let pull = clamp_length(across(wells.pull(self.ship.pos, 30.0)), 7.0);
+        let pull = across(wells.pull(self.ship.pos, 30.0)).clamp_ideal_norm(7.0);
         let limit = self.ship_radius(self.ship.s() + self.ship.speed * DT);
         let ship = &mut self.ship;
         ship.prev = ship.pos;

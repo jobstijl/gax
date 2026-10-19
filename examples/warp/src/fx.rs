@@ -12,7 +12,7 @@
 //! the kicks' momenta cancel (the centroid is the area-weighted mean of the pieces'), and being
 //! radial they add no angular momentum, so the pieces carry the body's motion on.
 
-use crate::geom::{ORIGIN, orbit};
+use crate::geom::ORIGIN;
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
 use crate::render::{GridSteps, Particle, PostSettings, Shock, Source};
@@ -317,7 +317,7 @@ impl Fx {
                     let p = pos;
                     let c = light::light(0.55, 0.8, 1.0, 3.5 * (0.35 + 0.65 * self.flash_scale));
                     let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / 2400.0);
-                    for (dir, _) in orbit(Point::direction(1.0, 0.0), 2400, step) {
+                    for (dir, _) in step.orbit(Point::direction(1.0, 0.0), 2400) {
                         let v = dir * self.rng.range(28.0, 42.0);
                         let life = [0.0, self.rng.range(0.8, 1.3), 1.2, 0.03];
                         self.particle(p, v, c, life);

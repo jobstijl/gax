@@ -6,8 +6,8 @@ use super::lattice::RADIUS;
 use super::space::{P, arc, around, dir, foot, off_axis, radial};
 use super::wells::Wells;
 use super::{SHIP_RADIUS, World};
-use crate::geom::clamp_length;
 use crate::sim::{DT, Phase};
+use gax::IdealNorm;
 use gax::pga3d::Plane;
 
 /// A turret's bolts' speed along the track, relative to the ship.
@@ -41,7 +41,7 @@ impl View<'_> {
 
 /// Towards `place` from `from`, capped so that it glides in (on top of the motion it follows).
 fn glide(from: P, place: P, cap: f32) -> P {
-    clamp_length((place - from) * 2.5, cap)
+    ((place - from) * 2.5).clamp_ideal_norm(cap)
 }
 
 impl World {

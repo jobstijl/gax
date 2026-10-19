@@ -5,7 +5,6 @@ use super::entities::{Enemy, Event, Foe, Gate, GateState, Pending, Segment};
 use super::lattice::RADIUS;
 use super::space::{AXIS, P, about_axis, around, dir, radial};
 use super::{CRUISE, SHIP_RADIUS, SPAWN_AHEAD, World};
-use crate::geom::orbit;
 use crate::sim::DT;
 use gax::Unit;
 use gax::pga3d::{Motor, Twist};
@@ -150,7 +149,8 @@ impl World {
         let turn = side * r.range(0.5, 0.9 + 0.5 * i);
         let screw = about_axis(turn) * Motor::translation(dir(0.0, 0.0, GATE_GAP));
         let first = around(off, r.angle(), s0);
-        self.gates = orbit(first, GATES, screw)
+        self.gates = screw
+            .orbit(first, GATES)
             .map(|(pos, _)| Gate {
                 pos,
                 state: GateState::Open,
