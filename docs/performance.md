@@ -381,17 +381,19 @@ Measured in `f64` on this machine (one core), on a level-4 icosphere (2562 verti
 | operation | icosphere 4 | cube 8 |
 |---|---|---|
 | `Topology::new` (every face, orientations, the sorted index) | 3.4 ms | 5.0 ms |
-| `Geometry::new` (volumes and circumcentric duals) | 17.6 ms | 109 ms |
+| `Geometry::new` (volumes and circumcentric duals) | 13.8 ms | 29.5 ms |
 | `mass(1)` (the Whitney mass on edges) | | 32.5 ms |
 | `laplacian_form(0)` (the cotangent Laplacian) | 0.78 ms | |
 | one implicit heat step, `(M₀ + dt K) u = M₀ u` by CG | | 0.82 ms |
 | 16 Laplacian modes, `eigh` on `(⋆₀Δ₀, ⋆₀)` | 191 ms | |
 
 The construction and the operators are linear in the mesh. The geometry is the one that costs:
-about 35 µs per tetrahedron, from the dual volumes, which walk every flag of faces in each top
-simplex (41 visits per tetrahedron), each solving a small system for a face's circumcentre. The
-circumcentres repeat across flags and top simplices; caching them per face would roughly halve
-the cost. It is a one-time cost per mesh, so it is left as is for now. A top simplex is found by
+about 10 µs per tetrahedron, from the dual volumes, which walk every flag of faces in each top
+simplex (41 visits per tetrahedron). Each face's index and circumcentre are found once per top
+simplex, in buffers kept across them, and the squared distances between a flag's points are
+computed once per pair, without allocating; the results are bit for bit those of the plain walk
+(2026-10-19: 17.4 ms and 55.6 ms before, measured the same day; the table's earlier 109 ms was
+on a busier machine). A top simplex is found by
 its vertices through a sorted index (binary search): an early version scanned the top simplices,
 which made the geometry quadratic in their number.
 

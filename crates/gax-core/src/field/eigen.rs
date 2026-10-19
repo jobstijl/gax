@@ -150,12 +150,17 @@ where
                 // cluster, so that it dominates the inverted operator. The space is kept and
                 // its images are taken again with the new shift. Each new shift is at least
                 // twice as close to the cluster as the last, so a factorization is spent only
-                // when the estimates have moved enough. (The pairs are ordered by distance from
-                // zero, not by value; an indefinite pencil, with wanted values on both sides of
-                // zero, is never re-shifted.)
+                // when the estimates have moved enough. The estimates' error bound, the backward
+                // error times the pencil's scale at the value, counts in the spread: a first
+                // estimate from a small space can be far above the cluster (Spot's spin
+                // transformation's 8.3 for 0.0045), and a shift there would favour the values
+                // around it over the wanted ones. (The pairs are ordered by distance from zero,
+                // not by value; an indefinite pencil, with wanted values on both sides of zero,
+                // is never re-shifted.)
                 let low = pairs.iter().fold(pairs[0].0, |m, p| m.min(p.0));
                 let high = pairs.iter().fold(pairs[0].0, |m, p| m.max(p.0));
-                let spread = (high - low).max(T::epsilon() * high.abs());
+                let bound = progress.worst * (a_scale + low.abs() * m_scale);
+                let spread = (high - low).max(bound).max(T::epsilon() * high.abs());
                 let target = low - spread;
                 if reshifts < 16
                     && T::all_lt(T::zero(), target)
@@ -233,6 +238,8 @@ struct Progress<T> {
     loose: T,
     best: T,
     stalled: usize,
+    /// The worst backward error of the last check.
+    worst: T,
 }
 
 impl<T: Real> Progress<T> {
@@ -243,6 +250,7 @@ impl<T: Real> Progress<T> {
             loose: eps.sqrt(),
             best: T::from_f64(f64::MAX),
             stalled: 0,
+            worst: T::from_f64(f64::MAX),
         }
     }
 
@@ -258,6 +266,7 @@ impl<T: Real> Progress<T> {
                 break; // not even near: no need to look further
             }
         }
+        self.worst = worst;
         if !T::all_lt(self.strict, worst) {
             return true;
         }

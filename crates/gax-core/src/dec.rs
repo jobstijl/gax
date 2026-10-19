@@ -171,22 +171,20 @@ fn circumcentre<T: Real>(d: &[T], k: usize) -> Vec<T> {
 }
 
 /// The squared distances between points given in barycentric coordinates of one simplex,
-/// `|Σ wᵢ vᵢ|² = −½ Σ wᵢ wⱼ dᵢⱼ` for `w` the difference of two of them (`Σ w = 0`).
-fn barycentric_distances<T: Real>(points: &[Vec<T>], d: &[T]) -> Vec<T> {
-    let n = points[0].len();
+/// `|Σ wᵢ vᵢ|² = −½ Σ wᵢ wⱼ dᵢⱼ` for `w` the difference of two of them (`Σ w = 0`). Symmetric:
+/// each pair is computed once (`−w` gives the same products exactly).
+fn barycentric_distances<T: Real, const N: usize>(points: &[Vec<T>], d: &[T]) -> Vec<T> {
     let m = points.len();
     let half = T::from_ratio(1, 2);
     let mut out = std::vec![T::zero(); m * m];
     for p in 0..m {
-        for q in 0..m {
-            let w: Vec<T> = (0..n).map(|i| points[p][i] - points[q][i]).collect();
-            let mut s = T::zero();
-            for i in 0..n {
-                for j in 0..n {
-                    s = s + w[i] * w[j] * d[i * n + j];
-                }
-            }
+        for q in p..m {
+            let w: [T; N] = core::array::from_fn(|i| points[p][i] - points[q][i]);
+            let s = (0..N).fold(T::zero(), |s, i| {
+                (0..N).fold(s, |s, j| s + w[i] * w[j] * d[i * N + j])
+            });
             out[p * m + q] = -(half * s);
+            out[q * m + p] = out[p * m + q];
         }
     }
     out
@@ -228,6 +226,11 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         let mut dual_volumes: Vec<Vec<T>> = (0..N)
             .map(|k| std::vec![T::zero(); topology.len(k)])
             .collect();
+        let mut faces = Faces {
+            stamp: std::vec![0; 1 << N],
+            index: std::vec![0; 1 << N],
+            centre: std::vec![std::vec![T::zero(); N]; 1 << N],
+        };
         for (t, top) in topology.simplices(N - 1).enumerate() {
             let d = &distances[t];
             // Every flag from the top simplex down to each face: (local vertices, its
@@ -239,6 +242,8 @@ impl<T: Real, const N: usize> Geometry<T, N> {
                 top,
                 d,
                 flag: std::vec![centre.clone()],
+                faces: &mut faces,
+                stamp: t + 1,
                 duals: &mut dual_volumes,
             };
             flags.descend(&local, &centre, T::one());
@@ -651,13 +656,27 @@ fn subsets(n: usize, size: usize) -> Vec<Vec<usize>> {
 
 /// What the circumcentric dual volumes of one top simplex's faces are computed from, along its
 /// flags ([`Flags::descend`]): the topology, the top simplex's vertices and squared distances,
-/// the circumcentres from the top down to the current face, and the volumes being summed.
+/// the circumcentres from the top down to the current face, what is known of its faces (stamped
+/// with this top simplex), and the volumes being summed.
 struct Flags<'a, T, const N: usize> {
     topology: &'a Topology<N>,
     top: &'a [usize],
     d: &'a [T],
     flag: Vec<Vec<T>>,
+    faces: &'a mut Faces<T>,
+    stamp: usize,
     duals: &'a mut [Vec<T>],
+}
+
+/// The faces of one top simplex, by the set of their local vertices, each found once: a face
+/// lies on many flags (a vertex of a tetrahedron on six). An entry belongs to the top simplex
+/// whose stamp it carries, so the buffers serve every top simplex without being cleared.
+struct Faces<T> {
+    stamp: Vec<usize>,
+    /// The face's index among the simplices of its dimension.
+    index: Vec<usize>,
+    /// Its circumcentre, in the top simplex's barycentric coordinates.
+    centre: Vec<Vec<T>>,
 }
 
 impl<T: Real, const N: usize> Flags<'_, T, N> {
@@ -668,30 +687,16 @@ impl<T: Real, const N: usize> Flags<'_, T, N> {
     fn descend(&mut self, face: &[usize], centre: &[T], sign: T) {
         let d = self.d;
         let k = face.len() - 1;
-        let mut global: Vec<usize> = face.iter().map(|&l| self.top[l]).collect();
-        global.sort_unstable();
-        let index = self
-            .topology
-            .index_of(k, &global)
-            .expect("a face of the topology");
+        let index = self.face(face).0;
         let m = self.flag.len() - 1;
-        let piece = volume(&barycentric_distances(&self.flag, d), m);
+        let piece = volume(&barycentric_distances::<T, N>(&self.flag, d), m);
         self.duals[k][index] = self.duals[k][index] + sign * piece;
         if k == 0 {
             return;
         }
         for &opposite in face {
             let below: Vec<usize> = face.iter().copied().filter(|&l| l != opposite).collect();
-            // Its circumcentre, in its own barycentric coordinates, then in the top simplex's.
-            let sub: Vec<T> = below
-                .iter()
-                .flat_map(|&a| below.iter().map(move |&b| d[a * N + b]))
-                .collect();
-            let own = circumcentre(&sub, k - 1);
-            let mut c = std::vec![T::zero(); N];
-            for (&l, &x) in below.iter().zip(&own) {
-                c[l] = x;
-            }
+            let c = self.face(&below).1.to_vec();
             // The side: the sign of this face's centre's coordinate at the opposite vertex, as
             // seen from the parent's own barycentric coordinates (a point of the face's span,
             // in the top simplex's coordinates, has the face's coordinates at its vertices).
@@ -704,6 +709,33 @@ impl<T: Real, const N: usize> Flags<'_, T, N> {
             self.descend(&below, &c, sign * side);
             self.flag.pop();
         }
+    }
+
+    /// The face on the local vertices `face`: its index, and its circumcentre (in its own
+    /// barycentric coordinates, then in the top simplex's).
+    fn face(&mut self, face: &[usize]) -> (usize, &[T]) {
+        let key = face.iter().fold(0usize, |m, &l| m | 1 << l);
+        if self.faces.stamp[key] != self.stamp {
+            let mut global: Vec<usize> = face.iter().map(|&l| self.top[l]).collect();
+            global.sort_unstable();
+            self.faces.index[key] = self
+                .topology
+                .index_of(face.len() - 1, &global)
+                .expect("a face of the topology");
+            let d = self.d;
+            let sub: Vec<T> = face
+                .iter()
+                .flat_map(|&a| face.iter().map(move |&b| d[a * N + b]))
+                .collect();
+            let own = circumcentre(&sub, face.len() - 1);
+            let c = &mut self.faces.centre[key];
+            c.fill(T::zero());
+            for (&l, &x) in face.iter().zip(&own) {
+                c[l] = x;
+            }
+            self.faces.stamp[key] = self.stamp;
+        }
+        (self.faces.index[key], &self.faces.centre[key])
     }
 }
 

@@ -1591,6 +1591,13 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       come at least twice as close. Each move costs one factorization; the space is kept,
       since the pairs come from the pencil whatever shift built it. On the anchored 64 × 64
       grid of points this took 12 modes from 57 s to 1.9 s.
+    * The move waits for estimates it can trust: the estimates' error bound, the backward
+      error times the pencil's scale at the value, counts in the spread (2026-10-19). A first
+      estimate from a small space can be far above the cluster: Spot's spin transformation
+      (11720 unknowns) estimated 8.3 for a lowest value of 0.0045 from its first ten vectors,
+      moved there, and then grew its space to 240 vectors favouring the values around 8.3;
+      with the bound, it moves after the second check and stops at 40 to 50 (2.2 s to 0.9 s a
+      solve). The anchored grid and the icosphere's modes are unchanged, within the noise.
     * Single-vector Lanczos finds one vector per eigenspace, and a field map of isotropic
       cells repeats every value `K::N` times. The blocks have `2 K::N + 2` vectors, which also
       covers a doubling by a symmetry of the sites (a square grid); `eigh_block` takes
