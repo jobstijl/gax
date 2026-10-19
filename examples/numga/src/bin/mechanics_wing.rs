@@ -399,7 +399,7 @@ fn main() {
 mod tests {
     use super::wing::*;
     use core::f64::consts::TAU;
-    use gax::vga2d::Rotor;
+    use gax::vga2d::{Pseudoscalar, Rotor};
 
     /// The rings and angles numga's checks sample, and how far out the rings reach.
     const RINGS: usize = 140;
@@ -501,10 +501,15 @@ mod tests {
             .iter()
             .map(|ring| loop_integral(&ring_flow(&wing, ring, wing.trailing_edge())))
             .collect();
-        let circulation = Even::new(circulation(&wing, stream()).dual().s(), 0.0);
-        for l in &loops {
+        let swirl = circulation(&wing, stream()).cast::<Even>();
+        for (ring, l) in plane.iter().zip(&loops) {
             assert!(vanishes(&(*l - loops[0]).c, 1e-11), "{l:?}");
-            assert!(vanishes(&(*l - circulation).c, 1e-3), "{l:?}");
+            // Each ring's own oriented area sets the sense its sum is read in.
+            let area: Pseudoscalar = (ring.iter().zip(ring.iter().cycle().skip(1)))
+                .map(|(here, next)| *here ^ *next)
+                .sum();
+            let sense = area * area.norm().recip();
+            assert!(vanishes(&(*l * sense - swirl).c, 1e-3), "{l:?}");
         }
         pressure_is_the_lift(&wing);
     }

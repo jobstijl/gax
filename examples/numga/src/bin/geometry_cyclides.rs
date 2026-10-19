@@ -751,11 +751,11 @@ mod cyclides {
     pub fn flat_camera(position: [f64; 3], target: [f64; 3]) -> Motor {
         let (position, target) = (chart_point(position), chart_point(target));
         let forward = (target - position).normalized();
-        // `(forward ∧ z) xyz⁻¹`, the cross product with z (numga computes it with the
-        // trivector; this algebra declares no trivector kind).
-        let right = Vector::new(forward.c[1], -forward.c[0], 0.0, 0.0, 0.0).normalized();
+        // Up: z, less its part along forward.
+        let up = (forward | (forward ^ z())).normalized();
+        // -x onto forward, then z onto up.
         let aim = (one() - forward * x()).unit();
-        let roll = (one() + right * moved_sphere(aim, y())).unit();
+        let roll = (one() + up * moved_sphere(aim, z())).unit();
         (shift(position) * roll * aim).inverse()
     }
 

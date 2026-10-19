@@ -4,7 +4,7 @@
 
 use crate::kerr::{
     B, Hole, Map, PolarizedRay, RayState, Step, V, adjoint, field, frame, inverse_metric,
-    proper_unit, screen_identity, spatial, t, xyz,
+    proper_unit, screen_identity, spatial, t,
 };
 use gax::sta::Vector;
 
@@ -24,8 +24,11 @@ pub fn disk_coherency(
     let ray = state.ray;
     let local_momentum = frame(&field(ray.event, hole)).of(ray.momentum);
     let direction = spatial(local_momentum) * (t() | local_momentum).s().recip();
-    let magnetic = (ray.event | (normal | xyz())).normalized();
-    let electric = (direction ^ magnetic) | xyz();
+    // The magnetic direction circles the normal, square to the plane through the normal and
+    // the emitter. Emission is polarized perpendicular to it across the ray: in that plane,
+    // square to the ray.
+    let meridian = normal ^ spatial(ray.event);
+    let electric = (meridian | direction) * meridian.norm().recip();
     let polarization = adjoint(state.screen).of(electric);
     let polarized_fraction = -polarization_degree * polarization.norm_squared();
     screen_identity() * ((1.0 - polarized_fraction) / 2.0)

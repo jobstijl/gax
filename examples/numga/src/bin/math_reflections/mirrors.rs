@@ -8,7 +8,7 @@
 //! round), and a part along the plane's normal, the third basis vector. For the third to have
 //! unit length, the normal must square to plus one where the part in the plane is shorter than
 //! one, to zero where it has length one, and to minus one where it is longer: the sphere
-//! `x+y+z+` (VGA3D), the flat plane `x+y+w0`, the hyperbolic plane `x+y+t-`. On the flat plane
+//! `x+y+z+` (VGA3D), the flat plane `x+y+z0`, the hyperbolic plane `x+y+z-`. On the flat plane
 //! the normal adds no length, and its part sets the size of the tiles.
 //!
 //! A point is a bivector, the dual of a direction. Its side of a mirror is the sign of its
@@ -57,21 +57,21 @@ pub fn height(in_plane_squared: f64, curvature: i32) -> f64 {
 }
 
 gax::algebra! {
-    algebra flat_ga "numga's `x+y+w0`: the flat plane's algebra, the normal to `x` and `y` null.";
-    basis e1 = 1, e2 = 1, ew = 0;
+    algebra flat_ga "numga's `x+y+z0`: the flat plane's algebra, the normal to `x` and `y` null.";
+    basis e1 = 1, e2 = 1, e3 = 0;
     kind Scalar = [1];
-    versor Vector = [e1, e2, ew];
-    kind Bivector = [e12, e1w, e2w];
-    versor Rotor = [1, e12, e1w, e2w];
+    versor Vector = [e1, e2, e3];
+    kind Bivector = [e12, e13, e23];
+    versor Rotor = [1, e12, e13, e23];
 }
 
 gax::algebra! {
-    algebra hyperbolic_ga "numga's `x+y+t-`: the hyperbolic plane's algebra, the normal squaring to minus one.";
-    basis e1 = 1, e2 = 1, et = -1;
+    algebra hyperbolic_ga "numga's `x+y+z-`: the hyperbolic plane's algebra, the normal squaring to minus one.";
+    basis e1 = 1, e2 = 1, e3 = -1;
     kind Scalar = [1];
-    versor Vector = [e1, e2, et];
-    kind Bivector = [e12, e1t, e2t];
-    versor Rotor = [1, e12, e1t, e2t];
+    versor Vector = [e1, e2, e3];
+    kind Bivector = [e12, e13, e23];
+    versor Rotor = [1, e12, e13, e23];
 }
 
 /// The geometry of one algebra: its mirrors, its view of the disk, its motion along `x`, and
@@ -143,12 +143,12 @@ macro_rules! geometry {
 }
 
 geometry!(sphere, gax::vga3d, 1, "The sphere, `x+y+z+`: VGA3D.");
-geometry!(flat, super::flat_ga, 0, "The flat plane, `x+y+w0`.");
+geometry!(flat, super::flat_ga, 0, "The flat plane, `x+y+z0`.");
 geometry!(
     hyperbolic,
     super::hyperbolic_ga,
     -1,
-    "The hyperbolic plane, `x+y+t-`."
+    "The hyperbolic plane, `x+y+z-`."
 );
 
 #[cfg(test)]

@@ -21,6 +21,7 @@
 
 mod delaunay;
 mod disks;
+mod obj;
 
 use core::ops::{Add, Mul, Sub};
 use gax::dec::Geometry;

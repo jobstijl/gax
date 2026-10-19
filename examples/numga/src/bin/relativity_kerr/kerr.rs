@@ -3,7 +3,7 @@
 //! them, and the camera's rays.
 
 use core::ops::{Add, Mul};
-use gax::sta::{Bivector, Even, Scalar, Trivector, Vector};
+use gax::sta::{Bivector, Even, Scalar, Vector};
 
 pub type V = Vector;
 pub type B = Bivector;
@@ -37,12 +37,6 @@ pub fn z() -> V {
 /// The equatorial plane `x ∧ y`: the spin's and the disk's orbits'.
 pub fn xy() -> B {
     x() ^ y()
-}
-
-/// The spatial pseudoscalar `x ∧ y ∧ z`: a spatial bivector's product with it is the vector
-/// along its axis, and back.
-pub fn xyz() -> Trivector {
-    x() ^ y() ^ z()
 }
 
 /// The part of a vector across the time axis, `t ⌋ (t ∧ v)`.
@@ -116,13 +110,13 @@ pub struct Field {
 }
 
 /// The oblate radius `r` from the squared distance from the centre, the squared spin and
-/// the position's projection on the spin axis: the positive root of
-/// `r⁴ − (|x|² − a²) r² − (a · x)² = 0`. Returns it with the square root of the
+/// the squared volume the position spans with the spin plane, `(a · x)²`: the positive root
+/// of `r⁴ − (|x|² − a²) r² − (a · x)² = 0`. Returns it with the square root of the
 /// quadratic's discriminant.
 #[allow(clippy::disallowed_methods)] // a quadratic's root: the Kerr–Schild radius
-fn oblate_radius(distance_squared: f64, spin_squared: f64, projection: f64) -> (f64, f64) {
+fn oblate_radius(distance_squared: f64, spin_squared: f64, volume_squared: f64) -> (f64, f64) {
     let offset = distance_squared - spin_squared;
-    let discriminant = (offset * offset + 4.0 * projection * projection).sqrt();
+    let discriminant = (offset * offset + 4.0 * volume_squared).sqrt();
     (((offset + discriminant) / 2.0).sqrt(), discriminant)
 }
 
@@ -130,29 +124,32 @@ fn oblate_radius(distance_squared: f64, spin_squared: f64, projection: f64) -> (
 pub fn field(position: V, hole: Hole) -> Field {
     let Hole { spin, mass } = hole;
     let spatial = spatial(position);
-    let normal = spin | xyz();
-    let projection = (normal | spatial).s();
+    // The volume the position spans with the spin plane: the spin times the position's height
+    // off its plane. Its contraction with the spin is that height along the spin's axis, times
+    // the spin squared; the spin enters twice, so its sense of turning drops out.
+    let volume = spatial ^ spin;
+    let height = volume | spin;
+    let volume_squared = volume.dot(volume).s();
     let spin_squared = spin.norm_squared();
     // A vector's norm squared is its square, minus its length squared for a spatial one.
-    let (radius, discriminant) = oblate_radius(-spatial.norm_squared(), spin_squared, projection);
+    let (radius, discriminant) =
+        oblate_radius(-spatial.norm_squared(), spin_squared, volume_squared);
     let radius_squared = radius * radius;
     let scale = (radius_squared + spin_squared).recip();
     // Its inner product with a small step is how far the step changes the oblate radius.
-    let radius_gradient =
-        (spatial * radius_squared - normal * projection) * (-1.0 / (radius * discriminant));
-    let direction = (spatial * radius + (spatial | spin) - normal * (projection / radius)) * scale;
-    let lever = spatial - direction * (2.0 * radius) + normal * (projection / radius_squared);
+    let radius_gradient = (spatial * radius_squared - height) * (-1.0 / (radius * discriminant));
+    let direction = (spatial * radius + (spatial | spin) - height * radius.recip()) * scale;
+    let lever = spatial - direction * (2.0 * radius) + height * radius_squared.recip();
     let step = Vector::slot();
     let direction_gradient: Map = (lever * (radius_gradient | step)
         + spatial_identity() * radius
         + (spatial_identity() | spin)
-        - normal * (normal | step) * radius.recip())
+        - ((spatial_identity() ^ spin) | spin) * radius.recip())
         * scale;
-    let denominator = radius_squared * radius_squared + projection * projection;
+    let denominator = radius_squared * radius_squared + volume_squared;
     let profile = mass * radius.powi(3) / denominator;
     let profile_gradient = (radius_gradient * (3.0 / radius)
-        - (radius_gradient * (4.0 * radius.powi(3)) + normal * (2.0 * projection))
-            * denominator.recip())
+        - (radius_gradient * (4.0 * radius.powi(3)) + height * 2.0) * denominator.recip())
         * profile;
     // The derivative's curl, `Σ eⁱ ∧ D(eᵢ)`, piece by piece: the rank-one piece gives its
     // two vectors wedged, the turn by the spin twice the spin, the rest none.
@@ -406,7 +403,9 @@ pub fn camera_screen(ray: Ray, orientation: Rotor, hole: Hole) -> ScreenFrame {
     let direction = spatial(local_momentum) * -(t() | local_momentum).s().recip();
     let right = orientation >> y();
     let right = (right + direction * (direction | right).s()).normalized();
-    let up = (direction ^ right) | xyz();
+    // Up is the camera's own, local `-x`, less its parts in the plane of the ray and right.
+    let beside = direction ^ right;
+    let up = (((orientation >> -x()) ^ beside) | beside.inverse()).normalized();
     -(right * (x() | Vector::slot())) - up * (y() | Vector::slot())
 }
 

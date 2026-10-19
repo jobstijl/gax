@@ -17,11 +17,16 @@
 //! solve with the cotangent Laplacian.
 //!
 //! The animation shows a sphere given a change in mean curvature that grows along `y`, and the
-//! surface it becomes, checkered by where each face sat on the sphere; a cube rounded by
+//! surface it becomes, checkered by where each face sat on the sphere; Spot the cow rounded by
 //! conformal curvature flow, iterated spin transformations that shave off each face's departure
-//! from the mean curvature; and Dirac spheres: with `ρ` constant, the fields of zero energy are
+//! from the mean curvature, drawing in her legs, horns and ears until she is a sphere, every
+//! square of the checkerboard laid on her staying square; and Dirac spheres: with `ρ` constant, the fields of zero energy are
 //! the Dirac operator's eigenfields, and the surfaces they spin the sphere into keep its angles
 //! (eigenvalues the integers but `-1`). The outside of each surface is orange, its inside blue.
+//!
+//! Spot is Keenan Crane's, from his model repository (CC0,
+//! <https://www.cs.cmu.edu/~kmcrane/Projects/ModelRepository/>), as numga's shared models have
+//! her: `models/spot.obj`, built into the binary.
 
 use gax_numga_examples::shared::surfaces_sphere;
 use gax_numga_examples::shared::surfaces_spin;
@@ -36,9 +41,9 @@ use surfaces_spin::{Hit, checker_light, render};
 
 mod spin {
     pub use super::surfaces_sphere::icosphere;
-    pub use super::surfaces_spin::cube;
+    use core::f64::consts::FRAC_PI_4;
     use gax::field::{Field, SparseMap};
-    use gax::vga3d::{Odd, Pseudoscalar, Rotor};
+    use gax::vga3d::{Bivector, Odd, Pseudoscalar, Rotor};
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 
     /// A quaternion: an even multivector, a turn and a scale.
@@ -49,6 +54,19 @@ mod spin {
     /// The unit volume `e123`, the oriented volume no motion changes: an oriented volume read
     /// against it is its signed size.
     pub const UNIT_VOLUME: Pseudoscalar = Pseudoscalar::new(1.0);
+
+    /// Spot the cow, as numga's shared models have her.
+    const SPOT: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/spot.obj"));
+
+    /// Spot the cow, upright with `z` up and facing along `x`, centred and scaled to reach one
+    /// at her furthest: her `y` axis, up in the file, turned onto `z` by a quarter turn in the
+    /// plane `yz`, and then `x` onto `y` by one in `xy`.
+    pub fn spot() -> Mesh {
+        let mesh = Mesh::from_obj(SPOT, 2.0);
+        let quarter = |plane: Bivector| (plane * -FRAC_PI_4).exp();
+        let upright = quarter(Bivector::new(0.0, 0.0, 1.0)) * quarter(Bivector::new(1.0, 0.0, 0.0));
+        mesh.with_vertices(mesh.vertices.map(|v| upright >> v))
+    }
 
     /// The Dirac operator less `ρ` (a number on each face), `[F, V]` with odd cells: each face
     /// takes each corner by the edge it faces over minus twice its area, less `ρ` times the
@@ -151,8 +169,7 @@ mod spin {
     /// Conformal curvature flow by iterated spin transformations: the mesh before each step and
     /// after the last. Each step asks for `ρ = -rate (H - H̄)`, a change in mean curvature that
     /// shaves off each face's departure from the area-weighted mean, so the surface relaxes
-    /// towards constant mean curvature while every step keeps the angles. A cube's corners stay
-    /// cone points: a conformal map keeps the angle deficit there.
+    /// towards constant mean curvature while every step keeps the angles.
     pub fn conformal_smooth(mesh: &Mesh, iterations: usize, rate: f64) -> Vec<Mesh> {
         let mut frames = vec![recenter(mesh)];
         for _ in 0..iterations {
@@ -176,10 +193,9 @@ mod scenes {
     /// changes along y.
     pub const LEVELS: usize = 3;
     pub const DIPOLE: f64 = 0.5;
-    /// The cube's squares per side edge, the share of each face's curvature departure each flow
-    /// step removes, and the number of steps.
-    pub const DIVISIONS: usize = 8;
-    pub const RATE: f64 = 0.25;
+    /// The share of each face's curvature departure each step of Spot's flow removes, and the
+    /// number of steps.
+    pub const RATE: f64 = 0.1;
     pub const STEPS: usize = 30;
     /// The finer sphere the Dirac spheres are spun from (one split coarser than numga's, to
     /// start in seconds; the checks use numga's), the eigenvalues shown, and the states shown of
@@ -213,9 +229,9 @@ mod scenes {
         }
     }
 
-    /// A cube under conformal curvature flow: the mesh at every step.
+    /// Spot the cow under conformal curvature flow: the mesh at every step.
     pub fn rounding() -> Vec<Mesh> {
-        conformal_smooth(&cube(DIVISIONS), STEPS, RATE)
+        conformal_smooth(&spot(), STEPS, RATE)
     }
 
     /// The Dirac spheres of one eigenvalue, with the energies of their fields.
@@ -344,7 +360,10 @@ fn draw(c: &mut Canvas, s: &Scenes, t: f32) {
     // The flow, played over most of the loop and held at its end.
     let steps = s.rounding.len() - 1;
     let step = ((phase / FLOW_SHARE).min(1.0) * steps as f32).round() as usize;
-    let (rect, label) = (upper.column(2, 3), format!("CONFORMAL FLOW, STEP {step}"));
+    let (rect, label) = (
+        upper.column(2, 3),
+        format!("SPOT, CONFORMAL FLOW STEP {step}"),
+    );
     checkered(c, rect, &s.rounding[step], &s.rounding[0], azimuth, &label);
 
     // A Dirac sphere of each eigenvalue, the states in turn.
@@ -480,18 +499,52 @@ mod tests {
         assert!(correlated_over(&values(&risen), &values(&rho), 0.5));
     }
 
-    /// numga's `rounding` checks.
+    /// The spread of the vertices' distances from the surface's centre, its area-weighted
+    /// centroid, over their mean: nothing on a sphere, however its vertices crowd.
+    #[allow(clippy::disallowed_methods)] // a statistic, the standard deviation
+    fn roundness(mesh: &Mesh) -> f64 {
+        let (centres, areas) = (mesh.face_centers(), mesh.triangle_areas());
+        let weighted = centres.zip_with(&areas, |c, a| c * a).sum();
+        let middle = weighted * (1.0 / areas.sum().s());
+        let distances: Vec<f64> = mesh.vertices.iter().map(|v| (v - middle).norm()).collect();
+        variance(&distances).sqrt() / mean(&distances)
+    }
+
+    /// Spot as numga reads her: her size, and her first vertex, upright, centred and scaled
+    /// (numga 7dff347).
     #[test]
-    fn conformal_flow_rounds_the_cube_and_keeps_its_angles() {
+    fn spot_is_read_as_numga_reads_her() {
+        let spot = spot();
+        assert_eq!((spot.vertices.len(), spot.faces.len()), (2930, 5856));
+        let first = Vector3::new(-0.31815259, 0.4060739, -0.51623223);
+        assert!((spot.vertices.site(0) - first).norm() < 1e-8);
+    }
+
+    /// numga's `rounding` checks, and its numbers (numga 7dff347): the surface rounds, the
+    /// spread of the vertices' distances from its centre falling tenfold, and the angles hold
+    /// up to the mesh's resolution, in the median.
+    #[test]
+    fn conformal_flow_rounds_spot_and_keeps_her_angles() {
         let frames = rounding();
         assert_eq!(frames.len(), STEPS + 1);
-        // The spread of the vertices' distances from the centre falls fivefold.
-        let radii = |mesh: &Mesh| mesh.vertices.iter().map(|v| v.norm()).collect::<Vec<_>>();
         let (first, last) = (&frames[0], &frames[STEPS]);
-        assert!(variance(&radii(last)) < 0.2f64.powi(2) * variance(&radii(first)));
-        // The angles hold up to the mesh's resolution: in the median, against a cosine change
-        // of up to 0.12 at the creases in the first step.
+        assert!(roundness(last) < 0.1 * roundness(first));
         assert!(median(&cosine_changes(first, last)) < 0.05);
+        let numga = [
+            (0, 0.3095647685450167, 0.0),
+            (1, 0.2864012228918342, 0.002155483252500416),
+            (10, 0.11019845029444196, 0.013093452113141314),
+            (30, 0.022443147020477575, 0.017884460501218002),
+        ];
+        for (step, round, change) in numga {
+            let found = roundness(&frames[step]);
+            assert!(
+                (found - round).abs() < 1e-6 * round,
+                "{step}: {found} {round}"
+            );
+            let median = median(&cosine_changes(first, &frames[step]));
+            assert!((median - change).abs() < 1e-6, "{step}: {median} {change}");
+        }
     }
 
     /// numga's `dirac` checks.

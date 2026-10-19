@@ -197,7 +197,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Laws: every versor law factor `‖m‖²` (derived with the oriented sandwich), the Hodge dual commuting with reflections, the issues' examples, compile-fail refusals (twist + momentum, `exp` of a join, a join into a twist slot); guide §5 and §10, laws.md, ADR-051 implemented
 - [x] The numga ports migrated to orientations (105 bins; reflections re-checked against upstream `7dff347`)
 - [x] Ergonomics found in the migration: a short spelling for a slot kind of the other orientation (`Line<(intrinsic::Line,)>`, ADR-052 batch 1); orientation arithmetic that reduces for generic `O` (batch 1); an intrinsic line-direction helper (`Line::direction`), a PGA2D extrinsic line through a point along a direction (`Line::through`), a VGA3D rotation about an axis of either orientation (`Rotor::rotation`; batch 3)
-- [ ] The numga ports synced to upstream `7dff347` (its newer content), with its four orientation examples ported (normals, mechanical work, mirror energy, conformal circle)
+- [x] The numga ports synced to upstream `7dff347` (its newer content), with its four orientation examples ported (normals, mechanical work, mirror energy, conformal circle)
 
 ## Phase 12: API consolidation (ADR-052)
 - [x] Internal cleanups: the generator (output byte-identical: shared emission helpers, split modules, data structures) and gax-core (one SVD, the study series over `Channel`, shared sparse and DEC kernels, iterator style)
@@ -215,6 +215,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] numga structure left from the cleanup: the overlong `draw` functions (one function per panel) and the 74 `static OnceLock` data globals (a `run_with(anim, setup, draw)` in app.rs)
 - [x] Library friction from the cleanups (ADR-052): `ConstCoef` and the consts `Point::ORIGIN`, `Plane::INFINITY`, PGA2D `Line::INFINITY` (no const versor identity: `Unit::new_unchecked(Motor::new(..))` is const); `IdealNorm` for the PGA directions of both dimensions (`with_ideal_norm`, `clamp_ideal_norm`); VGA3D `Rotor::rotation_in(plane, angle)`; `ApproxEq::abs_diff_eq`; `Unit::orbit(start, n)`
 - [ ] The examples moved onto them (warp's `geom::{ORIGIN, Direction, orbit}`, the `near` helpers of numga, asteroids, colour)
+
+- [ ] Friction from the numga sync: a non-unit CGA3D `Even >> Quadvector` returns a whole `Even` (the plain sandwich of a non-unit versor leaves the kind); CGA points need `hodge()`, not the metric-free `dual()` (it pairs `eo` with `eo`): say so where the guide introduces CGA points; `let f: Forque = x.cast()` cannot infer (cast re-orients to the source); PGA2D pairings cannot be solved against a PGA3D scalar
 
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.

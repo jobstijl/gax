@@ -774,9 +774,10 @@ mod tests {
         let last = f.left.len() - azimuths + azimuths / 3;
         let forward = gax_numga_examples::measure::linking(&f.left[0], &f.left[last]);
         let backward = gax_numga_examples::measure::linking(&f.right[0], &f.right[last]);
-        assert!((forward.abs() - 1.0).abs() < 1e-2, "{forward}");
-        assert!((backward.abs() - 1.0).abs() < 1e-2, "{backward}");
-        assert!(forward.signum() == -backward.signum());
+        // The linking numbers as volumes over the unit volume `xyz`: numga's `xyz` along and
+        // `-xyz` against, the mirror images linking the other way.
+        assert!((forward - 1.0).abs() < 1e-2, "{forward}");
+        assert!((backward + 1.0).abs() < 1e-2, "{backward}");
     }
 
     #[test]

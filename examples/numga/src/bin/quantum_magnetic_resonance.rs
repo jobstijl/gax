@@ -7,7 +7,9 @@
 //! Hamiltonian is half the detuning along z plus half the drive along x, and the state turns by
 //! `-2 I` times its commutator with it. Relaxation enters through processes `L`, each adding
 //! `L rho ~L - {~L L, rho} / 2`: `x (1 - z) / 2` turns spins against the field over onto it at the
-//! rate `1 / T1`, and `z` scrambles the phase. Where the generator vanishes the state is steady,
+//! rate `1 / T1`, and the half turn in the plane `xy` scrambles the phase: an even element, so its
+//! sandwich is a turn (the vector `z` would do the same up to the central pseudoscalar, a phase
+//! that cancels from the sandwich). Where the generator vanishes the state is steady,
 //! a linear solve with the scalar part pinned. A short step of evolution is the exponential of
 //! the generator to fourth order, a sum of powers of a map; composed with itself it spans twice
 //! the time, and composed with the pulses (sandwiches, maps too) a whole pulse sequence is one map.
@@ -99,12 +101,13 @@ mod resonance {
     }
 
     /// The rate of change of a state in the frame that turns with the drive: turning about the axis
-    /// `drive x + detuning z` at its length, relaxing toward +z at `1 / t1`, and dephasing along z
-    /// at `1 / t2 - 1 / (2 t1)`, so that the transverse part decays at `1 / t2`.
+    /// `drive x + detuning z` at its length, relaxing toward +z at `1 / t1`, and dephasing by the
+    /// half turn in xy at `1 / t2 - 1 / (2 t1)`, so that the transverse part decays at `1 / t2`.
     pub fn generator(detuning: f64, drive: f64, t1: f64, t2: f64) -> Rates {
         let hamiltonian = (z() * detuning + x() * drive) * 0.5;
         let turning = (i() * hamiltonian.commutator(open())).cast::<Paravector>() * -2.0;
-        let dephasing = z().cast::<Multivector>();
+        // The half turn in the plane xy: z up to the pseudoscalar, which cancels from the sandwich.
+        let dephasing = (x() ^ Vector::new(0.0, 1.0, 0.0)).cast::<Multivector>();
         let relaxing = relaxation(raise()) * (1.0 / t1)
             + relaxation(dephasing) * (0.5 * (1.0 / t2 - 1.0 / (2.0 * t1)));
         turning + relaxing

@@ -7,7 +7,8 @@
 //! lifted to unit height, the bivector of two corners over the trivector of all three. Across an
 //! interior edge the terrain creases, and the crease is a bar of the planar truss: the jump in
 //! slope over the edge's length is its stress, positive in tension where the terrain is convex
-//! (the trivector of the bar, the jump and `e3`, in units of the unit volume). The slopes of the
+//! (the jump measured towards the corner across the edge, so that which face is called left
+//! does not matter). The slopes of the
 //! faces are the vertices of the reciprocal diagram, and the jump across each edge is its
 //! reciprocal edge, perpendicular to the bar and as long as the bar's force. Every interior
 //! vertex is in equilibrium; the boundary carries the loads. Lifted onto the paraboloid, the
@@ -27,7 +28,6 @@ use gax_numga_examples::{
 
 mod reciprocal {
     use gax::field::{Field, SparseMap};
-    use gax::vga3d::Pseudoscalar;
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 
     /// Up: a point of the plane lifted to unit height is the point plus `e3`.
@@ -82,16 +82,22 @@ mod reciprocal {
         slopes(mesh, heights).map(|p| (p ^ UP) | UP)
     }
 
-    /// The stress of each interior edge: the jump in slope from the face on its left to the face
-    /// on its right, over the edge's length, positive in tension, where the terrain bends convex.
+    /// The stress of each interior edge: the jump in slope between the faces on either side,
+    /// measured towards the corner across the edge, over the edge's length, positive in tension,
+    /// where the terrain bends convex. Which face is called left does not matter: swapping them
+    /// turns both the jump and the side the corner lies on.
     pub fn stresses(mesh: &Mesh, heights: &Field<Scalar3>) -> Field<Scalar3> {
         let Beside { inner, left, right } = beside(mesh);
         let (planes, bars) = (slopes(mesh, heights), mesh.edge_vectors());
-        let unit_volume = Pseudoscalar::new(1.0).reverse();
         let stress = |i: usize| {
             let jump = planes.site(left[i]) - planes.site(right[i]);
-            let bar = bars.site(inner[i]);
-            (bar ^ jump ^ UP) * unit_volume * (1.0 / bar.norm_squared())
+            let (edge, bar) = (mesh.edges[inner[i]], bars.site(inner[i]));
+            // The corner across the edge in the face on its right, as its offset square to the
+            // bar.
+            let far = mesh.faces[right[i]].iter().sum::<usize>() - edge[0] - edge[1];
+            let corner = mesh.vertices.site(far) - mesh.vertices.site(edge[0]);
+            let across = (corner ^ bar) | bar.inverse();
+            -(jump | across) * (across.norm() * bar.norm()).recip()
         };
         (0..inner.len()).map(stress).collect()
     }
@@ -314,7 +320,7 @@ fn draw(c: &mut Canvas, scene: &Breathing, t: f32) {
     caption(
         c,
         "RECIPROCAL DIAGRAMS: A LIFTED MESH AND THE STRESSES OF ITS CREASES",
-        "FACE SLOPES FROM THE RECIPROCAL FRAME OF LIFTED CORNERS; STRESS: THE TRIVECTOR OF BAR, JUMP AND E3 (VGA3D)",
+        "FACE SLOPES FROM THE RECIPROCAL FRAME OF LIFTED CORNERS; STRESS: THE JUMP IN SLOPE TOWARDS THE FAR CORNER (VGA3D)",
     );
 }
 

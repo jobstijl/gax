@@ -50,7 +50,7 @@ const ACTS: [Scene; 4] = [
     ),
     (
         "REFLECTIONS: SPHERE, PLANE, HYPERBOLIC PLANE",
-        "THE ANGLE SUM PICKS THE SIGNATURE: X+Y+Z+, X+Y+W0, X+Y+T-",
+        "THE ANGLE SUM PICKS THE SIGNATURE: X+Y+Z+, X+Y+Z0, X+Y+Z-",
     ),
 ];
 

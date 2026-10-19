@@ -5,8 +5,8 @@
 //! cubie's face on the cube's surface. Each sticker is a point, its cubie's centre plus half its
 //! face, in units of half a cubie, `2 cubie + face`, so every coordinate is an integer, and so
 //! are its corners. A face's layer is the stickers whose point reaches past 1 along the face.
-//! A quarter turn is the rotor `1 + plane`, the face's plane (the face times the pseudoscalar),
-//! as a map on vectors (`(1 + plane) >> Vector::slot()`), halved: the sandwich with an
+//! A quarter turn is the rotor `1 + plane`, the plane of the face, the wedge of its two edge
+//! directions, as a map on vectors (`(1 + plane) >> Vector::slot()`), halved: the sandwich with an
 //! unnormalized rotor scales by its squared norm, two, so the halved map turns by exactly a
 //! quarter, clockwise seen from outside, with coefficients 0 and ±1; `1 - plane` turns back. A
 //! turned point keeps integer coordinates, and the cube is solved when every sticker is back at
@@ -28,7 +28,7 @@ use gax_numga_examples::{
 };
 
 mod cube {
-    use gax::vga3d::{Bivector, Pseudoscalar, Rotor, Vector};
+    use gax::vga3d::{Bivector, Rotor, Vector};
     use std::collections::{HashMap, HashSet};
 
     /// A map on vectors.
@@ -70,9 +70,11 @@ mod cube {
             face(self.side, self.axis)
         }
 
-        /// The face's plane, clockwise seen from outside: the face times the pseudoscalar.
+        /// The face's plane: the wedge of its two edge directions, in the order that turns it
+        /// clockwise seen from outside (for `+x`, `y ^ z`), the opposite face wound the other way.
         pub fn plane(self) -> Bivector {
-            self.face() * Pseudoscalar::new(1.0)
+            let edge = |k: usize| face(0, (self.axis + k) % 3);
+            (edge(1) ^ edge(2)).gp([1.0, -1.0][self.side])
         }
 
         /// The sign of the turn: plus one clockwise, minus one back.
