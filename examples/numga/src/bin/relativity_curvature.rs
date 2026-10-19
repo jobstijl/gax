@@ -88,7 +88,7 @@ mod curvature {
     pub fn boosted_observers(rapidities: &[f64], direction: Vector) -> Vec<Vector> {
         rapidities
             .iter()
-            .map(|r| ((direction ^ t()) * (r / 2.0)).exp() >> t())
+            .map(|r| gax::sta::Even::boost(direction, *r) >> t())
             .collect()
     }
 

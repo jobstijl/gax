@@ -121,7 +121,7 @@ mod maxwell {
 
     /// The boost by rapidity `zeta` along `axis` (a unit spatial vector), `exp(axis t ζ / 2)`.
     pub fn boost(zeta: f64, axis: Vector) -> Boost {
-        ((axis ^ t()) * (0.5 * zeta)).exp()
+        Even::boost(axis, zeta)
     }
 
     /// The map seen after boosting everything: `R T(~R v R) ~R`.

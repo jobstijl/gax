@@ -160,7 +160,7 @@ mod constitutive {
 
     /// The boost to speed `beta` along a unit spatial `direction`.
     pub fn boost_rotor(beta: f64, direction: Vector) -> Rotor {
-        ((direction ^ t()) * (beta.atanh() / 2.0)).exp()
+        gax::sta::Even::boost(direction, beta.atanh())
     }
 
     /// A medium at rest, set moving: conjugated by the boost.
