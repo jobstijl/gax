@@ -11329,20 +11329,3 @@ impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Trivector<(), f64
 }
 
 impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Trivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<3> for Trivector<(), f64, O> {
-    type Out = Trivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Quadvector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Quadvector<(), f64, O>> for Quadvector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Quadvector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 11, false), (1, 12, false), (2, 13, false), (3, 14, false), (4, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Quadvector<(), f64, O> {}
