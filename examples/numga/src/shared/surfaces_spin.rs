@@ -4,10 +4,10 @@
 //! so that colours and normals are interpolated across the faces and each side of a face can have
 //! its own colour.
 
+use crate::mesh::{Mesh, Vector3};
+use crate::{Camera, Canvas, Light, Point2, Rect, palette, reach3};
 use gax::field::Field;
 use gax::{Extensor, vga3d};
-use gax_numga_examples::mesh::{Mesh, Vector3};
-use gax_numga_examples::{Camera, Canvas, Light, Point2, Rect, palette, reach3};
 use std::collections::BTreeSet;
 
 /// The surface of the cube `[-1, 1]³`, each side a grid of `divisions` by `divisions` squares, two
@@ -79,9 +79,9 @@ const DARK_SQUARE: f32 = 0.25;
 /// A checkerboard's square: orange on a surface's outside and blue on its inside, light or dark.
 pub fn checker_light(dark: bool, outside: bool) -> Light {
     let side = if outside {
-        palette::orange()
+        palette::ORANGE
     } else {
-        palette::sky()
+        palette::SKY
     };
     side.faded(if dark { DARK_SQUARE } else { LIGHT_SQUARE })
 }
@@ -223,7 +223,7 @@ pub fn render(
         let normal = hit.at(mesh, &normals) * side;
         let to_eye = eye - hit.at(mesh, &mesh.vertices);
         let facing = ((normal | to_eye).s() / (normal.norm() * to_eye.norm())).max(0.0) as f32;
-        let glint = gax_numga_examples::light(1.0, 1.0, 1.0, GLINT * facing.powi(16));
+        let glint = crate::light(1.0, 1.0, 1.0, GLINT * facing.powi(16));
         Some(colour(&hit).faded(AMBIENT + (1.0 - AMBIENT) * facing) + glint)
     });
     c.unclip();
@@ -232,7 +232,7 @@ pub fn render(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gax_numga_examples::{Lens, ORIGIN3, Point3};
+    use crate::{Lens, ORIGIN3, Point3};
 
     #[test]
     fn a_camera_on_the_outside_sees_the_outside() {

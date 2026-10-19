@@ -12,22 +12,21 @@ use gax::pga3d::{Motor, Plane, Point, intrinsic};
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption, palette,
-    run,
+    Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Scene3, backdrop, caption,
+    palette, run,
 };
 
 mod qem {
     use super::*;
 
-    pub type P = Point<(), f64>;
     /// A face's supporting plane: the join of its corners, oriented by their winding
     /// (intrinsic).
-    pub type Pl = intrinsic::Plane<(), f64>;
+    pub type Pl = intrinsic::Plane;
     /// A quadric: a polarity, each point to its polar plane.
-    pub type Quadric = Plane<(Point,), f64>;
+    pub type Quadric = Plane<(Point,)>;
 
     /// A surface patch with a sharp ridge ending in an apex: six vertices and six triangles.
-    pub fn ridge_patch() -> ([P; 6], [[usize; 3]; 6]) {
+    pub fn ridge_patch() -> ([Point; 6], [[usize; 3]; 6]) {
         let vertices = [
             Point::xyz(0.35, 0.0, 0.25),   // 0: vertex a, the apex of a sharp corner
             Point::xyz(-0.35, 0.0, 0.25),  // 1: vertex b, where the crease continues
@@ -48,7 +47,7 @@ mod qem {
     }
 
     /// The faces' supporting planes: the join of their three vertices, normalized.
-    pub fn face_planes(vertices: &[P; 6], faces: &[[usize; 3]; 6]) -> [Pl; 6] {
+    pub fn face_planes(vertices: &[Point; 6], faces: &[[usize; 3]; 6]) -> [Pl; 6] {
         faces.map(|[i, j, k]| (vertices[i] & vertices[j] & vertices[k]).normalized())
     }
 
@@ -63,18 +62,18 @@ mod qem {
     }
 
     /// A quadric's error at a point: the point paired with its polar plane.
-    pub fn error(q: Quadric, x: P) -> f64 {
+    pub fn error(q: Quadric, x: Point) -> f64 {
         (q.of(x) & x).s()
     }
 
     /// Contract an edge `(a, b)`, given the planes of the faces at each end (the faces flanking
     /// the edge in both sets): the two quadrics, their sum, and the merged vertex, whose polar
     /// plane is the plane at infinity.
-    pub fn edge_collapse(planes_a: &[Pl], planes_b: &[Pl]) -> (Quadric, Quadric, Quadric, P) {
+    pub fn edge_collapse(planes_a: &[Pl], planes_b: &[Pl]) -> (Quadric, Quadric, Quadric, Point) {
         let (qa, qb) = (quadric(planes_a), quadric(planes_b));
         let q_edge = qa + qb;
-        let infinity = Plane::new(0.0, 0.0, 0.0, 1.0);
-        let v_edge: P = q_edge.lstsq(infinity).unitized();
+        let infinity = Plane::infinity();
+        let v_edge: Point = q_edge.lstsq(infinity).unitized();
         (qa, qb, q_edge, v_edge)
     }
 
@@ -83,12 +82,12 @@ mod qem {
 
     /// The scene: the patch, its faces' planes, and the collapse of the ridge edge.
     pub struct Collapse {
-        pub vertices: [P; 6],
+        pub vertices: [Point; 6],
         pub faces: [[usize; 3]; 6],
         pub qa: Quadric,
         pub qb: Quadric,
         pub q_edge: Quadric,
-        pub v_edge: P,
+        pub v_edge: Point,
     }
 
     pub fn collapse() -> Collapse {
@@ -110,7 +109,7 @@ mod qem {
 
     /// The radius of a quadric's error ellipsoid `error = epsilon²` along a unit direction,
     /// capped at `max_radius` where the error stays flat.
-    pub fn ellipsoid_radius(q: Quadric, dir: P, epsilon: f64, max_radius: f64) -> f64 {
+    pub fn ellipsoid_radius(q: Quadric, dir: Point, epsilon: f64, max_radius: f64) -> f64 {
         // On a direction (an ideal point) the quadric reads its quadratic part alone, the
         // error's growth along that direction; the radius is the root of
         // `growth r² - epsilon² = 0`, half the distance between its two roots `±r`.
@@ -122,7 +121,7 @@ mod qem {
 use qem::*;
 
 /// The point `t` of the way from `a` to `b` (unit points).
-fn lerp(a: P, b: P, t: f64) -> P {
+fn lerp(a: Point, b: Point, t: f64) -> Point {
     a + (b - a).gp(t)
 }
 
@@ -137,7 +136,7 @@ fn face_colour(f: usize) -> Light {
 /// A quadric's error ellipsoid about `centre`, as a wireframe: along each direction (the pole
 /// `z` tilted by `theta` towards `x`, then turned by `phi` about `z`), the radius at which the
 /// error reaches its level.
-fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
+fn ellipsoid(s: &mut Scene3, q: Quadric, centre: Point, colour: Light) {
     let (n_theta, n_phi) = (17, 25);
     let pt = |i: usize, j: usize| {
         let theta = core::f64::consts::PI * i as f64 / (n_theta - 1) as f64;
@@ -148,11 +147,11 @@ fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
         centre + d.gp(ellipsoid_radius(q, d, 0.12, 0.4))
     };
     for i in 0..n_theta {
-        let ring: Vec<P> = (0..n_phi).map(|j| pt(i, j)).collect();
+        let ring: Vec<Point> = (0..n_phi).map(|j| pt(i, j)).collect();
         s.polyline(&ring, 1.0, colour.faded(0.45));
     }
     for j in 0..n_phi {
-        let meridian: Vec<P> = (0..n_theta).map(|i| pt(i, j)).collect();
+        let meridian: Vec<Point> = (0..n_theta).map(|i| pt(i, j)).collect();
         s.polyline(&meridian, 1.0, colour.faded(0.45));
     }
 }
@@ -160,7 +159,7 @@ fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
 fn camera(c: &Canvas, azimuth: f32) -> Camera {
     Camera::orbit(
         c.rect(),
-        Point::xyz(0.0, 0.0, 0.0),
+        ORIGIN3,
         2.9,
         azimuth,
         0.42,
@@ -169,12 +168,12 @@ fn camera(c: &Canvas, azimuth: f32) -> Camera {
 }
 
 /// Triangles covering what is behind by `opacity`, with their edges as one faint stroke each.
-fn mesh(s: &mut Scene3, pts: &[P], faces: &[(usize, [usize; 3])], opacity: f32) {
+fn mesh(s: &mut Scene3, pts: &[Point], faces: &[(usize, [usize; 3])], opacity: f32) {
     for &(f, [i, j, k]) in faces {
         let (a, b, c) = (pts[i], pts[j], pts[k]);
         let col = s.lit(a, b, c, face_colour(f));
         s.tri(a, b, c, col, opacity);
-        s.polyline(&[a, b, c, a], 1.0, palette::grid().faded(0.8));
+        s.polyline(&[a, b, c, a], 1.0, palette::GRID.faded(0.8));
     }
 }
 
@@ -191,7 +190,7 @@ fn vertex_panel(c: &mut Canvas, scene: &Collapse, which: usize, azimuth: f32, ti
     let faces: Vec<_> = incident.iter().map(|&f| (f, scene.faces[f])).collect();
     mesh(&mut s, &pts, &faces, 0.5);
     ellipsoid(&mut s, q, pts[which], colour);
-    s.dot(pts[which], Marker::Dot, 8.0, palette::ink());
+    s.dot(pts[which], Marker::Dot, 8.0, palette::INK);
     s.draw(c);
     label(c, title);
 }
@@ -208,14 +207,14 @@ fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f64, azimuth: f32)
     pts[1] = lerp(b, target, progress);
     let faces: Vec<_> = scene.faces.iter().copied().enumerate().collect();
     mesh(&mut s, &pts, &faces, 0.55);
-    s.seg(a, b, 1.5, palette::red().faded(0.5));
-    s.dot(a, Marker::Dot, 6.0, palette::ink().faded(0.4));
-    s.dot(b, Marker::Dot, 6.0, palette::ink().faded(0.4));
-    ellipsoid(&mut s, scene.q_edge, target, palette::green());
-    s.dot(target, Marker::Star, 14.0, palette::green());
+    s.seg(a, b, 1.5, palette::RED.faded(0.5));
+    s.dot(a, Marker::Dot, 6.0, palette::INK.faded(0.4));
+    s.dot(b, Marker::Dot, 6.0, palette::INK.faded(0.4));
+    ellipsoid(&mut s, scene.q_edge, target, palette::GREEN);
+    s.dot(target, Marker::Star, 14.0, palette::GREEN);
     s.draw(c);
     label(c, "3. MERGED: V MINIMIZES QA + QB");
-    let err = |p: P| error(scene.q_edge, p);
+    let err = |p: Point| error(scene.q_edge, p);
     let text = format!(
         "ERROR AT A {:.4}  AT B {:.4}  AT V {:.4}",
         err(scene.vertices[0]),
@@ -236,7 +235,7 @@ fn centred(c: &mut Canvas, text: &str, height: f32) {
     let fit = panel.width() * 0.94 / gax_numga_examples::font::width(text, 1.0);
     let top_middle = panel.top_middle();
     let at = top_middle + Point2::direction(0.0, height * panel.height());
-    c.text(text, at, size.min(fit), palette::ink(), Align::Center);
+    c.text(text, at, size.min(fit), palette::INK, Align::Center);
 }
 
 const SECONDS: f32 = 8.0;

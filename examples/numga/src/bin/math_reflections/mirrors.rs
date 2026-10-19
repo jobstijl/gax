@@ -83,10 +83,10 @@ macro_rules! geometry {
             use super::{FIRST_SECOND, FIRST_THIRD, cos, height};
             use $algebra::{Bivector, Rotor, Vector};
 
-            pub type V = Vector<(), f64>;
+            pub type V = Vector;
             /// A point: a dual of a direction, so intrinsic (ADR-051).
             pub type B = gax::Oriented<Bivector, gax::Intrinsic>;
-            pub type R = Rotor<(), f64>;
+            pub type R = Rotor;
             /// What the normal to the first two mirrors squares to.
             pub const CURVATURE: i32 = $curvature;
 

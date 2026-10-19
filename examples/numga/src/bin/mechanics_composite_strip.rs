@@ -49,24 +49,23 @@ mod strip {
     use super::vga3d::{Bivector, Rotor, Scalar, State, Vector};
     use super::*;
 
-    pub type V = Vector<(), f64>;
     /// Axial strain, and thickness times twist per length.
-    pub type St = State<(), f64>;
+    pub type St = State;
     /// A linear form on the state.
-    pub type Measurement = Scalar<(State,), f64>;
+    pub type Measurement = Scalar<(State,)>;
     /// A bilinear form on the state.
-    pub type Energy = Scalar<(State, State), f64>;
+    pub type Energy = Scalar<(State, State)>;
     /// A strain at a height through the thickness, with the state left open.
-    pub type Strain = Vector<(Vector, State), f64>;
+    pub type Strain = Vector<(Vector, State)>;
     /// A rotation: a ply's fibre angle, or a cross-section's twist.
-    pub type Turn = gax::Unit<Rotor<(), f64>>;
+    pub type Turn = gax::Unit<Rotor>;
 
-    pub const X: V = Vector::new(1.0, 0.0, 0.0);
-    pub const Y: V = Vector::new(0.0, 1.0, 0.0);
-    pub const Z: V = Vector::new(0.0, 0.0, 1.0);
+    pub const X: Vector = Vector::new(1.0, 0.0, 0.0);
+    pub const Y: Vector = Vector::new(0.0, 1.0, 0.0);
+    pub const Z: Vector = Vector::new(0.0, 0.0, 1.0);
     /// The planes of the strip and of its cross-sections.
-    pub const XY: Bivector<(), f64> = Bivector::new(0.0, 0.0, 1.0);
-    pub const YZ: Bivector<(), f64> = Bivector::new(1.0, 0.0, 0.0);
+    pub const XY: Bivector = Bivector::new(0.0, 0.0, 1.0);
+    pub const YZ: Bivector = Bivector::new(1.0, 0.0, 0.0);
     /// Gauss's two-point nodes on `[-1, 1]`, `±1/√3`.
     const GAUSS_NODE: f64 = 0.577_350_269_189_625_8;
 
@@ -99,7 +98,7 @@ mod strip {
     /// The strain at `height` through the thickness (along `z`): the stretch along the strip,
     /// and the shear the twist brings there, opposite above and below the middle. Twist tilts the
     /// normal both ways in the plane; dividing by the thickness gives angle per length.
-    pub fn strain(height: V, thickness: f64) -> Strain {
+    pub fn strain(height: Vector, thickness: f64) -> Strain {
         let stretch = X * (X | Vector::slot()) * extension();
         let shear = (X * (Y | Vector::slot()) + Y * (X | Vector::slot())) * twist();
         stretch + shear * (-(height | Z).s() / thickness)
@@ -107,10 +106,10 @@ mod strip {
 
     /// A strain's readings along a ply's fibres, across them and as their shear, with any slots
     /// of the strain left open.
-    pub fn read<M, S: Slots>(strain: M, fibre: V) -> [Scalar<S, f64>; 3]
+    pub fn read<M, S: Slots>(strain: M, fibre: Vector) -> [Scalar<S, f64>; 3]
     where
-        M: Copy + Of<V, Output = Vector<S, f64>>,
-        V: BitOr<Vector<S, f64>, Output = Scalar<S, f64>>,
+        M: Copy + Of<Vector, Output = Vector<S, f64>>,
+        Vector: BitOr<Vector<S, f64>, Output = Scalar<S, f64>>,
         Scalar<S, f64>: Mul<f64, Output = Scalar<S, f64>>,
     {
         let across = XY | fibre;
@@ -156,8 +155,8 @@ mod strip {
     /// A ply: its fibre direction, and the heights of its two Gauss samples with their weight.
     #[derive(Clone, Copy, Debug)]
     pub struct Ply {
-        pub fibre: V,
-        pub heights: [V; 2],
+        pub fibre: Vector,
+        pub heights: [Vector; 2],
         pub weight: f64,
     }
 
@@ -223,7 +222,7 @@ mod strip {
     /// A point of the strip deformed: the uniform stretch and width contraction, with the
     /// cross-section turned about the strip's axis. A point off the midsurface turns with its
     /// cross-section.
-    pub fn deform(point: V, state: St, width_strain: f64, thickness: f64) -> V {
+    pub fn deform(point: Vector, state: St, width_strain: f64, thickness: f64) -> Vector {
         let [along, across, height] = [X, Y, Z].map(|e| (point | e).s());
         let section = Y * (across * (1.0 + width_strain)) + Z * height;
         X * (along * (1.0 + extension().of(state).s()))
@@ -265,12 +264,12 @@ fn load(t: f32) -> f64 {
 }
 
 /// A point of the strip for drawing.
-fn spot(v: V) -> Point3 {
+fn spot(v: Vector) -> Point3 {
     Point3::xyz(v.e1() as f32, v.e2() as f32, v.e3() as f32)
 }
 
 /// A displacement for drawing.
-fn heading(v: V) -> Point3 {
+fn heading(v: Vector) -> Point3 {
     Point3::direction(v.e1() as f32, v.e2() as f32, v.e3() as f32)
 }
 
@@ -280,42 +279,42 @@ fn heading(v: V) -> Point3 {
 struct Shown {
     state: St,
     width_strain: f64,
-    placement: V,
+    placement: Vector,
 }
 
 impl Shown {
     /// The deformed point at `along` and `across` of the flat strip (mm), at `height`.
-    fn at(self, along: f64, across: f64, height: f64) -> V {
+    fn at(self, along: f64, across: f64, height: f64) -> Vector {
         let flat = X * along + Y * across + Z * height;
         deform(flat, self.state, self.width_strain, THICKNESS) + self.placement
     }
 
     /// The flat strip's point a fraction `u` along and `v` across.
-    fn grid(self, u: f64, v: f64) -> V {
+    fn grid(self, u: f64, v: f64) -> Vector {
         self.at(u * LENGTH, (v - 0.5) * WIDTH, 0.0)
     }
 
     /// The top face's normal at `along`: the cross-section's turn of `z`.
-    fn up(self, along: f64) -> V {
+    fn up(self, along: f64) -> Vector {
         section_turn(along, self.state, THICKNESS) >> Z
     }
 }
 
 fn face_light() -> Light {
-    palette::blue().faded(0.32)
+    palette::BLUE.faded(0.32)
 }
 
 fn underside_light() -> Light {
-    palette::grid()
+    palette::GRID
 }
 
 fn fibre_light() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 
 /// The strip's surface, lit and two-sided: the top face blue where it is towards the eye, the
 /// underside dim.
-fn surface(s: &mut Scene3, strip: Shown, eye: V) {
+fn surface(s: &mut Scene3, strip: Shown, eye: Vector) {
     let [nu, nv] = CELLS;
     let p = |i: usize, j: usize| spot(strip.grid(i as f64 / nu as f64, j as f64 / nv as f64));
     for i in 0..nu {
@@ -340,23 +339,23 @@ fn rest_grip_and_pull(s: &mut Scene3, strip: Shown, rest: Shown, pull: f64) {
         .iter()
         .map(|&(u, v)| spot(rest.grid(u, v)))
         .collect();
-    s.polyline(&outline, 1.0, palette::grid());
+    s.polyline(&outline, 1.0, palette::GRID);
     let grip = [-0.6, 0.6].map(|k| spot(rest.at(0.0, k * WIDTH, 0.0)));
-    s.seg(grip[0], grip[1], 5.0, palette::ink().faded(0.5));
+    s.seg(grip[0], grip[1], 5.0, palette::INK.faded(0.5));
     let end = spot(strip.at(LENGTH, 0.0, 0.0));
     s.arrow(
         end,
         heading(X * (PULL_ARROW * pull)),
         2.0,
         9.0,
-        palette::yellow(),
+        palette::YELLOW,
     );
 }
 
 /// The top ply's fibres on a strip: the level lines of the distance across them, `FIBRE_SPACING`
 /// apart, found on the flat strip and carried onto the deformed top face, drawn where that face
 /// is towards the eye.
-fn fibres(c: &mut Canvas, cam: &Camera, strip: Shown, top: V, eye: V) {
+fn fibres(c: &mut Canvas, cam: &Camera, strip: Shown, top: Vector, eye: Vector) {
     let normal = XY | top;
     let across = |q: Point2| {
         let [along, sideways] = q.to_euclidean().map(f64::from);
@@ -455,12 +454,12 @@ fn label(c: &mut Canvas, cam: &Camera, strip: Shown, k: usize) {
     };
     let size = c.rect().height() / 44.0;
     let lines = [
-        (stack.join(" "), palette::ink()),
+        (stack.join(" "), palette::INK),
         (
             format!("STRAIN {:.3}%", 100.0 * extension().of(state).s()),
-            palette::ink().faded(0.6),
+            palette::INK.faded(0.6),
         ),
-        (twisting, palette::ink().faded(0.6)),
+        (twisting, palette::INK.faded(0.6)),
     ];
     for (i, (text, light)) in lines.iter().enumerate() {
         let line = grip + Point2::direction(0.0, size * (2.5 + 1.5 * i as f32));

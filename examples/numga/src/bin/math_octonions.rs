@@ -28,7 +28,8 @@
 use gax_numga_examples::points;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
+    run,
 };
 
 gax::algebra! {
@@ -56,13 +57,13 @@ mod octonions {
     use super::cl07::{Bivector, Even, Multivector, Octonion, Scalar, Trivector, Vector};
     use std::sync::OnceLock;
 
-    pub type O = Octonion<(), f64>;
-    pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
-    pub type T = Trivector<(), f64>;
-    pub type R = Even<(), f64>;
+    pub type O = Octonion;
+    pub type V = Vector;
+    pub type B = Bivector;
+    pub type T = Trivector;
+    pub type R = Even;
     /// The octonion product, with both factors open.
-    pub type Product = Octonion<(Octonion, Octonion), f64>;
+    pub type Product = Octonion<(Octonion, Octonion)>;
 
     /// The units' names, numga's: one, and `a` to `g` for `e1` to `e7`.
     pub const NAMES: [&str; 8] = ["1", "A", "B", "C", "D", "E", "F", "G"];
@@ -124,7 +125,7 @@ mod octonions {
     /// the orientation vanishes, the right singular vectors of that map with singular values
     /// below the tolerance.
     pub fn symmetry_generators(tolerance: f64) -> Vec<B> {
-        let constraint: Trivector<(Bivector,), f64> = Bivector::slot().commutator(orientation());
+        let constraint: Trivector<(Bivector,)> = Bivector::slot().commutator(orientation());
         let svd = constraint.svd();
         svd.values
             .iter()
@@ -171,7 +172,7 @@ macro_rules! doubling {
     ($name:ident, $algebra:path) => {
         pub mod $name {
             use $algebra::{Multivector, Odd, Rotor};
-            pub type M = Multivector<(), f64>;
+            pub type M = Multivector;
 
             /// `a c - ~d b + d a + b ~c`, with `a`, `c` the even and `b`, `d` the odd parts.
             pub fn doubled(first: M, second: M) -> M {
@@ -212,7 +213,7 @@ fn places() -> [Point2; 8] {
     };
     let (b, d, g) = (corner(90.0), corner(210.0), corner(330.0));
     let mid = |p: Point2, q: Point2| (p + q).gp(0.5);
-    let origin = Point2::xy(0.0, 0.0);
+    let origin = ORIGIN2;
     [origin, origin, b, mid(d, g), d, mid(b, g), mid(b, d), g]
 }
 
@@ -224,7 +225,7 @@ fn head(ax: &Axes, c: &mut Canvas, from: Point2, to: Point2, colour: Light) {
 
 /// Whether a triple lies on the circle through the midpoints, rather than on a line.
 fn on_circle(triple: [usize; 3]) -> bool {
-    let radius = |k: usize| (places()[k] & Point2::xy(0.0, 0.0)).norm();
+    let radius = |k: usize| (places()[k] & ORIGIN2).norm();
     triple.iter().all(|k| (radius(*k) - 0.5).abs() < 1e-4)
 }
 
@@ -232,17 +233,17 @@ fn on_circle(triple: [usize; 3]) -> bool {
 /// of the circle, with arrowheads on the steps of its cycle that do not pass the third point.
 fn draw_triple(ax: &Axes, c: &mut Canvas, triple: [usize; 3], colour: Light) {
     let at = triple.map(|k| places()[k]);
-    let centre = Point2::xy(0.0, 0.0);
+    let centre = ORIGIN2;
     if on_circle(triple) {
         for k in 0..3 {
             // Along the shorter arc: towards the middle of the chord pushed out to the circle.
             let (from, middle) = (at[k], (at[k] + at[(k + 1) % 3]).gp(0.5));
-            let out = (middle - centre).gp(0.5 / (middle & centre).norm());
+            let out = (middle - centre).gp(0.5 / middle.distance(centre));
             head(ax, c, from, centre + out, colour);
         }
         return;
     }
-    let length = |(i, j): (usize, usize)| (at[i] & at[j]).norm();
+    let length = |(i, j): (usize, usize)| at[i].distance(at[j]);
     let steps = [(0, 1), (1, 2), (2, 0)];
     let ends = steps
         .into_iter()
@@ -257,21 +258,21 @@ fn draw_triple(ax: &Axes, c: &mut Canvas, triple: [usize; 3], colour: Light) {
 /// The Fano plane in `rect`, the triple `lit` brighter.
 fn fano_panel(c: &mut Canvas, rect: Rect, lit: usize) {
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.1), 1.05);
-    let circle = points::circle(Point2::xy(0.0, 0.0), 0.5, 96);
-    let dim = palette::sky().faded(0.45);
+    let circle = points::circle(ORIGIN2, 0.5, 96);
+    let dim = palette::SKY.faded(0.45);
     let circle_lit = on_circle(TRIPLES[lit]);
     ax.polyline(
         c,
         &circle,
         1.6,
-        if circle_lit { palette::orange() } else { dim },
+        if circle_lit { palette::ORANGE } else { dim },
     );
     for (k, triple) in TRIPLES.iter().enumerate() {
         draw_triple(
             &ax,
             c,
             *triple,
-            if k == lit { palette::orange() } else { dim },
+            if k == lit { palette::ORANGE } else { dim },
         );
     }
     for (place, name) in places().iter().zip(NAMES).skip(1) {
@@ -280,11 +281,11 @@ fn fano_panel(c: &mut Canvas, rect: Rect, lit: usize) {
             &[*place],
             Marker::Dot,
             22.0,
-            palette::bottom().whitened(0.05),
+            palette::BOTTOM.whitened(0.05),
         );
-        ax.scatter(c, &[*place], Marker::Ring, 22.0, palette::ink());
+        ax.scatter(c, &[*place], Marker::Ring, 22.0, palette::INK);
         let label = *place + Point2::direction(0.0, -0.035);
-        ax.text(c, label, name, 12.0, palette::ink(), Align::Center);
+        ax.text(c, label, name, 12.0, palette::INK, Align::Center);
     }
     let [a, b, cc] = TRIPLES[lit].map(|k| NAMES[k]);
     let rule = format!("{a} {b} = {cc},  {b} {cc} = {a},  {cc} {a} = {b}");
@@ -292,7 +293,7 @@ fn fano_panel(c: &mut Canvas, rect: Rect, lit: usize) {
         &rule,
         rect.bottom_left() + Point2::direction(0.0, -6.0),
         13.0,
-        palette::orange(),
+        palette::ORANGE,
         Align::Left,
     );
 }
@@ -314,7 +315,7 @@ fn defect_panel(c: &mut Canvas, rect: Rect, t: f32) {
     let ax = Axes::new(rect, [0.0, 1.0], DECADES);
     ax.frame(c, "LOG10 |R(A D) - R(A) R(D)|^2", "TURN", "");
     let angle = |s: f64| core::f64::consts::TAU * s;
-    for (generator, colour) in [(ordinary, palette::red()), (symmetry, palette::green())] {
+    for (generator, colour) in [(ordinary, palette::RED), (symmetry, palette::GREEN)] {
         let curve: Vec<Point2> = (0..=120)
             .map(|k| {
                 let s = k as f64 / 120.0;
@@ -329,14 +330,14 @@ fn defect_panel(c: &mut Canvas, rect: Rect, t: f32) {
     ax.legend(
         c,
         &[
-            ("ROTATION IN THE AB PLANE", palette::red()),
-            ("ITS PART IN G2", palette::green()),
+            ("ROTATION IN THE AB PLANE", palette::RED),
+            ("ITS PART IN G2", palette::GREEN),
         ],
     );
     let count = format!("{} OF 21 GENERATORS PRESERVE THE PRODUCT", generators.len());
     // Below the axis's label.
     let below = rect.bottom_left() + Point2::direction(-50.0, 56.0);
-    c.text(&count, below, 11.0, palette::ink(), Align::Left);
+    c.text(&count, below, 11.0, palette::INK, Align::Left);
     let skew = associator(unit(1), unit(2), unit(4));
     let terms: Vec<String> = (0..8)
         .filter(|k| skew.c[*k] != 0.0)
@@ -344,7 +345,7 @@ fn defect_panel(c: &mut Canvas, rect: Rect, t: f32) {
         .collect();
     let rule = format!("NOT ASSOCIATIVE: (A B) D - A (B D) = {}", terms.join(" + "));
     let further = below + Point2::direction(0.0, 22.0);
-    c.text(&rule, further, 11.0, palette::ink(), Align::Left);
+    c.text(&rule, further, 11.0, palette::INK, Align::Left);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -414,7 +415,7 @@ mod tests {
             for j in 1..8 {
                 let both = action(i).of(action(j)) + action(j).of(action(i));
                 let square = (unit(i).scalar_product(unit(j))).s();
-                let identity = super::cl07::Octonion::<(), f64>::slot();
+                let identity = super::cl07::Octonion::slot();
                 assert_eq!(both, identity.gp(2.0 * square), "{i} {j}");
             }
         }
@@ -460,7 +461,7 @@ mod tests {
     #[test]
     fn a_squares_to_minus_one_and_only_the_g2_rotation_preserves_the_product() {
         let left = product().of(unit(1));
-        let identity = super::cl07::Octonion::<(), f64>::slot();
+        let identity = super::cl07::Octonion::slot();
         assert!(left.of(left).approx_eq(&identity.gp(-1.0), 1e-10));
         let generators = symmetry_generators(super::TOLERANCE);
         let symmetry = project(seed(), &generators);
@@ -477,9 +478,7 @@ mod tests {
     fn doubling_in_the_algebra_of_space_gives_the_same_octonions_and_the_split_ones() {
         use gax::vga3d::Multivector;
         let blade = |k: usize| {
-            Multivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
-                if i == k { 1.0 } else { 0.0 }
-            }))
+            Multivector::from_coeffs(core::array::from_fn(|i| if i == k { 1.0 } else { 0.0 }))
         };
         let (a, b, d) = (blade(1), blade(2), blade(3));
         let (c, e, f) = (
@@ -519,7 +518,7 @@ mod tests {
                 - split::length_squared(x) * split::length_squared(y);
             assert!(error.abs() < 1e-10);
         }
-        let null = super::cl21::Multivector::<(), f64>::new(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
+        let null = super::cl21::Multivector::new(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
         let conjugate = super::cl21::Multivector::new(-1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0);
         assert_eq!(split::length_squared(null), 0.0);
         assert_eq!(

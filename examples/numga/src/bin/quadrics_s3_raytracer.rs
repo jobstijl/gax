@@ -6,8 +6,7 @@
 //! reconverge on its antipode, and the farthest ellipsoid looms larger than the middle ones. The
 //! eye walks toward them and back.
 
-#[path = "../shared/quadrics_s3.rs"]
-mod s3;
+use gax_numga_examples::shared::quadrics_s3 as s3;
 
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{Anim, Canvas, backdrop, caption, run};

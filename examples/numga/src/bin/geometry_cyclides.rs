@@ -43,16 +43,16 @@ mod cyclides {
     use gax_numga_examples::signal::{phasor, wave};
 
     /// A sphere (or a great sphere, or a point of S³ as a unit vector plus `e`): a vector.
-    pub type Sphere = Vector<(), f64>;
+    pub type Sphere = Vector;
     /// A point: the Hodge dual of a null vector (see [`point`]).
-    pub type Point = Quadvector<(), f64>;
+    pub type Point = Quadvector;
     /// A direction at the eye, in `x, y, z`.
-    pub type Dir = Direction<(), f64>;
-    pub type Biv = Bivector<(), f64>;
+    pub type Dir = Direction;
+    pub type Biv = Bivector;
     /// A rotation of R⁴ or a conformal dilation: a unit even versor.
-    pub type Motor = gax::Unit<Even<(), f64>>;
+    pub type Motor = gax::Unit<Even>;
     /// A quadric: a point to its polar sphere.
-    pub type Quadric = Vector<(Quadvector,), f64>;
+    pub type Quadric = Vector<(Quadvector,)>;
 
     pub fn x() -> Sphere {
         Vector::new(1.0, 0.0, 0.0, 0.0, 0.0)
@@ -71,17 +71,12 @@ mod cyclides {
     }
 
     /// The scalar 1 as an even versor.
-    fn one() -> Even<(), f64> {
+    fn one() -> Even {
         Scalar::new(1.0).cast::<Even>()
     }
 
-    /// The identity motor.
-    pub fn identity() -> Motor {
-        Biv::zero().exp()
-    }
-
     /// The open point slot.
-    fn slot() -> Quadvector<(Quadvector,), f64> {
+    fn slot() -> Quadvector<(Quadvector,)> {
         Quadvector::slot()
     }
 
@@ -119,17 +114,17 @@ mod cyclides {
     /// The great circle of the eye turned towards a unit direction, as maps of the direction.
     pub struct Rays {
         /// Half the rotation's generator, `(d ∧ w) / 2`.
-        pub rotation: Bivector<(Direction,), f64>,
+        pub rotation: Bivector<(Direction,)>,
         /// The circle's first order term, `2 [rotation, origin]`.
-        pub linear: Quadvector<(Direction,), f64>,
+        pub linear: Quadvector<(Direction,)>,
         /// The second order term, `2 [rotation, linear]`.
-        pub quadratic: Quadvector<(Direction, Direction), f64>,
+        pub quadratic: Quadvector<(Direction, Direction)>,
         /// The parabola's bend in `u = tan(t/2)`: `origin (d | d) + 2 quadratic`, the antipode.
-        pub bend: Quadvector<(Direction, Direction), f64>,
+        pub bend: Quadvector<(Direction, Direction)>,
     }
 
     pub fn rays() -> Rays {
-        let d = Direction::<(), f64>::slot();
+        let d = Direction::slot();
         let metric = d.dot(d);
         let rotation = (d ^ w()).gp(0.5);
         let linear = rotation.commutator(origin()).gp(2.0);
@@ -208,7 +203,7 @@ mod cyclides {
         planes
             .iter()
             .zip(angles)
-            .fold(identity(), |r, (p, a)| r * turn(*p, a))
+            .fold(Motor::identity(), |r, (p, a)| r * turn(*p, a))
     }
 
     /// Turn the shape, carry its centre to `ahead` rad in front of the eye, then turn the eye
@@ -302,10 +297,10 @@ mod cyclides {
     pub struct Traced {
         pub surface: Quadric,
         constant: f64,
-        linear: Scalar<(Direction,), f64>,
-        quadratic: Scalar<(Direction, Direction), f64>,
-        cubic: Scalar<(Direction, Direction, Direction), f64>,
-        quartic: Scalar<(Direction, Direction, Direction, Direction), f64>,
+        linear: Scalar<(Direction,)>,
+        quadratic: Scalar<(Direction, Direction)>,
+        cubic: Scalar<(Direction, Direction, Direction)>,
+        quartic: Scalar<(Direction, Direction, Direction, Direction)>,
     }
 
     /// A hit: the angle along the great circle and the headlight facing, the cosine between
@@ -369,15 +364,13 @@ mod cyclides {
 
     /// numga's sensor: the pixel centres of a `rows` x `cols` image, row-major.
     pub fn sensor(rows: usize, cols: usize, fov: f64) -> Vec<Dir> {
-        let mut out = Vec::with_capacity(rows * cols);
-        for i in 0..rows {
-            for j in 0..cols {
-                let u = 2.0 * (j as f64 + 0.5) / cols as f64 - 1.0;
+        (0..rows)
+            .flat_map(|i| {
                 let v = (1.0 - 2.0 * (i as f64 + 0.5) / rows as f64) * rows as f64 / cols as f64;
-                out.push(direction(u, v, fov));
-            }
-        }
-        out
+                (0..cols)
+                    .map(move |j| direction(2.0 * (j as f64 + 0.5) / cols as f64 - 1.0, v, fov))
+            })
+            .collect()
     }
 
     /// numga's image shape and field of view.
@@ -507,7 +500,7 @@ mod cyclides {
     pub type Part = (Quadric, Biv);
 
     /// A quadric moved by a unit vector, an inversion or a reflection.
-    fn inverted(v: gax::Unit<Vector<(), f64>>, q: Quadric) -> Quadric {
+    fn inverted(v: gax::Unit<Vector>, q: Quadric) -> Quadric {
         v >> q.of(v << slot())
     }
 
@@ -592,7 +585,7 @@ mod cyclides {
 
     /// The inverted hyperboloid, with its sign reversed since this inversion's centre lies
     /// outside the solid, and the inversion.
-    fn inverted_hyperboloid() -> (Quadric, gax::Unit<Vector<(), f64>>) {
+    fn inverted_hyperboloid() -> (Quadric, gax::Unit<Vector>) {
         let surface = hyperboloid_of_one_sheet() - dyad(y()).gp(1.0 / (0.65 * 0.65) - 1.0);
         let inversion = moved_sphere(shift(x().gp(1.7)), chart_origin() - chart_infinity()).unit();
         (-inverted(inversion, surface), inversion)
@@ -988,7 +981,7 @@ fn draw(c: &mut Canvas, t: f32) {
             screen.hi,
             screen.bottom_left(),
         ];
-        c.fill(&corners, palette::bottom(), veil);
+        c.fill(&corners, palette::BOTTOM, veil);
     }
     let title = format!(
         "DUPIN CYCLIDES ON THE 3-SPHERE: {}",
@@ -998,7 +991,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The shot's number in the bottom right corner.
     let number = format!("{}/{}", index + 1, list.len());
     let corner = screen.hi + Point2::direction(-8.0, -8.0);
-    let dim = palette::ink().mix_light(palette::bottom(), 0.4);
+    let dim = palette::INK.mix_light(palette::BOTTOM, 0.4);
     c.text(&number, corner, 10.0, dim, Align::Right);
 }
 

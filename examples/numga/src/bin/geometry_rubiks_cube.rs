@@ -20,6 +20,7 @@
 //! In Singmaster's notation the faces along +x, -x, +y, -y, +z and -z read as R, L, B, F, U
 //! and D. The animation plays a random scramble and then the solution the search found.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, Scene3, backdrop, caption, light,
@@ -30,11 +31,10 @@ mod cube {
     use gax::vga3d::{Bivector, Pseudoscalar, Rotor, Vector};
     use std::collections::{HashMap, HashSet};
 
-    pub type V = Vector<(), f64>;
     /// A map on vectors.
-    pub type Map = Vector<(Vector,), f64>;
+    pub type Map = Vector<(Vector,)>;
     /// The cube's 54 sticker points.
-    pub type Cube = [V; 54];
+    pub type Cube = [Vector; 54];
     /// A state's sticker coordinates as integers: exact, since they are.
     type Key = [i8; 162];
 
@@ -66,12 +66,12 @@ mod cube {
         }
 
         /// The face along the move's side and axis.
-        pub fn face(self) -> V {
+        pub fn face(self) -> Vector {
             face(self.side, self.axis)
         }
 
         /// The face's plane, clockwise seen from outside: the face times the pseudoscalar.
-        pub fn plane(self) -> Bivector<(), f64> {
+        pub fn plane(self) -> Bivector {
             self.face() * Pseudoscalar::new(1.0)
         }
 
@@ -94,19 +94,19 @@ mod cube {
     }
 
     /// The unit vector along a side (0 for +, 1 for -) of an axis.
-    pub fn face(side: usize, axis: usize) -> V {
+    pub fn face(side: usize, axis: usize) -> Vector {
         let mut c = [0.0; 3];
         c[axis] = [1.0, -1.0][side];
         Vector::from_coeffs(c)
     }
 
     /// Whether a sticker lies in a face's layer: it reaches past 1 along the face.
-    pub fn in_layer(sticker: V, face: V) -> bool {
+    pub fn in_layer(sticker: Vector, face: Vector) -> bool {
         (sticker | face).s() > 1.0
     }
 
     /// The stickers after a quarter turn of a face: those in its layer turned, the rest left.
-    pub fn turned(cube: &Cube, turn: Map, face: V) -> Cube {
+    pub fn turned(cube: &Cube, turn: Map, face: Vector) -> Cube {
         cube.map(|s| if in_layer(s, face) { turn.of(s) } else { s })
     }
 
@@ -118,7 +118,7 @@ mod cube {
     /// Every quarter turn of each of the given states, in the order of the moves (directions,
     /// sides, axes), each move over all the states.
     pub fn frontier(states: &[Cube]) -> Vec<Cube> {
-        let moves: Vec<(Map, V)> = Move::all().map(|m| (m.turn(), m.face())).collect();
+        let moves: Vec<(Map, Vector)> = Move::all().map(|m| (m.turn(), m.face())).collect();
         moves
             .iter()
             .flat_map(|(turn, face)| states.iter().map(|s| turned(s, *turn, *face)))
@@ -126,7 +126,7 @@ mod cube {
     }
 
     /// The cubies' centres, at -1, 0 and 1 along each axis.
-    pub fn cubies() -> Vec<V> {
+    pub fn cubies() -> Vec<Vector> {
         (0..27)
             .map(|i| [i / 9, i / 3 % 3, i % 3].map(|c| c as f64 - 1.0))
             .map(Vector::from_coeffs)
@@ -134,7 +134,7 @@ mod cube {
     }
 
     /// The sides (side, axis) a cubie shows on the cube's surface: those it lies on.
-    pub fn outward(cubie: V) -> impl Iterator<Item = (usize, usize)> {
+    pub fn outward(cubie: Vector) -> impl Iterator<Item = (usize, usize)> {
         (0..6)
             .map(|i| (i / 3, i % 3))
             .filter(move |&(side, axis)| (cubie | face(side, axis)).s() > 0.5)
@@ -142,7 +142,7 @@ mod cube {
 
     /// The corners of a cubie's face about its centre, in order round the face: one corner on
     /// the face's side, then its quarter turns about it.
-    pub fn square(side: usize, axis: usize) -> [V; 4] {
+    pub fn square(side: usize, axis: usize) -> [Vector; 4] {
         let quarter = Move {
             direction: 0,
             side,
@@ -159,8 +159,8 @@ mod cube {
 
     /// The solved cube: its 54 sticker points, their corners, and the face each belongs to,
     /// `side * 3 + axis`.
-    pub fn solved() -> (Cube, [[V; 4]; 54], [usize; 54]) {
-        let shown: Vec<(V, usize, usize)> = cubies()
+    pub fn solved() -> (Cube, [[Vector; 4]; 54], [usize; 54]) {
+        let shown: Vec<(Vector, usize, usize)> = cubies()
             .into_iter()
             .flat_map(|c| outward(c).map(move |(side, axis)| (c, side, axis)))
             .collect();
@@ -325,7 +325,7 @@ fn body() -> Light {
 }
 
 /// A point of the cube, in half cubies, as a point of the scene, in cubies.
-fn spot(v: V) -> gax::pga3d::Point<(), f64> {
+fn spot(v: Vector) -> gax::pga3d::Point {
     let [x, y, z] = v.c.map(|c| 0.5 * c);
     gax::pga3d::Point::xyz(x, y, z)
 }
@@ -335,8 +335,11 @@ const STICKER: f64 = 0.84;
 
 /// A cubie's face: the sticker, inset, and around it a frame of dark plastic in four pieces
 /// that do not overlap it, so that no depth order can put the plastic in front.
-fn draw_sticker(s: &mut Scene3, corners: &[V; 4], colour: Light) {
-    let centre = corners.iter().fold(V::zero(), |sum, v| sum + *v).gp(0.25);
+fn draw_sticker(s: &mut Scene3, corners: &[Vector; 4], colour: Light) {
+    let centre = corners
+        .iter()
+        .fold(Vector::zero(), |sum, v| sum + *v)
+        .gp(0.25);
     let outer = corners.map(spot);
     let inner = corners.map(|v| spot(centre + (v - centre).gp(STICKER)));
     for k in 0..4 {
@@ -349,7 +352,7 @@ fn draw_sticker(s: &mut Scene3, corners: &[V; 4], colour: Light) {
 
 /// The cube in `rect` with the stickers' corners `corners`, and the dark cut under a turning
 /// layer.
-fn draw_cube(c: &mut Canvas, rect: Rect, corners: &[[V; 4]; 54], cut: &[[V; 4]]) {
+fn draw_cube(c: &mut Canvas, rect: Rect, corners: &[[Vector; 4]; 54], cut: &[[Vector; 4]]) {
     let cam = Camera::orbit(
         rect,
         gax_numga_examples::ORIGIN3,
@@ -371,7 +374,7 @@ fn draw_cube(c: &mut Canvas, rect: Rect, corners: &[[V; 4]; 54], cut: &[[V; 4]])
 }
 
 /// The stickers' points and corners after whole moves.
-fn settled(moves: &[Move]) -> (Cube, [[V; 4]; 54]) {
+fn settled(moves: &[Move]) -> (Cube, [[Vector; 4]; 54]) {
     let (mut stickers, mut corners, _) = solved();
     for m in moves {
         let (turn, face) = (m.turn(), m.face());
@@ -386,7 +389,7 @@ fn settled(moves: &[Move]) -> (Cube, [[V; 4]; 54]) {
 }
 
 /// The faces of a move's layer's cubies towards the middle of the cube, seen while it turns.
-fn cut(m: Move) -> Vec<[V; 4]> {
+fn cut(m: Move) -> Vec<[Vector; 4]> {
     let inner = square(1 - m.side, m.axis);
     let layer = cubies()
         .into_iter()
@@ -396,7 +399,7 @@ fn cut(m: Move) -> Vec<[V; 4]> {
 
 /// The cube at a move, a fraction of the way through it: the stickers' corners, and the cut
 /// under the turning layer on both sides, still and turned.
-fn pose(moves: &[Move], index: usize, fraction: f64) -> ([[V; 4]; 54], Vec<[V; 4]>) {
+fn pose(moves: &[Move], index: usize, fraction: f64) -> ([[Vector; 4]; 54], Vec<[Vector; 4]>) {
     let (stickers, mut corners) = settled(&moves[..index]);
     let Some(m) = moves.get(index) else {
         return (corners, vec![]);
@@ -411,18 +414,18 @@ fn pose(moves: &[Move], index: usize, fraction: f64) -> ([[V; 4]; 54], Vec<[V; 4
         }
     }
     let still = cut(*m);
-    let turned: Vec<[V; 4]> = still.iter().map(|q| q.map(|v| rotor >> v)).collect();
+    let turned: Vec<[Vector; 4]> = still.iter().map(|q| q.map(|v| rotor >> v)).collect();
     (corners, [still, turned].concat())
 }
 
 /// The moves in Singmaster's notation, the current one lit.
 fn draw_moves(c: &mut Canvas, at: Point2, label: &str, moves: &[Move], current: Option<usize>) {
-    c.text(label, at, 11.0, palette::ink().faded(0.6), Align::Left);
+    c.text(label, at, 11.0, palette::INK.faded(0.6), Align::Left);
     for (k, m) in moves.iter().enumerate() {
         let colour = if Some(k) == current {
-            palette::orange()
+            palette::ORANGE
         } else {
-            palette::ink().faded(0.75)
+            palette::INK.faded(0.75)
         };
         let place = at + Point2::direction(36.0 * (k % 8) as f32, 22.0 * (1 + k / 8) as f32);
         c.text(&m.name(), place, 13.0, colour, Align::Left);

@@ -21,8 +21,8 @@ use gax::field::Field;
 use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Rect, Scene3, backdrop,
-    caption, label_under, palette, run,
+    Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Point3, Rect, Scene3,
+    backdrop, caption, label_under, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -88,7 +88,7 @@ mod reciprocal {
     pub fn stresses(mesh: &Mesh, heights: &Field<Scalar3>) -> Field<Scalar3> {
         let Beside { inner, left, right } = beside(mesh);
         let (planes, bars) = (slopes(mesh, heights), mesh.edge_vectors());
-        let unit_volume = Pseudoscalar::<(), f64>::new(1.0).reverse();
+        let unit_volume = Pseudoscalar::new(1.0).reverse();
         let stress = |i: usize| {
             let jump = planes.site(left[i]) - planes.site(right[i]);
             let bar = bars.site(inner[i]);
@@ -208,9 +208,9 @@ const REACH: f32 = 1.45;
 /// A bar's light: blue in tension, orange in compression, brighter as the stress nears its scale.
 fn stress_light(stress: f64) -> Light {
     let (base, scale) = if stress > 0.0 {
-        (palette::sky(), TENSION)
+        (palette::SKY, TENSION)
     } else {
-        (palette::orange(), COMPRESSION)
+        (palette::ORANGE, COMPRESSION)
     };
     let strength = (stress.abs() / scale).min(1.0) as f32;
     base.faded(UNSTRESSED + (1.0 - UNSTRESSED) * strength)
@@ -222,7 +222,7 @@ fn planar(v: Vector3) -> Point2 {
 }
 
 /// A vertex lifted to its height, as drawn.
-fn lifted(v: Vector3, height: Scalar3) -> gax::pga3d::Point<(), f64> {
+fn lifted(v: Vector3, height: Scalar3) -> gax::pga3d::Point {
     gax::pga3d::Point::xyz(v.e1(), v.e2(), height.s())
 }
 
@@ -246,7 +246,7 @@ fn terrain(
     let at = |v: usize| lifted(mesh.vertices.site(v), heights.site(v));
     panel3(c, rect, cam, |s: &mut Scene3| {
         for &[a, b, c] in &mesh.faces {
-            let shade = s.lit(at(a), at(b), at(c), palette::blue().faded(0.5));
+            let shade = s.lit(at(a), at(b), at(c), palette::BLUE.faded(0.5));
             s.tri(at(a), at(b), at(c), shade, 0.35);
         }
         for (&e, stress) in beside(mesh).inner.iter().zip(stresses.iter()) {
@@ -255,7 +255,7 @@ fn terrain(
         }
         for e in mesh.boundary_edges() {
             let [a, b] = mesh.edges[e];
-            s.seg(at(a), at(b), RIM_WIDTH, palette::grid());
+            s.seg(at(a), at(b), RIM_WIDTH, palette::GRID);
         }
     });
 }
@@ -269,7 +269,7 @@ fn truss(
     stresses: &Field<Scalar3>,
     duals: &Field<Vector3>,
 ) {
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), REACH);
+    let ax = Axes::equal(rect, ORIGIN2, REACH);
     let Beside { inner, left, right } = beside(mesh);
     let point = |v: usize| planar(mesh.vertices.site(v));
     for (&e, stress) in inner.iter().zip(stresses.iter()) {
@@ -278,20 +278,20 @@ fn truss(
     }
     for e in mesh.boundary_edges() {
         let [a, b] = mesh.edges[e];
-        ax.line(c, point(a), point(b), RIM_WIDTH, palette::grid());
+        ax.line(c, point(a), point(b), RIM_WIDTH, palette::GRID);
     }
     let dual = |f: usize| planar(duals.site(f));
     for (&l, &r) in left.iter().zip(&right) {
-        ax.line(c, dual(l), dual(r), 1.0, palette::ink().faded(0.7));
+        ax.line(c, dual(l), dual(r), 1.0, palette::INK.faded(0.7));
     }
     let vertices: Vec<Point2> = (0..duals.len()).map(dual).collect();
-    ax.scatter(c, &vertices, Marker::Dot, 4.0, palette::ink());
+    ax.scatter(c, &vertices, Marker::Dot, 4.0, palette::INK);
     ax.legend(
         c,
         &[
-            ("TENSION", palette::sky()),
-            ("COMPRESSION", palette::orange()),
-            ("RECIPROCAL", palette::ink()),
+            ("TENSION", palette::SKY),
+            ("COMPRESSION", palette::ORANGE),
+            ("RECIPROCAL", palette::INK),
         ],
     );
 }

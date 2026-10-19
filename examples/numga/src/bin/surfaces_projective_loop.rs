@@ -19,8 +19,7 @@
 //! with their weights (middle) and as positions (right), each face coloured by the gap between
 //! the two orders: none for the weighted points, plain to see for the positions.
 
-#[path = "../shared/surfaces_loop.rs"]
-mod surfaces_loop;
+use gax_numga_examples::shared::surfaces_loop;
 
 use gax::field::{Field, SparseMap};
 use gax::pga3d::Scalar;
@@ -39,14 +38,11 @@ mod projective {
     use gax_numga_examples::mesh::Mesh;
 
     /// A map on points, `Point <- Point`.
-    pub type PointMap = Point<(Point,), f64>;
+    pub type PointMap = Point<(Point,)>;
 
     /// So many Loop steps from a closed mesh, nothing pinned, composed into one map from its
     /// vertices to those of the refined mesh, and the refined mesh.
-    pub fn subdivision(
-        mesh: &Mesh<Point64>,
-        depth: usize,
-    ) -> (SparseMap<Scalar<(), f64>>, Mesh<Point64>) {
+    pub fn subdivision(mesh: &Mesh<Point64>, depth: usize) -> (SparseMap<Scalar>, Mesh<Point64>) {
         let pinned = vec![false; mesh.vertices.len()];
         refine(mesh, &pinned, depth, |p| p)
     }
@@ -59,7 +55,7 @@ mod projective {
     /// The central collineation of a centre and an axis plane, as a map on points: each point
     /// moves along its line through the centre, by the centre times its pairing with the axis;
     /// points on the axis stay where they are.
-    pub fn collineation(centre: Point64, axis: Plane<(), f64>, strength: f64) -> PointMap {
+    pub fn collineation(centre: Point64, axis: Plane, strength: f64) -> PointMap {
         let open = Point64::slot();
         open + centre * (axis & open) * strength
     }
@@ -120,7 +116,7 @@ mod scenes {
     }
 
     /// The octahedron's refinement: the composed map and the refined mesh.
-    pub fn refinement() -> (SparseMap<Scalar<(), f64>>, Mesh<Point64>) {
+    pub fn refinement() -> (SparseMap<Scalar>, Mesh<Point64>) {
         subdivision(&control(), DEPTH)
     }
 
@@ -155,8 +151,8 @@ mod scenes {
                 [0, 1, 2].map(|axis| OCTAHEDRON[v][axis] * STRETCH[axis] + OFFSET[axis]);
             Point64::xyz(x, y, z)
         });
-        let origin = Point64::xyz(0.0, 0.0, 0.0);
-        let floor = Plane::<(), f64>::new(0.0, 0.0, 1.0, 0.0);
+        let origin = Point64::origin();
+        let floor = Plane::new(0.0, 0.0, 1.0, 0.0);
         let lens = collineation(origin, floor, STRENGTH);
         let seen = |points: &Field<Point64>| points.map(|p| lens.of(p));
         let refined = |points: &Field<Point64>| &subdivide * points;
@@ -174,7 +170,7 @@ use scenes::*;
 struct Shown {
     control: Mesh<Point64>,
     refined: Mesh<Point64>,
-    subdivide: SparseMap<Scalar<(), f64>>,
+    subdivide: SparseMap<Scalar>,
     perspective: Perspective,
 }
 
@@ -199,10 +195,10 @@ const AZIMUTH: f32 = -1.05;
 
 /// The light of a face where the two orders agree, and where they are furthest apart.
 fn agreed() -> Light {
-    palette::sky().faded(0.55)
+    palette::SKY.faded(0.55)
 }
 fn apart() -> Light {
-    palette::orange().faded(0.8)
+    palette::ORANGE.faded(0.8)
 }
 
 /// A refined surface over its control net, its faces in the given lights.

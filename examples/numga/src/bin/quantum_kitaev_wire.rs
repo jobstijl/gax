@@ -20,7 +20,7 @@
 //! (two energies drop to zero), and the splitting of the boundary modes as the segment
 //! shortens, exponentially small while they do not overlap.
 
-use gax_numga_examples::signal::linspace;
+use gax_numga_examples::signal::{frame, linspace};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
 };
@@ -33,12 +33,12 @@ mod kitaev {
     use gax_numga_examples::signal::linspace;
 
     /// Two Majorana amplitudes, a map on them, and a field of them over the wire's sites.
-    pub type Majorana = Vector<(), f64>;
-    pub type Map = Vector<(Vector,), f64>;
+    pub type Majorana = Vector;
+    pub type Map = Vector<(Vector,)>;
     pub type Modes = Field<Majorana>;
     /// The couplings between sites, and the chemical potential at each.
     pub type Generator = SparseMap<Map>;
-    pub type Potential = Field<Scalar<(), f64>>;
+    pub type Potential = Field<Scalar>;
 
     fn x() -> Majorana {
         Vector::new(1.0, 0.0)
@@ -46,7 +46,7 @@ mod kitaev {
     fn y() -> Majorana {
         Vector::new(0.0, 1.0)
     }
-    fn xy() -> Pseudoscalar<(), f64> {
+    fn xy() -> Pseudoscalar {
         Pseudoscalar::new(1.0)
     }
     fn open() -> Map {
@@ -328,7 +328,7 @@ fn data() -> &'static Data {
 
 /// The slow and the fast transport's colours and names.
 fn cases() -> [(Light, &'static str); 2] {
-    [(palette::green(), "SLOW"), (palette::orange(), "FAST")]
+    [(palette::GREEN, "SLOW"), (palette::ORANGE, "FAST")]
 }
 
 /// How deep a chemical potential lies in the topological regime: zero at the threshold, twice
@@ -350,7 +350,7 @@ fn draw_gate(c: &mut Canvas, ax: &Axes, potential: &Potential) {
                 Point2::xy(b, hi),
                 Point2::xy(a, hi),
             ];
-            ax.fill(c, &column, palette::purple().faded(0.06), 0.5 * shade);
+            ax.fill(c, &column, palette::PURPLE.faded(0.06), 0.5 * shade);
         }
     }
 }
@@ -375,7 +375,7 @@ fn draw_transport(c: &mut Canvas, ax: &Axes, m: &Moving, case: usize, now: usize
         &weights(&m.target[now]),
         1.0,
         4.0,
-        palette::ink().faded(0.6),
+        palette::INK.faded(0.6),
     );
     ax.polyline(c, &weights(&m.history[case][now]), 2.0, colour);
     let label = Point2::xy(SITES as f32 * 0.01, ax.y[1] * 0.86);
@@ -411,7 +411,7 @@ fn draw_spectrum(c: &mut Canvas, ax: &Axes, d: &Data) {
         Point2::xy(threshold, ax.y[0]),
         Point2::xy(threshold, ax.y[1]),
     ];
-    ax.dashed(c, &across, 1.0, 3.0, palette::grid());
+    ax.dashed(c, &across, 1.0, 3.0, palette::GRID);
     // Each energy is held by two quadratures: one curve per pair.
     for level in (0..ENERGIES).step_by(2) {
         let curve: Vec<Point2> = d
@@ -421,9 +421,9 @@ fn draw_spectrum(c: &mut Canvas, ax: &Axes, d: &Data) {
             .map(|(mu, e)| Point2::xy(*mu as f32, e[level] as f32))
             .collect();
         let colour = if level == 0 {
-            palette::sky()
+            palette::SKY
         } else {
-            palette::ink().faded(0.6)
+            palette::INK.faded(0.6)
         };
         ax.polyline(c, &curve, 1.4, colour);
     }
@@ -443,7 +443,7 @@ fn draw_splitting(c: &mut Canvas, ax: &Axes, d: &Data) {
         .zip(&d.splitting)
         .map(|(s, e)| Point2::xy(*s as f32, *e as f32))
         .collect();
-    ax.polyline(c, &curve, 1.8, palette::sky());
+    ax.polyline(c, &curve, 1.8, palette::SKY);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -451,7 +451,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let d = data();
     let screen = c.rect();
     let records = d.moving.progress.len();
-    let now = (((t / SECONDS).fract() * records as f32) as usize).min(records - 1);
+    let now = frame((t / SECONDS).fract(), records);
     let top = d.peak as f32 * 1.15;
     let sites = [0.0, (SITES - 1) as f32];
     for case in 0..2 {
@@ -518,13 +518,13 @@ mod tests {
     const ROUND_OFF: f64 = 1e-10;
 
     /// A field over two sites as one vector of the big algebra.
-    fn joined(f: &Modes) -> majoranas::Vector<(), f64> {
+    fn joined(f: &Modes) -> majoranas::Vector {
         let (a, b) = (f.site(0), f.site(1));
         majoranas::Vector::new(a.e1(), a.e2(), b.e1(), b.e2())
     }
 
     /// A field over two sites from one vector of the big algebra.
-    fn split(v: majoranas::Vector<(), f64>) -> Modes {
+    fn split(v: majoranas::Vector) -> Modes {
         let c = v.c;
         Field::new(vec![Vector::new(c[0], c[1]), Vector::new(c[2], c[3])])
     }
@@ -534,7 +534,7 @@ mod tests {
     }
 
     /// The bivector of the big algebra whose action is the generator of a wire of two sites.
-    fn bivector(mu: [f64; 2], hopping: f64, pairing: f64) -> majoranas::Bivector<(), f64> {
+    fn bivector(mu: [f64; 2], hopping: f64, pairing: f64) -> majoranas::Bivector {
         // In the order eab, eac, ead, ebc, ebd, ecd.
         majoranas::Bivector::new(
             -mu[0],
@@ -583,7 +583,7 @@ mod tests {
         let (sites, hopping, count) = (12, 1.0, 8);
         let sweet = Wire::chain(sites, hopping, hopping);
         let g = sweet.generator(&potential(&vec![0.0; sites]));
-        let end = |site: usize, v: Vector<(), f64>| {
+        let end = |site: usize, v: Vector| {
             Field::from_fn(sites, |s| if s == site { v } else { Vector::zero() })
         };
         assert!(largest(&g.of(&end(0, Vector::new(1.0, 0.0)))) < ROUND_OFF);
@@ -621,7 +621,7 @@ mod tests {
     fn the_cayley_steps_converge_to_the_rotor() {
         let wire = Wire::chain(2, 1.0, 0.7);
         let mu = [0.6, 1.1];
-        let start = majoranas::Vector::<(), f64>::new(1.0, 2.0, 3.0, 4.0).normalized();
+        let start = majoranas::Vector::new(1.0, 2.0, 3.0, 4.0).normalized();
         let duration = 0.8;
         let exact = (bivector(mu, 1.0, 0.7) * (duration / 2.0)).exp() >> start;
         let error = |steps: usize| {

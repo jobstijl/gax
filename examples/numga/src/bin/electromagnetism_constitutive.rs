@@ -18,6 +18,7 @@
 //! cursors sweeping the dispersion scans, the Fresnel surfaces and the drag curve.
 
 use gax::pga2d::Point;
+use gax::sta::Bivector;
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
@@ -29,27 +30,25 @@ mod constitutive {
     // numga's API in full: the tests use parts the animation does not.
     #![cfg_attr(not(test), allow(dead_code))]
 
-    use gax::sta::{Bivector, Odd, Scalar, Vector, intrinsic, oriented};
+    use gax::sta::{Bivector, Odd, Vector, intrinsic, oriented};
     use gax::{Orientation, Vee};
 
-    pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
     /// An excitation, the dual of a field: a bivector of the other orientation (intrinsic).
-    pub type Excitation = intrinsic::Bivector<(), f64>;
+    pub type Excitation = intrinsic::Bivector;
     /// A map on fields, `Bivector <- Bivector`.
-    pub type Projector = Bivector<(Bivector,), f64>;
+    pub type Projector = Bivector<(Bivector,)>;
     /// A constitutive map, `Antibivector <- Bivector` (antibivectors are bivectors in 4D, of
     /// the other orientation).
-    pub type Medium = intrinsic::Bivector<(Bivector,), f64>;
+    pub type Medium = intrinsic::Bivector<(Bivector,)>;
     /// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
-    pub type AxionCoupling = intrinsic::Scalar<(), f64>;
+    pub type AxionCoupling = intrinsic::Scalar;
     /// A stress-energy current, `Antivector <- Vector`.
-    pub type Current = intrinsic::Trivector<(Vector,), f64>;
+    pub type Current = intrinsic::Trivector<(Vector,)>;
     /// Both Maxwell residuals of a plane wave, `Odd <- Bivector`.
-    pub type WaveMap = Odd<(Bivector,), f64>;
-    pub type Rotor = gax::Unit<gax::sta::Even<(), f64>>;
+    pub type WaveMap = Odd<(Bivector,)>;
+    pub type Rotor = gax::Unit<gax::sta::Even>;
     /// A vector of the rest observer's space, for drawing.
-    pub type Space = gax::vga3d::Vector<(), f64>;
+    pub type Space = gax::vga3d::Vector;
 
     /// numga's regressive product of complementary grades, `(a* ∧ b*) I⁻¹` with numga's dual
     /// (gax's `hodge`, `~x I`, which keeps the metric): the pairing behind the material and
@@ -69,20 +68,20 @@ mod constitutive {
     }
 
     /// The open vector.
-    pub fn open_vector() -> Vector<(Vector,), f64> {
+    pub fn open_vector() -> Vector<(Vector,)> {
         Vector::slot()
     }
 
-    pub fn t() -> V {
+    pub fn t() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 0.0, 1.0, 0.0)
     }
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
@@ -94,19 +93,19 @@ mod constitutive {
 
     /// The electric and magnetic vectors a rest observer reads off a field: `F · t` and
     /// `F* · t`, as numga draws them.
-    pub fn arrows(f: B) -> (Space, Space) {
+    pub fn arrows(f: Bivector) -> (Space, Space) {
         (spatial(f | t()), spatial(f.hodge() | t()))
     }
 
     /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy` (numga's `tx = t ^ x`
     /// is gax's `-e10`).
-    pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> B {
+    pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> Bivector {
         Bivector::new(-tx, -ty, -tz, yz, zx, xy)
     }
 
     /// The electric and magnetic projectors of a unit timelike observer: `(F - u F u) / 2`
     /// and the rest.
-    pub fn observer_projectors(observer: V) -> (Projector, Projector) {
+    pub fn observer_projectors(observer: Vector) -> (Projector, Projector) {
         let electric = (open() - (observer >> open())).gp(0.5);
         (electric, open() - electric)
     }
@@ -115,13 +114,13 @@ mod constitutive {
     /// `dual`; gax's `dual` is the metric-free complement, which in spacetime differs in sign
     /// on every blade with an odd number of spatial vectors, and with it vacuum `F ↦ F*` has
     /// no waves).
-    pub fn isotropic_medium(eps: f64, mu: f64, observer: V) -> Medium {
+    pub fn isotropic_medium(eps: f64, mu: f64, observer: Vector) -> Medium {
         let (electric, magnetic) = observer_projectors(observer);
         (electric.gp(eps) + magnetic.gp(1.0 / mu)).hodge()
     }
 
     /// An anisotropic electric response: each axis's plane with the observer weighted.
-    pub fn crystal_medium(eps: [f64; 3], mu: f64, observer: V) -> Medium {
+    pub fn crystal_medium(eps: [f64; 3], mu: f64, observer: Vector) -> Medium {
         let (_, magnetic) = observer_projectors(observer);
         let electric: Projector = [x(), y(), z()]
             .iter()
@@ -136,7 +135,7 @@ mod constitutive {
 
     /// An anisotropic magnetic response: each axis's magnetic plane weighted by the inverse
     /// permeability.
-    pub fn ferrite_medium(eps: f64, mu_inv: [f64; 3], observer: V) -> Medium {
+    pub fn ferrite_medium(eps: f64, mu_inv: [f64; 3], observer: Vector) -> Medium {
         let (electric, _) = observer_projectors(observer);
         let magnetic: Projector = [x(), y(), z()]
             .iter()
@@ -151,7 +150,7 @@ mod constitutive {
 
     /// An axion coupling of strength `alpha`: the number, declared a pseudoscalar.
     pub fn axion_coupling(alpha: f64) -> AxionCoupling {
-        Scalar::new(alpha).with_orientation()
+        AxionCoupling::new(alpha)
     }
 
     /// Add the axion response, a multiple of the identity on field planes.
@@ -160,19 +159,19 @@ mod constitutive {
     }
 
     /// The boost to speed `beta` along a unit spatial `direction`.
-    pub fn boost_rotor(beta: f64, direction: V) -> Rotor {
+    pub fn boost_rotor(beta: f64, direction: Vector) -> Rotor {
         ((direction ^ t()) * (beta.atanh() / 2.0)).exp()
     }
 
     /// A medium at rest, set moving: conjugated by the boost.
-    pub fn boosted_medium(base: Medium, beta: f64, direction: V) -> Medium {
+    pub fn boosted_medium(base: Medium, beta: f64, direction: Vector) -> Medium {
         let r = boost_rotor(beta, direction);
         r >> base.of(r << open())
     }
 
     /// The electromagnetic stress-energy current `v ↦ (v · F) ∧ G + ½ (F ∨ G) v*`. An
     /// observer's energy density is `u ∨ current(u)`.
-    pub fn stress_energy(field: B, excitation: Excitation) -> Current {
+    pub fn stress_energy(field: Bivector, excitation: Excitation) -> Current {
         let lagrangian = pair(field, excitation).s() / 2.0;
         ((open_vector() | field) ^ excitation) + open_vector().hodge().gp(lagrangian)
     }
@@ -180,19 +179,19 @@ mod constitutive {
     /// Both exterior Maxwell residuals, packed into separate grades: `k ∧ F` is a trivector
     /// and the dual of `k ∧ χ(F)` a vector, so they cannot cancel. gax adds values of one
     /// kind, so both are cast into the odd subalgebra.
-    pub fn wave_map(k: V, medium: Medium) -> WaveMap {
+    pub fn wave_map(k: Vector, medium: Medium) -> WaveMap {
         (k ^ open()).cast::<Odd>() + (k ^ medium).hodge().cast::<Odd>()
     }
 
     /// The singular values (descending) and right singular vectors of a wave map (8 x 6).
-    pub fn svd(w: WaveMap) -> ([f64; 6], [B; 6]) {
+    pub fn svd(w: WaveMap) -> ([f64; 6], [Bivector; 6]) {
         let svd = w.svd();
         (svd.values, svd.inputs)
     }
 
     /// The smallest singular value of the wave map over trial phase speeds, for waves along
     /// `direction`.
-    pub fn dispersion_scan(speeds: &[f64], medium: Medium, direction: V) -> Vec<f64> {
+    pub fn dispersion_scan(speeds: &[f64], medium: Medium, direction: Vector) -> Vec<f64> {
         speeds
             .iter()
             .map(|s| svd(wave_map(t().gp(*s) + direction, medium)).0[5])
@@ -208,7 +207,7 @@ mod constitutive {
     }
 
     /// The field in the wave map's nullspace.
-    pub fn field_eigenmode(k: V, medium: Medium) -> B {
+    pub fn field_eigenmode(k: Vector, medium: Medium) -> Bivector {
         svd(wave_map(k, medium)).1[5]
     }
 
@@ -297,7 +296,7 @@ mod constitutive {
 
     /// The crystal's slow and fast waves along z: their speeds and fields.
     #[allow(clippy::disallowed_methods)] // wave speeds 1/√(εμ): a physical law, not geometry
-    pub fn field_modes() -> ([f64; 2], [B; 2]) {
+    pub fn field_modes() -> ([f64; 2], [Bivector; 2]) {
         let speeds = [1.0 / 2.25f64.sqrt(), 1.0 / 1.5f64.sqrt()];
         (
             speeds,
@@ -307,7 +306,7 @@ mod constitutive {
 
     /// Two field modes along z in glass, sharing one speed: the two smallest singular vectors.
     #[allow(clippy::disallowed_methods)] // wave speeds 1/√(εμ): a physical law, not geometry
-    pub fn glass_modes() -> ([f64; 2], [B; 2]) {
+    pub fn glass_modes() -> ([f64; 2], [Bivector; 2]) {
         let glass = isotropic_medium(EPS_GLASS, MU_GLASS, t());
         let speed = 1.0 / (EPS_GLASS * MU_GLASS).sqrt();
         let (_, v) = svd(wave_map(t().gp(speed) + z(), glass));
@@ -315,7 +314,7 @@ mod constitutive {
     }
 
     /// The direction in the xz-plane at `angle` from z towards x.
-    pub fn direction(angle: f64) -> V {
+    pub fn direction(angle: f64) -> Vector {
         // x and z square to minus one, which turns the sense of the rotor.
         Bivector::new(0.0, 0.0, 0.0, 0.0, angle / 2.0, 0.0).exp() >> z()
     }
@@ -353,8 +352,8 @@ struct Scans {
     sheets: Vec<(&'static str, Vec<Vec<f64>>)>,
     betas: Vec<f64>,
     drag: (Vec<f64>, Vec<f64>),
-    glass: ([f64; 2], [B; 2]),
-    crystal: ([f64; 2], [B; 2]),
+    glass: ([f64; 2], [Bivector; 2]),
+    crystal: ([f64; 2], [Bivector; 2]),
 }
 
 fn scans() -> &'static Scans {
@@ -394,7 +393,7 @@ fn scans() -> &'static Scans {
 
 /// The travelling wave of two modes at time `tau`: each mode normalized to a unit electric
 /// amplitude, summed with its phase `ω (z / v - τ)`.
-fn wave_at(modes: &([f64; 2], [B; 2]), z: f64, tau: f64) -> B {
+fn wave_at(modes: &([f64; 2], [Bivector; 2]), z: f64, tau: f64) -> Bivector {
     let (speeds, fields) = modes;
     speeds
         .iter()
@@ -408,7 +407,7 @@ fn wave_at(modes: &([f64; 2], [B; 2]), z: f64, tau: f64) -> B {
 
 /// The wave in 3D, the beam running across the screen: world x along the beam (scaled),
 /// world y and z the field's x and y.
-fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, label: &str) {
+fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [Bivector; 2]), tau: f64, label: &str) {
     let view = rect.inset(0.0, 20.0, 0.0, 0.0);
     let length = 6.0;
     let cam = Camera::parallel(view, rect.width() * 0.125, -1.1, 0.35);
@@ -419,7 +418,7 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
     // A field's vector in the world: its x and y across the beam (the world's y and z), a little
     // of its z along it.
     let across = |v: Space| gax::pga3d::Point::direction(v.e3() * 0.1, v.e1() * 0.8, v.e2() * 0.8);
-    sc.seg(on_beam(0.0), on_beam(Z_MAX), 1.0, palette::grid());
+    sc.seg(on_beam(0.0), on_beam(Z_MAX), 1.0, palette::GRID);
     let samples = 200;
     let (e_line, b_line): (Vec<_>, Vec<_>) = (0..samples)
         .map(|i| {
@@ -428,12 +427,12 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
             (on_beam(z) + across(e), on_beam(z) + across(b))
         })
         .unzip();
-    sc.polyline(&b_line, 1.5, palette::sky().faded(0.8));
-    sc.polyline(&e_line, 2.0, palette::orange());
+    sc.polyline(&b_line, 1.5, palette::SKY.faded(0.8));
+    sc.polyline(&e_line, 2.0, palette::ORANGE);
     for k in 0..21 {
         let z = Z_MAX * k as f64 / 20.0;
         let (e, b) = arrows(wave_at(modes, z, tau));
-        for (v, col) in [(e, palette::orange()), (b, palette::sky())] {
+        for (v, col) in [(e, palette::ORANGE), (b, palette::SKY)] {
             sc.arrow(on_beam(z), across(v), 1.2, 5.0, col);
         }
     }
@@ -445,7 +444,7 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
         .min(rect.width() / gax_numga_examples::font::width(label, 1.0));
     let top_middle = rect.top_middle();
     let at = top_middle + Point2::direction(0.0, size * 14.0 / 11.0);
-    c.text(label, at, size, palette::ink(), Align::Center);
+    c.text(label, at, size, palette::INK, Align::Center);
 }
 
 /// How much smaller a plot's own text is drawn than in a plot 240 pixels tall (numga's
@@ -470,7 +469,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
             let line = [Point::xy(*v, 1e-4), Point::xy(*v, 3.0)];
             ax.dashed(c, &line, 1.0, 4.0, col.faded(0.6));
         }
-        let pts: Vec<Point<(), f64>> = s
+        let pts: Vec<Point> = s
             .speeds
             .iter()
             .zip(scan)
@@ -484,7 +483,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
         Point::xy(cursor, 1e-4),
         Point::xy(cursor, 3.0),
         1.0,
-        palette::ink().faded(0.5),
+        palette::INK.faded(0.5),
     );
     let names: Vec<(&str, Light)> = s
         .dispersion
@@ -497,15 +496,15 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
 
 fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     let (_, fields) = scans().crystal;
-    let origin = Point::xy(0.0, 0.0);
+    let origin = Point::origin();
     let inset = rect.inset(14.0, 26.0, 10.0, 34.0);
     let ax = Axes::equal(inset, origin, 1.3);
     ax.frame(c, "CRYSTAL MODES", "X", "");
-    let faint = palette::grid().faded(0.6);
+    let faint = palette::GRID.faded(0.6);
     ax.line(c, Point::xy(-1.3, 0.0), Point::xy(1.3, 0.0), 1.0, faint);
     ax.line(c, Point::xy(0.0, -1.3), Point::xy(0.0, 1.3), 1.0, faint);
     // Each mode's field oscillating in its plane at the entrance face, in phase.
-    for (f, col) in fields.iter().zip([palette::red(), palette::blue()]) {
+    for (f, col) in fields.iter().zip([palette::RED, palette::BLUE]) {
         // The electric vector lies across the beam: its x and y, at unit length.
         let (e, _) = arrows(*f);
         let a = e.normalized();
@@ -517,7 +516,7 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
             &[along(phasor(tau).e20())],
             Marker::Dot,
             7.0,
-            palette::ink(),
+            palette::INK,
         );
     }
     // The names in the top left corner (the panel is narrower than it is tall).
@@ -525,8 +524,8 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     let slow = corner + Point2::direction(0.1, -0.2);
     let fast = corner + Point2::direction(0.1, -0.45);
     let size = 10.0 * text_scale(rect);
-    ax.text(c, slow, "SLOW", size, palette::red(), Align::Left);
-    ax.text(c, fast, "FAST", size, palette::blue(), Align::Left);
+    ax.text(c, slow, "SLOW", size, palette::RED, Align::Left);
+    ax.text(c, fast, "FAST", size, palette::BLUE, Align::Left);
 }
 
 fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
@@ -539,22 +538,22 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
     ax.frame(c, "FRESNEL SURFACES", "X", "");
     // Zero along +z (up), angles towards +x (right): a point is the speed times the direction
     // from the origin.
-    let origin = Point::xy(0.0, 0.0);
-    let place = |a: f64, v: f64| -> Point<(), f64> {
+    let origin = Point::origin();
+    let place = |a: f64, v: f64| -> Point {
         let d = direction(a);
         origin + Point::direction(d.e1(), d.e3()).gp(v)
     };
     for r in [0.25, 0.5, 0.75, 1.0] {
-        let ring: Vec<Point<(), f64>> = (0..=72)
+        let ring: Vec<Point> = (0..=72)
             .map(|k| place(core::f64::consts::TAU * k as f64 / 72.0, r))
             .collect();
-        ax.polyline(c, &ring, 1.0, palette::grid().faded(0.6));
+        ax.polyline(c, &ring, 1.0, palette::GRID.faded(0.6));
     }
     for (m, (name, per_angle)) in s.sheets.iter().enumerate() {
         let col = palette::series([0, 2, 4][m]);
         let branches = per_angle.iter().map(Vec::len).max().unwrap_or(0);
         for b in 0..branches {
-            let pts: Vec<Point<(), f64>> = s
+            let pts: Vec<Point> = s
                 .angles
                 .iter()
                 .zip(per_angle)
@@ -565,7 +564,7 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
         // Where the sweeping direction meets each sheet, from the nearest scanned angle.
         let i = ((angle / core::f64::consts::TAU * (s.angles.len() - 1) as f64).round() as usize)
             .min(s.angles.len() - 1);
-        let hits: Vec<Point<(), f64>> = per_angle[i]
+        let hits: Vec<Point> = per_angle[i]
             .iter()
             .map(|v| place(s.angles[i], *v))
             .collect();
@@ -580,7 +579,7 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
         );
     }
     let d = place(angle, 1.1);
-    ax.line(c, origin, d, 1.0, palette::ink().faded(0.6));
+    ax.line(c, origin, d, 1.0, palette::INK.faded(0.6));
 }
 
 fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
@@ -591,18 +590,18 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
     let ax = Axes::new(inset, [-0.6, 0.6], [0.0, 1.0]);
     ax.frame(c, "FRESNEL DRAG", "MEDIUM SPEED", "");
     let fine = linspace(-0.6, 0.6, 121);
-    let curve = |f: &dyn Fn(f64) -> f64| -> Vec<Point<(), f64>> {
+    let curve = |f: &dyn Fn(f64) -> f64| -> Vec<Point> {
         fine.iter().map(|b| Point::xy(*b, f(*b))).collect()
     };
     let coeff = 1.0 - 1.0 / (n * n);
-    let (down, up) = (palette::orange(), palette::sky());
+    let (down, up) = (palette::ORANGE, palette::SKY);
     ax.polyline(c, &curve(&|b| add_speeds(1.0 / n, b)), 1.5, down);
     ax.polyline(c, &curve(&|b| add_speeds(1.0 / n, -b)), 1.5, up);
     // First-order Fresnel drag, dashed.
     let first_order = |b: f64| 1.0 / n + b * coeff;
     ax.dashed(c, &curve(&first_order), 1.0, 5.0, down.faded(0.6));
     ax.dashed(c, &curve(&|b| first_order(-b)), 1.0, 5.0, up.faded(0.6));
-    let pts = |v: &[f64]| -> Vec<Point<(), f64>> {
+    let pts = |v: &[f64]| -> Vec<Point> {
         s.betas
             .iter()
             .zip(v)
@@ -615,9 +614,9 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
         Point::xy(beta, add_speeds(1.0 / n, beta)),
         Point::xy(beta, add_speeds(1.0 / n, -beta)),
     ];
-    let cursor = palette::ink().faded(0.5);
+    let cursor = palette::INK.faded(0.5);
     ax.line(c, Point::xy(beta, 0.0), Point::xy(beta, 1.0), 1.0, cursor);
-    ax.scatter(c, &now, Marker::Ring, 11.0, palette::ink());
+    ax.scatter(c, &now, Marker::Ring, 11.0, palette::INK);
     ax.legend(c, &[("WITH FLOW", down), ("AGAINST", up)]);
 }
 
@@ -667,10 +666,10 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::constitutive::*;
-    use gax::ApproxEq;
-    use gax::sta::{Pseudoscalar, Trivector, intrinsic};
+    use gax::sta::{Bivector, Pseudoscalar, Trivector, Vector, intrinsic};
     use gax_numga_examples::rng::{Draw, Rng, rng};
     use gax_numga_examples::signal::linspace;
+    use gax_numga_examples::testing::near;
 
     fn speeds() -> Vec<f64> {
         linspace(0.05, 1.5, 6001)
@@ -680,7 +679,7 @@ mod tests {
         1.45 / 6000.0
     }
 
-    fn phase_speeds(medium: Medium, direction: V, speeds: &[f64]) -> Vec<f64> {
+    fn phase_speeds(medium: Medium, direction: Vector, speeds: &[f64]) -> Vec<f64> {
         minimum_speeds(speeds, &dispersion_scan(speeds, medium, direction), 2e-3)
     }
 
@@ -688,14 +687,9 @@ mod tests {
         a.len() == b.len() && a.iter().zip(b).all(|(p, q)| (p - q).abs() <= tol)
     }
 
-    /// Whether `a` is within `tol` of `b`, coefficient by coefficient.
-    fn near<X: ApproxEq>(a: X, b: X, tol: f64) -> bool {
-        a.max_abs_diff(&b) <= tol
-    }
-
     /// A field with coefficients uniform in `[-1, 1)`.
-    fn bivector(r: &mut Rng) -> B {
-        B::from_coeffs(core::array::from_fn(|_| r.range(-1.0, 1.0)))
+    fn bivector(r: &mut Rng) -> Bivector {
+        Bivector::from_coeffs(core::array::from_fn(|_| r.range(-1.0, 1.0)))
     }
 
     #[test]
@@ -795,8 +789,8 @@ mod tests {
             let k = t().gp(*s) + z();
             assert!(near(k ^ f, Trivector::zero(), 1e-12));
             assert!(near(k ^ crystal.of(f), intrinsic::Trivector::zero(), 1e-12));
-            let e_part: B = electric_planes.iter().map(|p| *p * (*p | f)).sum();
-            let m_part: B = magnetic_planes.iter().map(|p| *p * (*p | f)).sum();
+            let e_part: Bivector = electric_planes.iter().map(|p| *p * (*p | f)).sum();
+            let m_part: Bivector = magnetic_planes.iter().map(|p| *p * (*p | f)).sum();
             assert!(near(electric.of(f), e_part, 1e-12));
             assert!(near(magnetic.of(f), -m_part, 1e-12));
         }
@@ -940,14 +934,14 @@ mod tests {
     #[test]
     fn the_pairing_is_numga_s_regressive_product() {
         let numga =
-            |a: B, b: B| (a.hodge() ^ b.hodge()) * Pseudoscalar::<(), f64>::new(1.0).inverse();
+            |a: Bivector, b: Bivector| (a.hodge() ^ b.hodge()) * Pseudoscalar::new(1.0).inverse();
         let mut rng = rng(5);
         for _ in 0..7 {
             let (a, b) = (bivector(&mut rng), bivector(&mut rng));
             assert!((pair(a, b).s() - numga(a, b).s()).abs() < 1e-12);
-            let v = V::new(rng.normal(), rng.normal(), rng.normal(), rng.normal());
+            let v = Vector::new(rng.normal(), rng.normal(), rng.normal(), rng.normal());
             let w = v ^ a;
-            let numga_vw = (v.hodge() ^ w.hodge()) * Pseudoscalar::<(), f64>::new(1.0).inverse();
+            let numga_vw = (v.hodge() ^ w.hodge()) * Pseudoscalar::new(1.0).inverse();
             assert!((pair(v, w).s() - numga_vw.s()).abs() < 1e-12);
         }
     }

@@ -324,7 +324,7 @@ fn grid_inside(reach: f64, n: usize) -> Vec<Vector3> {
 }
 
 /// The couplings of a field map by the sites they couple, repeated couplings added.
-fn merged(map: &SparseMap<Scalar<(Scalar,), f64>>) -> BTreeMap<(usize, usize), f64> {
+fn merged(map: &SparseMap<Scalar<(Scalar,)>>) -> BTreeMap<(usize, usize), f64> {
     let mut cells = BTreeMap::new();
     for (row, column, cell) in map.couplings() {
         *cells.entry((row, column)).or_insert(0.0) += cell.c[0][0];

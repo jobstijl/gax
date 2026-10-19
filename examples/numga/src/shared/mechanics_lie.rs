@@ -21,8 +21,6 @@
 //! References: Hairer, Lubich, Wanner, *Geometric Numerical Integration*; Krysl, *Explicit
 //! Newmark-type integrators on Lie groups*.
 
-#![allow(dead_code)]
-
 use core::ops::{Add, Mul};
 use gax::Of;
 use gax::motions::{Linear, Motions};
@@ -79,22 +77,22 @@ pub type Step<G> =
 /// extrinsic lines (a turn about an axis) and forques intrinsic ones (the joins of points with
 /// their velocities); an inertia maps the first to the second and its inverse back.
 pub mod rigid {
-    use gax::pga3d::{Forque, Line, Motor, Point};
+    use gax::pga3d::{Forque, Motor, Point, Twist};
 
     /// The algebra.
     pub type G = gax::motions::Pga3d;
     /// A pose.
-    pub type M = gax::Unit<Motor<(), f64>>;
+    pub type M = gax::Unit<Motor>;
     /// A rate, in the body frame.
-    pub type R = Line<(), f64>;
+    pub type R = Twist;
     /// A forque.
-    pub type F = Forque<(), f64>;
+    pub type F = Forque;
     /// A mass point.
-    pub type P = Point<(), f64>;
+    pub type P = Point;
     /// Rate to momentum.
-    pub type Inertia = Forque<(Line,), f64>;
+    pub type Inertia = Forque<(Twist,)>;
     /// Momentum to rate.
-    pub type InertiaInv = Line<(Forque,), f64>;
+    pub type InertiaInv = Twist<(Forque,)>;
 }
 
 /// The Lie-group steppers, for every algebra's [`Motions`].

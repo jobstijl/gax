@@ -63,7 +63,7 @@ const CORD_VIEW: [f32; 2] = [-64.0, 20.0];
 const MARGIN: f64 = 1.08;
 
 /// A point of the plane of bending.
-type P2 = pga2d::Point<(), f64>;
+type P2 = pga2d::Point;
 
 /// The box around points of space: its centre, and its half extents along `x`, `y` and `z`.
 #[derive(Clone, Copy, Debug)]
@@ -172,7 +172,7 @@ fn across(spacing: f64, k: usize) -> P {
 }
 
 /// The plane of bending, a map on points: along the unbent rod (`z`) across, and up (`y`) up.
-fn bending_plane() -> pga2d::Point<(Point,), f64> {
+fn bending_plane() -> pga2d::Point<(Point,)> {
     let image = pga2d::Point::new;
     pga2d::Point::from_images([
         image(0.0, 0.0, 0.0),
@@ -193,7 +193,7 @@ fn in_plane(frames: &[Frame]) -> Vec<P2> {
 
 /// Space with the cord's weight down: `x` across, `y` up and `z` towards the viewer, as a map
 /// on points.
-fn weight_down() -> Point<(Point,), f64> {
+fn weight_down() -> Point<(Point,)> {
     let image = Point::new;
     Point::from_images([
         image(1.0, 0.0, 0.0, 0.0),
@@ -242,12 +242,12 @@ fn draw_curls(c: &mut Canvas, rect: Rect, turns: f64) {
     let curls = &scene().curls;
     let ax = Axes::fitting(rect, curls.iter().flatten().copied(), MARGIN as f32);
     let [low, high] = [-0.06, 0.7].map(|y| P2::xy(0.0, y));
-    ax.polyline(c, &[low, high], 3.0, palette::grid().faded(1.5));
+    ax.polyline(c, &[low, high], 3.0, palette::GRID.faded(1.5));
     for (k, curl) in curls.iter().enumerate() {
         let colour = colormap::viridis(0.05 + 0.85 * k as f32 / (curls.len() - 1) as f32);
         ax.polyline(c, curl, 1.2, colour.faded(0.3));
     }
-    ax.polyline(c, &in_plane(&curling(turns)), 2.4, palette::sky());
+    ax.polyline(c, &in_plane(&curling(turns)), 2.4, palette::SKY);
     label(c, rect, &format!("CURLED BY A COUPLE: {turns:.2} TURNS"));
 }
 
@@ -259,14 +259,14 @@ fn draw_euler(c: &mut Canvas, rect: Rect, degrees: f64) {
     let ax = Axes::fitting(rect, shapes, MARGIN as f32);
     // The line of thrust across the panel.
     let thrust = [0.0, 1.0].map(|x| P2::xy(f64::from(ax.at(x, 0.0).to_euclidean()[0]), 0.0));
-    ax.polyline(c, &thrust, 1.0, palette::grid());
+    ax.polyline(c, &thrust, 1.0, palette::GRID);
     for shape in &sc.plate {
-        ax.polyline(c, shape, 1.0, palette::blue().faded(0.25));
+        ax.polyline(c, shape, 1.0, palette::BLUE.faded(0.25));
     }
     let rod = in_plane(&euler(degrees));
-    ax.polyline(c, &rod, 2.4, palette::sky());
+    ax.polyline(c, &rod, 2.4, palette::SKY);
     let pins = [rod[0], P2::xy(chord(degrees.to_radians()), 0.0)];
-    ax.scatter(c, &pins, Marker::Triangle, 9.0, palette::ink());
+    ax.scatter(c, &pins, Marker::Triangle, 9.0, palette::INK);
     label(
         c,
         rect,
@@ -282,11 +282,11 @@ fn draw_rod(s: &mut Scene3, frames: &[Frame], width: f64, place: impl Fn(P) -> P
         .collect();
     for pair in edges.windows(2) {
         let ([a, b], [d, e]) = (pair[0], pair[1]);
-        let colour = s.lit(a, b, e, palette::sky().faded(0.4));
+        let colour = s.lit(a, b, e, palette::SKY.faded(0.4));
         s.quad(a, b, e, d, colour, 0.9);
     }
     let centres: Vec<P> = frames.iter().map(|f| place(*f >> rod::centre())).collect();
-    s.polyline(&centres, 0.8, palette::blue().faded(0.5));
+    s.polyline(&centres, 0.8, palette::BLUE.faded(0.5));
 }
 
 /// Kirchhoff's helices side by side, each a little more than the widest apart.
@@ -340,7 +340,7 @@ fn draw_cord(c: &mut Canvas, rect: Rect, t: f32) {
                 view.of(end >> rod::centre()),
                 Marker::Dot,
                 9.0,
-                palette::ink(),
+                palette::INK,
             );
         }
     });
@@ -450,7 +450,7 @@ mod tests {
         let cord = cord();
         let (_, mut frames) = coil(CORD_PIECES);
         let mut draw = rng(0);
-        let mut rates: Vec<Line<(), f64>> = (0..CORD_PIECES)
+        let mut rates: Vec<Line> = (0..CORD_PIECES)
             .map(|_| {
                 let [a, b, c] = [(); 3].map(|_| 0.3 * draw.normal());
                 Line::new(0.0, 0.0, 0.0, a, b, c)
@@ -461,7 +461,7 @@ mod tests {
             damping: 0.0,
             ..cord.segment
         };
-        let energy = |frames: &[Frame], rates: &[Line<(), f64>]| {
+        let energy = |frames: &[Frame], rates: &[Line]| {
             let kinetic: f64 = rates.iter().map(|r| (free.inertia.of(*r) & *r).s()).sum();
             let elastic: f64 = frames
                 .windows(2)

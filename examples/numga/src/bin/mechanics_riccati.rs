@@ -22,21 +22,18 @@ use std::sync::OnceLock;
 mod riccati {
     use super::*;
 
-    pub type P = Point<(), f64>;
-    /// An error: a twist, the extrinsic point (a turn about it), where a position is intrinsic.
-    pub type E = Twist<(), f64>;
     /// A forque: a line of force, the join of a point and a direction.
-    pub type L = Forque<(), f64>;
+    pub type L = Forque;
     /// `Scalar <- (Twist, Twist)`.
-    pub type StateCost = Scalar<(Twist, Twist), f64>;
+    pub type StateCost = Scalar<(Twist, Twist)>;
     /// `Scalar <- (Forque, Forque)`.
-    pub type EffortCost = Scalar<(Forque, Forque), f64>;
+    pub type EffortCost = Scalar<(Forque, Forque)>;
     /// `Twist <- Twist`.
-    pub type Dynamics = Twist<(Twist,), f64>;
+    pub type Dynamics = Twist<(Twist,)>;
     /// `Twist <- Forque`.
-    pub type Actuation = Twist<(Forque,), f64>;
+    pub type Actuation = Twist<(Forque,)>;
     /// `Forque <- Twist`.
-    pub type Feedback = Forque<(Twist,), f64>;
+    pub type Feedback = Forque<(Twist,)>;
 
     /// The cost still to pay and the feedback, one more step back from `value` each time.
     pub fn riccati(
@@ -52,7 +49,7 @@ mod riccati {
                 // A push costs effort now and moves the error whose cost is paid next.
                 let control_cost: EffortCost = effort_cost + value.of_both(actuation, actuation);
                 // The push that cancels the cost's derivative, for every error at once.
-                let cross: Scalar<(Twist, Forque), f64> = value.of_both(dynamics, actuation);
+                let cross: Scalar<(Twist, Forque)> = value.of_both(dynamics, actuation);
                 let feedback: Feedback = -control_cost.solve(cross);
                 // The error's cost now, and its future cost through the step that feedback takes.
                 let closed: Dynamics = dynamics + actuation.of(feedback);
@@ -64,11 +61,11 @@ mod riccati {
 
     /// The initial error and its evolution under the feedbacks.
     pub fn rollout(
-        initial: E,
+        initial: Twist,
         dynamics: Dynamics,
         actuation: Actuation,
         feedbacks: &[Feedback],
-    ) -> Vec<E> {
+    ) -> Vec<Twist> {
         let mut error = initial;
         let mut out = vec![error];
         for f in feedbacks {
@@ -89,7 +86,7 @@ mod riccati {
     /// How much stiffer the pose is priced at the deadline than along the way.
     pub const LANDING: f64 = 1e6;
 
-    pub fn hull() -> [P; 5] {
+    pub fn hull() -> [Point; 5] {
         [
             Point::xy(-0.45, -0.23),
             Point::xy(0.28, -0.23),
@@ -98,32 +95,32 @@ mod riccati {
             Point::xy(-0.45, 0.23),
         ]
     }
-    pub fn centre() -> P {
-        Point::xy(0.0, 0.0)
+    pub fn centre() -> Point {
+        Point::origin()
     }
     /// Forward and sideways, points at infinity.
-    pub fn axes() -> [P; 2] {
+    pub fn axes() -> [Point; 2] {
         [Point::direction(1.0, 0.0), Point::direction(0.0, 1.0)]
     }
-    pub fn mounts() -> [P; 3] {
+    pub fn mounts() -> [Point; 3] {
         [
             Point::xy(-0.3, 0.2),
             Point::xy(-0.3, -0.2),
             Point::xy(0.35, 0.0),
         ]
     }
-    pub fn directions() -> [P; 3] {
+    pub fn directions() -> [Point; 3] {
         [
             Point::direction(1.0, 0.0),
             Point::direction(1.0, 0.0),
             Point::direction(0.0, 1.0),
         ]
     }
-    pub fn tracking_points() -> [P; 2] {
+    pub fn tracking_points() -> [Point; 2] {
         [Point::xy(0.45, 0.0), Point::xy(-0.35, 0.0)]
     }
     /// numga's `0.4 xw + 0.5 yw + 0.35 xy`: with `w = e0`, `xw = -e01` and `yw = e20`.
-    pub fn initial() -> E {
+    pub fn initial() -> Twist {
         Twist::from_coeffs([0.5, -0.4, 0.35])
     }
 
@@ -195,7 +192,7 @@ mod riccati {
     pub struct Docking {
         pub values: Vec<StateCost>,
         pub feedbacks: Vec<Feedback>,
-        pub errors: Vec<E>,
+        pub errors: Vec<Twist>,
         pub commands: Vec<[f64; 3]>,
     }
 
@@ -242,12 +239,12 @@ mod riccati {
     }
 
     /// The pose of an error: `exp(-error / 2)`.
-    pub fn pose(error: E) -> Unit<Motor<(), f64>> {
+    pub fn pose(error: Twist) -> Unit<Motor> {
         error.gp(-0.5).exp()
     }
 
     /// The twist whose pose is the translation carrying the dock's centre to `to`.
-    pub fn offset(to: P) -> E {
+    pub fn offset(to: Point) -> Twist {
         let d = to.unitized() - centre();
         Twist::translation(Point::direction(d.e20(), d.e01())).gp(-2.0)
     }
@@ -265,8 +262,8 @@ const STEP: f32 = 0.08;
 const HOLD: f32 = 1.4;
 
 /// Every corner of the hull at every pose of both approaches (the last pose is the dock).
-fn corners() -> &'static [P] {
-    static L: OnceLock<Vec<P>> = OnceLock::new();
+fn corners() -> &'static [Point] {
+    static L: OnceLock<Vec<Point>> = OnceLock::new();
     L.get_or_init(|| {
         let hull = hull();
         cases()
@@ -286,7 +283,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let k = (s.floor() as usize).min(STEPS - 1);
     let frac = f64::from(s - k as f32);
     let hull = hull();
-    let closed = |pts: &[P]| [pts, &pts[..1]].concat();
+    let closed = |pts: &[Point]| [pts, &pts[..1]].concat();
     let [x, y] = axes();
     let horizon = x & y;
     let labels = ["LOWER EFFORT PENALTY", "HIGHER EFFORT PENALTY"];
@@ -308,21 +305,21 @@ fn draw(c: &mut Canvas, t: f32) {
             90,
             0.15,
             1.5,
-            palette::green(),
+            palette::GREEN,
         );
-        ax.dashed(c, &closed(&hull), 1.2, 5.0, palette::grid());
-        let path: Vec<P> = case.errors.iter().map(|e| pose(*e) >> centre()).collect();
-        ax.polyline(c, &path, 1.0, palette::sky().faded(0.35));
+        ax.dashed(c, &closed(&hull), 1.2, 5.0, palette::GRID);
+        let path: Vec<Point> = case.errors.iter().map(|e| pose(*e) >> centre()).collect();
+        ax.polyline(c, &path, 1.0, palette::SKY.faded(0.35));
         // The pose between steps: along the screw from one to the next.
         let m = Motor::interpolate(
             pose(case.errors[k]),
             pose(case.errors[(k + 1).min(STEPS)]),
             if s >= STEPS as f32 { 1.0 } else { frac },
         );
-        let body: Vec<P> = hull.iter().map(|p| m >> *p).collect();
+        let body: Vec<Point> = hull.iter().map(|p| m >> *p).collect();
         // The hull's fill covers what is below, a dim blue: its outline glows.
-        ax.fill(c, &body, palette::blue().faded(0.1), 0.5);
-        ax.polyline(c, &closed(&body), 1.6, palette::sky());
+        ax.fill(c, &body, palette::BLUE.faded(0.1), 0.5);
+        ax.polyline(c, &closed(&body), 1.6, palette::SKY);
         // The total push the feedback asks for, a forque: its line of action, through the foot
         // of the perpendicular from the dock (the meet of the forque with the perpendicular),
         // along its point at infinity (its meet with the horizon).
@@ -330,7 +327,7 @@ fn draw(c: &mut Canvas, t: f32) {
             let f = case.feedbacks[k].of(case.errors[k]);
             if f.norm() > 1e-6 {
                 let foot = (f | centre()) ^ f;
-                ax.axline(c, foot, f ^ horizon, 1.0, palette::orange().faded(0.35));
+                ax.axline(c, foot, f ^ horizon, 1.0, palette::ORANGE.faded(0.35));
             }
         }
         // The thrusters' commands: a signed command reverses its ideal direction before the
@@ -343,15 +340,15 @@ fn draw(c: &mut Canvas, t: f32) {
         for j in 0..3 {
             let base = m >> mounts[j];
             let force = m >> directions[j].gp(command[j] * 0.04);
-            ax.scatter(c, &[base], Marker::Square, 6.0, palette::ink());
-            ax.arrow(c, base, base + force, 2.0, 8.0, palette::orange());
+            ax.scatter(c, &[base], Marker::Square, 6.0, palette::INK);
+            ax.arrow(c, base, base + force, 2.0, 8.0, palette::ORANGE);
         }
         // The labels just inside the top left corner.
         let corner = ax.at(0.0, 1.0);
         let at = |down: f32| corner + Point2::direction(0.05, -down);
-        ax.text(c, at(0.1), label, 12.0, palette::ink(), Align::Left);
+        ax.text(c, at(0.1), label, 12.0, palette::INK, Align::Left);
         let note = format!("{remaining} STEPS LEFT: COST 0.15 LEVEL");
-        ax.text(c, at(0.22), &note, 10.0, palette::green(), Align::Left);
+        ax.text(c, at(0.22), &note, 10.0, palette::GREEN, Align::Left);
     }
     caption(
         c,
@@ -410,7 +407,7 @@ mod tests {
                 riccati(terminal, d, a, q, r, steps).into_iter().unzip();
             gains.reverse();
             // Six initial errors fix the value's quadratic form; each tests the whole policy.
-            let starts: [E; 6] = [
+            let starts: [Twist; 6] = [
                 [1.0, 0.0, 0.0],
                 [0.0, 1.0, 0.0],
                 [0.0, 0.0, 1.0],
@@ -434,9 +431,9 @@ mod tests {
                     "{paid} {predicted}"
                 );
                 // Half the derivatives of the cost (the forms are symmetric).
-                let mut costate: Scalar<(Twist,), f64> = terminal.of(errors[steps]);
+                let mut costate: Scalar<(Twist,)> = terminal.of(errors[steps]);
                 for step in (0..steps).rev() {
-                    let gradient: Scalar<(Forque,), f64> = r.of(pushes[step]) + costate.of(a);
+                    let gradient: Scalar<(Forque,)> = r.of(pushes[step]) + costate.of(a);
                     let size = r.of(pushes[step]).max_abs_diff(&Scalar::zero());
                     assert!(
                         gradient.max_abs_diff(&Scalar::zero()) < 1e-10 * size.max(1.0),
@@ -476,7 +473,7 @@ mod tests {
                 })
                 .collect();
             let landing = tracking[STEPS] * LANDING;
-            let cost = |v: &StateCost, e: E| v.of(e).of(e).s();
+            let cost = |v: &StateCost, e: Twist| v.of(e).of(e).s();
             let predicted = cost(&d.values[STEPS - 1], d.errors[0]);
             let total: f64 = running.iter().sum::<f64>() + landing;
             assert!((total - predicted).abs() < 1e-9, "{total} {predicted}");
@@ -510,7 +507,7 @@ mod tests {
                 assert!(supplied.max_abs_diff(&requested) < 1e-10);
             }
         }
-        for trial in [[0.2, -0.3, 0.15], [-0.1, 0.25, -0.12]].map(E::from_coeffs) {
+        for trial in [[0.2, -0.3, 0.15], [-0.1, 0.25, -0.12]].map(Twist::from_coeffs) {
             for ((m, dir), t) in mounts().iter().zip(directions()).zip(thrusters) {
                 let v = m.commutator(trial);
                 let power = dir.e20() * v.e20() + dir.e01() * v.e01();

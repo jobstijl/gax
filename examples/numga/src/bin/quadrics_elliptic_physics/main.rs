@@ -10,14 +10,13 @@
 //! hyperbolic` and `--s3 crowd|gap|needle|tunnel` choose them (crowded and crowd by default).
 
 mod engine;
-#[path = "../../shared/quadrics_s3.rs"]
-mod s3;
+use gax_numga_examples::shared::quadrics_s3 as s3;
 mod scenes;
 
 use gax_colour::{Light, light};
 use gax_numga_examples::disc::Disc;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run, signal::frame,
 };
 use scenes::{Scene3, s2};
 
@@ -114,7 +113,7 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: Rect, f: usize) {
     );
     ax.frame(c, &title, "", "");
     if tumbling {
-        let colours = [palette::sky(), palette::red(), palette::yellow()];
+        let colours = [palette::SKY, palette::RED, palette::YELLOW];
         for (i, colour) in colours.into_iter().enumerate() {
             let rate: Vec<Point2> = (0..frames)
                 .map(|k| Point2::xy(time(k), show.s2.rates[k][0].c[i] as f32))
@@ -129,14 +128,14 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: Rect, f: usize) {
     let momentum: Vec<Point2> = (0..frames)
         .map(|k| Point2::xy(time(k), (show.s2.momentum[k].norm() / m0) as f32))
         .collect();
-    ax.polyline(c, &energy, 1.8, palette::green());
-    ax.polyline(c, &momentum, 1.4, palette::purple());
+    ax.polyline(c, &energy, 1.8, palette::GREEN);
+    ax.polyline(c, &momentum, 1.4, palette::PURPLE);
     ax.line(
         c,
         Point2::xy(time(f), range[0]),
         Point2::xy(time(f), range[1]),
         1.0,
-        palette::ink().faded(0.6),
+        palette::INK.faded(0.6),
     );
 }
 
@@ -146,7 +145,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     let (w, h) = (screen.width(), screen.height());
     let down = Point2::direction(0.0, 1.0);
     let frames = show.s2.energy.len();
-    let f = (((t / SECONDS).fract() * frames as f32) as usize).min(frames - 1);
+    let f = frame((t / SECONDS).fract(), frames);
     caption(
         c,
         "QUADRIC RIGID BODIES ON S2 AND S3",
@@ -163,7 +162,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     hemisphere(c, centre, radius, &show.s2.surfaces[f], &show.s2.colors);
     let name = format!("S2: {}", show.s2_name);
     let label = centre + down.gp(radius + size * 1.4);
-    c.text(&name, label, size, palette::ink(), Align::Center);
+    c.text(&name, label, size, palette::INK, Align::Center);
     let below = centre + down.gp(radius + size * 1.6);
     let rect = Rect::new(0.0, below.e01(), w * 0.44, h).inset(34.0, 16.0, 8.0, 20.0);
     // A plot frame's text is never under 3 pixels: on a small canvas its title stands taller
@@ -204,7 +203,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
         trajectory.impulses
     );
     let at = panel.bottom_left() + Point2::direction(4.0, size * 1.5);
-    c.text(&note, at, size, palette::ink(), Align::Left);
+    c.text(&note, at, size, palette::INK, Align::Left);
 }
 
 fn main() {
@@ -230,10 +229,7 @@ mod tests {
     use super::scenes::{self, s2, s3};
     use gax::vga3d::{Bivector, Vector};
     use gax_numga_examples::signal::{phasor, tangent};
-
-    fn close(a: f64, b: f64, tol: f64) -> bool {
-        (a - b).abs() <= tol
-    }
+    use gax_numga_examples::testing::close;
 
     /// Great circles tangent to an ellipse satisfy `π ∨ Q(π) = 0`.
     #[test]
@@ -274,7 +270,7 @@ mod tests {
         let (points, masses) =
             scenes::ellipse_mesh([35f64.to_radians(), 10f64.to_radians()], 1.0, 1536, 10);
         let inertia = s2::pointcloud_inertia(&points, &masses);
-        let moment = |axis: Bivector<(), f64>| (axis & inertia.of(axis)).s().abs();
+        let moment = |axis: Bivector| (axis & inertia.of(axis)).s().abs();
         let (ix, iy, iz) = (
             moment(Bivector::new(1.0, 0.0, 0.0)),
             moment(Bivector::new(0.0, 1.0, 0.0)),

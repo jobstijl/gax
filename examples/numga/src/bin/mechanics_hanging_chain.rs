@@ -24,6 +24,7 @@
 //! The animation draws the iterates one after another over the dashed catenary, and the
 //! largest unbalanced force at each, in bead weights, on a logarithmic scale.
 
+use gax::vga2d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, reach2, run,
 };
@@ -36,10 +37,8 @@ mod hanging_chain {
     use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
-    /// A position in the plane of the chain, from the point midway between the pins.
-    pub type V = Vector<(), f64>;
     /// The beads' positions.
-    pub type Chain = Field<V>;
+    pub type Chain = Field<Vector>;
 
     pub const BEADS: usize = 31;
     pub const LINKS: usize = BEADS + 1;
@@ -55,16 +54,16 @@ mod hanging_chain {
     /// from the arc's lowest point.
     pub const START_TURN: f64 = 1.3;
 
-    pub const X: V = V::new(1.0, 0.0);
-    pub const Y: V = V::new(0.0, 1.0);
+    pub const X: Vector = Vector::new(1.0, 0.0);
+    pub const Y: Vector = Vector::new(0.0, 1.0);
 
     /// The pins.
-    pub fn pins() -> [V; 2] {
+    pub fn pins() -> [Vector; 2] {
         [X * (-SPAN / 2.0), X * (SPAN / 2.0)]
     }
 
     /// A bead's weight.
-    pub fn weight() -> V {
+    pub fn weight() -> Vector {
         Y * (-BEAD_MASS * GRAVITY)
     }
 
@@ -75,7 +74,7 @@ mod hanging_chain {
 
     /// The incidence of the links on the beads: link `k` has bead `k` as its head (`+1`) and
     /// bead `k - 1` as its tail (`-1`).
-    pub fn bead_ends() -> SparseMap<Scalar<(), f64>> {
+    pub fn bead_ends() -> SparseMap<Scalar> {
         let heads = (0..BEADS).map(|k| (k, k, 1.0));
         let tails = (0..BEADS).map(|k| (k + 1, k, -1.0));
         let (rows, (cols, cells)): (Vec<usize>, (Vec<usize>, Vec<_>)) = heads
@@ -87,10 +86,10 @@ mod hanging_chain {
 
     /// The pins' share of the links: the left pin is the first link's tail, the right pin the
     /// last link's head.
-    pub fn anchors() -> Field<V> {
+    pub fn anchors() -> Field<Vector> {
         let [left, right] = pins();
         let pin_ends = SparseMap::new(
-            vec![Scalar::<(), f64>::new(-1.0), Scalar::new(1.0)],
+            vec![Scalar::new(-1.0), Scalar::new(1.0)],
             vec![0, LINKS - 1],
             vec![0, 1],
             (LINKS, 2),
@@ -102,7 +101,7 @@ mod hanging_chain {
     /// coefficients so that `gax::field` can differentiate it.
     pub fn energy<T: Real>(beads: &Field<Vector<(), T>>) -> T {
         let c = T::from_f64;
-        let lift = |v: V| v.map_coefs(c);
+        let lift = |v: Vector| v.map_coefs(c);
         let ends = bead_ends().map_cells(|e| e.map_coefs(c));
         let links = &(&ends * beads) + &anchors().map(lift);
         let stretch = links.map(|l| Scalar::new(l.norm() - c(rest())));
@@ -113,7 +112,7 @@ mod hanging_chain {
 
     /// The metric of the plane, `a | b`: it reads a form as the vector that pairs as it does,
     /// and a bilinear form as the map.
-    fn metric() -> Scalar<(Vector, Vector), f64> {
+    fn metric() -> Scalar<(Vector, Vector)> {
         Vector::slot() | Vector::slot()
     }
 
@@ -127,7 +126,7 @@ mod hanging_chain {
         Field::from_fn(BEADS, |i| {
             let t = (i + 1) as f64 / LINKS as f64;
             let angle = START_TURN * (2.0 * t - 1.0);
-            let turn = Pseudoscalar::<(), f64>::new(-angle / 2.0).exp();
+            let turn = Pseudoscalar::new(-angle / 2.0).exp();
             centre + (turn >> lowest)
         })
     }
@@ -196,7 +195,7 @@ const SECONDS: f32 = STEP_SECONDS * (STEPS as f32 + 3.0);
 struct Solve {
     chains: Vec<Chain>,
     residuals: Vec<f64>,
-    catenary: Vec<V>,
+    catenary: Vec<Vector>,
 }
 
 fn solve() -> &'static Solve {
@@ -236,25 +235,25 @@ fn draw_shapes(c: &mut Canvas, rect: Rect, shown: usize) {
     let s = solve();
     let ax = Axes::equal(rect, Point2::xy(0.0, -0.4), 0.95);
     let catenary: Vec<Point2> = s.catenary.iter().map(|v| reach2(*v)).collect();
-    ax.dashed(c, &catenary, 2.2, 7.0, palette::orange().faded(0.8));
+    ax.dashed(c, &catenary, 2.2, 7.0, palette::ORANGE.faded(0.8));
     for (k, chain) in s.chains[..shown].iter().enumerate() {
         let age = (shown - 1 - k) as f32;
         ax.polyline(
             c,
             &polyline(chain),
             1.2,
-            palette::sky().faded(0.55 / (1.0 + age)),
+            palette::SKY.faded(0.55 / (1.0 + age)),
         );
     }
     let now = polyline(&s.chains[shown - 1]);
-    ax.polyline(c, &now, 1.8, palette::sky());
-    ax.scatter(c, &now[1..now.len() - 1], Marker::Dot, 5.0, palette::ink());
+    ax.polyline(c, &now, 1.8, palette::SKY);
+    ax.scatter(c, &now[1..now.len() - 1], Marker::Dot, 5.0, palette::INK);
     ax.scatter(
         c,
         &[now[0], now[now.len() - 1]],
         Marker::Square,
         10.0,
-        palette::yellow(),
+        palette::YELLOW,
     );
     let label = format!("NEWTON STEP {}", shown - 1);
     ax.text(
@@ -262,13 +261,10 @@ fn draw_shapes(c: &mut Canvas, rect: Rect, shown: usize) {
         ax.at(0.03, 0.06),
         &label,
         13.0,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
-    ax.legend(
-        c,
-        &[("CHAIN", palette::sky()), ("CATENARY", palette::orange())],
-    );
+    ax.legend(c, &[("CHAIN", palette::SKY), ("CATENARY", palette::ORANGE)]);
 }
 
 /// The largest unbalanced force at each iterate shown, in bead weights, over the level of one
@@ -284,9 +280,9 @@ fn draw_residuals(c: &mut Canvas, rect: Rect, shown: usize) {
         .map(|(k, r)| Point2::xy(k as f32, (*r as f32).max(FLOOR)))
         .collect();
     let one = steps.map(|k| Point2::xy(k, 1.0));
-    ax.line(c, one[0], one[1], 1.0, palette::grid());
-    ax.polyline(c, &points, 1.8, palette::sky());
-    ax.scatter(c, &points, Marker::Dot, 7.0, palette::sky());
+    ax.line(c, one[0], one[1], 1.0, palette::GRID);
+    ax.polyline(c, &points, 1.8, palette::SKY);
+    ax.scatter(c, &points, Marker::Dot, 7.0, palette::SKY);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -316,6 +312,7 @@ fn main() {
 mod tests {
     use super::hanging_chain::*;
     use super::solve;
+    use gax::vga2d::Vector;
 
     /// The notebook's checks: at rest every bead's unbalanced force vanishes to round-off
     /// against its weight; once below a weight, each Newton step squares it, in units of the
@@ -364,9 +361,9 @@ mod tests {
     fn the_start_stretches_every_spring() {
         let chain = start();
         let [left, right] = pins();
-        let beads: Vec<V> = chain.iter().collect();
+        let beads: Vec<Vector> = chain.iter().collect();
         let ends = [left].into_iter().chain(beads).chain([right]);
-        let links: Vec<V> = ends.clone().zip(ends.skip(1)).map(|(a, b)| b - a).collect();
+        let links: Vec<Vector> = ends.clone().zip(ends.skip(1)).map(|(a, b)| b - a).collect();
         assert!(links.iter().all(|l| l.norm() > rest()));
     }
 

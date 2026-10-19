@@ -54,20 +54,20 @@ pub const FIBRE_SAMPLES: usize = 240;
 
 /// The turn of space from the flow lines to the Hopfion's electric lines, a quarter turn in
 /// the `xy` plane.
-pub fn electric_turn() -> gax::Unit<vga3d::Rotor<(), f64>> {
+pub fn electric_turn() -> gax::Unit<vga3d::Rotor> {
     let [ex, ey, _] = space_axes();
     ((ex ^ ey) * core::f64::consts::FRAC_PI_4).exp()
 }
 
 /// The turn from the flow lines to the magnetic lines, a quarter turn in the `yz` plane.
 #[cfg_attr(not(test), allow(dead_code))] // the tests follow the magnetic lines too
-pub fn magnetic_turn() -> gax::Unit<vga3d::Rotor<(), f64>> {
+pub fn magnetic_turn() -> gax::Unit<vga3d::Rotor> {
     let [_, ey, ez] = space_axes();
     ((ey ^ ez) * core::f64::consts::FRAC_PI_4).exp()
 }
 
 /// Curves of space turned by a rotor.
-pub fn turned(curves: &[Vec<Spatial>], r: gax::Unit<vga3d::Rotor<(), f64>>) -> Vec<Vec<Spatial>> {
+pub fn turned(curves: &[Vec<Spatial>], r: gax::Unit<vga3d::Rotor>) -> Vec<Vec<Spatial>> {
     curves
         .iter()
         .map(|c| c.iter().map(|p| r >> *p).collect())

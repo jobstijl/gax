@@ -181,19 +181,19 @@ pub fn segments(s: &str, align: Align) -> Vec<[Point2; 2]> {
         Align::Center => -w * 0.5,
         Align::Right => -w,
     };
-    let mut out = Vec::new();
-    for (i, c) in s.chars().enumerate() {
-        // The glyph's own origin, `6 i` along the baseline.
-        let origin = Point2::xy(start + 6.0 * i as f32, 0.0);
-        let at = |(x, y): (f32, f32)| origin + Point2::direction(x, y);
-        let strokes = glyph(c).or_else(|| glyph('?')).unwrap_or(&[]);
-        for stroke in strokes {
-            for pair in stroke.windows(2) {
-                out.push([at(pair[0]), at(pair[1])]);
-            }
-        }
-    }
-    out
+    s.chars()
+        .enumerate()
+        .flat_map(|(i, c)| {
+            // The glyph's own origin, `6 i` along the baseline.
+            let origin = Point2::xy(start + 6.0 * i as f32, 0.0);
+            let at = move |(x, y): (f32, f32)| origin + Point2::direction(x, y);
+            let strokes = glyph(c).or_else(|| glyph('?')).unwrap_or(&[]);
+            strokes
+                .iter()
+                .flat_map(|stroke| stroke.windows(2))
+                .map(move |pair| [at(pair[0]), at(pair[1])])
+        })
+        .collect()
 }
 
 #[cfg(test)]

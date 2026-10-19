@@ -34,8 +34,7 @@
 //! The animation bends a bar held at one end a quarter turn up at the other, as rigid as possible
 //! beside Laplacian editing, each checkered by where its faces sat at rest.
 
-#[path = "../shared/surfaces_spin.rs"]
-mod surfaces_spin;
+use gax_numga_examples::shared::surfaces_spin;
 
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::{
@@ -51,7 +50,7 @@ mod arap {
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 
     /// A form on two rotors: a number for every two.
-    pub type RotorForm = Scalar<(Rotor, Rotor), f64>;
+    pub type RotorForm = Scalar<(Rotor, Rotor)>;
 
     /// One pose's answers: the vertices as rigid as possible, the vertices by Laplacian editing,
     /// and the energy at each iteration of the first.
@@ -115,9 +114,9 @@ mod arap {
         rest: &Field<Vector3>,
         means: &SparseMap<Scalar3>,
         weights: &SparseMap<Scalar3>,
-    ) -> Field<Rotor<(), f64>> {
+    ) -> Field<Rotor> {
         // The rest edge turned by any rotor: the sandwich with the rotor open in both places.
-        let open = Rotor::<(), f64>::slot();
+        let open = Rotor::slot();
         let forms: Field<RotorForm> =
             edges.zip_with(rest, |e, r| e.scalar_product((open * r) * open.reverse()));
         let summed = &means.reverse() * &(weights * &forms);
@@ -193,7 +192,7 @@ mod scenes {
     pub fn bent(vertices: &Field<Vector3>, angle: f64) -> Field<Vector3> {
         let radius = LENGTH / angle;
         let pivot = X * (-LENGTH / 2.0) + Z * radius;
-        let turn = Bivector::<(), f64>::new(0.0, angle / 2.0, 0.0).exp();
+        let turn = Bivector::new(0.0, angle / 2.0, 0.0).exp();
         let end = pivot + (turn >> (Z * -radius));
         vertices.map(|v| end + (turn >> (v - X * (LENGTH / 2.0))))
     }
@@ -365,8 +364,7 @@ mod tests {
                 }
         });
         // numga's `exp(-0.3 xy) exp(0.2 yz)`.
-        let turn =
-            Bivector::<(), f64>::new(0.0, 0.0, -0.3).exp() * Bivector::new(0.2, 0.0, 0.0).exp();
+        let turn = Bivector::new(0.0, 0.0, -0.3).exp() * Bivector::new(0.2, 0.0, 0.0).exp();
         let shape = &deform(&bar, &handles, core::slice::from_ref(&pose), 1e3, 4)[0].rigid;
         let turned_bar = bar.with_vertices(bar.vertices.map(|v| turn >> v));
         let turned = &deform(&turned_bar, &handles, &[pose.map(|v| turn >> v)], 1e3, 4)[0].rigid;

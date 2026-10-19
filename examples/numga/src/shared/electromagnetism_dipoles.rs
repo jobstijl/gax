@@ -21,7 +21,6 @@ pub fn between_others<C: Copy>(
 /// sites (added up where they repeat) are the transposes of those back. For the dipoles' maps,
 /// the field of one particle's dipole at another is the field of the other's at the one, and
 /// each coupling is symmetric.
-#[cfg(test)]
 pub fn is_self_adjoint<C, A>(map: &SparseMap<C>, tolerance: f64) -> bool
 where
     C: gax::Extensor<Slots = (A,), Coef = f64> + core::ops::Add<Output = C>,

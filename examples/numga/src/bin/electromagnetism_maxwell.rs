@@ -14,6 +14,7 @@
 //! cloud's exact third.
 
 use gax::pga2d::Point;
+use gax::sta::{Bivector, Vector};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
@@ -28,13 +29,11 @@ mod maxwell {
     use gax::sta::{Bivector, Even, Scalar, Vector, oriented};
     use gax_numga_examples::rng::{Draw, Rng};
 
-    pub type V = Vector<(), f64>;
-    pub type F = Bivector<(), f64>;
     /// A vector of the rest observer's space, for drawing.
-    pub type Space = gax::vga3d::Vector<(), f64>;
+    pub type Space = gax::vga3d::Vector;
     /// A stress-energy map: an observer in, the momentum flux it sees out.
-    pub type StressEnergy = Vector<(Vector,), f64>;
-    pub type Boost = gax::Unit<Even<(), f64>>;
+    pub type StressEnergy = Vector<(Vector,)>;
+    pub type Boost = gax::Unit<Even>;
 
     /// The open vector: numga's `Vector` used as a hole in an expression.
     pub fn open() -> StressEnergy {
@@ -42,16 +41,16 @@ mod maxwell {
     }
 
     /// The rest observer and the spatial axes.
-    pub fn t() -> V {
+    pub fn t() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 0.0, 1.0, 0.0)
     }
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
@@ -63,40 +62,40 @@ mod maxwell {
 
     /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy`. gax orders the
     /// boost planes as `e10, e20, e30`, so numga's `tx = t ^ x` is `-e10`.
-    pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> F {
+    pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> Bivector {
         Bivector::new(-tx, -ty, -tz, yz, zx, xy)
     }
 
     /// The electromagnetic stress-energy map `T(v) = ½ F v ~F`. gax sandwiches with versor
     /// kinds only, so the field is cast to the even subalgebra first.
-    pub fn stress_energy(f: F) -> StressEnergy {
+    pub fn stress_energy(f: Bivector) -> StressEnergy {
         0.5 * (f.cast::<Even>() >> open())
     }
 
     /// The same map from the Lorentz force generator `v ↦ F × v`, iterated, minus the
     /// Lagrangian `⟨F F⟩₀` (squared electric minus squared magnetic field) as an isotropic
     /// pressure.
-    pub fn stress_from_force(f: F) -> StressEnergy {
+    pub fn stress_from_force(f: Bivector) -> StressEnergy {
         f.commutator(f.commutator(open())) - (0.5 * lagrangian(f)) * open()
     }
 
     /// `⟨F F⟩₀`, a Lorentz invariant.
-    pub fn lagrangian(f: F) -> f64 {
+    pub fn lagrangian(f: Bivector) -> f64 {
         (f * f).grade::<0>().s()
     }
 
     /// The dyad `u (u · v)`: dust moving with four-velocity `u`, per unit density.
-    pub fn dyad(u: V) -> StressEnergy {
+    pub fn dyad(u: Vector) -> StressEnergy {
         u * (u | open())
     }
 
     /// Normal traction on a face with unit spatial normal `n` (`n² = -1`): `n⁻¹ · T(n)`.
-    pub fn normal_stress(t_map: StressEnergy, n: V) -> f64 {
+    pub fn normal_stress(t_map: StressEnergy, n: Vector) -> f64 {
         (n.inverse() | t_map.of(n)).s()
     }
 
     /// The energy density a unit observer `u` sees, `u · T(u)`.
-    pub fn energy(t_map: StressEnergy, u: V) -> f64 {
+    pub fn energy(t_map: StressEnergy, u: Vector) -> f64 {
         (u | t_map.of(u)).s()
     }
 
@@ -112,8 +111,8 @@ mod maxwell {
     /// cloud's `S(v, v) = Σ m (u · v)²` is positive definite, so the pencil is solved the
     /// other way round, `g(v, ·) = λ⁻¹ S(v, ·)`.
     pub fn spectrum(t_map: StressEnergy) -> [f64; 4] {
-        let s: Scalar<(Vector, Vector), f64> = open() | t_map;
-        let g: Scalar<(Vector, Vector), f64> = open() | open();
+        let s: Scalar<(Vector, Vector)> = open() | t_map;
+        let g: Scalar<(Vector, Vector)> = open() | open();
         let (inverse, _) = g.eigh(s);
         let mut values = inverse.map(|m| 1.0 / m);
         values.sort_by(f64::total_cmp);
@@ -121,7 +120,7 @@ mod maxwell {
     }
 
     /// The boost by rapidity `zeta` along `axis` (a unit spatial vector), `exp(axis t ζ / 2)`.
-    pub fn boost(zeta: f64, axis: V) -> Boost {
+    pub fn boost(zeta: f64, axis: Vector) -> Boost {
         ((axis ^ t()) * (0.5 * zeta)).exp()
     }
 
@@ -133,7 +132,7 @@ mod maxwell {
     /// The sum `Σ m u (u · v)` over a cloud of four-velocities, pairwise as NumPy sums, so
     /// that rounding grows with the logarithm of the cloud's size (the trace checks hold to
     /// `1e-14`).
-    pub fn cloud_tensor(us: &[V], mass: f64) -> StressEnergy {
+    pub fn cloud_tensor(us: &[Vector], mass: f64) -> StressEnergy {
         if us.len() <= 8 {
             us.iter().map(|u| dyad(*u).gp(mass)).sum()
         } else {
@@ -148,11 +147,11 @@ mod maxwell {
     }
 
     /// `n` unit spatial directions, uniform on the sphere.
-    pub fn sphere_directions(n: usize, rng: &mut Rng) -> Vec<V> {
+    pub fn sphere_directions(n: usize, rng: &mut Rng) -> Vec<Vector> {
         (0..n)
             .map(|_| {
                 // A unit vector of space, as a spatial vector of spacetime.
-                let d: gax::vga3d::Vector<(), f64> = rng.direction();
+                let d: gax::vga3d::Vector = rng.direction();
                 Vector::new(0.0, d.e1(), d.e2(), d.e3())
             })
             .collect()
@@ -160,23 +159,23 @@ mod maxwell {
 
     /// The four-velocities at one speed along each direction: the rest observer boosted by
     /// the rapidity `atanh(speed)`.
-    pub fn moving(directions: &[V], speed: f64) -> Vec<V> {
+    pub fn moving(directions: &[Vector], speed: f64) -> Vec<Vector> {
         let zeta = speed.atanh();
         directions.iter().map(|d| boost(zeta, *d) >> t()).collect()
     }
 
     /// The null rays `t + direction`.
-    pub fn rays(directions: &[V]) -> Vec<V> {
+    pub fn rays(directions: &[Vector]) -> Vec<Vector> {
         directions.iter().map(|d| t() + *d).collect()
     }
 
     /// `n` four-velocities at one speed, directions uniform on the sphere.
-    pub fn isotropic_cloud(n: usize, speed: f64, rng: &mut Rng) -> Vec<V> {
+    pub fn isotropic_cloud(n: usize, speed: f64, rng: &mut Rng) -> Vec<Vector> {
         moving(&sphere_directions(n, rng), speed)
     }
 
     /// `n` null rays, directions uniform on the sphere.
-    pub fn null_cloud(n: usize, rng: &mut Rng) -> Vec<V> {
+    pub fn null_cloud(n: usize, rng: &mut Rng) -> Vec<Vector> {
         rays(&sphere_directions(n, rng))
     }
 
@@ -188,13 +187,13 @@ mod maxwell {
     }
 
     /// The general field of numga's commutator check, used by the animation.
-    pub fn general_field() -> F {
+    pub fn general_field() -> Bivector {
         field(0.7, -0.4, 1.1, 0.3, -0.8, 0.5)
     }
 
     /// The electric and magnetic vectors a rest observer reads off a field: `t · F` and
     /// `t · F*` (the complement turns magnetic planes into electric ones).
-    pub fn electric_magnetic(f: F) -> (Space, Space) {
+    pub fn electric_magnetic(f: Bivector) -> (Space, Space) {
         (spatial(t() | f), spatial(t() | f.dual()))
     }
 }
@@ -223,8 +222,8 @@ fn cloud_speed(p: f64) -> f64 {
 }
 
 /// The fixed cloud directions; the animation boosts the rest observer along them.
-fn directions() -> &'static [V] {
-    static DIRS: std::sync::OnceLock<Vec<V>> = std::sync::OnceLock::new();
+fn directions() -> &'static [Vector] {
+    static DIRS: std::sync::OnceLock<Vec<Vector>> = std::sync::OnceLock::new();
     DIRS.get_or_init(|| sphere_directions(2000, &mut gax_numga_examples::rng::rng(0x9e37)))
 }
 
@@ -246,10 +245,10 @@ fn axes3(c: &mut Canvas, cam: &Camera, s: &mut Scene3, len: f32) {
         Point3::direction(0.0, 0.0, 1.0),
     ];
     for (d, name) in axes.into_iter().zip(["X", "Y", "Z"]) {
-        s.seg(ORIGIN3, ORIGIN3 + d.gp(len), 1.0, palette::grid());
+        s.seg(ORIGIN3, ORIGIN3 + d.gp(len), 1.0, palette::GRID);
         if let Some(q) = cam.px(ORIGIN3 + d.gp(len * 1.1)) {
             let below = q + Point2::direction(0.0, 4.0);
-            c.text(name, below, 10.0, palette::grid(), Align::Center);
+            c.text(name, below, 10.0, palette::GRID, Align::Center);
         }
     }
 }
@@ -292,7 +291,7 @@ fn notes(rect: Rect) -> (Point2, Point2, f32) {
 
 /// The general field boosted by rapidity `zeta` along x, and its stress-energy map. The map is
 /// boosted by covariance; it equals the boosted field's own map (checked in the tests).
-fn boosted_field(zeta: f64) -> (F, StressEnergy) {
+fn boosted_field(zeta: f64) -> (Bivector, StressEnergy) {
     let f = general_field();
     let r = boost(zeta, x());
     (r >> f, boosted(r, stress_energy(f)))
@@ -327,7 +326,7 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
             [e, b, poynting(tm)].map(reach3)
         })
         .collect();
-    let cols = [palette::orange(), palette::sky(), palette::yellow()];
+    let cols = [palette::ORANGE, palette::SKY, palette::YELLOW];
     for (k, col) in cols.iter().enumerate() {
         let path: Vec<Point3> = tips.iter().map(|p| p[k]).collect();
         sc.polyline(&path, 1.0, (*col).faded(0.45));
@@ -339,12 +338,12 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     c.unclip();
     let (at, line, size) = notes(rect);
     let boost = format!("BOOST ALONG X, RAPIDITY {zeta:+.2}");
-    note(c, &boost, at, size, palette::ink());
+    note(c, &boost, at, size, palette::INK);
     let across = Point2::direction(size * 16.0 / 11.0, 0.0);
-    note(c, "E", at + line, size, palette::orange());
-    note(c, "B", at + line + across, size, palette::sky());
+    note(c, "E", at + line, size, palette::ORANGE);
+    note(c, "B", at + line + across, size, palette::SKY);
     let flux = at + line + across.gp(2.0);
-    note(c, "POYNTING FLUX", flux, size, palette::yellow());
+    note(c, "POYNTING FLUX", flux, size, palette::YELLOW);
 
     let ax = Axes::new(plot, [-SWING as f32, SWING as f32], [-1.0, 6.0]);
     ax.frame(c, "", "RAPIDITY", "");
@@ -352,14 +351,13 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
         .map(|i| (sampled(i), readout(sampled(i))))
         .collect();
     let cols = [
-        palette::orange(),
-        palette::yellow(),
-        palette::green(),
-        palette::purple(),
+        palette::ORANGE,
+        palette::YELLOW,
+        palette::GREEN,
+        palette::PURPLE,
     ];
     for (k, col) in cols.iter().enumerate() {
-        let curve: Vec<Point<(), f64>> =
-            readouts.iter().map(|(z, r)| Point::xy(*z, r[k])).collect();
+        let curve: Vec<Point> = readouts.iter().map(|(z, r)| Point::xy(*z, r[k])).collect();
         ax.polyline(c, &curve, 1.8, *col);
     }
     let now = readout(zeta);
@@ -368,7 +366,7 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
         &[Point::xy(zeta, now[0]), Point::xy(zeta, now[1])],
         Marker::Dot,
         8.0,
-        palette::ink(),
+        palette::INK,
     );
     ax.legend(
         c,
@@ -392,9 +390,9 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let cam = Camera::parallel(view, 80.0, -0.4 + spin, 0.3);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
-    sc.sphere_wire(ORIGIN3, 1.0, 12, palette::grid().faded(0.5));
+    sc.sphere_wire(ORIGIN3, 1.0, 12, palette::GRID.faded(0.5));
     // Five hundred dots add their light: each faint, so that the cloud glows rather than burns.
-    let dot = palette::sky().faded(0.2);
+    let dot = palette::SKY.faded(0.2);
     for d in dirs.iter().step_by(4) {
         sc.dot(reach3(spatial(*d) * speed), Marker::Dot, 3.0, dot);
     }
@@ -402,15 +400,15 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     c.unclip();
     let (at, line, size) = notes(rect);
     let speeds = format!("SPEED {speed:.2}   TRACE {:.3}", tm.trace());
-    note(c, &speeds, at, size, palette::ink());
+    note(c, &speeds, at, size, palette::INK);
     let balance = format!("ENERGY {energy:.2}   PRESSURE {pressure:.3}");
-    note(c, &balance, at + line, size, palette::ink());
+    note(c, &balance, at + line, size, palette::INK);
     note(
         c,
         "VELOCITIES IN SPACE",
         at + line.gp(2.0),
         size,
-        palette::sky(),
+        palette::SKY,
     );
 
     let ax = Axes::new(plot, [0.0, 1.0], [0.0, 0.4]);
@@ -421,28 +419,28 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
             Point::xy(v, v * v / 3.0)
         })
         .collect();
-    ax.polyline(c, &theory, 1.5, palette::green());
+    ax.polyline(c, &theory, 1.5, palette::GREEN);
     ax.dashed(
         c,
         &[Point::xy(0.0, 1.0 / 3.0), Point::xy(1.0, 1.0 / 3.0)],
         1.0,
         8.0,
-        palette::grid(),
+        palette::GRID,
     );
     // Each stress eigenvalue over the energy: the three nearly coincide (isotropy).
-    let marks: Vec<Point<(), f64>> = s[..3]
+    let marks: Vec<Point> = s[..3]
         .iter()
         .map(|p| Point::xy(speed, -p / energy))
         .collect();
-    ax.scatter(c, &marks, Marker::Ring, 9.0, palette::orange());
+    ax.scatter(c, &marks, Marker::Ring, 9.0, palette::ORANGE);
     let light = Point::xy(1.0, null_ratio());
-    ax.scatter(c, &[light], Marker::Star, 12.0, palette::yellow());
+    ax.scatter(c, &[light], Marker::Star, 12.0, palette::YELLOW);
     ax.legend(
         c,
         &[
-            ("V*V/3", palette::green()),
-            ("-STRESS/ENERGY", palette::orange()),
-            ("LIGHT", palette::yellow()),
+            ("V*V/3", palette::GREEN),
+            ("-STRESS/ENERGY", palette::ORANGE),
+            ("LIGHT", palette::YELLOW),
         ],
     );
 }
@@ -478,6 +476,7 @@ fn main() {
 mod tests {
     use super::maxwell::*;
     use gax::ApproxEq;
+    use gax::sta::Vector;
     use gax_numga_examples::rng::{Draw, Rng, rng};
 
     fn close(a: f64, b: f64, tol: f64) -> bool {
@@ -488,8 +487,8 @@ mod tests {
         a.max_abs_diff(&b) <= tol
     }
 
-    fn random_vector(rng: &mut Rng) -> V {
-        V::new(rng.normal(), rng.normal(), rng.normal(), rng.normal())
+    fn random_vector(rng: &mut Rng) -> Vector {
+        Vector::new(rng.normal(), rng.normal(), rng.normal(), rng.normal())
     }
 
     /// A cloud's three stresses agree with its pressure to `band`: isotropy, within the

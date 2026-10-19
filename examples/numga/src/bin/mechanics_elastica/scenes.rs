@@ -78,7 +78,7 @@ fn bent(load: F, start: Frame) -> Vec<Frame> {
 /// dual of the turn about that axis.
 pub fn curling(turns: f64) -> Vec<Frame> {
     let couple = (Y ^ Z).dual() * (TAU / (TURNING[0] * LENGTH) * turns);
-    bent(couple, L::zero().exp())
+    bent(couple, Frame::identity())
 }
 
 /// The frames of a rod leaving its first pin at an angle in degrees to the line of thrust

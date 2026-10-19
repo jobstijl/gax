@@ -19,8 +19,9 @@
 //! tilts from near the phase plane to the vacuum one, and the isospin follows it adiabatically
 //! from electron to muon flavour. Below, the two flavours' probabilities along the way.
 
+use gax::vga3d::Bivector;
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::wave;
+use gax_numga_examples::signal::{frame, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, palette, reach3, run,
@@ -33,13 +34,10 @@ mod neutrino {
     use gax_numga_examples::signal::linspace;
 
     /// A state `(1 + P) / 2`, and its isospin vector.
-    pub type St = Paravector<(), f64>;
-    pub type V = Vector<(), f64>;
-    /// A Hamiltonian, a plane of turning.
-    pub type Bi = Bivector<(), f64>;
+    pub type St = Paravector;
     /// A rate of change of states, and a transfer over a stretch of the journey: maps on states.
-    pub type Rates = Paravector<(Paravector,), f64>;
-    pub type Transfer = Paravector<(Paravector,), f64>;
+    pub type Rates = Paravector<(Paravector,)>;
+    pub type Transfer = Paravector<(Paravector,)>;
 
     /// The order of the exponential series of a step's transfer.
     const SERIES_ORDER: u32 = 5;
@@ -47,25 +45,25 @@ mod neutrino {
     pub fn one() -> St {
         Paravector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 1.0, 0.0)
     }
     /// The electron flavour, `+z`, and the muon flavour, `-z`.
-    pub fn electron() -> V {
+    pub fn electron() -> Vector {
         Vector::new(0.0, 0.0, 1.0)
     }
-    pub fn muon() -> V {
+    pub fn muon() -> Vector {
         -electron()
     }
     /// The plane in which the quantum phase accumulates.
-    pub fn phase_plane() -> Bi {
+    pub fn phase_plane() -> Bivector {
         x() ^ y()
     }
     /// The plane in which the flavour basis turns into the mass basis.
-    fn mixing_plane() -> Bi {
+    fn mixing_plane() -> Bivector {
         x() ^ electron()
     }
 
@@ -75,46 +73,46 @@ mod neutrino {
     }
 
     /// The state with isospin vector `p`.
-    pub fn state(p: V) -> St {
+    pub fn state(p: Vector) -> St {
         (one() + p.cast::<Paravector>()) * 0.5
     }
 
     /// The isospin vector of a state: twice its vector part.
-    pub fn isospin(rho: St) -> V {
+    pub fn isospin(rho: St) -> Vector {
         rho.cast::<Vector>() * 2.0
     }
 
     /// The chances of the electron and the muon flavour: the isospin's projection on the flavour
     /// axis, from -1 to 1, read as a probability.
-    pub fn flavour_probabilities(p: V) -> (f64, f64) {
+    pub fn flavour_probabilities(p: Vector) -> (f64, f64) {
         let along = (p | electron()).s();
         (0.5 * (1.0 + along), 0.5 * (1.0 - along))
     }
 
     /// The rotor that turns the flavour basis into the mass basis: twice the mixing angle in the
     /// `xz` plane, since a rotor turns by twice its angle.
-    pub fn mixing_rotor(theta: f64) -> Unit<Rotor<(), f64>> {
+    pub fn mixing_rotor(theta: f64) -> Unit<Rotor> {
         (mixing_plane() * -theta).exp()
     }
 
     /// The Hamiltonian in vacuum: the phase plane, reversed, turned by the mixing rotor.
-    pub fn vacuum_hamiltonian(omega: f64, theta: f64) -> Bi {
+    pub fn vacuum_hamiltonian(omega: f64, theta: f64) -> Bivector {
         (mixing_rotor(theta) >> -phase_plane()) * omega
     }
 
     /// The Hamiltonian in matter: the electrons' potential adds to the phase plane.
-    pub fn matter_hamiltonian(vacuum: Bi, potential: f64) -> Bi {
+    pub fn matter_hamiltonian(vacuum: Bivector, potential: f64) -> Bivector {
         vacuum + phase_plane() * potential
     }
 
     /// The potential at which the matter Hamiltonian has no part in the phase plane, so that it
     /// turns the flavours fully into each other: the MSW resonance, `omega cos 2 theta`.
-    pub fn resonance_potential(vacuum: Bi) -> f64 {
+    pub fn resonance_potential(vacuum: Bivector) -> f64 {
         vacuum.scalar_product(phase_plane()).s()
     }
 
     /// The turning by a Hamiltonian: minus its commutator with the state.
-    pub fn coherent_generator(plane: Bi) -> Rates {
+    pub fn coherent_generator(plane: Bivector) -> Rates {
         -plane.commutator(open()).cast::<Paravector>()
     }
 
@@ -122,13 +120,13 @@ mod neutrino {
     /// `~l l` is its squared norm, so the anticommutator is plain scaling. The sandwich is the
     /// bivector's as a rotor (a half turn, for a unit one), and it keeps a state a state; gax
     /// types it as a multivector, so the empty grades are dropped.
-    pub fn relaxation(process: Bi) -> Rates {
+    pub fn relaxation(process: Bivector) -> Rates {
         (Rotor::from(process) >> open()).cast::<Paravector>() - open() * process.norm_squared()
     }
 
     /// The decoherence of the wave packets' separation at `gamma`: dephasing by the half turn in
     /// the given phase plane.
-    pub fn dephasing_generator(plane: Bi, gamma: f64) -> Rates {
+    pub fn dephasing_generator(plane: Bivector, gamma: f64) -> Rates {
         relaxation(plane) * gamma
     }
 
@@ -145,7 +143,7 @@ mod neutrino {
     }
 
     /// The isospin before each of the transfers, applied one after another to `initial`.
-    pub fn propagate(initial: St, transfers: impl IntoIterator<Item = Transfer>) -> Vec<V> {
+    pub fn propagate(initial: St, transfers: impl IntoIterator<Item = Transfer>) -> Vec<Vector> {
         let mut rho = initial;
         transfers
             .into_iter()
@@ -160,8 +158,8 @@ mod neutrino {
     /// A journey: the distances, the isospin at each and the Hamiltonian's plane there.
     pub struct Journey {
         pub distances: Vec<f64>,
-        pub isospins: Vec<V>,
-        pub planes: Vec<Bi>,
+        pub isospins: Vec<Vector>,
+        pub planes: Vec<Bivector>,
     }
 
     /// `steps` distances evenly from zero to `end`, and the step between them.
@@ -232,7 +230,7 @@ mod neutrino {
             .iter()
             .map(|d| CORE_DENSITY * resonance * (-d / DENSITY_SCALE).exp())
             .collect();
-        let planes: Vec<Bi> = potentials
+        let planes: Vec<Bivector> = potentials
             .iter()
             .map(|v| matter_hamiltonian(vacuum, *v))
             .collect();
@@ -249,13 +247,13 @@ mod neutrino {
     }
 
     /// The turning axis of a Hamiltonian, perpendicular to its plane: its dual.
-    pub fn axis(plane: Bi) -> V {
+    pub fn axis(plane: Bivector) -> Vector {
         Pseudoscalar::new(1.0) * plane
     }
 
     /// The unit circle in a plane, in `count` steps: a direction in the plane (the plane's
     /// contraction with the axis it leans on least) turned about its normal.
-    pub fn great_circle(plane: Bi, count: usize) -> Vec<V> {
+    pub fn great_circle(plane: Bivector, count: usize) -> Vec<Vector> {
         let unit = plane.normalized();
         let start = [x(), y(), electron()]
             .map(|a| a.lc(unit))
@@ -315,21 +313,21 @@ const TITLES: [&str; 3] = [
     "SOLAR MSW CONVERSION",
 ];
 fn colours() -> [Light; 3] {
-    [palette::orange(), palette::purple(), palette::green()]
+    [palette::ORANGE, palette::PURPLE, palette::GREEN]
 }
 
 /// The isospin sphere: a faint wireframe, the axes, and the two flavours at the poles.
 fn draw_sphere(s: &mut Scene3) {
-    s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.5));
+    s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.5));
     for a in [x(), y(), electron()] {
-        s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
+        s.seg(reach3(-a), reach3(a), 1.0, palette::GRID);
     }
-    s.dot(reach3(electron()), Marker::Dot, 8.0, palette::sky());
-    s.dot(reach3(muon()), Marker::Dot, 8.0, palette::red());
+    s.dot(reach3(electron()), Marker::Dot, 8.0, palette::SKY);
+    s.dot(reach3(muon()), Marker::Dot, 8.0, palette::RED);
 }
 
 /// A Hamiltonian's plane as its great circle, and its turning axis through the sphere.
-fn draw_plane(s: &mut Scene3, plane: Bi, colour: Light) {
+fn draw_plane(s: &mut Scene3, plane: Bivector, colour: Light) {
     let circle: Vec<_> = great_circle(plane, 96).into_iter().map(reach3).collect();
     s.polyline(&circle, 1.4, colour);
     let n = axis(plane).normalized() * 1.15;
@@ -340,8 +338,8 @@ fn draw_plane(s: &mut Scene3, plane: Bi, colour: Light) {
 fn pole_names(c: &mut Canvas, cam: &Camera) {
     let beside = Point2::direction(8.0, 4.0);
     for (name, pole, colour) in [
-        ("NU E", electron(), palette::sky()),
-        ("NU MU", muon(), palette::red()),
+        ("NU E", electron(), palette::SKY),
+        ("NU MU", muon(), palette::RED),
     ] {
         if let Some(p) = cam.px(reach3(pole * 1.12)) {
             c.text(name, p + beside, 10.0, colour, Align::Left);
@@ -355,9 +353,9 @@ fn draw_journey(s: &mut Scene3, journey: &Journey, now: usize, colour: Light) {
     draw_sphere(s);
     let (first, current) = (journey.planes[0], journey.planes[now]);
     if (current - first).norm() > 1e-9 {
-        draw_plane(s, first, palette::ink().faded(0.1));
+        draw_plane(s, first, palette::INK.faded(0.1));
     }
-    draw_plane(s, current, palette::ink().faded(0.2));
+    draw_plane(s, current, palette::INK.faded(0.2));
     let path: Vec<_> = journey.isospins[..=now]
         .iter()
         .map(|p| reach3(*p))
@@ -379,7 +377,7 @@ fn draw_probabilities(c: &mut Canvas, ax: &Axes, journey: &Journey, now: usize) 
             (Point2::xy(x, e as f32), Point2::xy(x, m as f32))
         })
         .unzip();
-    let flavours = [(electron, palette::sky()), (muon, palette::red())];
+    let flavours = [(electron, palette::SKY), (muon, palette::RED)];
     for (curve, colour) in &flavours {
         ax.polyline(c, curve, 1.0, colour.faded(0.25));
     }
@@ -399,10 +397,10 @@ fn draw_references(c: &mut Canvas, ax: &Axes, k: usize, d: &Data) {
         DECOHERENCE => {
             let level = d.asymptote as f32;
             let across = [Point2::xy(0.0, level), Point2::xy(end, level)];
-            ax.dashed(c, &across, 1.0, 5.0, palette::ink().faded(0.5));
+            ax.dashed(c, &across, 1.0, 5.0, palette::INK.faded(0.5));
             let note = Point2::xy(end * 0.98, level + 0.05);
             let text = format!("SETTLES AT {level:.3}");
-            ax.text(c, note, &text, small, palette::ink(), Align::Right);
+            ax.text(c, note, &text, small, palette::INK, Align::Right);
         }
         SOLAR => {
             let core = d.potentials[0];
@@ -412,10 +410,10 @@ fn draw_references(c: &mut Canvas, ax: &Axes, k: usize, d: &Data) {
                 .zip(&d.potentials)
                 .map(|(x, v)| Point2::xy(*x as f32, (v / core) as f32))
                 .collect();
-            ax.dashed(c, &density, 1.0, 3.0, palette::yellow().faded(0.6));
+            ax.dashed(c, &density, 1.0, 3.0, palette::YELLOW.faded(0.6));
             let note = Point2::xy(end * 0.4, 0.5);
             let text = "ELECTRON DENSITY";
-            ax.text(c, note, text, small, palette::yellow(), Align::Left);
+            ax.text(c, note, text, small, palette::YELLOW, Align::Left);
         }
         _ => {}
     }
@@ -434,7 +432,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let plots = Rect::new(0.0, 360.0, w, screen.height() - 36.0);
     for (k, (journey, colour)) in d.journeys.iter().zip(colours()).enumerate() {
         let steps = journey.isospins.len();
-        let now = ((progress * steps as f32) as usize).min(steps - 1);
+        let now = frame(progress, steps);
         let rect = band.column(k, 3);
         let cam = Camera::orbit(
             rect,
@@ -460,7 +458,7 @@ fn draw(c: &mut Canvas, t: f32) {
         [0.0, 1.0],
         [0.0, 1.0],
     );
-    legend.legend(c, &[("NU E", palette::sky()), ("NU MU", palette::red())]);
+    legend.legend(c, &[("NU E", palette::SKY), ("NU MU", palette::RED)]);
     caption(
         c,
         "NEUTRINO FLAVOUR ISOSPIN",

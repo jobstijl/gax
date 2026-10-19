@@ -27,34 +27,24 @@ use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, par_map, run,
 };
 
-#[path = "../shared/mechanics_lie.rs"]
-mod lie;
+use gax_numga_examples::shared::mechanics_lie as lie;
 
 mod top {
     use super::*;
     pub use crate::lie::rigid::{F, G, Inertia, InertiaInv, M, P, R};
 
     /// A quadric: each point to its polar plane.
-    pub type Quadric = Plane<(Point,), f64>;
-    /// A plane.
-    pub type Pl = Plane<(), f64>;
-    /// A direction: an ideal point, a point's weightless part (numga's `Direction` type).
-    pub type D = Direction<(), f64>;
-
-    /// The plane at infinity, `e0`: its pairing with a point is the point's weight.
-    pub fn w() -> Pl {
-        Plane::new(0.0, 0.0, 0.0, 1.0)
-    }
+    pub type Quadric = Plane<(Point,)>;
 
     /// The plane at infinity as the join of the three axis directions, where [`w`] is their
     /// meet: intrinsic, so that a plane wedged with it is a load (a forque), not a turn.
-    pub fn horizon() -> intrinsic::Plane<(), f64> {
+    pub fn horizon() -> intrinsic::Plane {
         let [x, y, z] = directions();
         x & y & z
     }
 
     /// The coordinate planes `x = 0`, `y = 0`, `z = 0`.
-    pub fn axes() -> [Pl; 3] {
+    pub fn axes() -> [Plane; 3] {
         [
             Plane::new(1.0, 0.0, 0.0, 0.0),
             Plane::new(0.0, 1.0, 0.0, 0.0),
@@ -73,12 +63,12 @@ mod top {
 
     /// The Euclidean inner product of two directions: of the planes through the origin they are
     /// normal to.
-    pub fn dot(a: D, b: D) -> f64 {
+    pub fn dot(a: Direction, b: Direction) -> f64 {
         (a.dual() | b.dual()).s()
     }
 
     /// The Euclidean length of a direction: the norm of the planes normal to it.
-    pub fn length(d: D) -> f64 {
+    pub fn length(d: Direction) -> f64 {
         d.dual().norm()
     }
 
@@ -95,9 +85,9 @@ mod top {
     /// negative inside.
     pub fn ellipsoid(centre: P, semi: [f64; 3]) -> Quadric {
         let slot = Point::slot();
-        let mut q = -(w() * (w() & slot));
+        let mut q = -(Plane::infinity() * (Plane::infinity() & slot));
         for (a, s) in axes().into_iter().zip(semi) {
-            let through = a - w() * (a & centre).s();
+            let through = a - Plane::infinity() * (a & centre).s();
             q += through * (through & slot) / (s * s);
         }
         q
@@ -108,7 +98,8 @@ mod top {
     pub fn bowl(curvature: f64) -> Quadric {
         let slot = Point::slot();
         let [x, y, z] = axes();
-        (z * (w() & slot) + w() * (z & slot)) * 0.5 - (x * (x & slot) + y * (y & slot)) * curvature
+        (z * (Plane::infinity() & slot) + Plane::infinity() * (z & slot)) * 0.5
+            - (x * (x & slot) + y * (y & slot)) * curvature
     }
 
     /// A quadric moved by a motor: its input and its output.
@@ -118,7 +109,7 @@ mod top {
 
     /// A quadric's centre: the pole of the plane at infinity, unitized.
     pub fn centre(quadric: Quadric) -> P {
-        quadric.solve(w()).unitized()
+        quadric.solve(Plane::infinity()).unitized()
     }
 
     /// Six mass points per solid ellipsoid with its mass, centroid and second moments, at
@@ -143,7 +134,7 @@ mod top {
     /// The ground's unit normal at a point, toward the air, where its form grows. A point's
     /// polar plane under the ground quadric is the gradient of the ground's form there; its
     /// direction divided by its length is the normal, on the ground or off it.
-    pub fn ground_normal(ground: Quadric, p: P) -> D {
+    pub fn ground_normal(ground: Quadric, p: P) -> Direction {
         let g = ground.of(p);
         g.dual().cast::<Direction>() / g.norm()
     }
@@ -153,25 +144,26 @@ mod top {
     /// infinity, the direction conjugate to it, along which the centre reaches the planes
     /// tangent to the quadric parallel to it; scaled to reach the surface, it leads from the
     /// centre to the lowest point.
-    pub fn lowest_point(surface: Quadric, normal: D) -> P {
+    pub fn lowest_point(surface: Quadric, normal: Direction) -> P {
         // Planes to their poles.
         let dual = surface.inverse();
-        let pole = dual.of(w());
-        let centre = pole / (w() & pole).s();
+        let pole = dual.of(Plane::infinity());
+        let centre = pole / (Plane::infinity() & pole).s();
         // The plane through the centre, normal to the direction, and its pole, a direction.
-        let plane = normal.dual() - w() * (normal.dual() & centre).s();
+        let plane = normal.dual() - Plane::infinity() * (normal.dual() & centre).s();
         let conjugate = dual.of(plane);
         // Along the conjugate the form is `t² Q(conjugate) + Q(centre)` (no cross term, by
         // conjugacy), with `Q(conjugate) = plane & conjugate` and `Q(centre) = 1 / (w & pole)`:
         // its roots are a pair centred on the centre, and the reach is their radius (none, not
         // a number, if the quadric is not closed).
         let a = (plane & conjugate).s();
-        let reach = roots(a, 0.0, (w() & pole).s().recip()).map_or(f64::NAN, |(_, r)| r);
+        let reach =
+            roots(a, 0.0, (Plane::infinity() & pole).s().recip()).map_or(f64::NAN, |(_, r)| r);
         centre + conjugate * reach
     }
 
     /// The direction less its part along the ground's normal: its part in the ground's plane.
-    pub fn along_ground(d: D, normal: D) -> D {
+    pub fn along_ground(d: Direction, normal: Direction) -> Direction {
         d - normal * dot(d, normal)
     }
 
@@ -196,7 +188,7 @@ mod top {
         let tangent = surface.of(p);
         let normal = tangent.dual().cast::<Direction>();
         // Directions, projected along the normal onto the tangent plane.
-        let d = Direction::<(), f64>::slot();
+        let d = Direction::slot();
         let project = d.cast::<Point>() - normal * ((tangent & d) / (tangent & normal).s());
         let hessian = surface & Point::slot();
         let second = hessian.of_both(project, project) / length(normal);
@@ -231,7 +223,7 @@ mod top {
             .iter()
             .map(|q| lowest_point(*q, ground_normal(ground, centre(*q))))
             .collect();
-        let normal: Vec<D> = contact.iter().map(|c| ground_normal(ground, *c)).collect();
+        let normal: Vec<Direction> = contact.iter().map(|c| ground_normal(ground, *c)).collect();
         // The ground's form at the contact over its gradient's length: how far the point lies
         // below the ground, to first order in the depth; a part in the air has none.
         let depth: Vec<f64> = contact
@@ -271,7 +263,7 @@ mod top {
         // of the radius of curvature times the indentation. The couple is the torque about the
         // normal: the line at infinity of the planes normal to it, as a load the meet with the
         // joined plane at infinity; its sense cancels below (it enters the step and the turn).
-        let turn: R = (motor * before.reverse()).log();
+        let turn = (motor * before.reverse()).log();
         let mut twist = Line::zero();
         for i in 0..n {
             let couple = normal[i].dual() ^ horizon();
@@ -385,7 +377,7 @@ mod scenarios {
         let total: f64 = mass.iter().sum();
         // The centre of mass, and the parts moved to put it at the origin.
         let com = centres.iter().zip(mass).map(|(c, m)| *c * m).sum::<P>() / total;
-        let centred = Motor::between(com, Point::xyz(0.0, 0.0, 0.0));
+        let centred = Motor::between(com, Point::origin());
         let centres = centres.map(|c| centred >> c);
         let parts = centres
             .iter()
@@ -415,7 +407,7 @@ mod scenarios {
     pub fn spin(setup: Setup, seconds: f64, dt: f64, every: usize) -> (Top, Quadric, Vec<Sample>) {
         let body = top(setup.tip_radius, 0.14, setup.disc_height, setup.disc_mass);
         let ground = bowl(setup.bowl_curvature);
-        let origin = Point::xyz(0.0, 0.0, 0.0);
+        let origin = Point::origin();
         let up = Point::direction(0.0, 0.0, 1.0);
         // Tilt, then lift the centre of mass so that the tip, `height` below it, clears the
         // ground by 2 mm.
@@ -472,7 +464,7 @@ mod scenarios {
     }
 
     /// The normal of the quadric at a point on it: the direction of its polar plane.
-    pub fn normal_at(surface: Quadric, p: P) -> D {
+    pub fn normal_at(surface: Quadric, p: P) -> Direction {
         surface.of(p).dual().cast::<Direction>()
     }
 }
@@ -525,7 +517,7 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Re
     // along its +z), and up and to the right on screen (its +y and -x).
     let to64 = |p: Point<(), f32>| p.map_coefs(f64::from);
     let lamp = to64(cam.pose >> Point::direction(0.3, 0.8, -1.0)).cast::<Direction>();
-    let facing = |n: D| (dot(n, lamp) / (length(n) * length(lamp))).abs() as f32;
+    let facing = |n: Direction| (dot(n, lamp) / (length(n) * length(lamp))).abs() as f32;
     // The parts in the world, and four planes through the top's axis an eighth of a turn
     // apart: crossing any of them flips the sign of the product of a point's distances to
     // them, so that sign alternates from one eighth of a turn about the axis to the next.
@@ -604,7 +596,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.frame(c, title, if p == 1 { "TIME (S)" } else { "" }, "");
         for (v, samples) in runs.samples.iter().enumerate() {
             // The chart's points: (time, value).
-            let pts: Vec<gax::pga2d::Point<(), f64>> = samples[..=k]
+            let pts: Vec<gax::pga2d::Point> = samples[..=k]
                 .iter()
                 .enumerate()
                 .map(|(j, s)| {
@@ -616,7 +608,7 @@ fn draw(c: &mut Canvas, t: f32) {
             ax.polyline(c, &pts, width, palette::series(v));
         }
         let (low, high) = (Point2::xy(time, range[0]), Point2::xy(time, range[1]));
-        ax.line(c, low, high, 0.8, palette::grid());
+        ax.line(c, low, high, 0.8, palette::GRID);
         // The legend where the spin has decayed.
         if p == 1 {
             let entries: Vec<(&str, Light)> = VARIATIONS
@@ -643,10 +635,7 @@ mod tests {
     use super::scenarios::*;
     use super::top::*;
     use gax::pga3d::{Direction, Point};
-
-    fn close(a: f64, b: f64, tol: f64) -> bool {
-        (a - b).abs() <= tol
-    }
+    use gax_numga_examples::testing::close;
 
     /// A sphere curves by the inverse of its radius both ways; an ellipsoid at the end of its
     /// semi-axis `c` by `c / a²` and `c / b²`.
@@ -656,7 +645,7 @@ mod tests {
         let [k1, k2] = principal(sphere, Point::xyz(0.2, 0.2, 0.3 + 0.4));
         assert!(close(k1, 2.0, 1e-9) && close(k2, 2.0, 1e-9), "{k1} {k2}");
         let (a, b, c) = (0.5, 0.3, 0.2);
-        let e = ellipsoid(Point::xyz(0.0, 0.0, 0.0), [a, b, c]);
+        let e = ellipsoid(Point::origin(), [a, b, c]);
         let [k1, k2] = principal(e, Point::xyz(0.0, 0.0, c));
         assert!(
             close(k1, c / (a * a), 1e-9) && close(k2, c / (b * b), 1e-9),
@@ -664,7 +653,7 @@ mod tests {
         );
         // The bowl is concave from the air: it curves negatively, by twice its curvature at
         // the bottom.
-        let [k1, k2] = principal(bowl(0.15), Point::xyz(0.0, 0.0, 0.0));
+        let [k1, k2] = principal(bowl(0.15), Point::origin());
         assert!(close(k1, -0.3, 1e-9) && close(k2, -0.3, 1e-9), "{k1} {k2}");
     }
 
@@ -678,7 +667,7 @@ mod tests {
         let [x, y, z] = low.to_euclidean();
         assert!(close(x, 0.1, 1e-12) && close(y, 0.0, 1e-12) && close(z, 0.5, 1e-12));
         let ground = bowl(0.15);
-        let n = ground_normal(ground, Point::xyz(0.0, 0.0, 0.0));
+        let n = ground_normal(ground, Point::origin());
         assert!(close(n.e021(), 1.0, 1e-12));
         let p = Point::xyz(0.3, 0.0, 0.0);
         assert!((ground.of(p) & p).s() < 0.0);

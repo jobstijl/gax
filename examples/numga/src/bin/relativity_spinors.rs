@@ -18,10 +18,11 @@
 //! the light cone (middle), the boost sweeping; and the densities of a Majorana state in the two
 //! eigenspaces of charge conjugation as a phase turns it (right).
 
+use gax::sta::Vector;
 use gax_numga_examples::points::circle;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
-    run,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption,
+    label_above, palette, run,
     signal::{linspace, wave},
 };
 
@@ -29,28 +30,26 @@ mod spinors {
     use gax::sta::{Bivector, Even, Vector};
     use gax_numga_examples::signal::phasor;
 
-    pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
     /// A Dirac spinor is an even multivector.
-    pub type Spinor = Even<(), f64>;
+    pub type Spinor = Even;
     /// A linear map on spinors.
-    pub type SpinorMap = Even<(Even,), f64>;
+    pub type SpinorMap = Even<(Even,)>;
 
     /// The observer's time axis.
-    pub fn t() -> V {
+    pub fn t() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
 
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
 
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 0.0, 1.0, 0.0)
     }
 
     /// The spin axis.
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
@@ -60,7 +59,7 @@ mod spinors {
     }
 
     /// Right multiplication of the open spinor by a bivector.
-    fn times(b: B) -> SpinorMap {
+    fn times(b: Bivector) -> SpinorMap {
         Even::slot() * b
     }
 
@@ -95,12 +94,12 @@ mod spinors {
     }
 
     /// The future current: the observer's time axis carried by the spinor.
-    pub fn current(psi: Spinor) -> V {
+    pub fn current(psi: Spinor) -> Vector {
         psi >> t()
     }
 
     /// The spin current: the spin axis carried by the spinor.
-    pub fn spin(psi: Spinor) -> V {
+    pub fn spin(psi: Spinor) -> Vector {
         psi >> z()
     }
 
@@ -123,7 +122,7 @@ mod spinors {
     /// A spinor turned by `angle` in the `xz` plane: its spin, and the intensities at the sum
     /// and difference outputs of an interferometer against the unturned spinor. The spin comes
     /// back after one turn; the outputs only after two.
-    pub fn rotation(angle: f64) -> (V, [f64; 2]) {
+    pub fn rotation(angle: f64) -> (Vector, [f64; 2]) {
         let psi = ((x() ^ z()) * (angle / 2.0)).exp().into_inner();
         let ports = [interference(psi, one()), interference(psi, -one())];
         (spin(psi), ports)
@@ -131,7 +130,7 @@ mod spinors {
 
     /// The currents of the left- and right-handed parts of a spinor boosted along `z` by the
     /// rapidity, and the Dirac current of the whole: `[left, right, Dirac]`.
-    pub fn chiral_currents(rapidity: f64) -> [V; 3] {
+    pub fn chiral_currents(rapidity: f64) -> [Vector; 3] {
         let psi = ((t() ^ z()) * (-rapidity / 2.0)).exp().into_inner();
         [
             current(left_handed().of(psi)),
@@ -165,19 +164,13 @@ const SECONDS: f32 = 8.0;
 const PHASE_SAMPLES: usize = 129;
 
 /// A spacetime vector as a drawing point: its `across` component across, `up` component up.
-fn in_plane(v: V, across: fn(&V) -> f64, up: fn(&V) -> f64) -> Point2 {
+fn in_plane(v: Vector, across: fn(&Vector) -> f64, up: fn(&Vector) -> f64) -> Point2 {
     Point2::xy(across(&v) as f32, up(&v) as f32)
 }
 
 /// The colours of the left-handed, right-handed and Dirac currents.
 fn hands() -> [Light; 3] {
-    [palette::orange(), palette::sky(), palette::ink()]
-}
-
-/// A panel's title, centred above it.
-fn title(c: &mut Canvas, panel: Rect, text: &str, size: f32) {
-    let at = panel.top_middle() - Point2::direction(0.0, size * 0.8);
-    c.text(text, at, size, palette::ink(), Align::Center);
+    [palette::ORANGE, palette::SKY, palette::INK]
 }
 
 /// The spin in the `xz` plane as an arrow on the unit circle, and the interferometer's two
@@ -191,13 +184,13 @@ fn draw_rotation(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
         [Point2::xy(-reach, 0.0), Point2::xy(reach, 0.0)],
         [Point2::xy(0.0, -reach), Point2::xy(0.0, reach)],
     ];
-    ax.stroke(c, &axes, 1.0, palette::grid());
+    ax.stroke(c, &axes, 1.0, palette::GRID);
     ax.text(
         c,
         Point2::xy(reach, 0.06),
         "X",
         size * 0.8,
-        palette::grid().faded(4.0),
+        palette::GRID.faded(4.0),
         Align::Right,
     );
     ax.text(
@@ -205,19 +198,20 @@ fn draw_rotation(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
         Point2::xy(0.06, reach - 0.1),
         "Z",
         size * 0.8,
-        palette::grid().faded(4.0),
+        palette::GRID.faded(4.0),
         Align::Left,
     );
-    ax.polyline(
-        c,
-        &circle(ORIGIN2, 1.0, 96),
-        1.2,
-        palette::grid().faded(2.0),
-    );
-    let tip = ORIGIN2 + in_plane(spin, V::e1, V::e3);
-    ax.arrow(c, ORIGIN2, tip, 2.4, 10.0, palette::yellow());
+    ax.polyline(c, &circle(ORIGIN2, 1.0, 96), 1.2, palette::GRID.faded(2.0));
+    let tip = ORIGIN2 + in_plane(spin, Vector::e1, Vector::e3);
+    ax.arrow(c, ORIGIN2, tip, 2.4, 10.0, palette::YELLOW);
     let turns = angle / core::f64::consts::PI;
-    title(c, rect, &format!("SPIN, TURNED {turns:.2} PI"), size);
+    label_above(
+        c,
+        rect,
+        &format!("SPIN, TURNED {turns:.2} PI"),
+        size,
+        size * 0.8,
+    );
 
     let row = rect.part(0.0, 0.7, 1.0, 1.0);
     for (k, (intensity, label)) in ports
@@ -228,12 +222,12 @@ fn draw_rotation(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
         let cell = row.column(k, 2);
         let centre = cell.centre() - Point2::direction(0.0, size * 0.6);
         let radius = cell.height() * 0.24;
-        c.ring(centre, radius + 3.0, 1.0, palette::grid().faded(2.0));
+        c.ring(centre, radius + 3.0, 1.0, palette::GRID.faded(2.0));
         // The port's light covers the dark disk by its intensity.
         let disk = circle(centre, radius, 96);
-        c.fill(&disk, palette::sky(), intensity.clamp(0.0, 1.0) as f32);
+        c.fill(&disk, palette::SKY, intensity.clamp(0.0, 1.0) as f32);
         let below = centre + Point2::direction(0.0, radius + size * 1.5);
-        c.text(label, below, size * 0.75, palette::ink(), Align::Center);
+        c.text(label, below, size * 0.75, palette::INK, Align::Center);
     }
 }
 
@@ -250,11 +244,11 @@ fn draw_chirality(c: &mut Canvas, rect: Rect, rapidity: f64, size: f32) {
         ORIGIN2,
         Point2::xy(extent, extent),
     ];
-    ax.fill(c, &cone, palette::grid(), 0.25);
-    ax.polyline(c, &cone, 1.2, palette::grid().faded(2.0));
+    ax.fill(c, &cone, palette::GRID, 0.25);
+    ax.polyline(c, &cone, 1.2, palette::GRID.faded(2.0));
     let names = ["LEFT", "RIGHT", "DIRAC"];
     for ((current, colour), name) in chiral_currents(rapidity).iter().zip(hands()).zip(names) {
-        let tip = in_plane(*current, V::e3, V::e0);
+        let tip = in_plane(*current, Vector::e3, Vector::e0);
         ax.arrow(c, ORIGIN2, tip, 2.2, 10.0, colour);
         let label = ax.px(tip) + Point2::direction(size * 0.6, -size * 0.4);
         c.text(name, label, size * 0.8, colour, Align::Left);
@@ -262,8 +256,8 @@ fn draw_chirality(c: &mut Canvas, rect: Rect, rapidity: f64, size: f32) {
     ax.frame(c, "", "Z CURRENT", "");
     let readout = format!("RAPIDITY {rapidity:+.2}");
     let inside = ax.rect.lo + Point2::direction(size * 0.6, size * 1.6);
-    c.text(&readout, inside, size * 0.8, palette::ink(), Align::Left);
-    title(c, rect, "WEYL CURRENTS (Z, T)", size);
+    c.text(&readout, inside, size * 0.8, palette::INK, Align::Left);
+    label_above(c, rect, "WEYL CURRENTS (Z, T)", size, size * 0.8);
 }
 
 /// The Majorana state's densities in the two eigenspaces of charge conjugation over a phase
@@ -274,7 +268,7 @@ fn draw_majorana(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
     let at =
         |phase: f64, share: f64| Point2::xy((phase / core::f64::consts::PI) as f32, share as f32);
     let phases = linspace(0.0, core::f64::consts::TAU, PHASE_SAMPLES);
-    let colours = [palette::sky(), palette::orange()];
+    let colours = [palette::SKY, palette::ORANGE];
     let shares: Vec<[f64; 2]> = phases.iter().map(|p| majorana_shares(*p)).collect();
     let now = majorana_shares(angle);
     for (k, colour) in colours.iter().enumerate() {
@@ -294,7 +288,7 @@ fn draw_majorana(c: &mut Canvas, rect: Rect, angle: f64, size: f32) {
             ("CONJUGATION -1", colours[1]),
         ],
     );
-    title(c, rect, "MAJORANA DENSITIES", size);
+    label_above(c, rect, "MAJORANA DENSITIES", size, size * 0.8);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -323,7 +317,7 @@ fn main() {
 mod tests {
     use super::spinors::*;
     use gax::ApproxEq;
-    use gax::sta::Even;
+    use gax::sta::{Bivector, Even, Vector};
     use gax_numga_examples::rng::{Draw, Rng, rng};
 
     const TOLERANCE: f64 = 1e-11;
@@ -337,7 +331,7 @@ mod tests {
     }
 
     /// The rotor `exp(b angle)`.
-    fn turn(b: B, angle: f64) -> Spinor {
+    fn turn(b: Bivector, angle: f64) -> Spinor {
         (b * angle).exp().into_inner()
     }
 
@@ -415,7 +409,7 @@ mod tests {
             // also takes a fixed state out of the fixed subspace.
             assert!(conjugate.of(fixed).max_abs_diff(&fixed) < TOLERANCE);
             assert!(current(fixed).norm_squared().abs() < TOLERANCE);
-            assert!(spin(fixed).max_abs_diff(&V::zero()) < TOLERANCE);
+            assert!(spin(fixed).max_abs_diff(&Vector::zero()) < TOLERANCE);
             generic = generic.max(conjugate.of(psi).max_abs_diff(&psi));
             let turned = fixed * phase;
             phased_majorana = phased_majorana.max(conjugate.of(turned).max_abs_diff(&turned));

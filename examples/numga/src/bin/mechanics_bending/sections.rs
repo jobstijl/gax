@@ -4,7 +4,7 @@
 use gax::pga2d::{Motor, Point};
 
 /// A point of the section, or a direction in it.
-pub type P2 = Point<(), f64>;
+pub type P2 = Point;
 
 pub const NAMES: [&str; 4] = ["I-SECTION", "TURNED I-SECTION", "Z-SECTION", "SLOTTED TUBE"];
 /// The I-section's turn for the second section, in degrees.
@@ -71,7 +71,7 @@ fn points(coordinates: &[[f64; 2]]) -> Vec<P2> {
 
 /// A polygonal section from its counterclockwise outline, turned about the origin by `degrees`.
 fn polygon(outline: &[[f64; 2]], degrees: f64) -> Section {
-    let turned = Motor::rotation(Point::xy(0.0, 0.0), degrees.to_radians());
+    let turned = Motor::rotation(Point::origin(), degrees.to_radians());
     let boundary: Vec<P2> = points(outline).iter().map(|p| turned >> *p).collect();
     let triangles = triangulate(&boundary)
         .iter()
@@ -129,7 +129,7 @@ fn slotted_tube() -> Section {
         (0..=ARC_SEGMENTS)
             .map(|k| {
                 let angle = opening / 2.0 + sweep * k as f64 / ARC_SEGMENTS as f64;
-                Motor::rotation(Point::xy(0.0, 0.0), angle) >> Point::xy(radius, 0.0)
+                Motor::rotation(Point::origin(), angle) >> Point::xy(radius, 0.0)
             })
             .collect()
     };

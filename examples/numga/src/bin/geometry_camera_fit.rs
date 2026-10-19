@@ -16,19 +16,16 @@ use gax::{Real, Unit};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, from_above, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Rect, Scene3,
+    backdrop, caption, from_above, palette, run,
 };
 use std::sync::OnceLock;
 
 mod camera_fit {
     use super::*;
 
-    pub type P = Point<(), f64>;
-    pub type B = Line<(), f64>;
-
     /// The world: thirty points about the origin.
-    pub fn world() -> Vec<P> {
+    pub fn world() -> Vec<Point> {
         let mut rng = rng(0xca3e_0001);
         (0..30)
             .map(|_| Point::xyz(rng.normal(), rng.normal(), rng.normal()))
@@ -37,7 +34,7 @@ mod camera_fit {
 
     /// The images of the world points seen from the rig, as points on its screen `z = 1`, in the
     /// rig's frame. Generic over the coefficients, so that dual numbers carry the gradient.
-    pub fn image<T: Real>(generator: Line<(), T>, world: &[P]) -> Vec<Point<(), T>> {
+    pub fn image<T: Real>(generator: Line<(), T>, world: &[Point]) -> Vec<Point<(), T>> {
         let c = T::from_f64;
         let origin = Point::xyz(c(0.0), c(0.0), c(0.0));
         let screen = Plane::new(c(0.0), c(0.0), c(1.0), c(-1.0));
@@ -54,7 +51,7 @@ mod camera_fit {
 
     /// The mean squared distance between two sets of images: two images of unit weight differ
     /// by a direction, the displacement on the screen.
-    pub fn misfit<T: Real>(images: &[Point<(), T>], observed: &[P]) -> T {
+    pub fn misfit<T: Real>(images: &[Point<(), T>], observed: &[Point]) -> T {
         let c = T::from_f64;
         let sum = images.iter().zip(observed).fold(c(0.0), |sum, (a, o)| {
             sum + (*a - o.map_coefs(c)).ideal_norm_squared()
@@ -63,16 +60,20 @@ mod camera_fit {
     }
 
     /// The true rig's generator, and the start of the descent.
-    pub fn truth() -> B {
+    pub fn truth() -> Line {
         Line::new(0.1, -0.2, 0.15, -0.3, 0.1, -2.5)
     }
 
-    pub fn start() -> B {
+    pub fn start() -> Line {
         truth() + Line::new(0.3, 0.3, 0.3, -0.3, -0.3, -0.3)
     }
 
     /// The misfit and its steepest-descent direction with respect to the generator.
-    pub fn misfit_and_gradient(generator: B, world: &[P], observed: &[P]) -> (f64, B) {
+    pub fn misfit_and_gradient(
+        generator: Line,
+        world: &[Point],
+        observed: &[Point],
+    ) -> (f64, Line) {
         // The slope is a form on bivectors, `Scalar <- Line`; steepest descent in the
         // coefficient metric reads its coefficients as a bivector.
         let (value, slope) = gradient(|g| misfit(&image(g, world), observed), generator);
@@ -80,7 +81,7 @@ mod camera_fit {
     }
 
     /// Plain gradient descent with step 0.25: the generator after each step, with its misfit.
-    pub fn descend(steps: usize) -> Vec<(B, f64)> {
+    pub fn descend(steps: usize) -> Vec<(Line, f64)> {
         let world = world();
         let observed = image(truth(), &world);
         let mut g = start();
@@ -95,8 +96,8 @@ mod camera_fit {
 
     /// The pose error between two generators: the log of the relative motor, whose Euclidean
     /// part turns and whose ideal part shifts (the dual swaps the two).
-    pub fn pose_error(a: B, b: B) -> (f64, f64) {
-        let relative: B = (a.exp().inverse() * b.exp()).log();
+    pub fn pose_error(a: Line, b: Line) -> (f64, f64) {
+        let relative = (a.exp().inverse() * b.exp()).log();
         (relative.norm(), relative.dual().norm())
     }
 
@@ -106,13 +107,13 @@ mod camera_fit {
 use camera_fit::*;
 
 /// The descent, computed once.
-fn path() -> &'static [(B, f64)] {
-    static PATH: OnceLock<Vec<(B, f64)>> = OnceLock::new();
+fn path() -> &'static [(Line, f64)] {
+    static PATH: OnceLock<Vec<(Line, f64)>> = OnceLock::new();
     PATH.get_or_init(|| descend(STEPS))
 }
 
 /// A camera's frustum: its centre, and the corners of its screen.
-fn frustum(s: &mut Scene3, generator: B, colour: Light, width: f32) {
+fn frustum(s: &mut Scene3, generator: Line, colour: Light, width: f32) {
     let rig: Unit<_> = generator.exp();
     let at = |x: f64, y: f64, z: f64| rig >> Point::xyz(x, y, z);
     let centre = at(0.0, 0.0, 0.0);
@@ -149,7 +150,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let mut left = c.sub(Rect::new(0.0, 0.0, (w * 0.55).floor(), h));
     backdrop(&mut left);
     // Centred between the world's origin and the true camera.
-    let origin = Point::xyz(0.0, 0.0, 0.0);
+    let origin = Point::origin();
     let middle = (origin + (truth().exp() >> origin)).gp(0.5);
     let cam = Camera::orbit(
         left.rect(),
@@ -165,15 +166,15 @@ fn draw(c: &mut Canvas, t: f32) {
             *p,
             Marker::Dot,
             4.0,
-            palette::grid().mix_light(palette::ink(), 0.5),
+            palette::GRID.mix_light(palette::INK, 0.5),
         );
     }
-    frustum(&mut scene, truth(), palette::sky(), 2.0);
-    frustum(&mut scene, g, palette::red(), 1.5);
+    frustum(&mut scene, truth(), palette::SKY, 2.0);
+    frustum(&mut scene, g, palette::RED, 1.5);
     // The rays of the estimate, from its centre through each world point.
     let centre = g.exp() >> origin;
     for p in &world {
-        scene.seg(centre, *p, 0.6, palette::red().faded(0.25));
+        scene.seg(centre, *p, 0.6, palette::RED.faded(0.25));
     }
     scene.draw(&mut left);
     c.blit(&left, screen.lo);
@@ -181,7 +182,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let right = screen
         .part(0.55, 0.0, 1.0, 0.6)
         .inset(w * 0.05, h * 0.14, w * 0.02, h * 0.06);
-    let ax = Axes::equal(right, Point2::xy(0.0, 0.0), 0.75);
+    let ax = Axes::equal(right, ORIGIN2, 0.75);
     ax.frame(c, "THE SCREEN Z = 1", "", "");
     // The screen `z = 1` seen from above: its points with their `z` dropped.
     for (a, o) in images.iter().zip(&observed) {
@@ -190,13 +191,13 @@ fn draw(c: &mut Canvas, t: f32) {
             from_above(*a),
             from_above(*o),
             0.8,
-            palette::red().faded(0.5),
+            palette::RED.faded(0.5),
         );
     }
     let obs: Vec<_> = observed.iter().copied().map(from_above).collect();
     let cur: Vec<_> = images.iter().copied().map(from_above).collect();
-    ax.scatter(c, &obs, Marker::Cross, 8.0, palette::sky());
-    ax.scatter(c, &cur, Marker::Dot, 5.0, palette::red());
+    ax.scatter(c, &obs, Marker::Cross, 8.0, palette::SKY);
+    ax.scatter(c, &cur, Marker::Dot, 5.0, palette::RED);
     // The misfit over the steps, on a log scale.
     let lower = screen
         .part(0.55, 0.6, 1.0, 1.0)
@@ -213,16 +214,16 @@ fn draw(c: &mut Canvas, t: f32) {
         .enumerate()
         .map(|(i, p)| Point2::xy((i + 1) as f32, p.1 as f32))
         .collect();
-    mx.polyline(c, &curve, 1.0, palette::grid());
-    mx.polyline(c, &curve[..=k.min(STEPS)], 2.0, palette::yellow());
+    mx.polyline(c, &curve, 1.0, palette::GRID);
+    mx.polyline(c, &curve[..=k.min(STEPS)], 2.0, palette::YELLOW);
     let now = Point2::xy((k + 1) as f32, value as f32);
-    mx.scatter(c, &[now], Marker::Dot, 7.0, palette::yellow());
+    mx.scatter(c, &[now], Marker::Dot, 7.0, palette::YELLOW);
     let (turn, shift) = pose_error(truth(), g);
     c.text(
         &format!("STEP {k}   POSE ERROR: TURN {turn:.4}  SHIFT {shift:.4}"),
         screen.bottom_left() + Point2::direction(w * 0.02, -14.0),
         12.0,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
     caption(

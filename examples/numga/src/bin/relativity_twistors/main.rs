@@ -151,13 +151,13 @@ fn draw_incidence(c: &mut Canvas, rect: Rect, incidence: &Incidence) {
                 axis.gp(2.0),
                 1.0,
                 6.0,
-                palette::grid().faded(2.0),
+                palette::GRID.faded(2.0),
             );
         }
         let ray: Vec<Point3> = incidence.ray.iter().map(|e| drawn(*e)).collect();
-        s.polyline(&ray, 1.8, palette::sky());
+        s.polyline(&ray, 1.8, palette::SKY);
         for e in incidence.events {
-            s.dot(drawn(e), Marker::Dot, 8.0, palette::orange());
+            s.dot(drawn(e), Marker::Dot, 8.0, palette::ORANGE);
         }
     });
 }
@@ -186,7 +186,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let left = Rect::new(0.0, h * 0.12, w * 0.58, h);
     draw_curves(c, left, spatial_camera(left, turn, 2.6), &lines);
     let readout = format!("HOPFION: ELECTRIC LINES AT T = {time:+.2}");
-    label(c, left, &readout, size, palette::yellow());
+    label(c, left, &readout, size, palette::YELLOW);
 
     let flow: Vec<Vec<Point3>> = s
         .flow
@@ -200,21 +200,21 @@ fn draw(c: &mut Canvas, t: f32) {
         top_right,
         "ROBINSON CONGRUENCE AT T = 0",
         size,
-        palette::ink(),
+        palette::INK,
     );
 
     let bottom = Rect::new(w * 0.58, h * 0.62, w, h);
     for (k, (incidence, name)) in s.incidence.iter().zip(["AT REST", "BOOSTED"]).enumerate() {
         let panel = bottom.column(k, 2).inset(0.0, 0.0, 0.0, size * 1.6);
         draw_incidence(c, panel, incidence);
-        label(c, panel, name, size * 0.8, palette::ink());
+        label(c, panel, name, size * 0.8, palette::INK);
     }
     label(
         c,
         bottom,
         "A RAY FROM ITS TWISTOR (X, Z, T)",
         size,
-        palette::ink(),
+        palette::INK,
     );
     caption(
         c,

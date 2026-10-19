@@ -18,40 +18,32 @@ mod optics {
     use super::*;
 
     /// A ray: the join of two points, a line oriented along itself (intrinsic).
-    pub type L = intrinsic::Line<(), f64>;
-    /// The plane of a lens, a prism or a mirror: a vector (extrinsic), as a mirror is.
-    pub type Pl = Line<(), f64>;
-    pub type P = Point<(), f64>;
+    pub type L = intrinsic::Line;
     /// Where two rays cross: a meet, oriented by what crosses it (extrinsic).
-    pub type Crossing = extrinsic::Point<(), f64>;
+    pub type Crossing = extrinsic::Point;
     /// A map on rays.
-    pub type LineMap = intrinsic::Line<(intrinsic::Line,), f64>;
-    pub type M = gax::Unit<Motor<(), f64>>;
-
-    /// The origin.
-    pub fn origin() -> P {
-        Point::xy(0.0, 0.0)
-    }
+    pub type LineMap = intrinsic::Line<(intrinsic::Line,)>;
+    pub type M = gax::Unit<Motor>;
 
     /// The home plane `x = 0`, where every train element is defined.
-    pub fn home() -> Pl {
+    pub fn home() -> Line {
         Line::new(1.0, 0.0, 0.0)
     }
 
     /// The vertical line `x = a`.
-    pub fn vertical(a: f64) -> Pl {
+    pub fn vertical(a: f64) -> Line {
         Line::new(1.0, 0.0, -a)
     }
 
     /// A thin lens of focal length `focal` in the home plane: `L - (L ∨ O) x / f`.
     pub fn lens_at_home(focal: f64) -> LineMap {
         let l = L::slot();
-        l - (l & origin()) * home().gp(1.0 / focal)
+        l - (l & Point::origin()) * home().gp(1.0 / focal)
     }
 
     /// A thin lens in a `plane`: the lens at home conjugated by the motion that carries the
     /// home plane onto it.
-    pub fn thin_lens(plane: Pl, focal: f64) -> LineMap {
+    pub fn thin_lens(plane: Line, focal: f64) -> LineMap {
         placed(Motor::between(home(), plane), lens_at_home(focal))
     }
 
@@ -81,7 +73,7 @@ mod optics {
         rays: &[L],
         motors: &[M; 4],
         elements: &[LineMap; 4],
-    ) -> (Vec<Pl>, Vec<Vec<L>>, LineMap) {
+    ) -> (Vec<Line>, Vec<Vec<L>>, LineMap) {
         let mut train = L::slot();
         let mut legs = vec![rays.to_vec()];
         for (motor, element) in motors.iter().zip(elements) {
@@ -100,12 +92,12 @@ mod optics {
 
     /// One frame of the train at phase `t` (radians): the subject, the planes, the legs, the
     /// composed train and the image.
-    pub fn train(t: f64) -> (P, Vec<Pl>, Vec<Vec<L>>, LineMap, Crossing) {
+    pub fn train(t: f64) -> (Point, Vec<Line>, Vec<Vec<L>>, LineMap, Crossing) {
         let subject = Point::xy(-1.0, 0.5);
         let fan: Vec<L> = (0..7)
             .map(|k| subject & Point::xy(1.0, -0.6 + 1.2 * k as f64 / 6.0))
             .collect();
-        let o = origin();
+        let o = Point::origin();
         let motors = [
             // The first lens slides and tilts.
             Motor::translation(Point::direction(1.0 + 0.3 * wave(t), 0.0))
@@ -126,8 +118,8 @@ mod optics {
     /// A bundle of rays between two planes.
     pub struct Leg {
         pub rays: Vec<L>,
-        pub start: Pl,
-        pub stop: Pl,
+        pub start: Line,
+        pub stop: Line,
     }
 
     /// One lens imaging a point, and two lenses focusing parallel rays.
@@ -141,7 +133,7 @@ mod optics {
         /// Where the two lenses focus the parallel rays.
         pub focus: Crossing,
         /// The lens planes and focal lengths.
-        pub lenses: [(Pl, f64); 2],
+        pub lenses: [(Line, f64); 2],
     }
 
     pub fn lenses() -> Bench {
@@ -151,7 +143,7 @@ mod optics {
         // Rays from an object point through a pupil of points on the lens plane; every ray
         // after the lens passes through one point, the image.
         let obj = Point::xy(-2.0, 0.5);
-        let pupil: Vec<P> = (0..9)
+        let pupil: Vec<Point> = (0..9)
             .map(|k| Point::xy(1.5, -0.8 + 1.6 * k as f64 / 8.0))
             .collect();
         let rays: Vec<L> = pupil.iter().map(|p| obj & *p).collect();
@@ -167,7 +159,7 @@ mod optics {
         let after = |p: Crossing| {
             Motor::translation(Point::direction(0.25, 0.0)) >> (p & Point::direction(0.0, 1.0))
         };
-        let leg = |rays: Vec<L>, start: Pl, stop: Pl| Leg { rays, start, stop };
+        let leg = |rays: Vec<L>, start: Line, stop: Line| Leg { rays, start, stop };
         let through_1 = parallel.iter().map(|r| lens_1.of(*r)).collect();
         Bench {
             one: vec![
@@ -196,16 +188,16 @@ fn rays(ax: &Axes, c: &mut Canvas, leg: &Leg, color: Light) {
 }
 
 /// An element's plane between heights `-h` and `h`.
-fn plane(ax: &Axes, c: &mut Canvas, plane: Pl, h: f64) {
+fn plane(ax: &Axes, c: &mut Canvas, plane: Line, h: f64) {
     let a = plane ^ Line::new(0.0, 1.0, h);
     let b = plane ^ Line::new(0.0, 1.0, -h);
-    ax.line(c, a, b, 2.5, palette::grid());
+    ax.line(c, a, b, 2.5, palette::GRID);
 }
 
 /// A ray's heading: the unit direction along a line (its point at infinity), flipped to the
 /// side of `plane` that `towards` gives, the sign of its pairing with the plane.
-fn heading(ray: L, plane: Pl, towards: f64) -> P {
-    let d = ray ^ Line::new(0.0, 0.0, 1.0);
+fn heading(ray: L, plane: Line, towards: f64) -> Point {
+    let d = ray.direction();
     let d = d.gp(d.ideal_norm().recip());
     if (plane & d).s() * towards >= 0.0 {
         d
@@ -231,9 +223,9 @@ fn draw(c: &mut Canvas, t: f32) {
     // takes the direction of its line that continues forward through a lens or prism, and
     // that turns back across the plane at the mirror (the last element). The side of a plane
     // a direction points to is the sign of its pairing with the plane.
-    let mut start: Vec<P> = vec![subject; legs[0].len()];
+    let mut start: Vec<Point> = vec![subject; legs[0].len()];
     // From the subject towards the first plane: the side the subject is not on.
-    let mut dir: Vec<P> = legs[0]
+    let mut dir: Vec<Point> = legs[0]
         .iter()
         .map(|r| heading(*r, planes[0], -(planes[0] & subject).s()))
         .collect();
@@ -253,7 +245,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.line(c, *s, *s + d.gp(2.5), 1.3, (palette::series(4)).faded(0.9));
     }
     ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0));
-    ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow());
+    ax.scatter(c, &[image], Marker::Star, 13.0, palette::YELLOW);
     caption(
         c,
         "THIN LENS: AN OPTICAL TRAIN AS ONE MAP ON LINES",
@@ -281,14 +273,14 @@ fn draw(c: &mut Canvas, t: f32) {
             plane(&ax, c, *pl, 1.0);
         }
         let mark = if k == 0 { bench.image } else { bench.focus };
-        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow());
+        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::YELLOW);
         ax.text(
             c,
             // Just inside the top left corner of the data box.
             ax.at(0.0, 1.0) + Point2::direction(0.1, -0.25),
             title,
             11.0,
-            palette::ink(),
+            palette::INK,
             Align::Left,
         );
     }
@@ -302,10 +294,7 @@ fn main() {
 mod tests {
     use super::optics::*;
     use gax::ApproxEq;
-
-    fn close(a: f64, b: f64, tol: f64) -> bool {
-        (a - b).abs() <= tol
-    }
+    use gax_numga_examples::testing::close;
 
     /// The composed train maps the fan onto the last leg, and every output ray passes through
     /// the image, for every placement.

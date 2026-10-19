@@ -31,14 +31,13 @@ mod pascal {
     use super::*;
 
     /// A side: the join of two points, so intrinsic (ADR-051).
-    pub type L = intrinsic::Line<(), f64>;
-    pub type P = Point<(), f64>;
+    pub type L = intrinsic::Line;
     /// A crossing of two sides: their meet, so extrinsic.
-    pub type X = extrinsic::Point<(), f64>;
+    pub type X = extrinsic::Point;
     /// A conic: a map from points to their polar lines.
-    pub type Conic = Line<(Point,), f64>;
+    pub type Conic = Line<(Point,)>;
     /// A form with a point open in two places.
-    pub type Form = Scalar<(Point, Point), f64>;
+    pub type Form = Scalar<(Point, Point)>;
 
     /// The next vertex of each vertex of a hexagon.
     pub const NEXT: [usize; 6] = [1, 2, 3, 4, 5, 0];
@@ -51,13 +50,13 @@ mod pascal {
     }
 
     /// The pairing of a conic with a point, zero on the conic.
-    pub fn on(shape: Conic, p: P) -> f64 {
+    pub fn on(shape: Conic, p: Point) -> f64 {
         (shape.of(p) & p).s()
     }
 
     /// The conic through five points: the combination of the two line pairs through the first
     /// four that vanishes on the fifth.
-    pub fn conic(points: [P; 5]) -> Conic {
+    pub fn conic(points: [Point; 5]) -> Conic {
         let [first, second, third, fourth, fifth] = points;
         let sides = pair(first & second, third & fourth);
         let diagonals = pair(first & third, second & fourth);
@@ -68,12 +67,12 @@ mod pascal {
     /// again. Along `start + heading t` the pairing is
     /// `2 t (shape(start) & heading) + t² (shape(heading) & heading)`, zero at the start and at
     /// the other root.
-    pub fn second_crossing(shape: Conic, start: P, heading: P) -> P {
+    pub fn second_crossing(shape: Conic, start: Point, heading: Point) -> Point {
         start.gp(on(shape, heading)) - heading.gp(2.0 * (shape.of(start) & heading).s())
     }
 
     /// The three points where opposite sides of a hexagon meet.
-    pub fn crossings(hexagon: &[P; 6]) -> [X; 3] {
+    pub fn crossings(hexagon: &[Point; 6]) -> [X; 3] {
         let sides: Vec<L> = (0..6).map(|i| hexagon[i] & hexagon[NEXT[i]]).collect();
         [0, 1, 2].map(|i| sides[i] ^ sides[i + 3])
     }
@@ -81,7 +80,7 @@ mod pascal {
     /// Pascal's condition on a sixth point after five, as a form with the sixth point open in
     /// both places it appears: the join of the three crossings of opposite sides, zero exactly
     /// when they lie on one line.
-    pub fn pascal(five: [P; 5]) -> Form {
+    pub fn pascal(five: [Point; 5]) -> Form {
         let [first, second, third, fourth, fifth] = five;
         let open = Point::slot();
         ((first & second) ^ (fourth & fifth))
@@ -89,32 +88,27 @@ mod pascal {
             & ((third & fourth) ^ (open & first))
     }
 
-    /// The origin.
-    pub fn origin() -> P {
-        Point::xy(0.0, 0.0)
-    }
-
     /// The point at an angle on an ellipse off the origin: the point of the unit circle at the
     /// angle, stretched by 1.6 along x and moved to (0.3, -0.1).
-    pub fn ellipse_point(angle: f64) -> P {
-        let stretch: Point<(Point,), f64> = Point::from_images([
+    pub fn ellipse_point(angle: f64) -> Point {
+        let stretch: Point<(Point,)> = Point::from_images([
             Point::new(1.6, 0.0, 0.0),
             Point::new(0.0, 1.0, 0.0),
             Point::new(0.0, 0.0, 1.0),
         ]);
-        let on_circle = Motor::rotation(origin(), angle) >> Point::xy(1.0, 0.0);
+        let on_circle = Motor::rotation(Point::origin(), angle) >> Point::xy(1.0, 0.0);
         Motor::translation(Point::direction(0.3, -0.1)) >> stretch.of(on_circle)
     }
 
     /// The five fixed points.
-    pub fn five() -> [P; 5] {
+    pub fn five() -> [Point; 5] {
         [0.4, 1.44, 4.12, 4.77, 6.08].map(ellipse_point)
     }
 
     /// The conic through the five points, and for the line through the first at an angle the
     /// hexagon of the five and the line's second crossing with the conic, with the crossings of
     /// its opposite sides.
-    pub fn scene(angle: f64) -> (Conic, [P; 6], [X; 3]) {
+    pub fn scene(angle: f64) -> (Conic, [Point; 6], [X; 3]) {
         let five = five();
         let shape = conic(five);
         let sixth = second_crossing(shape, five[0], Point::direction_from_angle(angle));
@@ -131,7 +125,7 @@ mod pascal {
         let join = (crossing[0] & crossing[1] & crossing[2]).s();
         let size: f64 = crossing
             .iter()
-            .map(|p| gax::vga3d::Vector::<(), f64>::from_coeffs(p.c).norm())
+            .map(|p| gax::vga3d::Vector::from_coeffs(p.c).norm())
             .product();
         join / size
     }
@@ -148,15 +142,14 @@ use pascal::*;
 const SECONDS: f32 = 8.0;
 /// Colours of the three pairs of opposite sides and their crossings.
 fn pairs(i: usize) -> Light {
-    [palette::sky(), palette::green(), palette::purple()][i % 3]
+    [palette::SKY, palette::GREEN, palette::PURPLE][i % 3]
 }
 
 /// A line drawn across the axes: through its point nearest the origin (where the
 /// perpendicular through the origin meets it), along its point at infinity.
 fn across(ax: &Axes, c: &mut Canvas, l: L, width: f32, colour: Light) {
-    let foot = (l | origin()) ^ l;
-    let along = l ^ Line::new(0.0, 0.0, 1.0);
-    ax.axline(c, foot, along, width, colour);
+    let foot = (l | Point::origin()) ^ l;
+    ax.axline(c, foot, l.direction(), width, colour);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -173,7 +166,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(1.0, 1.5),
         4.0,
     );
-    ax.fill(c, &hexagon, palette::grid(), 0.35);
+    ax.fill(c, &hexagon, palette::GRID, 0.35);
     for i in 0..6 {
         across(
             &ax,
@@ -184,12 +177,12 @@ fn draw(c: &mut Canvas, t: f32) {
         );
     }
     let conic_level = |p: Point2| on(shape, p.map_coefs(f64::from)) as f32;
-    ax.contour(c, conic_level, 240, 0.0, 2.0, palette::ink());
-    across(&ax, c, crossing[0] & crossing[2], 2.4, palette::red());
-    ax.scatter(c, &hexagon[..5], Marker::Dot, 7.0, palette::ink());
-    ax.scatter(c, &hexagon[5..], Marker::Dot, 11.0, palette::orange());
+    ax.contour(c, conic_level, 240, 0.0, 2.0, palette::INK);
+    across(&ax, c, crossing[0] & crossing[2], 2.4, palette::RED);
+    ax.scatter(c, &hexagon[..5], Marker::Dot, 7.0, palette::INK);
+    ax.scatter(c, &hexagon[5..], Marker::Dot, 11.0, palette::ORANGE);
     for (i, p) in crossing.iter().enumerate() {
-        ax.scatter(c, &[*p], Marker::Dot, 11.0, palette::red());
+        ax.scatter(c, &[*p], Marker::Dot, 11.0, palette::RED);
         ax.scatter(c, &[*p], Marker::Dot, 7.0, pairs(i));
     }
 
@@ -203,7 +196,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let five = five();
     let form = pascal(five);
-    ax2.contour(c, conic_level, 160, 0.0, 5.0, palette::grid());
+    ax2.contour(c, conic_level, 160, 0.0, 5.0, palette::GRID);
     ax2.contour(
         c,
         |p| {
@@ -213,13 +206,13 @@ fn draw(c: &mut Canvas, t: f32) {
         160,
         0.0,
         1.6,
-        palette::yellow(),
+        palette::YELLOW,
     );
-    ax2.scatter(c, &five, Marker::Dot, 7.0, palette::ink());
+    ax2.scatter(c, &five, Marker::Dot, 7.0, palette::INK);
     // The note sits just in from the panel's top left corner.
     let note = ax2.rect.lo + Point2::direction(0.05, 0.2).gp(ax2.scale());
     let text = "PASCAL'S CONDITION IS THE CONIC";
-    c.text(text, note, 10.0, palette::yellow(), Align::Left);
+    c.text(text, note, 10.0, palette::YELLOW, Align::Left);
 
     // The join of the three crossings over the turn, at round-off.
     let ax3 = Axes::new(
@@ -238,14 +231,14 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(s as f32, collinearity(&x).abs().max(1e-18) as f32)
         })
         .collect();
-    ax3.polyline(c, &samples, 1.4, palette::sky());
+    ax3.polyline(c, &samples, 1.4, palette::SKY);
     let now = collinearity(&crossing).abs().max(1e-18) as f32;
     ax3.scatter(
         c,
         &[Point2::xy(phase as f32, now)],
         Marker::Dot,
         8.0,
-        palette::orange(),
+        palette::ORANGE,
     );
 
     caption(

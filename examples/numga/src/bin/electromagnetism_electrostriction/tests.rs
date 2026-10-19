@@ -319,7 +319,7 @@ fn rotating_the_lattice_and_field_carries_the_whole_response() {
         fields,
         positions,
     } = loading();
-    let turn = Pseudoscalar::<(), f64>::new(-0.37).exp();
+    let turn = Pseudoscalar::new(-0.37).exp();
     let turned = Lattice {
         rest: lattice.rest.map(|p| turn >> p),
         ..lattice.clone()

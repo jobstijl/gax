@@ -24,18 +24,15 @@
 //! together with the face field's directions `x`, `y` and `z` across them. Lengths are in
 //! units of the sphere's radius and times in units of the radius over the waves' speed.
 
-#[path = "../shared/surfaces_sphere.rs"]
-mod surfaces_sphere;
-#[path = "../shared/surfaces_spin.rs"]
-#[allow(dead_code)] // the cube and its checkerboard are spin_transformations' and arap's
-mod surfaces_spin;
+use gax_numga_examples::shared::surfaces_sphere;
+use gax_numga_examples::shared::surfaces_spin;
 
 use gax::field::Field;
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::palette;
 use gax_numga_examples::run;
 use gax_numga_examples::{
-    Anim, Camera, Canvas, Lens, Light, ORIGIN3, Rect, backdrop, caption, label_under,
+    Anim, Camera, Canvas, Lens, Light, ORIGIN3, Rect, backdrop, caption, label_under, signal::frame,
 };
 use std::sync::OnceLock;
 use surfaces_spin::{Hit, render};
@@ -47,9 +44,9 @@ mod waves {
     use gax_numga_examples::signal::phasor;
 
     /// A quaternion: the even multivector at a vertex.
-    pub type Quaternion = Rotor<(), f64>;
+    pub type Quaternion = Rotor;
     /// The odd multivector on a face.
-    pub type Spinor = Odd<(), f64>;
+    pub type Spinor = Odd;
 
     /// The Dirac operator from vertices to faces `[F, V]`, with the face and vertex areas.
     pub struct Dirac {
@@ -335,11 +332,11 @@ fn colour(amplitudes: &Amplitudes, mesh: &Mesh, hit: &Hit) -> Light {
             .norm_squared()
             .min(1.0)
     };
-    let accents = [palette::red(), palette::green(), palette::blue()];
+    let accents = [palette::RED, palette::GREEN, palette::BLUE];
     let glow = |axis: usize| accents[axis].faded(GAIN * energy(axis));
     let mix = glow(0) + glow(1) + glow(2);
     let vivid = mix.perceptually(|c| c.with_lightness(LIGHTNESS).with_chroma(CHROMA));
-    palette::grid() + vivid.to_gamut()
+    palette::GRID + vivid.to_gamut()
 }
 
 /// One sphere in its panel, with a label under it.
@@ -368,7 +365,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let tile = |i: usize| rows[i / 3].column(i % 3, 3);
     let share = (t / SECONDS).rem_euclid(1.0);
 
-    let frame = ((share * s.pulse.len() as f32) as usize).min(s.pulse.len() - 1);
+    let frame = frame(share, s.pulse.len());
     let time = (frame * EVERY) as f64 * INTERVAL;
     let label = format!("PULSE FROM THE NORTH POLE, T = {time:.2}");
     sphere_panel(c, tile(0), &s.pulse_sphere, &s.pulse[frame], &label);

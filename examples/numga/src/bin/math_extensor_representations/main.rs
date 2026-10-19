@@ -116,10 +116,10 @@ macro_rules! signature {
             use super::algebras::$algebra::{Scalar, $full as Full, $state as State};
             use super::canonical_masks;
 
-            pub type F = Full<(), f64>;
-            pub type S = State<(), f64>;
+            pub type F = Full;
+            pub type S = State;
             /// A map on the states.
-            pub type Rep = State<(State,), f64>;
+            pub type Rep = State<(State,)>;
             pub const P: usize = $p;
             pub const Q: usize = $q;
             pub const N: usize = $p + $q;
@@ -214,11 +214,11 @@ macro_rules! signature {
                 /// the state's dimension, solved against the scalar product.
                 pub fn readout(&self, map: Rep) -> F {
                     let d = dimension() as f64;
-                    let form: Scalar<(Full,), f64> =
-                        Scalar::<(Full,), f64>::from_images(core::array::from_fn(|i| {
+                    let form: Scalar<(Full,)> =
+                        Scalar::<(Full,)>::from_images(core::array::from_fn(|i| {
                             Scalar::new(self.blades[i].of(map).trace() / d)
                         }));
-                    let pairing = Full::<(), f64>::slot().scalar_product(Full::<(), f64>::slot());
+                    let pairing = Full::slot().scalar_product(Full::slot());
                     pairing.solve(form)
                 }
             }
@@ -370,7 +370,7 @@ fn square(c: &mut Canvas, corner: Point2, side: f32, colour: Light) {
 /// A cell's colour by its state size: brighter the more components.
 fn size_colour(state: usize) -> Light {
     let level = (state as f32).log2() / 4.0;
-    palette::grid().mix_light(palette::sky(), level)
+    palette::GRID.mix_light(palette::SKY, level)
 }
 
 /// The table of signatures in `rect`: a row per dimension, from all plus on the left to all
@@ -387,7 +387,7 @@ fn table_panel(c: &mut Canvas, rect: Rect, current: usize) {
                 cell * (n as f32 + 0.6),
             );
         let fill = if k == current {
-            palette::orange()
+            palette::ORANGE
         } else {
             size_colour(row.state)
         };
@@ -397,7 +397,7 @@ fn table_panel(c: &mut Canvas, rect: Rect, current: usize) {
             &row.state.to_string(),
             middle,
             0.36 * cell,
-            palette::ink(),
+            palette::INK,
             Align::Center,
         );
     }
@@ -406,7 +406,7 @@ fn table_panel(c: &mut Canvas, rect: Rect, current: usize) {
         note,
         rect.lo + Point2::direction(0.0, 0.2 * cell),
         10.0,
-        palette::ink().faded(0.7),
+        palette::INK.faded(0.7),
         Align::Left,
     );
 }
@@ -424,13 +424,13 @@ fn generators_panel(c: &mut Canvas, rect: Rect, row: &Row) {
         "CL({},{}): {} BLADES ON {} REAL STATES",
         row.p, row.q, row.blades, row.state
     );
-    c.text(&head, rect.lo, 13.0, palette::ink(), Align::Left);
+    c.text(&head, rect.lo, 13.0, palette::INK, Align::Left);
     let sub = format!("PROJECTOR BLADES: {projector}");
     c.text(
         &sub,
         rect.lo + Point2::direction(0.0, 20.0),
         11.0,
-        palette::orange(),
+        palette::ORANGE,
         Align::Left,
     );
     let grid = (rect.width() / 3.2).min(rect.height() / 2.6);
@@ -444,11 +444,11 @@ fn generators_panel(c: &mut Canvas, rect: Rect, row: &Row) {
         for (r, entries) in matrix.iter().enumerate() {
             for (k, value) in entries.iter().enumerate() {
                 let colour = if *value > 0.0 {
-                    palette::orange()
+                    palette::ORANGE
                 } else if *value < 0.0 {
-                    palette::sky()
+                    palette::SKY
                 } else {
-                    palette::grid()
+                    palette::GRID
                 };
                 let at = corner + Point2::direction(step * k as f32, step * r as f32);
                 let strength = if *value == 0.0 { 0.25 } else { 0.8 };
@@ -460,7 +460,7 @@ fn generators_panel(c: &mut Canvas, rect: Rect, row: &Row) {
             &label,
             corner + Point2::direction(0.0, grid + 10.0),
             10.0,
-            palette::ink().faded(0.7),
+            palette::INK.faded(0.7),
             Align::Left,
         );
     }
@@ -505,7 +505,7 @@ mod tests {
             for (rep, mask) in reps.blades.iter().zip(super::canonical_masks(N)) {
                 assert_eq!(reps.readout(*rep), blade(mask));
             }
-            let one = Scalar::<(), f64>::new(1.0);
+            let one = Scalar::new(1.0);
             let arbitrary: Rep = (one * one.scalar_product(State::slot())).cast::<State>();
             let projected = reps.of(reps.readout(arbitrary));
             let residual = arbitrary - projected;

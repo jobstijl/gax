@@ -1,7 +1,7 @@
 //! Level lines of a scalar field on a grid by marching squares: the segments where the field
 //! crosses `level`, with the crossings placed by linear interpolation along the cell edges.
 
-use crate::points::{Point2, box_map};
+use crate::points::{ORIGIN2, Point2, box_map};
 
 /// The segments (in grid coordinates: the point `(column, row)`) where `f` crosses `level`, for
 /// `f` sampled on a `cols` x `rows` grid (`f[row * cols + col]`). Non-finite samples break the
@@ -65,7 +65,7 @@ pub fn of_fn(
     // The grid's corners onto the ranges' corners.
     let last = (n - 1) as f32;
     let to = box_map(
-        [Point2::xy(0.0, 0.0), Point2::xy(last, last)],
+        [ORIGIN2, Point2::xy(last, last)],
         [Point2::xy(x[0], y[0]), Point2::xy(x[1], y[1])],
     );
     let grid: Vec<f32> = (0..n * n)

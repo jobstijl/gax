@@ -17,7 +17,7 @@ use gax::{Unit, vga2d};
 
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, ORIGIN2, Point2, Rect, backdrop, caption, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -26,32 +26,24 @@ mod station {
 
     /// A position error: the small motion from the set point to the pose, a bivector, a turn
     /// about a point (extrinsic).
-    pub type Twist = pga2d::Twist<(), f64>;
+    pub type Twist = pga2d::Twist;
     /// A line reads out a twist, `line & twist`: an intrinsic line, numga's `antibivector`.
-    pub type Readout = Forque<(), f64>;
+    pub type Readout = Forque;
     /// A measurement line to the correlated twist.
-    pub type Covariance = pga2d::Twist<(Forque,), f64>;
+    pub type Covariance = pga2d::Twist<(Forque,)>;
     /// The rate of change of a position error.
-    pub type Dynamics = pga2d::Twist<(pga2d::Twist,), f64>;
+    pub type Dynamics = pga2d::Twist<(pga2d::Twist,)>;
     /// The same rate of change, acting on measurement lines.
-    pub type Readouts = Forque<(Forque,), f64>;
+    pub type Readouts = Forque<(Forque,)>;
     /// The covariance of two position measurements, by lines that read a position (extrinsic:
     /// their pairing with the moved point matches the twist readouts' with the twist).
-    pub type Spread = Scalar<(Line, Line), f64>;
+    pub type Spread = Scalar<(Line, Line)>;
     /// White noise to a gust's push on the vessel.
-    pub type Kicks = pga2d::Twist<(Forque,), f64>;
-    /// A position.
-    pub type P = Point<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
+    pub type Kicks = pga2d::Twist<(Forque,)>;
+    pub type M = Unit<Motor>;
 
     /// The controller gain, per second.
     pub const RELAXATION: f64 = 0.6;
-
-    /// The set point; in PGA2D a point is a bivector, like a twist, but intrinsic: a position,
-    /// where a twist turns about it.
-    pub fn origin() -> P {
-        Point::xy(0.0, 0.0)
-    }
 
     /// numga's PGA2D basis twists by name: `yw = e20`, `wx = e01`, `xy = e12`, which are gax's
     /// `Point` coefficients in order. A `yw` twist slides the set point along `y`, sideways; a
@@ -160,7 +152,7 @@ mod station {
     /// another line, solved from the incidence pairing. Pairing two such readings through the
     /// covariance gives a symmetric form on lines, whose eigenpairs are the ellipse's axes.
     pub fn position_spread(covariance: Covariance) -> Spread {
-        let shift = Twist::slot().commutator(origin());
+        let shift = Twist::slot().commutator(Point::origin());
         let readout = (Readout::slot() & Twist::slot()).solve(Line::slot() & shift);
         readout & covariance.of(readout)
     }
@@ -170,14 +162,14 @@ mod station {
     /// through the origin (VGA2D's vectors), where the line metric is the Euclidean one; its
     /// eigenpairs are the ellipse's axes. The ring is the unit circle, turned out step by step,
     /// through the map that stretches each axis to twice its deviation: a sum of dyads.
-    pub fn ellipse(spread: Spread, n: usize) -> Vec<P> {
-        let through: Line<(vga2d::Vector,), f64> = Line::from(vga2d::Vector::slot());
+    pub fn ellipse(spread: Spread, n: usize) -> Vec<Point> {
+        let through: Line<(vga2d::Vector,)> = Line::from(vga2d::Vector::slot());
         let (variances, axes) = spread
             .of(through)
             .at::<1>()
             .of(through)
             .eigh(Scalar::identity());
-        gax_numga_examples::plot::ellipse(origin(), variances, axes, n)
+        gax_numga_examples::plot::ellipse(Point::origin(), variances, axes, n)
     }
 
     /// A run: snapshots of the bodies' errors and of the predicted covariance every few steps,
@@ -276,7 +268,7 @@ fn draw(c: &mut Canvas, t: f32) {
             Rect::new(0.0, top, w, h)
                 .column(k, 2)
                 .inset(w * 0.06, h * 0.05, w * 0.02, h * 0.13);
-        let ax = Axes::equal(rect, origin(), EXTENT);
+        let ax = Axes::equal(rect, ORIGIN2, EXTENT);
         ax.frame(
             c,
             &format!("{name}, T = {seconds:.1} S"),
@@ -287,28 +279,28 @@ fn draw(c: &mut Canvas, t: f32) {
         // and a point a little ahead of it, moved by the vessel's pose. The swarm is one
         // stroke, so where the vessels crowd it does not burn white.
         let ahead = Point::xy(0.08 * f64::from(EXTENT), 0.0);
-        let dashes: Vec<[P; 2]> = run.errors[index]
+        let dashes: Vec<[Point; 2]> = run.errors[index]
             .iter()
             .map(|error| {
                 let pose = pose(*error);
-                let here = pose >> origin();
+                let here = pose >> Point::origin();
                 let half = ((pose >> ahead) - here).gp(0.5);
                 [here - half, here + half]
             })
             .collect();
-        ax.stroke(c, &dashes, 1.0, palette::sky().faded(0.6));
+        ax.stroke(c, &dashes, 1.0, palette::SKY.faded(0.6));
         let ring = |cov: Covariance| ellipse(position_spread(cov), 96);
-        ax.dashed(c, &ring(run.limit), 1.8, 6.0, palette::red());
+        ax.dashed(c, &ring(run.limit), 1.8, 6.0, palette::RED);
         let sample = ring(empirical(&run.errors[index]));
-        ax.polyline(c, &sample, 1.4, palette::yellow().faded(0.9));
-        ax.polyline(c, &ring(run.predicted[index]), 2.2, palette::red());
+        ax.polyline(c, &sample, 1.4, palette::YELLOW.faded(0.9));
+        ax.polyline(c, &ring(run.predicted[index]), 2.2, palette::RED);
         if k == 0 {
             ax.legend(
                 c,
                 &[
-                    ("VESSELS", palette::sky()),
-                    ("PREDICTED 2 SIGMA", palette::red()),
-                    ("SAMPLE 2 SIGMA", palette::yellow()),
+                    ("VESSELS", palette::SKY),
+                    ("PREDICTED 2 SIGMA", palette::RED),
+                    ("SAMPLE 2 SIGMA", palette::YELLOW),
                 ],
             );
         }
@@ -322,7 +314,7 @@ fn draw(c: &mut Canvas, t: f32) {
         "GUSTS MOSTLY SIDEWAYS, TURNING SPREADS THEM",
         screen.hi - Point2::direction(12.0, 8.0),
         11.0,
-        palette::grid(),
+        palette::GRID,
         Align::Right,
     );
 }
@@ -395,7 +387,7 @@ mod tests {
             let spread = position_spread(settled(drift(rate, RELAXATION), covariance(kicks())));
             let ring = ellipse(spread, 720);
             for k in 0..12 {
-                let turn = gax::pga2d::Motor::rotation(origin(), 0.5 * k as f64);
+                let turn = gax::pga2d::Motor::rotation(gax::pga2d::Point::origin(), 0.5 * k as f64);
                 let line = turn >> gax::pga2d::Line::new(1.0, 0.0, 0.0);
                 let reach = ring
                     .iter()

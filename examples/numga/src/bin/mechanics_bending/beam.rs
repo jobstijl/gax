@@ -6,20 +6,20 @@ use crate::simplex;
 use gax::{Unit, pga2d, pga3d};
 
 /// A strain: a line of the section, its neutral axis. The line at infinity is a pure stretch.
-pub type Strain = pga2d::Line<(), f64>;
+pub type Strain = pga2d::Line;
 /// A strain's resultant pull: a point of the section weighted by the force (a direction for a
 /// couple).
 pub type Resultant = P2;
 /// Strain to the fibres' resultant, `Point <- Line`: the section's polarity.
-pub type Stiffness = pga2d::Point<(pga2d::Line,), f64>;
+pub type Stiffness = pga2d::Point<(pga2d::Line,)>;
 /// A point of space.
-pub type P3 = pga3d::Point<(), f64>;
+pub type P3 = pga3d::Point;
 /// A line of space as a twist: a meet of planes, extrinsic.
-pub type L3 = pga3d::Line<(), f64>;
+pub type L3 = pga3d::Line;
 /// A load: a line of force, the join of a point with a direction (intrinsic, a forque).
-pub type Load = pga3d::Forque<(), f64>;
+pub type Load = pga3d::Forque;
 /// A cross-section's frame along the beam.
-pub type Frame = Unit<pga3d::Motor<(), f64>>;
+pub type Frame = Unit<pga3d::Motor>;
 
 /// The material's modulus, the beam's length, the pieces it is cut into and its tip load.
 pub const MODULUS: f64 = 1.0;
@@ -32,14 +32,14 @@ pub const PUSH: f64 = 1e-3;
 pub const PUSH_POINTS: [[f64; 2]; 2] = [[0.03, 0.04], [0.1, 0.3]];
 
 /// The plane of the cross-section at the clamp, `z = 0`.
-pub fn section_plane() -> pga3d::Plane<(), f64> {
+pub fn section_plane() -> pga3d::Plane {
     pga3d::Plane::new(0.0, 0.0, 1.0, 0.0)
 }
 
 /// The shift along the beam: the section's line at infinity, under which every fibre stretches
 /// by one, and which, lifted into space, carries a section along the beam.
 pub fn shift_along_beam() -> Strain {
-    Strain::new(0.0, 0.0, 1.0)
+    Strain::infinity()
 }
 
 /// A point of the section as the point of space in the clamp's section plane: the line along
@@ -57,7 +57,7 @@ pub fn in_space_line(strain: Strain) -> L3 {
 
 /// Space seen along the beam: a point's place in the section, its position along the beam
 /// dropped.
-pub fn chart() -> pga2d::Point<(pga3d::Point,), f64> {
+pub fn chart() -> pga2d::Point<(pga3d::Point,)> {
     pga2d::Point::from_images([
         P2::new(1.0, 0.0, 0.0),
         P2::new(0.0, 1.0, 0.0),
@@ -133,7 +133,7 @@ pub fn carried(load: Load, station: f64) -> Resultant {
 /// shift along the beam plus its strain, and acts in the frame of the cross-section before it.
 pub fn bend(strains: &[Strain], step: f64) -> Vec<Frame> {
     // The clamp's frame: no twist at all.
-    let mut frames = vec![L3::zero().exp()];
+    let mut frames = vec![Frame::identity()];
     for strain in strains {
         let twist = (in_space_line(shift_along_beam() + *strain) * (step / 2.0)).exp();
         let last = *frames.last().expect("the clamp");

@@ -38,6 +38,25 @@ pub fn box_map(from: [Point2; 2], to: [Point2; 2]) -> Map2 {
     Motor::between(ORIGIN2, to[0]) >> s.of(Motor::between(from[0], ORIGIN2) >> Point2::slot())
 }
 
+/// The sides of the closed polygon `poly`: each vertex with the next, the last with the first.
+pub fn sides<P: Copy>(poly: &[P]) -> impl Iterator<Item = (P, P)> + '_ {
+    poly.iter()
+        .copied()
+        .zip(poly.iter().copied().cycle().skip(1))
+}
+
+/// The box around `points`: their least and greatest coordinates, `[x, y]` each (inside out,
+/// `[MAX, MIN]`, for no points).
+pub fn bounds(points: impl IntoIterator<Item = Point2>) -> [[f32; 2]; 2] {
+    let start = [[f32::MAX; 2], [f32::MIN; 2]];
+    points
+        .into_iter()
+        .map(|p| p.to_euclidean())
+        .fold(start, |[lo, hi], [x, y]| {
+            [[lo[0].min(x), lo[1].min(y)], [hi[0].max(x), hi[1].max(y)]]
+        })
+}
+
 /// The coefficient types the examples compute in.
 pub trait Precision: Coef {
     /// Rounded to `f32`, the drawing precision.
@@ -149,7 +168,7 @@ pub fn reach3(d: impl Dir3) -> Point3 {
 
 /// The direction from the origin of the plane to a drawn point, as the examples compute in: a
 /// VGA vector in `f64`. The inverse of [`reach2`].
-pub fn vector2(p: Point2) -> vga2d::Vector<(), f64> {
+pub fn vector2(p: Point2) -> vga2d::Vector {
     let [x, y] = p.to_euclidean();
     vga2d::Vector::new(f64::from(x), f64::from(y))
 }
@@ -157,7 +176,7 @@ pub fn vector2(p: Point2) -> vga2d::Vector<(), f64> {
 /// The direction from the origin of space to the point of the ground plane `z = 0` under a
 /// drawn point seen from above: a VGA vector in `f64`. The inverse of [`from_above`] of
 /// [`reach3`] there.
-pub fn vector3(p: Point2) -> vga3d::Vector<(), f64> {
+pub fn vector3(p: Point2) -> vga3d::Vector {
     let [x, y] = p.to_euclidean();
     vga3d::Vector::new(f64::from(x), f64::from(y), 0.0)
 }
@@ -175,6 +194,18 @@ pub fn circle<T: Real>(
     (0..=segments)
         .map(|k| centre + pga2d::Point::direction_from_angle(angle(k)).gp(radius))
         .collect()
+}
+
+/// The unit direction of space at `longitude` and `latitude`, in radians: `x` raised towards
+/// `z` by the latitude, then turned about `z` by the longitude. The cosine of the latitude
+/// scales the phasor of the longitude.
+pub fn on_sphere<T: Real>(longitude: T, latitude: T) -> vga3d::Vector<(), T> {
+    let (around, up) = (
+        vga2d::Vector::from_angle(longitude),
+        vga2d::Vector::from_angle(latitude),
+    );
+    let across = up.e1();
+    vga3d::Vector::new(across * around.e1(), across * around.e2(), up.e2())
 }
 
 /// A point of space seen from above (along `-z`): the point of the plane under it, its `z`

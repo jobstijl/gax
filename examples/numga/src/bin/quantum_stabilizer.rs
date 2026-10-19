@@ -46,8 +46,8 @@ mod stabilizer {
     use gax_numga_examples::signal::phasor;
 
     /// An operator, any element of the algebra, and a state: a spinor of the ideal.
-    pub type Full = Multivector<(), f64>;
-    pub type St = State<(), f64>;
+    pub type Full = Multivector;
+    pub type St = State;
 
     /// The qubits, the kinds of error on each (none, bit flip, phase flip, both), and the two
     /// logical qubits.
@@ -60,7 +60,7 @@ mod stabilizer {
     }
 
     /// The basis vector named by a letter, `a` to `h`.
-    fn vector(name: char) -> Vector<(), f64> {
+    fn vector(name: char) -> Vector {
         let mut c = [0.0; 8];
         c["abcdefgh".find(name).expect("a basis vector a to h")] = 1.0;
         Vector::from_coeffs(c)
@@ -335,9 +335,9 @@ fn data() -> &'static Data {
 /// The colour of a check's outcome: passed, or noticed.
 fn outcome(value: f64) -> Light {
     if value > 0.0 {
-        palette::green()
+        palette::GREEN
     } else {
-        palette::red()
+        palette::RED
     }
 }
 
@@ -349,26 +349,26 @@ fn draw_logical(c: &mut Canvas, area: Rect, d: &Data, state: St) {
     for k in 0..LOGICAL {
         let cell = area.column(k, LOGICAL);
         let ax = Axes::equal(cell, ORIGIN2, 1.3);
-        ax.polyline(c, &circle(ORIGIN2, 1.0, 64), 1.0, palette::grid());
+        ax.polyline(c, &circle(ORIGIN2, 1.0, 64), 1.0, palette::GRID);
         let reading = Point2::xy(
             d.code.expectation(phase_flips[k], state) as f32,
             d.code.expectation(flips[k], state) as f32,
         );
-        ax.arrow(c, ORIGIN2, reading, 2.2, 8.0, palette::sky());
+        ax.arrow(c, ORIGIN2, reading, 2.2, 8.0, palette::SKY);
         let name = cell.bottom_middle() + below.gp(8.0);
         let text = format!("LOGICAL {}", k + 1);
-        c.text(&text, name, 10.0, palette::sky(), Align::Center);
+        c.text(&text, name, 10.0, palette::SKY, Align::Center);
     }
     let note = area.bottom_middle() + below.gp(24.0);
     let text = "ACROSS: PHASE FLIP, UP: FLIP";
-    c.text(text, note, 9.0, palette::ink(), Align::Center);
+    c.text(text, note, 9.0, palette::INK, Align::Center);
 }
 
 /// The sixteen spinor components of a state as bars over their blades' names (staggered in two
 /// rows, to fit).
 fn draw_components(c: &mut Canvas, ax: &Axes, state: St) {
     let (lo, hi) = (Point2::xy(-0.5, 0.0), Point2::xy(15.5, 0.0));
-    ax.line(c, lo, hi, 1.0, palette::grid());
+    ax.line(c, lo, hi, 1.0, palette::GRID);
     let below = Point2::direction(0.0, 1.0);
     for (k, (value, name)) in state.c.iter().zip(BLADES).enumerate() {
         let (x, v) = (k as f32, *value as f32);
@@ -378,10 +378,10 @@ fn draw_components(c: &mut Canvas, ax: &Axes, state: St) {
             Point2::xy(x + 0.35, v),
             Point2::xy(x - 0.35, v),
         ];
-        ax.fill(c, &bar, palette::purple(), 0.8);
+        ax.fill(c, &bar, palette::PURPLE, 0.8);
         let row = (k % 2) as f32;
         let label = ax.px(Point2::xy(x, ax.y[0])) + below.gp(10.0 + 11.0 * row);
-        c.text(name, label, 8.0, palette::ink(), Align::Center);
+        c.text(name, label, 8.0, palette::INK, Align::Center);
     }
 }
 
@@ -396,7 +396,7 @@ fn draw_checks(
     let up = Point2::direction(0.0, -1.0);
     let title = ax.rect.top_middle() + up.gp(6.0);
     let text = "CHECKS AFTER EACH SINGLE ERROR";
-    c.text(text, title, 10.0, palette::ink(), Align::Center);
+    c.text(text, title, 10.0, palette::INK, Align::Center);
     for (q, row) in readings.iter().enumerate() {
         let y = (QUBITS - 1 - q) as f32;
         let name = format!("QUBIT {}", q + 1);
@@ -405,7 +405,7 @@ fn draw_checks(
             Point2::xy(-0.55, y - 0.1),
             &name,
             9.0,
-            palette::ink(),
+            palette::INK,
             Align::Right,
         );
         for (k, pair) in row.iter().enumerate() {
@@ -416,23 +416,23 @@ fn draw_checks(
             }
             if (q, k) == now {
                 let at = [Point2::xy(x, y)];
-                ax.scatter(c, &at, Marker::Ring, 26.0, palette::yellow());
+                ax.scatter(c, &at, Marker::Ring, 26.0, palette::YELLOW);
             }
         }
     }
     for (k, name) in KIND_NAMES.iter().enumerate() {
         let at = Point2::xy(k as f32, -0.75);
-        ax.text(c, at, name, 9.0, palette::ink(), Align::Center);
+        ax.text(c, at, name, 9.0, palette::INK, Align::Center);
     }
 }
 
 /// What the lights of the check table mean.
 fn draw_key(c: &mut Canvas, area: Rect) {
     let lines = [
-        ("LEFT: THE CHECK FLIPPING ALL", palette::ink()),
-        ("RIGHT: PHASE-FLIPPING ALL", palette::ink()),
-        ("GREEN: PASSED", palette::green()),
-        ("RED: NOTICED", palette::red()),
+        ("LEFT: THE CHECK FLIPPING ALL", palette::INK),
+        ("RIGHT: PHASE-FLIPPING ALL", palette::INK),
+        ("GREEN: PASSED", palette::GREEN),
+        ("RED: NOTICED", palette::RED),
     ];
     for (k, (text, colour)) in lines.iter().enumerate() {
         let at = area.lo + Point2::direction(0.0, 18.0 * k as f32);
@@ -450,23 +450,23 @@ fn draw_noise(c: &mut Canvas, ax: &Axes, d: &Data, rate: f64) {
             .map(|(r, v)| Point2::xy(*r as f32, *v as f32))
             .collect()
     };
-    ax.dashed(c, &curve(&d.kept), 1.4, 5.0, palette::ink().faded(0.6));
-    ax.polyline(c, &curve(&d.bare), 1.8, palette::red());
-    ax.polyline(c, &curve(&d.encoded), 1.8, palette::sky());
+    ax.dashed(c, &curve(&d.kept), 1.4, 5.0, palette::INK.faded(0.6));
+    ax.polyline(c, &curve(&d.bare), 1.8, palette::RED);
+    ax.polyline(c, &curve(&d.encoded), 1.8, palette::SKY);
     let r = rate as f32;
     ax.line(
         c,
         Point2::xy(r, 0.0),
         Point2::xy(r, 1.0),
         1.0,
-        palette::grid(),
+        palette::GRID,
     );
     ax.legend(
         c,
         &[
-            ("RUNS KEPT", palette::ink()),
-            ("BARE INFIDELITY", palette::red()),
-            ("KEPT RUNS' INFIDELITY", palette::sky()),
+            ("RUNS KEPT", palette::INK),
+            ("BARE INFIDELITY", palette::RED),
+            ("KEPT RUNS' INFIDELITY", palette::SKY),
         ],
     );
 }
@@ -500,7 +500,7 @@ fn draw(c: &mut Canvas, t: f32) {
     draw_components(c, &components, corrupted);
     let label = components.rect.top_middle() + Point2::direction(0.0, -10.0);
     let text = format!("THE SPINOR AFTER {} ON QUBIT {}", STRIKES[kind], qubit + 1);
-    c.text(&text, label, 10.0, palette::yellow(), Align::Center);
+    c.text(&text, label, 10.0, palette::YELLOW, Align::Center);
     // The cursor on the noise plot eases over the rates, from none to a half and back.
     let rate = 0.5 * (0.5 - 0.5 * f64::from(phasor(core::f32::consts::TAU * progress).e20()));
     let noise = Axes::new(screen.part(0.58, 0.58, 0.97, 0.88), [0.0, 0.5], [0.0, 1.0]);

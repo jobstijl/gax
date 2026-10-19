@@ -58,18 +58,18 @@ const FIELD_REACH: f64 = 1.25;
 
 /// A tangential vector's tip in the oblique view: its depth along the line (microns), moved by
 /// its `y` aslant, and its `x` up.
-fn oblique(depth: f64, v: Polarization<(), f64>) -> Point<(), f64> {
+fn oblique(depth: f64, v: Polarization) -> Point {
     Point::xy(depth / NM_PER_MICRON + SLANT * v.e2(), v.e1())
 }
 
 /// The point of the line at `depth` (nm) in the oblique view.
-fn on_line(depth: f64) -> Point<(), f64> {
+fn on_line(depth: f64) -> Point {
     oblique(depth, Polarization::zero())
 }
 
 /// The hue of a tangential vector's direction around the line, a light as bright as the vector
 /// is strong.
-fn direction_light(v: Polarization<(), f64>) -> Light {
+fn direction_light(v: Polarization) -> Light {
     let east = Polarization::new(1.0, 0.0);
     let hue = east.angle_to(v) / core::f64::consts::TAU;
     let strength = (4.0 * v.norm()).min(1.0);
@@ -109,9 +109,9 @@ fn draw_pulse(c: &mut Canvas, rect: Rect, at: f64) {
         (SLAB_START, FIELD_REACH),
     ]
     .map(|(d, e)| Point::xy(d / NM_PER_MICRON, e));
-    ax.fill(c, &band, palette::blue().faded(0.06), 0.4);
+    ax.fill(c, &band, palette::BLUE.faded(0.06), 0.4);
     let read = in_plane();
-    let rods: Vec<[Point<(), f64>; 2]> = positions
+    let rods: Vec<[Point; 2]> = positions
         .iter()
         .filter(|p| in_slab(**p))
         .step_by(3)
@@ -120,9 +120,9 @@ fn draw_pulse(c: &mut Canvas, rect: Rect, at: f64) {
             [oblique(*p, -axis), oblique(*p, axis)]
         })
         .collect();
-    ax.stroke(c, &rods, 1.0, palette::ink().faded(0.15));
-    ax.line(c, on_line(lo), on_line(hi), 1.0, palette::grid());
-    let tips: Vec<(Point<(), f64>, Light)> = positions
+    ax.stroke(c, &rods, 1.0, palette::INK.faded(0.15));
+    ax.line(c, on_line(lo), on_line(hi), 1.0, palette::GRID);
+    let tips: Vec<(Point, Light)> = positions
         .iter()
         .zip(frame.iter())
         .map(|(p, f)| {
@@ -148,7 +148,7 @@ fn draw_pulse(c: &mut Canvas, rect: Rect, at: f64) {
         ax.at(0.01, 0.92),
         &note,
         size,
-        palette::ink().faded(0.7),
+        palette::INK.faded(0.7),
         Align::Left,
     );
 }
@@ -162,7 +162,7 @@ fn draw_curves(
     cursor: usize,
 ) {
     for (_, ys, light) in curves {
-        let pts: Vec<Point<(), f64>> = xs.iter().zip(ys).map(|(x, y)| Point::xy(*x, *y)).collect();
+        let pts: Vec<Point> = xs.iter().zip(ys).map(|(x, y)| Point::xy(*x, *y)).collect();
         ax.polyline(c, &pts, 1.6, *light);
         ax.scatter(c, &pts[cursor..=cursor], Marker::Dot, 7.0, *light);
     }
@@ -172,7 +172,7 @@ fn draw_curves(
         Point::xy(x, y0),
         Point::xy(x, y1),
         1.0,
-        palette::ink().faded(0.4),
+        palette::INK.faded(0.4),
     );
     let names: Vec<(&str, Light)> = curves.iter().map(|(n, _, l)| (*n, *l)).collect();
     ax.legend(c, &names);
@@ -214,18 +214,14 @@ fn draw_helix(c: &mut Canvas, rect: Rect, cursor: usize) {
         Point::xy(BAND_WAVELENGTH, 0.0),
         Point::xy(BAND_WAVELENGTH, ceiling),
     ];
-    let faint = palette::ink().faded(0.5);
+    let faint = palette::INK.faded(0.5);
     ax.dashed(c, &carrier, 1.0, 4.0, faint);
     let size = (rect.height() / 30.0).clamp(4.0, 8.0);
     let label = Point::xy(BAND_WAVELENGTH + 8.0, 6.0);
     ax.text(c, label, "PULSE", size, faint, Align::Left);
     let curves = [
-        (
-            "X + IY, WITH IT",
-            percent(&s.helix[0][0]),
-            palette::orange(),
-        ),
-        ("X - IY, AGAINST", percent(&s.helix[1][0]), palette::sky()),
+        ("X + IY, WITH IT", percent(&s.helix[0][0]), palette::ORANGE),
+        ("X - IY, AGAINST", percent(&s.helix[1][0]), palette::SKY),
     ];
     draw_curves(c, &ax, &s.wavelengths, &curves, cursor);
 }
@@ -237,9 +233,9 @@ fn draw_axion(c: &mut Canvas, rect: Rect, cursor: usize) {
     ax.frame(c, "AN AXION INTERFACE", "AXION JUMP", "R (%)");
     let channel = |k: usize| s.axion.iter().map(|r| 100.0 * r[k]).collect();
     let curves = [
-        ("X, AS INCIDENT", channel(0), palette::green()),
-        ("Y, TURNED", channel(1), palette::purple()),
-        ("TOTAL", channel(2), palette::yellow()),
+        ("X, AS INCIDENT", channel(0), palette::GREEN),
+        ("Y, TURNED", channel(1), palette::PURPLE),
+        ("TOTAL", channel(2), palette::YELLOW),
     ];
     draw_curves(c, &ax, &s.jumps, &curves, cursor);
 }

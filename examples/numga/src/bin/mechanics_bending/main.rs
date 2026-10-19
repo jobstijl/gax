@@ -35,14 +35,13 @@
 
 mod beam;
 mod sections;
-#[path = "../../shared/mechanics_simplex.rs"]
-mod simplex;
+use gax_numga_examples::shared::mechanics_simplex as simplex;
 
 use beam::{Beam, Body, LENGTH, P3, Strain};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption,
-    colormap, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, Point2, Rect, Scene3, backdrop,
+    caption, colormap, palette, run,
 };
 use sections::{NAMES, P2};
 use std::sync::OnceLock;
@@ -99,7 +98,7 @@ fn scene() -> &'static Scene {
 }
 
 /// A triangle's edge: the join of two of its corners, an intrinsic line.
-type Edge = gax::pga2d::intrinsic::Line<(), f64>;
+type Edge = gax::pga2d::intrinsic::Line;
 
 /// Each triangle's edges as lines, the triangle on their positive sides.
 fn edges(section: &sections::Section) -> Vec<[Edge; 3]> {
@@ -122,10 +121,10 @@ fn corner_stresses(body: &Body, strain: Strain) -> impl Iterator<Item = f64> + '
     corners.map(move |p| beam::stress(strain, *p))
 }
 
-/// The direction of a line of the section: its meet with the line at infinity, an extrinsic
-/// point, taken as the displacement along the line.
+/// The direction of a line of the section, as the displacement along it: its meet with the
+/// line at infinity.
 fn heading(line: Strain) -> P2 {
-    (line ^ beam::shift_along_beam()).with_orientation()
+    line.direction()
 }
 
 /// The point `reach` from `from` towards a direction.
@@ -145,7 +144,7 @@ fn through(line: Strain, centre: P2, reach: f64) -> [P2; 2] {
 fn draw_section(c: &mut Canvas, rect: Rect, k: usize, load: P3, beam: &Beam) {
     let sc = scene();
     let body = &sc.bodies[k];
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), SECTION_REACH);
+    let ax = Axes::equal(rect, ORIGIN2, SECTION_REACH);
     let strain = beam.strains[0];
     let largest = sc.largest;
     ax.image(c, 1, |q| {
@@ -158,10 +157,10 @@ fn draw_section(c: &mut Canvas, rect: Rect, k: usize, load: P3, beam: &Beam) {
         c,
         &closed(&body.section.boundary),
         1.2,
-        palette::ink().faded(0.7),
+        palette::INK.faded(0.7),
     );
-    ax.fill(c, &sc.kerns[k], palette::purple().faded(0.2), 0.4);
-    ax.polyline(c, &closed(&sc.kerns[k]), 1.2, palette::purple());
+    ax.fill(c, &sc.kerns[k], palette::PURPLE.faded(0.2), 0.4);
+    ax.polyline(c, &closed(&sc.kerns[k]), 1.2, palette::PURPLE);
     let reach = 2.0 * f64::from(SECTION_REACH);
     for axis in body.principal {
         ax.dashed(
@@ -169,38 +168,38 @@ fn draw_section(c: &mut Canvas, rect: Rect, k: usize, load: P3, beam: &Beam) {
             &through(axis, body.centroid, reach),
             1.0,
             5.0,
-            palette::ink().faded(0.5),
+            palette::INK.faded(0.5),
         );
     }
     ax.polyline(
         c,
         &through(strain, body.centroid, reach),
         2.0,
-        palette::green(),
+        palette::GREEN,
     );
     let load = beam::chart().of(load);
     let [dx, dy] = beam::deflection(body, beam);
     let tip = P2::direction(dx, dy);
-    for (direction, colour) in [(load, palette::orange()), (tip, palette::sky())] {
+    for (direction, colour) in [(load, palette::ORANGE), (tip, palette::SKY)] {
         let end = towards(body.centroid, direction, ARROW);
         ax.arrow(c, body.centroid, end, 2.0, 8.0, colour);
     }
     for (p, push) in beam::pushes(body) {
         let squeezes_all = corner_stresses(body, push).all(|s| s < 0.0);
         let colour = if squeezes_all {
-            palette::purple()
+            palette::PURPLE
         } else {
-            palette::red()
+            palette::RED
         };
         ax.scatter(c, &[p], Marker::Dot, 6.0, colour);
     }
     let title = ax.px(ax.at(0.5, 1.0)) + Point2::direction(0.0, -6.0);
-    c.text(NAMES[k], title, 11.0, palette::ink(), Align::Center);
+    c.text(NAMES[k], title, 11.0, palette::INK, Align::Center);
 }
 
 /// The view of space, a map on points: along the beam (`z`) to the view's `x`, across (`x`) to
 /// its `y`, up (`y`) to its `z`, so that its camera, with `z` up, sees the beam's up as up.
-fn view() -> gax::pga3d::Point<(gax::pga3d::Point,), f64> {
+fn view() -> gax::pga3d::Point<(gax::pga3d::Point,)> {
     let image = gax::pga3d::Point::new;
     gax::pga3d::Point::from_images([
         image(0.0, 1.0, 0.0, 0.0),
@@ -217,7 +216,7 @@ fn draw_beams(c: &mut Canvas, rect: Rect, load: P3, beams: &[Beam]) {
     let view = view();
     // Each beam's place across the view, and its clamp's centre there.
     let offset = |k: usize| P3::direction(0.0, BEAM_SPACING * k as f64, 0.0);
-    let clamp = |k: usize| P3::xyz(0.0, 0.0, 0.0) + offset(k);
+    let clamp = |k: usize| P3::origin() + offset(k);
     let middle = (clamp(0) + clamp(3)) * 0.5 + P3::direction(LENGTH / 2.0, 0.0, -0.5);
     let lens = Lens::Parallel(BEAM_VIEW);
     let cam = Camera::orbit(rect, middle, 30.0, BEAM_AZIMUTH, BEAM_ELEVATION, lens);
@@ -229,7 +228,7 @@ fn draw_beams(c: &mut Canvas, rect: Rect, load: P3, beams: &[Beam]) {
     c.clip(rect);
     for (k, name) in NAMES.iter().enumerate() {
         if let Some(at) = cam.px(clamp(k) + P3::direction(1.5, 0.0, -1.3)) {
-            c.text(name, at, 10.0, palette::ink().faded(0.8), Align::Center);
+            c.text(name, at, 10.0, palette::INK.faded(0.8), Align::Center);
         }
     }
     c.unclip();
@@ -245,7 +244,7 @@ fn draw_beam(s: &mut Scene3, body: &Body, load: P3, beam: &Beam, place: impl Fn(
         &[Strain::zero(); beam::PIECES],
         LENGTH / beam::PIECES as f64,
     );
-    for (frames, colour) in [(&straight, palette::grid()), (&beam.frames, palette::sky())] {
+    for (frames, colour) in [(&straight, palette::GRID), (&beam.frames, palette::SKY)] {
         let at = |k: usize, i: usize| place(frames[k] >> beam::in_space(boundary[i]));
         for k in (0..frames.len()).step_by(OUTLINE_EVERY) {
             let ring: Vec<_> = (0..=boundary.len())
@@ -265,7 +264,7 @@ fn draw_beam(s: &mut Scene3, body: &Body, load: P3, beam: &Beam, place: impl Fn(
         place(head) - place(tip),
         2.0,
         8.0,
-        palette::orange(),
+        palette::ORANGE,
     );
 }
 
@@ -312,7 +311,7 @@ mod tests {
 
     /// numga's closed-form second moments of area of the two flanges and the web, per section
     /// (the I-section, turned, the Z-section), as maps on the plane's vectors: across and up.
-    fn second_moments() -> [vga2d::Vector<(vga2d::Vector,), f64>; 3] {
+    fn second_moments() -> [vga2d::Vector<(vga2d::Vector,)>; 3] {
         let flange_area = FLANGE * THICKNESS;
         let web_height = HEIGHT - 2.0 * THICKNESS;
         let web_area = web_height * THICKNESS;
@@ -323,10 +322,10 @@ mod tests {
         let up = 2.0 * flange_area * (offset_y.powi(2) + THICKNESS.powi(2) / 12.0)
             + web_area * web_height.powi(2) / 12.0;
         let product = 2.0 * flange_area * offset_x * offset_y;
-        let map = |c: [[f64; 2]; 2]| vga2d::Vector::<(vga2d::Vector,), f64>::from_coeffs(c);
+        let map = |c: [[f64; 2]; 2]| vga2d::Vector::<(vga2d::Vector,)>::from_coeffs(c);
         let aligned = map([[across, 0.0], [0.0, up]]);
         // Turned in the plane: the map moved by the rotor, its input and its output.
-        let turn = vga2d::Pseudoscalar::<(), f64>::new(-TURN.to_radians() / 2.0).exp();
+        let turn = vga2d::Pseudoscalar::new(-TURN.to_radians() / 2.0).exp();
         let turned = turn >> aligned.of(turn << vga2d::Vector::slot());
         let z_section = map([
             [across + 2.0 * flange_area * offset_x.powi(2), product],
@@ -336,7 +335,7 @@ mod tests {
     }
 
     /// A map's entry: `row | map(column)`.
-    fn entry(map: vga2d::Vector<(vga2d::Vector,), f64>, row: usize, column: usize) -> f64 {
+    fn entry(map: vga2d::Vector<(vga2d::Vector,)>, row: usize, column: usize) -> f64 {
         let axis =
             |k: usize| vga2d::Vector::new(f64::from(u8::from(k == 0)), f64::from(u8::from(k == 1)));
         (axis(row) | map.of(axis(column))).s()
@@ -346,7 +345,7 @@ mod tests {
     /// turns.
     fn turns(body: &Body) -> [Strain; 2] {
         [P2::direction(1.0, 0.0), P2::direction(0.0, 1.0)]
-            .map(|d| (body.centroid & d).with_orientation())
+            .map(|d| Strain::through(body.centroid, d))
     }
 
     /// A strain's energy, `strain & stiffness(strain)`.
@@ -416,7 +415,7 @@ mod tests {
     /// numga's `test_neutral_axes_and_principal_bending_directions`.
     #[test]
     fn neutral_axes_and_principal_bending_directions() {
-        let quarter = gax::pga2d::Motor::rotation(P2::xy(0.0, 0.0), core::f64::consts::FRAC_PI_2);
+        let quarter = gax::pga2d::Motor::rotation(P2::origin(), core::f64::consts::FRAC_PI_2);
         for body in &bodies() {
             let beam = cantilever(body, downward());
             assert!((body.centroid & beam.strains[0]).s().abs() < 1e-12);

@@ -13,7 +13,7 @@
 //! Gauss-Bonnet, the perpendicular through the pole and the reflection all follow, and grows
 //! two families of circles about their centres.
 
-use gax::pga2d::{Line, Point};
+use gax::pga2d::Point;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
 };
@@ -25,10 +25,10 @@ mod cayley_klein {
     // Every line here is the join of two points and every point the meet of two lines. A join
     // is oriented along itself and a meet by what turns around it, so the lines are intrinsic
     // and the points extrinsic (ADR-051).
-    pub type P = extrinsic::Point<(), f64>;
-    pub type L = intrinsic::Line<(), f64>;
+    pub type P = extrinsic::Point;
+    pub type L = intrinsic::Line;
     /// A polarity, points to lines (`Line <- Point`), on points of the constructions.
-    pub type Polarity = intrinsic::Line<(extrinsic::Point,), f64>;
+    pub type Polarity = intrinsic::Line<(extrinsic::Point,)>;
 
     /// The point at `(x, y)`, made as the constructions make their points: the meet of the
     /// lines `x = a` and `y = b`.
@@ -40,7 +40,7 @@ mod cayley_klein {
     /// `x² + y² ± w² = 0`. With `-` it is the unit circle (hyperbolic), with `+` a conic with no
     /// real points (elliptic).
     pub fn absolute(sign: f64) -> Polarity {
-        let dyad = |l: Line<(), f64>| l * (l & P::slot());
+        let dyad = |l: Line| l * (l & P::slot());
         dyad(Line::new(1.0, 0.0, 0.0))
             + dyad(Line::new(0.0, 1.0, 0.0))
             + dyad(Line::new(0.0, 0.0, 1.0)).gp(sign)
@@ -72,7 +72,7 @@ mod cayley_klein {
             versor Rotor = [1, e12, e20, e01];
             kind Pseudoscalar = [e120];
         }
-        pub use r21::{Bivector, Vector};
+        pub use r21::Vector;
     }
 
     /// A Cayley-Klein geometry: its absolute, and the angles and distances it measures, each the
@@ -99,16 +99,16 @@ mod cayley_klein {
         }
 
         fn angle(l: L, m: L) -> f64 {
-            let line = |l: L| metric::Vector::<(), f64>::new(l.e1(), l.e2(), l.e0());
-            let log: metric::Bivector<(), f64> = (line(m) * line(l)).unit().log();
+            let line = |l: L| metric::Vector::new(l.e1(), l.e2(), l.e0());
+            let log = (line(m) * line(l)).unit().log();
             log.norm()
         }
 
         /// Inside the disk `A ∨ C(B)` is negative, `-cosh` of the distance, so the boost from
         /// `A` to `B` is the rotor `-B A`.
         fn distance(a: P, b: P) -> f64 {
-            let point = |p: P| metric::Vector::<(), f64>::new(p.e20(), p.e01(), p.e12());
-            let log: metric::Bivector<(), f64> = (-(point(b) * point(a))).unit().log();
+            let point = |p: P| metric::Vector::new(p.e20(), p.e01(), p.e12());
+            let log = (-(point(b) * point(a))).unit().log();
             log.norm()
         }
     }
@@ -121,12 +121,12 @@ mod cayley_klein {
         }
 
         fn angle(l: L, m: L) -> f64 {
-            let line = |l: L| gax::vga3d::Vector::<(), f64>::new(l.e1(), l.e2(), l.e0());
+            let line = |l: L| gax::vga3d::Vector::new(l.e1(), l.e2(), l.e0());
             line(l).angle_between(line(m))
         }
 
         fn distance(a: P, b: P) -> f64 {
-            let point = |p: P| gax::vga3d::Vector::<(), f64>::new(p.e20(), p.e01(), p.e12());
+            let point = |p: P| gax::vga3d::Vector::new(p.e20(), p.e01(), p.e12());
             point(a).angle_between(point(b))
         }
     }
@@ -226,10 +226,10 @@ mod cayley_klein {
 use cayley_klein::*;
 
 /// A line, drawn through its point nearest the origin (its meet with the perpendicular from
-/// the origin) along its direction (its meet with the line at infinity).
+/// the origin) along its direction.
 fn line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Light) {
-    let foot = l ^ (l | Point::xy(0.0, 0.0));
-    ax.axline(c, foot, l ^ Line::new(0.0, 0.0, 1.0), width, color);
+    let foot = l ^ (l | Point::origin());
+    ax.axline(c, foot, l.direction(), width, color);
 }
 
 /// The locus `P ∨ quadric(P) = 0`.
@@ -261,17 +261,17 @@ fn draw(c: &mut Canvas, t: f32) {
     // The triangle, its perpendicular and the reflection, on the left.
     let ax = Axes::equal(rect(0), box_centre, 1.4);
     ax.clip(c);
-    level_set(&ax, c, s.c, 2.0, palette::ink());
+    level_set(&ax, c, s.c, 2.0, palette::INK);
     for side in s.triangle.sides {
-        line(&ax, c, side, 1.6, palette::sky());
+        line(&ax, c, side, 1.6, palette::SKY);
     }
-    line(&ax, c, s.normal, 1.4, palette::red());
-    ax.fill(c, &s.vertices, palette::sky(), 0.18);
-    ax.scatter(c, &s.vertices, Marker::Dot, 8.0, palette::sky());
-    ax.scatter(c, &[s.p], Marker::Dot, 9.0, palette::red());
-    ax.scatter(c, &[s.foot], Marker::Square, 8.0, palette::red());
-    ax.scatter(c, &[s.reflected], Marker::Dot, 9.0, palette::orange());
-    ax.scatter(c, &[s.pole], Marker::Triangle, 10.0, palette::purple());
+    line(&ax, c, s.normal, 1.4, palette::RED);
+    ax.fill(c, &s.vertices, palette::SKY, 0.18);
+    ax.scatter(c, &s.vertices, Marker::Dot, 8.0, palette::SKY);
+    ax.scatter(c, &[s.p], Marker::Dot, 9.0, palette::RED);
+    ax.scatter(c, &[s.foot], Marker::Square, 8.0, palette::RED);
+    ax.scatter(c, &[s.reflected], Marker::Dot, 9.0, palette::ORANGE);
+    ax.scatter(c, &[s.pole], Marker::Triangle, 10.0, palette::PURPLE);
     // The angles beside their vertices, the lengths beside the midpoints of the sides.
     for (v, angle) in s.vertices.iter().zip(s.triangle.angles) {
         ax.text(
@@ -279,7 +279,7 @@ fn draw(c: &mut Canvas, t: f32) {
             v.position() + Point::direction(0.04, 0.06),
             &format!("{:.1}", angle.to_degrees()),
             11.0,
-            palette::ink(),
+            palette::INK,
             Align::Left,
         );
     }
@@ -290,7 +290,7 @@ fn draw(c: &mut Canvas, t: f32) {
             midpoint.position() + Point::direction(0.03, -0.07),
             &format!("{:.2}", s.triangle.lengths[i]),
             10.0,
-            palette::sky(),
+            palette::SKY,
             Align::Left,
         );
     }
@@ -298,9 +298,9 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.legend(
         c,
         &[
-            ("P", palette::red()),
-            ("REFLECTION", palette::orange()),
-            ("POLE OF BC", palette::purple()),
+            ("P", palette::RED),
+            ("REFLECTION", palette::ORANGE),
+            ("POLE OF BC", palette::PURPLE),
         ],
     );
     let r = rect(0);
@@ -317,20 +317,20 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
         r.bottom_middle() + below,
         10.0,
-        palette::ink(),
+        palette::INK,
         Align::Center,
     );
 
     // Circles as level sets of quadrics, on the right.
     let ax = Axes::equal(rect(1), box_centre, 1.4);
     ax.clip(c);
-    level_set(&ax, c, s.c, 2.0, palette::ink());
-    for (centre, colour) in s.centres.iter().zip([palette::sky(), palette::orange()]) {
+    level_set(&ax, c, s.c, 2.0, palette::INK);
+    for (centre, colour) in s.centres.iter().zip([palette::SKY, palette::ORANGE]) {
         for r in s.radii {
             level_set(&ax, c, circle(s.c, *centre, r), 1.4, colour);
         }
     }
-    ax.scatter(c, &s.centres, Marker::Dot, 7.0, palette::ink());
+    ax.scatter(c, &s.centres, Marker::Dot, 7.0, palette::INK);
     c.unclip();
     let r = rect(1);
     c.text(
@@ -340,7 +340,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
         r.bottom_middle() + below,
         10.0,
-        palette::ink(),
+        palette::INK,
         Align::Center,
     );
     caption(
@@ -362,7 +362,7 @@ mod tests {
     use gax_numga_examples::measure;
 
     /// A pole map, lines to points (`Point <- Line`), on lines of the constructions.
-    type Pole = extrinsic::Point<(intrinsic::Line,), f64>;
+    type Pole = extrinsic::Point<(intrinsic::Line,)>;
 
     fn assert_close(a: f64, b: f64, tol: f64) {
         assert!((a - b).abs() <= tol, "{a} vs {b}");

@@ -38,7 +38,7 @@ use gax::field::Field;
 use gax_colour::Srgb;
 use gax_numga_examples::mesh::{Bivector3, Mesh, Scalar3, Vector3, direction};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, colormap,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
     from_above, palette, reach3, run,
 };
 use inductive::{InductiveMotion, Rotation};
@@ -263,7 +263,7 @@ fn disc(c: &mut Canvas, ax: &Axes, scene: &Scene, run: &Run, material: usize, st
     heated_faces(c, ax, scene, run, state, &world);
     for guide in guides(material) {
         let line: Vec<Point2> = guide.into_iter().map(world).collect();
-        ax.polyline(c, &line, 0.8, palette::blue().faded(0.15));
+        ax.polyline(c, &line, 0.8, palette::BLUE.faded(0.15));
     }
     current_arrows(c, ax, scene, run, state, &world);
     let mesh = &scene.mesh;
@@ -272,12 +272,12 @@ fn disc(c: &mut Canvas, ax: &Axes, scene: &Scene, run: &Run, material: usize, st
         .iter()
         .map(|&e| mesh.edges[e].map(|v| world(mesh.vertices.site(v))))
         .collect();
-    ax.stroke(c, &rim, 1.0, palette::grid().faded(3.0));
+    ax.stroke(c, &rim, 1.0, palette::GRID.faded(3.0));
     let knob = world(Vector3::new(KNOB * RADIUS, 0.0, 0.0));
-    ax.scatter(c, &[knob], Marker::Dot, 9.0, palette::purple());
+    ax.scatter(c, &[knob], Marker::Dot, 9.0, palette::PURPLE);
     let footprint = circle(magnet(FIELD_STRENGTH).centre, FIELD_WIDTH);
     let footprint: Vec<Point2> = footprint.into_iter().map(planar).collect();
-    ax.dashed(c, &footprint, 1.2, 4.0, palette::yellow().faded(0.8));
+    ax.dashed(c, &footprint, 1.2, 4.0, palette::YELLOW.faded(0.8));
 }
 
 /// The disc's faces, each glowing with the heat it has gathered per area.
@@ -323,7 +323,7 @@ fn current_arrows(
         let shown = strength.powf(CURRENT_GAMMA);
         let length = ARROW_LENGTH * RADIUS * f64::from(shown);
         let half = current.normalized() * (length / 2.0);
-        let light = palette::sky().faded(shown);
+        let light = palette::SKY.faded(shown);
         ax.arrow(
             c,
             world(centre - half),
@@ -358,7 +358,7 @@ fn row(c: &mut Canvas, rect: Rect, scene: &Scene, run: &Run, share: f64) {
     let lines = [run.title[0], run.title[1], &time];
     for (k, line) in lines.iter().enumerate() {
         let at = rect.left_middle() + Point2::direction(size, size * (1.6 * k as f32 - 1.6));
-        c.text(line, at, size, palette::ink(), Align::Left);
+        c.text(line, at, size, palette::INK, Align::Left);
     }
     let discs = rect.part(TITLES, 0.0, 1.0, 1.0);
     for (material, states) in run.states.iter().enumerate() {
@@ -366,14 +366,14 @@ fn row(c: &mut Canvas, rect: Rect, scene: &Scene, run: &Run, share: f64) {
         let state = &states[index];
         let ax = Axes::equal(
             panel.inset(0.0, 0.0, 0.0, size * 1.6),
-            Point2::xy(0.0, 0.0),
+            ORIGIN2,
             (1.06 * RADIUS) as f32,
         );
         disc(c, &ax, scene, run, material, state);
         let (speed, heat) = (state.speed, state.heat.sum().s());
         let label = format!("{} RAD/S, {} J", three_figures(speed), three_figures(heat));
         let at = panel.bottom_middle() - Point2::direction(0.0, size * 0.4);
-        c.text(&label, at, size * 0.9, palette::ink(), Align::Center);
+        c.text(&label, at, size * 0.9, palette::INK, Align::Center);
     }
 }
 
@@ -382,7 +382,7 @@ fn headers(c: &mut Canvas, rect: Rect) {
     let discs = rect.part(TITLES, 0.0, 1.0, 1.0);
     for (material, (name, _)) in MATERIALS.iter().enumerate() {
         let at = discs.column(material, 3).bottom_middle();
-        c.text(name, at, 10.0, palette::ink(), Align::Center);
+        c.text(name, at, 10.0, palette::INK, Align::Center);
     }
 }
 

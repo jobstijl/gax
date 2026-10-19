@@ -14,7 +14,8 @@
 //! down), and distances are the norms of joins.
 
 use crate::font::{self, Align};
-use crate::points::{Map2, Point2, box_map};
+use crate::parallel::par_rows;
+use crate::points::{Map2, ORIGIN2, Point2, bounds, box_map, sides};
 use gax::Extensor;
 use gax_colour::{DARK, Light, Srgb};
 
@@ -100,11 +101,6 @@ impl Rect {
         (self.lo + self.bottom_left()).unitized()
     }
 
-    /// The middle of the right edge.
-    pub fn right_middle(self) -> Point2 {
-        (self.top_right() + self.hi).unitized()
-    }
-
     /// The bottom left corner.
     pub fn bottom_left(self) -> Point2 {
         self.lo + Point2::direction(0.0, self.height())
@@ -154,18 +150,13 @@ pub struct Canvas {
 /// The pixel indices `[x0, y0, x1, y1]` of the box around `pts`, grown by `pad` pixels and
 /// limited to `clip` (ends excluded).
 fn span(pts: &[Point2], pad: f32, clip: [usize; 4]) -> [usize; 4] {
-    let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
-    for p in pts {
-        for (i, v) in p.to_euclidean().into_iter().enumerate() {
-            (lo[i], hi[i]) = (lo[i].min(v - pad), hi[i].max(v + pad));
-        }
-    }
+    let [lo, hi] = bounds(pts.iter().copied());
     let index = |v: f32, a: usize, b: usize| (v.max(a as f32) as usize).clamp(a, b);
     [
-        index(lo[0].floor(), clip[0], clip[2]),
-        index(lo[1].floor(), clip[1], clip[3]),
-        index(hi[0].ceil() + 1.0, clip[0], clip[2]),
-        index(hi[1].ceil() + 1.0, clip[1], clip[3]),
+        index((lo[0] - pad).floor(), clip[0], clip[2]),
+        index((lo[1] - pad).floor(), clip[1], clip[3]),
+        index((hi[0] + pad).ceil() + 1.0, clip[0], clip[2]),
+        index((hi[1] + pad).ceil() + 1.0, clip[1], clip[3]),
     ]
 }
 
@@ -182,13 +173,9 @@ fn drawable(p: Point2) -> bool {
 /// The distance of `q` to the segment from `a` to `b` (unit points): to its line where the foot
 /// falls between the ends (`q` lies between the perpendiculars `l | a` and `l | b`, so its
 /// joins with them differ in sign), else to the nearer end. A join of unit points is a line
-/// whose norm is their distance.
-fn segment_distance(a: Point2, b: Point2, q: Point2) -> f32 {
-    capped_distance(a, b, q, [true, true])
-}
-
-/// The same with each end round (`caps`) or flat: past a flat end the segment reaches no pixel,
-/// so where a stroke is drawn in pieces, their flat ends meet without overlapping.
+/// whose norm is their distance. Each end is round (`caps`) or flat: past a flat end the
+/// segment reaches no pixel, so where a stroke is drawn in pieces, their flat ends meet without
+/// overlapping.
 fn capped_distance(a: Point2, b: Point2, q: Point2, caps: [bool; 2]) -> f32 {
     let join = a & b;
     let len = join.norm();
@@ -249,8 +236,8 @@ impl Canvas {
     /// A dark canvas of `width` by `height` pixels at `scale` pixels per canvas unit (at 1, the
     /// canvas units are pixels, as tests of the drawing take them).
     pub fn with_scale(width: usize, height: usize, scale: f32) -> Canvas {
-        let unit = [Point2::xy(0.0, 0.0), Point2::xy(1.0, 1.0)];
-        let pixel = [Point2::xy(0.0, 0.0), Point2::xy(scale, scale)];
+        let unit = [ORIGIN2, Point2::xy(1.0, 1.0)];
+        let pixel = [ORIGIN2, Point2::xy(scale, scale)];
         Canvas {
             width,
             height,
@@ -283,7 +270,7 @@ impl Canvas {
             .from_pixels
             .of(Point2::xy(self.width as f32, self.height as f32));
         Rect {
-            lo: Point2::xy(0.0, 0.0),
+            lo: ORIGIN2,
             hi: corner,
         }
     }
@@ -376,29 +363,8 @@ impl Canvas {
         let width = width * self.scale;
         let half = width.max(1.0) * 0.5;
         let l = l * width.min(1.0);
-        for (&[a, b], &cap) in segs.iter().zip(caps) {
-            if !(drawable(a) && drawable(b)) {
-                continue;
-            }
-            let (a, b) = (self.pixel(a), self.pixel(b));
-            let [x0, y0, x1, y1] = span(&[a, b], reach(half), self.clip);
-            for y in y0..y1 {
-                for x in x0..x1 {
-                    let k = stroke_light(capped_distance(a, b, centre(x, y), cap), half);
-                    let i = y * self.width + x;
-                    if k > 1e-3 && k > self.cover[i] {
-                        if self.cover[i] == 0.0 {
-                            self.touched.push(i);
-                        }
-                        self.cover[i] = k;
-                    }
-                }
-            }
-        }
-        for i in self.touched.drain(..) {
-            self.px[i] += l * self.cover[i];
-            self.cover[i] = 0.0;
-        }
+        let light = |e| stroke_light(e, half);
+        self.cover(segs, caps, reach(half), 1e-3, light, |p, k| p + l * k);
     }
 
     /// The segments `segs` as one line `width` wide that covers what is below by
@@ -408,17 +374,34 @@ impl Canvas {
         let width = width * self.scale;
         let half = width.max(1.0) * 0.5;
         let opacity = opacity * width.min(1.0);
-        for &[a, b] in segs {
+        let caps = vec![[true, true]; segs.len()];
+        let paint = |p: Light, k| p.mix_light(l, opacity * k);
+        self.cover(segs, &caps, half + 1.0, 0.0, |e| core(e, half), paint);
+    }
+
+    /// The segments `segs` (each with its ends round or flat, `caps`) as one shape: each pixel
+    /// within `pad` of a segment takes the largest coverage `k` of its distance to them (where
+    /// above `floor`), then `paint` gives its light from the light below and the coverage.
+    fn cover(
+        &mut self,
+        segs: &[[Point2; 2]],
+        caps: &[[bool; 2]],
+        pad: f32,
+        floor: f32,
+        k: impl Fn(f32) -> f32,
+        paint: impl Fn(Light, f32) -> Light,
+    ) {
+        for (&[a, b], &cap) in segs.iter().zip(caps) {
             if !(drawable(a) && drawable(b)) {
                 continue;
             }
             let (a, b) = (self.pixel(a), self.pixel(b));
-            let [x0, y0, x1, y1] = span(&[a, b], half + 1.0, self.clip);
+            let [x0, y0, x1, y1] = span(&[a, b], pad, self.clip);
             for y in y0..y1 {
                 for x in x0..x1 {
-                    let k = core(segment_distance(a, b, centre(x, y)), half);
+                    let k = k(capped_distance(a, b, centre(x, y), cap));
                     let i = y * self.width + x;
-                    if k > 0.0 && k > self.cover[i] {
+                    if k > floor && k > self.cover[i] {
                         if self.cover[i] == 0.0 {
                             self.touched.push(i);
                         }
@@ -428,7 +411,7 @@ impl Canvas {
             }
         }
         for i in self.touched.drain(..) {
-            self.px[i] = self.px[i].mix_light(l, opacity * self.cover[i]);
+            self.px[i] = paint(self.px[i], self.cover[i]);
             self.cover[i] = 0.0;
         }
     }
@@ -504,9 +487,7 @@ impl Canvas {
             return;
         }
         let width = x1 - x0;
-        let edges: Vec<(Point2, Point2)> = (0..poly.len())
-            .map(|i| (poly[i], poly[(i + 1) % poly.len()]))
-            .collect();
+        let edges: Vec<(Point2, Point2)> = sides(&poly).collect();
         let mut cover = vec![0.0f32; width];
         let mut cross: Vec<(f32, i32)> = Vec::new();
         const SUB: usize = 4;
@@ -563,37 +544,30 @@ impl Canvas {
     /// parallel.
     pub fn shade(&mut self, n: usize, f: impl Fn(Point2) -> Option<Light> + Sync) {
         let (w, n, clip, back) = (self.width, n.max(1), self.clip, self.from_pixels);
-        let threads = std::thread::available_parallelism().map_or(4, |t| t.get());
-        let rows_per = self.height.div_ceil(threads).max(1);
-        std::thread::scope(|s| {
-            for (chunk, rows) in self.px.chunks_mut(rows_per * w).enumerate() {
-                let f = &f;
-                s.spawn(move || {
-                    for (i, p) in rows.iter_mut().enumerate() {
-                        let (xi, yi) = (i % w, chunk * rows_per + i / w);
-                        if xi < clip[0] || xi >= clip[2] || yi < clip[1] || yi >= clip[3] {
-                            continue;
-                        }
-                        let corner = Point2::xy(xi as f32, yi as f32);
-                        let (mut acc, mut hit) = (DARK, 0usize);
-                        for sy in 0..n {
-                            for sx in 0..n {
-                                let inside = Point2::direction(
-                                    (sx as f32 + 0.5) / n as f32,
-                                    (sy as f32 + 0.5) / n as f32,
-                                );
-                                if let Some(l) = f(back.of(corner + inside)) {
-                                    acc += l;
-                                    hit += 1;
-                                }
-                            }
-                        }
-                        if hit > 0 {
-                            let opacity = hit as f32 / (n * n) as f32;
-                            *p = (*p).mix_light(acc * (hit as f32).recip(), opacity);
+        par_rows(&mut self.px, w, |first, rows| {
+            for (i, p) in rows.iter_mut().enumerate() {
+                let (xi, yi) = (i % w, first + i / w);
+                if xi < clip[0] || xi >= clip[2] || yi < clip[1] || yi >= clip[3] {
+                    continue;
+                }
+                let corner = Point2::xy(xi as f32, yi as f32);
+                let (mut acc, mut hit) = (DARK, 0usize);
+                for sy in 0..n {
+                    for sx in 0..n {
+                        let inside = Point2::direction(
+                            (sx as f32 + 0.5) / n as f32,
+                            (sy as f32 + 0.5) / n as f32,
+                        );
+                        if let Some(l) = f(back.of(corner + inside)) {
+                            acc += l;
+                            hit += 1;
                         }
                     }
-                });
+                }
+                if hit > 0 {
+                    let opacity = hit as f32 / (n * n) as f32;
+                    *p = (*p).mix_light(acc * (hit as f32).recip(), opacity);
+                }
             }
         });
     }
@@ -604,7 +578,7 @@ impl Canvas {
         // The font's frame (glyph units, y up) onto the canvas (y down) at `at`.
         let k = size / 6.0;
         let corner = at + Point2::direction(k, -k);
-        let place = box_map([Point2::xy(0.0, 0.0), Point2::xy(1.0, 1.0)], [at, corner]);
+        let place = box_map([ORIGIN2, Point2::xy(1.0, 1.0)], [at, corner]);
         let segs: Vec<[Point2; 2]> = font::segments(s, align)
             .into_iter()
             .map(|[a, b]| [place.of(a), place.of(b)])

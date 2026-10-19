@@ -17,34 +17,27 @@
 use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, colormap, palette,
-    run,
+    Align, Anim, Camera, Canvas, Lens, Light, ORIGIN3, Point2, Rect, backdrop, caption, colormap,
+    palette, run,
 };
 use std::sync::OnceLock;
 
 mod curvature {
     use super::*;
 
-    pub type P = Point<(), f64>;
-    pub type Pl = Plane<(), f64>;
     /// A polarity: each point to its polar plane.
-    pub type Quadric = Plane<(Point,), f64>;
+    pub type Quadric = Plane<(Point,)>;
     /// A form on directions.
-    pub type Form = Scalar<(Direction, Direction), f64>;
-
-    /// The plane at infinity.
-    pub fn infinity() -> Pl {
-        Plane::new(0.0, 0.0, 0.0, 1.0)
-    }
+    pub type Form = Scalar<(Direction, Direction)>;
 
     /// The open direction, as an ideal point.
-    pub fn direction() -> Point<(Direction,), f64> {
-        Direction::<(), f64>::slot().cast::<Point>()
+    pub fn direction() -> Point<(Direction,)> {
+        Direction::slot().cast::<Point>()
     }
 
     /// The metric on directions: the inner product of the planes they are normal to.
     pub fn metric() -> Form {
-        let normal = Direction::<(), f64>::slot().dual();
+        let normal = Direction::slot().dual();
         normal.dot(normal)
     }
 
@@ -54,7 +47,7 @@ mod curvature {
         let x = Point::slot();
         let axes = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
             .map(|n| Plane::with_normal(Point::direction(n[0], n[1], n[2]), 0.0));
-        let w = infinity();
+        let w = Plane::infinity();
         let dyads: Quadric = axes
             .iter()
             .zip(weights)
@@ -77,22 +70,22 @@ mod curvature {
     pub struct Surface {
         pub q: Quadric,
         /// The form `Point & Q(Point)`.
-        pub form: Scalar<(Point, Point), f64>,
-        pub centre: P,
+        pub form: Scalar<(Point, Point)>,
+        pub centre: Point,
         /// The poles of the planes through the centre normal to each direction, as the planes
         /// those poles are normal to.
-        pub shape: Plane<(Direction,), f64>,
+        pub shape: Plane<(Direction,)>,
         pub metric: Form,
     }
 
     impl Surface {
         pub fn new(q: Quadric) -> Surface {
             let dual = q.inverse();
-            let w = infinity();
+            let w = Plane::infinity();
             // The pole of the plane at infinity is the centre.
             let pole = dual.of(w);
             let centre = pole.gp(1.0 / (w & pole).s());
-            let d = Direction::<(), f64>::slot().dual();
+            let d = Direction::slot().dual();
             let through_centre = d - w * (d & centre);
             Surface {
                 q,
@@ -106,8 +99,8 @@ mod curvature {
         /// Where a ray first meets the surface, or `None` where it misses. The form bound to the
         /// ray in both slots is the quadratic `a t² + 2 b t + c` in the distance along it, whose
         /// nearest root ahead is the hit (the ray's origin where both lie behind).
-        pub fn hit(&self, origin: P, heading: P) -> Option<P> {
-            let f = |x: P, y: P| self.form.of(x).of(y).s();
+        pub fn hit(&self, origin: Point, heading: Point) -> Option<Point> {
+            let f = |x: Point, y: Point| self.form.of(x).of(y).s();
             let (a, b, c) = (f(heading, heading), f(heading, origin), f(origin, origin));
             let (mid, half) = roots(a, b, c)?;
             let t = [mid - half, mid + half]
@@ -122,7 +115,7 @@ mod curvature {
         /// curve positively. The form `Point & Q(Point)` with the projector onto the tangent
         /// plane in both slots is the second fundamental form, up to the length of the gradient;
         /// its eigenvalues against the metric are the principal curvatures and the normal's 0.
-        pub fn principal(&self, p: P) -> [f64; 2] {
+        pub fn principal(&self, p: Point) -> [f64; 2] {
             let tangent = self.q.of(p);
             // The normal: the tangent plane's dual, as a direction (its weight dropped), and
             // the length of the gradient.
@@ -143,11 +136,11 @@ mod curvature {
         /// The parameters of the confocal quadrics through a point: the eigenvalues of the
         /// shape less the point's own dyad. One is the surface itself; the level sets of the
         /// other two are its lines of curvature.
-        pub fn confocal(&self, p: P) -> [f64; 2] {
+        pub fn confocal(&self, p: Point) -> [f64; 2] {
             // The point's offset from the centre, a direction, as the plane it is normal to.
             let position = (p.unitized() - self.centre).dual();
             let through_point =
-                Direction::<(), f64>::slot() & (self.shape - position * (position & direction()));
+                Direction::slot() & (self.shape - position * (position & direction()));
             pair(through_point.eigh(self.metric).0)
         }
     }
@@ -178,7 +171,7 @@ struct Seen {
 
 /// Where the light comes from for a view along `heading`: from behind the viewer's right
 /// shoulder, the heading reversed, turned 22 degrees about the vertical and raised.
-fn lamp(heading: P) -> P {
+fn lamp(heading: Point) -> Point {
     let back = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), -0.38) >> -heading;
     back + Point::direction(0.0, 0.0, 0.6 * heading.ideal_norm())
 }
@@ -205,7 +198,7 @@ fn seen(surface: &Surface, cam: &Camera, q: Point2, height: f64) -> Option<Seen>
 
 /// The range of each confocal parameter over a surface, from a dense sample of its points
 /// (fixed, so that the level lines hold still while the view turns).
-fn ranges(surface: &Surface, sample: impl Fn(f64, f64) -> P) -> [[f64; 2]; 2] {
+fn ranges(surface: &Surface, sample: impl Fn(f64, f64) -> Point) -> [[f64; 2]; 2] {
     let mut r = [[f64::MAX, f64::MIN]; 2];
     for i in 0..=60 {
         for j in 0..120 {
@@ -231,10 +224,10 @@ fn scene() -> &'static Scene {
         // Points of the unit sphere and of the unit hyperboloid `x² + y² - z² = 1`, turned
         // about z by the longitude `v`, then stretched along the axes.
         let turned =
-            |v: f64, p: P| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), v * tau) >> p;
+            |v: f64, p: Point| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), v * tau) >> p;
         // The stretch by `k` along x, y and z, as a map on points (the weight kept).
         let stretch = |[a, b, c]: [f64; 3]| {
-            Point::<(Point,), f64>::from_coeffs([
+            Point::<(Point,)>::from_coeffs([
                 [a, 0.0, 0.0, 0.0],
                 [0.0, b, 0.0, 0.0],
                 [0.0, 0.0, c, 0.0],
@@ -313,7 +306,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let panel = Rect::new(0.0, top, screen.width(), screen.height()).column(i, 2);
         let cam = Camera::orbit(
             panel,
-            Point::xyz(0.0, 0.0, 0.0),
+            ORIGIN3,
             10.0 * extent,
             (-60f32).to_radians() + turn,
             elevation.to_radians(),
@@ -327,7 +320,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let size = (screen.height() / 30.0).clamp(7.0, 12.0);
         let bottom_middle = panel.bottom_middle();
         let at = bottom_middle - Point2::direction(0.0, size * 0.8);
-        c.text(label, at, size, palette::ink(), Align::Center);
+        c.text(label, at, size, palette::INK, Align::Center);
     }
     caption(
         c,
@@ -353,7 +346,7 @@ mod tests {
     /// The ellipsoid's four umbilics, where it curves equally in every direction: in the plane
     /// of its longest and shortest axes.
     #[allow(clippy::disallowed_methods)] // the umbilics' closed form, the reference checked against
-    fn umbilics() -> [P; 4] {
+    fn umbilics() -> [Point; 4] {
         let [a, b, c] = SEMI_AXES;
         let x = a * ((a * a - b * b) / (a * a - c * c)).sqrt();
         let z = c * ((b * b - c * c) / (a * a - c * c)).sqrt();
@@ -366,7 +359,7 @@ mod tests {
     }
 
     /// The quadric conjugated by a motor: the same surface, moved.
-    fn placed(q: Quadric, m: gax::Unit<Motor<(), f64>>) -> Quadric {
+    fn placed(q: Quadric, m: gax::Unit<Motor>) -> Quadric {
         m >> q.of(m << Point::slot())
     }
 
@@ -377,12 +370,12 @@ mod tests {
     const TOWARD: [[f64; 3]; 3] = [[10.0, 6.0, 4.0], [-7.0, 9.0, 3.0], [2.0, -8.0, -9.0]];
 
     /// Where rays toward the centre from a few points meet the surface.
-    fn surface_points(s: &Surface) -> Vec<P> {
+    fn surface_points(s: &Surface) -> Vec<Point> {
         TOWARD
             .iter()
             .map(|t| {
                 let from = Point::xyz(t[0], t[1], t[2]);
-                s.hit(from, Point::xyz(0.0, 0.0, 0.0) - from)
+                s.hit(from, Point::origin() - from)
                     .expect("a ray toward the centre meets the surface")
             })
             .collect()

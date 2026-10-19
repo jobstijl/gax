@@ -29,38 +29,36 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, backdrop,
-    caption, colormap, palette, run,
+    caption, colormap, palette, reach3, run,
 };
 
 mod hopf {
     use super::*;
 
-    pub type V = Vector<(), f64>;
-    pub type R = Rotor<(), f64>;
     /// A spinor's direction, with the spinor left open in both places it appears.
-    pub type Hopf = Vector<(Rotor, Rotor), f64>;
+    pub type Hopf = Vector<(Rotor, Rotor)>;
 
     /// The Hopf form: `spinor z ~spinor`, with both spinors open.
     pub fn hopf() -> Hopf {
-        let z: V = Vector::new(0.0, 0.0, 1.0);
+        let z: Vector = Vector::new(0.0, 0.0, 1.0);
         ((Rotor::slot() * z) * Rotor::slot().reverse()).cast::<Vector>()
     }
 
     /// A unit spinor pointing along a direction: the top eigenvector of the form
     /// `direction | HOPF`, whose eigenvalues are minus one twice and plus one twice.
-    pub fn fibre_start(direction: V) -> R {
-        let form: Scalar<(Rotor, Rotor), f64> = direction | hopf();
+    pub fn fibre_start(direction: Vector) -> Rotor {
+        let form: Scalar<(Rotor, Rotor)> = direction | hopf();
         form.eigh(Scalar::identity()).1[3]
     }
 
     /// The rotor that turns on the right in the xy plane by an angle.
-    pub fn along_fibre(angle: f64) -> R {
-        Bivector::<(), f64>::new(0.0, 0.0, angle).exp().into_inner()
+    pub fn along_fibre(angle: f64) -> Rotor {
+        Bivector::new(0.0, 0.0, angle).exp().into_inner()
     }
 
     /// The spinors pointing the same way as the start: the start turned on the right in the xy
     /// plane, at each angle.
-    pub fn fibre(start: R, angles: &[f64]) -> Vec<R> {
+    pub fn fibre(start: Rotor, angles: &[f64]) -> Vec<Rotor> {
         angles.iter().map(|a| start * along_fibre(*a)).collect()
     }
 
@@ -68,15 +66,15 @@ mod hopf {
     /// one plus the scalar part, read as the vector it is dual to, its product with the inverse
     /// pseudoscalar `-xyz` (a product, unlike `dual()`, keeps the orientation: extrinsic, a
     /// vector of space as the directions are).
-    pub fn stereographic(spinor: R) -> V {
-        let inverse_pseudoscalar = gax::vga3d::Pseudoscalar::<(), f64>::new(-1.0);
+    pub fn stereographic(spinor: Rotor) -> Vector {
+        let inverse_pseudoscalar = gax::vga3d::Pseudoscalar::new(-1.0);
         spinor.grade::<2>().gp(1.0 / (1.0 + spinor.s())) * inverse_pseudoscalar
     }
 
     /// The rotors that carry a frame along a curve of unit directions, by the smallest rotation
     /// from each direction to the next: from the first direction to each of the others.
-    pub fn transport(directions: &[V]) -> Vec<R> {
-        let one: R = Rotor::new(1.0, 0.0, 0.0, 0.0);
+    pub fn transport(directions: &[Vector]) -> Vec<Rotor> {
+        let one: Rotor = Rotor::new(1.0, 0.0, 0.0, 0.0);
         let mut total = one;
         directions
             .windows(2)
@@ -90,9 +88,9 @@ mod hopf {
 
     /// The unit direction at a polar angle from z and an azimuth about it: z turned toward x by
     /// the polar angle, then about z by the azimuth.
-    pub fn sphere(polar: f64, azimuth: f64) -> V {
-        let about_z = Bivector::<(), f64>::new(0.0, 0.0, -azimuth / 2.0).exp();
-        let toward_x = Bivector::<(), f64>::new(0.0, -polar / 2.0, 0.0).exp();
+    pub fn sphere(polar: f64, azimuth: f64) -> Vector {
+        let about_z = Bivector::new(0.0, 0.0, -azimuth / 2.0).exp();
+        let toward_x = Bivector::new(0.0, -polar / 2.0, 0.0).exp();
         (about_z * toward_x) >> Vector::new(0.0, 0.0, 1.0)
     }
 
@@ -104,7 +102,7 @@ mod hopf {
     }
 
     /// The fibre over a direction, projected into space.
-    pub fn projected_fibre(direction: V, samples: usize) -> Vec<V> {
+    pub fn projected_fibre(direction: Vector, samples: usize) -> Vec<Vector> {
         fibre(fibre_start(direction), &turn(samples))
             .into_iter()
             .map(stereographic)
@@ -113,7 +111,11 @@ mod hopf {
 
     /// The fibres over directions spaced around circles of latitude, projected into space:
     /// the directions and the projected fibres.
-    pub fn tori(polars: &[f64], per_circle: usize, samples: usize) -> Vec<Vec<(V, Vec<V>)>> {
+    pub fn tori(
+        polars: &[f64],
+        per_circle: usize,
+        samples: usize,
+    ) -> Vec<Vec<(Vector, Vec<Vector>)>> {
         polars
             .iter()
             .map(|polar| {
@@ -132,9 +134,9 @@ mod hopf {
 
     /// A spinor carried once around the circle of directions at a polar angle: the loop of
     /// directions, the start, and the carried spinors.
-    pub fn lift(polar: f64, count: usize) -> (Vec<V>, R, Vec<R>) {
+    pub fn lift(polar: f64, count: usize) -> (Vec<Vector>, Rotor, Vec<Rotor>) {
         let angles = turn(count);
-        let lp: Vec<V> = angles.iter().map(|a| sphere(polar, *a)).collect();
+        let lp: Vec<Vector> = angles.iter().map(|a| sphere(polar, *a)).collect();
         let start = fibre_start(lp[0]);
         let carried = transport(&lp).into_iter().map(|r| r * start).collect();
         (lp, start, carried)
@@ -142,7 +144,7 @@ mod hopf {
 
     /// The direction of the spiral at a fraction of the sweep: from near the south pole to just
     /// above the equator, four times around.
-    pub fn spiral(fraction: f64) -> V {
+    pub fn spiral(fraction: f64) -> Vector {
         sphere(
             core::f64::consts::PI * (0.95 - 0.5 * fraction),
             core::f64::consts::TAU * 4.0 * fraction,
@@ -161,29 +163,23 @@ const LIFT_POLAR: f64 = 2.2;
 
 /// A projected point as drawn, a point of space: the origin plus the vector, and beyond the
 /// limit a gap in the curve.
-fn clipped(v: V) -> gax::pga3d::Point<(), f64> {
+fn clipped(v: Vector) -> Point3 {
     if v.norm() > LIMIT {
-        gax::pga3d::Point::xyz(f64::NAN, f64::NAN, f64::NAN)
+        Point3::xyz(f32::NAN, f32::NAN, f32::NAN)
     } else {
-        at(v)
+        reach3(v)
     }
 }
 
-/// The point a vector reaches from the origin: a direction as a point of the sphere of
-/// directions, a projected spinor as a point of space.
-fn at(v: V) -> gax::pga3d::Point<(), f64> {
-    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
-}
-
 /// A direction's azimuth: the signed angle about z from x to its part in the xy plane.
-fn azimuth(d: V) -> f64 {
+fn azimuth(d: Vector) -> f64 {
     let x = gax::vga2d::Vector::new(1.0, 0.0);
     x.angle_to(gax::vga2d::Vector::new(d.e1(), d.e2()))
 }
 
 /// A direction's colour: its azimuth as the hue, whitened a little, fainter towards the south
 /// pole.
-fn colour(d: V) -> Light {
+fn colour(d: Vector) -> Light {
     let hue = (azimuth(d) / core::f64::consts::TAU) as f32;
     let base = (colormap::hsv(hue)).whitened(0.25);
     base.faded(0.45 + 0.55 * (1.0 + d.e3() as f32) / 2.0)
@@ -200,7 +196,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let elevation = 0.38;
     // First a direction spirals over the sphere and its fibres pile up; then the fibres over
     // three circles of latitude, which fill nested tori.
-    let fibres: Vec<(V, Vec<V>, bool)> = if phase < SWEEP {
+    let fibres: Vec<(Vector, Vec<Vector>, bool)> = if phase < SWEEP {
         let count = ((phase / SWEEP * FRAMES as f32) as usize + 1).min(FRAMES);
         (0..count)
             .map(|k| {
@@ -239,12 +235,12 @@ fn draw(c: &mut Canvas, t: f32) {
     if fibres.len() > 1 {
         let text = format!("LINKING NUMBER OF THE FIRST AND LAST FIBRE: {link:+.3}");
         let corner = screen.hi + Point2::direction(-14.0, -14.0);
-        c.text(&text, corner, 11.0, palette::ink(), Align::Right);
+        c.text(&text, corner, 11.0, palette::INK, Align::Right);
     }
     if phase >= SWEEP {
         let text = "FIBRES OVER CIRCLES OF DIRECTIONS FILL NESTED TORI";
         let corner = screen.top_right() + Point2::direction(-14.0, 30.0);
-        c.text(text, corner, 11.0, palette::ink(), Align::Right);
+        c.text(text, corner, 11.0, palette::INK, Align::Right);
     }
 
     // The sphere of directions, on the left above the lift.
@@ -259,15 +255,15 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.45),
     );
     panel3(c, sphere_rect, cam, |scene| {
-        scene.sphere_wire(ORIGIN3, 1.0, 24, palette::grid().faded(0.6));
+        scene.sphere_wire(ORIGIN3, 1.0, 24, palette::GRID.faded(0.6));
         for (d, _, newest) in &fibres {
             let size = if *newest { 10.0 } else { 5.0 };
-            scene.dot(at(*d), Marker::Dot, size, colour(*d));
+            scene.dot(reach3(*d), Marker::Dot, size, colour(*d));
         }
     });
     // The label clear of the caption, beside the sphere's top.
     let label = sphere_rect.lo + Point2::direction(14.0, 30.0);
-    c.text("DIRECTIONS", label, 11.0, palette::ink(), Align::Left);
+    c.text("DIRECTIONS", label, 11.0, palette::INK, Align::Left);
 
     // The lift: a spinor carried around a circle of directions, drawn up to now.
     let lift_rect = Rect::new(0.0, split, 0.3 * w, h);
@@ -285,20 +281,20 @@ fn draw(c: &mut Canvas, t: f32) {
             .into_iter()
             .map(|r| clipped(stereographic(r)))
             .collect();
-        scene.polyline(&circle, 1.2, palette::grid());
+        scene.polyline(&circle, 1.2, palette::GRID);
         let upto = ((phase / SWEEP * carried.len() as f32) as usize).clamp(1, carried.len());
         let track: Vec<_> = core::iter::once(start)
             .chain(carried[..upto].iter().copied())
             .map(|r| clipped(stereographic(r)))
             .collect();
-        scene.polyline(&track, 1.8, palette::red());
+        scene.polyline(&track, 1.8, palette::RED);
         let first = clipped(stereographic(start));
-        scene.dot(first, Marker::Dot, 8.0, palette::sky());
-        scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::red());
+        scene.dot(first, Marker::Dot, 8.0, palette::SKY);
+        scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::RED);
     });
     let down = Point2::direction(0.0, 1.0);
     let label = lift_rect.lo + Point2::direction(14.0, 8.0);
-    let ink = palette::ink();
+    let ink = palette::INK;
     c.text(
         "BERRY PHASE: BACK ON THE FIBRE,",
         label,
@@ -337,7 +333,7 @@ mod tests {
     /// it on its fibre.
     #[test]
     fn the_fibre_is_the_top_eigenspace_of_the_paired_form() {
-        let direction: V = Vector::new(0.3, -0.5, 0.8).normalized();
+        let direction: Vector = Vector::new(0.3, -0.5, 0.8).normalized();
         let (values, spinors) = (direction | hopf()).eigh(Scalar::identity());
         for (v, want) in values.iter().zip([-1.0, -1.0, 1.0, 1.0]) {
             assert!((v - want).abs() < 1e-12, "{values:?}");

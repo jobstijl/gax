@@ -18,38 +18,32 @@ use gax::{Unit, pga2d, vga3d};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::{smoothstep, wave};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, colormap, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
+    backdrop, caption, colormap, palette, run,
 };
 use std::sync::OnceLock;
 
 mod epipolar {
     use super::*;
 
-    pub type P = Point<(), f64>;
     /// A sight ray, the join of the centre and an image point: a line oriented along itself
     /// (intrinsic).
-    pub type L = intrinsic::Line<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
-
-    /// The cameras' centre, the world origin (camera 1 is at it, looking along `+z`).
-    pub fn origin() -> P {
-        Point::xyz(0.0, 0.0, 0.0)
-    }
+    pub type L = intrinsic::Line;
+    pub type M = Unit<Motor>;
 
     /// The screen `z = 1`.
-    pub fn screen() -> Plane<(), f64> {
+    pub fn screen() -> Plane {
         Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0)
     }
 
     /// The pinhole camera, a projective map on points: the join with the centre, then the meet
     /// with the screen.
-    pub fn camera() -> Point<(Point,), f64> {
-        (origin() & Point::slot()) ^ screen()
+    pub fn camera() -> Point<(Point,)> {
+        (Point::origin() & Point::slot()) ^ screen()
     }
 
     /// The sensor's coordinates: the points of the screen as points of the plane, `z` dropped.
-    pub fn sensor() -> pga2d::Point<(Point,), f64> {
+    pub fn sensor() -> pga2d::Point<(Point,)> {
         pga2d::Point::from_images([
             pga2d::Point::new(1.0, 0.0, 0.0),
             pga2d::Point::new(0.0, 1.0, 0.0),
@@ -59,7 +53,7 @@ mod epipolar {
     }
 
     /// World landmarks: the corners of a wireframe house and a grid of ground markers.
-    pub fn house_landmarks() -> Vec<P> {
+    pub fn house_landmarks() -> Vec<Point> {
         let mut v = vec![
             Point::xyz(-0.5, -0.4, 3.0),
             Point::xyz(0.5, -0.4, 3.0),
@@ -97,16 +91,16 @@ mod epipolar {
     }
 
     /// The image of each point on the screen, at unit weight.
-    pub fn image(points: &[P]) -> Vec<P> {
+    pub fn image(points: &[Point]) -> Vec<Point> {
         let cam = camera();
         points.iter().map(|p| cam.of(*p).unitized()).collect()
     }
 
     /// The sight rays through image points, unit lines.
-    pub fn rays(images: &[P]) -> Vec<L> {
+    pub fn rays(images: &[Point]) -> Vec<L> {
         images
             .iter()
-            .map(|p| (origin() & *p).normalized())
+            .map(|p| (Point::origin() & *p).normalized())
             .collect()
     }
 
@@ -117,16 +111,16 @@ mod epipolar {
     /// Jacobian form times itself, the gradient the residual times it, with no metric chosen.
     /// The cutoff in least squares drops the unobservable translation scale.
     pub fn step(rays_1: &[L], rays_2: &[L], motor: M) -> M {
-        let mut h: Scalar<(Line, Line), f64> = Scalar::zero();
-        let mut rhs: Scalar<(Line,), f64> = Scalar::zero();
+        let mut h: Scalar<(Line, Line)> = Scalar::zero();
+        let mut rhs: Scalar<(Line,)> = Scalar::zero();
         for (r1, r2) in rays_1.iter().zip(rays_2) {
             let moved = motor >> *r2;
-            let res: intrinsic::Scalar<(), f64> = (*r1 ^ moved).dual();
-            let j: intrinsic::Scalar<(Line,), f64> = (*r1 ^ Line::slot().commutator(moved)).dual();
+            let res: intrinsic::Scalar = (*r1 ^ moved).dual();
+            let j: intrinsic::Scalar<(Line,)> = (*r1 ^ Line::slot().commutator(moved)).dual();
             h += j * j;
             rhs -= res * j;
         }
-        let step: Line<(), f64> = h.lstsq_with(rhs, 1e-4);
+        let step: Line = h.lstsq_with(rhs, 1e-4);
         step.gp(0.5).exp() * motor
     }
 
@@ -134,8 +128,8 @@ mod epipolar {
     /// ray and an unknown point, and its square, by the metric, the point's squared distance
     /// from the ray; the two quadrics summed are least at the reconstructed point: the least
     /// finite mode against the point weight, which does not measure directions, as in numga.
-    pub fn triangulate(rays_1: &[L], rays_2: &[L], motor: M) -> Vec<P> {
-        let weight = Plane::new(0.0, 0.0, 0.0, 1.0) & Point::slot();
+    pub fn triangulate(rays_1: &[L], rays_2: &[L], motor: M) -> Vec<Point> {
+        let weight = Plane::infinity() & Point::slot();
         rays_1
             .iter()
             .zip(rays_2)
@@ -163,22 +157,22 @@ mod epipolar {
     /// The epipolar lines on camera 2's screen: the images of camera 1's rays, by the same
     /// join-then-meet with a line in the open slot.
     pub fn epipolar_lines(rays_1: &[L], motor: M) -> Vec<L> {
-        let line_camera = (origin() & L::slot()) ^ screen();
+        let line_camera = (Point::origin() & L::slot()) ^ screen();
         rays_1.iter().map(|r| line_camera.of(motor << *r)).collect()
     }
 
     /// The points of a screen line at `x = -half` and `x = half`.
-    pub fn ends(line: L, half: f64) -> [P; 2] {
+    pub fn ends(line: L, half: f64) -> [Point; 2] {
         [-half, half].map(|x| line ^ Plane::with_normal(Point::direction(1.0, 0.0, 0.0), x))
     }
 
     /// The scene, its noisy images and the recovery.
     pub struct Scene {
-        pub landmarks: Vec<P>,
-        pub image_1: Vec<P>,
-        pub image_2: Vec<P>,
-        pub noisy_1: Vec<P>,
-        pub noisy_2: Vec<P>,
+        pub landmarks: Vec<Point>,
+        pub image_1: Vec<Point>,
+        pub image_2: Vec<Point>,
+        pub noisy_1: Vec<Point>,
+        pub noisy_2: Vec<Point>,
         pub rays_1: Vec<L>,
         pub rays_2: Vec<L>,
         pub true_motor: M,
@@ -193,10 +187,10 @@ mod epipolar {
         let landmarks = house_landmarks();
         let (true_motor, start) = true_motors();
         let image_1 = image(&landmarks);
-        let moved: Vec<P> = landmarks.iter().map(|p| true_motor << *p).collect();
+        let moved: Vec<Point> = landmarks.iter().map(|p| true_motor << *p).collect();
         let image_2 = image(&moved);
         let mut rng = rng(seed);
-        let mut jitter = |ps: &[P]| -> Vec<P> {
+        let mut jitter = |ps: &[Point]| -> Vec<Point> {
             ps.iter()
                 .map(|p| *p + Point::direction(noise * rng.normal(), noise * rng.normal(), 0.0))
                 .collect()
@@ -218,7 +212,7 @@ mod epipolar {
     }
 
     /// The Euclidean normal of a plane, as a vector of VGA3D (to measure angles with).
-    fn normal(plane: Plane<(), f64>) -> vga3d::Vector<(), f64> {
+    fn normal(plane: Plane) -> vga3d::Vector {
         vga3d::Vector::new(plane.e1(), plane.e2(), plane.e3())
     }
 
@@ -236,19 +230,19 @@ mod epipolar {
 
     /// The baseline from camera 1 to camera 2 at a motor, a line.
     pub fn baseline(motor: M) -> L {
-        origin() & (motor >> origin())
+        Point::origin() & (motor >> Point::origin())
     }
 
     /// The angle, in radians, between the true and recovered baselines: between the
     /// directions from camera 1 to camera 2 (the difference of two unit points).
     pub fn baseline_error(est: M, truth: M) -> f64 {
-        let towards = |motor: M| (motor >> origin()).unitized() - origin();
+        let towards = |motor: M| (motor >> Point::origin()).unitized() - Point::origin();
         towards(est).angle_between(towards(truth))
     }
 
     /// A unit point scaled about camera 1 by `scale`.
-    pub fn scaled(p: P, scale: f64) -> P {
-        origin() + (p - origin()).gp(scale)
+    pub fn scaled(p: Point, scale: f64) -> Point {
+        Point::origin() + (p - Point::origin()).gp(scale)
     }
 
     /// The RMS distance of the reconstruction from the landmarks, scaled about camera 1 to the
@@ -308,7 +302,14 @@ fn frustum(s: &mut Scene3, pose: M, size: f64, color: Light, width: f32) {
 
 /// A camera's sensor: the true projections and the measured keypoints, and optionally the
 /// epipolar lines.
-fn sensor_panel(c: &mut Canvas, rect: Rect, title: &str, truth: &[P], measured: &[P], lines: &[L]) {
+fn sensor_panel(
+    c: &mut Canvas,
+    rect: Rect,
+    title: &str,
+    truth: &[Point],
+    measured: &[Point],
+    lines: &[L],
+) {
     let ax = Axes::new(rect, [-0.6, 0.6], [-0.45, 0.45]);
     ax.frame(c, title, "SENSOR U", "");
     let on_sensor = sensor();
@@ -318,8 +319,8 @@ fn sensor_panel(c: &mut Canvas, rect: Rect, title: &str, truth: &[P], measured: 
         let [a, b] = ends(*l, 0.7).map(|p| on_sensor.of(p));
         ax.line(c, a, b, 1.0, (colour(i)).faded(0.45));
     }
-    let pts: Vec<pga2d::Point<(), f64>> = truth.iter().map(|p| on_sensor.of(*p)).collect();
-    ax.scatter(c, &pts, Marker::Ring, 7.0, palette::grid());
+    let pts: Vec<pga2d::Point> = truth.iter().map(|p| on_sensor.of(*p)).collect();
+    ax.scatter(c, &pts, Marker::Ring, 7.0, palette::GRID);
     for (i, p) in measured.iter().enumerate() {
         ax.scatter(c, &[on_sensor.of(*p)], Marker::Dot, 5.0, colour(i));
     }
@@ -361,8 +362,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let (x0, y0) = ((w * 0.37).floor(), 72.0);
     let mut sub = c.sub(Rect::new(x0, y0, w, h));
     sub.backdrop(
-        palette::top().mix_light(palette::bottom(), y0 / h),
-        palette::bottom(),
+        palette::TOP.mix_light(palette::BOTTOM, y0 / h),
+        palette::BOTTOM,
     );
     let azimuth = -2.2 + 0.5 * wave(core::f32::consts::TAU * t / (PER_STEP * SHOWN as f32 + HOLD));
     let cam = Camera::orbit(
@@ -376,25 +377,25 @@ fn draw(c: &mut Canvas, t: f32) {
     let mut scene = Scene3::new(cam);
     let points = triangulate(&s.rays_1, &s.rays_2, motor);
     let n = points.len();
-    let centre_2 = motor >> origin();
+    let centre_2 = motor >> Point::origin();
     for (i, (p, l)) in points.iter().zip(&s.landmarks).enumerate() {
         let colour = colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
-        scene.dot(*l, Marker::Ring, 10.0, palette::grid());
+        scene.dot(*l, Marker::Ring, 10.0, palette::GRID);
         scene.dot(*p, Marker::Star, 12.0, colour);
         if i % 5 == 0 {
-            scene.seg(origin(), *p, 0.8, palette::sky().faded(0.4));
-            scene.seg(centre_2, *p, 0.8, palette::green().faded(0.4));
+            scene.seg(ORIGIN3, *p, 0.8, palette::SKY.faded(0.4));
+            scene.seg(centre_2, *p, 0.8, palette::GREEN.faded(0.4));
         }
     }
     frustum(
         &mut scene,
         Motor::translation(Point::direction(0.0, 0.0, 0.0)),
         0.4,
-        palette::sky(),
+        palette::SKY,
         1.6,
     );
-    frustum(&mut scene, s.true_motor, 0.4, palette::grid(), 1.2);
-    frustum(&mut scene, motor, 0.4, palette::green(), 1.8);
+    frustum(&mut scene, s.true_motor, 0.4, palette::GRID, 1.2);
+    frustum(&mut scene, motor, 0.4, palette::GREEN, 1.8);
     scene.draw(&mut sub);
     // The errors of the step, on two lines.
     for (k, line) in [
@@ -412,16 +413,16 @@ fn draw(c: &mut Canvas, t: f32) {
     .enumerate()
     {
         let at = sub.rect().lo + Point2::direction(10.0, 18.0 + 16.0 * k as f32);
-        sub.text(line, at, 11.0, palette::ink(), Align::Left);
+        sub.text(line, at, 11.0, palette::INK, Align::Left);
     }
     c.blit(&sub, Point2::xy(x0, y0));
     let key = Axes::new(Rect::new(x0, h - 80.0, w, h), [0.0, 1.0], [0.0, 1.0]);
     key.legend(
         c,
         &[
-            ("CAMERA 1", palette::sky()),
-            ("CAMERA 2, TRUE", palette::grid()),
-            ("CAMERA 2, ESTIMATE", palette::green()),
+            ("CAMERA 1", palette::SKY),
+            ("CAMERA 2, TRUE", palette::GRID),
+            ("CAMERA 2, ESTIMATE", palette::GREEN),
         ],
     );
     caption(
@@ -440,7 +441,7 @@ fn main() {
 mod tests {
     use super::epipolar::*;
     use gax::ApproxEq;
-    use gax::pga3d::Line;
+    use gax::pga3d::{Line, Point};
 
     /// Without noise, the relative pose and the world points are recovered exactly, up to the
     /// baseline's scale.
@@ -449,9 +450,10 @@ mod tests {
         let s = epipolar(0.0, 1);
         let est = *s.motors.last().expect("a motor");
         assert!(rotation_error(est, s.true_motor) < 1e-3);
-        let c_true = s.true_motor >> origin();
-        let c_est = est >> origin();
-        let scale = (c_true - origin()).ideal_norm() / (c_est - origin()).ideal_norm();
+        let c_true = s.true_motor >> Point::origin();
+        let c_est = est >> Point::origin();
+        let scale =
+            (c_true - Point::origin()).ideal_norm() / (c_est - Point::origin()).ideal_norm();
         let d = scaled(c_est, scale).max_abs_diff(&c_true);
         assert!(d < 1e-4, "{c_est:?} {c_true:?}");
         let points = triangulate(&s.rays_1, &s.rays_2, est);

@@ -8,11 +8,11 @@
 //! at a time: the faces a new point sees are removed, and the edges of the hole they leave (the
 //! horizon) are joined to it.
 
+use crate::measure::{GOLDEN, lift};
+use crate::mesh::{Mesh, Vector3, direction};
+use crate::rng::{Draw, rng};
+use crate::{Camera, Canvas, ORIGIN3, Point3, Rect, palette};
 use gax::field::Field;
-use gax_numga_examples::measure::{GOLDEN, lift};
-use gax_numga_examples::mesh::{Mesh, Vector3, direction};
-use gax_numga_examples::rng::{Draw, rng};
-use gax_numga_examples::{Camera, Canvas, Point3, Rect, palette};
 use std::collections::BTreeSet;
 
 /// The number of points, how far their directions are nudged off an even spread, and the seed
@@ -150,11 +150,9 @@ pub fn near_side(p: Vector3, toward: Vector3) -> Point3 {
 
 /// The sphere as a faint disk with a rim, behind everything in the panel.
 pub fn ghost(c: &mut Canvas, cam: &Camera, rect: Rect) {
-    let centre = cam
-        .px(Point3::xyz(0.0, 0.0, 0.0))
-        .expect("the centre in view");
+    let centre = cam.px(ORIGIN3).expect("the centre in view");
     c.clip(rect);
-    c.disk(centre, scale(rect), palette::grid().faded(0.6));
-    c.ring(centre, scale(rect), 1.0, palette::grid());
+    c.disk(centre, scale(rect), palette::GRID.faded(0.6));
+    c.ring(centre, scale(rect), 1.0, palette::GRID);
     c.unclip();
 }

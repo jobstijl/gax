@@ -5,13 +5,13 @@ use gax::Unit;
 use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 use std::ops::Range;
 
-pub type P = Point<(), f64>;
-pub type Pl = Plane<(), f64>;
-pub type L = Line<(), f64>;
+pub type P = Point;
+pub type Pl = Plane;
+pub type L = Line;
 /// A line from one point of the paper to another, oriented along itself (intrinsic), as their
 /// join is.
-pub type Edge = intrinsic::Line<(), f64>;
-pub type M = Unit<Motor<(), f64>>;
+pub type Edge = intrinsic::Line;
+pub type M = Unit<Motor>;
 
 /// The perpendicular bisector plane of two equally weighted finite points: the inner product of
 /// their join with their sum, the plane through their midpoint orthogonal to the line.
@@ -203,7 +203,7 @@ impl Paper {
         // The sheet's normal: the direction of the line square to it, signed towards its
         // positive side by its pairing with the sheet. An offset's height is its pairing with
         // the sheet, in units of the normal's.
-        let square = (self.sheet | Point::xyz(0.0, 0.0, 0.0)) ^ Plane::new(0.0, 0.0, 0.0, 1.0);
+        let square = (self.sheet | Point::origin()) ^ Plane::infinity();
         let normal = square.gp((self.sheet & square).s());
         let unit = (self.sheet & normal).s();
         let heights = self

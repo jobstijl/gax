@@ -1,58 +1,12 @@
-//! From the world to the canvas: a 2D view (a rectangle of the plane) and a 3D camera whose pose is a
-//! PGA3D motor (`Motor::look_at`), with perspective or parallel projection, and the ray through
-//! each canvas point for the ray-traced examples. Both end in a map of the plane onto the
-//! canvas.
+//! From the world to the canvas: a 3D camera whose pose is a PGA3D motor (`Motor::look_at`),
+//! with perspective or parallel projection, ending in a map of the plane onto the canvas, and
+//! the ray through each canvas point for the ray-traced examples. (2D views are
+//! [`Axes`](crate::Axes).)
 
 use crate::canvas::Rect;
-use crate::points::{Map2, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, box_map, from_above};
+use crate::points::{Map2, ORIGIN2, ORIGIN3, Point2, Point3, Pos3, box_map, from_above};
 use gax::Unit;
 use gax::pga3d::{Motor, Plane, Point};
-
-/// A rectangle of the plane on the canvas: `centre` in the middle, `half_height` units from the
-/// middle to the top edge, y up.
-#[derive(Clone, Copy, Debug)]
-pub struct View2 {
-    /// The plane onto the canvas, and back.
-    to_px: Map2,
-    from_px: Map2,
-    /// Canvas units per world unit.
-    pub scale: f32,
-    /// The world's half width.
-    half_width: f32,
-}
-
-impl View2 {
-    /// The view filling the canvas rectangle `canvas`.
-    pub fn new(canvas: Rect, centre: impl Pos2, half_height: f32) -> View2 {
-        let scale = canvas.height() * 0.5 / half_height;
-        let half_width = canvas.width() * 0.5 / scale;
-        // The world's top left and bottom right corners onto the canvas's.
-        let centre = centre.point2().unitized();
-        let half = Point2::direction(half_width, -half_height);
-        let to_px = box_map([centre - half, centre + half], [canvas.lo, canvas.hi]);
-        View2 {
-            to_px,
-            from_px: to_px.inverse(),
-            scale,
-            half_width,
-        }
-    }
-
-    /// The canvas point of a world point.
-    pub fn px(&self, p: impl Pos2) -> Point2 {
-        self.to_px.of(p.point2())
-    }
-
-    /// The world point at the canvas point `q`.
-    pub fn world(&self, q: Point2) -> Point2 {
-        self.from_px.of(q).unitized()
-    }
-
-    /// The world's half width.
-    pub fn half_width(&self) -> f32 {
-        self.half_width
-    }
-}
 
 /// How the camera projects.
 #[derive(Clone, Copy, Debug)]

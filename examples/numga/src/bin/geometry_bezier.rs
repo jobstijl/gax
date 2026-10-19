@@ -24,30 +24,30 @@
 //! it for a parabola and cross it for a hyperbola. On the right, the same curves in the plane of
 //! unit weight, where each vector is the point it stands for.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, contour, palette, reach3, run, scene3::panel3, signal::phasor,
+    backdrop, caption, contour, on_sphere, palette, reach3, run, scene3::panel3, signal::phasor,
 };
 
 mod bezier {
     use gax::vga3d::{Vector, intrinsic};
 
-    pub type V = Vector<(), f64>;
     /// The normal of a plane through the origin: the dual of a bivector, of the other
     /// orientation (intrinsic).
-    pub type Normal = intrinsic::Vector<(), f64>;
+    pub type Normal = intrinsic::Vector;
     /// A quadratic form on vectors, as the map from a vector to the vector it pairs with.
-    pub type Conic = Vector<(Vector,), f64>;
+    pub type Conic = Vector<(Vector,)>;
     /// The weights of a quadratic curve's three control points.
     pub type Weights = [f64; 3];
 
     /// The point `(x, y)` at unit weight: the vector `x e1 + y e2 + e3`.
-    pub fn point(x: f64, y: f64) -> V {
+    pub fn point(x: f64, y: f64) -> Vector {
         Vector::new(x, y, 1.0)
     }
 
     /// numga's control triangle.
-    pub fn controls() -> [V; 3] {
+    pub fn controls() -> [Vector; 3] {
         [point(-1.0, 0.0), point(0.0, 1.5), point(1.0, 0.0)]
     }
 
@@ -58,15 +58,15 @@ mod bezier {
 
     /// The rational quadratic curve at `t`: each control weighted by its weight and its
     /// Bernstein polynomial, summed.
-    pub fn blend(controls: &[V; 3], weights: Weights, t: f64) -> V {
+    pub fn blend(controls: &[Vector; 3], weights: Weights, t: f64) -> Vector {
         let basis = bernstein(t);
-        (0..3).fold(V::zero(), |sum, k| {
+        (0..3).fold(Vector::zero(), |sum, k| {
             sum + controls[k].gp(weights[k] * basis[k])
         })
     }
 
     /// The curve at `samples + 1` parameters from 0 to 1.
-    pub fn curve(controls: &[V; 3], weights: Weights, samples: usize) -> Vec<V> {
+    pub fn curve(controls: &[Vector; 3], weights: Weights, samples: usize) -> Vec<Vector> {
         (0..=samples)
             .map(|k| blend(controls, weights, k as f64 / samples as f64))
             .collect()
@@ -88,7 +88,7 @@ mod bezier {
     /// The form whose zero set is the cone a quadratic curve's rays sweep: the plane through
     /// the origin and the ends against the two through the origin and an end's tangent, in the
     /// proportion the weights set.
-    pub fn conic(controls: &[V; 3], [first, inner, last]: Weights) -> Conic {
+    pub fn conic(controls: &[Vector; 3], [first, inner, last]: Weights) -> Conic {
         let [start, middle, end] = *controls;
         let chord = (start ^ end).dual();
         let (before, after) = ((start ^ middle).dual(), (middle ^ end).dual());
@@ -96,7 +96,7 @@ mod bezier {
     }
 
     /// The form's value on a vector: zero on the cone.
-    pub fn on(shape: Conic, v: V) -> f64 {
+    pub fn on(shape: Conic, v: Vector) -> f64 {
         (v | shape.of(v)).s()
     }
 
@@ -128,15 +128,15 @@ const ELEVATION: f32 = 18.0;
 const AZIMUTH: f32 = -62.0;
 
 fn curve_colour() -> Light {
-    palette::sky()
+    palette::SKY
 }
 
 fn complement_colour() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 
 fn control_colour() -> Light {
-    palette::ink().faded(0.45)
+    palette::INK.faded(0.45)
 }
 
 /// The middle weight at time `t`.
@@ -145,16 +145,9 @@ fn middle_at(t: f32) -> f64 {
     middle_weight(phasor(phase).e20())
 }
 
-/// The unit vector at a longitude and latitude, in radians.
-fn on_sphere(longitude: f64, latitude: f64) -> V {
-    let (around, up) = (phasor(longitude), phasor(latitude));
-    let across = up.e20();
-    gax::vga3d::Vector::new(across * around.e20(), across * around.e01(), up.e01())
-}
-
 /// Where the conic's form vanishes on the unit sphere, as segments: its level zero over a
 /// longitude-latitude grid, numga's construction of the cone's loops.
-fn cone_loops(shape: Conic) -> Vec<[V; 2]> {
+fn cone_loops(shape: Conic) -> Vec<[Vector; 2]> {
     let (pi, half) = (core::f32::consts::PI, core::f32::consts::FRAC_PI_2);
     let level = |p: Point2| {
         let [lon, lat] = p.to_euclidean().map(f64::from);
@@ -173,7 +166,7 @@ fn cone_loops(shape: Conic) -> Vec<[V; 2]> {
 
 /// A curve as its sum is, the fan of rays from the origin to it, and where its rays pierce the
 /// unit sphere.
-fn draw_rays(s: &mut Scene3, points: &[V], colour: Light) {
+fn draw_rays(s: &mut Scene3, points: &[Vector], colour: Light) {
     let sum: Vec<_> = points.iter().map(|v| reach3(*v)).collect();
     s.polyline(&sum, 1.2, colour.faded(0.7));
     for k in (0..points.len() - FAN_STRIDE).step_by(FAN_STRIDE) {
@@ -185,7 +178,7 @@ fn draw_rays(s: &mut Scene3, points: &[V], colour: Light) {
 }
 
 /// The weighted control points of a curve, each on its ray out to the sphere at least.
-fn draw_controls(s: &mut Scene3, controls: &[V; 3], weights: Weights) {
+fn draw_controls(s: &mut Scene3, controls: &[Vector; 3], weights: Weights) {
     let weighted: Vec<_> = (0..3).map(|k| controls[k].gp(weights[k])).collect();
     let corners: Vec<_> = weighted.iter().map(|v| reach3(*v)).collect();
     s.polyline(&corners, 1.0, control_colour());
@@ -212,38 +205,38 @@ fn space_panel(c: &mut Canvas, rect: Rect, t: f32) {
         Lens::Perspective(0.33),
     );
     panel3(c, rect, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 12, palette::grid().faded(0.6));
+        s.sphere_wire(ORIGIN3, 1.0, 12, palette::GRID.faded(0.6));
         let equator: Vec<_> = (0..=96)
             .map(|k| reach3(on_sphere(core::f64::consts::TAU * k as f64 / 96.0, 0.0)))
             .collect();
-        s.polyline(&equator, 1.4, palette::ink().faded(0.6));
+        s.polyline(&equator, 1.4, palette::INK.faded(0.6));
         let loops: Vec<_> = cone_loops(shape)
             .into_iter()
             .map(|seg| seg.map(reach3))
             .collect();
-        s.stroke(&loops, 1.0, palette::ink().faded(0.3));
+        s.stroke(&loops, 1.0, palette::INK.faded(0.3));
         for side in [weights, complementary(weights)] {
             draw_controls(s, &controls, side);
         }
         draw_rays(s, &curve(&controls, weights, SAMPLES), curve_colour());
         let rest = curve(&controls, complementary(weights), SAMPLES);
         draw_rays(s, &rest, complement_colour());
-        s.dot(ORIGIN3, Marker::Dot, 5.0, palette::ink());
+        s.dot(ORIGIN3, Marker::Dot, 5.0, palette::INK);
     });
     let note = "THE UNIT SPHERE IS THE PROJECTIVE PLANE, ITS EQUATOR THE LINE AT INFINITY";
     let at = rect.bottom_left() + Point2::direction(12.0, -14.0);
-    c.text(note, at, 9.0, palette::ink().faded(0.6), Align::Left);
+    c.text(note, at, 9.0, palette::INK.faded(0.6), Align::Left);
 }
 
 /// A vector of space as the point of the plane it stands for: `x e1 + y e2 + w e3` is the
 /// PGA2D point `x e20 + y e01 + w e12`, at `(x / w, y / w)`.
-fn projective(v: V) -> gax::pga2d::Point<(), f64> {
+fn projective(v: Vector) -> gax::pga2d::Point {
     gax::pga2d::Point::new(v.e1(), v.e2(), v.e3())
 }
 
 /// A curve in the plane of unit weight, broken where its weight changes sign: there it runs
 /// through the line at infinity, from one branch of a hyperbola to the other.
-fn draw_chart_curve(ax: &Axes, c: &mut Canvas, points: &[V], colour: Light) {
+fn draw_chart_curve(ax: &Axes, c: &mut Canvas, points: &[Vector], colour: Light) {
     let mut run = Vec::new();
     for pair in points.windows(2) {
         run.push(projective(pair[0]));
@@ -279,17 +272,11 @@ fn chart_panel(c: &mut Canvas, rect: Rect, t: f32) {
     draw_chart_curve(&ax, c, &curve(&controls, weights, SAMPLES), curve_colour());
     let rest = curve(&controls, complementary(weights), SAMPLES);
     draw_chart_curve(&ax, c, &rest, complement_colour());
-    ax.scatter(
-        c,
-        &controls.map(projective),
-        Marker::Dot,
-        7.0,
-        palette::ink(),
-    );
+    ax.scatter(c, &controls.map(projective), Marker::Dot, 7.0, palette::INK);
     c.unclip();
     let label = format!("MIDDLE WEIGHT {middle:.2}: {}", kind(middle));
     let at = rect.bottom_left() + Point2::direction(4.0, -8.0);
-    c.text(&label, at, 11.0, palette::ink(), Align::Left);
+    c.text(&label, at, 11.0, palette::INK, Align::Left);
 }
 
 fn draw(c: &mut Canvas, t: f32) {

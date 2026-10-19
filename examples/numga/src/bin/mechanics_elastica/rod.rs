@@ -10,22 +10,22 @@ use gax::motions::{Motions, Pga3d};
 use gax::pga3d::{Forque, Line, Motor, Plane, Point};
 
 /// A point of space.
-pub type P = Point<(), f64>;
+pub type P = Point;
 /// A motion: a turn about a line and a shift along it.
-pub type L = Line<(), f64>;
+pub type L = Line;
 /// A load: a force along a line, or a couple.
-pub type F = Forque<(), f64>;
+pub type F = Forque;
 /// The placement of a cross-section.
-pub type Frame = Unit<Motor<(), f64>>;
+pub type Frame = Unit<Motor>;
 /// A compliance, `Line <- Forque`: a load to the motion per unit length it causes; and a
 /// mobility, a momentum to its rate.
-pub type Compliance = Line<(Forque,), f64>;
+pub type Compliance = Line<(Forque,)>;
 /// A stiffness, `Forque <- Line`: a joint's deviation per unit length to its load; and an
 /// inertia, a rate to its momentum.
-pub type Stiffness = Forque<(Line,), f64>;
+pub type Stiffness = Forque<(Line,)>;
 
 /// A plane.
-pub type Pl = Plane<(), f64>;
+pub type Pl = Plane;
 
 /// The coordinate planes `x = 0`, `y = 0` and `z = 0`, and the plane at infinity: numga's
 /// `mv.x`, `mv.y`, `mv.z` and `mv.w`, whose meets are its lines `yz`, `wx` and the rest.
@@ -36,7 +36,7 @@ pub const W: Pl = Plane::new(0.0, 0.0, 0.0, 1.0);
 
 /// The centre of the cross-section at the rod's start.
 pub fn centre() -> P {
-    Point::xyz(0.0, 0.0, 0.0)
+    Point::origin()
 }
 
 /// The motion carrying a cross-section along the unbent rod per unit length: a shift along

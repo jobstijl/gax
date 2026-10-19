@@ -139,17 +139,16 @@ impl<S: Space> Colour<S> {
     }
 
     /// The distance between two colours' positions in this space (in CIELAB the CIE76 colour
-    /// difference, in Oklab ΔE_OK): the norm of their join.
+    /// difference, in Oklab ΔE_OK).
     pub fn distance(self, other: Self) -> f32 {
-        (self.unit() & other.unit()).norm()
+        self.unit().distance(other.unit())
     }
 
     // The cylindrical geometry: hue, chroma and lightness about the grey axis.
 
     /// The grey axis, black to white, at unit length: a join, so intrinsic (ADR-051).
     fn axis() -> intrinsic::Line<(), f32> {
-        let l = S::black() & S::white();
-        l * l.norm().recip()
+        (S::black() & S::white()).normalized()
     }
 
     /// The plane through black orthogonal to the grey axis: lightness 0.
@@ -221,12 +220,11 @@ impl<S: Space> Colour<S> {
     pub fn hue(self) -> f32 {
         let axis = Self::axis();
         // The half-planes are joins, so intrinsic; their product, a turn, is extrinsic.
-        let unit = |p: intrinsic::Plane<(), f32>| p * p.norm().recip();
         let (zero, here) = (axis & S::hue_zero(), axis & self.unit());
         if here.norm() < 1e-9 {
             return 0.0;
         }
-        let turn = (unit(here) * unit(zero)).unit();
+        let turn = (here.normalized() * zero.normalized()).unit();
         let log: Line<(), f32> = turn.log();
         let angle = log.norm();
         let tau = core::f32::consts::TAU;

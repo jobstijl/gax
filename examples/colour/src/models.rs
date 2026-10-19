@@ -43,7 +43,8 @@ fn hexagon() -> [Raw; 6] {
 /// The value of a point of the cube (weight 1): its largest channel, the ratio of its distance
 /// from black to the distance at which its ray from black leaves the cube.
 pub(crate) fn value(p: Raw) -> f32 {
-    if (black() & p).norm() < 1e-9 {
+    let to_p = black().distance(p);
+    if to_p < 1e-9 {
         return 0.0;
     }
     let far = [
@@ -53,12 +54,11 @@ pub(crate) fn value(p: Raw) -> f32 {
     ];
     let ray = black() & p;
     // The nearest far face along the ray: the smallest distance from black.
-    let to_p = (black() & p).norm();
     let exit = far
         .iter()
         .map(|plane| ray ^ *plane)
         .filter(|m| m.e123().abs() > 1e-9)
-        .map(|m| (black() & m.unitized()).norm())
+        .map(|m| black().distance(m))
         .fold(f32::MAX, f32::min);
     to_p / exit
 }
@@ -76,11 +76,11 @@ pub(crate) fn whiteness(p: Raw) -> f32 {
     let foot = near
         .iter()
         .map(|plane| (line ^ *plane).unitized())
-        .min_by(|a, b| (p & *a).norm().total_cmp(&(p & *b).norm()))
+        .min_by(|a, b| p.distance(*a).total_cmp(&p.distance(*b)))
         .expect("three faces");
     // Signed: below the faces (a channel under zero) is negative whiteness.
     let below = near.iter().any(|plane| (*plane & p).s() < 0.0);
-    let w = (p & foot).norm() / (black() & white()).norm();
+    let w = p.distance(foot) / black().distance(white());
     if below { -w } else { w }
 }
 
@@ -96,7 +96,7 @@ fn hexagon_hue(p: Raw, value: f32, whiteness: f32) -> f32 {
     let (edge, along) = (0..6)
         .map(|k| {
             let (a, b) = (corners[k], corners[(k + 1) % 6]);
-            ((a & b & q).norm(), k, (a & q).norm())
+            ((a & b & q).norm(), k, a.distance(q))
         })
         .filter(|(off, _, along)| *off < 1e-4 && *along <= 1.0 + 1e-4)
         .map(|(_, k, along)| (k, along))

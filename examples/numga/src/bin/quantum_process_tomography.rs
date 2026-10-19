@@ -27,11 +27,10 @@ mod tomography {
     use gax::vga3d::{Bivector, Multivector, Paravector, Vector};
 
     /// A state `(1 + r) / 2`, and a channel: a map on states.
-    pub type St = Paravector<(), f64>;
-    pub type Channel = Paravector<(Paravector,), f64>;
-    pub type Bi = Bivector<(), f64>;
+    pub type St = Paravector;
+    pub type Channel = Paravector<(Paravector,)>;
     /// A Bloch vector.
-    pub type Space = Vector<(), f64>;
+    pub type Space = Vector;
 
     pub fn one() -> St {
         Paravector::new(1.0, 0.0, 0.0, 0.0)
@@ -42,7 +41,7 @@ mod tomography {
     pub fn z() -> Space {
         Vector::new(0.0, 0.0, 1.0)
     }
-    pub fn xy() -> Bi {
+    pub fn xy() -> Bivector {
         Bivector::new(0.0, 0.0, 1.0)
     }
 
@@ -64,7 +63,7 @@ mod tomography {
     /// The sandwich by one path of a channel, `k rho ~k`. A path may be any multivector whose
     /// sandwich keeps a state (its own reverse) a state, such as a scalar plus a vector plus a
     /// bivector, or a rotor; the other grades of the product are zero and dropped.
-    fn sandwich(k: Multivector<(), f64>) -> Channel {
+    fn sandwich(k: Multivector) -> Channel {
         (k * open() * k.reverse()).cast::<Paravector>()
     }
 
@@ -72,7 +71,7 @@ mod tomography {
     /// pole: each a sum of sandwiches, composed. The noise's alternatives are not observed:
     /// their output states add, not their amplitudes.
     #[allow(clippy::disallowed_methods)] // amplitudes are square roots of probabilities, not geometry
-    pub fn noisy_gate(angle: f64, phase_flip: f64, loss: f64, plane: Bi) -> Channel {
+    pub fn noisy_gate(angle: f64, phase_flip: f64, loss: f64, plane: Bivector) -> Channel {
         // Kept, or flipped in the xy plane; the square roots are amplitudes.
         let keep = one().cast::<Multivector>() * (1.0 - phase_flip).sqrt();
         let flip = xy().cast::<Multivector>() * phase_flip.sqrt();
@@ -176,7 +175,7 @@ mod tomography {
     pub const LOSS: [f64; 3] = [0.0, 0.0, 0.10];
     pub const STEPS: usize = 48;
 
-    pub fn rotation_plane() -> Bi {
+    pub fn rotation_plane() -> Bivector {
         Bivector::new(1.0, 1.0, 1.0).normalized()
     }
 
@@ -325,14 +324,14 @@ fn table(
             let text = format!("{v:.2}");
             let at = cell.centre() + baseline;
             let text = text.trim_start_matches('0');
-            c.text(text, at, size, palette::ink(), Align::Center);
+            c.text(text, at, size, palette::INK, Align::Center);
         }
         let name = rect.lo + down.gp(i as f32 + 0.5) + baseline - Point2::direction(4.0, 0.0);
-        c.text(names[i], name, size, palette::ink(), Align::Right);
+        c.text(names[i], name, size, palette::INK, Align::Right);
     }
     for (j, name) in names.iter().enumerate().take(cols as usize) {
         let at = rect.bottom_left() + right.gp(j as f32 + 0.5) + baseline.gp(2.8);
-        c.text(name, at, size, palette::ink(), Align::Center);
+        c.text(name, at, size, palette::INK, Align::Center);
     }
 }
 
@@ -344,12 +343,12 @@ fn draw(c: &mut Canvas, t: f32) {
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let phase = (t / SECONDS).clamp(0.0, 0.9999);
     let uses = 1 + (phase * STEPS as f32) as usize;
-    let colours = [palette::sky(), palette::orange(), palette::purple()];
+    let colours = [palette::SKY, palette::ORANGE, palette::PURPLE];
     let probe_colours = [
-        palette::sky(),
-        palette::orange(),
-        palette::green(),
-        palette::purple(),
+        palette::SKY,
+        palette::ORANGE,
+        palette::GREEN,
+        palette::PURPLE,
     ];
     let small = (h / 50.0).min(11.0);
 
@@ -374,9 +373,9 @@ fn draw(c: &mut Canvas, t: f32) {
             Lens::Perspective(0.62),
         );
         panel3(c, rect, cam, |s| {
-            s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.45));
+            s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.45));
             for a in axes() {
-                s.seg(reach3(-a), reach3(a), 1.0, palette::grid().faded(0.8));
+                s.seg(reach3(-a), reach3(a), 1.0, palette::GRID.faded(0.8));
             }
             // The image: a translucent surface with its mesh lines.
             for i in 0..LATITUDES {
@@ -411,7 +410,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     let note = band.bottom_middle() + up.gp(small * 0.8);
     let text = format!("{uses} USES OF EACH LEARNED CHANNEL");
-    c.text(&text, note, small * 1.1, palette::ink(), Align::Center);
+    c.text(&text, note, small * 1.1, palette::INK, Align::Center);
     // How many state directions each probe set determines: the singular values of its dyads,
     // under the band's two bottom corners, a line below the note.
     let corners = [
@@ -431,7 +430,7 @@ fn draw(c: &mut Canvas, t: f32) {
     {
         let values: Vec<String> = spectrum.iter().map(|v| format!("{v:.2}")).collect();
         let text = format!("{name}: {}", values.join(" "));
-        c.text(&text, at, small * 0.85, palette::grid(), align);
+        c.text(&text, at, small * 0.85, palette::GRID, align);
     }
 
     // Predictions after as many uses for unseen states, against the exact probabilities.
@@ -443,10 +442,10 @@ fn draw(c: &mut Canvas, t: f32) {
     // their ticks are a fifth apart and their labels clear of one another.
     let ax = Axes::equal(Rect { lo, hi: lo + side }, Point2::xy(0.27, 0.27), 0.38);
     ax.frame(c, "UNSEEN STATES", "EXACT", "");
-    ax.line(c, ORIGIN2, Point2::xy(0.54, 0.54), 1.0, palette::grid());
+    ax.line(c, ORIGIN2, Point2::xy(0.54, 0.54), 1.0, palette::GRID);
     for ((exact, predicted), colour) in validation(&d.learned, uses).iter().zip(colours) {
         // Each probability as a point of the plot: exact across, predicted up.
-        let pts: Vec<gax::pga2d::Point<(), f64>> = exact
+        let pts: Vec<gax::pga2d::Point> = exact
             .iter()
             .flatten()
             .zip(predicted.iter().flatten())
@@ -501,12 +500,13 @@ mod tests {
     use gax::ApproxEq;
     use gax::vga3d::{Bivector, Multivector, Pseudoscalar, Vector};
     use gax_numga_examples::rng::{Draw, rng};
+    use gax_numga_examples::testing::near;
 
     /// Bloch vectors in random directions with lengths spread evenly over `[0, 1]`.
     fn blochs(seed: u64, n: usize) -> Vec<Space> {
         let mut r = rng(seed);
         (0..n)
-            .map(|k| r.direction::<Vector<(), f64>>() * (k as f64 / (n - 1) as f64))
+            .map(|k| r.direction::<Vector>() * (k as f64 / (n - 1) as f64))
             .collect()
     }
 
@@ -526,10 +526,6 @@ mod tests {
         v * angle.cos() + cross * angle.sin() + axis * ((1.0 - angle.cos()) * along)
     }
 
-    fn close(a: St, b: St, tol: f64) -> bool {
-        a.max_abs_diff(&b) <= tol
-    }
-
     #[test]
     fn channels_match_the_independent_bloch_law_and_normalized_born_probabilities() {
         let angles = [0.0, 0.47, -0.9, 0.3];
@@ -547,7 +543,7 @@ mod tests {
             for (r, (p, row)) in blochs.iter().zip(prepared.iter().zip(&probs)) {
                 let out = device.of(*p);
                 let want = analytical_bloch(*r, angles[c], phase_flip[c], loss[c], axis);
-                assert!(close(out, state(want), 1e-8), "{out:?} vs {want:?}");
+                assert!(near(out, state(want), 1e-8), "{out:?} vs {want:?}");
                 assert!((2.0 * out.s() - 1.0).abs() < 1e-8);
                 assert!(bloch(out).norm() <= 1.0 + 1e-8);
                 for (prob, dir) in row.iter().zip(&detector) {
@@ -581,7 +577,7 @@ mod tests {
             let measured = probabilities(device, &prepared, &effects);
             let learned = reconstruct(&prepared, &effects, &measured);
             for s in &unseen {
-                assert!(close(learned.of(*s), device.of(*s), 1e-12));
+                assert!(near(learned.of(*s), device.of(*s), 1e-12));
             }
         }
     }
@@ -612,7 +608,7 @@ mod tests {
                 expected =
                     expected.map(|r| analytical_bloch(r, TURNS[c], PHASE_FLIP[c], LOSS[c], axis));
                 for (r, want) in blochs.iter().zip(&expected) {
-                    assert!(close(accumulated.of(state(*r)), state(*want), 1e-8));
+                    assert!(near(accumulated.of(state(*r)), state(*want), 1e-8));
                 }
             }
         }

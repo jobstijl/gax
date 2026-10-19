@@ -15,6 +15,7 @@
 //! spacetime ribbon, its null image and the tidal readout), and the Doppler scaling of the
 //! tide seen by observers boosted along the wave.
 
+use gax::sta::Vector;
 use std::sync::OnceLock;
 
 use gax::pga2d::Point;
@@ -30,35 +31,33 @@ mod curvature {
     use gax::sta::{Bivector, Odd, Pseudoscalar, Vector};
     use gax_numga_examples::signal::linspace;
 
-    pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
     /// A scalar plus a pseudoscalar: an amplitude and a phase.
-    pub type Phasor = gax::sta::Phasor<(), f64>;
+    pub type Phasor = gax::sta::Phasor;
     /// Area bivector to curvature bivector.
-    pub type Curvature = Bivector<(Bivector,), f64>;
+    pub type Curvature = Bivector<(Bivector,)>;
     /// Separation to relative acceleration.
-    pub type Tidal = Vector<(Vector,), f64>;
+    pub type Tidal = Vector<(Vector,)>;
     /// Rest separation to displacement.
-    pub type Strain = Vector<(Vector,), f64>;
+    pub type Strain = Vector<(Vector,)>;
 
-    pub fn t() -> V {
+    pub fn t() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 0.0, 1.0, 0.0)
     }
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
     /// The pseudoscalar `e0123`: it squares to minus one and commutes with every bivector.
-    pub fn i() -> Pseudoscalar<(), f64> {
+    pub fn i() -> Pseudoscalar {
         Pseudoscalar::new(1.0)
     }
     /// The bivector `e12 = x ∧ y`.
-    pub fn xy() -> B {
+    pub fn xy() -> Bivector {
         Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
     }
 
@@ -66,7 +65,7 @@ mod curvature {
     /// pair `(a, b)`. The null bivectors `k ∧ a` and `k ∧ b` are mutually orthogonal, so their
     /// dyads compose to zero and the map is nilpotent; opposite weights cancel the Ricci
     /// contraction.
-    pub fn plane_wave_curvature(k: V, a: V, b: V) -> Curvature {
+    pub fn plane_wave_curvature(k: Vector, a: Vector, b: Vector) -> Curvature {
         let (na, nb) = (k ^ a, k ^ b);
         na * (na | Bivector::slot()) - nb * (nb | Bivector::slot())
     }
@@ -82,12 +81,12 @@ mod curvature {
     /// Bind the observer twice and leave the separation open: `u ∧ s` sweeps a separation
     /// into a spacetime ribbon, the curvature maps it to a bivector, and the commutator with
     /// the observer reads it out as a vector.
-    pub fn tidal_map(curvature: Curvature, observer: V) -> Tidal {
+    pub fn tidal_map(curvature: Curvature, observer: Vector) -> Tidal {
         curvature.of(observer ^ Vector::slot()).commutator(observer)
     }
 
     /// Four-velocities of observers boosted along a spatial direction, one per rapidity.
-    pub fn boosted_observers(rapidities: &[f64], direction: V) -> Vec<V> {
+    pub fn boosted_observers(rapidities: &[f64], direction: Vector) -> Vec<Vector> {
         rapidities
             .iter()
             .map(|r| ((direction ^ t()) * (r / 2.0)).exp() >> t())
@@ -119,7 +118,7 @@ mod curvature {
     #[cfg_attr(not(test), allow(dead_code))]
     /// Curvature as a map on pairs of vectors (the plane's edges, in order), from the strain's
     /// second derivative along the wave: `k ∧ s''(a) (k·b) - (k·a) k ∧ s''(b)`.
-    pub fn curvature_of_strain(k: V, second: Strain) -> Bivector<(Vector, Vector), f64> {
+    pub fn curvature_of_strain(k: Vector, second: Strain) -> Bivector<(Vector, Vector)> {
         (k ^ second) * (k | Vector::slot()) - (k | Vector::slot()) * (k ^ second)
     }
 
@@ -160,7 +159,7 @@ mod curvature {
     }
 
     /// Unit reference separations in the plane transverse to the wave.
-    pub fn detector_ring(count: usize) -> Vec<V> {
+    pub fn detector_ring(count: usize) -> Vec<Vector> {
         (0..count)
             .map(|k| {
                 let angle = core::f64::consts::TAU * k as f64 / count as f64;
@@ -199,7 +198,7 @@ mod curvature {
     }
 
     /// Four corners of a simple area element, drawn from a unit spacelike edge in its plane.
-    pub fn plane_patch(area: B, edge: V) -> [V; 4] {
+    pub fn plane_patch(area: Bivector, edge: Vector) -> [Vector; 4] {
         let other = edge.commutator(area) * 0.5;
         let edge = edge * 0.6;
         [-edge - other, -edge + other, edge + other, edge - other]
@@ -223,18 +222,19 @@ mod curvature {
     /// from rest into displacements.
     pub struct Detector {
         pub time: Vec<f64>,
-        pub reference: Vec<V>,
-        pub displacement: Vec<Vec<Vec<V>>>,
-        pub acceleration: Vec<Vec<Vec<V>>>,
+        pub reference: Vec<Vector>,
+        pub displacement: Vec<Vec<Vec<Vector>>>,
+        pub acceleration: Vec<Vec<Vec<Vector>>>,
         pub strain: Vec<Phasor>,
     }
 
     /// Accelerations of the beads, `[polarization][time][bead]`, from the tidal maps of the
     /// three polarized waves at each time.
-    pub fn accelerations(time: &[f64], cycles: f64, reference: &[V]) -> Vec<Vec<Vec<V>>> {
+    pub fn accelerations(time: &[f64], cycles: f64, reference: &[Vector]) -> Vec<Vec<Vec<Vector>>> {
         let (plus, _) = polarizations();
         let (_, second) = wave_packet(time, DURATION, cycles, AMPLITUDE);
-        let mut out: Vec<Vec<Vec<V>>> = (0..3).map(|_| Vec::with_capacity(time.len())).collect();
+        let mut out: Vec<Vec<Vec<Vector>>> =
+            (0..3).map(|_| Vec::with_capacity(time.len())).collect();
         for s in &second {
             for (p, wave) in polarized_waves(plus, *s).into_iter().enumerate() {
                 let response = tidal_map(wave, t());
@@ -245,14 +245,14 @@ mod curvature {
     }
 
     /// Integrate each bead's acceleration twice along time, starting at rest.
-    pub fn integrate(time: &[f64], acceleration: &[Vec<Vec<V>>]) -> Vec<Vec<Vec<V>>> {
+    pub fn integrate(time: &[f64], acceleration: &[Vec<Vec<Vector>>]) -> Vec<Vec<Vec<Vector>>> {
         acceleration
             .iter()
             .map(|per_time| {
                 let beads = per_time[0].len();
-                let columns: Vec<Vec<V>> = (0..beads)
+                let columns: Vec<Vec<Vector>> = (0..beads)
                     .map(|b| {
-                        let a: Vec<V> = per_time.iter().map(|row| row[b]).collect();
+                        let a: Vec<Vector> = per_time.iter().map(|row| row[b]).collect();
                         cumulative_simpson(&cumulative_simpson(&a, time), time)
                     })
                     .collect();
@@ -266,7 +266,7 @@ mod curvature {
     /// The ring of beads through the packet in the plus, cross and circular polarizations.
     pub fn detector_scenario() -> Detector {
         let time = linspace(0.0, DURATION, SAMPLES);
-        let reference: Vec<V> = detector_ring(BEADS)
+        let reference: Vec<Vector> = detector_ring(BEADS)
             .into_iter()
             .map(|r| r * RADIUS)
             .collect();
@@ -311,10 +311,10 @@ fn tracking() -> [Light; 4] {
 /// The detector read out for drawing: bead positions and acceleration arrows in units of the
 /// ring's radius, `[polarization][time][bead]`, displacements magnified.
 struct Rings {
-    reference: Vec<V>,
+    reference: Vec<Vector>,
     profile: Vec<Phasor>,
-    positions: Vec<Vec<Vec<V>>>,
-    arrows: Vec<Vec<Vec<V>>>,
+    positions: Vec<Vec<Vec<Vector>>>,
+    arrows: Vec<Vec<Vec<Vector>>>,
     limit: f32,
     /// Plus and cross strain over time, in units of `1e-4`.
     strain: Vec<[f64; 2]>,
@@ -324,12 +324,12 @@ struct Rings {
 
 /// The point a separation reaches from the ring's centre, in the plane transverse to the wave
 /// (the ring panels' axes): its part along the wave dropped.
-fn transverse(v: V) -> Point<(), f64> {
-    Point::xy(0.0, 0.0) + Point::direction(v.e1(), v.e2())
+fn transverse(v: Vector) -> Point {
+    Point::origin() + Point::direction(v.e1(), v.e2())
 }
 
 /// `[polarization][time][bead]` values, each mapped by `f`.
-fn per_bead(values: &[Vec<Vec<V>>], f: impl Fn(V) -> V) -> Vec<Vec<Vec<V>>> {
+fn per_bead(values: &[Vec<Vec<Vector>>], f: impl Fn(Vector) -> Vector) -> Vec<Vec<Vec<Vector>>> {
     values
         .iter()
         .map(|per_time| {
@@ -359,7 +359,7 @@ fn rings() -> &'static Rings {
                     })
                     .collect()
             })
-            .collect::<Vec<Vec<Vec<V>>>>();
+            .collect::<Vec<Vec<Vec<Vector>>>>();
         // One arrow scale for the whole animation: the largest arrow is 0.31 radii long.
         let largest = d
             .acceleration
@@ -402,18 +402,18 @@ fn rings() -> &'static Rings {
 /// One ring of beads at sample `k`, with the trails of four tracked beads and the tidal
 /// acceleration arrows.
 fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
-    let blue = palette::sky();
-    let closed = |mut pts: Vec<Point<(), f64>>| {
+    let blue = palette::SKY;
+    let closed = |mut pts: Vec<Point>| {
         pts.push(pts[0]);
         pts
     };
     let circle = closed(detector_ring(120).into_iter().map(transverse).collect());
-    ax.dashed(c, &circle, 1.0, 4.0, palette::grid());
+    ax.dashed(c, &circle, 1.0, 4.0, palette::GRID);
     // The panel's axes: the transverse directions x and y, through the centre.
     for axis in [x(), y()] {
         let reach = axis * 1.08;
         let (from, to) = (transverse(-reach), transverse(reach));
-        ax.line(c, from, to, 0.8, palette::grid().faded(0.5));
+        ax.line(c, from, to, 0.8, palette::GRID.faded(0.5));
     }
     // The weak-wave prediction, the strain map applied to the rest separations: the integrated
     // beads land on it.
@@ -425,14 +425,14 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
             .map(|s| transverse((*s + strain.of(*s) * AMPLIFICATION) * (1.0 / RADIUS)))
             .collect(),
     );
-    ax.dashed(c, &predicted, 1.0, 3.0, palette::ink().faded(0.3));
+    ax.dashed(c, &predicted, 1.0, 3.0, palette::INK.faded(0.3));
     let beads = &r.positions[polarization][k];
-    let now: Vec<Point<(), f64>> = beads.iter().map(|p| transverse(*p)).collect();
+    let now: Vec<Point> = beads.iter().map(|p| transverse(*p)).collect();
     ax.polyline(c, &closed(now.clone()), 1.2, blue.faded(0.3));
     let tracked = [0, 6, 12, 18];
     let first = k.saturating_sub(r.time.len() / 7);
     for (j, bead) in tracked.iter().enumerate() {
-        let trail: Vec<Point<(), f64>> = r.positions[polarization][first..=k]
+        let trail: Vec<Point> = r.positions[polarization][first..=k]
             .iter()
             .map(|row| transverse(row[*bead]))
             .collect();
@@ -450,12 +450,12 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     for (j, bead) in tracked.iter().enumerate() {
         ax.scatter(c, &[now[*bead]], Marker::Dot, 8.0, tracking()[j].faded(1.5));
     }
-    ax.scatter(c, &[ORIGIN2], Marker::Dot, 5.0, palette::orange());
+    ax.scatter(c, &[ORIGIN2], Marker::Dot, 5.0, palette::ORANGE);
 }
 
 /// The curvature-map view of spacetime: `x` across, `z` along and `t` up, as a map to the
 /// space the camera sees (`y`, the other transverse direction, drops out).
-fn view() -> vga3d::Vector<(sta::Vector,), f64> {
+fn view() -> vga3d::Vector<(sta::Vector,)> {
     vga3d::Vector::from_images([
         vga3d::Vector::new(0.0, 0.0, 1.0),
         vga3d::Vector::new(1.0, 0.0, 0.0),
@@ -475,24 +475,23 @@ fn curvature_map(c: &mut Canvas, rect: Rect, azimuth: f32) {
     let cam = Camera::orbit(rect, ORIGIN3, 20.0, azimuth, 0.3, Lens::Parallel(1.25));
     let view = view();
     // The point of the drawing a spacetime vector reaches from the event.
-    let at = |v: V| ORIGIN3 + view.of(v).dir3();
+    let at = |v: Vector| ORIGIN3 + view.of(v).dir3();
     panel3(c, rect, cam, |s| {
         for axis in [x(), z(), t()] {
-            s.arrow(ORIGIN3, view.of(axis) * 1.05, 1.0, 6.0, palette::grid());
+            s.arrow(ORIGIN3, view.of(axis) * 1.05, 1.0, 6.0, palette::GRID);
         }
         let ribbon = plane_patch(incoming, edge).map(at);
         let image = plane_patch(outgoing, edge).map(at);
-        for (corners, colour, opacity) in [
-            (ribbon, palette::sky(), 0.2),
-            (image, palette::orange(), 0.12),
-        ] {
+        for (corners, colour, opacity) in
+            [(ribbon, palette::SKY, 0.2), (image, palette::ORANGE, 0.12)]
+        {
             let [a, b, c, d] = corners;
             s.quad(a, b, c, d, colour, opacity);
             s.polyline(&[a, b, c, d, a], 1.4, colour);
         }
-        s.arrow(ORIGIN3, view.of(observer), 2.0, 8.0, palette::ink());
-        s.arrow(ORIGIN3, view.of(wave), 2.0, 8.0, palette::yellow());
-        s.arrow(ORIGIN3, view.of(readout), 2.6, 8.0, palette::red());
+        s.arrow(ORIGIN3, view.of(observer), 2.0, 8.0, palette::INK);
+        s.arrow(ORIGIN3, view.of(wave), 2.0, 8.0, palette::YELLOW);
+        s.arrow(ORIGIN3, view.of(readout), 2.6, 8.0, palette::RED);
     });
 }
 
@@ -517,7 +516,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
             title,
             rect.top_middle(),
             size * 1.1,
-            palette::ink(),
+            palette::INK,
             Align::Center,
         );
     }
@@ -530,8 +529,8 @@ fn draw(c: &mut Canvas, t_now: f32) {
         [0.0, 6.0],
         [-1.15, 1.15],
     );
-    for (part, colour) in [palette::sky(), palette::orange()].into_iter().enumerate() {
-        let curve: Vec<Point<(), f64>> = r
+    for (part, colour) in [palette::SKY, palette::ORANGE].into_iter().enumerate() {
+        let curve: Vec<Point> = r
             .time
             .iter()
             .zip(&r.strain)
@@ -539,7 +538,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
             .collect();
         ax.polyline(c, &curve, 1.3, colour.faded(0.9));
     }
-    let cursor = palette::yellow().faded(0.9);
+    let cursor = palette::YELLOW.faded(0.9);
     ax.line(c, Point::xy(now, -1.15), Point::xy(now, 1.15), 1.2, cursor);
     ax.frame(c, "STRAIN / 1E-4: PLUS, CROSS", "TIME (C = 1)", "");
 
@@ -552,14 +551,14 @@ fn draw(c: &mut Canvas, t_now: f32) {
         "RIBBON T^X",
         names + left.gp(4.5),
         size * 0.8,
-        palette::sky(),
+        palette::SKY,
         Align::Right,
     );
     c.text(
         "ITS NULL IMAGE",
         names + left.gp(3.5),
         size * 0.8,
-        palette::orange(),
+        palette::ORANGE,
         Align::Left,
     );
     let bottom_middle = rect.bottom_middle();
@@ -567,7 +566,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
         "TIDAL READOUT",
         bottom_middle + Point2::direction(size * 4.0, -size * 0.4),
         size * 0.8,
-        palette::red(),
+        palette::RED,
         Align::Left,
     );
 
@@ -581,15 +580,15 @@ fn draw(c: &mut Canvas, t_now: f32) {
             Point2::xy(q, (-2.0 * q).exp())
         })
         .collect();
-    ax.polyline(c, &fine, 1.3, palette::ink().faded(0.9));
-    let dots: Vec<Point<(), f64>> = r
+    ax.polyline(c, &fine, 1.3, palette::INK.faded(0.9));
+    let dots: Vec<Point> = r
         .doppler
         .0
         .iter()
         .zip(&r.doppler.1)
         .map(|(q, a)| Point::xy(*q, *a))
         .collect();
-    ax.scatter(c, &dots, Marker::Dot, 6.0, palette::sky());
+    ax.scatter(c, &dots, Marker::Dot, 6.0, palette::SKY);
     ax.frame(c, "TIDE VS BOOST", "RAPIDITY", "");
 
     caption(
@@ -611,6 +610,7 @@ mod tests {
     use gax::ApproxEq;
     use gax::motions::Linear;
     use gax::sta::{Bivector, Vector};
+    use gax_numga_examples::testing::near;
 
     /// numga draws normals from `np.random.default_rng(seed)`, which cannot be reproduced; the
     /// identities hold for any vectors.
@@ -618,7 +618,7 @@ mod tests {
     use gax_numga_examples::signal::linspace;
 
     /// A vector of four standard normal coefficients.
-    fn vector(draws: &mut Rng) -> V {
+    fn vector(draws: &mut Rng) -> Vector {
         Vector::from_coeffs(core::array::from_fn(|_| draws.normal()))
     }
 
@@ -627,12 +627,8 @@ mod tests {
         x.max_abs_diff(&X::zero())
     }
 
-    fn close<X: ApproxEq>(a: X, b: X, tol: f64) -> bool {
-        a.max_abs_diff(&b) <= tol
-    }
-
     /// The reciprocal Lorentz basis: `basis[i] · reciprocal[j] = δij`.
-    fn frames() -> ([V; 4], [V; 4]) {
+    fn frames() -> ([Vector; 4], [Vector; 4]) {
         ([t(), x(), y(), z()], [t(), -x(), -y(), -z()])
     }
 
@@ -732,16 +728,16 @@ mod tests {
         // The duality turn -I is the eighth turn about the wave axis.
         let eighth = (xy() * (core::f64::consts::PI / 8.0)).exp();
         let turned = eighth >> plus.of(eighth << Bivector::slot());
-        assert!(close(cross, turned, 1e-9));
+        assert!(near(cross, turned, 1e-9));
         // numga's `exp(tx * .31) exp(yz * -.23)`, with `tx = -e10`.
         let rotor = Bivector::new(-0.31, 0.0, 0.0, 0.0, 0.0, 0.0).exp()
             * Bivector::new(0.0, 0.0, 0.0, -0.23, 0.0, 0.0).exp();
         let transformed = plane_wave_curvature(rotor >> (t() + z()), rotor >> x(), rotor >> y());
         let conjugated = rotor >> plus.of(rotor << Bivector::slot());
-        assert!(close(transformed, conjugated, 1e-13));
+        assert!(near(transformed, conjugated, 1e-13));
         let observer_response = tidal_map(transformed, rotor >> t());
         let transformed_response = rotor >> tidal_map(plus, t()).of(rotor << Vector::slot());
-        assert!(close(observer_response, transformed_response, 1e-13));
+        assert!(near(observer_response, transformed_response, 1e-13));
     }
 
     #[test]
@@ -755,7 +751,7 @@ mod tests {
                 let numerical = (-h[k - 2] + h[k - 1] * 16.0 - h[k] * 30.0 + h[k + 1] * 16.0
                     - h[k + 2])
                     * (1.0 / (12.0 * dt * dt));
-                assert!(close(numerical, a[k], 1e-11));
+                assert!(near(numerical, a[k], 1e-11));
             }
         }
         // Outside the window only the Gaussian's tails remain.
@@ -764,13 +760,13 @@ mod tests {
                 assert!(largest(h[k]) <= 1e-11 && largest(a[k]) <= 1e-9);
             }
         }
-        assert!(close(h[time.len() / 2], Phasor::new(1e-4, 0.0), 1e-16));
+        assert!(near(h[time.len() / 2], Phasor::new(1e-4, 0.0), 1e-16));
     }
 
     /// The independent prediction: half the strain applied to the separation, for the three
     /// polarizations, from the packet's envelope and carrier.
     #[allow(clippy::disallowed_methods)] // the reference it is checked against
-    fn expected(time: &[f64], reference: &[V]) -> Vec<Vec<Vec<V>>> {
+    fn expected(time: &[f64], reference: &[Vector]) -> Vec<Vec<Vec<Vector>>> {
         (0..3)
             .map(|p| {
                 time.iter()
@@ -836,7 +832,7 @@ mod tests {
         // Stopping the calculation halfway through the pulse keeps the nonzero displacement:
         // the integrator does not reset its final frame.
         let middle = time.len() / 2;
-        let prefix_accel: Vec<Vec<Vec<V>>> = acceleration
+        let prefix_accel: Vec<Vec<Vec<Vector>>> = acceleration
             .iter()
             .map(|per_time| per_time[..=middle].to_vec())
             .collect();
@@ -845,7 +841,7 @@ mod tests {
         for p in 0..3 {
             for b in 0..reference.len() {
                 let (a, d) = (prefix[p][middle][b], displacement[p][middle][b]);
-                assert!(close(a, d, 1e-15));
+                assert!(near(a, d, 1e-15));
                 biggest = biggest.max(largest(a));
             }
         }
@@ -857,7 +853,7 @@ mod tests {
         let (plus_strain, cross_strain) = strain_patterns();
         // Stretch along x, squeeze along y, nothing along time or the wave.
         for (separation, image) in [(x(), x()), (y(), -y()), (t(), t() * 0.0), (z(), z() * 0.0)] {
-            assert!(close(plus_strain.of(separation), image, 1e-15));
+            assert!(near(plus_strain.of(separation), image, 1e-15));
         }
         let time = linspace(-1.0, 7.0, 641);
         let (strain, second) = wave_packet(&time, 6.0, 3.0, 1e-4);
@@ -873,17 +869,17 @@ mod tests {
             for p in 0..3 {
                 for (b, r) in reference.iter().enumerate() {
                     let pr = predicted[p].of(*r);
-                    assert!(close(displacement[p][k][b], pr, 2e-9));
+                    assert!(near(displacement[p][k][b], pr, 2e-9));
                     biggest = biggest.max(largest(pr));
                 }
                 // The tidal map is the strain's second time derivative as a map on separations.
-                assert!(close(tidal_map(waves[p], t()), acceleration_map[p], 1e-12));
+                assert!(near(tidal_map(waves[p], t()), acceleration_map[p], 1e-12));
                 // Wedged with the wave vector, that second derivative is the curvature on pairs
                 // of vectors.
                 let two_form = curvature_of_strain(t() + z(), acceleration_map[p]);
                 let bound = two_form.of(edge);
                 let direct = waves[p].of(edge ^ Vector::slot());
-                assert!(close(bound, direct, 1e-12));
+                assert!(near(bound, direct, 1e-12));
             }
         }
         assert!(biggest > 4e-5);
@@ -902,7 +898,7 @@ mod tests {
             let predicted = polarized_strain(plus_strain, cross_strain, *s);
             for p in 0..3 {
                 for (b, r) in d.reference.iter().enumerate() {
-                    assert!(close(d.displacement[p][k][b], predicted[p].of(*r), 1e-12));
+                    assert!(near(d.displacement[p][k][b], predicted[p].of(*r), 1e-12));
                 }
             }
         }

@@ -34,15 +34,15 @@ mod poncelet {
     // Every line here is the join of two points and every point the meet of two lines. A join
     // is oriented along itself and a meet by what turns around it, so the lines are intrinsic
     // and the points extrinsic (ADR-051).
-    pub type L = intrinsic::Line<(), f64>;
-    pub type P = extrinsic::Point<(), f64>;
+    pub type L = intrinsic::Line;
+    pub type P = extrinsic::Point;
     /// The kinds of the slots of the maps below: a line and a point of the construction.
     type LineSlot = intrinsic::Line;
     type PointSlot = extrinsic::Point;
     /// A conic: points to their polar lines.
-    pub type Conic = intrinsic::Line<(PointSlot,), f64>;
+    pub type Conic = intrinsic::Line<(PointSlot,)>;
     /// A conic held by its tangents: lines to their poles.
-    pub type Envelope = extrinsic::Point<(LineSlot,), f64>;
+    pub type Envelope = extrinsic::Point<(LineSlot,)>;
 
     /// The point at `(x, y)`, made as the construction makes its points: the meet of the lines
     /// `x = a` and `y = b`.
@@ -53,7 +53,7 @@ mod poncelet {
     /// The points at infinity along x and along y, where the lines `y = 0` and `x = 0` meet
     /// the line at infinity.
     pub fn headings() -> [P; 2] {
-        let w = Line::new(0.0, 0.0, 1.0);
+        let w = Line::infinity();
         [Line::new(0.0, 1.0, 0.0) ^ w, w ^ Line::new(1.0, 0.0, 0.0)]
     }
 
@@ -138,8 +138,8 @@ mod poncelet {
     pub const CORNERS: [f64; 5] = [0.1, 0.8, 1.9, 3.0, 5.2];
 
     /// Where the ellipse sits: its centre at (0.4, -0.2), its first axis turned from x by 0.5.
-    pub fn placement() -> Unit<Motor<(), f64>> {
-        Motor::translation(Point::direction(0.4, -0.2)) * Motor::rotation(Point::xy(0.0, 0.0), 0.5)
+    pub fn placement() -> Unit<Motor> {
+        Motor::translation(Point::direction(0.4, -0.2)) * Motor::rotation(Point::origin(), 0.5)
     }
 
     /// The ellipse: the lines through its centre across each of its axes (the joins of the
@@ -159,7 +159,7 @@ mod poncelet {
     /// The point at an angle on the ellipse, drawn in towards its centre by the scale: the
     /// point of the circle of that radius at the angle, stretched along the axes and placed.
     pub fn on_ellipse(angle: f64, scale: f64) -> P {
-        let phasor = Point::<(), f64>::direction_from_angle(angle);
+        let phasor = Point::direction_from_angle(angle);
         let [x, y] = [phasor.e20(), phasor.e01()];
         placement() >> crossing(scale * SEMI[0] * x, scale * SEMI[1] * y)
     }
@@ -180,9 +180,9 @@ mod poncelet {
         inners().map(|inner| path(outer, inner, start, tangents(inner, start)[0], steps))
     }
 
-    /// The distance between two points at unit weight: the gap of a path.
+    /// The distance between two points: the gap of a path.
     pub fn gap(a: P, b: P) -> f64 {
-        (a & b).norm()
+        a.distance(b)
     }
 }
 
@@ -207,16 +207,16 @@ fn draw(c: &mut Canvas, t: f32) {
                 on(f, crossing(x, y)) as f32
             }
         };
-        ax.contour(c, level(outer), 260, 0.0, 2.0, palette::ink());
-        ax.contour(c, level(conic), 260, 0.0, 1.8, palette::sky());
-        ax.polyline(c, corners, 1.8, palette::red());
-        ax.scatter(c, &corners[1..5], Marker::Dot, 6.0, palette::red());
-        ax.scatter(c, &corners[..1], Marker::Dot, 12.0, palette::orange());
-        ax.scatter(c, &corners[5..], Marker::Ring, 18.0, palette::red());
+        ax.contour(c, level(outer), 260, 0.0, 2.0, palette::INK);
+        ax.contour(c, level(conic), 260, 0.0, 1.8, palette::SKY);
+        ax.polyline(c, corners, 1.8, palette::RED);
+        ax.scatter(c, &corners[1..5], Marker::Dot, 6.0, palette::RED);
+        ax.scatter(c, &corners[..1], Marker::Dot, 12.0, palette::ORANGE);
+        ax.scatter(c, &corners[5..], Marker::Ring, 18.0, palette::RED);
         let colour = if k == 0 {
-            palette::green()
+            palette::GREEN
         } else {
-            palette::yellow()
+            palette::YELLOW
         };
         // The notes sit a tenth of a unit in from the panel's top left and bottom left corners.
         let unit = ax.scale();
@@ -225,7 +225,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let miss = gap(corners[5], corners[0]);
         let note = rect.bottom_left() + Point2::direction(0.1, -0.15).gp(unit);
         let text = format!("GAP AFTER FIVE SIDES: {miss:.1E}");
-        c.text(&text, note, 10.0, palette::grid(), Align::Left);
+        c.text(&text, note, 10.0, palette::GRID, Align::Left);
     }
     caption(
         c,

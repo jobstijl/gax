@@ -27,8 +27,7 @@
 
 mod dual;
 mod program;
-#[path = "../../shared/surfaces_hull.rs"]
-mod surfaces_hull;
+use gax_numga_examples::shared::surfaces_hull;
 
 use dual::{dual_lengths, poles, sides};
 use gax::field::Field;
@@ -181,10 +180,10 @@ const ARC_WIDTH: f32 = 1.1;
 const POINT_SIZE: f32 = 4.0;
 
 fn primal() -> Light {
-    palette::sky()
+    palette::SKY
 }
 fn dual_light() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 
 /// In space: the hull's faces that face the viewer, its polar dual's edges in front (where
@@ -214,7 +213,7 @@ fn space(c: &mut Canvas, rect: Rect, mesh: &Mesh, points: &Field<Vector3>) {
         for point in points.iter().filter(|&p| in_front(p)) {
             let (distance, ray) = (point.norm(), point.normalized());
             let ends = [1.0 - RAY_SPAN, 1.0 + RAY_SPAN].map(|r| drawn(ray * r));
-            s.seg(ends[0], ends[1], RAY_WIDTH, palette::ink().faded(0.4));
+            s.seg(ends[0], ends[1], RAY_WIDTH, palette::INK.faded(0.4));
             let shade = 0.5 + 0.5 * ((distance - 1.0) / DISTANCE_RANGE).clamp(-1.0, 1.0);
             let light = colormap::coolwarm(shade as f32);
             s.dot(drawn(point), Marker::Dot, POINT_SIZE, light);

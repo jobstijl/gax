@@ -23,15 +23,14 @@ use gax::pga3d::{Line, Motor, Point};
 
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
+    Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Rect, Scene3, backdrop, caption, palette,
+    run,
 };
 
-#[path = "../shared/mechanics_lie.rs"]
-mod lie;
+use gax_numga_examples::shared::mechanics_lie as lie;
 use lie::{Lie, rigid};
 
-#[path = "../shared/mechanics_simplex.rs"]
-mod simplex;
+use gax_numga_examples::shared::mechanics_simplex as simplex;
 
 /// R(4,0,0): numga's spherical model `x+y+z+w+`, laid out as PGA3D with `e0` squaring to +1.
 /// Its points, like PGA3D's, are intrinsic: made from their coordinates, not met from planes.
@@ -75,12 +74,12 @@ macro_rules! principal_frame {
         use crate::Draw as _;
 
         /// A rate-to-momentum map: from twists to forques.
-        pub type Inertia = Forque<(Line,), f64>;
+        pub type Inertia = Forque<(Line,)>;
         /// A second-moment map: `b & S(a)` is `Σ m (a & p)(b & p)` over the mass points.
-        pub type Moment = Point<(Plane,), f64>;
-        pub type Pl = Plane<(), f64>;
-        pub type Pt = Point<(), f64>;
-        pub type Mo = gax::Unit<Motor<(), f64>>;
+        pub type Moment = Point<(Plane,)>;
+        pub type Pl = Plane;
+        pub type Pt = Point;
+        pub type Mo = gax::Unit<Motor>;
         const N: usize = $n;
 
         /// The `i`-th basis plane and point.
@@ -149,9 +148,9 @@ macro_rules! principal_frame {
         /// inverse iteration with gax's `solve`. As in numga, the one with the largest scalar
         /// part is the motor (the pure ideal candidates of PGA have none).
         pub fn diagonalizing_motor(source: &[(f64, Pl); N], reference: &[Pl; N]) -> Mo {
-            let slot = Motor::<(), f64>::slot();
+            let slot = Motor::slot();
             let weights: [f64; N] = core::array::from_fn(|k| f64::from(1u32 << (N - 1 - k)));
-            let t: Motor<(Motor,), f64> = (0..N)
+            let t: Motor<(Motor,)> = (0..N)
                 .map(|k| (reference[k] * slot * source[k].1).cast::<Motor>() * weights[k])
                 .sum();
             let norms: Vec<f64> = source.iter().map(|(_, p)| p.norm()).collect();
@@ -159,11 +158,11 @@ macro_rules! principal_frame {
             let live = norms.iter().filter(|n| **n > 1e-9 * norms[0]).count();
             // Inverse iteration only needs the iterate kept in range: it is scaled by its largest
             // coefficient, and sizes are compared squared, in the coefficients.
-            let largest = |x: Motor<(), f64>| x.c.iter().fold(0.0, |a: f64, v| a.max(v.abs()));
-            let squared = |x: Motor<(), f64>| x.c.iter().map(|v| v * v).sum::<f64>();
+            let largest = |x: Motor| x.c.iter().fold(0.0, |a: f64, v| a.max(v.abs()));
+            let squared = |x: Motor| x.c.iter().map(|v| v * v).sum::<f64>();
             // The share of a candidate's size in its scalar part, squared.
-            let scalar_share = |x: Motor<(), f64>| x.c[0] * x.c[0] / squared(x);
-            let mut best: Option<Motor<(), f64>> = None;
+            let scalar_share = |x: Motor| x.c[0] * x.c[0] / squared(x);
+            let mut best: Option<Motor> = None;
             for mask in 0..1usize << live {
                 let lam: f64 = (0..live)
                     .map(|k| if mask >> k & 1 == 1 { -1.0 } else { 1.0 } * weights[k] * norms[k])
@@ -177,7 +176,7 @@ macro_rules! principal_frame {
                 // The residual relative to the iterate's size, below `1e-6 scale`.
                 let residual = squared(t.of(x) - x * lam) / squared(x);
                 if residual < (1e-6 * scale).powi(2)
-                    && best.is_none_or(|b: Motor<(), f64>| scalar_share(x) > scalar_share(b))
+                    && best.is_none_or(|b: Motor| scalar_share(x) > scalar_share(b))
                 {
                     best = Some(x);
                 }
@@ -199,7 +198,7 @@ macro_rules! principal_frame {
 
         /// A random motor: the exponential of a bivector of normal coefficients of size `size`.
         pub fn random_motor(rng: &mut crate::Rng, size: f64) -> Mo {
-            Line::<(), f64>::from_coeffs(core::array::from_fn(|_| size * rng.normal())).exp()
+            Line::from_coeffs(core::array::from_fn(|_| size * rng.normal())).exp()
         }
 
         /// Random points normalized, placed with a random motor, with masses in `[0.5, 1.5]`.
@@ -278,7 +277,7 @@ struct Scene {
 }
 
 /// A point of the error chart.
-type Chart = gax::pga2d::Point<(), f64>;
+type Chart = gax::pga2d::Point;
 
 const SECONDS: f32 = 12.0;
 const DT: f64 = 0.01;
@@ -294,7 +293,7 @@ fn scene() -> &'static Scene {
         ];
         // Centred: moved by the translation from the centroid to the origin.
         let centroid = raw.iter().copied().sum::<simplex::P>().unitized();
-        let centre = Motor::between(centroid, Point::xyz(0.0, 0.0, 0.0));
+        let centre = Motor::between(centroid, Point::origin());
         let corners: Vec<simplex::P> = raw.iter().map(|p| centre >> *p).collect();
         let inertia = simplex::lumped(&corners);
         let inertia_inv = rigid::G::mobility(inertia);
@@ -389,7 +388,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let semi: [f64; 3] = core::array::from_fn(|axis| (5.0 / (planes[2 - axis].0 * mass)).sqrt());
     // The ellipsoid as a map on points: the unit sphere stretched by the semi-axes along x, y
     // and z, then carried into the recovered frame.
-    let stretch = Point::<(Point,), f64>::from_coeffs([
+    let stretch = Point::<(Point,)>::from_coeffs([
         [semi[0], 0.0, 0.0, 0.0],
         [0.0, semi[1], 0.0, 0.0],
         [0.0, 0.0, semi[2], 0.0],
@@ -399,7 +398,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let left = w * 0.55;
     let cam = Camera::orbit(
         Rect::new(0.0, 0.0, left, h),
-        Point::xyz(0.0, 0.0, 0.0),
+        ORIGIN3,
         9.0,
         0.5 + 0.2 * t,
         0.35,
@@ -410,16 +409,16 @@ fn draw(c: &mut Canvas, t: f32) {
     for f in [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]] {
         let (a, b, d) = (corners[f[0]], corners[f[1]], corners[f[2]]);
         // The faces cover what is behind them, so they are a dim light: the frame inside shows.
-        let col = s.lit(a, b, d, palette::purple().faded(0.3));
+        let col = s.lit(a, b, d, palette::PURPLE.faded(0.3));
         s.tri(a, b, d, col, 0.55);
         for (x, y) in [(a, b), (b, d), (d, a)] {
-            s.seg(x, y, 1.2, palette::ink().faded(0.7));
+            s.seg(x, y, 1.2, palette::INK.faded(0.7));
         }
     }
     // The principal axes and the second-moment ellipsoid, in the recovered frame: the images
     // of the unit axes, and of the unit circles about them, turned by rotation motors.
-    let colours = [palette::red(), palette::green(), palette::sky()];
-    let origin = Point::xyz(0.0, 0.0, 0.0);
+    let colours = [palette::RED, palette::GREEN, palette::SKY];
+    let origin = Point::origin();
     let axes = [
         Point::direction(1.0, 0.0, 0.0),
         Point::direction(0.0, 1.0, 0.0),
@@ -457,24 +456,24 @@ fn draw(c: &mut Canvas, t: f32) {
         &pts[..n]
     };
     let (g, r) = (reveal(&sc.grid), reveal(&sc.monte_carlo));
-    ax.polyline(c, g, 1.8, palette::orange());
-    ax.scatter(c, g, Marker::Dot, 5.0, palette::orange());
-    ax.polyline(c, r, 1.4, palette::sky());
+    ax.polyline(c, g, 1.8, palette::ORANGE);
+    ax.scatter(c, g, Marker::Dot, 5.0, palette::ORANGE);
+    ax.polyline(c, r, 1.4, palette::SKY);
     // The lumped inertia takes four points; gax's mesh moments agree with it to rounding.
     let floor = 2e-16;
     let (lumped, mesh) = (
         Chart::xy(4.0, floor),
         Chart::xy(4.0, sc.mesh.max(floor) * 8.0),
     );
-    ax.scatter(c, &[lumped], Marker::Star, 13.0, palette::green());
-    ax.scatter(c, &[mesh], Marker::Square, 9.0, palette::yellow());
+    ax.scatter(c, &[lumped], Marker::Star, 13.0, palette::GREEN);
+    ax.scatter(c, &[mesh], Marker::Square, 9.0, palette::YELLOW);
     ax.legend(
         c,
         &[
-            ("GRID", palette::orange()),
-            ("MONTE CARLO", palette::sky()),
-            ("LUMPED: 4 POINTS", palette::green()),
-            ("MESH MOMENTS", palette::yellow()),
+            ("GRID", palette::ORANGE),
+            ("MONTE CARLO", palette::SKY),
+            ("LUMPED: 4 POINTS", palette::GREEN),
+            ("MESH MOMENTS", palette::YELLOW),
         ],
     );
 }

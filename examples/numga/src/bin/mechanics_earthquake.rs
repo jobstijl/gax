@@ -41,8 +41,7 @@ use gax_numga_examples::{
 use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, PI, SQRT_2, TAU};
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod earthquake {
     pub use super::space::{Turn as Frame, V, turn};
@@ -51,7 +50,7 @@ mod earthquake {
     /// A moment: a map on directions.
     pub type Moment = super::space::Map;
     /// A point of the beachball's projection.
-    pub type Spot = pga2d::Point<(), f64>;
+    pub type Spot = pga2d::Point;
 
     pub const NORTH: V = Vector::new(1.0, 0.0, 0.0);
     pub const EAST: V = Vector::new(0.0, 1.0, 0.0);
@@ -235,20 +234,20 @@ fn rake_at(t: f32) -> f64 {
 
 /// Pushes glow warm, pulls stay dim and cool.
 fn push_light() -> Light {
-    palette::orange().faded(0.5)
+    palette::ORANGE.faded(0.5)
 }
 
 fn pull_light() -> Light {
-    palette::sky().faded(0.06)
+    palette::SKY.faded(0.06)
 }
 
 /// The pressure axis, where the ground is squeezed, and the tension axis, where it is pulled.
 fn pressure_light() -> Light {
-    palette::sky()
+    palette::SKY
 }
 
 fn tension_light() -> Light {
-    palette::yellow()
+    palette::YELLOW
 }
 
 /// A direction in space for drawing: east, north and up.
@@ -282,8 +281,8 @@ fn beachball(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
         .map(|seg| seg.map(on_grid))
         .collect();
     let width = (rect.height() / 110.0).max(1.0);
-    c.stroke(&nodal, width, palette::ink());
-    c.ring(ax.px(ORIGIN2), ax.scale(), width * 1.2, palette::ink());
+    c.stroke(&nodal, width, palette::INK);
+    c.ring(ax.px(ORIGIN2), ax.scale(), width * 1.2, palette::INK);
     let size = rect.height() / 14.0;
     let axes = [
         (fault.axes[0], "P", pressure_light()),
@@ -291,7 +290,7 @@ fn beachball(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
     ];
     for (axis, label, light) in axes {
         let at = ax.px(lambert(axis));
-        mark(c, at, Marker::Ring, size, palette::bottom());
+        mark(c, at, Marker::Ring, size, palette::BOTTOM);
         mark(c, at, Marker::Dot, size, light);
         let beside = at + Point2::direction(0.6 * size, -0.4 * size);
         c.text(label, beside, size * 0.9, light, Align::Left);
@@ -301,7 +300,7 @@ fn beachball(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
         "N",
         north,
         size * 0.8,
-        palette::ink().faded(0.5),
+        palette::INK.faded(0.5),
         Align::Center,
     );
 }
@@ -319,9 +318,9 @@ fn lobes(s: &mut Scene3, fault: &Mechanism) {
     let shade = |u: f32, v: f32| {
         let (push, _) = radiation(fault.moment, along(u, v));
         if push > 0.0 {
-            palette::orange().faded(0.8)
+            palette::ORANGE.faded(0.8)
         } else {
-            palette::sky().faded(0.35)
+            palette::SKY.faded(0.35)
         }
     };
     s.surface(tip, SPHERE.rings - 1, SPOKES, shade, 0.6, None);
@@ -337,15 +336,9 @@ fn patch(s: &mut Scene3, fault: &Mechanism) {
         })
         .collect();
     for pair in rim.windows(2) {
-        s.tri(
-            ORIGIN3,
-            pair[0],
-            pair[1],
-            palette::yellow().faded(0.12),
-            0.3,
-        );
+        s.tri(ORIGIN3, pair[0], pair[1], palette::YELLOW.faded(0.12), 0.3);
     }
-    s.polyline(&rim, 1.5, palette::yellow().faded(0.8));
+    s.polyline(&rim, 1.5, palette::YELLOW.faded(0.8));
     // Each side's slip: an arrow just off the fault on that side, centred on the source.
     for side in [1.0, -1.0] {
         let base = (fault.normal * 0.15 - fault.slip * 0.45) * side;
@@ -354,7 +347,7 @@ fn patch(s: &mut Scene3, fault: &Mechanism) {
             upright(fault.slip * (0.9 * side)),
             2.5,
             10.0,
-            palette::yellow(),
+            palette::YELLOW,
         );
     }
 }
@@ -368,9 +361,9 @@ fn compass(s: &mut Scene3) {
             ))
         })
         .collect();
-    s.polyline(&ring, 1.0, palette::grid());
+    s.polyline(&ring, 1.0, palette::GRID);
     let tick = reach3(upright(NORTH * COMPASS));
-    s.arrow(tick, upright(NORTH * 0.1), 1.0, 6.0, palette::grid());
+    s.arrow(tick, upright(NORTH * 0.1), 1.0, 6.0, palette::GRID);
 }
 
 /// The sweep's fault in space, in `rect`: the lobes of its P waves, with the fault and its slip
@@ -386,7 +379,7 @@ fn fault_in_space(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
     panel3(c, rect, cam, |s| patch(s, fault));
     if let Some(at) = cam.px(reach3(upright(NORTH * (COMPASS + 0.15)))) {
         let size = rect.height() / 32.0;
-        c.text("N", at, size, palette::grid().faded(4.0), Align::Center);
+        c.text("N", at, size, palette::GRID.faded(4.0), Align::Center);
     }
 }
 
@@ -394,13 +387,13 @@ fn fault_in_space(c: &mut Canvas, rect: Rect, fault: &Mechanism) {
 fn label(c: &mut Canvas, rect: Rect, title: &str, detail: &str) {
     let size = rect.height() / 15.0;
     let under = rect.bottom_middle() + Point2::direction(0.0, size * 0.2);
-    c.text(title, under, size, palette::ink(), Align::Center);
+    c.text(title, under, size, palette::INK, Align::Center);
     let below = under + Point2::direction(0.0, size * 1.3);
     c.text(
         detail,
         below,
         size * 0.7,
-        palette::ink().faded(0.5),
+        palette::INK.faded(0.5),
         Align::Center,
     );
 }

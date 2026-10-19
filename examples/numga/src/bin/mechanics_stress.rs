@@ -29,8 +29,7 @@ use gax_numga_examples::{
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod stress {
     use super::space::turn;
@@ -39,7 +38,7 @@ mod stress {
     use gax::vga3d::{Bivector, Rotor, Vector};
 
     /// The plane the shear acts in, from x towards y.
-    pub const SHEAR_PLANE: Bivector<(), f64> = Bivector::new(0.0, 0.0, 1.0);
+    pub const SHEAR_PLANE: Bivector = Bivector::new(0.0, 0.0, 1.0);
 
     /// The corners of the cube of unit side about the origin: corner `4 i + 2 j + k` sits at the
     /// `i`-th, `j`-th and `k`-th of `-0.5` and `0.5` along x, y and z.
@@ -221,16 +220,16 @@ fn cube(s: &mut Scene3, view: &View) {
             reach3(rest[a]),
             reach3(rest[b]),
             1.0,
-            palette::grid().faded(2.0),
+            palette::GRID.faded(2.0),
         );
     }
     let at = |i: usize| reach3(view.corners[i]);
     for [a, b, c, d] in FACES {
-        let light = s.lit(at(a), at(b), at(c), palette::blue().faded(0.5));
+        let light = s.lit(at(a), at(b), at(c), palette::BLUE.faded(0.5));
         s.quad(at(a), at(b), at(c), at(d), light, 0.35);
     }
     for [a, b] in EDGES {
-        s.seg(at(a), at(b), 1.6, palette::ink().faded(0.8));
+        s.seg(at(a), at(b), 1.6, palette::INK.faded(0.8));
     }
 }
 
@@ -244,18 +243,18 @@ fn tractions_on(s: &mut Scene3, view: &View) {
             view.normal[f] * NORMAL_SCALE,
             2.4,
             10.0,
-            palette::sky(),
+            palette::SKY,
         );
         s.arrow(
             centre,
             view.shear[f] * SHEAR_SCALE,
             3.0,
             11.0,
-            palette::orange(),
+            palette::ORANGE,
         );
     }
     for d in view.principal {
-        s.seg(reach3(-d), reach3(d), 1.2, palette::green().faded(0.5));
+        s.seg(reach3(-d), reach3(d), 1.2, palette::GREEN.faded(0.5));
     }
 }
 
@@ -321,12 +320,12 @@ fn draw_mohr(c: &mut Canvas, rect: Rect, material: &Material, turning: &View) {
         Point2::xy(x0, 0.0),
         Point2::xy(x1, 0.0),
         1.0,
-        palette::grid(),
+        palette::GRID,
     );
     for (low, high, width, light) in [
-        (0, 2, 2.0, palette::ink()),
-        (0, 1, 1.0, palette::ink().faded(0.4)),
-        (1, 2, 1.0, palette::ink().faded(0.4)),
+        (0, 2, 2.0, palette::INK),
+        (0, 1, 1.0, palette::INK.faded(0.4)),
+        (1, 2, 1.0, palette::INK.faded(0.4)),
     ] {
         let (centre, radius) = mohr_circle([v[low], 0.0, v[high]]);
         circle(&ax, c, centre, radius, width, light);
@@ -335,16 +334,16 @@ fn draw_mohr(c: &mut Canvas, rect: Rect, material: &Material, turning: &View) {
     for (k, stress) in v.iter().enumerate() {
         let at = ax.px(Point2::xy(*stress as f32, 0.0)) + Point2::direction(0.0, size * 2.4);
         let name = format!("S{}", k + 1);
-        c.text(&name, at, size, palette::green(), Align::Center);
+        c.text(&name, at, size, palette::GREEN, Align::Center);
     }
     let fixed = frames(material).map(|frame| view(material, frame));
-    let lights = [palette::yellow(), palette::green(), palette::red()];
+    let lights = [palette::YELLOW, palette::GREEN, palette::RED];
     for (view, light) in fixed.iter().zip(lights) {
         draw_diameter(&ax, c, view, 1.0, 7.0, light.faded(0.6));
     }
-    draw_diameter(&ax, c, turning, 2.2, 11.0, palette::purple());
+    draw_diameter(&ax, c, turning, 2.2, 11.0, palette::PURPLE);
     let mut entries: Vec<(&str, Light)> = FRAME_NAMES.into_iter().zip(lights).collect();
-    entries.push(("TURNING", palette::purple()));
+    entries.push(("TURNING", palette::PURPLE));
     ax.legend(c, &entries);
 }
 
@@ -361,7 +360,7 @@ fn draw(c: &mut Canvas, t: f32) {
     draw_mohr(c, right, material, &turning);
     let note = format!("FRAME {:.0} DEGREES FROM PRINCIPAL", angle.to_degrees());
     let at = left.bottom_middle() - Point2::direction(0.0, 16.0);
-    c.text(&note, at, 12.0, palette::ink().faded(0.6), Align::Center);
+    c.text(&note, at, 12.0, palette::INK.faded(0.6), Align::Center);
     caption(
         c,
         "STRESS: TRACTIONS ON A CUBE, AND MOHR'S CIRCLE",

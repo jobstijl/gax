@@ -16,7 +16,7 @@ use gax::{pga2d, pga3d, vga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, from_above, palette, reach3, run,
+    caption, from_above, on_sphere, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -25,41 +25,40 @@ mod symmetry {
     use core::f64::consts::PI;
     pub use vga3d::{Bivector, Scalar, Vector};
 
-    pub type V = Vector<(), f64>;
-    pub type R = Unit<vga3d::Rotor<(), f64>>;
+    pub type R = Unit<vga3d::Rotor>;
     /// A response of vectors to vectors: a conductivity.
-    pub type Response = Vector<(Vector,), f64>;
+    pub type Response = Vector<(Vector,)>;
     /// A form with four vector slots: an elasticity.
-    pub type Elasticity = Scalar<(Vector, Vector, Vector, Vector), f64>;
-    pub type P3 = pga3d::Point<(), f64>;
+    pub type Elasticity = Scalar<(Vector, Vector, Vector, Vector)>;
+    pub type P3 = pga3d::Point;
     /// A rate of turning: an axis line, the meet of two planes.
-    pub type L3 = pga3d::Line<(), f64>;
+    pub type L3 = pga3d::Line;
     /// Inertia: rigid-body velocities (twists, extrinsic lines) to momenta (forques).
-    pub type Inertia = pga3d::Forque<(pga3d::Line,), f64>;
+    pub type Inertia = pga3d::Forque<(pga3d::Line,)>;
 
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 1.0, 0.0)
     }
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 1.0)
     }
     /// The planes `yz`, `zx` and `xy` as unit bivectors.
-    pub fn yz() -> Bivector<(), f64> {
+    pub fn yz() -> Bivector {
         Bivector::new(1.0, 0.0, 0.0)
     }
-    pub fn zx() -> Bivector<(), f64> {
+    pub fn zx() -> Bivector {
         Bivector::new(0.0, 1.0, 0.0)
     }
-    pub fn xy() -> Bivector<(), f64> {
+    pub fn xy() -> Bivector {
         Bivector::new(0.0, 0.0, 1.0)
     }
 
     /// The cyclic group of `order` equal turns in a unit plane, the identity first. A rotor turns
     /// by twice its angle: element `k`, `exp(plane π k / order)`, turns by `2 π k / order`.
-    pub fn turns(plane: Bivector<(), f64>, order: usize) -> Vec<R> {
+    pub fn turns(plane: Bivector, order: usize) -> Vec<R> {
         (0..order)
             .map(|k| plane.gp(PI * k as f64 / order as f64).exp())
             .collect()
@@ -80,40 +79,26 @@ mod symmetry {
             .collect()
     }
 
-    /// A unit direction: `x` turned up towards `z` by the latitude, then about `z` by the
-    /// longitude.
-    pub fn direction(longitude: f64, latitude: f64) -> V {
-        // numga's `xz` is `-zx`.
-        let r = xy().gp(-longitude / 2.0).exp() * zx().gp(latitude / 2.0).exp();
-        r >> x()
-    }
-
     /// A sphere of unit driving fields, 33 latitudes by 65 longitudes.
-    pub fn directions() -> Vec<V> {
-        let mut out = Vec::new();
-        for i in 0..33 {
-            for j in 0..65 {
+    pub fn directions() -> Vec<Vector> {
+        (0..33)
+            .flat_map(|i| {
                 let lat = -PI / 2.0 + PI * i as f64 / 32.0;
-                let lon = 2.0 * PI * j as f64 / 64.0;
-                out.push(direction(lon, lat));
-            }
-        }
-        out
+                (0..65).map(move |j| on_sphere(2.0 * PI * j as f64 / 64.0, lat))
+            })
+            .collect()
     }
 
     /// Equal-mass samples of a thin rectangular flywheel arm on a massless hub: 24 along `x`
     /// from 0.25 to 2.2, 5 across from -0.14 to 0.14. (numga moves the origin by translations;
     /// the points are the same.)
     pub fn arm_samples() -> Vec<P3> {
-        let mut out = Vec::new();
-        for i in 0..24 {
-            for j in 0..5 {
+        (0..24)
+            .flat_map(|i| {
                 let a = 0.25 + (2.2 - 0.25) * i as f64 / 23.0;
-                let b = -0.14 + 0.28 * j as f64 / 4.0;
-                out.push(pga3d::Point::xyz(a, b, 0.0));
-            }
-        }
-        out
+                (0..5).map(move |j| pga3d::Point::xyz(a, -0.14 + 0.28 * j as f64 / 4.0, 0.0))
+            })
+            .collect()
     }
 
     /// The sites of a simple cubic lattice, and the central site's two neighbour shells.
@@ -140,7 +125,7 @@ mod symmetry {
     /// along itself. Averaging pulls the input into each rotated frame, applies the conductivity
     /// and turns the output back; a rotation of the group only permutes the terms, so the mean
     /// is invariant: the closest invariant response in the Frobenius norm.
-    pub fn conductivities(axes: &[V; 3], gains: [f64; 3], groups: &[Vec<R>]) -> Vec<Response> {
+    pub fn conductivities(axes: &[Vector; 3], gains: [f64; 3], groups: &[Vec<R>]) -> Vec<Response> {
         let conductivity: Response = axes
             .iter()
             .zip(gains)
@@ -161,10 +146,7 @@ mod symmetry {
     /// One arm's inertia (unit mass), and the flywheel's: the arm's turned by each rotation and
     /// added. Each sample's inertia is `Motions::point_inertia`: the commutator gives its velocity
     /// under the open rigid-motion slot, and the sample joined with its velocity is its momentum.
-    pub fn flywheel_inertia(
-        arm: &[P3],
-        rotations: &[Unit<pga3d::Motor<(), f64>>],
-    ) -> (Inertia, Inertia) {
+    pub fn flywheel_inertia(arm: &[P3], rotations: &[Unit<pga3d::Motor>]) -> (Inertia, Inertia) {
         let arm_inertia = arm
             .iter()
             .map(|p| Pga3d::point_inertia(*p))
@@ -182,7 +164,7 @@ mod symmetry {
     /// averaged and added: the conductivity and the elasticity. A unit bond `n` measures a
     /// gradient by `n | g`; an imposed strain `s d (d | v)` stretches it by `s (n | d)²`, so the
     /// spring energy has four factors `n | d`: a form with four vector slots.
-    pub fn lattice_responses(seeds: &[V; 2], cube: &[R]) -> (Response, Elasticity) {
+    pub fn lattice_responses(seeds: &[Vector; 2], cube: &[R]) -> (Response, Elasticity) {
         let mut conductivity: Response = Vector::zero();
         let mut elasticity: Elasticity = Scalar::zero();
         let k = 1.0 / cube.len() as f64;
@@ -322,16 +304,16 @@ const SCENE: f32 = 7.0;
 /// A camera orbiting the origin at `azimuth` and `elevation`, parallel, showing `half` units
 /// above and below the centre of the panel `rect`.
 fn orbit(rect: Rect, azimuth: f32, elevation: f32, half: f32) -> Camera {
-    let origin = P3::xyz(0.0, 0.0, 0.0);
+    let origin = P3::origin();
     Camera::orbit(rect, origin, 20.0, azimuth, elevation, Lens::Parallel(half))
 }
 
 /// A surface `radius(d) d` (or the image `f(d)` of the unit sphere) in a scene: longitude by
 /// latitude.
-fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Light, opacity: f32) {
+fn sphere_surface(sc: &mut Scene3, f: impl Fn(Vector) -> Vector, colour: Light, opacity: f32) {
     sc.surface(
         |u, v| {
-            let d = direction(
+            let d = on_sphere(
                 core::f64::consts::TAU * f64::from(u),
                 core::f64::consts::PI * (f64::from(v) - 0.5),
             );
@@ -354,7 +336,7 @@ fn bottom_middle(r: Rect) -> Point2 {
 }
 
 /// The angle between two vectors in degrees.
-fn degrees(a: V, b: V) -> f64 {
+fn degrees(a: Vector, b: Vector) -> f64 {
     a.angle_between(b).to_degrees()
 }
 
@@ -373,35 +355,35 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
     ];
     // The driving field sweeps a cone about the vertical.
     let phase = f64::from(s) * core::f64::consts::TAU;
-    let driving = direction(phase, 0.45);
+    let driving = on_sphere(phase, 0.45);
     for (i, (k, (title, sub))) in sc_data.conduction.iter().zip(labels).enumerate() {
         let rect = band.column(i, 4);
-        let origin = P3::xyz(0.0, 0.0, 0.0);
+        let origin = P3::origin();
         let flux = k.of(driving);
         panel3(c, rect, orbit(rect, -2.1 + 0.6 * s, 0.42, 7.4), |sc| {
             sc.axes(origin, 1.2);
-            sphere_surface(sc, |d| k.of(d), palette::sky(), 0.3);
-            sc.arrow(origin, driving.gp(4.0), 2.0, 9.0, palette::ink());
-            sc.arrow(origin, flux, 3.0, 11.0, palette::orange());
+            sphere_surface(sc, |d| k.of(d), palette::SKY, 0.3);
+            sc.arrow(origin, driving.gp(4.0), 2.0, 9.0, palette::INK);
+            sc.arrow(origin, flux, 3.0, 11.0, palette::ORANGE);
         });
         let (head, foot) = (top_middle(rect), bottom_middle(rect));
         c.text(
             title,
             head + down.gp(14.0),
             13.0,
-            palette::ink(),
+            palette::INK,
             Align::Center,
         );
         c.text(
             sub,
             head + down.gp(30.0),
             10.0,
-            palette::grid(),
+            palette::GRID,
             Align::Center,
         );
         let deflection = format!("DEFLECTION {:.1} DEG", degrees(flux, driving));
         let at = foot + down.gp(22.0);
-        c.text(&deflection, at, 11.0, palette::orange(), Align::Center);
+        c.text(&deflection, at, 11.0, palette::ORANGE, Align::Center);
     }
     caption(
         c,
@@ -419,34 +401,34 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     let left = screen
         .column(0, 2)
         .inset(w * 0.04, h * 0.17, w * 0.02, h * 0.06);
-    let hub = pga2d::Point::xy(0.0, 0.0);
+    let hub = pga2d::Point::origin();
     let ax = Axes::equal(left, hub, 2.4);
     let probe_dir = polar(1.0, angle) - hub;
-    ax.axline(c, hub, probe_dir, 1.0, palette::grid());
+    ax.axline(c, hub, probe_dir, 1.0, palette::GRID);
     let east = pga2d::Point::direction(1.0, 0.0);
-    ax.axline(c, hub, east, 0.8, palette::grid().faded(0.5));
+    ax.axline(c, hub, east, 0.8, palette::GRID.faded(0.5));
     for (k, arm) in sd.arms.iter().enumerate() {
         let colour = if k == 0 {
-            palette::orange()
+            palette::ORANGE
         } else {
-            palette::sky()
+            palette::SKY
         };
         let pts: Vec<_> = arm.iter().map(|p| from_above(*p)).collect();
         ax.scatter(c, &pts, Marker::Dot, 4.0, colour.faded(0.9));
     }
-    ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink());
+    ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::INK);
     let reach = probe_dir.gp(2.3);
-    ax.line(c, hub - reach, hub + reach, 2.5, palette::yellow());
+    ax.line(c, hub - reach, hub + reach, 2.5, palette::YELLOW);
     let note = ax.at(0.0, 1.0) + Point2::direction(0.1, -0.3);
     let text = "THREE UNIT-MASS ARMS, 120 DEG APART";
-    ax.text(c, note, text, 11.0, palette::ink(), Align::Left);
+    ax.text(c, note, text, 11.0, palette::INK, Align::Left);
     // The moments about axes in the wheel's plane, as a polar plot traced up to the probe.
     let right = screen
         .column(1, 2)
         .inset(w * 0.04, h * 0.17, w * 0.04, h * 0.06);
     let n = 180;
     // The point at the moment about each axis, out along it.
-    let curve = |inertia: &Inertia| -> Vec<pga2d::Point<(), f64>> {
+    let curve = |inertia: &Inertia| -> Vec<pga2d::Point> {
         (0..=n)
             .map(|k| {
                 let a = core::f64::consts::TAU * k as f64 / n as f64;
@@ -464,10 +446,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         .fold(0.0, f64::max);
     let pax = Axes::equal(right, hub, rmax as f32 * 1.15);
     polar_grid(&pax, c, rmax);
-    for (xy, colour) in [
-        (&arm_curve, palette::orange()),
-        (&wheel_curve, palette::sky()),
-    ] {
+    for (xy, colour) in [(&arm_curve, palette::ORANGE), (&wheel_curve, palette::SKY)] {
         pax.polyline(c, xy, 1.0, colour.faded(0.3));
         let upto = ((s * n as f32) as usize).min(n);
         pax.polyline(c, &xy[..=upto], 2.5, colour);
@@ -475,16 +454,13 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     }
     pax.legend(
         c,
-        &[
-            ("ONE ARM", palette::orange()),
-            ("WHOLE WHEEL", palette::sky()),
-        ],
+        &[("ONE ARM", palette::ORANGE), ("WHOLE WHEEL", palette::SKY)],
     );
     let axial = moment(&sd.inertia, z_axis());
     let transverse = moment(&sd.inertia, probe(angle));
     let note = pax.at(0.0, 0.0) + Point2::direction(0.0, rmax as f32 * 0.05);
     let text = format!("ABOUT Z: {axial:.3} = 2 X {transverse:.3}");
-    pax.text(c, note, &text, 11.0, palette::ink(), Align::Left);
+    pax.text(c, note, &text, 11.0, palette::INK, Align::Left);
     caption(
         c,
         "SYMMETRY: THREE ARMS, AXIALLY SYMMETRIC INERTIA",
@@ -493,23 +469,23 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
 }
 
 /// The point at radius `r` and angle `a` in the plane: `(r, 0)` turned about the origin.
-fn polar(r: f64, a: f64) -> pga2d::Point<(), f64> {
-    let origin = pga2d::Point::xy(0.0, 0.0);
+fn polar(r: f64, a: f64) -> pga2d::Point {
+    let origin = pga2d::Point::origin();
     pga2d::Motor::rotation(origin, a) >> pga2d::Point::xy(r, 0.0)
 }
 
 /// Rings and spokes of a polar plot of radius up to `rmax`.
 fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
     let turn = |j: usize, n: usize| core::f64::consts::TAU * j as f64 / n as f64;
-    let origin = pga2d::Point::xy(0.0, 0.0);
+    let origin = pga2d::Point::<(), f64>::origin();
     for k in 1..=4 {
         let r = rmax * k as f64 / 4.0;
         let ring: Vec<_> = (0..=96).map(|j| polar(r, turn(j, 96))).collect();
-        ax.polyline(c, &ring, 0.8, palette::grid().faded(0.8));
+        ax.polyline(c, &ring, 0.8, palette::GRID.faded(0.8));
     }
     for j in 0..12 {
         let spoke = polar(rmax, turn(j, 12));
-        ax.line(c, origin, spoke, 0.8, palette::grid().faded(0.5));
+        ax.line(c, origin, spoke, 0.8, palette::GRID.faded(0.5));
     }
 }
 
@@ -530,27 +506,27 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
     for (i, (title, sub)) in titles.iter().enumerate() {
         let rect = band.column(i, 3);
         let half = if i == 0 { 1.9 } else { 0.85 };
-        let origin = P3::xyz(0.0, 0.0, 0.0);
+        let origin = P3::origin();
         panel3(c, rect, orbit(rect, azimuth, 0.4, half), |sc| match i {
             0 => {
                 for q in &sites {
-                    sc.dot(*q, Marker::Dot, 6.0, palette::grid());
+                    sc.dot(*q, Marker::Dot, 6.0, palette::GRID);
                 }
-                for (shell, colour) in [(&axial, palette::orange()), (&diagonal, palette::sky())] {
+                for (shell, colour) in [(&axial, palette::ORANGE), (&diagonal, palette::SKY)] {
                     for q in shell {
                         sc.seg(origin, *q, 2.0, colour);
                         sc.dot(*q, Marker::Dot, 8.0, colour);
                     }
                 }
-                sc.dot(origin, Marker::Dot, 11.0, palette::ink());
+                sc.dot(origin, Marker::Dot, 11.0, palette::INK);
             }
             1 => {
                 let k = sd.conductivity;
-                sphere_surface(sc, |d| d.gp((d | k.of(d)).s()), palette::sky(), 0.85);
+                sphere_surface(sc, |d| d.gp((d | k.of(d)).s()), palette::SKY, 0.85);
             }
             _ => {
                 let e4 = sd.elasticity;
-                sphere_surface(sc, |d| d.gp(e4.fill(d).s()), palette::orange(), 0.85);
+                sphere_surface(sc, |d| d.gp(e4.fill(d).s()), palette::ORANGE, 0.85);
             }
         });
         let (head, foot) = (top_middle(rect), bottom_middle(rect));
@@ -558,14 +534,14 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
             title,
             head + down.gp(14.0),
             13.0,
-            palette::ink(),
+            palette::INK,
             Align::Center,
         );
         c.text(
             sub,
             foot + down.gp(18.0),
             10.0,
-            palette::grid(),
+            palette::GRID,
             Align::Center,
         );
     }
@@ -594,6 +570,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::symmetry::*;
+    use gax_numga_examples::on_sphere;
 
     /// Every pair of the 24 rotors differs, even up to sign: their scalar overlap is not plus or
     /// minus one.
@@ -644,7 +621,7 @@ mod tests {
         }
         let quarter = responses[2];
         for g in turns(xy(), 4) {
-            let d = direction(0.3, 0.7);
+            let d = on_sphere(0.3, 0.7);
             let a = g >> quarter.of(d);
             let b = quarter.of(g >> d);
             assert!((a - b).norm() < 1e-12);

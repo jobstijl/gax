@@ -20,19 +20,14 @@ use std::sync::OnceLock;
 mod arm {
     use super::*;
 
-    /// A joint axis, configuration or rate: a line to turn about, a meet of planes.
-    pub type L = Line<(), f64>;
-    /// A force line: the join of a point with a weighted direction.
-    pub type F = Forque<(), f64>;
-    pub type P = Point<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
+    pub type M = Unit<Motor>;
 
     /// The number of targets along the loop, one per frame of numga's animation.
     pub const TARGETS: usize = 72;
 
     /// The tip pose and the frame before each joint's rotation: the product of the joints
     /// before it.
-    pub fn forward_kinematics(joints: &[L; 3]) -> (M, [M; 3]) {
+    pub fn forward_kinematics(joints: &[Line; 3]) -> (M, [M; 3]) {
         let mut pose = Pga3d::identity();
         let mut frames = [pose; 3];
         for (frame, joint) in frames.iter_mut().zip(joints) {
@@ -48,18 +43,18 @@ mod arm {
     /// The tip velocity under joint rates, and the work per unit rate a forque does on each
     /// joint (the joint torques).
     pub fn mechanics(
-        joints: &[L; 3],
-        axis: &[L; 3],
-        rates: &[L; 3],
-        tip_home: P,
-        forque: F,
-    ) -> (P, [f64; 3]) {
+        joints: &[Line; 3],
+        axis: &[Line; 3],
+        rates: &[Line; 3],
+        tip_home: Point,
+        forque: Forque,
+    ) -> (Point, [f64; 3]) {
         let (pose, frames) = forward_kinematics(joints);
         let tip = pose >> tip_home;
         // Each joint's rate carried into its frame, summed: the world twist of the tip link.
         // Its commutator with the tip is the tip's velocity (the tip first: the motor is
         // `exp(-twist / 2)`, so the derivative of its sandwich is `tip × twist`).
-        let twist: L = frames.iter().zip(rates).map(|(f, r)| *f >> *r).sum();
+        let twist: Line = frames.iter().zip(rates).map(|(f, r)| *f >> *r).sum();
         let velocity = tip.commutator(twist);
         // Each carried axis paired with the forque: the work per unit joint rate.
         let torques = core::array::from_fn(|k| ((frames[k] >> axis[k]) & forque).s());
@@ -69,20 +64,21 @@ mod arm {
     /// Least-squares steps towards `target`: the joints, the frame after each joint (the link
     /// motors) and the tip.
     pub fn inverse_kinematics(
-        mut joints: [L; 3],
-        axis: &[L; 3],
-        tip_home: P,
-        target: P,
+        mut joints: [Line; 3],
+        axis: &[Line; 3],
+        tip_home: Point,
+        target: Point,
         iterations: usize,
-    ) -> ([L; 3], [M; 3], P) {
+    ) -> ([Line; 3], [M; 3], Point) {
         for _ in 0..iterations {
             let (pose, frames) = forward_kinematics(&joints);
             let tip = pose >> tip_home;
             // The tip velocity per unit rate of each joint: the Jacobian's columns, as points
             // at infinity. The three joint rates are the components of a `vga3d::Vector`, so
             // the Jacobian is the map from it whose images of the basis are the columns.
-            let columns: [P; 3] = core::array::from_fn(|k| tip.commutator(frames[k] >> axis[k]));
-            let jacobian = Point::<(gax::vga3d::Vector,), f64>::from_images(columns);
+            let columns: [Point; 3] =
+                core::array::from_fn(|k| tip.commutator(frames[k] >> axis[k]));
+            let jacobian = Point::<(gax::vga3d::Vector,)>::from_images(columns);
             // The joint increments whose tip velocities best sum to the remaining error, applied
             // along the home-pose axes.
             let w = jacobian.lstsq(target - tip);
@@ -96,7 +92,7 @@ mod arm {
 
     /// The joint axes in the home pose (a yaw about `z` at the base, then two pitch joints about
     /// `y`), the tip in the home pose, and a rest configuration (axes times angles).
-    pub fn arm() -> ([L; 3], P, [L; 3]) {
+    pub fn arm() -> ([Line; 3], Point, [Line; 3]) {
         // Each axis is a line to turn about: the meet of two planes, ordered for a right-handed
         // turn under `exp(-joint / 2)` (numga's `y ^ x` and `x ^ (z - w)` under `exp(joint / 2)`).
         // The pitch axes meet the planes `z = 1` and `z = 2`, through the elbow and the wrist.
@@ -114,7 +110,7 @@ mod arm {
     /// Target `k` along a loop in front of the arm: a circle of radius 0.5 about the vertical
     /// through `(1, 1)`, traced clockwise from above by turns about that axis, lifted onto the
     /// saddle `z = 1.2 + 2.4 (x - 1) (y - 1)` (so its height swings twice per loop, by 0.3).
-    pub fn loop_target(k: usize) -> P {
+    pub fn loop_target(k: usize) -> Point {
         let centre = Point::xyz(1.0, 1.0, 0.0);
         let turn = Motor::rotation(
             centre & Point::direction(0.0, 0.0, 1.0),
@@ -130,7 +126,7 @@ mod arm {
 
     /// The corners of slender boxes along `z`, one per unit link, in the home pose; corner
     /// `4 i + 2 j + k` is at `(±width, ±depth, k)` (minus first).
-    pub fn link_boxes(width: f64, depth: f64) -> [[P; 8]; 3] {
+    pub fn link_boxes(width: f64, depth: f64) -> [[Point; 8]; 3] {
         core::array::from_fn(|link| {
             core::array::from_fn(|c| {
                 let x = if c & 4 == 0 { -width } else { width };
@@ -143,7 +139,7 @@ mod arm {
 
     /// The tip velocity and the joint torques at rest, the velocity checked against a finite
     /// difference of forward kinematics.
-    pub fn statics() -> (P, [f64; 3]) {
+    pub fn statics() -> (Point, [f64; 3]) {
         let (axis, tip_home, rest) = arm();
         let rates = [axis[0].gp(0.5), axis[1].gp(-1.0), axis[2].gp(0.25)];
         // A force at a point is a forque: the join of the point with the weighted direction.
@@ -152,7 +148,7 @@ mod arm {
 
         // The tip velocity is the derivative of forward kinematics along the joint rates.
         let step = 1e-6;
-        let ahead: [L; 3] = core::array::from_fn(|k| rest[k] + rates[k].gp(step));
+        let ahead: [Line; 3] = core::array::from_fn(|k| rest[k] + rates[k].gp(step));
         let ahead = forward_kinematics(&ahead).0 >> tip_home;
         let here = forward_kinematics(&rest).0 >> tip_home;
         let predicted = here + velocity.gp(step);
@@ -162,7 +158,7 @@ mod arm {
 
     /// The angle of each joint: the joint projected on its axis, `(joint | axis) / (axis | axis)`.
     /// A Euclidean line squares to minus its squared norm, `axis | axis == -axis ~axis`.
-    pub fn angles(joints: &[L; 3], axis: &[L; 3]) -> [f64; 3] {
+    pub fn angles(joints: &[Line; 3], axis: &[Line; 3]) -> [f64; 3] {
         core::array::from_fn(|k| -(joints[k] | axis[k]).s() / axis[k].norm_squared())
     }
 
@@ -171,8 +167,7 @@ mod arm {
         let (axis, tip_home, rest) = arm();
         let target = loop_target(0);
         let (joints, _, tip) = inverse_kinematics(rest, &axis, tip_home, target, 8);
-        // The distance is the norm of the join of the two points.
-        let error = (target & tip).norm();
+        let error = target.distance(tip);
         assert!(error < 1e-8);
         (error, angles(&joints, &axis))
     }
@@ -180,10 +175,10 @@ mod arm {
     /// One tracked state: the joints, the link motors, the target and the tip.
     #[derive(Clone, Copy, Debug)]
     pub struct State {
-        pub joints: [L; 3],
+        pub joints: [Line; 3],
         pub links: [M; 3],
-        pub target: P,
-        pub tip: P,
+        pub target: Point,
+        pub tip: Point,
     }
 
     /// Home onto the loop, then follow it with two steps per target.
@@ -259,43 +254,43 @@ fn draw(c: &mut Canvas, t: f32) {
     for k in 0..=8 {
         let v = f64::from(k) * 0.375;
         let (x, y) = (v - 1.0, v - 1.5);
-        let line = palette::grid().faded(0.6);
+        let line = palette::GRID.faded(0.6);
         sc.seg(floor(x, -1.5), floor(x, 1.5), 1.0, line);
         sc.seg(floor(-1.0, y), floor(2.0, y), 1.0, line);
     }
     // The loop of targets, faint.
-    let lp: Vec<P> = (0..=n).map(|k| loop_target(k % n)).collect();
-    sc.polyline(&lp, 1.0, palette::red().faded(0.35));
+    let lp: Vec<Point> = (0..=n).map(|k| loop_target(k % n)).collect();
+    sc.polyline(&lp, 1.0, palette::RED.faded(0.35));
     // The tip's trail over the last half loop, fading.
     let trail = n / 2;
     for back in 0..trail {
         let k1 = (i + n - back) % n;
         let k0 = (k1 + n - 1) % n;
         let strength = 0.9 * (1.0 - back as f32 / trail as f32);
-        let tone = palette::yellow().faded(strength);
+        let tone = palette::YELLOW.faded(strength);
         sc.seg(states[k0].tip, states[k1].tip, 2.0, tone);
     }
     // The links, as lit translucent boxes with their edges.
     let boxes = link_boxes(0.15, 0.06);
-    let colours = [palette::sky(), palette::blue(), palette::purple()];
+    let colours = [palette::SKY, palette::BLUE, palette::PURPLE];
     for ((corners, m), colour) in boxes.iter().zip(links).zip(colours) {
-        let p: Vec<P> = corners.iter().map(|q| m >> *q).collect();
+        let p: Vec<Point> = corners.iter().map(|q| m >> *q).collect();
         for f in FACES {
             // The faces cover what is behind them: a dimmer light than the glowing strokes.
             let col = sc.lit(p[f[0]], p[f[1]], p[f[2]], colour.faded(0.5));
             sc.quad(p[f[0]], p[f[1]], p[f[2]], p[f[3]], col, 0.8);
             for e in 0..4 {
-                sc.seg(p[f[e]], p[f[(e + 1) % 4]], 1.0, palette::ink().faded(0.35));
+                sc.seg(p[f[e]], p[f[(e + 1) % 4]], 1.0, palette::INK.faded(0.35));
             }
         }
     }
     // The joints: the home joint positions carried by the frame of the link they start.
     for (k, m) in [Pga3d::identity(), links[0], links[1]].iter().enumerate() {
         let joint = *m >> Point::xyz(0.0, 0.0, k as f64);
-        sc.dot(joint, Marker::Dot, 8.0, palette::ink());
+        sc.dot(joint, Marker::Dot, 8.0, palette::INK);
     }
-    sc.dot(links[2] >> tip_home, Marker::Dot, 7.0, palette::yellow());
-    sc.dot(target, Marker::Star, 14.0, palette::red());
+    sc.dot(links[2] >> tip_home, Marker::Dot, 7.0, palette::YELLOW);
+    sc.dot(target, Marker::Star, 14.0, palette::RED);
     sc.draw(c);
 
     caption(
@@ -345,14 +340,10 @@ fn draw(c: &mut Canvas, t: f32) {
             velocity.e021()
         ),
         format!("HOMING ERROR   {error:.1E}"),
-        format!("TRACKING ERROR {:.1E}", (a.target & a.tip).norm()),
+        format!("TRACKING ERROR {:.1E}", a.target.distance(a.tip)),
     ];
     for (k, l) in lines.iter().enumerate() {
-        let tone = if k == 0 {
-            palette::grid()
-        } else {
-            palette::ink()
-        };
+        let tone = if k == 0 { palette::GRID } else { palette::INK };
         c.text(l, first + down.gp(k as f32), 10.0, tone, Align::Left);
     }
 }

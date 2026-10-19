@@ -16,14 +16,14 @@ pub const GOLDEN: f64 = 1.618_033_988_749_895;
 /// the roots' midpoint and its norm (the radius) half their distance: `(midpoint, half width)`,
 /// or `None` when the circle is imaginary (it squares negative) and there are no roots.
 pub fn roots(a: f64, b: f64, c: f64) -> Option<(f64, f64)> {
-    let circle = gax::cga2d::Vector::<(), f64>::new(-b / a, 0.0, 1.0, c / (2.0 * a));
+    let circle = gax::cga2d::Vector::new(-b / a, 0.0, 1.0, c / (2.0 * a));
     (circle.norm_squared() >= 0.0).then(|| (circle.down()[0], circle.norm()))
 }
 
 /// The point of the unit sphere above `(x, y)` (the front hemisphere, `z ≥ 0`, seen along
 /// `-z`), or `None` outside the unit disc: its height is half the distance between the roots of
 /// `z² - (1 - x² - y²)`, the sphere's meet with the vertical line, by [`roots`].
-pub fn lift(x: f64, y: f64) -> Option<Vector<(), f64>> {
+pub fn lift(x: f64, y: f64) -> Option<Vector> {
     let r2 = gax::vga2d::Vector::new(x, y).norm_squared();
     let (_, z) = roots(1.0, 0.0, r2 - 1.0)?;
     Some(Vector::new(x, y, z))
@@ -32,15 +32,17 @@ pub fn lift(x: f64, y: f64) -> Option<Vector<(), f64>> {
 /// The Gauss linking number of two closed polygons: the double sum, over pairs of segments, of
 /// the volume their directions span with the separation of their midpoints, over the cube of
 /// that separation, divided by `4π`.
-pub fn linking(first: &[Vector<(), f64>], second: &[Vector<(), f64>]) -> f64 {
-    let mut sum = 0.0;
-    for a in first.windows(2) {
-        for b in second.windows(2) {
+pub fn linking(first: &[Vector], second: &[Vector]) -> f64 {
+    let pairs = first
+        .windows(2)
+        .flat_map(|a| second.windows(2).map(move |b| (a, b)));
+    let sum: f64 = pairs
+        .map(|(a, b)| {
             let separation = (a[1] + a[0] - b[1] - b[0]).gp(0.5);
             let volume = (separation ^ (a[1] - a[0]) ^ (b[1] - b[0])).dual().s();
-            sum += volume / separation.norm().powi(3);
-        }
-    }
+            volume / separation.norm().powi(3)
+        })
+        .sum();
     sum / (4.0 * core::f64::consts::PI)
 }
 

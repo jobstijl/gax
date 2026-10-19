@@ -5,16 +5,16 @@
 use core::ops::{Add, Mul};
 use gax::sta::{Bivector, Even, Scalar, Trivector, Vector};
 
-pub type V = Vector<(), f64>;
-pub type B = Bivector<(), f64>;
+pub type V = Vector;
+pub type B = Bivector;
 /// A linear map on vectors, numga's `Vector <- Vector`: a metric, a frame, a derivative.
-pub type Map = Vector<(Vector,), f64>;
+pub type Map = Vector<(Vector,)>;
 /// The camera's two screen axes, a map from the screen to spacetime (numga's
 /// `Vector <- Screen`). gax's STA has no kind for the screen plane `x y`, so the map takes
 /// vectors and reads only their `x` and `y` parts: its `t` and `z` columns stay zero.
 pub type ScreenFrame = Map;
 /// A unit rotor of spacetime: the camera's orientation.
-pub type Rotor = gax::Unit<Even<(), f64>>;
+pub type Rotor = gax::Unit<Even>;
 
 /// The event with time `t` and position `x, y, z`.
 pub fn event(t: f64, x: f64, y: f64, z: f64) -> V {
@@ -41,7 +41,7 @@ pub fn xy() -> B {
 
 /// The spatial pseudoscalar `x ∧ y ∧ z`: a spatial bivector's product with it is the vector
 /// along its axis, and back.
-pub fn xyz() -> Trivector<(), f64> {
+pub fn xyz() -> Trivector {
     x() ^ y() ^ z()
 }
 
@@ -63,7 +63,7 @@ pub fn screen_identity() -> Map {
 }
 
 /// The metric's pairing of two vectors, both left open.
-fn minkowski() -> Scalar<(Vector, Vector), f64> {
+fn minkowski() -> Scalar<(Vector, Vector)> {
     Vector::slot() | Vector::slot()
 }
 
@@ -727,12 +727,12 @@ pub mod tests {
         let metric_partials = partials.map(|d| (Vector::slot() | d) * -2.0);
         let open_component = |e: V| reciprocal(e) | Vector::slot();
         let metric_along_v = (Vector::slot() | along(velocity)) * -2.0;
-        let by_y: Scalar<(Vector, Vector), f64> = basis()
+        let by_y: Scalar<(Vector, Vector)> = basis()
             .iter()
             .zip(&metric_partials)
             .map(|(e, m)| open_component(*e) * m.of(velocity))
             .sum();
-        let by_z: Scalar<(Vector, Vector), f64> = basis()
+        let by_z: Scalar<(Vector, Vector)> = basis()
             .iter()
             .zip(&metric_partials)
             .map(|(e, m)| m.of(velocity) * open_component(*e))

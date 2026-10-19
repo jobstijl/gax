@@ -14,9 +14,10 @@
 //! crystals.
 
 use gax::pga2d::Point;
+use gax::sta::Bivector;
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Dir3, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
+    Align, Anim, Axes, Camera, Canvas, Dir3, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, palette, run, signal::wave,
 };
 
@@ -27,21 +28,20 @@ mod shg {
     use gax::sta::{Bivector, Even, Vector};
     use gax_numga_examples::signal::{linspace, phasor};
 
-    pub type B = Bivector<(), f64>;
     /// The crystal's response: two electric fields in, a polarization source out.
-    pub type Response = Bivector<(Bivector, Bivector), f64>;
+    pub type Response = Bivector<(Bivector, Bivector)>;
     /// A linear map on fields.
-    pub type Linear = Bivector<(Bivector,), f64>;
-    pub type Rotor = gax::Unit<Even<(), f64>>;
+    pub type Linear = Bivector<(Bivector,)>;
+    pub type Rotor = gax::Unit<Even>;
 
     /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy` (numga's `tx = t ^ x`
     /// is gax's `-e10`).
-    pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> B {
+    pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> Bivector {
         Bivector::new(-tx, -ty, -tz, yz, zx, xy)
     }
 
     /// The observer's time direction.
-    pub fn t() -> Vector<(), f64> {
+    pub fn t() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
 
@@ -52,14 +52,14 @@ mod shg {
 
     /// Electric planes across a beam along a face diagonal of the crystal: horizontal,
     /// vertical, and along the beam.
-    pub fn horizontal() -> B {
+    pub fn horizontal() -> Bivector {
         let h = core::f64::consts::FRAC_1_SQRT_2;
         field(-h, h, 0.0, 0.0, 0.0, 0.0)
     }
-    pub fn vertical() -> B {
+    pub fn vertical() -> Bivector {
         field(0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
     }
-    pub fn longitudinal() -> B {
+    pub fn longitudinal() -> Bivector {
         let h = core::f64::consts::FRAC_1_SQRT_2;
         field(h, h, 0.0, 0.0, 0.0, 0.0)
     }
@@ -76,7 +76,7 @@ mod shg {
     }
 
     /// Four directed bond planes, `t ^ b` for the unit bonds to a tetrahedron's corners.
-    pub fn bonds() -> [B; 4] {
+    pub fn bonds() -> [Bivector; 4] {
         [
             [1.0, 1.0, 1.0],
             [1.0, -1.0, -1.0],
@@ -84,7 +84,7 @@ mod shg {
             [-1.0, -1.0, 1.0],
         ]
         .map(|[a, b, c]| {
-            let [x, y, z] = gax::vga3d::Vector::<(), f64>::new(a, b, c).normalized().c;
+            let [x, y, z] = gax::vga3d::Vector::new(a, b, c).normalized().c;
             field(x, y, z, 0.0, 0.0, 0.0)
         })
     }
@@ -94,7 +94,7 @@ mod shg {
     pub const STRENGTH: f64 = 1.299_038_105_676_658; // 3 √3 / 4
 
     /// Each bond responds to the product of the two electric fields along it.
-    pub fn response(bonds: &[B]) -> Response {
+    pub fn response(bonds: &[Bivector]) -> Response {
         bonds
             .iter()
             .map(|b| (*b * (*b | open()) * (*b | open())).gp(STRENGTH))
@@ -110,15 +110,20 @@ mod shg {
     }
 
     /// The transverse polarization source at twice the pump frequency, `½ P(χ(E, E))`.
-    pub fn doubled(crystal: Response, pump: B) -> B {
+    pub fn doubled(crystal: Response, pump: Bivector) -> Bivector {
         transverse().of(crystal.of(pump).of(pump)).gp(0.5)
     }
 
     /// The source fields accumulated slice by slice with their temporal phase: after each
     /// slice, the in-phase and quadrature amplitudes.
-    pub fn growth(source: B, orientation: &[f64], mismatch: f64, depths: &[f64]) -> Vec<[B; 2]> {
+    pub fn growth(
+        source: Bivector,
+        orientation: &[f64],
+        mismatch: f64,
+        depths: &[f64],
+    ) -> Vec<[Bivector; 2]> {
         let thickness = depths[1] - depths[0];
-        let mut sum = [B::zero(); 2];
+        let mut sum = [Bivector::zero(); 2];
         depths
             .iter()
             .zip(orientation)
@@ -133,7 +138,7 @@ mod shg {
     }
 
     /// The generated power of the two quadratures.
-    pub fn power(a: [B; 2]) -> f64 {
+    pub fn power(a: [Bivector; 2]) -> f64 {
         a[0].dot(a[0]).s() + a[1].dot(a[1]).s()
     }
 
@@ -146,10 +151,10 @@ mod shg {
 
     /// Two pump periods: the phase, the pump and the doubled-frequency polarization it drives
     /// across the beam, its static half removed.
-    pub fn waveform(samples: usize) -> (Vec<f64>, Vec<B>, Vec<B>) {
+    pub fn waveform(samples: usize) -> (Vec<f64>, Vec<Bivector>, Vec<Bivector>) {
         let crystal = response(&bonds());
         let phase = linspace(0.0, 4.0 * core::f64::consts::PI, samples);
-        let pump: Vec<B> = phase
+        let pump: Vec<Bivector> = phase
             .iter()
             .map(|p| horizontal().gp(phasor(*p).e20()))
             .collect();
@@ -163,7 +168,7 @@ mod shg {
     }
 
     /// Pump polarizations all around the beam, from horizontal.
-    pub fn pumps(samples: usize) -> Vec<B> {
+    pub fn pumps(samples: usize) -> Vec<Bivector> {
         (0..samples)
             .map(|i| {
                 let heading = core::f64::consts::TAU * i as f64 / (samples - 1) as f64;
@@ -174,7 +179,7 @@ mod shg {
 
     /// The crystal turned about the beam by `angle`: its bonds and the doubled-frequency
     /// polarization each pump drives.
-    pub fn turning(angle: f64, pumps: &[B]) -> ([B; 4], Vec<B>) {
+    pub fn turning(angle: f64, pumps: &[Bivector]) -> ([Bivector; 4], Vec<Bivector>) {
         let rotation = about_beam(angle);
         let crystal = turned(response(&bonds()), rotation);
         (
@@ -185,13 +190,13 @@ mod shg {
 
     /// Two fixed pumps, a circle of weak probes, and the doubled-frequency polarization the
     /// linear map each pump leaves makes of the probes.
-    pub fn mixing(samples: usize) -> ([B; 2], Vec<B>, [Vec<B>; 2]) {
+    pub fn mixing(samples: usize) -> ([Bivector; 2], Vec<Bivector>, [Vec<Bivector>; 2]) {
         let crystal = response(&bonds());
         let pumps = [
             horizontal(),
             (horizontal() + vertical()).gp(core::f64::consts::FRAC_1_SQRT_2),
         ];
-        let probes: Vec<B> = self::pumps(samples).iter().map(|p| p.gp(0.2)).collect();
+        let probes: Vec<Bivector> = self::pumps(samples).iter().map(|p| p.gp(0.2)).collect();
         // Binding a pump into one input leaves a linear map on the other.
         let generated = pumps.map(|pump| {
             let probe_map: Linear = transverse().of(crystal.of(pump));
@@ -202,7 +207,7 @@ mod shg {
 
     /// The light grown along a matched crystal, a mismatched one, and a mismatched one flipped
     /// every time the slip reaches half a turn: the slice depths and the amplitudes.
-    pub fn phase_matching(slices: usize) -> (Vec<f64>, [Vec<[B; 2]>; 3]) {
+    pub fn phase_matching(slices: usize) -> (Vec<f64>, [Vec<[Bivector; 2]>; 3]) {
         let depths: Vec<f64> = (0..slices)
             .map(|i| (i as f64 + 0.5) / slices as f64)
             .collect();
@@ -231,12 +236,12 @@ mod shg {
 
     /// Where a field reaches on the observer's screen across the beam: its horizontal and
     /// vertical components, drawn from the screen's centre.
-    pub fn screen(f: B) -> gax::pga2d::Point<(), f64> {
+    pub fn screen(f: Bivector) -> gax::pga2d::Point {
         gax::pga2d::Point::xy((f | horizontal()).s(), (f | vertical()).s())
     }
 
     /// An electric plane's direction in space, `t · b`, as a vector of space.
-    pub fn direction(b: B) -> gax::vga3d::Vector<(), f64> {
+    pub fn direction(b: Bivector) -> gax::vga3d::Vector {
         let v = t() | b;
         gax::vga3d::Vector::new(v.e1(), v.e2(), v.e3())
     }
@@ -245,11 +250,11 @@ mod shg {
 use shg::*;
 
 /// A spot on the screen across the beam.
-type Spot = gax::pga2d::Point<(), f64>;
+type Spot = gax::pga2d::Point;
 
 /// The screen's centre, where the beam passes.
 fn centre() -> Spot {
-    Spot::xy(0.0, 0.0)
+    Spot::origin()
 }
 
 const SECONDS: f32 = 9.0;
@@ -258,10 +263,10 @@ const HEADINGS: usize = 241;
 
 /// Precomputed scenes that do not change while the crystal turns.
 struct Still {
-    pumps: Vec<B>,
-    waveform: (Vec<f64>, Vec<B>, Vec<B>),
-    mixing: ([B; 2], Vec<B>, [Vec<B>; 2]),
-    growth: (Vec<f64>, [Vec<[B; 2]>; 3]),
+    pumps: Vec<Bivector>,
+    waveform: (Vec<f64>, Vec<Bivector>, Vec<Bivector>),
+    mixing: ([Bivector; 2], Vec<Bivector>, [Vec<Bivector>; 2]),
+    growth: (Vec<f64>, [Vec<[Bivector; 2]>; 3]),
 }
 
 fn still() -> &'static Still {
@@ -279,7 +284,7 @@ fn title(c: &mut Canvas, rect: Rect, s: &str) {
     let k = text_scale(rect);
     let top_middle = rect.top_middle();
     let at = top_middle + Point2::direction(0.0, 12.0 * k);
-    c.text(s, at, 11.0 * k, palette::ink(), Align::Center);
+    c.text(s, at, 11.0 * k, palette::INK, Align::Center);
 }
 
 /// How much smaller a panel's own text is drawn than in a panel 250 pixels tall (numga's
@@ -289,65 +294,65 @@ fn text_scale(rect: Rect) -> f32 {
 }
 
 /// The crystal's bonds in space, the beam along the face diagonal and the screen's axes.
-fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
+fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[Bivector; 4], spin: f32) {
     let view = rect.inset(0.0, 16.0, 0.0, 0.0);
     let cam = Camera::parallel(view, rect.height() * 0.32, -0.98 + spin, 0.40);
     let mut sc = Scene3::new(cam);
     // The point an electric plane's direction reaches from the crystal's centre.
-    let tip = |b: B| ORIGIN3 + direction(b).dir3();
+    let tip = |b: Bivector| ORIGIN3 + direction(b).dir3();
     let beam = direction(longitudinal()).dir3();
     sc.seg(
         ORIGIN3 - beam.gp(1.4),
         ORIGIN3 + beam.gp(1.4),
         1.0,
-        palette::grid(),
+        palette::GRID,
     );
-    sc.arrow(ORIGIN3 + beam, beam.gp(0.5), 1.5, 8.0, palette::yellow());
+    sc.arrow(ORIGIN3 + beam, beam.gp(0.5), 1.5, 8.0, palette::YELLOW);
     for axis in [horizontal(), vertical()] {
-        sc.arrow(ORIGIN3, direction(axis), 1.0, 6.0, palette::grid());
+        sc.arrow(ORIGIN3, direction(axis), 1.0, 6.0, palette::GRID);
     }
     let tips = bonds.map(tip);
     for (i, a) in tips.iter().enumerate() {
-        sc.seg(ORIGIN3, *a, 2.5, palette::ink().faded(0.8));
+        sc.seg(ORIGIN3, *a, 2.5, palette::INK.faded(0.8));
         for b in &tips[i + 1..] {
-            sc.seg(*a, *b, 1.0, palette::sky().faded(0.35));
+            sc.seg(*a, *b, 1.0, palette::SKY.faded(0.35));
         }
-        sc.dot(*a, Marker::Dot, 9.0, palette::orange());
+        sc.dot(*a, Marker::Dot, 9.0, palette::ORANGE);
     }
-    sc.dot(ORIGIN3, Marker::Dot, 7.0, palette::grid());
+    sc.dot(ORIGIN3, Marker::Dot, 7.0, palette::GRID);
     sc.draw(c);
     title(c, rect, "CRYSTAL BONDS");
     let k = text_scale(rect);
     let corner = rect.hi - Point2::direction(34.0, 10.0).gp(k);
-    c.text("BEAM", corner, 10.0 * k, palette::yellow(), Align::Center);
+    c.text("BEAM", corner, 10.0 * k, palette::YELLOW, Align::Center);
 }
 
 /// The screen: pump directions all around and the doubled polarization each drives.
-fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
+fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[Bivector], harmonic: &[Bivector]) {
     let inset = rect.inset(34.0, 30.0, 10.0, 30.0);
     let ax = Axes::equal(inset, centre(), 1.15);
     ax.frame(c, "TRANSVERSE POLARIZATION", "HORIZONTAL", "");
-    let faint = palette::grid().faded(0.6);
+    let faint = palette::GRID.faded(0.6);
     ax.line(c, Spot::xy(-1.15, 0.0), Spot::xy(1.15, 0.0), 1.0, faint);
     ax.line(c, Spot::xy(0.0, -1.15), Spot::xy(0.0, 1.15), 1.0, faint);
     let circle: Vec<Spot> = pumps.iter().map(|p| screen(*p)).collect();
-    ax.polyline(c, &circle, 1.0, palette::sky().faded(0.35));
+    ax.polyline(c, &circle, 1.0, palette::SKY.faded(0.35));
     let curve: Vec<Spot> = harmonic.iter().map(|p| screen(*p)).collect();
-    ax.polyline(c, &curve, 2.0, palette::orange().faded(0.8));
-    ax.arrow(c, centre(), circle[0], 2.0, 8.0, palette::sky());
-    ax.arrow(c, centre(), curve[0], 2.0, 8.0, palette::orange());
+    ax.polyline(c, &curve, 2.0, palette::ORANGE.faded(0.8));
+    ax.arrow(c, centre(), circle[0], 2.0, 8.0, palette::SKY);
+    ax.arrow(c, centre(), curve[0], 2.0, 8.0, palette::ORANGE);
 }
 
 /// A polar plot of the power over the pump's direction. (numga uses matplotlib's polar
 /// axes; this draws the rings, the spokes and the curve itself.) The pumps go once around the
 /// beam at unit strength, so scaled they draw the rings, and every eighth of the way a spoke.
-fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
+fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[Bivector], harmonic: &[Bivector]) {
     let intensity: Vec<f64> = harmonic.iter().map(|h| h.dot(*h).s()).collect();
     let top = intensity.iter().cloned().fold(0.0, f64::max).max(1e-9) * 1.12;
     let inset = rect.inset(10.0, 30.0, 10.0, 30.0);
     let ax = Axes::equal(inset, centre(), 1.0);
     title(c, rect, "POWER BY PUMP DIRECTION");
-    let faint = palette::grid().faded(0.8);
+    let faint = palette::GRID.faded(0.8);
     for k in 1..=4 {
         let ring: Vec<Spot> = pumps.iter().map(|p| screen(p.gp(k as f64 / 4.0))).collect();
         ax.polyline(c, &ring, 1.0, faint);
@@ -360,7 +365,7 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
             below >> screen(p.gp(1.1)),
             &format!("{}", 45 * k),
             9.0 * text_scale(rect),
-            palette::grid(),
+            palette::GRID,
             Align::Center,
         );
     }
@@ -372,14 +377,14 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     // The shared fill tests every edge at 16 samples per pixel, so the shading takes every
     // fourth point of the curve.
     let coarse: Vec<Spot> = pts.iter().step_by(4).copied().collect();
-    ax.fill(c, &coarse, palette::orange(), 0.12);
-    ax.polyline(c, &pts, 2.0, palette::orange());
-    ax.scatter(c, &pts[..1], Marker::Dot, 9.0, palette::sky());
+    ax.fill(c, &coarse, palette::ORANGE, 0.12);
+    ax.polyline(c, &pts, 2.0, palette::ORANGE);
+    ax.scatter(c, &pts[..1], Marker::Dot, 9.0, palette::SKY);
     c.text(
         &format!("MAX {:.2}", top / 1.12),
         rect.bottom_left() + Point2::direction(12.0, -10.0).gp(text_scale(rect)),
         10.0 * text_scale(rect),
-        palette::grid(),
+        palette::GRID,
         Align::Left,
     );
 }
@@ -390,7 +395,7 @@ fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     let ax = Axes::new(inset, [0.0, 2.0], [-1.2, 1.2]);
     ax.frame(c, "WAVEFORM", "PUMP PERIODS", "");
     let periods = |p: f64| p / core::f64::consts::TAU;
-    let series = |v: &[B], pick: B| -> Vec<Point<(), f64>> {
+    let series = |v: &[Bivector], pick: Bivector| -> Vec<Point> {
         phase
             .iter()
             .zip(v)
@@ -399,16 +404,16 @@ fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     };
     let a = series(pump, horizontal());
     let b = series(harmonic, vertical());
-    let zero = (Point::xy(0.0, 0.0), Point::xy(2.0, 0.0));
-    ax.line(c, zero.0, zero.1, 1.0, palette::grid().faded(0.6));
-    ax.polyline(c, &a, 2.0, palette::sky());
-    ax.polyline(c, &b, 2.0, palette::orange());
+    let zero = (ORIGIN2, Point2::xy(2.0, 0.0));
+    ax.line(c, zero.0, zero.1, 1.0, palette::GRID.faded(0.6));
+    ax.polyline(c, &a, 2.0, palette::SKY);
+    ax.polyline(c, &b, 2.0, palette::ORANGE);
     let k = ((at * (a.len() - 1) as f32) as usize).min(a.len() - 1);
     let now = periods(phase[k]);
-    let cursor = palette::ink().faded(0.5);
+    let cursor = palette::INK.faded(0.5);
     ax.line(c, Point::xy(now, -1.2), Point::xy(now, 1.2), 1.0, cursor);
-    ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::sky());
-    ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::orange());
+    ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::SKY);
+    ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::ORANGE);
 }
 
 fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
@@ -422,24 +427,25 @@ fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
         screen(pumps[1].gp(0.45)),
         3.0,
         8.0,
-        palette::grid(),
+        palette::GRID,
     );
-    let on_screen = |fields: &[B]| -> Vec<Spot> { fields.iter().map(|p| screen(*p)).collect() };
+    let on_screen =
+        |fields: &[Bivector]| -> Vec<Spot> { fields.iter().map(|p| screen(*p)).collect() };
     let circle = on_screen(probes);
     let image = on_screen(&generated[1]);
-    ax.dashed(c, &circle, 1.5, 6.0, palette::sky());
+    ax.dashed(c, &circle, 1.5, 6.0, palette::SKY);
     let unmixed = on_screen(&generated[0]);
-    ax.polyline(c, &unmixed, 1.0, palette::orange().faded(0.3));
-    ax.polyline(c, &image, 2.0, palette::orange());
+    ax.polyline(c, &unmixed, 1.0, palette::ORANGE.faded(0.3));
+    ax.polyline(c, &image, 2.0, palette::ORANGE);
     let k = ((at * (circle.len() - 1) as f32) as usize).min(circle.len() - 1);
-    ax.arrow(c, centre(), circle[k], 1.5, 6.0, palette::sky());
-    ax.arrow(c, centre(), image[k], 1.5, 6.0, palette::orange());
+    ax.arrow(c, centre(), circle[k], 1.5, 6.0, palette::SKY);
+    ax.arrow(c, centre(), image[k], 1.5, 6.0, palette::ORANGE);
 }
 
 const CASES: [&str; 3] = ["MATCHED", "MISMATCHED", "FLIPPED"];
 
 fn case_colour(k: usize) -> Light {
-    [palette::sky(), palette::orange(), palette::purple()][k]
+    [palette::SKY, palette::ORANGE, palette::PURPLE][k]
 }
 
 fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
@@ -452,7 +458,7 @@ fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
     );
     ax.frame(c, "ACCUMULATED FIELD", "IN PHASE", "");
     for (k, path) in amplitude.iter().enumerate() {
-        let pts: Vec<Point<(), f64>> = path[..n]
+        let pts: Vec<Point> = path[..n]
             .iter()
             .map(|a| Point::xy((a[0] | vertical()).s(), (a[1] | vertical()).s()))
             .collect();
@@ -466,7 +472,7 @@ fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
     );
     ax.frame(c, "GROWTH", "DEPTH", "");
     for (k, path) in amplitude.iter().enumerate() {
-        let pts: Vec<Point<(), f64>> = depths
+        let pts: Vec<Point> = depths
             .iter()
             .zip(path)
             .map(|(d, a)| Point::xy(*d, power(*a)))
@@ -522,16 +528,17 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::shg::*;
+    use gax::sta::Bivector;
 
     use gax::ApproxEq;
     use gax_numga_examples::rng::{Draw, Rng, rng};
 
     /// A field with coefficients uniform in `[-1, 1)`.
-    fn bivector(r: &mut Rng) -> B {
-        B::from_coeffs(core::array::from_fn(|_| r.range(-1.0, 1.0)))
+    fn bivector(r: &mut Rng) -> Bivector {
+        Bivector::from_coeffs(core::array::from_fn(|_| r.range(-1.0, 1.0)))
     }
 
-    fn near(a: B, b: B, tol: f64) -> bool {
+    fn near(a: Bivector, b: Bivector, tol: f64) -> bool {
         a.max_abs_diff(&b) <= tol
     }
 
@@ -572,8 +579,8 @@ mod tests {
     fn the_response_turns_with_the_crystal_and_reverses_with_its_bonds() {
         let crystal = response(&bonds());
         let mut rng = rng(177);
-        let rotation = B::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.37).exp()
-            * B::new(0.0, 0.0, 0.0, 0.23, 0.0, 0.0).exp();
+        let rotation = Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.37).exp()
+            * Bivector::new(0.0, 0.0, 0.0, 0.23, 0.0, 0.0).exp();
         let turned = turned(crystal, rotation);
         let rebuilt = response(&bonds().map(|b| rotation >> b));
         let reversed = response(&bonds().map(|b| -b));

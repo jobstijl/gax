@@ -30,8 +30,8 @@ use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, backdrop, caption, measure, palette,
-    run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, measure,
+    palette, run,
 };
 
 mod klein {
@@ -41,42 +41,28 @@ mod klein {
     /// A complex number.
     pub type C = Complex<f64>;
 
-    /// A line: every line here is a meet of two planes, as the lines through a point that meet
-    /// two lines are, and so extrinsic, an axis (ADR-051).
-    pub type L = Line<(), f64>;
-    pub type P = Point<(), f64>;
     /// A line with complex coefficients.
     pub type CL = Line<(), C>;
     /// A point with complex coefficients.
     pub type CP = Point<(), C>;
     /// A quadric: a map from points to planes, zero on its points. A point joined with a line
     /// and met with others gives a plane through points, oriented within itself: intrinsic.
-    pub type Quadric = intrinsic::Plane<(Point,), f64>;
+    pub type Quadric = intrinsic::Plane<(Point,)>;
 
     /// The Klein form: zero on one bivector twice exactly when it is a line, zero on two lines
     /// exactly when they meet.
-    pub fn klein() -> Pseudoscalar<(Line, Line), f64> {
+    pub fn klein() -> Pseudoscalar<(Line, Line)> {
         Line::slot() ^ Line::slot()
     }
 
     /// The Klein form on two bivectors, as a number.
-    pub fn pairing(a: L, b: L) -> f64 {
+    pub fn pairing(a: Line, b: Line) -> f64 {
         klein().of(a).of(b).dual().s()
-    }
-
-    /// The origin.
-    pub fn origin() -> P {
-        Point::xyz(0.0, 0.0, 0.0)
-    }
-
-    /// The plane at infinity.
-    pub fn infinity() -> Plane<(), f64> {
-        Plane::new(0.0, 0.0, 0.0, 1.0)
     }
 
     /// The plane at infinity as the join of the three directions, whose meet with a line is
     /// the line's point at infinity.
-    pub fn horizon() -> intrinsic::Plane<(), f64> {
+    pub fn horizon() -> intrinsic::Plane {
         Point::direction(1.0, 0.0, 0.0)
             & Point::direction(0.0, 1.0, 0.0)
             & Point::direction(0.0, 0.0, 1.0)
@@ -93,9 +79,9 @@ mod klein {
     /// The pencil of bivectors that meet all four lines: each line weighted by the Klein form
     /// between it and a bivector is zero exactly on the bivectors that meet all four, which are
     /// the right singular vectors of zero singular value. Returns the pencil's two bivectors.
-    pub fn pencil(lines: &[L; 4]) -> [L; 2] {
+    pub fn pencil(lines: &[Line; 4]) -> [Line; 2] {
         // The Klein form of two axes is a signed volume, intrinsic, and so are the misses.
-        let misses: intrinsic::Line<(Line,), f64> =
+        let misses: intrinsic::Line<(Line,)> =
             lines.iter().map(|l| *l * klein().of(*l).dual()).sum();
         let right = misses.svd().inputs;
         [right[4], right[5]]
@@ -105,7 +91,7 @@ mod klein {
     /// there, `a² + 2 b² + c²`: positive when the transversals are real, negative when they are
     /// complex. The pencil's two bivectors are any orthonormal pair of the null space, and both
     /// the discriminant and this size are the same for every such pair.
-    pub fn discriminant(lines: &[L; 4]) -> f64 {
+    pub fn discriminant(lines: &[Line; 4]) -> f64 {
         let [first, second] = pencil(lines);
         let (a, b, c) = (
             pairing(first, first),
@@ -124,7 +110,7 @@ mod klein {
 
     /// The two lines that meet all four lines, at unit norm: the two zeros of the Klein form
     /// along the pencil.
-    pub fn transversals(lines: &[L; 4]) -> [CL; 2] {
+    pub fn transversals(lines: &[Line; 4]) -> [CL; 2] {
         let [first, second] = pencil(lines);
         let weights = roots(
             pairing(first, first),
@@ -139,42 +125,45 @@ mod klein {
     /// The plane joining a point to the first line meets the third line in a point; the plane
     /// joining that point to the second line holds the first point exactly when a line through
     /// it meets all three.
-    pub fn ruled_quadric(first: L, second: L, third: L) -> Quadric {
+    pub fn ruled_quadric(first: Line, second: Line, third: Line) -> Quadric {
         ((Point::slot() & first) ^ third) & second
     }
 
     /// The two points where a line crosses a quadric, at unit weight.
-    pub fn crossings(surface: Quadric, line: L) -> [CP; 2] {
+    pub fn crossings(surface: Quadric, line: Line) -> [CP; 2] {
         // The line's point nearest the origin and its point at infinity span it.
         let (first, second) = frame(line);
         // The quadric's map need not be symmetric: the cross term is the mean of both orders.
-        let at = |x: P, y: P| (surface.of(x) & y).s();
+        let at = |x: Point, y: Point| (surface.of(x) & y).s();
         let cross = (at(first, second) + at(second, first)) / 2.0;
         let (f, s) = (first.map_coefs(C::real), second.map_coefs(C::real));
         roots(at(first, first), cross, at(second, second)).map(|[u, v]| {
             let p = f.gp(u) + s.gp(v);
             // At unit weight: the weight is the pairing with the plane at infinity.
-            let weight = (infinity().map_coefs(C::real) & p).s();
+            let weight = (Plane::infinity().map_coefs(C::real) & p).s();
             p.gp(weight.recip())
         })
     }
 
     /// The line through a point that meets two lines: the meet of the planes joining the point
     /// to each line.
-    pub fn through(point: P, second: L, third: L) -> L {
+    pub fn through(point: Point, second: Line, third: Line) -> Line {
         (point & second) ^ (point & third)
     }
 
     /// The point of a line nearest the origin, at unit weight, and its unit direction (its
     /// point at infinity).
-    pub fn frame(line: L) -> (P, P) {
+    pub fn frame(line: Line) -> (Point, Point) {
         let unit = line.normalized();
-        (((origin() | unit) ^ unit).unitized(), unit ^ horizon())
+        (
+            ((Point::origin() | unit) ^ unit).unitized(),
+            unit ^ horizon(),
+        )
     }
 
     /// Points spread over a whole line, its point at infinity included: the nearest point
     /// turned towards the unit direction by angles spaced evenly over half a turn.
-    pub fn spread(line: L, count: usize) -> Vec<P> {
+    pub fn spread(line: Line, count: usize) -> Vec<Point> {
         let (nearest, heading) = frame(line);
         (0..count)
             .map(|k| {
@@ -187,14 +176,14 @@ mod klein {
     /// Lines of the hyperboloid `x² + y² = 1 + z²` through the points of its waist at the given
     /// angles, all leaning the same way: the line through (1, 0, 0) leaning along (0, 1, 1), the
     /// meet of the planes `x = 1` and `y = z`, turned about z.
-    pub fn waist_lines(angles: [f64; 3]) -> [L; 3] {
+    pub fn waist_lines(angles: [f64; 3]) -> [Line; 3] {
         let line = Plane::new(1.0, 0.0, 0.0, -1.0) ^ Plane::new(0.0, 1.0, -1.0, 0.0);
         angles.map(|a| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), a) >> line)
     }
 
     /// A steep line crossing the plane `z = 0` at an offset along x, beside the x axis: the
     /// meet of the two planes through it along x and along y.
-    pub fn steep(offset: f64) -> L {
+    pub fn steep(offset: f64) -> Line {
         let base =
             Motor::translation(Point::direction(offset, 0.0, 0.0)) >> Point::xyz(0.0, 0.4, 0.0);
         let along = base & Point::direction(0.3, -0.2, 1.0);
@@ -202,7 +191,7 @@ mod klein {
     }
 
     /// The three lines of the scenes.
-    pub fn three() -> [L; 3] {
+    pub fn three() -> [Line; 3] {
         waist_lines([0.3, 2.3, 4.4])
     }
 
@@ -211,21 +200,21 @@ mod klein {
     /// three of those), the two transversals of all four and the two points where the fourth
     /// line crosses the quadric.
     pub struct Scene {
-        pub lines: [L; 4],
-        pub rulings: [Vec<L>; 2],
+        pub lines: [Line; 4],
+        pub rulings: [Vec<Line>; 2],
         pub across: [CL; 2],
         pub crossing: [CP; 2],
     }
 
-    pub fn scene(three: [L; 3], fourth: L, count: usize) -> Scene {
+    pub fn scene(three: [Line; 3], fourth: Line, count: usize) -> Scene {
         let [first, second, third] = three;
         let lines = [first, second, third, fourth];
         let surface = ruled_quadric(first, second, third);
-        let sweep: Vec<L> = spread(first, count)
+        let sweep: Vec<Line> = spread(first, count)
             .into_iter()
             .map(|p| through(p, second, third))
             .collect();
-        let family: Vec<L> = spread(sweep[0], count)
+        let family: Vec<Line> = spread(sweep[0], count)
             .into_iter()
             .map(|p| through(p, sweep[count / 3], sweep[2 * count / 3]))
             .collect();
@@ -249,12 +238,12 @@ mod klein {
     }
 
     /// A complex line's real part.
-    pub fn real_line(l: CL) -> L {
+    pub fn real_line(l: CL) -> Line {
         l.map_coefs(|v| v.re)
     }
 
     /// A complex point's real part.
-    pub fn real_point(p: CP) -> P {
+    pub fn real_point(p: CP) -> Point {
         p.map_coefs(|v| v.re)
     }
 }
@@ -269,9 +258,9 @@ const RADIUS: f64 = 3.0;
 /// line's point nearest the centre, half the chord each way along it. Along the line the ball
 /// is the quadratic `s² + d² - R²` in the distance `s` from the nearest point, `d` off the
 /// centre: its roots are `±` the half chord.
-fn chord(line: L) -> Option<[P; 2]> {
+fn chord(line: Line) -> Option<[Point; 2]> {
     let (nearest, heading) = frame(line);
-    let off_centre = (origin() & nearest).norm_squared();
+    let off_centre = (Point::origin() & nearest).norm_squared();
     let (_, half_chord) = measure::roots(1.0, 0.0, off_centre - RADIUS * RADIUS)?;
     let half = half_chord / heading.ideal_norm();
     Some([-half, half].map(|s| nearest + heading.gp(s)))
@@ -288,7 +277,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let left = screen.part(0.0, 0.0, 0.62, 1.0);
     let cam = Camera::orbit(
         left,
-        origin(),
+        ORIGIN3,
         15.0,
         (-60.0f32).to_radians() + core::f32::consts::TAU * phase as f32,
         18.0f32.to_radians(),
@@ -296,34 +285,34 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let visible = s.across.iter().all(|l| real(&l.c));
     panel3(c, left, cam, |scene3| {
-        let mut segment = |l: L, width: f32, colour| {
+        let mut segment = |l: Line, width: f32, colour| {
             if let Some([a, b]) = chord(l) {
                 scene3.seg(a, b, width, colour);
             }
         };
         for l in &s.rulings[0] {
-            segment(*l, 0.9, palette::sky().faded(0.55));
+            segment(*l, 0.9, palette::SKY.faded(0.55));
         }
         for l in &s.rulings[1] {
-            segment(*l, 0.9, palette::grid().faded(0.9));
+            segment(*l, 0.9, palette::GRID.faded(0.9));
         }
         for l in &s.lines[..3] {
-            segment(*l, 2.6, palette::blue());
+            segment(*l, 2.6, palette::BLUE);
         }
-        segment(s.lines[3], 2.6, palette::orange());
+        segment(s.lines[3], 2.6, palette::ORANGE);
         if visible {
             for l in &s.across {
-                segment(real_line(*l), 2.8, palette::red());
+                segment(real_line(*l), 2.8, palette::RED);
             }
             for p in &s.crossing {
-                scene3.dot(real_point(*p), Marker::Dot, 10.0, palette::red());
+                scene3.dot(real_point(*p), Marker::Dot, 10.0, palette::RED);
             }
         }
     });
     let (verdict, tone) = if visible {
-        ("TWO REAL TRANSVERSALS", palette::red())
+        ("TWO REAL TRANSVERSALS", palette::RED)
     } else {
-        ("TWO COMPLEX-CONJUGATE TRANSVERSALS", palette::yellow())
+        ("TWO COMPLEX-CONJUGATE TRANSVERSALS", palette::YELLOW)
     };
     let h = screen.height();
     let bottom_middle = left.bottom_middle();
@@ -359,8 +348,8 @@ fn draw(c: &mut Canvas, t: f32) {
         [lo as f32 * 1.15, hi as f32 * 1.15],
     );
     ax.frame(c, "DISCRIMINANT ON THE PENCIL", "PHASE OF THE SWING", "");
-    ax.line(c, graph(0.0, 0.0), graph(1.0, 0.0), 1.0, palette::grid());
-    ax.polyline(c, &curve, 1.6, palette::sky());
+    ax.line(c, graph(0.0, 0.0), graph(1.0, 0.0), 1.0, palette::GRID);
+    ax.polyline(c, &curve, 1.6, palette::SKY);
     let now = graph(phase, discriminant(&s.lines));
     ax.scatter(c, &[now], Marker::Dot, 10.0, tone);
     let notes = [
@@ -373,7 +362,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = ax.rect.bottom_left() + Point2::direction(-30.0, h * 0.13);
     for (k, note) in notes.iter().enumerate() {
         let at = first + down.gp(k as f32 * h * 0.028);
-        c.text(note, at, 10.0, palette::ink(), Align::Left);
+        c.text(note, at, 10.0, palette::INK, Align::Left);
     }
 
     caption(
@@ -390,12 +379,13 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::klein::*;
+    use gax::pga3d::Line;
 
     fn small(c: &[C], tol: f64) -> bool {
         c.iter().all(|v| v.abs() <= tol)
     }
 
-    fn complex_line(l: L) -> CL {
+    fn complex_line(l: Line) -> CL {
         l.map_coefs(C::real)
     }
 

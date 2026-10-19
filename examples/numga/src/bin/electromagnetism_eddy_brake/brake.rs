@@ -17,9 +17,9 @@ use gax::vga3d::{Rotor, Scalar, Vector};
 use gax_numga_examples::mesh::{Bivector3, Mesh, Scalar3, Vector3};
 
 /// A face's sheet conductance, `Vector <- Vector`.
-pub type Conductivity = Vector<(Vector,), f64>;
+pub type Conductivity = Vector<(Vector,)>;
 /// A turn of the disc.
-pub type Turn = Unit<Rotor<(), f64>>;
+pub type Turn = Unit<Rotor>;
 
 /// The plane the discs turn in, numga's `xy`.
 pub const XY: Bivector3 = Bivector3::new(0.0, 0.0, 1.0);
@@ -106,11 +106,11 @@ pub struct Conductor<'a> {
     pub conductivity: &'a Field<Conductivity>,
     areas: Field<Scalar3>,
     /// `[F, E]`: Whitney's reconstruction of a face vector from edge circulations.
-    reconstruction: SparseMap<Vector<(Scalar,), f64>>,
+    reconstruction: SparseMap<Vector<(Scalar,)>>,
     /// `[E, V]`: the difference along each edge.
-    derivative: SparseMap<Scalar<(Scalar,), f64>>,
+    derivative: SparseMap<Scalar<(Scalar,)>>,
     /// `[F, V]`: the face gradient of a potential.
-    gradient: SparseMap<Vector<(Scalar,), f64>>,
+    gradient: SparseMap<Vector<(Scalar,)>>,
     /// `[F, F]`: each face's conductance times its area.
     material: SparseMap<Conductivity>,
     /// The charge balance `Gᵀ A σ G`, its free constant pinned.
@@ -130,7 +130,7 @@ impl<'a> Conductor<'a> {
         // first vertex's potential is pinned to zero, fixing the free constant: no edge voltage
         // or current changes, and it is no contact to the disc.
         let first = balance.couplings().filter(|&(r, c, _)| r == 0 && c == 0);
-        let pin: Scalar<(Scalar,), f64> = first.map(|(_, _, cell)| cell).sum();
+        let pin: Scalar<(Scalar,)> = first.map(|(_, _, cell)| cell).sum();
         let n = mesh.vertices.len();
         let gauge = SparseMap::new(vec![pin], vec![0], vec![0], (n, n));
         let balance = (&balance + &gauge).factor().expect("a pinned balance");

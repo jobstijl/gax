@@ -34,8 +34,7 @@ use gax_numga_examples::{
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod foucault {
     pub use super::space::{AXES, B, Turn, V, turn};
@@ -180,7 +179,7 @@ fn round(at: impl Fn(f64) -> V) -> Vec<Point3> {
 }
 
 /// East and north of a direction on a floor, as a vector of the floor's plane.
-fn on_floor(v: V, site: &Compass) -> vga2d::Vector<(), f64> {
+fn on_floor(v: V, site: &Compass) -> vga2d::Vector {
     vga2d::Vector::new((v | site.east).s(), (v | site.north).s())
 }
 
@@ -211,32 +210,32 @@ fn draw_globe(c: &mut Canvas, rect: Rect, earth_turn: f64) {
             let (u, v) = (f64::from(u), f64::from(v));
             reach3(on_globe(pi * (v - 0.5), tau * u))
         };
-        let blue = |_: f32, _: f32| palette::blue().faded(0.15);
+        let blue = |_: f32, _: f32| palette::BLUE.faded(0.15);
         s.surface(globe, MERIDIANS, PARALLELS, blue, 0.3, None);
         // The cap north of the site.
         let cap = |u: f32, v: f32| {
             let (u, v) = (f64::from(u), f64::from(v));
             reach3(on_globe(paris + (pi / 2.0 - paris) * v, tau * u) * ABOVE)
         };
-        let sky = |_: f32, _: f32| palette::sky().faded(0.35);
+        let sky = |_: f32, _: f32| palette::SKY.faded(0.35);
         s.surface(cap, MERIDIANS, 6, sky, 0.45, None);
         // The meridians turn with the earth; the equator and the latitude circle stay.
         for k in 0..LINES {
             let longitude = tau * k as f64 / LINES as f64;
             let meridian = round(|a| earth >> on_globe(a / 2.0 - pi / 2.0, longitude));
-            s.polyline(&meridian, 0.8, palette::grid().faded(0.8));
+            s.polyline(&meridian, 0.8, palette::GRID.faded(0.8));
         }
         let parallel = |latitude: f64| round(|a| on_globe(latitude, a));
-        s.polyline(&parallel(0.0), 1.0, palette::ink().faded(0.35));
-        s.polyline(&parallel(paris), 1.6, palette::sky());
+        s.polyline(&parallel(0.0), 1.0, palette::INK.faded(0.35));
+        s.polyline(&parallel(paris), 1.6, palette::SKY);
         // The floor, its swing and its north, carried by the earth.
         let centre = earth >> site.vertical;
         let (across, along) = ((earth >> site.east) * FLOOR, (earth >> site.north) * FLOOR);
         let [p, q, r, t] = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
             .map(|(u, v)| reach3(centre + across * u + along * v));
-        let lit = s.lit(p, q, r, palette::yellow().faded(0.2));
+        let lit = s.lit(p, q, r, palette::YELLOW.faded(0.2));
         s.quad(p, q, r, t, lit, 0.9);
-        s.polyline(&[p, q, r, t, p], 1.0, palette::yellow().faded(0.6));
+        s.polyline(&[p, q, r, t, p], 1.0, palette::YELLOW.faded(0.6));
         // The swing just above the floor, so that the floor does not cover it.
         let line = (earth >> swing(paris, earth_turn)) * FLOOR;
         let above = centre * ABOVE.powi(3);
@@ -244,17 +243,17 @@ fn draw_globe(c: &mut Canvas, rect: Rect, earth_turn: f64) {
             reach3(above - line),
             reach3(above + line),
             2.6,
-            palette::orange(),
+            palette::ORANGE,
         );
         s.seg(
             reach3(centre + along),
             reach3(centre + along * 1.4),
             1.2,
-            palette::ink(),
+            palette::INK,
         );
     });
     let north = cam.px(reach3(Z * 1.12)).unwrap_or(rect.top_middle());
-    c.text("N", north, 11.0, palette::ink().faded(0.7), Align::Center);
+    c.text("N", north, 11.0, palette::INK.faded(0.7), Align::Center);
     // The holonomy: north carried once round the latitude circle, turned as the swing is in a
     // day.
     let holonomy = turned(carried(paris, STEPS) >> site.north, &site).to_degrees();
@@ -264,7 +263,7 @@ fn draw_globe(c: &mut Canvas, rect: Rect, earth_turn: f64) {
         holonomy.rem_euclid(360.0)
     );
     let at = rect.bottom_middle() + Point2::direction(0.0, -14.0);
-    c.text(&note, at, 10.0, palette::sky(), Align::Center);
+    c.text(&note, at, 10.0, palette::SKY, Align::Center);
 }
 
 /// The bob's track on one floor from the start of the day to `reached`, coloured by the time of
@@ -272,8 +271,8 @@ fn draw_globe(c: &mut Canvas, rect: Rect, earth_turn: f64) {
 fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth_turn: f64) {
     let site = compass(latitudes()[latitude]);
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.08), 1.3);
-    let ring = points::circle(gax::pga2d::Point::xy(0.0, 0.0), 1.0, CIRCLE);
-    ax.polyline(c, &ring, 1.0, palette::grid());
+    let ring = points::circle(gax::pga2d::Point::origin(), 1.0, CIRCLE);
+    ax.polyline(c, &ring, 1.0, palette::GRID);
     let track: Vec<Point2> = tracks()[latitude][..=reached]
         .iter()
         .map(|v| reach2(on_floor(*v, &site)))
@@ -286,14 +285,14 @@ fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth
         ax.polyline(c, &stroke, 1.0, track_colour(day));
     }
     let now = on_floor(swing(latitudes()[latitude], earth_turn), &site);
-    ax.line(c, reach2(-now), reach2(now), 2.4, palette::orange());
+    ax.line(c, reach2(-now), reach2(now), 2.4, palette::ORANGE);
     let north = |r: f32| ax.px(Point2::xy(0.0, r));
-    c.line(north(1.05), north(1.15), 1.2, palette::ink());
+    c.line(north(1.05), north(1.15), 1.2, palette::INK);
     c.text(
         "N",
         north(1.25),
         10.0,
-        palette::ink().faded(0.7),
+        palette::INK.faded(0.7),
         Align::Center,
     );
     // The turn so far, clockwise from north, from 0 to 360 degrees (`+ 0.0` makes a rounded
@@ -305,7 +304,7 @@ fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth
         TITLES[latitude],
         below(1.18),
         11.0,
-        palette::ink(),
+        palette::INK,
         Align::Center,
     );
     let note = format!("TURNED {degrees:.0} DEG CLOCKWISE");
@@ -313,7 +312,7 @@ fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth
         &note,
         below(1.38),
         9.0,
-        palette::ink().faded(0.6),
+        palette::INK.faded(0.6),
         Align::Center,
     );
 }

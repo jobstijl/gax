@@ -27,15 +27,14 @@
 //! repulsion, approaching the Heisenberg ring's.
 
 use gax_numga_examples::points::circle;
-use gax_numga_examples::signal::linspace;
+use gax_numga_examples::signal::{frame, linspace};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
     run,
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/quantum.rs"]
-mod quantum;
+use gax_numga_examples::shared::quantum;
 
 gax::algebra! {
     algebra ring "Four electrons on a ring of four sites, R(8,0): spin up and down on each site (ea eb, ec ed, ee ef, eg eh).";
@@ -57,10 +56,10 @@ mod hubbard {
 
     /// An orbital (or a sum of them) as a multivector of the whole algebra, and a state of four
     /// electrons.
-    pub type Mv = Multivector<(), f64>;
-    pub type S = State<(), f64>;
+    pub type Mv = Multivector;
+    pub type S = State;
     /// A map on states.
-    pub type Hamiltonian = State<(State,), f64>;
+    pub type Hamiltonian = State<(State,)>;
 
     /// The sites around the ring, and the two spins.
     pub const SITES: usize = 4;
@@ -74,10 +73,10 @@ mod hubbard {
     }
 
     /// The spin-up and the spin-down orbital on a site.
-    fn up(site: usize) -> Up<(), f64> {
+    fn up(site: usize) -> Up {
         Up::from_coeffs(on_site(site))
     }
-    fn down(site: usize) -> Down<(), f64> {
+    fn down(site: usize) -> Down {
         Down::from_coeffs(on_site(site))
     }
 
@@ -103,8 +102,8 @@ mod hubbard {
     /// A one-electron map that keeps the spin: a map on the spin-up orbitals and one on the
     /// spin-down.
     pub struct OneElectron {
-        up: Up<(Up,), f64>,
-        down: Down<(Down,), f64>,
+        up: Up<(Up,)>,
+        down: Down<(Down,)>,
     }
 
     impl OneElectron {
@@ -136,10 +135,10 @@ mod hubbard {
     pub fn single_hop(strength: f64) -> OneElectron {
         let around = SITES - 1;
         OneElectron {
-            up: Up::<(Up,), f64>::from_images(core::array::from_fn(|site| {
+            up: Up::<(Up,)>::from_images(core::array::from_fn(|site| {
                 (up(site + 1) + up(site + around)) * -strength
             })),
-            down: Down::<(Down,), f64>::from_images(core::array::from_fn(|site| {
+            down: Down::<(Down,)>::from_images(core::array::from_fn(|site| {
                 (down(site + 1) + down(site + around)) * -strength
             })),
         }
@@ -147,7 +146,7 @@ mod hubbard {
 
     /// The number of electrons in one orbital: its projector, lifted.
     fn number(site: usize, spin: usize) -> Hamiltonian {
-        let (none_up, none_down) = (Up::<(Up,), f64>::zero(), Down::<(Down,), f64>::zero());
+        let (none_up, none_down) = (Up::<(Up,)>::zero(), Down::<(Down,)>::zero());
         let (u, d) = (up(site), down(site));
         let single = match spin {
             UP => OneElectron {
@@ -291,15 +290,13 @@ fn place(site: usize) -> Point2 {
 /// One ring at a moment: each site's spin-up count as an arrow up, its spin-down count as an
 /// arrow down.
 fn draw_ring(c: &mut Canvas, ax: &Axes, counts: &Occupation) {
-    ax.polyline(c, &circle(ORIGIN2, 1.0, 96), 1.0, palette::grid());
+    ax.polyline(c, &circle(ORIGIN2, 1.0, 96), 1.0, palette::GRID);
     let up = Point2::direction(0.0, 1.0);
     for (site, [n_up, n_down]) in counts.iter().enumerate() {
         let at = place(site);
-        ax.scatter(c, &[at], Marker::Dot, 6.0, palette::ink());
-        let spins: [(f64, f32, Light); 2] = [
-            (*n_up, 1.0, palette::red()),
-            (*n_down, -1.0, palette::sky()),
-        ];
+        ax.scatter(c, &[at], Marker::Dot, 6.0, palette::INK);
+        let spins: [(f64, f32, Light); 2] =
+            [(*n_up, 1.0, palette::RED), (*n_down, -1.0, palette::SKY)];
         for (count, sense, colour) in spins {
             let length = 0.5 * count as f32;
             if length > 0.02 {
@@ -321,7 +318,7 @@ fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data) {
     let end = d.sweep.last().copied().unwrap_or_default() as f32;
     for level in HEISENBERG {
         let across = [Point2::xy(0.0, level as f32), Point2::xy(end, level as f32)];
-        ax.dashed(c, &across, 1.0, 5.0, palette::ink().faded(0.5));
+        ax.dashed(c, &across, 1.0, 5.0, palette::INK.faded(0.5));
     }
     for k in 0..SPIN_STATES {
         let curve: Vec<Point2> = d
@@ -330,7 +327,7 @@ fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data) {
             .zip(&d.levels)
             .map(|(u, l)| Point2::xy(*u as f32, l[k] as f32))
             .collect();
-        ax.polyline(c, &curve, 1.2, palette::purple());
+        ax.polyline(c, &curve, 1.2, palette::PURPLE);
     }
 }
 
@@ -339,7 +336,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let d = data();
     let screen = c.rect();
     let progress = (t / SECONDS).fract();
-    let now = ((progress * FRAMES as f32) as usize).min(FRAMES - 1);
+    let now = frame(progress, FRAMES);
     let band = Rect::new(screen.width() * 0.08, 70.0, screen.width() * 0.92, 320.0);
     for (k, (repulsion, walk)) in REPULSIONS.iter().zip(&d.walks).enumerate() {
         let cell = band.column(k, REPULSIONS.len());
@@ -347,12 +344,12 @@ fn draw(c: &mut Canvas, t: f32) {
         draw_ring(c, &ax, &walk[now]);
         let label = cell.bottom_middle() + Point2::direction(0.0, 4.0);
         let text = format!("U/T = {repulsion}");
-        c.text(&text, label, 12.0, palette::ink(), Align::Center);
+        c.text(&text, label, 12.0, palette::INK, Align::Center);
     }
     let note = band.top_middle() + Point2::direction(0.0, 18.0);
     let phase = 2.0 * progress;
     let text = format!("EXCHANGE PHASE {phase:.2} PI: SPIN UP RED, SPIN DOWN BLUE");
-    c.text(&text, note, 10.0, palette::ink(), Align::Center);
+    c.text(&text, note, 10.0, palette::INK, Align::Center);
     let (from, to, _) = SWEEP;
     let levels = Axes::new(
         screen.part(0.08, 0.68, 0.96, 0.92),

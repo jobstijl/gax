@@ -35,24 +35,20 @@
 use gax_numga_examples::points::box_map;
 use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, contour, palette,
-    reach2, run, vector2,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, contour,
+    label_above, palette, reach2, run, vector2,
 };
 
-#[path = "../shared/mechanics_vga2d.rs"]
-mod plane;
+use gax_numga_examples::shared::mechanics_vga2d as plane;
 
 mod wing {
-    use super::plane::turn;
     pub use super::plane::{AXES, Even, Map as VelocityGradient, V, derivative};
     use core::f64::consts::TAU;
     use gax::Complex;
     use gax::vga2d::{Pseudoscalar, Rotor, Scalar, Vector};
 
-    /// A bivector: a stream function's value, or a circulation.
-    pub type B = Pseudoscalar<(), f64>;
     /// A form on steps: how the velocity potential changes.
-    pub type PotentialGradient = Scalar<(Vector,), f64>;
+    pub type PotentialGradient = Scalar<(Vector,)>;
 
     /// A wing: the cylinder's centre before the map, its scale (the cylinder passes through
     /// `scale chord`, the trailing edge), and the unit chord from the leading to the trailing
@@ -78,7 +74,7 @@ mod wing {
         /// The wing turned nose up by the angle of attack: clockwise, the leading edge (towards
         /// -x) rising.
         pub fn pitched(&self, attack: f64) -> Wing {
-            let nose_up = turn(-attack);
+            let nose_up = Rotor::rotation(-attack);
             Wing {
                 centre: nose_up >> self.centre,
                 scale: self.scale,
@@ -101,17 +97,17 @@ mod wing {
         pub point: V,
         pub velocity: V,
         /// The stream function, constant along streamlines.
-        pub stream: B,
+        pub stream: Pseudoscalar,
     }
 
     /// The circulation that makes the trailing edge a stagnation point of the cylinder's flow.
-    pub fn circulation(wing: &Wing, stream: V) -> B {
+    pub fn circulation(wing: &Wing, stream: V) -> Pseudoscalar {
         (stream ^ wing.edge()) * (2.0 * TAU)
     }
 
     /// The flow past the cylinder at a point: its velocity, the velocity's gradient map, and the
     /// stream function.
-    pub fn cylinder(wing: &Wing, stream: V, point: V) -> (V, VelocityGradient, B) {
+    pub fn cylinder(wing: &Wing, stream: V, point: V) -> (V, VelocityGradient, Pseudoscalar) {
         let offset = point - wing.centre;
         let radius_squared = wing.edge().norm_squared();
         let swirl = circulation(wing, stream);
@@ -203,7 +199,7 @@ mod wing {
             .map(|k| {
                 (0..angles)
                     .map(|a| {
-                        let around = turn(TAU * (a as f64 + 0.5) / angles as f64);
+                        let around = Rotor::rotation(TAU * (a as f64 + 0.5) / angles as f64);
                         wing.centre + (around >> wing.edge()) * growth(k)
                     })
                     .collect()
@@ -270,11 +266,11 @@ fn sweep(t: f32) -> f64 {
 /// stagnates, from the backdrop's dark blue.
 fn shade(pressure: f64) -> Light {
     let (level, hue) = if pressure < 0.0 {
-        (-pressure / SUCTION, palette::orange())
+        (-pressure / SUCTION, palette::ORANGE)
     } else {
-        (pressure / STAGNATION, palette::sky())
+        (pressure / STAGNATION, palette::SKY)
     };
-    palette::bottom().blend(hue.faded(0.7), level.min(1.0) as f32)
+    palette::BOTTOM.blend(hue.faded(0.7), level.min(1.0) as f32)
 }
 
 /// The pressure coefficient around the wing, `1 - |v|² / U²`.
@@ -294,7 +290,7 @@ fn draw_streamlines(c: &mut Canvas, ax: &Axes, wing: &Wing, critical: V) {
         Point2::xy(WINDOW[1], WINDOW[3]),
     ];
     let last = Point2::xy((columns - 1) as f32, (rows - 1) as f32);
-    let to_plane = box_map([Point2::xy(0.0, 0.0), last], corners);
+    let to_plane = box_map([ORIGIN2, last], corners);
     let values: Vec<f32> = (0..columns * rows)
         .map(|k| {
             let at = to_plane.of(Point2::xy((k % columns) as f32, (k / columns) as f32));
@@ -308,7 +304,7 @@ fn draw_streamlines(c: &mut Canvas, ax: &Axes, wing: &Wing, critical: V) {
             .into_iter()
             .map(|[a, b]| [to_plane.of(a), to_plane.of(b)])
             .collect();
-        ax.stroke(c, &segments, 0.8, palette::ink().faded(0.3));
+        ax.stroke(c, &segments, 0.8, palette::INK.faded(0.3));
     }
 }
 
@@ -319,10 +315,10 @@ fn draw_outline(c: &mut Canvas, ax: &Axes, wing: &Wing, critical: V) {
         .iter()
         .map(|p| reach2(joukowski(critical, *p)))
         .collect();
-    ax.fill(c, &outline, palette::bottom(), 1.0);
+    ax.fill(c, &outline, palette::BOTTOM, 1.0);
     let mut closed = outline.clone();
     closed.push(outline[0]);
-    ax.polyline(c, &closed, 1.4, palette::ink().faded(0.8));
+    ax.polyline(c, &closed, 1.4, palette::INK.faded(0.8));
 }
 
 /// The flow past a wing with the given critical point: pressure, streamlines, the outline and
@@ -333,25 +329,17 @@ fn draw_flow(c: &mut Canvas, rect: Rect, wing: &Wing, critical: V) -> Axes {
     draw_streamlines(c, &ax, wing, critical);
     draw_outline(c, &ax, wing, critical);
     let arrow = lift(wing, stream(), DENSITY) * LIFT_SCALE;
-    ax.arrow(
-        c,
-        Point2::xy(0.0, 0.0),
-        reach2(arrow),
-        2.4,
-        10.0,
-        palette::green(),
-    );
+    ax.arrow(c, ORIGIN2, reach2(arrow), 2.4, 10.0, palette::GREEN);
     let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
+    c.polyline(&corners, 1.0, palette::GRID, true);
     ax
 }
 
 /// A panel's title above it and a note under it.
 fn label(c: &mut Canvas, rect: Rect, title: &str, note: &str) {
-    let above = rect.top_middle() - Point2::direction(0.0, 8.0);
-    c.text(title, above, 13.0, palette::ink(), Align::Center);
+    label_above(c, rect, title, 13.0, 8.0);
     let below = rect.bottom_middle() + Point2::direction(0.0, 20.0);
-    c.text(note, below, 11.0, palette::ink().faded(0.6), Align::Center);
+    c.text(note, below, 11.0, palette::INK.faded(0.6), Align::Center);
 }
 
 /// The wing pitching between its lowest and highest angle of attack.
@@ -371,13 +359,13 @@ fn draw_morph(c: &mut Canvas, rect: Rect, t: f32) {
     let critical = pitched.trailing_edge() * sweep(t);
     let ax = draw_flow(c, rect, &pitched, critical);
     let images = [reach2(critical * 2.0), reach2(critical * -2.0)];
-    ax.scatter(c, &images, Marker::Dot, 8.0, palette::yellow());
+    ax.scatter(c, &images, Marker::Dot, 8.0, palette::YELLOW);
     ax.scatter(
         c,
         &[reach2(pitched.centre)],
         Marker::Ring,
         8.0,
-        palette::ink(),
+        palette::INK,
     );
     let note = format!("CRITICAL POINTS {:.2} OF THE WAY OUT", sweep(t));
     label(c, rect, "FROM THE CYLINDER TO THE WING", &note);
@@ -409,9 +397,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::plane::turn;
     use super::wing::*;
     use core::f64::consts::TAU;
+    use gax::vga2d::Rotor;
 
     /// The rings and angles numga's checks sample, and how far out the rings reach.
     const RINGS: usize = 140;
@@ -435,7 +423,7 @@ mod tests {
     /// The pressure on a closed surface, half the density times the squared speed along the
     /// inward normal (each step turned a quarter turn back), summed by the trapezoidal rule.
     fn pressure_force(surface: &[Flow]) -> V {
-        let back = turn(-TAU / 4.0);
+        let back = Rotor::rotation(-TAU / 4.0);
         steps(surface)
             .map(|(here, next)| {
                 let squared = here.velocity.norm_squared() + next.velocity.norm_squared();

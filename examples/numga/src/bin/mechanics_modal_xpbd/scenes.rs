@@ -1,7 +1,7 @@
 //! Girders constrained at their corners: a spliced cantilever, a hinged chain under gravity,
 //! and a spliced beam fixed at both ends and compressed until it buckles.
 
-use crate::girder::{P, S, Shape, origin};
+use crate::girder::{P, S, Shape};
 use crate::xpbd::{Bodies, Constraints, Couple, M, Mobility, R, step};
 use core::f64::consts::PI;
 use gax::field::Field;
@@ -219,7 +219,7 @@ pub fn compress(
         for _ in 0..substeps {
             bodies = step(&bodies, constraints, dt, gravity(0.0), couple);
         }
-        let centres = [middle - 1, middle].map(|b| bodies.motor[b] >> origin());
+        let centres = [middle - 1, middle].map(|b| bodies.motor[b] >> Point::origin());
         frames.push(Frame {
             points: bodies.points(shape),
             midspan: (centres[0] + centres[1]) / 2.0,

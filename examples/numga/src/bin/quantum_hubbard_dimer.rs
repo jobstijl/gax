@@ -26,16 +26,16 @@
 //! the repulsion, the swap against the spin-only prediction, the swap frozen by a field that
 //! differs between the sites, and the charge an asymmetry between the sites moves over.
 
+use crate::dimer::Pair;
 use gax_numga_examples::points::circle;
-use gax_numga_examples::signal::{linspace, wave};
+use gax_numga_examples::signal::{frame, linspace, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
     run,
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/quantum.rs"]
-mod quantum;
+use gax_numga_examples::shared::quantum;
 
 gax::algebra! {
     algebra dimer "Two electrons on two sites, R(4,0): spin up and down on the left (ea, eb) and on the right (ec, ed).";
@@ -53,11 +53,10 @@ mod hubbard {
     use gax_numga_examples::signal::phasor;
 
     /// An orbital, and a state of two electrons.
-    pub type O = Orbital<(), f64>;
-    pub type P = Pair<(), f64>;
+    pub type O = Orbital;
     /// A one-electron map, and a map on pairs.
-    pub type Hopping = Orbital<(Orbital,), f64>;
-    pub type Hamiltonian = Pair<(Pair,), f64>;
+    pub type Hopping = Orbital<(Orbital,)>;
+    pub type Hamiltonian = Pair<(Pair,)>;
 
     /// The orbitals: up and down on the left, up and down on the right.
     pub fn orbitals() -> [O; 4] {
@@ -70,13 +69,13 @@ mod hubbard {
     }
 
     /// Both electrons in the orbitals `i` and `j`.
-    pub fn pair(i: usize, j: usize) -> P {
+    pub fn pair(i: usize, j: usize) -> Pair {
         let o = orbitals();
         o[i] ^ o[j]
     }
 
     /// The six two-electron configurations: `ab`, `ac`, `ad`, `bc`, `bd`, `cd`.
-    pub fn configurations() -> [P; 6] {
+    pub fn configurations() -> [Pair; 6] {
         [
             pair(0, 1),
             pair(0, 2),
@@ -87,16 +86,16 @@ mod hubbard {
         ]
     }
     /// The configuration both electrons start in: up on the left, down on the right.
-    pub fn up_down() -> P {
+    pub fn up_down() -> Pair {
         pair(0, 3)
     }
     /// The configuration of the swapped spins: down on the left, up on the right.
     pub const SWAPPED: usize = 3;
-    pub fn singlet() -> P {
+    pub fn singlet() -> Pair {
         (pair(0, 3) - pair(1, 2)) * FRAC_1_SQRT_2
     }
     /// The three triplets: both up, the triplet of zero spin, both down.
-    pub fn triplets() -> [P; 3] {
+    pub fn triplets() -> [Pair; 3] {
         [
             pair(0, 2),
             (pair(0, 3) + pair(1, 2)) * FRAC_1_SQRT_2,
@@ -105,7 +104,7 @@ mod hubbard {
     }
 
     /// The dyad that measures a state and returns it.
-    fn dyad(p: P) -> Hamiltonian {
+    fn dyad(p: Pair) -> Hamiltonian {
         p * p.reverse().scalar_product(Pair::slot())
     }
 
@@ -176,7 +175,7 @@ mod hubbard {
     }
 
     /// The Hamiltonian less half the repulsion, on the singlet.
-    fn shifted_singlet(strength: f64, repulsion: f64) -> P {
+    fn shifted_singlet(strength: f64, repulsion: f64) -> Pair {
         hamiltonian(strength, repulsion).of(singlet()) - singlet() * (repulsion / 2.0)
     }
 
@@ -184,27 +183,36 @@ mod hubbard {
     /// less the shifted Hamiltonian, divided by its norm. (A sum of two pairs is not a blade:
     /// `normalized` would scale it to a unit versor, `x ~x = 1` with the 4-vector part too, which
     /// is not a state's normalization.)
-    pub fn ground(strength: f64, repulsion: f64) -> P {
+    pub fn ground(strength: f64, repulsion: f64) -> Pair {
         let lower =
             singlet() * block_rate(strength, repulsion) - shifted_singlet(strength, repulsion);
         lower / lower.norm()
     }
 
-    impl InTime<P> {
+    /// What a state in time reads out: each configuration's chance, an observable's
+    /// expectation, and its part along a state, from both parts (the shared `InTime` is the
+    /// library's, so its readings here are a trait's).
+    pub trait Reading {
         /// The chance of each configuration: its squared amplitude in both parts.
-        pub fn probabilities(&self) -> [f64; 6] {
+        fn probabilities(&self) -> [f64; 6];
+        /// The expectation of an observable, from both parts.
+        fn expectation(&self, observable: Hamiltonian) -> f64;
+        /// The part along a state, in both parts.
+        fn along(&self, p: Pair) -> InTime<Pair>;
+    }
+
+    impl Reading for InTime<Pair> {
+        fn probabilities(&self) -> [f64; 6] {
             let (c, s) = (probabilities(self.cosine), probabilities(self.sine));
             core::array::from_fn(|k| c[k] + s[k])
         }
 
-        /// The expectation of an observable, from both parts.
-        pub fn expectation(&self, observable: Hamiltonian) -> f64 {
+        fn expectation(&self, observable: Hamiltonian) -> f64 {
             expectation(self.cosine, observable) + expectation(self.sine, observable)
         }
 
-        /// The part along a state, in both parts.
-        pub fn along(&self, p: P) -> InTime<P> {
-            let project = |x: P| p * p.reverse().scalar_product(x).s();
+        fn along(&self, p: Pair) -> InTime<Pair> {
+            let project = |x: Pair| p * p.reverse().scalar_product(x).s();
             InTime {
                 cosine: project(self.cosine),
                 sine: project(self.sine),
@@ -217,7 +225,7 @@ mod hubbard {
     /// the singlet's block the Hamiltonian is half the repulsion plus the shifted part, whose
     /// cosine and sine act on the singlet as those of the rate; the half repulsion turns the two
     /// into each other by its own angle.
-    pub fn exchange(strength: f64, repulsion: f64, time: f64) -> InTime<P> {
+    pub fn exchange(strength: f64, repulsion: f64, time: f64) -> InTime<Pair> {
         let rate = block_rate(strength, repulsion);
         let block = phasor(rate * time);
         let along = singlet() * block.e20();
@@ -231,12 +239,12 @@ mod hubbard {
     }
 
     /// The chance of each configuration in a real state: its squared amplitude.
-    pub fn probabilities(state: P) -> [f64; 6] {
+    pub fn probabilities(state: Pair) -> [f64; 6] {
         configurations().map(|c| c.reverse().scalar_product(state).s().powi(2))
     }
 
     /// The expectation of an observable in a real state.
-    pub fn expectation(state: P, observable: Hamiltonian) -> f64 {
+    pub fn expectation(state: Pair, observable: Hamiltonian) -> f64 {
         state.reverse().scalar_product(observable.of(state)).s()
     }
 
@@ -262,7 +270,7 @@ mod hubbard {
 
     /// Up on the left and down on the right over the exchange phases, on the timescale the gap
     /// sets.
-    pub fn exchange_cycle(repulsion: f64, phases: &[f64]) -> Vec<InTime<P>> {
+    pub fn exchange_cycle(repulsion: f64, phases: &[f64]) -> Vec<InTime<Pair>> {
         let gap = exchange_gap(HOPPING, repulsion);
         phases
             .iter()
@@ -273,7 +281,7 @@ mod hubbard {
     /// The same at the strongest repulsion, with a field differing between the sites of `ratio`
     /// times the exchange, from the Hamiltonian's states: each keeps its share of the start and
     /// turns by its own energy.
-    pub fn field_exchange(ratio: f64, phases: &[f64]) -> Vec<InTime<P>> {
+    pub fn field_exchange(ratio: f64, phases: &[f64]) -> Vec<InTime<Pair>> {
         let strong = REPULSIONS[2];
         let gap = exchange_gap(HOPPING, strong);
         let h = hamiltonian(HOPPING, strong) + field_difference() * (ratio * gap);
@@ -315,12 +323,12 @@ const DIAL_NAMES: [&str; 4] = ["L UP L DN", "L UP R DN", "L DN R UP", "R UP R DN
 /// What the frames share, computed once.
 struct Data {
     phases: Vec<f64>,
-    cycles: Vec<Vec<InTime<P>>>,
+    cycles: Vec<Vec<InTime<Pair>>>,
     /// The ground state's spin correlation at each repulsion.
     correlations: Vec<f64>,
     sweep: Vec<f64>,
     levels: Vec<[f64; 6]>,
-    fields: Vec<Vec<InTime<P>>>,
+    fields: Vec<Vec<InTime<Pair>>>,
     asymmetries: Vec<f64>,
     transfer: Vec<Vec<f64>>,
 }
@@ -361,29 +369,29 @@ fn data() -> &'static Data {
 
 /// The cases' colours.
 fn colours() -> [Light; 3] {
-    [palette::purple(), palette::sky(), palette::orange()]
+    [palette::PURPLE, palette::SKY, palette::ORANGE]
 }
 
 /// A configuration's amplitude in a state in time as a point of its dial: the cosine part
 /// across, the sine part up.
-fn amplitude(state: &InTime<P>, configuration: usize) -> Point2 {
+fn amplitude(state: &InTime<Pair>, configuration: usize) -> Point2 {
     let c = configurations()[configuration];
-    let read = |p: P| c.reverse().scalar_product(p).s() as f32;
+    let read = |p: Pair| c.reverse().scalar_product(p).s() as f32;
     Point2::xy(read(state.cosine), read(state.sine))
 }
 
 /// One dial: the unit circle, the path of the amplitude over the cycle, and the amplitude now as
 /// the triplet's share followed by the singlet block's.
-fn draw_dial(c: &mut Canvas, ax: &Axes, cycle: &[InTime<P>], now: usize, configuration: usize) {
-    ax.polyline(c, &circle(ORIGIN2, 1.0, 64), 1.0, palette::grid());
+fn draw_dial(c: &mut Canvas, ax: &Axes, cycle: &[InTime<Pair>], now: usize, configuration: usize) {
+    ax.polyline(c, &circle(ORIGIN2, 1.0, 64), 1.0, palette::GRID);
     let path: Vec<Point2> = cycle.iter().map(|s| amplitude(s, configuration)).collect();
-    ax.polyline(c, &path, 1.0, palette::purple().faded(0.3));
+    ax.polyline(c, &path, 1.0, palette::PURPLE.faded(0.3));
     let state = cycle[now];
     let triplet = amplitude(&state.along(triplets()[1]), configuration);
     let total = amplitude(&state, configuration);
-    ax.line(c, ORIGIN2, triplet, 2.0, palette::ink().faded(0.5));
-    ax.line(c, triplet, total, 2.0, palette::purple());
-    ax.scatter(c, &[total], Marker::Dot, 5.0, palette::ink());
+    ax.line(c, ORIGIN2, triplet, 2.0, palette::INK.faded(0.5));
+    ax.line(c, triplet, total, 2.0, palette::PURPLE);
+    ax.scatter(c, &[total], Marker::Dot, 5.0, palette::INK);
 }
 
 /// The dials: one row per repulsion, one dial per configuration that can be reached.
@@ -410,7 +418,7 @@ fn draw_dials(c: &mut Canvas, area: Rect, d: &Data, now: usize) {
         ];
         for (k, note) in notes.iter().enumerate() {
             let at = label + below.gp(16.0 + 11.0 * k as f32);
-            c.text(note, at, 8.0, palette::ink(), Align::Right);
+            c.text(note, at, 8.0, palette::INK, Align::Right);
         }
         for (column, configuration) in DIALS.iter().enumerate() {
             let cell = band.column(column, columns);
@@ -423,7 +431,7 @@ fn draw_dials(c: &mut Canvas, area: Rect, d: &Data, now: usize) {
             draw_dial(c, &ax, cycle, now, *configuration);
             if row == rows - 1 {
                 let name = cell.bottom_middle() + below.gp(10.0);
-                c.text(DIAL_NAMES[column], name, 8.0, palette::ink(), Align::Center);
+                c.text(DIAL_NAMES[column], name, 8.0, palette::INK, Align::Center);
             }
         }
     }
@@ -434,9 +442,9 @@ fn draw_dials(c: &mut Canvas, area: Rect, d: &Data, now: usize) {
 fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data) {
     ax.frame(c, "LEVELS", "REPULSION / HOPPING", "ENERGY");
     let groups = [
-        (0..1, palette::purple()),
-        (1..4, palette::sky()),
-        (4..6, palette::red()),
+        (0..1, palette::PURPLE),
+        (1..4, palette::SKY),
+        (4..6, palette::RED),
     ];
     for (levels, colour) in groups {
         for level in levels {
@@ -466,7 +474,7 @@ fn draw_swaps(
     c: &mut Canvas,
     ax: &Axes,
     d: &Data,
-    cycles: &[Vec<InTime<P>>],
+    cycles: &[Vec<InTime<Pair>>],
     title: &str,
     now: usize,
 ) {
@@ -477,7 +485,7 @@ fn draw_swaps(
         &on_cycle(&d.phases, spin_only),
         1.0,
         4.0,
-        palette::ink().faded(0.5),
+        palette::INK.faded(0.5),
     );
     for (cycle, colour) in cycles.iter().zip(colours()) {
         let swap = on_cycle(&d.phases, cycle.iter().map(|s| s.probabilities()[SWAPPED]));
@@ -504,7 +512,7 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let d = data();
     let screen = c.rect();
-    let now = (((t / SECONDS).fract() * CYCLE as f32) as usize).min(CYCLE - 1);
+    let now = frame((t / SECONDS).fract(), CYCLE);
     draw_dials(c, screen.part(0.15, 0.14, 0.53, 0.9), d, now);
     let strong = REPULSIONS[2] as f32;
     let levels = Axes::new(
@@ -538,6 +546,7 @@ fn main() {
 #[cfg(test)]
 #[allow(clippy::disallowed_methods)] // the two-site solution's closed forms, the references checked against
 mod tests {
+    use super::dimer::Pair;
     use super::hubbard::*;
     use gax_numga_examples::signal::linspace;
 
@@ -549,11 +558,11 @@ mod tests {
     const EXCHANGE_RELATIVE_ERROR: f64 = 0.011;
 
     /// Both electrons on one site, the left and the right alike.
-    fn symmetric_double() -> P {
+    fn symmetric_double() -> Pair {
         (pair(0, 1) + pair(2, 3)) * core::f64::consts::FRAC_1_SQRT_2
     }
 
-    fn small(p: P) -> bool {
+    fn small(p: Pair) -> bool {
         p.c.iter().all(|x| x.abs() < ROUND_OFF)
     }
 
@@ -618,7 +627,7 @@ mod tests {
     fn the_singlet_block_squares_to_its_rate() {
         for u in sweep() {
             let h = hamiltonian(HOPPING, u);
-            let shifted = |p: P| h.of(p) - p * (u / 2.0);
+            let shifted = |p: Pair| h.of(p) - p * (u / 2.0);
             let rate = block_rate(HOPPING, u);
             for p in [singlet(), symmetric_double()] {
                 assert!(small(shifted(shifted(p)) - p * (rate * rate)), "{u}");

@@ -19,6 +19,7 @@
 //! diffraction pattern on a logarithmic scale (right): the peaks follow the moved reciprocal
 //! lattice, ringed, squeezing where the atoms stretch.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
     palette, run, signal::haversine,
@@ -28,31 +29,30 @@ mod crystal {
     use gax::Complex;
     use gax::vga3d::{Vector, intrinsic};
 
-    pub type V = Vector<(), f64>;
     /// A phase plane: the Hodge dual of a wavevector, of the other orientation (intrinsic).
-    pub type B = intrinsic::Bivector<(), f64>;
+    pub type B = intrinsic::Bivector;
     /// A linear map on positions.
-    pub type Linear = Vector<(Vector,), f64>;
+    pub type Linear = Vector<(Vector,)>;
 
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
 
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 1.0, 0.0)
     }
 
     /// A layer of atoms, its wavevectors and their phase planes.
     #[derive(Clone, Debug)]
     pub struct Crystal {
-        pub positions: Vec<V>,
-        pub reciprocal: Vec<V>,
+        pub positions: Vec<Vector>,
+        pub reciprocal: Vec<Vector>,
         pub phase_planes: Vec<B>,
     }
 
     /// The wavevector whose phase at every deformed position is the old one's at the position:
     /// the solve of `k' · A(x) = k · x` for every `x`.
-    pub fn carried_wavevector(deformation: Linear, k: V) -> V {
+    pub fn carried_wavevector(deformation: Linear, k: Vector) -> Vector {
         let pairing = Vector::slot() | deformation.of(Vector::slot());
         pairing.solve(k | Vector::slot())
     }
@@ -85,7 +85,7 @@ mod crystal {
         /// The coherent scattering of equal atoms at a momentum transfer (the outgoing
         /// wavevector less the incoming one), normalized to one when every atom scatters in
         /// phase; no polarization factor is included.
-        pub fn intensity(&self, transfer: V) -> f64 {
+        pub fn intensity(&self, transfer: Vector) -> f64 {
             let waves = self
                 .positions
                 .iter()
@@ -100,13 +100,13 @@ mod crystal {
         let local = Vector::slot()
             + x() * (x() | Vector::slot()) * (stretch - 1.0)
             + x() * (y() | Vector::slot()) * shear;
-        ((x() ^ y()) * (-angle / 2.0)).exp() >> local
+        gax::vga3d::Rotor::rotation(Vector::new(0.0, 0.0, 1.0), angle) >> local
     }
 
     /// A finite square layer of `(2 shells + 1)²` atoms and its reciprocal lattice of
     /// `(2 orders + 1)²` wavevectors, embedded in space, row by row along `y`.
     pub fn square(shells: i32, orders: i32, spacing: f64) -> Crystal {
-        let lattice = |n: i32, step: f64| -> Vec<V> {
+        let lattice = |n: i32, step: f64| -> Vec<Vector> {
             (-n..=n)
                 .flat_map(|j| {
                     (-n..=n).map(move |i| (x() * f64::from(i) + y() * f64::from(j)) * step)
@@ -123,7 +123,7 @@ mod crystal {
 
     /// Momentum transfers on a square grid of `pixels` across, `half_width` from the middle to
     /// each side, row by row along `y`.
-    pub fn transfer_grid(half_width: f64, pixels: usize) -> Vec<V> {
+    pub fn transfer_grid(half_width: f64, pixels: usize) -> Vec<Vector> {
         let along = |i: usize| -half_width + 2.0 * half_width * i as f64 / (pixels - 1) as f64;
         (0..pixels * pixels)
             .map(|k| x() * along(k % pixels) + y() * along(k / pixels))
@@ -173,7 +173,7 @@ fn share(t: f32) -> f64 {
 }
 
 /// A vector of the layer's plane as a drawing point.
-fn in_layer(v: V) -> Point2 {
+fn in_layer(v: Vector) -> Point2 {
     Point2::xy(v.e1() as f32, v.e2() as f32)
 }
 
@@ -192,9 +192,9 @@ fn draw_atoms(c: &mut Canvas, rect: Rect, crystal: &Crystal) {
         [Point2::xy(-reach, 0.0), Point2::xy(reach, 0.0)],
         [Point2::xy(0.0, -reach), Point2::xy(0.0, reach)],
     ];
-    ax.stroke(c, &axes, 1.0, palette::grid());
+    ax.stroke(c, &axes, 1.0, palette::GRID);
     let atoms: Vec<Point2> = crystal.positions.iter().map(|p| in_layer(*p)).collect();
-    ax.scatter(c, &atoms, Marker::Dot, 7.0, palette::green());
+    ax.scatter(c, &atoms, Marker::Dot, 7.0, palette::GREEN);
     ax.frame(c, "ATOMS", "", "");
 }
 
@@ -210,7 +210,7 @@ fn draw_pattern(c: &mut Canvas, rect: Rect, crystal: &Crystal, grid: &[f64]) {
         Some(glow(grid[index(v) * PIXELS + index(u)]))
     });
     let peaks: Vec<Point2> = crystal.reciprocal.iter().map(|k| in_layer(*k)).collect();
-    ax.scatter(c, &peaks, Marker::Ring, 10.0, palette::sky().faded(0.5));
+    ax.scatter(c, &peaks, Marker::Ring, 10.0, palette::SKY.faded(0.5));
     ax.frame(c, "DIFFRACTION, LOG INTENSITY", "", "");
 }
 
@@ -234,7 +234,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let degrees = angle.to_degrees();
     let readout = format!("STRETCH {stretch:.2}  SHEAR {shear:.2}  TURN {degrees:.0} DEG");
     let below = Point2::xy(w * 0.5, h * 0.975);
-    c.text(&readout, below, size, palette::yellow(), Align::Center);
+    c.text(&readout, below, size, palette::YELLOW, Align::Center);
     caption(
         c,
         "CRYSTAL DIFFRACTION: PEAKS CARRIED THROUGH A DEFORMATION",
@@ -253,6 +253,7 @@ fn main() {
 mod tests {
     use super::crystal::*;
     use gax::ApproxEq;
+    use gax::vga3d::Vector;
 
     /// The phase of every wavevector at every atom.
     fn phases(c: &Crystal) -> Vec<f64> {
@@ -265,7 +266,7 @@ mod tests {
     /// Every phase measured at every atom is kept, the phase planes stay the wavevectors'
     /// duals, every reciprocal vector is a peak, and the deformed pattern is the reference one
     /// seen through the moved transfers.
-    fn assert_carried(reference: &Crystal, deformation: Linear, grid: &[V]) {
+    fn assert_carried(reference: &Crystal, deformation: Linear, grid: &[Vector]) {
         let crystal = reference.carried(deformation);
         for (a, b) in phases(&crystal).iter().zip(phases(reference)) {
             assert!((a - b).abs() < 1e-10);
@@ -311,8 +312,8 @@ mod tests {
     /// = k · x`.
     #[test]
     fn phase_planes_read_the_phase_by_incidence() {
-        let k = x() * 0.7 - y() * 1.3 + V::new(0.0, 0.0, 0.4);
-        let p = x() * -2.0 + y() * 0.5 + V::new(0.0, 0.0, 1.1);
+        let k = x() * 0.7 - y() * 1.3 + Vector::new(0.0, 0.0, 0.4);
+        let p = x() * -2.0 + y() * 0.5 + Vector::new(0.0, 0.0, 1.1);
         assert!(((k.hodge() & p).s() - (k | p).s()).abs() < 1e-14);
     }
 

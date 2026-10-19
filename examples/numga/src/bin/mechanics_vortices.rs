@@ -27,19 +27,21 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, reach2,
-    run, vector2,
+    run, signal::frame, vector2,
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga2d.rs"]
-mod plane;
+use gax_numga_examples::shared::mechanics_vga2d as plane;
 
 mod vortices {
     use super::plane::derivative;
-    use super::plane::turn;
-    pub use super::plane::{AXES, Even, Map as Gradient, PLANE, V};
+
+    pub use super::plane::{AXES, Even, Map as Gradient, V};
     use core::f64::consts::{PI, TAU};
-    use gax::vga2d::Vector;
+    use gax::vga2d::{Pseudoscalar, Rotor, Vector};
+
+    /// The plane, `xy`.
+    pub const PLANE: Pseudoscalar = Pseudoscalar::new(1.0);
     use gax_numga_examples::rng::{self, Draw};
     use gax_numga_examples::signal::wave;
     use rand::seq::SliceRandom;
@@ -323,7 +325,7 @@ mod vortices {
     /// of the first (equal areas), turned through the second's share of a turn.
     #[allow(clippy::disallowed_methods)] // a radius uniform over the disc's area
     fn disc_point(radius: f64, radius_draw: f64, turn_draw: f64) -> V {
-        turn(TAU * turn_draw) >> (AXES[0] * (radius * radius_draw.sqrt()))
+        Rotor::rotation(TAU * turn_draw) >> (AXES[0] * (radius * radius_draw.sqrt()))
     }
 
     /// The nudged pairs.
@@ -368,7 +370,7 @@ fn scenes() -> &'static Scenes {
 
 /// The frame a fraction of the way through `frames`.
 fn frame_at(fraction: f32, frames: usize) -> usize {
-    ((fraction * frames as f32) as usize).min(frames - 1)
+    frame(fraction, frames)
 }
 
 /// The half height of equal axes in `rect` that show a window of the given half extents whole.
@@ -379,16 +381,16 @@ fn half_height(rect: Rect, half_width: f64, half_height: f64) -> f32 {
 /// The light of a sense of turning: counterclockwise (positive) warm, clockwise cool.
 fn sense(turning: f64) -> Light {
     if turning > 0.0 {
-        palette::orange()
+        palette::ORANGE
     } else {
-        palette::sky()
+        palette::SKY
     }
 }
 
 /// The light of a vorticity: by its sense, from the backdrop's dark blue to full at the limit.
 fn shade(vorticity: f64, limit: f64) -> Light {
     let level = (vorticity.abs() / limit).min(1.0) as f32;
-    palette::bottom().blend(sense(vorticity).faded(0.8), level)
+    palette::BOTTOM.blend(sense(vorticity).faded(0.8), level)
 }
 
 /// The vorticity over the axes, from the derivative of the flow.
@@ -401,7 +403,7 @@ fn draw_vorticity(c: &mut Canvas, ax: &Axes, vortices: &Vortices, limit: f64) {
 
 /// The line where swirl gives way to strain.
 fn swirl_line() -> Light {
-    palette::ink().faded(0.35)
+    palette::INK.faded(0.35)
 }
 
 /// The vortices' centres, by their sense.
@@ -425,9 +427,9 @@ fn draw_scene(c: &mut Canvas, rect: Rect, scene: &Scene, vortices: &Vortices) {
         draw_centres(c, &ax, vortices, 5.0);
     }
     let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
+    c.polyline(&corners, 1.0, palette::GRID, true);
     let title = rect.top_middle() - Point2::direction(0.0, 6.0);
-    c.text(scene.name, title, 12.0, palette::ink(), Align::Center);
+    c.text(scene.name, title, 12.0, palette::INK, Align::Center);
 }
 
 /// The walkabout at a frame: the vorticity on the fixed strip, and each vortex's path so far.
@@ -445,7 +447,7 @@ fn draw_walkabout(c: &mut Canvas, rect: Rect, states: &[Vortices], frame: usize)
             .iter()
             .map(|v| reach2(v.centres[k]))
             .collect();
-        ax.polyline(c, &path, 1.0, palette::ink().faded(0.4));
+        ax.polyline(c, &path, 1.0, palette::INK.faded(0.4));
     }
     draw_centres(c, &ax, now, 7.0);
     ax.frame(c, "WALKABOUT: ONE LAP OUT, THEN LEAPFROGGING ON", "", "");

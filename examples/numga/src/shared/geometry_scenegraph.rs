@@ -9,34 +9,26 @@
 //! handed: `exp(-B θ / 2)`), so the joints turn by minus their angles, and numga's joint angles
 //! pose the arm as numga's do.
 
-// Each binary that includes this module uses a different part of it.
-#![allow(dead_code)]
-
 use gax::Unit;
 use gax::pga3d::{Motor, Plane, Point, intrinsic};
 
 /// A point (a finite point, or a direction with weight 0).
-pub type P = Point<(), f64>;
+pub type P = Point;
 /// A plane.
-pub type Pl = Plane<(), f64>;
+pub type Pl = Plane;
 /// A line, oriented along itself (intrinsic): a join of points, as an axis or a ray of light.
-pub type L = intrinsic::Line<(), f64>;
+pub type L = intrinsic::Line;
 /// A rigid motion.
-pub type M = Unit<Motor<(), f64>>;
+pub type M = Unit<Motor>;
 /// A collineation, `Point <- Point`.
-pub type PointMap = Point<(Point,), f64>;
+pub type PointMap = Point<(Point,)>;
 /// An optical map of rays, `Line <- Line`.
-pub type LineMap = intrinsic::Line<(intrinsic::Line,), f64>;
-
-/// The origin.
-pub fn origin() -> P {
-    Point::xyz(0.0, 0.0, 0.0)
-}
+pub type LineMap = intrinsic::Line<(intrinsic::Line,)>;
 
 /// The axis through the origin along the direction `(x, y, z)`: their join. The `z` axis is
 /// numga's bivector `xy = e12`, the `y` axis its `zx = e31`.
 pub fn axis(x: f64, y: f64, z: f64) -> L {
-    origin() & Point::direction(x, y, z)
+    Point::origin() & Point::direction(x, y, z)
 }
 
 /// A joint turned by `angle` about `axis` as numga turns it, `exp(axis angle / 2)`: by
@@ -105,13 +97,13 @@ pub fn anisotropic_scale(sx: f64, sy: f64, sz: f64) -> PointMap {
         Plane::new(1.0, 0.0, 0.0, 0.0),
         Plane::new(0.0, 1.0, 0.0, 0.0),
         Plane::new(0.0, 0.0, 1.0, 0.0),
-        Plane::new(0.0, 0.0, 0.0, 1.0),
+        Plane::infinity(),
     ];
     let scaled_axes = [
         Point::direction(sx, 0.0, 0.0),
         Point::direction(0.0, sy, 0.0),
         Point::direction(0.0, 0.0, sz),
-        origin(),
+        Point::origin(),
     ];
     let mut map = scaled_axes[0] * (coordinate_planes[0] & p);
     for (axis, plane) in scaled_axes.iter().zip(&coordinate_planes).skip(1) {
@@ -161,9 +153,10 @@ pub fn thin_lens(centre: P, plane: Pl, focal: f64) -> LineMap {
 /// sits at the origin; the rear lens is the same lens at home conjugated by its placement.
 pub fn lens_train(focal_front: f64, focal_rear: f64, rear_gap: f64) -> (LineMap, LineMap, Pl) {
     let front_plane = Plane::new(0.0, 0.0, -1.0, 0.0);
-    let front = thin_lens(origin(), front_plane, focal_front);
+    let front = thin_lens(Point::origin(), front_plane, focal_front);
     let placement = up(rear_gap);
-    let rear = placement >> thin_lens(origin(), front_plane, focal_rear).of(placement << L::slot());
+    let rear =
+        placement >> thin_lens(Point::origin(), front_plane, focal_rear).of(placement << L::slot());
     (front, rear, placement >> front_plane)
 }
 
@@ -171,7 +164,7 @@ pub fn lens_train(focal_front: f64, focal_rear: f64, rear_gap: f64) -> (LineMap,
 /// pull the world into the camera frame, join with the pupil into a ray, refract through the
 /// front and the rear lens (a composition of maps), and meet the sensor.
 pub fn lens_camera(pose: M, front: LineMap, rear: LineMap, pupil: P, sensor: Pl) -> PointMap {
-    let incoming: intrinsic::Line<(Point,), f64> = (pose << Point::slot()) & pupil;
+    let incoming: intrinsic::Line<(Point,)> = (pose << Point::slot()) & pupil;
     rear.of(front.of(incoming)) ^ sensor
 }
 

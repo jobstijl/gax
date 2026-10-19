@@ -29,29 +29,24 @@ use gax_numga_examples::{
     caption, palette, reach3, run, signal,
 };
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod area_transport {
     use super::space::adjoint;
     use gax::vga3d::{Bivector, Vector, intrinsic};
 
-    /// A direction, or a position from the cube's centre.
-    pub type V = Vector<(), f64>;
-    /// An oriented area.
-    pub type B = Bivector<(), f64>;
     /// An area normal: the dual of a patch, intrinsic.
-    pub type N = intrinsic::Vector<(), f64>;
+    pub type N = intrinsic::Vector;
     /// A map on directions, `Vector <- Vector`.
-    pub type Linear = Vector<(Vector,), f64>;
+    pub type Linear = Vector<(Vector,)>;
     /// A map on area normals.
-    pub type NormalMap = intrinsic::Vector<(intrinsic::Vector,), f64>;
+    pub type NormalMap = intrinsic::Vector<(intrinsic::Vector,)>;
     /// A map on oriented areas, `Bivector <- Bivector`.
-    pub type AreaMap = Bivector<(Bivector,), f64>;
+    pub type AreaMap = Bivector<(Bivector,)>;
 
-    pub const X: V = V::new(1.0, 0.0, 0.0);
-    pub const Y: V = V::new(0.0, 1.0, 0.0);
-    pub const Z: V = V::new(0.0, 0.0, 1.0);
+    pub const X: Vector = Vector::new(1.0, 0.0, 0.0);
+    pub const Y: Vector = Vector::new(0.0, 1.0, 0.0);
+    pub const Z: Vector = Vector::new(0.0, 0.0, 1.0);
 
     /// The cube's side.
     pub const SIDE: f64 = 1.0;
@@ -102,9 +97,9 @@ mod area_transport {
     /// normals (outward, as long as the face's area).
     #[derive(Clone, Debug)]
     pub struct Surface {
-        pub vertices: Vec<V>,
-        pub centres: Vec<V>,
-        pub patches: Vec<B>,
+        pub vertices: Vec<Vector>,
+        pub centres: Vec<Vector>,
+        pub patches: Vec<Bivector>,
         pub area_normals: Vec<N>,
     }
 
@@ -116,12 +111,12 @@ mod area_transport {
         let half = side / 2.0;
         let sign = |i: usize, bit: usize| if i >> bit & 1 == 1 { half } else { -half };
         let vertices = (0..8)
-            .map(|i| V::new(sign(i, 2), sign(i, 1), sign(i, 0)))
+            .map(|i| Vector::new(sign(i, 2), sign(i, 1), sign(i, 0)))
             .collect();
         let outward = [X, Y, Z, -X, -Y, -Z];
         // The faces at +x, +y and +z; the opposite faces are wound the other way.
         let facing = [Y ^ Z, Z ^ X, X ^ Y];
-        let patches: Vec<B> = (facing.iter().copied())
+        let patches: Vec<Bivector> = (facing.iter().copied())
             .chain(facing.iter().map(|f| -*f))
             .map(|f| f * (side * side))
             .collect();
@@ -136,7 +131,7 @@ mod area_transport {
     /// The surface moved: its points by the deformation, its patches by the area map, its
     /// area normals by the cofactor.
     pub fn carried(surface: &Surface, t: &Transport) -> Surface {
-        let on = |map: Linear, vs: &[V]| vs.iter().map(|v| map.of(*v)).collect();
+        let on = |map: Linear, vs: &[Vector]| vs.iter().map(|v| map.of(*v)).collect();
         Surface {
             vertices: on(t.deformation, &surface.vertices),
             centres: on(t.deformation, &surface.centres),
@@ -184,12 +179,7 @@ const MEASURES: [&str; 4] = ["YZ", "ZX", "XY", "VOLUME"];
 /// The colour of the faces facing along axis `k` (numga's blue, teal and orange), and of the
 /// volume.
 fn colour(k: usize) -> Light {
-    [
-        palette::blue(),
-        palette::green(),
-        palette::orange(),
-        palette::ink(),
-    ][k]
+    [palette::BLUE, palette::GREEN, palette::ORANGE, palette::INK][k]
 }
 
 /// The deformed cube: its faces lit and translucent, its edges, its area normals, and the
@@ -211,7 +201,7 @@ fn draw_cube(c: &mut Canvas, rect: Rect, transport: &Transport, surface: &Surfac
         let lit = s.lit(a, b, d, colour(f % 3).faded(0.35));
         s.quad(a, b, d, e, lit, 0.3);
         for (p, q) in [(a, b), (b, d), (d, e), (e, a)] {
-            s.seg(p, q, 1.2, palette::ink().faded(0.5));
+            s.seg(p, q, 1.2, palette::INK.faded(0.5));
         }
     }
     for (f, (centre, normal)) in surface
@@ -229,7 +219,7 @@ fn draw_cube(c: &mut Canvas, rect: Rect, transport: &Transport, surface: &Surfac
         );
     }
     let lost = transport.adjugate.of((X ^ Y).dual()) * ADJUGATE_SCALE;
-    s.arrow(ORIGIN3, lost, 2.0, 8.0, palette::yellow());
+    s.arrow(ORIGIN3, lost, 2.0, 8.0, palette::YELLOW);
     s.draw(c);
 }
 
@@ -241,9 +231,9 @@ fn draw_measures(c: &mut Canvas, rect: Rect, surface: &Surface, volume: f64) {
     let size = (rect.height() / 26.0).clamp(3.0, 13.0);
     let title = rect.top_middle() + Point2::direction(0.0, -size);
     let heading = "AREAS AND VOLUME (CUBE: 1)";
-    c.text(heading, title, size * 1.1, palette::ink(), Align::Center);
+    c.text(heading, title, size * 1.1, palette::INK, Align::Center);
     let unit = [Point2::xy(left, 1.0), Point2::xy(right, 1.0)];
-    ax.dashed(c, &unit, 1.0, 4.0, palette::ink().faded(0.4));
+    ax.dashed(c, &unit, 1.0, 4.0, palette::INK.faded(0.4));
     let mut values: Vec<f64> = surface.area_normals[..3].iter().map(|n| n.norm()).collect();
     values.push(volume);
     for (k, (value, label)) in values.iter().zip(MEASURES).enumerate() {
@@ -261,10 +251,10 @@ fn draw_measures(c: &mut Canvas, rect: Rect, surface: &Surface, volume: f64) {
             Align::Center,
         );
         let below = ax.px(Point2::xy(x, 0.0)) + Point2::direction(0.0, 1.8 * size);
-        c.text(label, below, size * 0.9, palette::ink(), Align::Center);
+        c.text(label, below, size * 0.9, palette::INK, Align::Center);
     }
     let baseline = [Point2::xy(left, 0.0), Point2::xy(right, 0.0)];
-    ax.polyline(c, &baseline, 1.2, palette::grid());
+    ax.polyline(c, &baseline, 1.2, palette::GRID);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -324,7 +314,7 @@ mod tests {
     /// collapsed and mirroring deformations, turned.
     #[test]
     fn transported_faces_and_volume_agree_with_the_deformed_edges() {
-        let turn = Bivector::<(), f64>::new(0.17, 0.0, 0.31).exp();
+        let turn = Bivector::new(0.17, 0.0, 0.31).exp();
         for (thickness, shear) in [(1.0, 0.0), (0.3, 0.5), (0.0, 0.7), (-0.4, 0.2)] {
             let t = transport(turn >> deformation(thickness, shear));
             let reference = cube(1.0);

@@ -16,21 +16,20 @@
 //! translation, through the first point for the turn, along the first edge for the roll. On the
 //! right, the markers after each stage.
 
+use gax::pga3d::Point;
 use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
-    palette, run, scene3::panel3,
+    palette, points::sides, run, scene3::panel3,
 };
 
 mod pose {
     use gax::Unit;
     use gax::pga3d::{Line, Motor, Point};
 
-    pub type P = Point<(), f64>;
-    pub type L = Line<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
+    pub type M = Unit<Motor>;
     /// Three markers, in order.
-    pub type Markers = [P; 3];
+    pub type Markers = [Point; 3];
 
     /// The three incremental motors that carry the source markers onto the congruent target
     /// markers: the translation of the first point, the turn of the first edge about the
@@ -65,19 +64,18 @@ mod pose {
     /// The markers a fraction of the way through an alignment from where the previous ones
     /// left them: a fraction of the motor's logarithm moves at a constant rate along its screw.
     pub fn partway(start: &Markers, increment: M, fraction: f64) -> Markers {
-        let screw: L = increment.log();
+        let screw = increment.log();
         moved(screw.gp(fraction).exp(), start)
-    }
-
-    /// The finite point at `(x, y, z)`.
-    pub fn point([x, y, z]: [f64; 3]) -> P {
-        Point::xyz(x, y, z)
     }
 
     /// numga's markers: a triangle, and the same triangle moved by a screw motion (numga's
     /// `exp(0.7 xw + 0.2 yw + 0.4 zw) exp(0.6 xy + 0.2 yz)`, with `xw = -e01`).
     pub fn markers() -> (Markers, Markers) {
-        let source = [[-0.8, -0.4, 0.0], [0.9, -0.3, 0.0], [-0.3, 0.8, 0.2]].map(point);
+        let source = [
+            Point::xyz(-0.8, -0.4, 0.0),
+            Point::xyz(0.9, -0.3, 0.0),
+            Point::xyz(-0.3, 0.8, 0.2),
+        ];
         let displacement = Line::new(0.0, 0.0, 0.0, -0.7, -0.2, -0.4).exp();
         let rotation = Line::new(0.2, 0.0, 0.6, 0.0, 0.0, 0.0).exp();
         let target = moved(displacement * rotation, &source);
@@ -95,11 +93,11 @@ const SECONDS: f32 = 3.0 * STAGE + HOLD;
 const STAGES: [&str; 3] = ["1  MATCH A POINT", "2  MATCH A LINE", "3  MATCH A PLANE"];
 
 fn target_colour() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 
 fn marker_colour() -> Light {
-    palette::sky()
+    palette::SKY
 }
 
 /// The stage under way at time `t` and how far through it, eased in and out (numga's
@@ -137,8 +135,7 @@ fn draw_target(s: &mut Scene3, target: &Markers) {
     // Dashes per side, and the share of its stretch of the side each dash inks.
     const DASHES: usize = 9;
     const INKED: f64 = 0.55;
-    for k in 0..3 {
-        let (a, b) = (target[k], target[(k + 1) % 3]);
+    for (a, b) in sides(target) {
         let at = |f: f64| a + (b - a).gp(f / DASHES as f64);
         for d in 0..DASHES {
             let from = d as f64;
@@ -163,12 +160,11 @@ fn draw_markers(s: &mut Scene3, markers: &Markers, strength: f32) {
 
 /// The axis of a motor's screw, a stretch of its line about the point of it nearest to
 /// `near`; nothing for a translation, whose axis lies at infinity.
-fn draw_axis(s: &mut Scene3, motor: M, near: P) {
-    let screw: L = motor.log();
-    // Where the axis meets the plane at infinity: its direction, used as a displacement (an
-    // intrinsic direction, as a difference of points is).
-    let direction =
-        (screw ^ gax::pga3d::Plane::new(0.0, 0.0, 0.0, 1.0)).with_orientation::<gax::Intrinsic>();
+fn draw_axis(s: &mut Scene3, motor: M, near: Point) {
+    let screw = motor.log();
+    // The axis's direction, as a displacement (its sign does not matter: the stretch is drawn
+    // both ways).
+    let direction = screw.direction();
     if direction.ideal_norm() < 1e-9 {
         return;
     }
@@ -176,7 +172,7 @@ fn draw_axis(s: &mut Scene3, motor: M, near: P) {
     // orthogonal to it.
     let foot = ((screw | near) ^ screw).unitized();
     let reach = direction.gp(1.6 / direction.ideal_norm());
-    s.seg(foot - reach, foot + reach, 1.6, palette::yellow());
+    s.seg(foot - reach, foot + reach, 1.6, palette::YELLOW);
 }
 
 /// The animated alignment, in `rect`.
@@ -194,7 +190,7 @@ fn alignment_panel(c: &mut Canvas, rect: Rect, t: f32) {
         draw_markers(s, &now, 1.0);
     });
     let at = rect.lo + Point2::direction(rect.width() * 0.04, rect.height() * 0.12);
-    c.text(STAGES[stage], at, 13.0, palette::ink(), Align::Left);
+    c.text(STAGES[stage], at, 13.0, palette::INK, Align::Left);
 }
 
 /// The markers after each stage, in panels down `rect`.
@@ -208,7 +204,7 @@ fn stages_panel(c: &mut Canvas, rect: Rect) {
             draw_markers(s, placed, 1.0);
         });
         let at = panel.lo + Point2::direction(4.0, 14.0);
-        c.text(STAGES[k], at, 9.0, palette::ink().faded(0.7), Align::Left);
+        c.text(STAGES[k], at, 9.0, palette::INK.faded(0.7), Align::Left);
     }
 }
 
@@ -235,7 +231,7 @@ mod tests {
     use gax::pga3d::{Line, Point};
 
     /// The largest coordinate difference between two lists of points, at unit weight.
-    fn gap(a: &[P], b: &[P]) -> f64 {
+    fn gap(a: &[Point], b: &[Point]) -> f64 {
         a.iter()
             .zip(b)
             .map(|(p, q)| p.unitized().max_abs_diff(&q.unitized()))
@@ -294,19 +290,17 @@ mod tests {
     fn the_stages_agree_with_numga() {
         let (source, target) = markers();
         let numga_target = [
-            [0.741322578201426, 1.003261912439876, 0.752892473932858],
-            [1.462527508141459, -0.504522748433966, 1.07915749728618],
-            [2.054341534820859, 0.972613548077326, 0.681886155059714],
-        ]
-        .map(point);
+            Point::xyz(0.741322578201426, 1.003261912439876, 0.752892473932858),
+            Point::xyz(1.462527508141459, -0.504522748433966, 1.07915749728618),
+            Point::xyz(2.054341534820859, 0.972613548077326, 0.681886155059714),
+        ];
         assert!(gap(&target, &numga_target) < 1e-14);
         let stages = placements(&source, &reconstruct(&source, &target));
         let translated = [
-            [0.741322578201426, 1.003261912439876, 0.752892473932858],
-            [2.441322578201426, 1.103261912439876, 0.752892473932858],
-            [1.241322578201426, 2.203261912439876, 0.952892473932858],
-        ]
-        .map(point);
+            Point::xyz(0.741322578201426, 1.003261912439876, 0.752892473932858),
+            Point::xyz(2.441322578201426, 1.103261912439876, 0.752892473932858),
+            Point::xyz(1.241322578201426, 2.203261912439876, 0.952892473932858),
+        ];
         let turned = Point::xyz(1.975624477618484, 1.048175803783343, 1.205088851030055);
         assert!(gap(&stages[0], &translated) < 1e-14);
         assert!(gap(&stages[1][2..], &[turned]) < 1e-14);

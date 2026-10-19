@@ -33,14 +33,15 @@
 #[cfg(test)]
 mod derived;
 mod girder;
-#[path = "../../shared/mechanics_lie.rs"]
-mod lie;
+use gax_numga_examples::shared::mechanics_lie as lie;
 mod scenes;
 mod xpbd;
 
 use gax::field::Field;
+use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, label_above,
+    palette, run,
 };
 use girder::{P, Shape};
 use scenes::*;
@@ -99,7 +100,7 @@ fn scene() -> &'static Scene {
 /// A body's light: the moving girders by turns, the fixed ones grey.
 fn body_light(body: usize, fixed: bool) -> Light {
     if fixed {
-        palette::ink().faded(0.35)
+        palette::INK.faded(0.35)
     } else {
         palette::series(body)
     }
@@ -141,8 +142,8 @@ fn draw_chain(c: &mut Canvas, rect: Rect, s: &Scene, frame: usize) {
     let last = s.chain.rest.len() - 1;
     let pivot = bodies[0].site(last).point2();
     draw_bars(c, &ax, &s.chain, bodies, |b| b == 0, 1.6);
-    ax.scatter(c, &[pivot], Marker::Dot, 8.0, palette::ink());
-    label(c, rect, "A HINGED CHAIN SWINGING");
+    ax.scatter(c, &[pivot], Marker::Dot, 8.0, palette::INK);
+    label_above(c, rect, "A HINGED CHAIN SWINGING", 12.0, 6.0);
 }
 
 /// The compressed beam at a frame, its heights stretched to show the buckle: its moving girders
@@ -165,7 +166,7 @@ fn draw_beam(c: &mut Canvas, rect: Rect, s: &Scene, frame: usize) {
     let stretch = (rect.height() / (2.0 * reach)) / (rect.width() / (right - left) as f32);
     let title =
         format!("A CLAMPED BEAM COMPRESSED FROM ITS END (HEIGHTS STRETCHED {stretch:.0} TIMES)");
-    label(c, rect, &title);
+    label_above(c, rect, &title, 12.0, 6.0);
 }
 
 /// The midspan's deflection against the end's displacement so far, and the critical
@@ -185,34 +186,28 @@ fn draw_buckling(c: &mut Canvas, rect: Rect, s: &Scene, frame: usize) {
         &[Point2::xy(critical, 0.0), Point2::xy(critical, top)],
         1.2,
         4.0,
-        palette::red(),
+        palette::RED,
     );
     ax.text(
         c,
         Point2::xy(critical, top * 0.92),
         " CRITICAL",
         10.0,
-        palette::red(),
+        palette::RED,
         Align::Left,
     );
     let curve: Vec<Point2> = (0..=frame)
         .map(|k| Point2::xy(s.displacements[k] as f32, deflection[k] as f32))
         .collect();
-    ax.polyline(c, &curve, 1.8, palette::sky());
-    ax.scatter(c, &curve[frame..], Marker::Dot, 8.0, palette::sky());
-}
-
-/// A panel's title above it.
-fn label(c: &mut Canvas, rect: Rect, title: &str) {
-    let above = rect.top_middle() - Point2::direction(0.0, 6.0);
-    c.text(title, above, 12.0, palette::ink(), Align::Center);
+    ax.polyline(c, &curve, 1.8, palette::SKY);
+    ax.scatter(c, &curve[frame..], Marker::Dot, 8.0, palette::SKY);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let s = scene();
     let fraction = (t / SECONDS).rem_euclid(1.0);
-    let at = |frames: usize| ((fraction * frames as f32) as usize).min(frames - 1);
+    let at = |frames: usize| frame(fraction, frames);
     let screen = c.rect();
     let top = screen.part(0.0, 0.15, 1.0, 0.7);
     draw_chain(
@@ -240,7 +235,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::girder::{D, P, Shape, girder, origin, stiffness, truss, work};
+    use super::girder::{D, P, Shape, girder, stiffness, truss, work};
     use super::scenes::*;
     use super::xpbd::{Bodies, Constraints, Couple, coupling, step};
     use super::{derived, xpbd};
@@ -362,7 +357,7 @@ mod tests {
             .map(|m| {
                 -work()
                     .of(pull)
-                    .of(((*m >> origin()) - origin()).cast::<Direction>())
+                    .of(((*m >> Point::origin()) - Point::origin()).cast::<Direction>())
                     .s()
                     * bodies.mass
             })

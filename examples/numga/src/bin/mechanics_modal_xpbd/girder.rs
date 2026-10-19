@@ -6,25 +6,20 @@ use gax::field::{Field, SparseMap};
 use gax::motions::Pga2d;
 use gax::pga2d::{Direction, Forque, Motor, Point, Scalar, Twist};
 
-pub type P = Point<(), f64>;
+pub type P = Point;
 /// A displacement, or a force (held as the direction it pulls in).
-pub type D = Direction<(), f64>;
-pub type S = Scalar<(), f64>;
+pub type D = Direction;
+pub type S = Scalar;
 /// A map on displacements: a bar's stiffness, a vertex's mass.
-pub type DMap = Direction<(Direction,), f64>;
+pub type DMap = Direction<(Direction,)>;
 /// Rate to momentum: twist (an extrinsic point) to forque (an intrinsic line).
-pub type Inertia = Forque<(Twist,), f64>;
+pub type Inertia = Forque<(Twist,)>;
 
 /// The work a force does along a displacement: the force's polar, numga's force (a line through
 /// the origin, the undual of the direction it pulls in), joined with the displacement. On the
 /// directions' coefficients it is their dot product.
-pub fn work() -> Scalar<(Direction, Direction), f64> {
+pub fn work() -> Scalar<(Direction, Direction)> {
     Direction::slot().undual() & Direction::slot()
-}
-
-/// The origin of the plane.
-pub fn origin() -> P {
-    Point::xy(0.0, 0.0)
 }
 
 /// A truss: its points, and its bars by their ends' indices.
@@ -136,7 +131,7 @@ pub fn girder(
     let (values, fields) = stiffness(&truss, bar_stiffness).eigh(&weights, RIGID + modes);
     // Centred on the mass: the points' mean, as the masses are equal.
     let centre = truss.positions.mean();
-    let to_centre = Motor::between(centre, origin());
+    let to_centre = Motor::between(centre, Point::origin());
     let rest = truss.positions.map(|p| to_centre >> p);
     let rest_masses = vec![vertex_mass; vertices];
     let (inertia, _) = Pga2d::inertia_of(rest.sites(), &rest_masses);

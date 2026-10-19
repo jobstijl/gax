@@ -16,8 +16,7 @@
 //! frames bend the motor surface (second pair). Each panel shows the control net and the frames'
 //! axes, `x` red, `y` green and `z` blue.
 
-#[path = "../shared/surfaces_loop.rs"]
-mod surfaces_loop;
+use gax_numga_examples::shared::surfaces_loop;
 
 use gax::field::Field;
 use gax_numga_examples::label_under;
@@ -33,7 +32,7 @@ mod motors {
     use gax_numga_examples::mesh::{Mesh, Vector3};
 
     /// A motor with `f64` coefficients.
-    pub type Motor64 = Motor<(), f64>;
+    pub type Motor64 = Motor;
 
     /// So many Loop steps on a mesh of motors, the `pinned` vertices staying where they are:
     /// the steps composed into one map, and the finer mesh, every averaged motor normalized back
@@ -42,7 +41,7 @@ mod motors {
         mesh: &Mesh<Motor64>,
         pinned: &[bool],
         depth: usize,
-    ) -> (SparseMap<Scalar<(), f64>>, Mesh<Motor64>) {
+    ) -> (SparseMap<Scalar>, Mesh<Motor64>) {
         refine(mesh, pinned, depth, |m| m.normalized())
     }
 
@@ -60,7 +59,7 @@ mod motors {
 
     /// The origin of every frame, where its motor takes the origin.
     pub fn origins(motors: &Field<Motor64>) -> Field<Point64> {
-        let origin = Point64::xyz(0.0, 0.0, 0.0);
+        let origin = Point64::origin();
         motors.map(|m| m >> origin)
     }
 }
@@ -208,10 +207,10 @@ fn panel(c: &mut Canvas, rect: Rect, refined: &Refined, points: &Field<Point64>,
     let cam = framing(rect, origins.sites(), AZIMUTH, ELEVATION);
     panel3(c, rect, cam, |s: &mut Scene3| {
         surface(s, points, &refined.motors.faces, |_| {
-            palette::sky().faded(0.5)
+            palette::SKY.faded(0.5)
         });
         net(s, &origins, &control.edges);
-        let lights = [palette::red(), palette::green(), palette::blue()];
+        let lights = [palette::RED, palette::GREEN, palette::BLUE];
         for (ends, light) in axis_ends(&control.vertices).iter().zip(lights) {
             for (o, e) in origins.iter().zip(ends.iter()) {
                 s.seg(o, e, AXIS_WIDTH, light);
@@ -266,7 +265,7 @@ mod tests {
     /// The mean distance of points from the `z` axis: the norm of the plane joining the axis to
     /// each point.
     fn reach(points: &Field<Point64>) -> f64 {
-        let axis = Point::xyz(0.0, 0.0, 0.0) & Point::direction(0.0, 0.0, 1.0);
+        let axis = Point::origin() & Point::direction(0.0, 0.0, 1.0);
         let distances = points.iter().map(|p| (axis & p.unitized()).norm());
         distances.sum::<f64>() / points.len() as f64
     }

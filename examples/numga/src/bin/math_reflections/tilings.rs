@@ -81,7 +81,7 @@ pub fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(0.0, -1.15),
             name,
             11.0,
-            palette::ink(),
+            palette::INK,
             Align::Center,
         );
     }

@@ -184,14 +184,14 @@ fn draw_view(c: &mut Canvas, rect: Rect, pixels: &[Light]) {
     });
     c.unclip();
     let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
+    c.polyline(&corners, 1.0, palette::GRID, true);
 }
 
 /// A camera view with its title above it.
 fn titled_view(c: &mut Canvas, rect: Rect, pixels: &[Light], title: &str) {
     draw_view(c, rect, pixels);
     let at = rect.lo + Point2::direction(0.0, -7.0);
-    c.text(title, at, 12.0, palette::ink(), Align::Left);
+    c.text(title, at, 12.0, palette::INK, Align::Left);
 }
 
 /// The sweep: the equatorial rays at the frame's spin, coloured across the bundle, and the
@@ -210,7 +210,7 @@ fn draw_sweep(c: &mut Canvas, ax: &Axes, t: f32) {
     let outline = vga2d::Vector::new(hole.horizon(), spin).norm() as f32;
     let circle = points::circle(ORIGIN2, outline, 96);
     ax.fill(c, &circle, light(0.01, 0.012, 0.03, 1.0), 1.0);
-    ax.polyline(c, &circle, 1.0, palette::grid());
+    ax.polyline(c, &circle, 1.0, palette::GRID);
     ax.frame(c, "EQUATORIAL RAYS", "X / M", "Y / M");
     let sense = if spin >= 0.0 {
         "COUNTERCLOCKWISE"
@@ -223,7 +223,7 @@ fn draw_sweep(c: &mut Canvas, ax: &Axes, t: f32) {
         ax.at(0.03, 0.95),
         &readout,
         12.0,
-        palette::yellow(),
+        palette::YELLOW,
         Align::Left,
     );
 }
@@ -243,19 +243,19 @@ fn draw_temperature_bar(c: &mut Canvas, rect: Rect) {
         let fraction = ((k - RANGE[0]) / (RANGE[1] - RANGE[0])) as f32;
         let foot = rect.bottom_left() + Point2::direction(fraction * rect.width(), size * 1.4);
         let label = format!("{k:.0}");
-        c.text(&label, foot, size, palette::ink(), Align::Center);
+        c.text(&label, foot, size, palette::INK, Align::Center);
     }
     let title = rect.lo + Point2::direction(0.0, -size * 0.6);
     let name = "OBSERVED TEMPERATURE, K";
-    c.text(name, title, size, palette::ink(), Align::Left);
+    c.text(name, title, size, palette::INK, Align::Left);
 }
 
 /// The polarizer's axis on the screen, as a line across a ring: `x` right and `y` up.
 fn draw_analyzer(c: &mut Canvas, centre: Point2, radius: f32, angle: f32) {
     let axis = phasor(angle);
     let across = Point2::direction(axis.e20(), -axis.e01()).gp(radius);
-    c.ring(centre, radius, 1.0, palette::grid());
-    c.line(centre - across, centre + across, 1.5, palette::sky());
+    c.ring(centre, radius, 1.0, palette::GRID);
+    c.line(centre - across, centre + across, 1.5, palette::SKY);
 }
 
 fn draw(c: &mut Canvas, t: f32) {

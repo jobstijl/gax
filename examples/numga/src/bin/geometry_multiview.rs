@@ -33,16 +33,16 @@ macro_rules! multiview_core {
         use gax::$ga::{Direction, Motor, Point, Scalar, Twist};
         use gax::{Kind, Unit};
 
-        pub type P = Point<(), f64>;
-        pub type Pl = Plane<(), f64>;
-        pub type Tw = Twist<(), f64>;
-        pub type M = Unit<Motor<(), f64>>;
+        pub type P = Point;
+        pub type Pl = Plane;
+        pub type Tw = Twist;
+        pub type M = Unit<Motor>;
         /// A camera: a projective map on points.
-        pub type Camera = Point<(Point,), f64>;
+        pub type Camera = Point<(Point,)>;
         /// A quadric as its polarity map: a point to its polar plane.
-        pub type Quadric = Plane<(Point,), f64>;
+        pub type Quadric = Plane<(Point,)>;
         /// The curvature of a cost over pose twists.
-        pub type Information = Scalar<(Twist, Twist), f64>;
+        pub type Information = Scalar<(Twist, Twist)>;
         /// The dimension of the space.
         pub const DIM: usize = <Point as Kind>::N - 1;
 
@@ -73,8 +73,8 @@ macro_rules! multiview_core {
         }
 
         /// The directions widened into points (of weight zero), a map `Point <- Direction`.
-        pub fn embed() -> Point<(Direction,), f64> {
-            Direction::<(), f64>::slot().cast::<Point>()
+        pub fn embed() -> Point<(Direction,)> {
+            Direction::slot().cast::<Point>()
         }
 
         /// A point scaled so that the plane at infinity reads it as one, as numga normalizes
@@ -100,7 +100,7 @@ macro_rules! multiview_core {
 
         /// The map on planes induced by a map on points, through incidence: `on_planes(t)(l) & p
         /// == l & t(p)` for every plane and point, whether or not `t` is invertible.
-        pub fn on_planes(collineation: Camera) -> Plane<(Plane,), f64> {
+        pub fn on_planes(collineation: Camera) -> Plane<(Plane,)> {
             (Plane::slot() & Point::slot()).solve(Plane::slot() & collineation)
         }
 
@@ -139,8 +139,8 @@ macro_rules! multiview_core {
 
         /// The motion of a camera-frame point per unit right step of its camera's pose: minus
         /// the commutator with the twist.
-        pub fn motion(local: P) -> Point<(Twist,), f64> {
-            -Twist::<(), f64>::slot().commutator(local)
+        pub fn motion(local: P) -> Point<(Twist,)> {
+            -Twist::slot().commutator(local)
         }
 
         /// One Gauss-Newton step per camera on the cone value, its twist solved by least
@@ -157,7 +157,7 @@ macro_rules! multiview_core {
                 .iter()
                 .enumerate()
                 .map(|(c, m)| {
-                    let gradient: Scalar<(Twist,), f64> = points
+                    let gradient: Scalar<(Twist,)> = points
                         .iter()
                         .zip(cones)
                         .map(|(p, row)| {
@@ -259,12 +259,12 @@ macro_rules! multiview_core {
                 let scaled = reweight_cones(camera, &motors, cones);
                 let (points, _) = triangulate(&motors, &scaled);
                 // A world displacement of a point, carried into each camera.
-                let moved: Vec<Point<(Direction,), f64>> =
+                let moved: Vec<Point<(Direction,)>> =
                     motors.iter().map(|m| *m << embed()).collect();
                 let h_cam = camera_curvature(&motors, &scaled, &points);
                 information = h_cam;
                 for (p, row) in points.iter().zip(&scaled) {
-                    let h_pt: Scalar<(Direction, Direction), f64> =
+                    let h_pt: Scalar<(Direction, Direction)> =
                         row.iter().zip(&moved).map(|(q, mv)| q.of(*mv) & *mv).sum();
                     for (c, m) in motors.iter().enumerate() {
                         let moving = motion(*m << *p);
@@ -330,11 +330,6 @@ mod plane {
         18f64.to_radians()
     }
 
-    /// The origin, where the pinhole sits in its camera's frame.
-    pub fn origin() -> P {
-        Point::xy(0.0, 0.0)
-    }
-
     /// Camera poses at offsets along the x axis, each looking along its `+y` panned clockwise
     /// (towards `+x`) by its gaze: numga's `exp(xw offset / 2) exp(xy gaze / 2)`.
     pub fn rig(offsets: &[f64], gazes: &[f64]) -> Vec<M> {
@@ -342,7 +337,7 @@ mod plane {
             .iter()
             .zip(gazes)
             .map(|(o, g)| {
-                Motor::translation(Point::direction(*o, 0.0)) * Motor::rotation(origin(), -g)
+                Motor::translation(Point::direction(*o, 0.0)) * Motor::rotation(Point::origin(), -g)
             })
             .collect()
     }
@@ -479,8 +474,8 @@ mod plane {
 
     /// A pose's covariance from its information form: the form as a map from twists to
     /// forques (solved from the incidence pairing), pseudo-inverted with numga's cutoff.
-    pub fn pose_covariance(information: Information) -> Twist<(Forque,), f64> {
-        let map: Forque<(Twist,), f64> = (Forque::slot() & Twist::slot()).solve(information);
+    pub fn pose_covariance(information: Information) -> Twist<(Forque,)> {
+        let map: Forque<(Twist,)> = (Forque::slot() & Twist::slot()).solve(information);
         map.pinv_with(1e-4)
     }
 }
@@ -526,7 +521,7 @@ fn data() -> &'static Data {
 }
 
 fn camera_colour(c: usize) -> Light {
-    [palette::sky(), palette::purple(), palette::green()][c % 3]
+    [palette::SKY, palette::PURPLE, palette::GREEN][c % 3]
 }
 
 /// Smooth coverage of the level set `sqrt(value) <= level`, a pixel wide at the edge.
@@ -549,7 +544,7 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
     let world = plane::world_cones(motors, cones);
     let (points, fused) = plane::triangulate(motors, cones);
     // Each camera's focal line, oriented so that a point ahead reads a positive depth.
-    let focal: Vec<Line<(), f64>> = motors
+    let focal: Vec<Line> = motors
         .iter()
         .map(|m| {
             let l = *m >> Line::new(0.0, 1.0, 0.0);
@@ -579,8 +574,8 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
     let pixel = f64::from(ax.scale().recip());
     let height = c.rect().height();
     let backdrop_at =
-        |q: Point2| palette::top().mix_light(palette::bottom(), q.unitized().e01() / height);
-    let splat = palette::orange();
+        |q: Point2| palette::TOP.mix_light(palette::BOTTOM, q.unitized().e01() / height);
+    let splat = palette::ORANGE;
     let me = *ax;
     ax.image(c, 1, |at| {
         let p = at.map_coefs(f64::from);
@@ -616,7 +611,7 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
     // The cameras, drawn in their own frames (looking along +y): a field-of-view wedge 38
     // degrees either side of the axis to a depth of 0.28, the sensor line across it, and the
     // optical axis.
-    let origin = plane::origin();
+    let origin = Point::origin();
     let depth = 0.28;
     for (k, m) in motors.iter().enumerate() {
         let edge = |angle: f64| {
@@ -635,14 +630,14 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
         let ahead = *m >> Point::xy(0.0, depth * 1.15);
         ax.dashed(c, &[o, ahead], 1.2, 3.0, colour);
     }
-    ax.scatter(c, &points, Marker::Dot, 3.0, palette::ink());
+    ax.scatter(c, &points, Marker::Dot, 3.0, palette::INK);
 }
 
 /// Each moving camera's position ellipse (scaled for display) and turning fan, from its
 /// marginal information.
 fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[plane::Information]) {
     use gax::pga2d::{Forque, Line, Motor, Point, Scalar, Twist};
-    let origin = plane::origin();
+    let origin = Point::origin();
     // The centre moves by the commutator of a local twist with the origin; reading that
     // displacement with a line is reading the twist with a forque.
     let shift = Twist::slot().commutator(origin);
@@ -658,7 +653,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
         // with a direction), their normals with their standard deviations.
         let (values, modes) = (readout & cov.of(readout)).eigh(Scalar::identity());
         #[allow(clippy::disallowed_methods)] // standard deviations from variances
-        let axes: Vec<(Point<(), f64>, f64)> = modes
+        let axes: Vec<(Point, f64)> = modes
             .iter()
             .zip(values)
             .filter(|(l, _)| l.norm() > 0.5)
@@ -671,7 +666,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
             })
             .collect();
         // Round the ellipse: the unit direction at each angle, its coordinates along the axes.
-        let ring: Vec<Point<(), f64>> = (0..=64)
+        let ring: Vec<Point> = (0..=64)
             .map(|i| {
                 let angle = core::f64::consts::TAU * f64::from(i) / 64.0;
                 let u = Point::direction_from_angle(angle);
@@ -689,7 +684,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
         #[allow(clippy::disallowed_methods)] // a standard deviation from a variance
         let turn = (w & cov.of(w)).s().max(0.0).sqrt() * 0.35;
         let half = turn.min(core::f64::consts::PI);
-        let arc: Vec<Point<(), f64>> = (0..=24)
+        let arc: Vec<Point> = (0..=24)
             .map(|i| {
                 let angle = half * (2.0 * f64::from(i) / 24.0 - 1.0);
                 *m >> (Motor::rotation(origin, angle) >> Point::xy(0.0, 0.38))
@@ -788,19 +783,11 @@ fn draw(c: &mut Canvas, t: f32) {
         (
             format!("CAMERAS ANCHORED: {}   FREE: {}", pick(false), pick(true)),
             12.0,
-            palette::ink(),
+            palette::INK,
         ),
-        (format!("CONE COST {cost:.2e}"), 11.0, palette::grid()),
-        (
-            "SIGHT CONES A PIXEL WIDE;".to_string(),
-            11.0,
-            palette::grid(),
-        ),
-        (
-            "ORANGE: THE FUSED SPLATS".to_string(),
-            11.0,
-            palette::grid(),
-        ),
+        (format!("CONE COST {cost:.2e}"), 11.0, palette::GRID),
+        ("SIGHT CONES A PIXEL WIDE;".to_string(), 11.0, palette::GRID),
+        ("ORANGE: THE FUSED SPLATS".to_string(), 11.0, palette::GRID),
     ]
     .iter()
     .enumerate()
@@ -1017,8 +1004,7 @@ mod tests {
             ([-30.0, 20.0, -25.0], [-0.40, 0.30, 0.45], 30),
             ([-50.0, -35.0, 40.0], [0.60, -0.50, 0.80], 40),
         ] {
-            let spin =
-                gax::pga3d::Point::<(), f64>::direction(rotation[0], rotation[1], rotation[2]);
+            let spin: Point = Point::direction(rotation[0], rotation[1], rotation[2]);
             let [tx, ty, tz] = translation;
             let perturbation = Motor::translation(Point::direction(tx, ty, tz))
                 * Motor::rotation_about(
@@ -1042,7 +1028,7 @@ mod tests {
             if residual.s() < 0.0 {
                 residual = -residual;
             }
-            let log: gax::pga3d::Line<(), f64> = gax::Unit::new_unchecked(residual).log();
+            let log = gax::Unit::new_unchecked(residual).log();
             let angle = 2.0 * log.norm();
             assert!(angle.to_degrees() < 0.5, "{}", angle.to_degrees());
             assert!(space::cone_cost(&est, &points, &cones) < initial_cost * 1e-3);

@@ -19,13 +19,12 @@
 use gax::vga3d::Bivector;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, from_above, measure, palette, reach3, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect, Scene3,
+    backdrop, caption, from_above, label_above, measure, on_sphere, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod rolling {
     use super::space::AXES;
@@ -152,22 +151,22 @@ fn table(v: V) -> Point2 {
 
 /// The pattern's colour where the product of the coordinates is positive.
 fn light_side() -> Light {
-    palette::yellow()
+    palette::YELLOW
 }
 
 /// The pattern's colour where it is negative.
 fn dark_side() -> Light {
-    palette::blue()
+    palette::BLUE
 }
 
 /// The colour of the great circles between them.
 fn circle_light() -> Light {
-    palette::bottom()
+    palette::BOTTOM
 }
 
 /// The colour of the contact's trail.
 fn trail_light() -> Light {
-    palette::red()
+    palette::RED
 }
 
 /// The trail so far, thinned to at most [`TRAIL_MARKS`] marks evenly along it.
@@ -215,12 +214,12 @@ fn draw_ball(c: &mut Canvas, ax: &Axes, centre: V, orientation: Turn, trail: &[V
 /// The table from above: the loop, the centre's path so far, and the ball.
 fn draw_table(c: &mut Canvas, rect: Rect, r: &Rolling, step: usize) {
     let reach = (LOOP + TABLE_MARGIN * RADIUS) as f32;
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), reach);
+    let ax = Axes::equal(rect, ORIGIN2, reach);
     let whole: Vec<Point2> = r.path[..=STEPS_PER_LOOP]
         .iter()
         .map(|p| table(*p))
         .collect();
-    ax.polyline(c, &whole, 1.0, palette::grid().faded(2.0));
+    ax.polyline(c, &whole, 1.0, palette::GRID.faded(2.0));
     draw_ball(
         c,
         &ax,
@@ -229,14 +228,8 @@ fn draw_table(c: &mut Canvas, rect: Rect, r: &Rolling, step: usize) {
         &r.contact[..=step],
     );
     let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
-    label(c, rect, "THE TABLE FROM ABOVE");
-}
-
-/// A panel's title above it.
-fn label(c: &mut Canvas, rect: Rect, title: &str) {
-    let above = rect.top_middle() - Point2::direction(0.0, 8.0);
-    c.text(title, above, 13.0, palette::ink(), Align::Center);
+    c.polyline(&corners, 1.0, palette::GRID, true);
+    label_above(c, rect, "THE TABLE FROM ABOVE", 13.0, 8.0);
 }
 
 /// The ball in its own frame, the camera turning once per loop of the animation: a shell over
@@ -264,8 +257,14 @@ fn draw_frame(c: &mut Canvas, rect: Rect, r: &Rolling, step: usize, t: f32) {
         );
     });
     let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
-    label(c, rect, "THE CONTACT'S TRAIL, IN THE BALL'S FRAME");
+    c.polyline(&corners, 1.0, palette::GRID, true);
+    label_above(
+        c,
+        rect,
+        "THE CONTACT'S TRAIL, IN THE BALL'S FRAME",
+        13.0,
+        8.0,
+    );
 }
 
 /// The ball as a faint shell, which dims what lies behind it, with the pattern's three great
@@ -276,16 +275,10 @@ fn shell(s: &mut Scene3) {
             core::f32::consts::PI * (u - 0.5),
             core::f32::consts::TAU * v,
         );
-        let turn =
-            gax::pga3d::Motor::rotation_about(gax::pga3d::Point::direction(0.0, 0.0, 1.0), lon)
-                * gax::pga3d::Motor::rotation_about(
-                    gax::pga3d::Point::direction(0.0, -1.0, 0.0),
-                    lat,
-                );
-        ORIGIN3 + (turn >> gax::pga3d::Point::direction(RADIUS as f32, 0.0, 0.0))
+        reach3(on_sphere(lon, lat).gp(RADIUS as f32))
     };
     let [latitudes, longitudes] = SHELL;
-    let shade = |_, _| palette::bottom().faded(4.0);
+    let shade = |_, _| palette::BOTTOM.faded(4.0);
     s.surface(sphere, latitudes, longitudes, shade, 0.55, None);
     // Each circle where a coordinate vanishes: its plane, and a direction in it to start from.
     let circles = [
@@ -300,7 +293,7 @@ fn shell(s: &mut Scene3) {
                 reach3(turn(plane, angle) >> (start * RADIUS))
             })
             .collect();
-        s.polyline(&ring, 1.2, palette::ink().faded(0.5));
+        s.polyline(&ring, 1.2, palette::INK.faded(0.5));
     }
 }
 
@@ -332,7 +325,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let degrees = 2.0 * turn.log().norm().to_degrees();
     let note = format!("ONE LOOP TURNS THE BALL BY {degrees:.0} DEGREES");
     let at = right.bottom_middle() - Point2::direction(0.0, 10.0);
-    c.text(&note, at, 11.0, palette::ink().faded(0.6), Align::Center);
+    c.text(&note, at, 11.0, palette::INK.faded(0.6), Align::Center);
     caption(
         c,
         "ROLLING BALL: A LOOP THAT DOES NOT UNDO ITSELF",

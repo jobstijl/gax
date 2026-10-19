@@ -23,12 +23,11 @@
 //! the Dirac operator's eigenfields, and the surfaces they spin the sphere into keep its angles
 //! (eigenvalues the integers but `-1`). The outside of each surface is orange, its inside blue.
 
-#[path = "../shared/surfaces_sphere.rs"]
-mod surfaces_sphere;
-#[path = "../shared/surfaces_spin.rs"]
-mod surfaces_spin;
+use gax_numga_examples::shared::surfaces_sphere;
+use gax_numga_examples::shared::surfaces_spin;
 
 use gax_numga_examples::mesh::Mesh;
+use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Camera, Canvas, Lens, Light, Rect, backdrop, caption, colormap, label_under, reach3, run,
 };
@@ -43,18 +42,18 @@ mod spin {
     use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 
     /// A quaternion: an even multivector, a turn and a scale.
-    pub type Quaternion = Rotor<(), f64>;
+    pub type Quaternion = Rotor;
     /// A map on quaternions: the cells of the energy and of the area metric.
-    pub type QuaternionMap = Rotor<(Rotor,), f64>;
+    pub type QuaternionMap = Rotor<(Rotor,)>;
 
     /// The unit volume `e123`, the oriented volume no motion changes: an oriented volume read
     /// against it is its signed size.
-    pub const UNIT_VOLUME: Pseudoscalar<(), f64> = Pseudoscalar::new(1.0);
+    pub const UNIT_VOLUME: Pseudoscalar = Pseudoscalar::new(1.0);
 
     /// The Dirac operator less `ρ` (a number on each face), `[F, V]` with odd cells: each face
     /// takes each corner by the edge it faces over minus twice its area, less `ρ` times the
     /// pseudoscalar of the mean of its corners: `ρ` times the unit volume.
-    pub fn dirac_less(mesh: &Mesh, rho: &Field<Scalar3>) -> SparseMap<Odd<(), f64>> {
+    pub fn dirac_less(mesh: &Mesh, rho: &Field<Scalar3>) -> SparseMap<Odd> {
         let inverse_areas = mesh.triangle_areas().map(|a| a.inverse());
         let corners = mesh.at_corners(&mesh.triangle_edges());
         let dirac = &SparseMap::from_diagonal(&inverse_areas) * &corners;
@@ -353,7 +352,7 @@ fn draw(c: &mut Canvas, t: f32) {
     checkered(c, rect, &s.rounding[step], &s.rounding[0], azimuth, &label);
 
     // A Dirac sphere of each eigenvalue, the states in turn.
-    let state = ((phase * STATES as f32) as usize).min(STATES - 1);
+    let state = frame(phase, STATES);
     for (i, gallery) in s.galleries.iter().enumerate() {
         let rect = lower.column(i, s.galleries.len());
         let energy = gallery.energies[state];

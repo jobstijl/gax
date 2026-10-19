@@ -5,8 +5,15 @@
 
 use gax::Unit;
 use gax::batch::BatchTransform;
-use gax::pga2d::{Moments, Motor, Point, Twist, intrinsic};
+use gax::pga2d::{Moments, intrinsic};
 use rand::Rng as _;
+
+/// The game's points and directions, in `f32`.
+pub type Point = gax::pga2d::Point<(), f32>;
+/// Its motions.
+type Motor = gax::pga2d::Motor<(), f32>;
+/// Its twists.
+type Twist = gax::pga2d::Twist<(), f32>;
 
 /// The width and height of the world (it wraps around at the edges).
 pub const WORLD: [f32; 2] = [160.0, 100.0];
@@ -28,15 +35,10 @@ const SPLIT_MOMENTUM: f32 = 400.0;
 const MIN_PIECE_AREA: f32 = 8.0;
 
 /// The origin of the plane.
-const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
+const ORIGIN: Point = Point::new(0.0, 0.0, 1.0);
 
 /// The ship's nose, in its body frame: forwards.
-const FORWARDS: Point<(), f32> = Point::new(0.0, 1.0, 0.0);
-
-/// The direction of `length` at `angle` from the x axis: `(length, 0)` turned by a rotation.
-fn polar(length: f32, angle: f32) -> Point<(), f32> {
-    Motor::rotation(ORIGIN, angle) >> Point::direction(length, 0.0)
-}
+const FORWARDS: Point = Point::new(0.0, 1.0, 0.0);
 
 /// Keys held (or pressed) this frame.
 #[derive(Clone, Copy, Debug, Default)]
@@ -56,16 +58,16 @@ pub struct Input {
 #[derive(Clone, Copy, Debug)]
 pub struct Body {
     /// Body to world.
-    pub pose: Unit<Motor<(), f32>>,
+    pub pose: Unit<Motor>,
     /// World velocity: a direction.
-    pub vel: Point<(), f32>,
+    pub vel: Point,
     /// Angular velocity, counterclockwise, rad/s.
     pub spin: f32,
 }
 
 impl Body {
     /// A body at `p`, turned by `angle`, at rest.
-    pub fn at(p: Point<(), f32>, angle: f32) -> Body {
+    pub fn at(p: Point, angle: f32) -> Body {
         Body {
             pose: Motor::between(ORIGIN, p) * Motor::rotation(ORIGIN, angle),
             vel: Point::direction(0.0, 0.0),
@@ -76,7 +78,7 @@ impl Body {
     /// Advance by `dt`: translate in the world frame, spin in the body frame, wrap around.
     pub fn step(&mut self, dt: f32) {
         // The twists (bivectors: in PGA2D, points) of the velocities; exp(t B) moves for time t.
-        let travel = self.translation_twist().gp(dt).exp();
+        let travel = Twist::translation(self.vel).gp(dt).exp();
         let turn = Twist::rotation(ORIGIN, self.spin).gp(dt).exp();
         self.pose = travel * self.pose * turn;
         // Across an edge: carried to the other side, a world's width or height away.
@@ -90,29 +92,24 @@ impl Body {
     }
 
     /// The body's origin in the world.
-    pub fn position(&self) -> Point<(), f32> {
+    pub fn position(&self) -> Point {
         self.pose >> ORIGIN
-    }
-
-    /// The twist of a translation at `vel`.
-    fn translation_twist(&self) -> Twist<(), f32> {
-        Twist::translation(Point::direction(self.vel.e20(), self.vel.e01()))
     }
 
     /// The world twist of its motion: a translation at `vel` plus a turn at `spin` about its
     /// origin. Twists add.
-    pub fn twist(&self) -> Twist<(), f32> {
-        self.translation_twist() + Twist::rotation(self.position(), self.spin)
+    pub fn twist(&self) -> Twist {
+        Twist::translation(self.vel) + Twist::rotation(self.position(), self.spin)
     }
 
     /// The world velocity of the body's point at `p` (a unit point): the rate of `exp(t B) p
     /// exp(-t B)`, `B p - p B`, twice gax's commutator.
-    pub fn velocity_at(&self, p: Point<(), f32>) -> Point<(), f32> {
+    pub fn velocity_at(&self, p: Point) -> Point {
         self.twist().commutator(p).gp(2.0)
     }
 
     /// A body direction (such as [`FORWARDS`]) in the world.
-    pub fn direction(&self, d: Point<(), f32>) -> Point<(), f32> {
+    pub fn direction(&self, d: Point) -> Point {
         self.pose >> d
     }
 }
@@ -121,7 +118,7 @@ impl Body {
 #[derive(Clone, Debug)]
 pub struct Shape {
     /// The vertices.
-    pub points: Vec<Point<(), f32>>,
+    pub points: Vec<Point>,
     /// The largest distance of a vertex from the origin.
     pub radius: f32,
     /// Its mass (area times density).
@@ -131,10 +128,10 @@ pub struct Shape {
 }
 
 impl Shape {
-    fn new(points: Vec<Point<(), f32>>) -> Shape {
+    fn new(points: Vec<Point>) -> Shape {
         let radius = points
             .iter()
-            .map(|p| (*p & ORIGIN).norm())
+            .map(|p| p.distance(ORIGIN))
             .fold(0.0, f32::max);
         let m = Moments::<f32>::of_polygon(&points);
         Shape {
@@ -147,7 +144,7 @@ impl Shape {
 
     /// The shape of `points` moved so that its centre of mass is the body origin (a rigid body
     /// spins about it), and that centre in the old coordinates.
-    fn centred(points: &[Point<(), f32>]) -> (Shape, Point<(), f32>) {
+    fn centred(points: &[Point]) -> (Shape, Point) {
         let c = Moments::<f32>::of_polygon(points).centroid();
         let back = Motor::between(c, ORIGIN);
         (Shape::new(points.iter().map(|&p| back >> p).collect()), c)
@@ -159,19 +156,26 @@ impl Shape {
     }
 
     /// The vertices placed by `pose` (all at once, on SIMD lanes).
-    pub fn placed(&self, pose: Unit<Motor<(), f32>>, out: &mut Vec<Point<(), f32>>) {
+    pub fn placed(&self, pose: Unit<Motor>, out: &mut Vec<Point>) {
         out.resize(self.points.len(), Point::zero());
         pose.transform_slice(&self.points, out);
     }
 }
 
+/// The sides of the closed polygon `poly`: each vertex with the next, the last with the first.
+pub fn sides(poly: &[Point]) -> impl Iterator<Item = (Point, Point)> + '_ {
+    poly.iter()
+        .copied()
+        .zip(poly.iter().copied().cycle().skip(1))
+}
+
 /// The convex polygon `poly` cut by `line` into the parts on its two sides: each edge whose ends
 /// lie on different sides contributes the meet of its line with `line` to both. The cutting line
 /// is a join of points, so intrinsic (ADR-051).
-pub fn cut(poly: &[Point<(), f32>], line: intrinsic::Line<(), f32>) -> [Vec<Point<(), f32>>; 2] {
-    let side = |p: Point<(), f32>| (line ^ p).e012() * p.e12().signum();
+pub fn cut(poly: &[Point], line: intrinsic::Line<(), f32>) -> [Vec<Point>; 2] {
+    let side = |p: Point| (line ^ p).e012() * p.e12().signum();
     let mut parts = [Vec::new(), Vec::new()];
-    for (&a, &b) in poly.iter().zip(poly.iter().cycle().skip(1)) {
+    for (a, b) in sides(poly) {
         let (sa, sb) = (side(a), side(b));
         parts[usize::from(sa < 0.0)].push(a);
         if (sa < 0.0) != (sb < 0.0) {
@@ -186,14 +190,12 @@ pub fn cut(poly: &[Point<(), f32>], line: intrinsic::Line<(), f32>) -> [Vec<Poin
 /// Whether `p` lies inside the convex polygon `poly` (world vertices, either orientation):
 /// on the same side of every edge line as the polygon's `inside` point. The side of a point
 /// with respect to a line is the sign of their outer product.
-pub fn contains(poly: &[Point<(), f32>], inside: Point<(), f32>, p: Point<(), f32>) -> bool {
-    poly.iter()
-        .zip(poly.iter().cycle().skip(1))
-        .all(|(&a, &b)| {
-            let edge = a & b;
-            let (s, t) = ((edge ^ p).e012(), (edge ^ inside).e012());
-            s * t >= 0.0
-        })
+pub fn contains(poly: &[Point], inside: Point, p: Point) -> bool {
+    sides(poly).all(|(a, b)| {
+        let edge = a & b;
+        let (s, t) = ((edge ^ p).e012(), (edge ^ inside).e012());
+        s * t >= 0.0
+    })
 }
 
 /// The random generator, seeded.
@@ -211,10 +213,10 @@ pub struct Asteroid {
 }
 
 impl Asteroid {
-    fn random(rng: &mut Rng, at: Point<(), f32>, size: u8) -> Asteroid {
+    fn random(rng: &mut Rng, at: Point, size: u8) -> Asteroid {
         let r = 3.5 * f32::from(size);
         let n = 7 + usize::from(size) * 2;
-        let points: Vec<Point<(), f32>> = (0..n)
+        let points: Vec<Point> = (0..n)
             .map(|i| {
                 let a = std::f32::consts::TAU * (i as f32 + rng.random_range(-0.3..0.3)) / n as f32;
                 let d = r * rng.random_range(0.75..1.1);
@@ -224,7 +226,7 @@ impl Asteroid {
         let mut body = Body::at(at, rng.random_range(0.0..std::f32::consts::TAU));
         let speed = rng.random_range(4.0..14.0) * (4.0 - f32::from(size)) / 2.0;
         let heading = rng.random_range(0.0..std::f32::consts::TAU);
-        body.vel = polar(speed, heading);
+        body.vel = Point::direction_from_angle(heading).gp(speed);
         body.spin = rng.random_range(-1.2..1.2);
         Asteroid {
             body,
@@ -239,7 +241,7 @@ impl Asteroid {
     /// mass, its inertia); then the rock is cut along the bullet's path, and each piece keeps
     /// the rock's rigid motion at its own centre of mass, the two pushed apart with equal and
     /// opposite momentum. Small rocks and slivers turn to dust.
-    pub fn shatter(&self, hit: Point<(), f32>, bullet: Point<(), f32>) -> Vec<Asteroid> {
+    pub fn shatter(&self, hit: Point, bullet: Point) -> Vec<Asteroid> {
         if self.size <= 1 {
             return Vec::new();
         }
@@ -256,7 +258,7 @@ impl Asteroid {
         // positive towards the line's normal.
         let line = hit & bullet;
         let line = line.gp(line.norm().max(1e-6).recip());
-        let normal = Point::direction(line.e1(), line.e2());
+        let normal = line.normal();
         cut(&shape.points, path)
             .iter()
             .filter_map(|part| {
@@ -282,24 +284,13 @@ impl Asteroid {
     }
 }
 
-/// A shot.
+/// A shot, or a spark of an explosion.
 #[derive(Clone, Copy, Debug)]
-pub struct Bullet {
+pub struct Particle {
     /// Position.
-    pub pos: Point<(), f32>,
+    pub pos: Point,
     /// Velocity: a direction.
-    pub vel: Point<(), f32>,
-    /// Seconds left.
-    pub life: f32,
-}
-
-/// A spark of an explosion.
-#[derive(Clone, Copy, Debug)]
-pub struct Spark {
-    /// Position.
-    pub pos: Point<(), f32>,
-    /// Velocity: a direction.
-    pub vel: Point<(), f32>,
+    pub vel: Point,
     /// Seconds left.
     pub life: f32,
 }
@@ -314,9 +305,9 @@ pub struct Game {
     /// Rocks.
     pub asteroids: Vec<Asteroid>,
     /// Shots in flight.
-    pub bullets: Vec<Bullet>,
+    pub bullets: Vec<Particle>,
     /// Explosion sparks.
-    pub sparks: Vec<Spark>,
+    pub sparks: Vec<Particle>,
     /// Points.
     pub score: u32,
     /// Ships left.
@@ -331,7 +322,7 @@ pub struct Game {
     pub over: bool,
     cooldown: f32,
     rng: Rng,
-    scratch: [Vec<Point<(), f32>>; 2],
+    scratch: [Vec<Point>; 2],
 }
 
 impl Game {
@@ -379,13 +370,13 @@ impl Game {
         }
     }
 
-    fn explode(&mut self, at: Point<(), f32>, n: usize, speed: f32) {
+    fn explode(&mut self, at: Point, n: usize, speed: f32) {
         for _ in 0..n {
             let a = self.rng.random_range(0.0..std::f32::consts::TAU);
             let s = self.rng.random_range(0.2..1.0) * speed;
-            self.sparks.push(Spark {
+            self.sparks.push(Particle {
                 pos: at,
-                vel: polar(s, a),
+                vel: Point::direction_from_angle(a).gp(s),
                 life: self.rng.random_range(0.3..0.9),
             });
         }
@@ -413,7 +404,7 @@ impl Game {
         if input.fire && self.cooldown <= 0.0 {
             self.cooldown = FIRE_DELAY;
             let nose = self.ship.pose >> Point::xy(0.0, 3.0);
-            self.bullets.push(Bullet {
+            self.bullets.push(Particle {
                 pos: nose,
                 vel: self.ship.vel + self.ship.direction(FORWARDS).gp(BULLET_SPEED),
                 life: BULLET_LIFE,
@@ -441,7 +432,7 @@ impl Game {
 
     /// Bullets against asteroids, then the ship against asteroids.
     fn hits(&mut self) {
-        let mut split: Vec<(usize, Bullet)> = Vec::new();
+        let mut split: Vec<(usize, Particle)> = Vec::new();
         let [placed, ship] = &mut self.scratch;
         for (i, a) in self.asteroids.iter().enumerate() {
             let c = a.body.position();
@@ -491,14 +482,13 @@ impl Game {
     }
 }
 
-/// Whether the unit points `a` and `b` are within `r`: the norm of their join is their
-/// distance.
-fn near(a: Point<(), f32>, b: Point<(), f32>, r: f32) -> bool {
-    (a & b).norm() <= r
+/// Whether the points `a` and `b` are within `r`.
+fn near(a: Point, b: Point, r: f32) -> bool {
+    a.distance(b) <= r
 }
 
 /// `p` wrapped into the world (a torus): its coordinates taken modulo the world's size.
-fn wrap(p: Point<(), f32>) -> Point<(), f32> {
+fn wrap(p: Point) -> Point {
     let [x, y] = p.to_euclidean();
     let w = |x: f32, s: f32| (x + s / 2.0).rem_euclid(s) - s / 2.0;
     Point::xy(w(x, WORLD[0]), w(y, WORLD[1]))
@@ -509,7 +499,7 @@ mod tests {
     use super::*;
 
     /// Points (or directions) with the same coefficients, to rounding.
-    fn close(a: Point<(), f32>, b: Point<(), f32>) -> bool {
+    fn close(a: Point, b: Point) -> bool {
         a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-4)
     }
 
@@ -553,11 +543,11 @@ mod tests {
             Point::xy(1.0, 1.0),
             Point::xy(-1.0, 1.0),
         ];
-        let c = Point::xy(0.0, 0.0);
+        let c = ORIGIN;
         assert!(contains(&square, c, Point::xy(0.5, -0.9)));
         assert!(!contains(&square, c, Point::xy(1.5, 0.0)));
         // Either orientation.
-        let rev: Vec<Point<(), f32>> = square.iter().rev().copied().collect();
+        let rev: Vec<Point> = square.iter().rev().copied().collect();
         assert!(contains(&rev, c, Point::xy(-0.9, 0.9)));
         assert!(!contains(&rev, c, Point::xy(0.0, -1.1)));
     }
@@ -567,7 +557,7 @@ mod tests {
         let shape = Shape::new(vec![Point::xy(1.0, 0.0), Point::xy(0.0, 1.0)]);
         let mut out = Vec::new();
         let pose = Motor::translation(Point::direction(2.0, 3.0))
-            * Motor::rotation(Point::xy(0.0, 0.0), std::f32::consts::FRAC_PI_2);
+            * Motor::rotation(ORIGIN, std::f32::consts::FRAC_PI_2);
         shape.placed(pose, &mut out);
         assert!(close(out[0], Point::xy(2.0, 4.0)));
         assert!(close(out[1], Point::xy(1.0, 3.0)));
@@ -625,11 +615,8 @@ mod tests {
             // Apart: a moment later the centres are farther from each other.
             let (a, b) = (pieces[0].body.position(), pieces[1].body.position());
             let (va, vb) = (pieces[0].body.vel, pieces[1].body.vel);
-            let later = (a + va.gp(0.01)) & (b + vb.gp(0.01));
-            assert!(
-                later.norm() > (a & b).norm(),
-                "rock {k}: the pieces close in"
-            );
+            let later = (a + va.gp(0.01)).distance(b + vb.gp(0.01));
+            assert!(later > a.distance(b), "rock {k}: the pieces close in");
         }
     }
 

@@ -1,8 +1,8 @@
 //! What numga's `surfaces/spin_transformations` shares with `surfaces/dirac_waves`: the unit
 //! sphere's surface mesh.
 
-use gax_numga_examples::measure::GOLDEN;
-use gax_numga_examples::mesh::{Mesh, Vector3};
+use crate::measure::GOLDEN;
+use crate::mesh::{Mesh, Vector3};
 
 /// A unit sphere: an icosahedron (its corners `(0, ±1, ±φ)` cycled) with each face split in four
 /// at the midpoints of its edges, the given number of times, its vertices pushed out onto the

@@ -5,10 +5,10 @@
 
 use crate::canvas::{Canvas, Rect};
 use crate::plot::{Marker, arrow, mark};
-use crate::points::{Dir3, ORIGIN3, Point2, Point3, Pos3};
+use crate::points::{Dir3, ORIGIN3, Point2, Point3, Pos3, on_sphere};
 use crate::view::Camera;
 use gax::Extensor;
-use gax::pga3d::{Motor, Plane, Point};
+use gax::pga3d::{Plane, Point};
 use gax_colour::Light;
 
 enum Prim {
@@ -189,13 +189,8 @@ impl Scene3 {
     /// A wireframe sphere: `n` meridians and `n / 2` parallels.
     pub fn sphere_wire(&mut self, centre: impl Pos3, r: f32, n: usize, color: Light) {
         let centre = centre.point3().unitized();
-        // The direction `r` along x, raised by the latitude (about -y) and turned by the
-        // longitude (about z), from the centre.
-        let pt = |lon: f32, lat: f32| {
-            let turn = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), lon)
-                * Motor::rotation_about(Point::direction(0.0, -1.0, 0.0), lat);
-            centre + (turn >> Point::direction(r, 0.0, 0.0))
-        };
+        // `r` from the centre at a longitude and latitude.
+        let pt = |lon: f32, lat: f32| centre + on_sphere(lon, lat).dir3().gp(r);
         let tau = core::f32::consts::TAU;
         let steps = 48;
         for k in 0..n {
@@ -218,9 +213,9 @@ impl Scene3 {
     pub fn axes(&mut self, origin: impl Pos3, len: f32) {
         let origin = origin.point3();
         let axes = [
-            (Point::direction(len, 0.0, 0.0), crate::palette::red()),
-            (Point::direction(0.0, len, 0.0), crate::palette::green()),
-            (Point::direction(0.0, 0.0, len), crate::palette::blue()),
+            (Point::direction(len, 0.0, 0.0), crate::palette::RED),
+            (Point::direction(0.0, len, 0.0), crate::palette::GREEN),
+            (Point::direction(0.0, 0.0, len), crate::palette::BLUE),
         ];
         for (v, col) in axes {
             self.arrow(origin, v, 1.5, 8.0, col);
@@ -230,38 +225,30 @@ impl Scene3 {
     /// Draw everything, far to near; consecutive segments of one stroke as one shape.
     pub fn draw(mut self, c: &mut Canvas) {
         self.prims.sort_by(|a, b| b.0.total_cmp(&a.0));
-        let mut run: Vec<[Point2; 2]> = Vec::new();
-        let mut caps: Vec<[bool; 2]> = Vec::new();
-        let mut current: Option<(usize, f32, Light)> = None;
-        let flush = |c: &mut Canvas,
-                     run: &mut Vec<[Point2; 2]>,
-                     caps: &mut Vec<[bool; 2]>,
-                     s: Option<(usize, f32, Light)>| {
-            if let Some((_, w, l)) = s {
-                c.stroke_capped(run, caps, w, l);
-            }
-            run.clear();
-            caps.clear();
+        let stroke = |p: &Prim| match p {
+            Prim::Seg(.., id) => Some(*id),
+            _ => None,
         };
-        for (_, p) in self.prims {
-            if let Prim::Seg(ab, cap, w, col, id) = p {
-                if current.is_some_and(|(i, _, _)| i != id) {
-                    flush(c, &mut run, &mut caps, current);
+        let one_stroke = |(_, a): &(f32, Prim), (_, b): &(f32, Prim)| {
+            stroke(a).is_some() && stroke(a) == stroke(b)
+        };
+        for run in self.prims.chunk_by(one_stroke) {
+            match run[run.len() - 1].1 {
+                Prim::Seg(_, _, w, col, _) => {
+                    let (segs, caps): (Vec<_>, Vec<_>) = run
+                        .iter()
+                        .filter_map(|(_, p)| match p {
+                            Prim::Seg(ab, cap, ..) => Some((*ab, *cap)),
+                            _ => None,
+                        })
+                        .unzip();
+                    c.stroke_capped(&segs, &caps, w, col);
                 }
-                current = Some((id, w, col));
-                run.push(ab);
-                caps.push(cap);
-                continue;
-            }
-            flush(c, &mut run, &mut caps, current.take());
-            match p {
                 Prim::Tri(t, col, a) => c.fill(&t, col, a),
                 Prim::Dot(q, m, s, col) => mark(c, q, m, s, col),
                 Prim::Arrow(a, b, w, h, col) => arrow(c, a, b, w, h, col),
-                Prim::Seg(..) => unreachable!(),
             }
         }
-        flush(c, &mut run, &mut caps, current);
     }
 }
 

@@ -23,7 +23,7 @@ impl Disc {
 
     /// The point of the front hemisphere under pixel `q`, as a unit vector of space, or `None`
     /// outside the disc ([`crate::measure::lift`]).
-    pub fn point(&self, q: Point2) -> Option<gax::vga3d::Vector<(), f64>> {
+    pub fn point(&self, q: Point2) -> Option<gax::vga3d::Vector> {
         // The pixel's offset from the centre in radii, y up.
         let off = (q.unitized() - self.centre).gp(self.radius.recip());
         crate::measure::lift(f64::from(off.e20()), -f64::from(off.e01()))

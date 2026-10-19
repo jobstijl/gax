@@ -25,13 +25,12 @@
 //! deformation predicts.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, from_above, palette,
-    reach3, run, vector3,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, from_above,
+    palette, reach3, run, vector3,
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod tides {
     pub use super::space::{AXES, Map, V};
@@ -41,12 +40,12 @@ mod tides {
     use gax_numga_examples::rng::{self, Draw};
 
     /// A symmetric form on offsets.
-    pub type Form = Scalar<(Vector, Vector), f64>;
+    pub type Form = Scalar<(Vector, Vector)>;
     /// An even element: a scalar plus a bivector.
-    pub type Even = Rotor<(), f64>;
+    pub type Even = Rotor;
 
     /// The plane of the cluster's disc, `z = 0`.
-    pub const DISC_PLANE: Bivector<(), f64> = Bivector::new(0.0, 0.0, 1.0);
+    pub const DISC_PLANE: Bivector = Bivector::new(0.0, 0.0, 1.0);
 
     /// Soft masses.
     #[derive(Clone, Debug)]
@@ -319,9 +318,9 @@ fn draw_density(c: &mut Canvas, ax: &Axes, masses: &Masses) {
 /// blue through blue to cyan.
 fn shade(level: f32) -> Light {
     let level = level.clamp(0.0, 1.0);
-    let (blue, sky) = (palette::blue().faded(0.25), palette::sky().faded(0.6));
+    let (blue, sky) = (palette::BLUE.faded(0.25), palette::SKY.faded(0.6));
     if level < 0.5 {
-        palette::bottom().blend(blue, level * 2.0)
+        palette::BOTTOM.blend(blue, level * 2.0)
     } else {
         blue.blend(sky, level * 2.0 - 1.0)
     }
@@ -335,21 +334,21 @@ fn draw_stars(c: &mut Canvas, ax: &Axes, stars: &Stars, size: f32) {
 
 /// The stars' light.
 fn star_light() -> Light {
-    palette::yellow().faded(0.6)
+    palette::YELLOW.faded(0.6)
 }
 
 /// The whole flyby: the density, the path of the cluster's predicted centre, and the stars.
 fn draw_field(c: &mut Canvas, rect: Rect, s: &Scene, frame: usize) {
     // The field's whole width, and as much of its height as fits.
     let half = HALF_WIDTH as f32 * rect.height() / rect.width();
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), half);
+    let ax = Axes::equal(rect, ORIGIN2, half);
     draw_density(c, &ax, &s.masses);
     let path: Vec<Point2> = s
         .states
         .iter()
         .map(|(_, shape)| plane(shape.centre))
         .collect();
-    ax.dashed(c, &path, 1.0, 4.0, palette::orange().faded(0.5));
+    ax.dashed(c, &path, 1.0, 4.0, palette::ORANGE.faded(0.5));
     draw_stars(c, &ax, &s.states[frame].0, 1.8);
     ax.frame(c, "DENSITY, AND THE STARS", "", "");
 }
@@ -369,14 +368,11 @@ fn draw_cluster(c: &mut Canvas, rect: Rect, stars: &Stars, shape: &Shape) {
         let x = vector3(p) - centre;
         rim.of(x).of(x).s() as f32
     };
-    ax.contour(c, level, RIM_SAMPLES, 1.0, 2.4, palette::orange());
+    ax.contour(c, level, RIM_SAMPLES, 1.0, 2.4, palette::ORANGE);
     ax.frame(c, "THE CLUSTER, CLOSE UP", "", "");
     ax.legend(
         c,
-        &[
-            ("STARS", star_light()),
-            ("PREDICTED RIM", palette::orange()),
-        ],
+        &[("STARS", star_light()), ("PREDICTED RIM", palette::ORANGE)],
     );
 }
 
@@ -395,7 +391,7 @@ fn draw(c: &mut Canvas, t: f32) {
     draw_cluster(c, right, stars, shape);
     let note = format!("TIME {:.1}", frame as f64 * SUBSTEPS as f64 * DT);
     let at = left.bottom_left() + Point2::direction(8.0, -8.0);
-    c.text(&note, at, 11.0, palette::ink().faded(0.6), Align::Left);
+    c.text(&note, at, 11.0, palette::INK.faded(0.6), Align::Left);
     caption(
         c,
         "TIDES: A CLUSTER STRETCHED INTO A STREAM",

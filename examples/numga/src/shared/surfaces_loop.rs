@@ -2,12 +2,12 @@
 //! of a field of PGA3D elements (points with their weights, or motors), its steps composed into
 //! one map, and the refined surfaces drawn shaded under their control nets.
 
+use crate::mesh::{Mesh, ScalarOf, scalar};
+use crate::{Camera, Lens, Light, Rect, Scene3, palette};
 use core::ops::{Add, Mul, Sub};
 use gax::Extensor;
 use gax::field::{Field, SparseMap};
 use gax::pga3d::Point;
-use gax_numga_examples::mesh::{Mesh, ScalarOf, scalar};
-use gax_numga_examples::{Camera, Lens, Light, Rect, Scene3, palette};
 
 /// So many Loop steps from a mesh, the `pinned` vertices staying where they are, each step's
 /// averages taken back into their kind by `settle` (a motor normalized; a point kept as it is):
@@ -37,7 +37,7 @@ where
 }
 
 /// A point of space with `f64` coordinates, of any weight.
-pub type Point64 = Point<(), f64>;
+pub type Point64 = Point;
 
 /// The largest distance between where two fields put the same site, each point divided by its
 /// weight: the length of the direction between them.
@@ -70,7 +70,7 @@ pub fn net(s: &mut Scene3, points: &Field<Point64>, edges: &[[usize; 2]]) {
         .iter()
         .map(|&[a, b]| [a, b].map(|v| points.site(v).unitized()))
         .collect();
-    s.stroke(&segments, NET_WIDTH, palette::ink().faded(0.35));
+    s.stroke(&segments, NET_WIDTH, palette::INK.faded(0.35));
 }
 
 /// The camera's vertical field of view; how far it first stands from the points' centre, in

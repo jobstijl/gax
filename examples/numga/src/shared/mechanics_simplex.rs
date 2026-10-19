@@ -10,19 +10,16 @@
 //! numga weights each sample point by the square root of its mass, so that a product of two of
 //! them carries the mass once; here the points stay unit and their masses are kept beside them.
 
-// Each binary that includes this module uses a different part of it.
-#![allow(dead_code)]
-
+use crate::rng::{Draw, Rng};
 use core::iter::Sum;
 use core::ops::{Div, Mul};
 use gax::motions::{Motions, Pga3d};
 use gax::pga3d::{Forque, Line, Point};
-use gax_numga_examples::rng::{Draw, Rng};
 
 /// A point of space.
-pub type P = Point<(), f64>;
+pub type P = Point;
 /// Rate to momentum: twists (extrinsic lines) to forques (intrinsic ones).
-pub type Inertia = Forque<(Line,), f64>;
+pub type Inertia = Forque<(Line,)>;
 
 /// The barycentric weights mapping a uniform simplex to its equivalent lumped masses:
 /// `(1/n + (I - 1/n) sqrt(1 / (1 + n))) / n`, one row per lumped point.

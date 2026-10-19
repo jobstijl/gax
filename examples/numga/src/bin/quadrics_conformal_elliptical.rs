@@ -16,13 +16,12 @@ mod elliptical {
     use gax::vga3d::{Bivector, Rotor, Vector};
     use gax_numga_examples::signal::haversine;
 
-    pub type V = Vector<(), f64>;
-    pub type R = gax::Unit<Rotor<(), f64>>;
+    pub type R = gax::Unit<Rotor>;
 
     /// All 13 planes of the octahedral symmetry group: normals along the axes and the face and
     /// body diagonals. numga takes the first 13 of the 27 sign triples of `meshgrid([1, 0, -1])`,
     /// the ones before `(0, 0, 0)`: no two of them are opposite.
-    pub fn octahedral_planes() -> Vec<V> {
+    pub fn octahedral_planes() -> Vec<Vector> {
         let vals = [1.0, 0.0, -1.0];
         (0..13)
             .map(|k| {
@@ -34,7 +33,7 @@ mod elliptical {
     }
 
     /// The rotor `exp(B angle)` for a bivector `B` normalized first: a turn by twice `angle`.
-    pub fn turn(b: Bivector<(), f64>, angle: f64) -> R {
+    pub fn turn(b: Bivector, angle: f64) -> R {
         (b.normalized() * angle).exp()
     }
 
@@ -51,7 +50,7 @@ mod elliptical {
     /// The planes at phase `t` (radians), seen tilted: over the first half of the loop a
     /// quarter turn about z, over the second a third turn about the body diagonal, each eased in
     /// and out. Both end where they started, since each carries the arrangement onto itself.
-    pub fn planes_at(t: f64) -> Vec<V> {
+    pub fn planes_at(t: f64) -> Vec<Vector> {
         let s = (t / core::f64::consts::TAU).rem_euclid(1.0);
         let (generator, along) = if s < 0.5 {
             (quarter(), s * 2.0)
@@ -70,7 +69,7 @@ mod elliptical {
 
     /// The softened product of the signs of `p | plane`, in `[-1, 1]`: `sharpness` sets the
     /// width of a circle.
-    pub fn sides(p: V, planes: &[V], sharpness: f64) -> f64 {
+    pub fn sides(p: Vector, planes: &[Vector], sharpness: f64) -> f64 {
         planes
             .iter()
             .map(|n| ((p | *n).s() * sharpness).tanh())
@@ -90,7 +89,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let radius = screen.height() * 0.42;
     let sharpness = 2.0 * f64::from(radius);
     // The cells cover the disk, so they shine far less than a stroke.
-    let (cell_a, cell_b) = (palette::sky().faded(0.3), palette::blue().faded(0.15));
+    let (cell_a, cell_b) = (palette::SKY.faded(0.3), palette::BLUE.faded(0.15));
     // Lit from the upper left, so the disk reads as a sphere: the inner product of the normal
     // (on the unit sphere, the point itself) with the direction to the light.
     let light = Vector::new(-0.35, 0.45, 0.82);
@@ -103,7 +102,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let lit = (0.55 + 0.45 * (p | light).s()).clamp(0.2, 1.0);
         Some(colour.faded(lit as f32))
     });
-    c.ring(centre, radius, 1.5, palette::ink().faded(0.6));
+    c.ring(centre, radius, 1.5, palette::INK.faded(0.6));
     caption(
         c,
         "THE OCTAHEDRAL MIRROR PLANES ON THE UNIT SPHERE",

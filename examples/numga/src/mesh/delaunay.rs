@@ -16,7 +16,7 @@ use gax::{cga2d, pga2d};
 use std::collections::{BTreeSet, HashMap, VecDeque};
 
 /// A point of the plane.
-pub type Point = pga2d::Point<(), f64>;
+pub type Point = pga2d::Point;
 
 /// How far the enclosing triangle reaches, in units of the points' extent: far enough that its
 /// circumcircles through two points of the hull do not reach any other point.
@@ -204,11 +204,7 @@ mod tests {
 
     #[test]
     fn a_counter_clockwise_turn_is_positive() {
-        let (o, x, y) = (
-            Point::xy(0.0, 0.0),
-            Point::xy(1.0, 0.0),
-            Point::xy(0.0, 1.0),
-        );
+        let (o, x, y) = (Point::origin(), Point::xy(1.0, 0.0), Point::xy(0.0, 1.0));
         assert!(turn(o, x, y) > 0.0);
         assert!(turn(o, y, x) < 0.0);
     }
@@ -220,7 +216,7 @@ mod tests {
             Point::xy(0.0, 1.0),
             Point::xy(-1.0, 0.0),
         );
-        assert!(in_circle(a, b, c, Point::xy(0.0, 0.0)) > 0.0);
+        assert!(in_circle(a, b, c, Point::origin()) > 0.0);
         assert!(in_circle(a, b, c, Point::xy(0.0, 2.0)) < 0.0);
         assert!(in_circle(a, b, c, Point::xy(0.0, -1.0)).abs() < 1e-15);
     }

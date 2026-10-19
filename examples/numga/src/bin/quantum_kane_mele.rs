@@ -24,6 +24,7 @@
 //! the mass, shaded by their share on the rim, and the state nearest zero below and above the
 //! transition.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
     from_above, palette, reach3, run,
@@ -40,19 +41,18 @@ mod kane_mele {
 
     /// A coupling between atoms: a scalar plus a multiple of `xy`, the even multivectors of the
     /// plane.
-    pub type Coupling = gax::vga2d::Rotor<(), f64>;
+    pub type Coupling = gax::vga2d::Rotor;
     /// A spinor, and the flake's state: a spinor on every atom.
-    pub type Spinor = Rotor<(), f64>;
+    pub type Spinor = Rotor;
     pub type Spinors = Field<Spinor>;
-    pub type V = Vector<(), f64>;
 
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 1.0)
     }
-    pub fn xy() -> Bivector<(), f64> {
+    pub fn xy() -> Bivector {
         Bivector::new(0.0, 0.0, 1.0)
     }
 
@@ -61,7 +61,7 @@ mod kane_mele {
     /// round) with the sense each second neighbour's path turns, which atoms are on the rim, and
     /// the atom in the middle of the edge facing x.
     pub struct Flake {
-        pub positions: Field<V>,
+        pub positions: Field<Vector>,
         pub sublattice: Vec<f64>,
         pub first: Vec<[usize; 2]>,
         pub second: Vec<[usize; 2]>,
@@ -318,7 +318,7 @@ mod kane_mele {
         start: usize,
         spinor: Spinor,
         time: f64,
-    ) -> Field<V> {
+    ) -> Field<Vector> {
         let turned: Vec<Spinor> = states
             .iter()
             .zip(energies)
@@ -427,7 +427,7 @@ fn data() -> &'static Data {
 }
 
 /// An atom's place in the drawing's plane.
-fn place(p: V) -> Point2 {
+fn place(p: Vector) -> Point2 {
     from_above(reach3(p))
 }
 
@@ -445,7 +445,7 @@ fn draw_bonds(c: &mut Canvas, ax: &Axes, f: &Flake) {
         .filter(|[a, b]| a < b)
         .map(|[a, b]| [place(f.positions.site(*a)), place(f.positions.site(*b))])
         .collect();
-    ax.stroke(c, &segs, 0.8, palette::grid().faded(0.6));
+    ax.stroke(c, &segs, 0.8, palette::GRID.faded(0.6));
 }
 
 /// The spin density of the electron at `time`: a dot on each atom sized by the density, red
@@ -486,13 +486,13 @@ fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data, mass: f64) {
     ax.frame(c, "", "MASS", "");
     let title = ax.rect.top_middle() - Point2::direction(0.0, 26.0);
     let text = "SPIN-UP ENERGIES NEAREST ZERO";
-    c.text(text, title, 11.0, palette::ink(), Align::Center);
+    c.text(text, title, 11.0, palette::INK, Align::Center);
     let transition = (GAP_PER_COUPLING * SPIN_ORBIT) as f32;
     let across = [
         Point2::xy(transition, ax.y[0]),
         Point2::xy(transition, ax.y[1]),
     ];
-    ax.dashed(c, &across, 1.0, 4.0, palette::ink().faded(0.5));
+    ax.dashed(c, &across, 1.0, 4.0, palette::INK.faded(0.5));
     for (m, spectrum) in d.masses.iter().zip(&d.spectra) {
         for (e, share) in spectrum.energies.iter().zip(&spectrum.shares) {
             let tone = colormap::inferno(0.15 + 0.85 * *share as f32);
@@ -509,9 +509,9 @@ fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data, mass: f64) {
         Point2::xy(mass as f32, ax.y[0]),
         Point2::xy(mass as f32, ax.y[1]),
     ];
-    ax.polyline(c, &cursor, 1.0, palette::orange().faded(0.6));
+    ax.polyline(c, &cursor, 1.0, palette::ORANGE.faded(0.6));
     let note = Point2::xy(transition + 0.02, ax.y[1] * 0.9);
-    ax.text(c, note, "GAP CLOSES", 9.0, palette::ink(), Align::Left);
+    ax.text(c, note, "GAP CLOSES", 9.0, palette::INK, Align::Left);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -536,10 +536,10 @@ fn draw(c: &mut Canvas, t: f32) {
     draw_spin(c, &ax, d, time);
     let title = main.top_middle() - below.gp(4.0);
     let text = format!("AN ELECTRON FROM THE EDGE  T = {time:.1}");
-    c.text(&text, title, 11.0, palette::ink(), Align::Center);
+    c.text(&text, title, 11.0, palette::INK, Align::Center);
     let note = main.bottom_middle() + below.gp(12.0);
     let text = "SPIN UP (RED) CLOCKWISE, SPIN DOWN (BLUE) COUNTERCLOCKWISE";
-    c.text(text, note, 9.0, palette::ink(), Align::Center);
+    c.text(text, note, 9.0, palette::INK, Align::Center);
 
     // The state nearest zero at the sweep's ends, below the transition and above.
     let ends = [0, d.masses.len() - 1];
@@ -551,7 +551,7 @@ fn draw(c: &mut Canvas, t: f32) {
         draw_density(c, &ax, &d.flake, density);
         let label = rect.top_middle() - below.gp(4.0);
         let text = format!("NEAREST ZERO, MASS {mass}");
-        c.text(&text, label, 10.0, palette::ink(), Align::Center);
+        c.text(&text, label, 10.0, palette::INK, Align::Center);
     }
     caption(
         c,
@@ -569,6 +569,7 @@ mod tests {
     use super::kane_mele::*;
     use gax::field::{Field, SparseMap};
     use gax::vga2d::Scalar;
+    use gax::vga3d::Vector;
 
     /// The masses of numga's sweep.
     const MASSES: usize = 41;
@@ -583,7 +584,7 @@ mod tests {
         let f = flake(8, RIM);
         let (spin_orbit, mass, count) = (0.1, 0.3, 12);
         let n = f.sublattice.len();
-        let s = Scalar::<(), f64>::new;
+        let s = Scalar::new;
         let mut triples = Vec::new();
         for part in [0, n] {
             for (a, m) in f.sublattice.iter().enumerate() {
@@ -674,7 +675,7 @@ mod tests {
                 LAP * frame as f64 / FRAMES as f64,
             )
         };
-        let total = |spins: &Field<V>| spins.iter().map(|s| s.norm()).sum::<f64>();
+        let total = |spins: &Field<Vector>| spins.iter().map(|s| s.norm()).sum::<f64>();
         let first = total(&at(0));
         for frame in 0..=FRAMES {
             let spins = at(frame);
@@ -689,12 +690,12 @@ mod tests {
                 .iter()
                 .map(|s| (s.norm() + sign * s.e3()) / 2.0)
                 .collect();
-            let centre: V = f
+            let centre: Vector = f
                 .positions
                 .iter()
                 .zip(&half)
                 .map(|(p, h)| p * *h)
-                .sum::<V>()
+                .sum::<Vector>()
                 / half.iter().sum::<f64>();
             (xy() | (centre.normalized() ^ start)).s()
         };

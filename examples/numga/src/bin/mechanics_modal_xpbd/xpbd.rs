@@ -1,7 +1,7 @@
 //! Modal extended position-based dynamics: flexible bodies under point constraints, every
 //! constraint and mode coupled in one sparse system per step.
 
-use crate::girder::{D, DMap, Inertia, P, S, Shape, origin, work};
+use crate::girder::{D, DMap, Inertia, P, S, Shape, work};
 use crate::lie::{self, Lie};
 use gax::field::{Field, SparseMap};
 use gax::motions::Pga2d;
@@ -14,9 +14,9 @@ pub type R = lie::R<Pga2d>;
 /// Forque to twist.
 pub type Mobility = lie::InertiaInv<Pga2d>;
 /// How a gap changes with a body's twist.
-pub type RigidCell = Direction<(Twist,), f64>;
+pub type RigidCell = Direction<(Twist,)>;
 /// How a gap changes with a body's amplitude of one mode.
-pub type ModalCell = Direction<(Scalar,), f64>;
+pub type ModalCell = Direction<(Scalar,)>;
 
 /// Flexible bodies in motion: per body its pose and rate, and per mode a field over the bodies
 /// of its amplitudes, their rates, and its compliance (zero for a fixed body).
@@ -149,14 +149,14 @@ pub fn coupling(bodies: &Bodies, constraints: &Constraints) -> Coupling {
 /// The forque a force exerts through a rigid coupling (the coupling's adjugate under the work
 /// pairing): the line whose pairing with any twist is the work the force does along the
 /// displacement that twist causes. A pairing solve.
-fn forque_of(cell: RigidCell) -> Forque<(Direction,), f64> {
+fn forque_of(cell: RigidCell) -> Forque<(Direction,)> {
     let pairing = Forque::slot() & Twist::slot();
     pairing.solve(work().of_both(Direction::slot(), cell))
 }
 
 /// The load a force puts on a mode through a modal coupling: the work it does along the mode's
 /// displacement.
-fn load_of(cell: ModalCell) -> Scalar<(Direction,), f64> {
+fn load_of(cell: ModalCell) -> Scalar<(Direction,)> {
     work().of(cell.of(S::new(1.0)))
 }
 
@@ -236,8 +236,8 @@ fn times(a: &Field<S>, b: &Field<S>) -> Field<S> {
 /// compliance over the step squared.
 fn system(
     coupling: &Coupling,
-    forques: &SparseMap<Forque<(Direction,), f64>>,
-    loads: &[SparseMap<Scalar<(Direction,), f64>>],
+    forques: &SparseMap<Forque<(Direction,)>>,
+    loads: &[SparseMap<Scalar<(Direction,)>>],
     inverse: &SparseMap<Mobility>,
     mobility: &[Field<S>],
     compliance: f64,
@@ -322,7 +322,7 @@ pub fn step(
     couple: Couple,
 ) -> Bodies {
     // Gravity acts at each body's centre of mass, the origin of its frame.
-    let weight = |motor: M, _: R| (origin() & (motor << gravity)) * bodies.mass;
+    let weight = |motor: M, _: R| (Point::origin() & (motor << gravity)) * bodies.mass;
     let mut moved = bodies.clone();
     for (b, motor) in moved.motor.iter_mut().enumerate() {
         let inverse = bodies.inverse_inertia[b];

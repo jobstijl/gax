@@ -26,8 +26,7 @@
 //! `z` axis: left the polyhedron (blue) and its dual (orange) about the sphere, right their
 //! circles on the sphere, the near side of each.
 
-#[path = "../shared/surfaces_hull.rs"]
-mod surfaces_hull;
+use gax_numga_examples::shared::surfaces_hull;
 
 gax::algebra! {
     algebra sphere "The algebra of the unit sphere, R(3,1): `x`, `y` and `z` square to one, `w` to minus one.";
@@ -61,14 +60,14 @@ mod koebe {
 
     /// A circle on the sphere, a point of the sphere (null), or a point of space at unit weight
     /// along `w`: a vector of the algebra.
-    pub type Circle = Vector<(), f64>;
+    pub type Circle = Vector;
     /// A face's circle, orthogonal to its vertices' circles: the dual of their wedge, so
     /// intrinsic where theirs are extrinsic.
-    pub type FaceCircle = intrinsic::Vector<(), f64>;
+    pub type FaceCircle = intrinsic::Vector;
     /// A boost or a turn: a rotor of the algebra.
-    pub type Boost = Rotor<(), f64>;
+    pub type Boost = Rotor;
     /// A linear form on circles, `c | Vector::slot()`: a row of the Jacobian.
-    pub type CircleForm = Scalar<(Vector,), f64>;
+    pub type CircleForm = Scalar<(Vector,)>;
 
     /// The unit timelike `w`, the centre of the sphere.
     pub const W: Circle = Vector::new(0.0, 0.0, 0.0, 1.0);
@@ -144,7 +143,7 @@ mod koebe {
         }
 
         /// How far each equation is from holding: the pair's inner product less the one asked.
-        fn residuals(&self, circles: &Field<Circle>) -> Field<Scalar<(), f64>> {
+        fn residuals(&self, circles: &Field<Circle>) -> Field<Scalar> {
             let residual = |(&[a, b], &product): (&[usize; 2], &f64)| {
                 (circles.site(a) | circles.site(b)) - Scalar::new(product)
             };
@@ -207,12 +206,12 @@ mod koebe {
     /// leaves the ball.
     pub fn centre(points: &Field<Circle>) -> Circle {
         let points = points.sites();
-        let mut s = vga3d::Vector::<(), f64>::zero();
+        let mut s = vga3d::Vector::zero();
         for _ in 0..NEWTON_STEPS {
             let (value, gradient, curvature) = gax::jet::hessian(|s| imbalance(points, s), s);
             let newton = -curvature.solve(gradient);
             let mut length = 1.0;
-            let worse = |step: vga3d::Vector<(), f64>| {
+            let worse = |step: vga3d::Vector| {
                 (s + step).norm_squared() >= 1.0 || imbalance(points, s + step) > value
             };
             while worse(newton * length) {
@@ -307,10 +306,10 @@ const CIRCLE_WIDTH: f32 = 1.2;
 const TOUCH_SIZE: f32 = 3.0;
 
 fn primal() -> Light {
-    palette::sky()
+    palette::SKY
 }
 fn dual() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 
 /// The polyhedron of the circles' apexes and its dual, the polyhedron of the face circles'
@@ -336,7 +335,7 @@ fn polyhedra(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
             let [f, g] = s.dual_edges[e];
             scene.seg(at(&duals, f), at(&duals, g), DUAL_WIDTH, dual());
             let touching_point = drawn(spatial(touch.site(e)));
-            scene.dot(touching_point, Marker::Dot, TOUCH_SIZE, palette::ink());
+            scene.dot(touching_point, Marker::Dot, TOUCH_SIZE, palette::INK);
         }
     });
 }

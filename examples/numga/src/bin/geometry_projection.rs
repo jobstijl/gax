@@ -9,9 +9,10 @@
 //! its circle (the corner's shadow runs along the trail the reopened slot drew), and turns the
 //! subject in front of the stereo rig, whose epipolar lines follow.
 
+use gax::pga3d::Point;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, palette, run, signal::wave,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Rect, Scene3,
+    backdrop, caption, palette, run, signal::wave,
 };
 
 mod projection {
@@ -19,19 +20,17 @@ mod projection {
     use gax::{Unit, pga2d};
     use gax_numga_examples::signal::wave;
 
-    pub type P = Point<(), f64>;
-    pub type Pl = Plane<(), f64>;
     /// A line, the join of two points: oriented along itself (intrinsic).
-    pub type L = intrinsic::Line<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
+    pub type L = intrinsic::Line;
+    pub type M = Unit<Motor>;
     /// A camera, or a shadow: `Point <- Point`.
-    pub type Camera = Point<(Point,), f64>;
+    pub type Camera = Point<(Point,)>;
     /// The camera for lines.
-    pub type LineCamera = intrinsic::Line<(intrinsic::Line,), f64>;
+    pub type LineCamera = intrinsic::Line<(intrinsic::Line,)>;
     /// The bilinear form on two cameras' image points that vanishes on corresponding pairs.
-    pub type Correspondence = Pseudoscalar<(Point, Point), f64>;
+    pub type Correspondence = Pseudoscalar<(Point, Point)>;
     /// A rig's screen coordinates: points of space as points of the plane.
-    pub type Screen = pga2d::Point<(Point,), f64>;
+    pub type Screen = pga2d::Point<(Point,)>;
 
     /// Which corner pairs of [`cube`] are joined by an edge.
     pub const CUBE_EDGES: [[usize; 2]; 12] = [
@@ -49,24 +48,19 @@ mod projection {
         [3, 7],
     ];
 
-    /// The origin.
-    pub fn origin() -> P {
-        Point::xyz(0.0, 0.0, 0.0)
-    }
-
     /// The rig's screen `z = 1`, ahead of its centre at the origin.
-    pub fn screen() -> Pl {
+    pub fn screen() -> Plane {
         Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 1.0)
     }
 
     /// The ground `z = 0`.
-    pub fn ground() -> Pl {
+    pub fn ground() -> Plane {
         Plane::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0)
     }
 
     /// `n` points round the unit circle in the `xy` plane, centred on the origin: `(1, 0, 0)`
     /// turned about `z`.
-    pub fn circle(n: usize) -> Vec<P> {
+    pub fn circle(n: usize) -> Vec<Point> {
         (0..n)
             .map(|k| {
                 let t = core::f64::consts::TAU * k as f64 / n as f64;
@@ -78,7 +72,7 @@ mod projection {
 
     /// The eight corners of an axis-aligned cube centred on the origin, corner `4 x + 2 y + z`
     /// at the signs of `x`, `y`, `z`.
-    pub fn cube(size: f64) -> [P; 8] {
+    pub fn cube(size: f64) -> [Point; 8] {
         core::array::from_fn(|k| {
             let s = |bit: usize| {
                 if k >> bit & 1 == 1 {
@@ -92,20 +86,27 @@ mod projection {
     }
 
     /// The camera (or shadow) map with centre `centre` onto `screen`: join, then meet.
-    pub fn camera(centre: P, screen: Pl) -> Camera {
+    pub fn camera(centre: Point, screen: Plane) -> Camera {
         (centre & Point::slot()) ^ screen
     }
 
     /// A body's shadows under a point light and the sun, and one corner's shadow as the light
     /// moves.
     pub struct Shadows {
-        pub spot: [P; 8],
-        pub sun: [P; 8],
-        pub trail: Vec<P>,
+        pub spot: [Point; 8],
+        pub sun: [Point; 8],
+        pub trail: Vec<Point>,
     }
 
     /// Cast a body's shadows, then reopen the light slot to sweep one corner's shadow.
-    pub fn shadows(body: &[P; 8], ground: Pl, light: P, sun: P, corner: P, path: &[P]) -> Shadows {
+    pub fn shadows(
+        body: &[Point; 8],
+        ground: Plane,
+        light: Point,
+        sun: Point,
+        corner: Point,
+        path: &[Point],
+    ) -> Shadows {
         // The light joined with the open point, met with the ground: whether the light is a
         // finite point or a direction at infinity, the expression is the same.
         let spotlight = camera(light, ground);
@@ -122,15 +123,21 @@ mod projection {
 
     /// Two posed copies of one rig over a subject.
     pub struct Stereo {
-        pub image_1: [P; 8],
-        pub image_2: [P; 8],
-        pub epipole_2: P,
+        pub image_1: [Point; 8],
+        pub image_2: [Point; 8],
+        pub epipole_2: Point,
         pub epipolar_lines_2: [L; 8],
         pub correspondence: Correspondence,
     }
 
     /// Move the rig's centre and screen into two poses and relate their images.
-    pub fn stereo(subject: &[P; 8], centre: P, screen: Pl, rig_1: M, rig_2: M) -> Stereo {
+    pub fn stereo(
+        subject: &[Point; 8],
+        centre: Point,
+        screen: Plane,
+        rig_1: M,
+        rig_2: M,
+    ) -> Stereo {
         let camera = camera(centre, screen);
         // The same join-then-meet with a line in the slot is the camera for lines.
         let line_camera: LineCamera = (centre & L::slot()) ^ screen;
@@ -172,7 +179,7 @@ mod projection {
 
     /// A line on a rig's screen clipped at `x = ±half_width`: the screen points of its meets
     /// with the two planes.
-    pub fn screen_line(rig: M, line: L, half_width: f64) -> [pga2d::Point<(), f64>; 2] {
+    pub fn screen_line(rig: M, line: L, half_width: f64) -> [pga2d::Point; 2] {
         let on_screen = screen_map(rig);
         [-half_width, half_width].map(|x| {
             on_screen.of(line ^ (rig >> Plane::with_normal(Point::direction(1.0, 0.0, 0.0), x)))
@@ -181,10 +188,10 @@ mod projection {
 
     /// The scene at phase `t` (radians): at 0 it is numga's figure.
     pub struct Scene {
-        pub body: [P; 8],
-        pub light: P,
-        pub sun: P,
-        pub path: Vec<P>,
+        pub body: [Point; 8],
+        pub light: Point,
+        pub sun: Point,
+        pub path: Vec<Point>,
         pub cast: Shadows,
         pub rig_1: M,
         pub rig_2: M,
@@ -197,7 +204,7 @@ mod projection {
         // The light's path: the unit circle carried to (0, -1, 4), 64 lights along it; the
         // light moves round it, starting at numga's (1, -1, 4).
         let lift = Motor::translation(Point::direction(0.0, -1.0, 4.0));
-        let path: Vec<P> = circle(64).into_iter().map(|p| lift >> p).collect();
+        let path: Vec<Point> = circle(64).into_iter().map(|p| lift >> p).collect();
         let light = (lift * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), t))
             >> Point::xyz(1.0, 0.0, 0.0);
         // Two copies of the rig, 0.6 either side of the origin along x and turned 0.12 rad
@@ -212,7 +219,7 @@ mod projection {
             * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.25 * wave(t));
         let subject = cube(1.6).map(|p| pose >> p);
         let cast = shadows(&body, ground(), light, sun, body[7], &path);
-        let views = stereo(&subject, origin(), screen(), rig_1, rig_2);
+        let views = stereo(&subject, Point::origin(), screen(), rig_1, rig_2);
         Scene {
             body,
             light,
@@ -251,17 +258,17 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     let turn = 0.25 * wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
         c.rect(),
-        P::xyz(0.0, 0.3, 1.6),
+        Point::xyz(0.0, 0.3, 1.6),
         15.0,
         (-60f32).to_radians() + turn,
         24f32.to_radians(),
         Lens::Perspective(0.5),
     );
     let mut s = Scene3::new(cam);
-    let floor = |x: f64, y: f64| P::xyz(x, y, 0.0);
+    let floor = |x: f64, y: f64| Point::xyz(x, y, 0.0);
     for k in 0..=6 {
         let g = -3.0 + f64::from(k);
-        let line = (palette::grid().mix_light(palette::ink(), 0.15)).faded(0.7);
+        let line = (palette::GRID.mix_light(palette::INK, 0.15)).faded(0.7);
         s.seg(floor(g, -3.0), floor(g, 3.0), 1.0, line);
         s.seg(floor(-3.0, g), floor(3.0, g), 1.0, line);
     }
@@ -285,7 +292,7 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
         s.seg(w[0], w[1], 1.2, amber().faded(0.8));
     }
     // The light's path, dimmer.
-    let path: Vec<P> = sc.path.iter().chain(&sc.path[..1]).copied().collect();
+    let path: Vec<Point> = sc.path.iter().chain(&sc.path[..1]).copied().collect();
     s.polyline(&path, 1.0, amber().faded(0.4));
     // The ray from the light through the corner to its shadow.
     s.seg(sc.light, spot[7], 1.0, amber().faded(0.5));
@@ -293,7 +300,7 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     s.dot(spot[7], Marker::Dot, 6.0, amber());
     // The sun's direction, a unit arrow at (-2, 2, 4).
     s.arrow(
-        P::xyz(-2.0, 2.0, 4.0),
+        Point::xyz(-2.0, 2.0, 4.0),
         sc.sun.gp(1.0 / sc.sun.ideal_norm()),
         2.0,
         9.0,
@@ -309,11 +316,11 @@ fn screen_panel(
     rect: Rect,
     title: &str,
     rig: M,
-    image: &[P; 8],
+    image: &[Point; 8],
     lines: Option<&[L; 8]>,
 ) {
     let half = 0.5;
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), half as f32);
+    let ax = Axes::equal(rect, ORIGIN2, half as f32);
     let on_screen = screen_map(rig);
     let image = image.map(|p| on_screen.of(p));
     ax.clip(c);
@@ -350,14 +357,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let corner = sub.rect().bottom_left();
     let row = |lines: f32| corner + Point2::direction(s, -s * lines);
     for (heading, lines) in [("SHADOWS: (LIGHT JOIN POINT)", 5.7), ("MEET GROUND", 4.2)] {
-        sub.text(heading, row(lines), s, palette::ink(), Align::Left);
+        sub.text(heading, row(lines), s, palette::INK, Align::Left);
     }
     for (k, (label, col)) in [
         ("POINT LIGHT, ITS SHADOW", amber()),
         ("SUN, ITS SHADOW (DASHED)", violet()),
         (
             "CORNER'S SHADOW AS THE LIGHT MOVES",
-            amber().mix_light(palette::ink(), 0.4),
+            amber().mix_light(palette::INK, 0.4),
         ),
     ]
     .into_iter()
@@ -367,7 +374,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let mid = baseline + Point2::direction(0.0, -s * 0.3);
         sub.line(mid, mid + Point2::direction(s * 1.4, 0.0), 2.0, col);
         let at = baseline + Point2::direction(s * 2.0, 0.0);
-        sub.text(label, at, s * 0.75, palette::ink(), Align::Left);
+        sub.text(label, at, s * 0.75, palette::INK, Align::Left);
     }
     c.blit(&sub, screen.lo);
     // The two cameras on the right.
@@ -408,7 +415,7 @@ fn draw(c: &mut Canvas, t: f32) {
             text,
             rect_1.bottom_left() + Point2::direction(0.0, s * (3.4 + 1.4 * k as f32)),
             s * 0.8,
-            palette::grid().mix_light(palette::ink(), 0.5),
+            palette::GRID.mix_light(palette::INK, 0.5),
             Align::Left,
         );
     }
@@ -431,7 +438,7 @@ mod tests {
     use gax::{ApproxEq, pga2d};
 
     /// Whether two points are one, whatever their weights.
-    fn same(a: P, b: P, tol: f64) -> bool {
+    fn same(a: Point, b: Point, tol: f64) -> bool {
         a.unitized().max_abs_diff(&b.unitized()) <= tol
     }
 
@@ -441,7 +448,7 @@ mod tests {
     }
 
     /// Whether a rig sees a point at the screen coordinates `want`.
-    fn seen_at(rig: M, p: P, want: [f64; 2], tol: f64) -> bool {
+    fn seen_at(rig: M, p: Point, want: [f64; 2], tol: f64) -> bool {
         let at = screen_map(rig).of(p).unitized();
         at.max_abs_diff(&pga2d::Point::xy(want[0], want[1])) <= tol
     }
@@ -449,7 +456,7 @@ mod tests {
     /// A pinhole at the origin with screen `z = 1` images `(x, y, z)` to `(x/z, y/z, 1)`.
     #[test]
     fn pinhole_image_is_perspective_division() {
-        let camera: Camera = (origin() & Point::slot()) ^ screen();
+        let camera: Camera = (Point::origin() & Point::slot()) ^ screen();
         for (p, want) in [
             (Point::xyz(1.0, 2.0, 4.0), Point::xyz(0.25, 0.5, 1.0)),
             (Point::xyz(-3.0, 0.5, 2.0), Point::xyz(-1.5, 0.25, 1.0)),
@@ -481,7 +488,7 @@ mod tests {
     /// Binding the centre and the screen of the open ternary projector gives the camera.
     #[test]
     fn ternary_projector_binds_to_camera() {
-        let projector: Point<(Point, Point, Plane), f64> =
+        let projector: Point<(Point, Point, Plane)> =
             (Point::slot() & Point::slot()) ^ Plane::slot();
         let centre = Point::xyz(0.3, -0.2, -1.0);
         let world = Point::xyz(1.0, 2.0, 4.0);
@@ -532,7 +539,7 @@ mod tests {
         let y_axis = Plane::new(0.0, 0.0, 1.0, 0.0) ^ Plane::new(1.0, 0.0, 0.0, 0.0);
         let turned = y_axis.gp(-core::f64::consts::FRAC_PI_4).exp() >> Point::xyz(1.0, 0.0, 0.0);
         assert!(same(turned, Point::xyz(0.0, 0.0, -1.0), 1e-8));
-        let joined = origin() & Point::direction(0.0, 1.0, 0.0);
+        let joined = Point::origin() & Point::direction(0.0, 1.0, 0.0);
         let rotation = Motor::rotation(joined, core::f64::consts::FRAC_PI_2);
         let turned = rotation >> Point::xyz(1.0, 0.0, 0.0);
         assert!(same(turned, Point::xyz(0.0, 0.0, -1.0), 1e-15));
@@ -543,9 +550,9 @@ mod tests {
     fn moving_the_rig_equals_moving_centre_and_screen() {
         let motor = Motor::translation(Point::direction(0.4, -0.3, 2.0))
             * Motor::rotation_about(Point::direction(0.0, 1.0, 0.0), 0.7);
-        let camera = camera(origin(), screen());
+        let camera = camera(Point::origin(), screen());
         let moved = motor >> camera.of(motor << Point::slot());
-        let rebuilt = ((motor >> origin()) & Point::slot()) ^ (motor >> screen());
+        let rebuilt = ((motor >> Point::origin()) & Point::slot()) ^ (motor >> screen());
         assert!(moved.approx_eq(&rebuilt, 1e-14), "{moved:?} {rebuilt:?}");
         let world = Point::xyz(1.0, 2.0, 4.0);
         let [x, y, _] = camera.of(motor << world).to_euclidean();

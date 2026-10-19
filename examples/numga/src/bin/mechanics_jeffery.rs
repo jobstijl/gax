@@ -38,8 +38,7 @@ use gax_numga_examples::{
 };
 use std::sync::OnceLock;
 
-#[path = "../shared/mechanics_vga3d.rs"]
-mod space;
+use gax_numga_examples::shared::mechanics_vga3d as space;
 
 mod jeffery {
     pub use super::space::{AXES, B, Map, Turn, V, adjoint, curl, turn};
@@ -182,9 +181,8 @@ fn start_colour(start: usize) -> Light {
 /// latitude from the south pole): the first axis raised towards the third, then turned towards
 /// the second.
 fn on_sphere(u: f64, v: f64) -> V {
-    let [x, y, z] = AXES;
-    let pi = core::f64::consts::PI;
-    turn(x ^ y, 2.0 * pi * u) >> (turn(x ^ z, pi * (v - 0.5)) >> x)
+    use core::f64::consts::{PI, TAU};
+    gax_numga_examples::on_sphere(TAU * u, PI * (v - 0.5))
 }
 
 /// One panel's parallel camera, `reach` units from the centre to the panel's top.
@@ -203,14 +201,14 @@ fn step_at(t: f32) -> usize {
 fn draw_orbits(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
     let [x, _, z] = AXES;
     let cam = panel3(c, rect, camera(rect, ORBIT_REACH), |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 24, palette::grid().faded(0.6));
+        s.sphere_wire(ORIGIN3, 1.0, 24, palette::GRID.faded(0.6));
         for axis in [x, z] {
             s.arrow(
                 ORIGIN3,
                 direction(axis * ARROW),
                 1.4,
                 7.0,
-                palette::ink().faded(0.4),
+                palette::INK.faded(0.4),
             );
         }
         for (start, turns) in bodies()[body].iter().enumerate() {
@@ -226,7 +224,7 @@ fn draw_orbits(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
     let label = |c: &mut Canvas, axis: V, text: &str| {
         if let Some(tip) = cam.px(position(axis * (ARROW + 0.1))) {
             let at = tip + Point2::direction(0.0, 12.0);
-            c.text(text, at, 9.0, palette::ink().faded(0.6), Align::Center);
+            c.text(text, at, 9.0, palette::INK.faded(0.6), Align::Center);
         }
     };
     label(c, x, "FLOW");
@@ -250,16 +248,16 @@ fn draw_body(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
                 direction(velocity),
                 1.4,
                 7.0,
-                palette::grid().faded(2.5),
+                palette::GRID.faded(2.5),
             );
         }
         // The colour of a patch: light or dark by the octant of the body's own direction there.
         let checker = |u: f32, v: f32| {
             let d = on_sphere(f64::from(u), f64::from(v));
             if d.e1() * d.e2() * d.e3() > 0.0 {
-                palette::sky().faded(0.55)
+                palette::SKY.faded(0.55)
             } else {
-                palette::blue().faded(0.35)
+                palette::BLUE.faded(0.35)
             }
         };
         let surface =
@@ -268,9 +266,9 @@ fn draw_body(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
         let tips: Vec<V> = turns[..=now].iter().map(|t| *t >> (x * long)).collect();
         for end in [1.0, -1.0] {
             let tip = tips[tips.len() - 1] * end;
-            s.seg(position(tip), position(tip * 1.15), 2.2, palette::orange());
+            s.seg(position(tip), position(tip * 1.15), 2.2, palette::ORANGE);
             let path: Vec<Point3> = tips.iter().map(|t| position(*t * end)).collect();
-            s.polyline(&path, 1.0, palette::orange().faded(0.8));
+            s.polyline(&path, 1.0, palette::ORANGE.faded(0.8));
         }
     });
 }
@@ -289,7 +287,7 @@ fn draw(c: &mut Canvas, t: f32) {
         draw_orbits(c, orbits.inset(4.0, 16.0, 4.0, 0.0), body, now);
         draw_body(c, tumbling.inset(4.0, 0.0, 4.0, 4.0), body, now);
         let at = Point2::xy(column.centre().e20(), top + 8.0);
-        c.text(name, at, 12.0, palette::ink(), Align::Center);
+        c.text(name, at, 12.0, palette::INK, Align::Center);
     }
     let periods = now as f64 / STEPS_PER_PERIOD as f64;
     caption(
@@ -325,7 +323,7 @@ mod tests {
         let semi_axes = [3.0, 1.5, 0.5];
         let entries = [[0.3, -1.2, 0.4], [0.7, 0.1, -0.5], [-0.2, 0.9, -0.4]];
         let gradient = gradient_of(entries);
-        let identity = Rotor::<(), f64>::new(1.0, 0.0, 0.0, 0.0).unit();
+        let identity = Rotor::new(1.0, 0.0, 0.0, 0.0).unit();
         let spin = spin(placed(stretch(semi_axes), identity), gradient);
         let fluid = curl(gradient) * 0.5;
         for (first, second) in [(0, 1), (1, 2), (0, 2)] {

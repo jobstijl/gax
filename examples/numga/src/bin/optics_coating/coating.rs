@@ -7,18 +7,18 @@
 
 use core::f64::consts::{FRAC_1_SQRT_2, TAU};
 use gax::Complex;
-use gax::sta::{Bivector, Even, Odd, Scalar, Vector, intrinsic};
+use gax::sta::{Bivector, Even, Odd, Vector, intrinsic};
 
 pub type C = Complex<f64>;
-pub type V = Vector<(), f64>;
-pub type B = Bivector<(), f64>;
+pub type V = Vector;
+pub type B = Bivector;
 /// An excitation: the dual of a field, a bivector of the other orientation (intrinsic).
-pub type Excitation = intrinsic::Bivector<(), f64>;
-pub type Rotor = gax::Unit<Even<(), f64>>;
+pub type Excitation = intrinsic::Bivector;
+pub type Rotor = gax::Unit<Even>;
 /// numga's `Constitutive`: a field in, its excitation out (`Antibivector <- Bivector`).
-pub type Constitutive = intrinsic::Bivector<(Bivector,), f64>;
+pub type Constitutive = intrinsic::Bivector<(Bivector,)>;
 /// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
-pub type AxionCoupling = intrinsic::Scalar<(), f64>;
+pub type AxionCoupling = intrinsic::Scalar;
 
 /// numga's `Polarization`, the tangential blades `x y`: a vector of the interface plane,
 /// VGA2D's vector, with complex coefficients for its phase. [`tangential`] sends it into
@@ -33,13 +33,13 @@ pub use gax::vga2d::Vector as Polarization;
 pub use gax::vga3d::Paravector as Boundary;
 
 /// numga's `BoundaryMap`: the boundary amplitudes of a field.
-pub type BoundaryMap = Boundary<(Bivector,), f64>;
+pub type BoundaryMap = Boundary<(Bivector,)>;
 /// The boundary amplitudes of an excitation.
-pub type ExcitationBoundary = Boundary<(intrinsic::Bivector,), f64>;
+pub type ExcitationBoundary = Boundary<(intrinsic::Bivector,)>;
 /// numga's `FieldMap`: the field reconstructed from boundary amplitudes.
-pub type FieldMap = Bivector<(Boundary,), f64>;
+pub type FieldMap = Bivector<(Boundary,)>;
 /// The amplitudes' generator along the layer's normal (numga's `Propagation`, real).
-pub type Generator = Boundary<(Boundary,), f64>;
+pub type Generator = Boundary<(Boundary,)>;
 /// numga's `Propagation`: amplitudes carried across layers, with their phases.
 pub type Propagation = Boundary<(Boundary,), C>;
 /// numga's `Outgoing`: the amplitudes of the waves leaving a face, by their polarization.
@@ -77,7 +77,7 @@ pub fn about_line(angle: f64) -> Rotor {
 }
 
 /// The boundary amplitudes as STA's odd elements: their blades `x y txz tyz`.
-pub fn embed() -> Odd<(Boundary,), f64> {
+pub fn embed() -> Odd<(Boundary,)> {
     let (t, x, y, z) = (t(), x(), y(), z());
     Odd::from_images([
         x.cast::<Odd>(),
@@ -89,17 +89,17 @@ pub fn embed() -> Odd<(Boundary,), f64> {
 
 /// The boundary amplitudes of an odd element, its other blades dropped: the embedding's
 /// pseudo-inverse, which reads each blade's coefficient with its sign.
-pub fn amplitudes() -> Boundary<(Odd,), f64> {
+pub fn amplitudes() -> Boundary<(Odd,)> {
     embed().pinv()
 }
 
 /// The interface plane's vectors in spacetime: `e1, e2` to `x, y`.
-pub fn tangential() -> Vector<(Polarization,), f64> {
+pub fn tangential() -> Vector<(Polarization,)> {
     Vector::from_images([x(), y()])
 }
 
 /// A vector's tangential part, read in the interface plane.
-pub fn in_plane() -> Polarization<(Vector,), f64> {
+pub fn in_plane() -> Polarization<(Vector,)> {
     tangential().pinv()
 }
 
@@ -118,7 +118,7 @@ pub fn excitation_boundary() -> ExcitationBoundary {
 
 /// The tangential electric field of the amplitudes as a polarization, `-t · (z · B)`:
 /// undoing the two wedges of [`field_boundary`].
-pub fn electric_trace() -> Polarization<(Boundary,), f64> {
+pub fn electric_trace() -> Polarization<(Boundary,)> {
     let (t, z) = (t(), z());
     in_plane().of((-(t | (z | embed()))).cast::<Vector>())
 }
@@ -128,7 +128,7 @@ pub fn electric_trace() -> Polarization<(Boundary,), f64> {
 /// planes by the reluctivity, then the Hodge dual (numga's `dual`).
 pub fn dielectric(permittivity: [f64; 3], reluctivity: f64) -> Constitutive {
     let open = Bivector::slot();
-    let electric: Bivector<(Bivector,), f64> = [x(), y(), z()]
+    let electric: Bivector<(Bivector,)> = [x(), y(), z()]
         .into_iter()
         .zip(permittivity)
         .map(|(axis, e)| {
@@ -143,8 +143,7 @@ pub fn dielectric(permittivity: [f64; 3], reluctivity: f64) -> Constitutive {
 /// The axion response of strength `alpha`: the coupling, a pseudoscalar, times the identity
 /// on field planes. The coupling's number is declared the pseudoscalar's orientation.
 pub fn axion_response(alpha: f64) -> Constitutive {
-    let coupling: AxionCoupling = Scalar::new(alpha).with_orientation();
-    coupling * Bivector::slot()
+    AxionCoupling::new(alpha) * Bivector::slot()
 }
 
 /// A lossless nonmagnetic isotropic medium of refractive index `index`.
@@ -455,7 +454,7 @@ pub mod tests {
     }
 
     /// A real vector as a complex one.
-    pub fn complex(v: Vector<(), f64>) -> Vector<(), C> {
+    pub fn complex(v: Vector) -> Vector<(), C> {
         v.map_coefs(C::real)
     }
 

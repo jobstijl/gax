@@ -75,7 +75,7 @@ impl<S: Space> Colour<S> {
             .iter()
             .filter(|f| (**f & p).s() < 0.0)
             .map(|f| (ray ^ *f).unitized())
-            .min_by(|a, b| (grey & *a).norm().total_cmp(&(grey & *b).norm()))
+            .min_by(|a, b| grey.distance(*a).total_cmp(&grey.distance(*b)))
             .unwrap_or(p);
         LinearRgb::from_point(nearest * self.alpha()).convert()
     }

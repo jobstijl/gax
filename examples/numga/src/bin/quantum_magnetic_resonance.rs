@@ -19,10 +19,12 @@
 //! Below: spins nutating into their steady states, the absorption lines under weak and strong
 //! drive, and the echo against the free decay as composed maps.
 
-use gax::vga3d::{Bivector, Vector};
+use gax::pga2d::Point;
+use gax::vga3d::Vector;
+use gax_numga_examples::points::circle;
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::haversine;
+use gax_numga_examples::signal::{frame, haversine};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, ORIGIN3, Point2, backdrop, caption,
     colormap, from_above, palette, reach3, run,
@@ -35,26 +37,26 @@ mod resonance {
     use gax_numga_examples::rng::{Draw, rng};
 
     /// A spin's state, `(1 + r) / 2`: a scalar plus a vector.
-    pub type St = Paravector<(), f64>;
+    pub type St = Paravector;
     /// A rate of change of states, and an evolution over a stretch of time: maps on states.
-    pub type Rates = Paravector<(Paravector,), f64>;
-    pub type Evolution = Paravector<(Paravector,), f64>;
+    pub type Rates = Paravector<(Paravector,)>;
+    pub type Evolution = Paravector<(Paravector,)>;
     /// A relaxation process, a vector plus a bivector (VGA3D declares no kind of just these
     /// grades, so it is a multivector).
-    pub type Pr = Multivector<(), f64>;
+    pub type Pr = Multivector;
 
     /// The relaxation times, in microseconds: typical of an electron spin in a solid.
     pub const T1: f64 = 10.0;
     pub const T2: f64 = 4.0;
 
-    pub fn x() -> Vector<(), f64> {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
-    pub fn z() -> Vector<(), f64> {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 1.0)
     }
     /// The pseudoscalar, the imaginary unit.
-    pub fn i() -> Pseudoscalar<(), f64> {
+    pub fn i() -> Pseudoscalar {
         Pseudoscalar::new(1.0)
     }
     pub fn one() -> St {
@@ -67,7 +69,7 @@ mod resonance {
     }
 
     /// The state with Bloch vector `r`.
-    pub fn state(r: Vector<(), f64>) -> St {
+    pub fn state(r: Vector) -> St {
         (one() + r.cast::<Paravector>()) * 0.5
     }
 
@@ -77,7 +79,7 @@ mod resonance {
     }
 
     /// The Bloch vector of a state: twice its vector part.
-    pub fn bloch(rho: St) -> Vector<(), f64> {
+    pub fn bloch(rho: St) -> Vector {
         rho.cast::<Vector>() * 2.0
     }
 
@@ -142,7 +144,7 @@ mod resonance {
 
     /// A short strong pulse along x as a rotor: it turns the Bloch vector about x by the angle, in
     /// the sense of the drive, by its sandwich.
-    pub fn pulse(angle: f64) -> Unit<Rotor<(), f64>> {
+    pub fn pulse(angle: f64) -> Unit<Rotor> {
         (i() * x() * (-angle / 2.0)).exp()
     }
 
@@ -343,13 +345,8 @@ fn data() -> &'static Data {
     })
 }
 
-/// A point of a plot, from its two values.
-fn on_plot(across: f64, up: f64) -> gax::pga2d::Point<(), f64> {
-    gax::pga2d::Point::xy(across, up)
-}
-
 /// The unit directions of space.
-fn axes() -> [Vector<(), f64>; 3] {
+fn axes() -> [Vector; 3] {
     [x(), Vector::new(0.0, 1.0, 0.0), z()]
 }
 
@@ -363,24 +360,16 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The ensemble seen from above the field, coloured by detuning.
     let records = d.ensemble.len();
-    let index = ((phase * records as f32) as usize).min(records - 1);
+    let index = frame(phase, records);
     let dt = (ECHO_DT * ECHO_EVERY as f64) as f32;
     let now = index as f32 * dt;
     let top_rect = screen.part(0.02, 0.15, 0.34, 0.58);
     let ax = Axes::equal(top_rect, ORIGIN2, 1.12);
-    // The unit circle: x turned about the field.
-    let circle: Vec<_> = (0..=96)
-        .map(|k| {
-            let a = core::f64::consts::TAU * k as f64 / 96.0;
-            from_above(reach3(
-                (Bivector::new(0.0, 0.0, 1.0) * (-a / 2.0)).exp() >> x(),
-            ))
-        })
-        .collect();
-    ax.polyline(c, &circle, 1.0, palette::grid());
+    // The unit circle about the field.
+    ax.polyline(c, &circle(Point::origin(), 1.0, 96), 1.0, palette::GRID);
     for a in [x(), Vector::new(0.0, 1.0, 0.0)] {
         let (from, to) = (from_above(reach3(-a * 1.1)), from_above(reach3(a * 1.1)));
-        ax.line(c, from, to, 1.0, palette::grid().faded(0.6));
+        ax.line(c, from, to, 1.0, palette::GRID.faded(0.6));
     }
     let mut order: Vec<usize> = (0..d.detunings.len()).collect();
     order.sort_by(|a, b| d.detunings[*a].total_cmp(&d.detunings[*b]));
@@ -390,7 +379,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.scatter(c, &[r], Marker::Dot, 3.5, tone);
     }
     let signal = from_above(reach3(bloch(mean(&d.ensemble[index]))));
-    ax.arrow(c, ORIGIN2, signal, 2.5, 9.0, palette::yellow());
+    ax.arrow(c, ORIGIN2, signal, 2.5, 9.0, palette::YELLOW);
     let stage = if now < 0.3 {
         "TIPPED ONTO -Y"
     } else if now < DELAY as f32 - 0.05 {
@@ -409,12 +398,12 @@ fn draw(c: &mut Canvas, t: f32) {
         "SPINS FROM ABOVE",
         title,
         small * 0.9,
-        palette::ink(),
+        palette::INK,
         Align::Center,
     );
     let note = top_rect.bottom_middle() + down.gp(small * 1.2);
     let text = format!("T = {now:.2} US: {stage}");
-    c.text(&text, note, small * 0.9, palette::ink(), Align::Center);
+    c.text(&text, note, small * 0.9, palette::INK, Align::Center);
 
     // The signal so far.
     let total = records as f32 * dt;
@@ -430,10 +419,10 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(at, 0.0),
             Point2::xy(at, 1.05),
             1.0,
-            palette::grid(),
+            palette::GRID,
         );
         let label = Point2::xy(at + 0.06, 0.95);
-        ax.text(c, label, name, small, palette::grid(), Align::Left);
+        ax.text(c, label, name, small, palette::GRID, Align::Left);
     }
     let decay: Vec<Point2> = (0..=100)
         .map(|k| {
@@ -441,15 +430,15 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(s, (-s / T2 as f32).exp())
         })
         .collect();
-    ax.dashed(c, &decay, 1.0, 5.0, palette::grid());
+    ax.dashed(c, &decay, 1.0, 5.0, palette::GRID);
     let trace: Vec<Point2> = d.signal[..=index]
         .iter()
         .enumerate()
         .map(|(k, s)| Point2::xy(k as f32 * dt, *s as f32))
         .collect();
-    ax.polyline(c, &trace, 1.8, palette::sky());
+    ax.polyline(c, &trace, 1.8, palette::SKY);
     let head = Point2::xy(now, d.signal[index] as f32);
-    ax.scatter(c, &[head], Marker::Dot, 6.0, palette::sky());
+    ax.scatter(c, &[head], Marker::Dot, 6.0, palette::SKY);
 
     // Spins switched on to a steady drive, nutating into their steady states.
     let ball_rect = screen.part(0.0, 0.64, 0.3, 1.0);
@@ -462,11 +451,11 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.6),
     );
     let shown = ((phase * d.nutation.len() as f32) as usize).clamp(1, d.nutation.len());
-    let colours = [palette::red(), palette::purple(), palette::sky()];
+    let colours = [palette::RED, palette::PURPLE, palette::SKY];
     panel3(c, ball_rect, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.45));
+        s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.45));
         for a in axes() {
-            s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
+            s.seg(reach3(-a), reach3(a), 1.0, palette::GRID);
         }
         for (j, colour) in colours.iter().enumerate() {
             let path: Vec<_> = d.nutation[..shown]
@@ -483,7 +472,7 @@ fn draw(c: &mut Canvas, t: f32) {
         "NUTATION TO THE STEADY STATE",
         label,
         small * 0.9,
-        palette::ink(),
+        palette::INK,
         Align::Center,
     );
 
@@ -496,7 +485,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .line_detunings
             .iter()
             .zip(&d.lines)
-            .map(|(det, row)| on_plot(*det, -bloch(row[j]).e2() / drive))
+            .map(|(det, row)| Point::xy(*det, -bloch(row[j]).e2() / drive))
             .collect();
         ax.polyline(c, &pts, 1.5, colours[j]);
         legend.push((format!("DRIVE {drive}"), colours[j]));
@@ -508,10 +497,9 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(sweep, 0.0),
         Point2::xy(sweep, 4.2),
         1.0,
-        palette::grid(),
+        palette::GRID,
     );
-    let entries: Vec<(&str, _)> = legend.iter().map(|(s, c)| (s.as_str(), *c)).collect();
-    ax.legend(c, &entries);
+    ax.legend(c, &legend);
 
     // The echo against the free decay, from composed maps, on a logarithmic time axis.
     let ax = Axes::new(
@@ -527,25 +515,22 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(s, (-s / T2 as f32).exp())
         })
         .collect();
-    ax.dashed(c, &fine, 1.0, 5.0, palette::grid());
-    for (states, colour) in [(&d.echoed, palette::sky()), (&d.faded, palette::red())] {
+    ax.dashed(c, &fine, 1.0, 5.0, palette::GRID);
+    for (states, colour) in [(&d.echoed, palette::SKY), (&d.faded, palette::RED)] {
         let pts: Vec<_> = d
             .decay_times
             .iter()
             .zip(states)
-            .map(|(s, rho)| on_plot(*s, transverse(*rho)))
+            .map(|(s, rho)| Point::xy(*s, transverse(*rho)))
             .collect();
         ax.polyline(c, &pts, 1.5, colour);
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour);
     }
     if now > 0.02 {
-        let cursor = palette::yellow().faded(0.7);
+        let cursor = palette::YELLOW.faded(0.7);
         ax.line(c, Point2::xy(now, 0.0), Point2::xy(now, 1.05), 1.0, cursor);
     }
-    ax.legend(
-        c,
-        &[("ECHO", palette::sky()), ("FREE DECAY", palette::red())],
-    );
+    ax.legend(c, &[("ECHO", palette::SKY), ("FREE DECAY", palette::RED)]);
 
     caption(
         c,
@@ -566,10 +551,7 @@ mod tests {
     use super::resonance::*;
     use gax::ApproxEq;
     use gax::vga3d::{Multivector, Paravector, Vector};
-
-    fn close(a: St, b: St, tol: f64) -> bool {
-        a.max_abs_diff(&b) <= tol
-    }
+    use gax_numga_examples::testing::near;
 
     /// The generator is the Bloch equations: the Bloch vector changes by `w x r` less the
     /// relaxation, with `w = (drive, 0, detuning)`, the transverse part decaying at `1 / T2` and
@@ -592,7 +574,7 @@ mod tests {
     /// `~L L` and the commutator term all stay states.
     #[test]
     fn relaxation_keeps_states_their_own_reverse() {
-        let states = |m: Multivector<(), f64>| m.cast::<Paravector>().cast::<Multivector>();
+        let states = |m: Multivector| m.cast::<Paravector>().cast::<Multivector>();
         for p in [raise(), z().cast::<Multivector>()] {
             let s = Paravector::new(0.5, 0.1, -0.3, 0.2);
             let full = p * s * p.reverse();
@@ -616,7 +598,7 @@ mod tests {
             let (sampled, last, settled) = nutation(&detunings, 1.0, seconds, dt, every);
             assert_eq!(sampled[0].len(), detunings.len());
             for (a, b) in last.iter().zip(&settled) {
-                assert!(close(*a, *b, 1e-2), "{a:?} vs {b:?}");
+                assert!(near(*a, *b, 1e-2), "{a:?} vs {b:?}");
             }
         }
     }

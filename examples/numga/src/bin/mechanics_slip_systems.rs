@@ -30,34 +30,34 @@
 //! between [001], [011] and [111] close up, with the paths of eight pulls' axes growing, each
 //! step coloured by the systems that slipped in it.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    from_above, palette, reach3, run,
+    from_above, label_above, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
 mod slip {
     use gax::vga3d::{Vector, intrinsic};
 
-    pub type V = Vector<(), f64>;
     /// A slip direction: the meet of two slip planes, intrinsic, its sense a convention.
-    pub type D = intrinsic::Vector<(), f64>;
+    pub type D = intrinsic::Vector;
     /// A Schmid factor or a slip: the stress resolved along a slip direction, intrinsic like the
     /// direction, so that its product with the direction, a move, does not depend on its sense.
-    pub type Factor = intrinsic::Scalar<(), f64>;
+    pub type Factor = intrinsic::Scalar;
     /// A stress: a map on vectors, the traction on a plane for its normal.
-    pub type Stress = Vector<(Vector,), f64>;
+    pub type Stress = Vector<(Vector,)>;
     /// One value per slip system: per plane, per slip direction in it.
     pub type Systems<T> = [[T; DIRECTIONS]; PLANES];
 
     /// The slip planes, and the slip directions in each.
     pub const PLANES: usize = 4;
     pub const DIRECTIONS: usize = 3;
-    pub const Z: V = Vector::new(0.0, 0.0, 1.0);
+    pub const Z: Vector = Vector::new(0.0, 0.0, 1.0);
 
     /// The slip directions of each slip plane: the lines where it meets each of the others,
     /// normalized.
-    pub fn slip_directions(normals: &[V; PLANES]) -> Systems<D> {
+    pub fn slip_directions(normals: &[Vector; PLANES]) -> Systems<D> {
         let planes = normals.map(|n| n.dual());
         core::array::from_fn(|i| {
             core::array::from_fn(|k| {
@@ -69,13 +69,17 @@ mod slip {
 
     /// A unit pull along the axis: the traction on a plane is the axis, by the plane's normal's
     /// share of it.
-    pub fn tension(axis: V) -> Stress {
+    pub fn tension(axis: Vector) -> Stress {
         axis * (axis | Vector::slot())
     }
 
     /// The shear stress a pull resolves along each slip system, per unit pull: the traction on
     /// the slip plane, along the slip direction.
-    pub fn schmid(axis: V, normals: &[V; PLANES], directions: &Systems<D>) -> Systems<Factor> {
+    pub fn schmid(
+        axis: Vector,
+        normals: &[Vector; PLANES],
+        directions: &Systems<D>,
+    ) -> Systems<Factor> {
         let stress = tension(axis);
         core::array::from_fn(|i| {
             let traction = stress.of(normals[i]);
@@ -87,12 +91,12 @@ mod slip {
     /// its direction by its height above its plane, the moves add, and the part of their sum
     /// across the axis turns it, in the plane of the axis and the move.
     pub fn slipped(
-        axis: V,
-        normals: &[V; PLANES],
+        axis: Vector,
+        normals: &[Vector; PLANES],
         directions: &Systems<D>,
         amounts: &Systems<Factor>,
-    ) -> V {
-        let mut shift = V::zero();
+    ) -> Vector {
+        let mut shift = Vector::zero();
         for ((normal, plane), amount) in normals.iter().zip(directions).zip(amounts) {
             let height = normal.dot(axis).s();
             for (d, a) in plane.iter().zip(amount) {
@@ -131,24 +135,24 @@ mod slip {
     pub const STEPS: usize = 500;
 
     /// A unit vector from coordinates.
-    pub fn unit(c: [f64; 3]) -> V {
+    pub fn unit(c: [f64; 3]) -> Vector {
         Vector::from_coeffs(c).normalized()
     }
 
     /// The slip planes' normals.
-    pub fn normals() -> [V; PLANES] {
+    pub fn normals() -> [Vector; PLANES] {
         NORMALS.map(unit)
     }
 
     /// The pull direction at a point `(x, y)` of the chart, the plane across [001]: [001]'s
     /// opposite reflected in the plane across [001] plus the point, the stereographic lift.
-    pub fn lift(x: f64, y: f64) -> V {
+    pub fn lift(x: f64, y: f64) -> Vector {
         (Z + Vector::new(x, y, 0.0)).normalized() >> -Z
     }
 
     /// The point of the chart a direction projects to, its opposite (the same pull) taken on
     /// the upper side: its part across [001], over one plus its part along it.
-    pub fn project(d: V) -> V {
+    pub fn project(d: Vector) -> Vector {
         let upper = if d.dot(Z).s() < 0.0 { -d } else { d };
         let across = (upper ^ Z) | Z;
         across / (1.0 + upper.dot(Z).s())
@@ -169,7 +173,7 @@ mod slip {
     /// The slip planes' normals and slip directions.
     #[derive(Clone, Copy, Debug)]
     pub struct Crystal {
-        pub normals: [V; PLANES],
+        pub normals: [Vector; PLANES],
         pub slips: Systems<D>,
     }
 
@@ -184,19 +188,19 @@ mod slip {
         }
 
         /// The Schmid factors of a pull along the axis.
-        pub fn schmid(&self, axis: V) -> Systems<Factor> {
+        pub fn schmid(&self, axis: Vector) -> Systems<Factor> {
             schmid(axis, &self.normals, &self.slips)
         }
 
         /// One pull's axis after a slip step, and how much each system slipped in it.
-        pub fn step(&self, axis: V) -> (V, Systems<Factor>) {
+        pub fn step(&self, axis: Vector) -> (Vector, Systems<Factor>) {
             let amounts = power_law(&self.schmid(axis));
             (slipped(axis, &self.normals, &self.slips, &amounts), amounts)
         }
 
         /// A pull's axis at every step (`STEPS + 1`), and how much each system slipped in each
         /// step (`STEPS`).
-        pub fn path(&self, start: V) -> (Vec<V>, Vec<Systems<Factor>>) {
+        pub fn path(&self, start: Vector) -> (Vec<Vector>, Vec<Systems<Factor>>) {
             let (mut axes, mut amounts) = (vec![start], Vec::with_capacity(STEPS));
             for _ in 0..STEPS {
                 let (axis, slipped) = self.step(axes[axes.len() - 1]);
@@ -207,7 +211,7 @@ mod slip {
         }
 
         /// Every pull's path.
-        pub fn paths(&self) -> Vec<(Vec<V>, Vec<Systems<Factor>>)> {
+        pub fn paths(&self) -> Vec<(Vec<Vector>, Vec<Systems<Factor>>)> {
             STARTS.iter().map(|s| self.path(unit(*s))).collect()
         }
     }
@@ -241,7 +245,7 @@ const EDGE_SAMPLES: usize = 60;
 /// The crystal and the pulls' paths, computed once.
 struct Scene {
     crystal: Crystal,
-    paths: Vec<(Vec<V>, Vec<Systems<Factor>>)>,
+    paths: Vec<(Vec<Vector>, Vec<Systems<Factor>>)>,
 }
 
 fn scene() -> &'static Scene {
@@ -256,7 +260,7 @@ fn scene() -> &'static Scene {
 }
 
 /// A direction on the chart, as drawn.
-fn chart(d: V) -> Point2 {
+fn chart(d: Vector) -> Point2 {
     from_above(reach3(project(d)))
 }
 
@@ -295,35 +299,24 @@ fn draw_triangle(c: &mut Canvas, ax: &Axes) {
                 })))
             })
             .collect();
-        ax.polyline(c, &arc, 1.2, palette::ink().faded(0.6));
+        ax.polyline(c, &arc, 1.2, palette::INK.faded(0.6));
     }
 }
 
 /// The whole chart: each region in the colour of its first system, the slip planes' normals as
 /// triangles and the slip directions as dots, and the standard triangle.
 fn draw_chart(c: &mut Canvas, rect: Rect, crystal: &Crystal) {
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), 1.04);
+    let ax = Axes::equal(rect, ORIGIN2, 1.04);
     draw_shading(c, &ax, crystal);
-    c.ring(
-        ax.px(Point2::xy(0.0, 0.0)),
-        ax.scale(),
-        1.2,
-        palette::ink().faded(0.5),
-    );
+    c.ring(ax.px(ORIGIN2), ax.scale(), 1.2, palette::INK.faded(0.5));
     let normals: Vec<Point2> = crystal.normals.iter().map(|n| chart(*n)).collect();
-    ax.scatter(c, &normals, Marker::Triangle, 10.0, palette::ink());
+    ax.scatter(c, &normals, Marker::Triangle, 10.0, palette::INK);
     // A slip direction drawn where its line pierces the chart: its sense does not show.
     let slip_at = |d: &D| chart(d.with_orientation());
     let slips: Vec<Point2> = crystal.slips.iter().flatten().map(slip_at).collect();
-    ax.scatter(c, &slips, Marker::Dot, 6.0, palette::ink());
+    ax.scatter(c, &slips, Marker::Dot, 6.0, palette::INK);
     draw_triangle(c, &ax);
-    title(c, rect, "THE SYSTEM THAT YIELDS FIRST");
-}
-
-/// A panel's title above it.
-fn title(c: &mut Canvas, rect: Rect, text: &str) {
-    let above = rect.top_middle() - Point2::direction(0.0, 8.0);
-    c.text(text, above, 13.0, palette::ink(), Align::Center);
+    label_above(c, rect, "THE SYSTEM THAT YIELDS FIRST", 13.0, 8.0);
 }
 
 /// A step's colour: the colours of the systems that slipped in it, mixed by how much.
@@ -349,7 +342,13 @@ fn carriers(amounts: &Systems<Factor>) -> u32 {
 
 /// A path's first `reached` steps as runs on the same systems, each drawn as one stroke in the
 /// colour of its first step.
-fn draw_path(c: &mut Canvas, ax: &Axes, axes: &[V], amounts: &[Systems<Factor>], reached: usize) {
+fn draw_path(
+    c: &mut Canvas,
+    ax: &Axes,
+    axes: &[Vector],
+    amounts: &[Systems<Factor>],
+    reached: usize,
+) {
     let mut start = 0;
     while start < reached {
         let systems = carriers(&amounts[start]);
@@ -364,13 +363,13 @@ fn draw_path(c: &mut Canvas, ax: &Axes, axes: &[V], amounts: &[Systems<Factor>],
         ax.polyline(c, &run, 2.0, mixed(&amounts[start]).whitened(0.3));
         start += length;
     }
-    ax.scatter(c, &[chart(axes[reached])], Marker::Dot, 6.0, palette::ink());
+    ax.scatter(c, &[chart(axes[reached])], Marker::Dot, 6.0, palette::INK);
 }
 
 /// A name beside a point of the chart, `lift` pixels above it.
 fn name(c: &mut Canvas, ax: &Axes, at: Point2, text: &str, lift: f32) {
     let px = ax.px(at) - Point2::direction(0.0, lift);
-    c.text(text, px, 11.0, palette::ink().faded(0.7), Align::Center);
+    c.text(text, px, 11.0, palette::INK.faded(0.7), Align::Center);
 }
 
 /// The standard triangle close up, with each pull's path so far, each step in the colours of
@@ -389,13 +388,13 @@ fn draw_paths(c: &mut Canvas, rect: Rect, s: &Scene, reached: usize) {
     }
     for (goal, label) in GOALS {
         let at = chart(unit(goal));
-        ax.scatter(c, &[at], Marker::Square, 7.0, palette::ink().faded(0.7));
+        ax.scatter(c, &[at], Marker::Square, 7.0, palette::INK.faded(0.7));
         name(c, &ax, at, label, 10.0);
     }
     for (axes, amounts) in &s.paths {
         draw_path(c, &ax, axes, amounts, reached);
     }
-    title(c, rect, "PULLS TURNING TOWARDS [112]");
+    label_above(c, rect, "PULLS TURNING TOWARDS [112]", 13.0, 8.0);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -423,6 +422,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::slip::*;
+    use gax::vga3d::Vector;
 
     /// numga's samples across the stereographic chart of pull directions, along each side.
     const GRID: usize = 1000;
@@ -465,7 +465,8 @@ mod tests {
         for (axes, amounts) in Crystal::fcc().paths() {
             let mut end = axes[STEPS].c;
             end.sort_by(f64::total_cmp);
-            assert!(V::from_coeffs(end).dot(target).s() > 0.999, "{end:?}");
+            let reached: Vector = Vector::from_coeffs(end);
+            assert!(reached.dot(target).s() > 0.999, "{end:?}");
             let mut carried = [0.0; PLANES * DIRECTIONS];
             for step in &amounts {
                 for (sum, a) in carried.iter_mut().zip(step.iter().flatten()) {

@@ -9,75 +9,74 @@
 //! towards `cos 75°` in the middle.
 
 use gax::Unit;
-use gax::pga3d::{Line, Motor, Point, intrinsic};
+use gax::pga3d::{Motor, Point, intrinsic};
 
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Point2, Scene3, backdrop, caption, colormap, palette, run,
+    Align, Anim, Camera, Canvas, Lens, ORIGIN3, Point2, Scene3, backdrop, caption, colormap,
+    palette, run,
 };
 
 mod skinning {
     use super::*;
 
-    pub type P = Point<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
+    pub type M = Unit<Motor>;
 
     /// The three skins: normalized motor blending, motor slerp, and map (matrix) blending, each
     /// vertex weighted `w` towards the tip bone.
     pub fn blend_skin(
-        vertices: &[P],
+        vertices: &[Point],
         weights: &[f64],
         root: M,
         tip: M,
-    ) -> (Vec<P>, Vec<P>, Vec<P>) {
+    ) -> (Vec<Point>, Vec<Point>, Vec<Point>) {
         let (r, t) = (root.into_inner(), tip.into_inner());
         // The bones' point maps: the matrices of computer graphics.
         let root_map = root >> Point::slot();
         let tip_map = tip >> Point::slot();
         // The geodesic from the root to the tip: the log of the relative motor.
-        let relative: Line<(), f64> = (tip * root.inverse()).log();
-        let mut motor_skin = Vec::with_capacity(vertices.len());
-        let mut slerp_skin = Vec::with_capacity(vertices.len());
-        let mut matrix_skin = Vec::with_capacity(vertices.len());
-        for (v, &w) in vertices.iter().zip(weights) {
+        let relative = (tip * root.inverse()).log();
+        let skin = |at: &dyn Fn(Point, f64) -> Point| -> Vec<Point> {
+            vertices
+                .iter()
+                .zip(weights)
+                .map(|(v, &w)| at(*v, w))
+                .collect()
+        };
+        (
             // Blend the motors and renormalize: a chord of the geodesic, still rigid.
-            motor_skin.push((r + (t - r).gp(w)).normalized() >> *v);
+            skin(&|v, w| (r + (t - r).gp(w)).normalized() >> v),
             // Follow the geodesic: rigid, with the twist spread evenly along the blend.
-            slerp_skin.push((relative.gp(w).exp() * root) >> *v);
+            skin(&|v, w| (relative.gp(w).exp() * root) >> v),
             // Blend the maps: no longer a motion, so the skin shrinks where the bones disagree.
-            matrix_skin.push((root_map + (tip_map - root_map).gp(w)).of(*v));
-        }
-        (motor_skin, slerp_skin, matrix_skin)
+            skin(&|v, w| (root_map + (tip_map - root_map).gp(w)).of(v)),
+        )
     }
 
     /// The bone axis, the x axis: the join of the origin and a point along x.
-    pub fn bone_axis() -> intrinsic::Line<(), f64> {
-        Point::xyz(0.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 0.0)
+    pub fn bone_axis() -> intrinsic::Line {
+        Point::origin() & Point::xyz(1.0, 0.0, 0.0)
     }
 
     /// The distance of a vertex from the bone axis: the norm of the plane joining them.
-    pub fn radius(v: P) -> f64 {
+    pub fn radius(v: Point) -> f64 {
         (v.unitized() & bone_axis()).norm()
     }
 
     /// A unit-radius skin around the x axis for `x` from 0 to 1, ring by ring, and each vertex's
     /// weight of the second bone, its `x`.
-    pub fn cylinder(rings: usize, around: usize) -> (Vec<P>, Vec<f64>) {
-        let mut skin = Vec::with_capacity(rings * around);
-        let mut weights = Vec::with_capacity(rings * around);
-        for i in 0..rings {
-            let x = i as f64 / (rings - 1) as f64;
-            for j in 0..around {
-                let turn = core::f64::consts::TAU * j as f64 / around as f64;
-                // The skin at y = 1, turned about the x axis.
-                skin.push(
-                    Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), turn)
-                        >> Point::xyz(x, 1.0, 0.0),
-                );
-                weights.push(x);
-            }
-        }
-        (skin, weights)
+    pub fn cylinder(rings: usize, around: usize) -> (Vec<Point>, Vec<f64>) {
+        (0..rings)
+            .flat_map(|i| {
+                let x = i as f64 / (rings - 1) as f64;
+                (0..around).map(move |j| {
+                    let turn = core::f64::consts::TAU * j as f64 / around as f64;
+                    // The skin at y = 1, turned about the x axis.
+                    let about_x = Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), turn);
+                    (about_x >> Point::xyz(x, 1.0, 0.0), x)
+                })
+            })
+            .unzip()
     }
 
     /// The second bone, turned by `angle` about the shared axis.
@@ -89,9 +88,9 @@ mod skinning {
     pub const AROUND: usize = 24;
 
     /// The scene: the cylinder skinned three ways with the tip bone turned by `angle`.
-    pub fn skinning(angle: f64) -> [Vec<P>; 3] {
+    pub fn skinning(angle: f64) -> [Vec<Point>; 3] {
         let (skin, weights) = cylinder(RINGS, AROUND);
-        let root = Motor::<(), f64>::translation(Point::direction(0.0, 0.0, 0.0));
+        let root = Motor::translation(Point::direction(0.0, 0.0, 0.0));
         let (motor, slerp, matrix) = blend_skin(&skin, &weights, root, twist(angle));
         [motor, slerp, matrix]
     }
@@ -102,7 +101,7 @@ use skinning::*;
 const TITLES: [&str; 3] = ["NORMALIZED MOTOR BLEND", "MOTOR SLERP", "MATRIX BLEND"];
 
 /// One skin as a lit quad mesh, striped around its length, with the bone axis inside.
-fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
+fn panel(c: &mut Canvas, skin: &[Point], angle: f64, azimuth: f32, title: &str) {
     backdrop(c);
     let cam = Camera::orbit(
         c.rect(),
@@ -147,23 +146,23 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
         Point::xyz(-0.25, 0.0, 0.0),
         Point::xyz(1.25, 0.0, 0.0),
         2.0,
-        palette::ink().faded(0.8),
+        palette::INK.faded(0.8),
     );
     let up = Point::direction(0.0, 0.0, 1.5);
-    s.arrow(Point::xyz(0.0, 0.0, 0.0), up, 2.0, 8.0, palette::orange());
+    s.arrow(ORIGIN3, up, 2.0, 8.0, palette::ORANGE);
     s.arrow(
         Point::xyz(1.0, 0.0, 0.0),
         twist(angle) >> up,
         2.0,
         8.0,
-        palette::orange(),
+        palette::ORANGE,
     );
     s.draw(c);
     for (_, q, colour) in quads {
         let px: Option<Vec<_>> = q.iter().map(|p| cam.px(*p)).collect();
         if let Some(px) = px {
             c.fill(&px, colour, 0.92);
-            c.polyline(&px, 0.6, palette::grid().faded(0.6), true);
+            c.polyline(&px, 0.6, palette::GRID.faded(0.6), true);
         }
     }
     // The title a sixth of the way down the middle, and the least radius near the bottom,
@@ -172,9 +171,9 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     let size = (screen.height() / 30.0).clamp(8.0, 13.0);
     let (top, down) = (screen.top_middle(), Point2::direction(0.0, 1.0));
     let title_at = top + down.gp(screen.height() * 0.17);
-    c.text(title, title_at, size, palette::ink(), Align::Center);
+    c.text(title, title_at, size, palette::INK, Align::Center);
     let least = skin.iter().map(|v| radius(*v)).fold(f64::MAX, f64::min);
-    let colour = palette::red().blend(palette::green(), least as f32);
+    let colour = palette::RED.blend(palette::GREEN, least as f32);
     let note = top + down.gp(screen.height() * 0.92);
     c.text(
         &format!("MIN RADIUS {least:.3}"),

@@ -25,7 +25,7 @@ mod mirrors;
 mod six_hundred_cell;
 mod tilings;
 
-use gax_numga_examples::{Anim, Axes, Canvas, Light, Point2, Rect, backdrop, caption, light, run};
+use gax_numga_examples::{Anim, Axes, Canvas, Light, ORIGIN2, Rect, backdrop, caption, light, run};
 
 /// The seconds each scene shows.
 const ACT: f32 = 7.0;
@@ -89,7 +89,7 @@ pub fn disk_axes(rect: Rect) -> Axes {
     const ROOM: f32 = 1.03;
     Axes::equal(
         rect,
-        Point2::xy(0.0, 0.0),
+        ORIGIN2,
         ROOM * (rect.height() / rect.width()).max(1.0),
     )
 }

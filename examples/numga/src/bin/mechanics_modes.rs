@@ -21,27 +21,24 @@ use std::sync::OnceLock;
 mod modes {
     use super::*;
 
-    pub type P = Point<(), f64>;
     /// A small rigid motion: a turn about a point, the extrinsic point.
-    pub type Q = Twist<(), f64>;
-    /// A spring's line of action: the join of its anchor and attachment, a forque line.
-    pub type L = Forque<(), f64>;
+    pub type Q = Twist;
     /// A map from twists to forques: a stiffness or an inertia.
-    pub type Response = Forque<(Twist,), f64>;
+    pub type Response = Forque<(Twist,)>;
     /// A linear form on twists: a spring's extension.
-    pub type Extension = Scalar<(Twist,), f64>;
+    pub type Extension = Scalar<(Twist,)>;
     /// A bilinear form on twists: an energy.
-    pub type Energy = Scalar<(Twist, Twist), f64>;
+    pub type Energy = Scalar<(Twist, Twist)>;
 
     /// One suspension: the plate's corners, the springs' attachments and anchors, their
     /// constants, and the mass points with their masses.
     #[derive(Clone, Debug)]
     pub struct Suspension {
-        pub body: Vec<P>,
-        pub attachments: Vec<P>,
-        pub anchors: Vec<P>,
+        pub body: Vec<Point>,
+        pub attachments: Vec<Point>,
+        pub anchors: Vec<Point>,
         pub spring_constants: Vec<f64>,
-        pub mass_points: Vec<P>,
+        pub mass_points: Vec<Point>,
         pub masses: Vec<f64>,
     }
 
@@ -52,21 +49,25 @@ mod modes {
         pub system: Suspension,
         pub frequencies: [f64; 3],
         pub modes: [Q; 3],
-        pub body_offsets: [Vec<P>; 3],
-        pub attachment_offsets: [Vec<P>; 3],
+        pub body_offsets: [Vec<Point>; 3],
+        pub attachment_offsets: [Vec<Point>; 3],
         pub extensions: [Vec<f64>; 3],
     }
 
     /// A uniform 2 by 1 plate of mass 1 on the first `springs` springs of stiffness 6. The first
     /// two hang vertically; the third is angled and off-centre.
     pub fn suspension(springs: usize) -> Suspension {
-        let points = |v: &[[f64; 2]]| v.iter().map(|p| Point::xy(p[0], p[1])).collect::<Vec<P>>();
+        let points = |v: &[[f64; 2]]| {
+            v.iter()
+                .map(|p| Point::xy(p[0], p[1]))
+                .collect::<Vec<Point>>()
+        };
         let body = points(&[[0.0, 0.5], [2.0, 0.5], [2.0, 1.5], [0.0, 1.5]]);
         let attachments = points(&[[0.2, 1.5], [1.8, 1.5], [2.0, 1.0]][..springs]);
         let anchors = points(&[[0.2, 2.55], [1.8, 2.55], [2.9, 1.85]][..springs]);
         // Tensor-product two-point Gauss quadrature on the uniform plate: the corners pulled
         // towards the centre by `1 / sqrt(3)`, Gauss's nodes.
-        let center = body.iter().copied().sum::<P>().gp(0.25);
+        let center = body.iter().copied().sum::<Point>().gp(0.25);
         #[allow(clippy::disallowed_methods)] // a number: Gauss's quadrature nodes ±1/√3
         let node = 1.0 / 3f64.sqrt();
         let mass_points = body
@@ -84,7 +85,7 @@ mod modes {
     }
 
     /// The springs' lines of action, joining anchor to attachment, normalized.
-    pub fn lines(s: &Suspension) -> Vec<L> {
+    pub fn lines(s: &Suspension) -> Vec<Forque> {
         s.anchors
             .iter()
             .zip(&s.attachments)
@@ -94,7 +95,7 @@ mod modes {
 
     /// The stiffness and each spring's extension form, from the springs' lines: pairing an open
     /// twist with a line measures the stretch, and Hooke's law scales the line by it.
-    pub fn spring_stiffness(lines: &[L], constants: &[f64]) -> (Response, Vec<Extension>) {
+    pub fn spring_stiffness(lines: &[Forque], constants: &[f64]) -> (Response, Vec<Extension>) {
         let extension: Vec<Extension> = lines.iter().map(|l| Twist::slot() & *l).collect();
         let stiffness: Response = lines
             .iter()
@@ -108,7 +109,7 @@ mod modes {
     /// The inertia from lumped masses: each point's velocity under an open twist is its
     /// commutator with it, and the point joined with its velocity is its momentum
     /// (`Motions::point_inertia`, per unit mass).
-    pub fn body_inertia(points: &[P], masses: &[f64]) -> Response {
+    pub fn body_inertia(points: &[Point], masses: &[f64]) -> Response {
         points
             .iter()
             .zip(masses)
@@ -133,7 +134,8 @@ mod modes {
         let inertia = body_inertia(&system.mass_points, &system.masses);
         let (modes, frequencies) = normal_modes(stiffness, inertia);
         // The displacement of a point under a twist is their commutator (a direction).
-        let offsets = |pts: &[P], m: Q| pts.iter().map(|p| p.commutator(m)).collect::<Vec<P>>();
+        let offsets =
+            |pts: &[Point], m: Q| pts.iter().map(|p| p.commutator(m)).collect::<Vec<Point>>();
         ModeCase {
             body_offsets: modes.map(|m| offsets(&system.body, m)),
             attachment_offsets: modes.map(|m| offsets(&system.attachments, m)),
@@ -168,13 +170,13 @@ fn seconds() -> f32 {
 }
 
 /// A direction turned a quarter turn counterclockwise, scaled to unit length.
-fn across(d: P) -> P {
-    let quarter = Motor::rotation(Point::xy(0.0, 0.0), core::f64::consts::FRAC_PI_2);
+fn across(d: Point) -> Point {
+    let quarter = Motor::rotation(Point::origin(), core::f64::consts::FRAC_PI_2);
     (quarter >> d).gp(1.0 / d.ideal_norm())
 }
 
 /// A coil with straight leads from `a` to `b`: points along the axis, offset across it.
-fn spring_path(a: P, b: P) -> Vec<P> {
+fn spring_path(a: Point, b: Point) -> Vec<Point> {
     let axis = b - a;
     let side = across(axis);
     let turns = 15;
@@ -191,31 +193,31 @@ fn spring_path(a: P, b: P) -> Vec<P> {
 }
 
 /// A wall at the anchor, across the spring, hatched on the far side.
-fn support(ax: &Axes, c: &mut Canvas, anchor: P, attachment: P) {
+fn support(ax: &Axes, c: &mut Canvas, anchor: Point, attachment: Point) {
     let out = anchor - attachment;
     let out = out.gp(1.0 / out.ideal_norm());
     let side = across(out);
     let at = |s: f64| anchor + side.gp(s);
-    ax.line(c, at(-0.14), at(0.14), 2.0, palette::grid());
+    ax.line(c, at(-0.14), at(0.14), 2.0, palette::GRID);
     for k in 0..5 {
         let s = at(-0.12 + 0.06 * k as f64);
-        ax.line(c, s, s + (out + side).gp(0.075), 1.0, palette::grid());
+        ax.line(c, s, s + (out + side).gp(0.075), 1.0, palette::GRID);
     }
 }
 
 fn spring_colour(extension: f64) -> Light {
     if extension > 1e-9 {
-        palette::orange()
+        palette::ORANGE
     } else if extension < -1e-9 {
-        palette::sky()
+        palette::SKY
     } else {
-        palette::grid()
+        palette::GRID
     }
 }
 
 /// One mode's panel at `phase` (the cosine of the oscillation).
 fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, title: &str) {
-    let ax = Axes::equal(rect, P::xy(1.35, 1.5), 1.4);
+    let ax = Axes::equal(rect, Point::xy(1.35, 1.5), 1.4);
     let s = &case.system;
     // The mode's shape, enlarged so that the largest corner moves 0.2.
     let largest = case.body_offsets[mode]
@@ -223,30 +225,30 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
         .map(|o| o.ideal_norm())
         .fold(0.0, f64::max);
     let k = 0.2 / largest * phase;
-    let moved = |p: P, o: P| p + o.gp(k);
-    let body: Vec<P> = s
+    let moved = |p: Point, o: Point| p + o.gp(k);
+    let body: Vec<Point> = s
         .body
         .iter()
         .zip(&case.body_offsets[mode])
         .map(|(p, o)| moved(*p, *o))
         .collect();
-    let closed = |pts: &[P]| [pts, &pts[..1]].concat();
-    ax.dashed(c, &closed(&s.body), 1.2, 4.0, palette::grid());
+    let closed = |pts: &[Point]| [pts, &pts[..1]].concat();
+    ax.dashed(c, &closed(&s.body), 1.2, 4.0, palette::GRID);
     // The plate's fill covers what is below, a dim blue: its outline glows.
-    ax.fill(c, &body, palette::blue().faded(0.1), 0.55);
-    ax.polyline(c, &closed(&body), 2.0, palette::sky());
+    ax.fill(c, &body, palette::BLUE.faded(0.1), 0.55);
+    ax.polyline(c, &closed(&body), 2.0, palette::SKY);
     for (j, (anchor, attachment)) in s.anchors.iter().zip(&s.attachments).enumerate() {
         let b = moved(*attachment, case.attachment_offsets[mode][j]);
         support(&ax, c, *anchor, *attachment);
         let colour = spring_colour(case.extensions[mode][j] * k);
         ax.polyline(c, &spring_path(*anchor, b), 2.0, colour);
-        ax.scatter(c, &[b], Marker::Dot, 7.0, palette::ink());
+        ax.scatter(c, &[b], Marker::Dot, 7.0, palette::INK);
     }
     // The mode's centre of rotation. A translation's is at infinity (its weight is zero), so an
     // arrow from the plate's centre shows the direction it slides in instead.
     let m = case.modes[mode];
     if m.e12().abs() > 1e-9 {
-        ax.scatter(c, &[m], Marker::Cross, 9.0, palette::yellow().faded(0.9));
+        ax.scatter(c, &[m], Marker::Cross, 9.0, palette::YELLOW.faded(0.9));
     } else {
         let centre = Point::xy(1.0, 1.0);
         let slide = centre.commutator(m);
@@ -256,7 +258,7 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
             centre + slide.gp(0.4 / slide.ideal_norm()),
             1.5,
             7.0,
-            palette::yellow(),
+            palette::YELLOW,
         );
     }
     // The title just inside the lower left corner; where it would not fit across the panel,
@@ -276,7 +278,7 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
     let up = Point2::direction(0.0, -1.3 * size);
     for (i, line) in lines.iter().rev().enumerate() {
         let at = corner + up.gp(i as f32);
-        c.text(line, at, size, palette::ink(), Align::Left);
+        c.text(line, at, size, palette::INK, Align::Left);
     }
 }
 
@@ -316,6 +318,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::modes::*;
+    use gax::pga2d::{Forque, Point};
 
     /// numga's `test_scenario_has_analytic_modes_and_renders` and
     /// `test_two_springs_have_analytic_slide_bounce_and_rock_frequencies`: mass 1, polar
@@ -339,15 +342,13 @@ mod tests {
         let (stiffness, extension) = spring_stiffness(&lines(&s), &s.spring_constants);
         let q = Q::from_coeffs([0.3, -0.4, 0.25]);
         let h = 1e-4;
-        // The distance between two (unit) points: the norm of their join.
-        let dist = |a: P, b: P| (a & b).norm();
         let plus = q.gp(-h / 2.0).exp();
         let minus = q.gp(h / 2.0).exp();
         let mut actual = 0.0;
         for (j, (anchor, att)) in s.anchors.iter().zip(&s.attachments).enumerate() {
-            let rest = dist(*att, *anchor);
-            let ep = dist(plus >> *att, *anchor) - rest;
-            let em = dist(minus >> *att, *anchor) - rest;
+            let rest = att.distance(*anchor);
+            let ep = (plus >> *att).distance(*anchor) - rest;
+            let em = (minus >> *att).distance(*anchor) - rest;
             let measured = (ep - em) / (2.0 * h);
             let predicted = extension[j].of(q).s();
             assert!(
@@ -393,8 +394,8 @@ mod tests {
         // numga's `exp(-0.9 xw + 0.3 yw) exp(0.37 xy)`: with `w = e0`, `xw = -e01`, `yw = e20`.
         let m = Q::from_coeffs([0.3, 0.9, 0.0]).exp() * Q::from_coeffs([0.0, 0.0, 0.37]).exp();
         let lines = lines(&s);
-        let moved_lines: Vec<L> = lines.iter().map(|l| m >> *l).collect();
-        let moved_points: Vec<P> = s.mass_points.iter().map(|p| m >> *p).collect();
+        let moved_lines: Vec<Forque> = lines.iter().map(|l| m >> *l).collect();
+        let moved_points: Vec<Point> = s.mass_points.iter().map(|p| m >> *p).collect();
         let (k0, _) = spring_stiffness(&lines, &s.spring_constants);
         let (k1, _) = spring_stiffness(&moved_lines, &s.spring_constants);
         let (_, before) = normal_modes(k0, body_inertia(&s.mass_points, &s.masses));

@@ -15,7 +15,6 @@
 //!
 //! Included by each binary that needs it with `#[path = "../shared/quadrics_s3.rs"] mod s3;`, so
 //! not every binary uses every item.
-#![allow(dead_code)]
 
 gax::algebra! {
     algebra cl4 "The algebra of the 3-sphere, R(4,0,0), in numga's blade orientations for S³.";
@@ -29,32 +28,32 @@ gax::algebra! {
     versor Rotor = [1, e23, e31, e12, e14, e24, e34, e1234];
 }
 
+use crate::measure;
+use crate::points::box_map;
+use crate::signal::tangent;
+use crate::{Point2, Rect};
 pub use cl4::{Bivector, Rotor, ScreenPoint, Trivector, Vector};
 use gax_colour::Light;
-use gax_numga_examples::measure;
-use gax_numga_examples::points::box_map;
-use gax_numga_examples::signal::tangent;
-use gax_numga_examples::{Point2, Rect};
 
 /// A point of S³: a trivector, on numga's `yzw`, `zxw`, `xyw`, `zyx`. The pole of a plane,
 /// its dual, and so intrinsic (ADR-051), as the algebra declares its trivectors.
-pub type Point = Trivector<(), f64>;
+pub type Point = Trivector;
 /// A plane through the origin of `R⁴`: a great sphere of S³.
-pub type Plane = Vector<(), f64>;
+pub type Plane = Vector;
 /// A rotation of `R⁴`, the rigid motions of S³.
-pub type Motor = gax::Unit<Rotor<(), f64>>;
+pub type Motor = gax::Unit<Rotor>;
 /// A rate of rotation: a bivector.
-pub type Rate = Bivector<(), f64>;
+pub type Rate = Bivector;
 /// The primal quadric: a point to its polar plane, negative inside.
-pub type Quadric = Vector<(Trivector,), f64>;
+pub type Quadric = Vector<(Trivector,)>;
 /// The dual quadric: a plane to its pole.
-pub type DualQuadric = Trivector<(Vector,), f64>;
+pub type DualQuadric = Trivector<(Vector,)>;
 /// A pixel: a point of the image sphere a quarter turn ahead of the eye, `(1, u, v)`.
-pub type Pixel = ScreenPoint<(), f64>;
+pub type Pixel = ScreenPoint;
 /// A body's outline in the pixel chart: a quadratic form on pixels.
-pub type ScreenConic = cl4::Scalar<(ScreenPoint, ScreenPoint), f64>;
+pub type ScreenConic = cl4::Scalar<(ScreenPoint, ScreenPoint)>;
 /// The eye's polar plane in the pixel chart: a linear form on pixels.
-pub type ScreenPolar = cl4::Scalar<(ScreenPoint,), f64>;
+pub type ScreenPolar = cl4::Scalar<(ScreenPoint,)>;
 
 /// The plane `w = 0`... as a vector: `e4`.
 pub fn w() -> Plane {
@@ -73,9 +72,9 @@ pub fn origin() -> Point {
 }
 
 /// A direction at the origin: a vector of the tangent space there, Euclidean 3-space.
-pub type Tangent = gax::vga3d::Vector<(), f64>;
+pub type Tangent = gax::vga3d::Vector;
 /// A plane of turning at the origin: a bivector of the tangent space.
-pub type TangentPlane = gax::vga3d::Bivector<(), f64>;
+pub type TangentPlane = gax::vga3d::Bivector;
 
 /// The point a quarter turn from the origin in the direction `d`.
 pub fn direction(d: Tangent) -> Point {
@@ -116,17 +115,18 @@ pub fn moved_dual(m: Motor, q: DualQuadric) -> DualQuadric {
 /// its squared half-width, and the origin with itself, weighted by `-1`, which closes it.
 pub fn ellipsoid(half_widths: [f64; 3]) -> DualQuadric {
     let plane = Vector::slot();
-    let mut q = (origin() & plane) * origin().gp(-1.0);
     let axes = [
         Tangent::new(1.0, 0.0, 0.0),
         Tangent::new(0.0, 1.0, 0.0),
         Tangent::new(0.0, 0.0, 1.0),
     ];
-    for (d, h) in axes.into_iter().zip(half_widths) {
-        let axis = direction(d);
-        q += (axis & plane) * axis.gp(h * h);
-    }
-    q
+    let closing = (origin() & plane) * origin().gp(-1.0);
+    axes.into_iter()
+        .zip(half_widths)
+        .fold(closing, |q, (d, h)| {
+            let axis = direction(d);
+            q + (axis & plane) * axis.gp(h * h)
+        })
 }
 
 /// A pixel of a pinhole looking along `+x` from the origin with horizontal field of view `fov`:
@@ -154,8 +154,7 @@ pub fn inside(cone: Quadric, ray: Pixel) -> bool {
 /// must be off the surface.
 pub fn project(eye_frame: Motor, surface: Quadric) -> (ScreenConic, ScreenPolar) {
     let eye = eye_frame >> origin();
-    let screen: Trivector<(ScreenPoint,), f64> =
-        eye_frame >> ScreenPoint::slot().cast::<Trivector>();
+    let screen: Trivector<(ScreenPoint,)> = eye_frame >> ScreenPoint::slot().cast::<Trivector>();
     let normalized = surface.gp(1.0 / (eye & surface.of(eye)).s());
     let polar = screen & normalized.of(eye);
     ((screen & normalized.of(screen)) - polar * polar, polar)
@@ -299,8 +298,8 @@ mod tests {
     #[test]
     #[allow(clippy::disallowed_methods)] // the references they are checked against
     fn conventions_match_numga() {
-        let p = |c: [f64; 4]| Trivector::<(), f64>::from_coeffs(c);
-        let x = Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
+        let p = |c: [f64; 4]| Trivector::from_coeffs(c);
+        let x = Vector::new(1.0, 0.0, 0.0, 0.0);
         assert_eq!((w() & p([0.0, 0.0, 0.0, 1.0])).s(), 1.0);
         assert_eq!((p([0.0, 0.0, 0.0, 1.0]) & w()).s(), -1.0);
         assert_eq!((x & p([1.0, 0.0, 0.0, 0.0])).s(), 1.0);
@@ -308,7 +307,7 @@ mod tests {
         let yzw = p([1.0, 0.0, 0.0, 0.0]);
         assert_eq!((yzw | yzw).s(), -1.0);
         // exp(0.3 xw) carries the origin 0.6 toward +x.
-        let moved = Bivector::<(), f64>::new(0.0, 0.0, 0.0, 0.3, 0.0, 0.0).exp() >> origin();
+        let moved = Bivector::new(0.0, 0.0, 0.0, 0.3, 0.0, 0.0).exp() >> origin();
         assert!(
             (moved.c[0] - 0.6f64.sin()).abs() < 1e-14 && (moved.c[3] - 0.6f64.cos()).abs() < 1e-14
         );

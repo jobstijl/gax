@@ -16,6 +16,7 @@
 //! in the barn (it fits in motion, but cannot stop inside relaxed), and Bell's spaceships
 //! (synchronized clocks stretch the rope; the bisector train does not).
 
+use crate::spacetime::Vector;
 use std::sync::OnceLock;
 
 use gax::pga2d::Point;
@@ -38,30 +39,29 @@ mod impulse {
     use super::spacetime::{Bivector, Vector};
     use gax_numga_examples::signal::phasor;
 
-    pub type V = Vector<(), f64>;
     /// A map on events and directions: an observer change.
-    pub type VectorMap = Vector<(Vector,), f64>;
+    pub type VectorMap = Vector<(Vector,)>;
 
-    pub fn t() -> V {
+    pub fn t() -> Vector {
         Vector::new(1.0, 0.0)
     }
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(0.0, 1.0)
     }
     /// The event at time `time` and position `position`.
-    pub fn event(time: f64, position: f64) -> V {
+    pub fn event(time: f64, position: f64) -> Vector {
         Vector::new(time, position)
     }
     /// The unit bivector `t ∧ x`; it squares to +1.
-    pub fn tx() -> Bivector<(), f64> {
+    pub fn tx() -> Bivector {
         Bivector::new(1.0)
     }
     /// An event's time, `v · t`.
-    pub fn time_of(v: V) -> f64 {
+    pub fn time_of(v: Vector) -> f64 {
         (v | t()).s()
     }
     /// An event's position, `-v · x` (`x` squares to -1).
-    pub fn position_of(v: V) -> f64 {
+    pub fn position_of(v: Vector) -> f64 {
         -(v | x()).s()
     }
 
@@ -75,14 +75,14 @@ mod impulse {
     /// directions give the midpoint observer's time axis, its perpendicular (the product with
     /// `t ∧ x`) the kink line, scaled so that both rest frames measure unit proper spacing.
     /// The left kink is at the origin.
-    pub fn strain_preserving_kinks(before: V, after: V) -> [V; 2] {
+    pub fn strain_preserving_kinks(before: Vector, after: Vector) -> [Vector; 2] {
         let separation = ((before + after) * tx()) * (1.0 / (1.0 + (before | after).s()));
         [Vector::zero(), separation]
     }
 
     /// A rigid-to-rigid step anchored at the left end's kink: the two kink events, and the unit
     /// directions before and after.
-    pub fn velocity_step(before_rapidity: f64, after_rapidity: f64) -> ([V; 2], [V; 2]) {
+    pub fn velocity_step(before_rapidity: f64, after_rapidity: f64) -> ([Vector; 2], [Vector; 2]) {
         let directions = [
             boost(before_rapidity).of(t()),
             boost(after_rapidity).of(t()),
@@ -96,7 +96,11 @@ mod impulse {
     /// One fixed boost and one fixed translation, composed again and again: the kink events
     /// per step (left, right), and the directions before, between and after the steps. `dt` is
     /// the left end's proper time between kinks.
-    pub fn small_impulses(final_rapidity: f64, count: usize, dt: f64) -> (Vec<[V; 2]>, Vec<V>) {
+    pub fn small_impulses(
+        final_rapidity: f64,
+        count: usize,
+        dt: f64,
+    ) -> (Vec<[Vector; 2]>, Vec<Vector>) {
         let step = boost(final_rapidity / count as f64);
         let before = t();
         let mut after = step.of(before);
@@ -116,15 +120,19 @@ mod impulse {
 
     /// The event at observer time `time` on the straight worldline through `at` along
     /// `direction`.
-    pub fn coasting(at: V, direction: V, time: f64) -> V {
+    pub fn coasting(at: Vector, direction: Vector, time: f64) -> Vector {
         at + direction * ((time - time_of(at)) / time_of(direction))
     }
 
     /// Each end's event at observer time `time` on its piecewise straight worldline: start on
     /// the worldline before the first kink, then add each velocity jump once that end has
     /// crossed its kink.
-    pub fn worldline_events(time: f64, kinks: &[[V; 2]], directions: &[V]) -> [V; 2] {
-        let rates: Vec<V> = directions
+    pub fn worldline_events(
+        time: f64,
+        kinks: &[[Vector; 2]],
+        directions: &[Vector],
+    ) -> [Vector; 2] {
+        let rates: Vec<Vector> = directions
             .iter()
             .map(|d| *d * (1.0 / time_of(*d)))
             .collect();
@@ -139,7 +147,11 @@ mod impulse {
     }
 
     /// Each end's worldline as a polyline over the observer times `span`, through its kinks.
-    pub fn worldlines(kinks: &[[V; 2]], directions: &[V], span: [f64; 2]) -> Vec<[V; 2]> {
+    pub fn worldlines(
+        kinks: &[[Vector; 2]],
+        directions: &[Vector],
+        span: [f64; 2],
+    ) -> Vec<[Vector; 2]> {
         let mut out = vec![worldline_events(span[0], kinks, directions)];
         out.extend_from_slice(kinks);
         out.push(worldline_events(span[1], kinks, directions));
@@ -164,15 +176,15 @@ mod impulse {
     pub struct Impulse {
         /// Per view (symmetric, boosted): the worldlines, the kinks, the slices before and
         /// after, and the directions before and after.
-        pub worldlines: [Vec<[V; 2]>; 2],
-        pub kinks: [[V; 2]; 2],
-        pub slices: [[[V; 2]; 2]; 2],
-        pub directions: [[V; 2]; 2],
+        pub worldlines: [Vec<[Vector; 2]>; 2],
+        pub kinks: [[Vector; 2]; 2],
+        pub slices: [[[Vector; 2]; 2]; 2],
+        pub directions: [[Vector; 2]; 2],
         /// The symmetric observer's time axis.
-        pub bisector: V,
-        pub train: Vec<[V; 2]>,
-        pub steps: Vec<[V; 2]>,
-        pub train_slice: [V; 2],
+        pub bisector: Vector,
+        pub train: Vec<[Vector; 2]>,
+        pub steps: Vec<[Vector; 2]>,
+        pub train_slice: [Vector; 2],
     }
 
     pub fn impulse() -> Impulse {
@@ -215,32 +227,32 @@ mod impulse {
     // Some fields serve only the tests (numga's scenario checks).
     #[cfg_attr(not(test), allow(dead_code))]
     pub struct Ladder {
-        pub barn_doors: Vec<[V; 2]>,
-        pub closure: [V; 2],
-        pub barn_ladder: Vec<[V; 2]>,
-        pub incoming: [V; 2],
-        pub moving_doors: Vec<[V; 2]>,
-        pub moving_closure: [V; 2],
-        pub moving_ladder: Vec<[V; 2]>,
-        pub moving_events: [V; 2],
-        pub moving_direction: V,
-        pub ladder_cut: [V; 2],
-        pub barn_cut: [V; 2],
-        pub doors: Vec<[V; 2]>,
-        pub stop_ladder: Vec<[V; 2]>,
-        pub stop_kinks: [V; 2],
-        pub stop_directions: [V; 2],
-        pub stopped: [V; 2],
-        pub contact: V,
-        pub ring_incoming: Vec<[V; 2]>,
-        pub ring: Vec<[V; 2]>,
-        pub relaxed: Vec<[V; 2]>,
-        pub contacts: [V; 2],
-        pub relaxed_cut: [V; 2],
+        pub barn_doors: Vec<[Vector; 2]>,
+        pub closure: [Vector; 2],
+        pub barn_ladder: Vec<[Vector; 2]>,
+        pub incoming: [Vector; 2],
+        pub moving_doors: Vec<[Vector; 2]>,
+        pub moving_closure: [Vector; 2],
+        pub moving_ladder: Vec<[Vector; 2]>,
+        pub moving_events: [Vector; 2],
+        pub moving_direction: Vector,
+        pub ladder_cut: [Vector; 2],
+        pub barn_cut: [Vector; 2],
+        pub doors: Vec<[Vector; 2]>,
+        pub stop_ladder: Vec<[Vector; 2]>,
+        pub stop_kinks: [Vector; 2],
+        pub stop_directions: [Vector; 2],
+        pub stopped: [Vector; 2],
+        pub contact: Vector,
+        pub ring_incoming: Vec<[Vector; 2]>,
+        pub ring: Vec<[Vector; 2]>,
+        pub relaxed: Vec<[Vector; 2]>,
+        pub contacts: [Vector; 2],
+        pub relaxed_cut: [Vector; 2],
     }
 
     /// `[a, b]` as events at both ends of each of the given times.
-    fn over(times: [f64; 2], f: impl Fn(f64) -> [V; 2]) -> Vec<[V; 2]> {
+    fn over(times: [f64; 2], f: impl Fn(f64) -> [Vector; 2]) -> Vec<[Vector; 2]> {
         times.iter().map(|t| f(*t)).collect()
     }
 
@@ -262,7 +274,7 @@ mod impulse {
         ];
         let incoming_direction = boost(rapidity).of(t());
         let at_rest = t();
-        let coast = |events: [V; 2], direction: V| {
+        let coast = |events: [Vector; 2], direction: Vector| {
             move |time: f64| events.map(|e| coasting(e, direction, time))
         };
 
@@ -349,11 +361,11 @@ mod impulse {
     // Some fields serve only the tests (numga's scenario checks).
     #[cfg_attr(not(test), allow(dead_code))]
     pub struct Spaceships {
-        pub tracks: [Vec<[V; 2]>; 2],
-        pub schedules: [Vec<[V; 2]>; 2],
-        pub slices: [[[V; 2]; 2]; 2],
-        pub final_events: [[V; 2]; 2],
-        pub directions: Vec<V>,
+        pub tracks: [Vec<[Vector; 2]>; 2],
+        pub schedules: [Vec<[Vector; 2]>; 2],
+        pub slices: [[[Vector; 2]; 2]; 2],
+        pub final_events: [[Vector; 2]; 2],
+        pub directions: Vec<Vector>,
         pub final_frame: VectorMap,
     }
 
@@ -362,7 +374,7 @@ mod impulse {
         let rapidity = beta.atanh();
         let (preserved, directions) = small_impulses(rapidity, count, dt);
         // Bell's front follows an exact spatial translation of the same rear path.
-        let bell: Vec<[V; 2]> = preserved.iter().map(|s| [s[0], s[0] + x()]).collect();
+        let bell: Vec<[Vector; 2]> = preserved.iter().map(|s| [s[0], s[0] + x()]).collect();
         let schedules = [preserved, bell];
         // Boost the final coasting worldlines, then measure at equal final-frame time, from the
         // rear's final kink. The front's final worldline is at rest there, so its position is
@@ -396,19 +408,19 @@ use impulse::*;
 const SCENE: f32 = 7.0;
 
 fn rear() -> Light {
-    palette::sky()
+    palette::SKY
 }
 fn front() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 fn kink() -> Light {
-    palette::green()
+    palette::GREEN
 }
 fn door() -> Light {
     Light::from_srgb(0.55, 0.58, 0.64, 1.2)
 }
 fn elastic() -> Light {
-    palette::purple()
+    palette::PURPLE
 }
 fn contact() -> Light {
     Light::from_srgb(0.92, 0.36, 0.36, 1.8)
@@ -416,15 +428,15 @@ fn contact() -> Light {
 
 /// An event where the diagrams draw it: the point its vector reaches from the origin event,
 /// position across, time up.
-impl Pos2 for V {
+impl Pos2 for Vector {
     fn point2(self) -> Point2 {
-        let origin = Point::xy(0.0, 0.0);
+        let origin = Point::origin();
         (origin + Point::direction(position_of(self), time_of(self))).point2()
     }
 }
 
 /// One end's worldline from a list of `[left, right]` events.
-fn end_line(events: &[[V; 2]], end: usize) -> Vec<V> {
+fn end_line(events: &[[Vector; 2]], end: usize) -> Vec<Vector> {
     events.iter().map(|e| e[end]).collect()
 }
 
@@ -452,7 +464,7 @@ fn title(c: &mut Canvas, ax: &Axes, text: &str, colour: Light) {
 }
 
 /// The part of a worldline (events in time order) up to the observer time `tau`.
-fn upto(events: &[V], tau: f64) -> Vec<V> {
+fn upto(events: &[Vector], tau: f64) -> Vec<Vector> {
     let mut out = vec![];
     for w in events.windows(2) {
         let (a, b) = (w[0], w[1]);
@@ -473,7 +485,7 @@ fn upto(events: &[V], tau: f64) -> Vec<V> {
 }
 
 /// Where a worldline is at the observer time `tau`, if it is there then.
-fn at(events: &[V], tau: f64) -> Option<V> {
+fn at(events: &[Vector], tau: f64) -> Option<Vector> {
     events.windows(2).find_map(|w| {
         let (a, b) = (w[0], w[1]);
         (time_of(a) <= tau && tau <= time_of(b) && time_of(b) > time_of(a))
@@ -505,13 +517,13 @@ impl Diagram<'_> {
         // Light cones through the origin, faint: the null directions `t ± x`, far out.
         let big = 10.0;
         for null in [t() + x(), t() - x()] {
-            ax.line(c, null * -big, null * big, 0.8, palette::grid().faded(0.35));
+            ax.line(c, null * -big, null * big, 0.8, palette::GRID.faded(0.35));
         }
         Diagram { ax, tau, size, c }
     }
 
     /// A worldline: faint in full, bright up to the present.
-    fn worldline(&mut self, events: &[V], colour: Light, width: f32) {
+    fn worldline(&mut self, events: &[Vector], colour: Light, width: f32) {
         self.ax
             .polyline(self.c, events, width * 0.6, colour.faded(0.18));
         self.ax
@@ -519,13 +531,13 @@ impl Diagram<'_> {
     }
 
     /// Both ends' worldlines.
-    fn rod(&mut self, events: &[[V; 2]], width: f32) {
+    fn rod(&mut self, events: &[[Vector; 2]], width: f32) {
         self.worldline(&end_line(events, 0), rear(), width);
         self.worldline(&end_line(events, 1), front(), width);
     }
 
     /// A dashed line through events, shown once the present has passed its first.
-    fn dashed(&mut self, events: &[V], colour: Light, width: f32) {
+    fn dashed(&mut self, events: &[Vector], colour: Light, width: f32) {
         let first = events
             .iter()
             .map(|e| time_of(*e))
@@ -536,7 +548,7 @@ impl Diagram<'_> {
     }
 
     /// Events, bright once the present has passed them.
-    fn events(&mut self, events: &[V], marker: Marker, size: f32, colour: Light) {
+    fn events(&mut self, events: &[Vector], marker: Marker, size: f32, colour: Light) {
         for e in events {
             let strength = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
             let faded = colour.faded(strength);
@@ -546,7 +558,7 @@ impl Diagram<'_> {
 
     /// A length bar across two equal-time events, labelled above (`dy > 0`) or below, once the
     /// present has reached it.
-    fn bar(&mut self, [a, b]: [V; 2], label: &str, dy: f32, colour: Light) {
+    fn bar(&mut self, [a, b]: [Vector; 2], label: &str, dy: f32, colour: Light) {
         if time_of(a) > self.tau {
             return;
         }
@@ -578,10 +590,9 @@ impl Diagram<'_> {
     }
 
     /// The present: the equal-time slice between two worldlines, with its length.
-    fn now(&mut self, left: &[V], right: &[V]) {
+    fn now(&mut self, left: &[Vector], right: &[Vector]) {
         if let (Some(a), Some(b)) = (at(left, self.tau), at(right, self.tau)) {
-            self.ax
-                .line(self.c, a, b, 1.6, palette::yellow().faded(0.9));
+            self.ax.line(self.c, a, b, 1.6, palette::YELLOW.faded(0.9));
             let text = format!("{:.2}", position_of(b) - position_of(a));
             let size = self.size;
             // Beside the right end, or beside the left end where that would leave the frame.
@@ -595,12 +606,12 @@ impl Diagram<'_> {
                     Align::Right,
                 )
             };
-            self.c.text(&text, at, size, palette::yellow(), align);
+            self.c.text(&text, at, size, palette::YELLOW, align);
         }
     }
 
     fn title(&mut self, text: &str) {
-        title(self.c, &self.ax, text, palette::ink());
+        title(self.c, &self.ax, text, palette::INK);
     }
 
     fn text(&mut self, at: impl Pos2, text: &str, colour: Light) {
@@ -611,8 +622,7 @@ impl Diagram<'_> {
     fn frame(&mut self) {
         self.ax.frame(self.c, "", "X / L0", "");
         let at = self.ax.rect.lo + Point2::direction(4.0, self.size * 1.4);
-        self.c
-            .text("CT", at, self.size, palette::ink(), Align::Left);
+        self.c.text("CT", at, self.size, palette::INK, Align::Left);
     }
 }
 
@@ -643,12 +653,7 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         for (cut, prefix) in s.slices[v].iter().zip(["BEFORE", "AFTER"]) {
             let length = position_of(cut[1]) - position_of(cut[0]);
             let dy = if time_of(cut[0]) < 0.0 { -1.0 } else { 1.0 };
-            d.bar(
-                *cut,
-                &format!("{prefix}: {length:.3} L0"),
-                dy,
-                palette::ink(),
-            );
+            d.bar(*cut, &format!("{prefix}: {length:.3} L0"), dy, palette::INK);
         }
         let label = if v == 0 {
             "SIMULTANEOUS REVERSAL"
@@ -675,7 +680,7 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         s.train_slice,
         &format!("AFTER: {length:.3} L0"),
         1.0,
-        palette::ink(),
+        palette::INK,
     );
     // Below the front end's curve, clear of the steps and the frame's labels.
     d.text(event(0.12, 1.95), "ONE FIXED MAP,", kink());
@@ -691,7 +696,7 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
 }
 
 /// The barn between its door worldlines, and the door closures.
-fn barn(d: &mut Diagram, doors: &[[V; 2]], closure: &[V; 2]) {
+fn barn(d: &mut Diagram, doors: &[[Vector; 2]], closure: &[Vector; 2]) {
     let (l, r) = (end_line(doors, 0), end_line(doors, 1));
     let mut poly = l.clone();
     poly.extend(r.iter().rev());
@@ -711,7 +716,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     let mut d = Diagram::new(c, rect(0), [-0.46, 1.32], [-0.6, 0.65], r);
     barn(&mut d, &s.barn_doors, &s.closure);
     d.rod(&s.barn_ladder, 2.2);
-    d.bar(s.incoming, "LADDER 0.60", 1.0, palette::ink());
+    d.bar(s.incoming, "LADDER 0.60", 1.0, palette::INK);
     d.text(event(-0.45, 0.4), "DOORS CLOSE TOGETHER", door());
     d.now(&end_line(&s.barn_ladder, 0), &end_line(&s.barn_ladder, 1));
     d.frame();
@@ -721,7 +726,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     let mut d = Diagram::new(c, rect(1), [-0.31, 2.32], [-1.62, 0.30], r);
     barn(&mut d, &s.moving_doors, &s.moving_closure);
     d.rod(&s.moving_ladder, 2.2);
-    d.bar(s.ladder_cut, "LADDER 1.00", 1.0, palette::ink());
+    d.bar(s.ladder_cut, "LADDER 1.00", 1.0, palette::INK);
     d.bar(s.barn_cut, "BARN 0.48", 1.0, door());
     // Top right, clear of the doors, the bars and the closures.
     d.text(event(0.12, 1.78), "EXIT CLOSES", door());
@@ -739,10 +744,10 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.rod(&s.stop_ladder, 2.2);
     d.dashed(&s.stop_kinks, kink(), 2.0);
     d.events(&s.stop_kinks, Marker::Dot, 7.0, kink());
-    d.bar(s.incoming, "0.60 AT CLOSURE", -1.0, palette::ink());
-    d.bar(s.stopped, "AT REST 1.00", 1.0, palette::ink());
+    d.bar(s.incoming, "0.60 AT CLOSURE", -1.0, palette::INK);
+    d.bar(s.stopped, "AT REST 1.00", 1.0, palette::INK);
     d.events(&[s.contact], Marker::Star, 11.0, contact());
-    d.text(event(1.85, 0.5), "TOO LONG FOR THE BARN", palette::ink());
+    d.text(event(1.85, 0.5), "TOO LONG FOR THE BARN", palette::INK);
     d.now(&end_line(&s.stop_ladder, 0), &end_line(&s.stop_ladder, 1));
     d.frame();
     d.title("3. STRAIN-PRESERVING STOP");
@@ -758,7 +763,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.events(&s.incoming, Marker::Dot, 7.0, elastic());
     d.bar(s.incoming, "COMPRESSED 0.60", -1.0, elastic());
     d.events(&s.contacts, Marker::Star, 11.0, contact());
-    d.bar(s.relaxed_cut, "RELAXED 1.00", 1.0, palette::ink());
+    d.bar(s.relaxed_cut, "RELAXED 1.00", 1.0, palette::INK);
     d.text(event(1.05, 0.4), "ELASTIC RINGING", elastic());
     let mut left = end_line(&s.ring_incoming, 0);
     left.extend(end_line(&s.ring, 0));
@@ -798,7 +803,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         for (cut, label) in s.slices[k].iter().zip(["INITIALLY", "FINAL LAB GAP"]) {
             let gap = position_of(cut[1]) - position_of(cut[0]);
             let dy = if time_of(cut[0]) < 0.0 { -1.0 } else { 1.0 };
-            d.bar(*cut, &format!("{label}: {gap:.2} L0"), dy, palette::ink());
+            d.bar(*cut, &format!("{label}: {gap:.2} L0"), dy, palette::INK);
         }
         // Below and right of the front end's curve, clear of the steps.
         d.text(event(0.35, 2.2), notes[k][0], colours[k]);
@@ -817,7 +822,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         [-0.35, 3.03],
     );
     let size = 10.0;
-    title(c, &ax, "IN THE FINAL REST FRAME", palette::ink());
+    title(c, &ax, "IN THE FINAL REST FRAME", palette::INK);
     let gaps = s.final_events.map(|e| position_of(e[1]));
     let rows = [
         (
@@ -899,7 +904,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ("REAR END", rear()),
         ("FRONT END", front()),
         ("IMPULSES", kink()),
-        ("NOW", palette::yellow()),
+        ("NOW", palette::YELLOW),
     ];
     let right = Point2::direction(size, 0.0);
     // Each entry a swatch and its name, two glyphs apart, the row centred.
@@ -909,7 +914,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (label, colour) in entries {
         c.line(start, start + right.gp(2.0), 2.5, colour);
         let at = start + right.gp(2.6) + Point2::direction(0.0, size * 0.4);
-        c.text(label, at, size, palette::ink(), Align::Left);
+        c.text(label, at, size, palette::INK, Align::Left);
         start += right.gp(span(label) / size);
     }
 }
@@ -932,11 +937,12 @@ fn main() {
 #[allow(clippy::needless_range_loop)]
 mod tests {
     use super::impulse::*;
+    use super::spacetime::Vector;
     use gax::ApproxEq;
 
     const ATOL: f64 = 1e-9;
 
-    fn velocity(d: V) -> f64 {
+    fn velocity(d: Vector) -> f64 {
         position_of(d) / time_of(d)
     }
 
@@ -948,7 +954,7 @@ mod tests {
     fn velocity_step_preserves_proper_spacing_and_requested_directions() {
         let (before, after) = (0.6f64, -0.75f64);
         let (events, directions) = velocity_step(before, after);
-        assert!(events[0].max_abs_diff(&V::zero()) <= ATOL);
+        assert!(events[0].max_abs_diff(&Vector::zero()) <= ATOL);
         for (d, r) in directions.iter().zip([before, after]) {
             assert!(close(d.norm_squared(), 1.0));
             assert!(close(velocity(*d), r.tanh()));
@@ -1077,7 +1083,7 @@ mod tests {
         assert!(close(position_of(last), 0.0));
         assert!(close(position_of(s.final_events[0][1]), 1.0));
         assert!(close(position_of(s.final_events[1][1]), rapidity.cosh()));
-        let gap = |cut: [V; 2]| position_of(cut[1] - cut[0]);
+        let gap = |cut: [Vector; 2]| position_of(cut[1] - cut[0]);
         assert!(close(gap(s.slices[0][1]), 1.0 / rapidity.cosh()));
         assert!(close(gap(s.slices[1][1]), 1.0));
         for i in 0..300 {

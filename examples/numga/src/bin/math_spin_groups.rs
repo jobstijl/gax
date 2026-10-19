@@ -37,7 +37,7 @@
 use gax::ApproxEq;
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::wave;
+use gax_numga_examples::signal::{frame, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop, caption,
     colormap, palette, run,
@@ -226,11 +226,11 @@ mod spin {
         ($m:ident, $k:expr) => {{
             use $m::{Even, Odd, Scalar};
             let k: usize = $k;
-            let mut even: Even<(), f64> = Scalar::<(), f64>::from_coeffs([1.0]).cast::<Even>();
+            let mut even: Even = Scalar::from_coeffs([1.0]).cast::<Even>();
             for i in 0..k / 2 {
                 even = even * (axis!($m, 2 * i) * axis!($m, 2 * i + 1));
             }
-            let odd: Odd<(), f64> = if k % 2 == 1 {
+            let odd: Odd = if k % 2 == 1 {
                 even * axis!($m, k - 1)
             } else {
                 Odd::zero()
@@ -251,8 +251,8 @@ mod spin {
         ($m:ident, $p:expr) => {{
             use $m::Bivector;
             let (even, odd) = blade_product!($m, $p);
-            Bivector::<(Bivector,), f64>::from_images(core::array::from_fn(|j| {
-                let b = Bivector::<(), f64>::from_coeffs(basis(j));
+            Bivector::<(Bivector,)>::from_images(core::array::from_fn(|j| {
+                let b: Bivector = Bivector::from_coeffs(basis(j));
                 ((even * b) * even.reverse()).cast::<Bivector>()
                     + ((odd * b) * odd.reverse()).cast::<Bivector>()
             }))
@@ -267,8 +267,8 @@ mod spin {
         ($m:ident, $n:expr) => {{
             use $m::Even;
             let (pseudoscalar, _) = blade_product!($m, $n);
-            Even::<(Even,), f64>::from_images(core::array::from_fn(|j| {
-                pseudoscalar * Even::<(), f64>::from_coeffs(basis(j))
+            Even::<(Even,)>::from_images(core::array::from_fn(|j| {
+                pseudoscalar * Even::from_coeffs(basis(j))
             }))
         }};
     }
@@ -284,13 +284,13 @@ mod spin {
             // commutator with the other bivector open. (The form with both bivectors open, the
             // double commutator with three open slots traced, takes too long to compile in
             // six dimensions.)
-            let planes: Vec<Bivector<(), f64>> = (0..n * (n - 1) / 2)
+            let planes: Vec<Bivector> = (0..n * (n - 1) / 2)
                 .map(|i| Bivector::from_coeffs(basis(i)))
                 .collect();
-            let ad: Vec<Bivector<(Bivector,), f64>> = planes
+            let ad: Vec<Bivector<(Bivector,)>> = planes
                 .iter()
                 .map(|a| {
-                    Bivector::<(Bivector,), f64>::from_images(core::array::from_fn(|j| {
+                    Bivector::<(Bivector,)>::from_images(core::array::from_fn(|j| {
                         a.commutator(planes[j])
                     }))
                 })
@@ -367,11 +367,11 @@ mod spin {
         use super::*;
         pub use cl40::{Bivector, Even, Vector};
 
-        pub type B = Bivector<(), f64>;
-        pub type V = Vector<(), f64>;
-        pub type E = Even<(), f64>;
+        pub type B = Bivector;
+        pub type V = Vector;
+        pub type E = Even;
         /// A point of the space the three-sphere is projected into.
-        pub type Space = gax::vga3d::Vector<(), f64>;
+        pub type Space = gax::vga3d::Vector;
 
         /// The bivector with one plane: `e_ij` by its basis indices.
         pub fn plane(i: usize, j: usize) -> B {
@@ -391,7 +391,7 @@ mod spin {
 
         /// The scalar one, as an even multivector.
         pub fn one() -> E {
-            cl40::Scalar::<(), f64>::from_coeffs([1.0]).cast::<Even>()
+            cl40::Scalar::from_coeffs([1.0]).cast::<Even>()
         }
 
         /// A four-dimensional generator as the sum of two commuting generators,
@@ -414,8 +414,8 @@ mod spin {
         }
 
         /// The sandwich with a rotor, as a map on vectors.
-        pub fn turn_map(r: E) -> Vector<(Vector,), f64> {
-            Vector::<(Vector,), f64>::from_images(core::array::from_fn(|j| turn(r, axis(j))))
+        pub fn turn_map(r: E) -> Vector<(Vector,)> {
+            Vector::<(Vector,)>::from_images(core::array::from_fn(|j| turn(r, axis(j))))
         }
 
         /// A unit vector of the four directions, projected from `-e4` into the space of the
@@ -518,8 +518,8 @@ fn orbit_colour(height: usize, heights: usize, azimuth: usize, azimuths: usize) 
 }
 
 /// The point of space a projected vector reaches from the origin.
-fn at(v: four::Space) -> gax::pga3d::Point<(), f64> {
-    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
+fn at(v: four::Space) -> gax::pga3d::Point {
+    gax::pga3d::Point::origin() + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
 }
 
 /// The checks of the four-dimensional scenes, live: the isoclinic split of a random rotor, the
@@ -567,7 +567,7 @@ const HEADER: &str = "(P,Q) PLANES ROTATIONS BOOSTS FORM/INNER I*I SPINORS";
 
 /// The table of algebras, its header's baseline starting at `at`, one row under another.
 fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
-    c.text(HEADER, at, size, palette::ink(), Align::Left);
+    c.text(HEADER, at, size, palette::INK, Align::Left);
     let down = Point2::direction(0.0, size * 1.4);
     for (k, row) in table().iter().enumerate() {
         let (rotations, boosts) = row.counts();
@@ -583,11 +583,11 @@ fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
             row.spinors()
         );
         let colour = if boosts == 0 {
-            palette::sky()
+            palette::SKY
         } else {
-            palette::grid()
+            palette::GRID
         };
-        let colour = colour.mix_light(palette::ink(), 0.35);
+        let colour = colour.mix_light(palette::INK, 0.35);
         let row_at = at + down.gp((k + 1) as f32);
         c.text(&line, row_at, size, colour, Align::Left);
     }
@@ -613,7 +613,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .flat_map(|p| p.c)
         .fold(0.0f64, |m, x| m.max(x.abs()));
     let length = flows.left[0].len() - 1;
-    let step = ((phase * length as f32) as usize).min(length - 1);
+    let step = frame(phase, length);
     let titles = [
         "ALONG: XY WITH ZW",
         "AGAINST: XY AGAINST ZW",
@@ -649,12 +649,12 @@ fn draw(c: &mut Canvas, t: f32) {
         });
         let top_middle = rect.top_middle();
         let title = top_middle + down.gp(16.0);
-        c.text(titles[k], title, 11.0, palette::ink(), Align::Center);
+        c.text(titles[k], title, 11.0, palette::INK, Align::Center);
         if k < 2 {
             let bottom_middle = rect.bottom_middle();
             let text = format!("LINKING NUMBER {:+.2}", checks().links[k]);
             let note = bottom_middle + up.gp(12.0);
-            c.text(&text, note, 10.0, palette::grid(), Align::Center);
+            c.text(&text, note, 10.0, palette::GRID, Align::Center);
         }
     }
     let exact = table().iter().all(|row| row.form_is_inner);
@@ -675,7 +675,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = Point2::xy(0.015 * w, 0.2 * h);
     for (k, line) in lines.iter().enumerate() {
         let line_at = first + down.gp(k as f32 * size * 1.6);
-        c.text(line, line_at, size, palette::grid(), Align::Left);
+        c.text(line, line_at, size, palette::GRID, Align::Left);
     }
     caption(
         c,
@@ -702,8 +702,8 @@ mod tests {
         use super::cl31::Bivector;
         let involution = involution!(cl31, 3);
         // e12 is a rotation, e1t a boost (the third blade in the layout).
-        let xy: Bivector<(), f64> = Bivector::from_coeffs([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
-        let xt: Bivector<(), f64> = Bivector::from_coeffs([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
+        let xy: Bivector = Bivector::from_coeffs([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        let xt: Bivector = Bivector::from_coeffs([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
         assert!(involution.of(xy).max_abs_diff(&xy) < 1e-12);
         assert!(involution.of(xt).max_abs_diff(&-xt) < 1e-12);
         for v in action!(cl31, 4).eigvals() {

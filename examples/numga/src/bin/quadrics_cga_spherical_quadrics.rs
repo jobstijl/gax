@@ -27,28 +27,24 @@ mod cga {
     use super::cl31::{Bivector, Vector, intrinsic};
     use gax_numga_examples::signal::phasor;
 
-    /// A point of S², or any vector.
-    pub type V = Vector<(), f64>;
     /// A plane: a trivector, the dual of a vector, and so intrinsic (ADR-051).
-    pub type Plane = intrinsic::Trivector<(), f64>;
-    /// A 2-blade, the generator of a flow.
-    pub type B = Bivector<(), f64>;
+    pub type Plane = intrinsic::Trivector;
     /// A conformal rotor.
-    pub type R = gax::Unit<super::cl31::Rotor<(), f64>>;
+    pub type R = gax::Unit<super::cl31::Rotor>;
     /// A spherical quadric: a map from vectors to planes.
-    pub type Quadric = intrinsic::Trivector<(Vector,), f64>;
+    pub type Quadric = intrinsic::Trivector<(Vector,)>;
 
     /// The basis vectors x, y, z and w.
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 1.0, 0.0)
     }
-    pub fn w() -> V {
+    pub fn w() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
@@ -68,21 +64,21 @@ mod cga {
     }
 
     /// Rotation generators in numga's blade names: `yz`, `zx`, `xy`, and the boost `xw`.
-    pub fn yz(a: f64) -> B {
+    pub fn yz(a: f64) -> Bivector {
         Bivector::new(a, 0.0, 0.0, 0.0, 0.0, 0.0)
     }
-    pub fn zx(a: f64) -> B {
+    pub fn zx(a: f64) -> Bivector {
         Bivector::new(0.0, a, 0.0, 0.0, 0.0, 0.0)
     }
-    pub fn xy(a: f64) -> B {
+    pub fn xy(a: f64) -> Bivector {
         Bivector::new(0.0, 0.0, a, 0.0, 0.0, 0.0)
     }
-    pub fn xw(a: f64) -> B {
+    pub fn xw(a: f64) -> Bivector {
         Bivector::new(0.0, 0.0, 0.0, a, 0.0, 0.0)
     }
 
     /// The null vector of the point of S² at unit coordinates, with weight one on w.
-    pub fn point([px, py, pz]: [f64; 3]) -> V {
+    pub fn point([px, py, pz]: [f64; 3]) -> Vector {
         Vector::new(px, py, pz, 1.0)
     }
 
@@ -108,7 +104,7 @@ mod cga {
     }
 
     /// Whether a point is inside: `Q(p) ∨ p < 0`, and the value itself.
-    pub fn potential(q: Quadric, p: V) -> f64 {
+    pub fn potential(q: Quadric, p: Vector) -> f64 {
         (q.of(p) & p).s()
     }
 
@@ -272,14 +268,19 @@ mod cga {
 
     /// The 2-blade where two off-centre circles meet, normalized to square to -1: each circle
     /// is the vector of its centre with weight the cosine of its radius.
-    pub fn circle_intersection_vortex(center1: V, radius1: f64, center2: V, radius2: f64) -> B {
+    pub fn circle_intersection_vortex(
+        center1: Vector,
+        radius1: f64,
+        center2: Vector,
+        radius2: f64,
+    ) -> Bivector {
         let c1 = center1 + w().gp(height(radius1));
         let c2 = center2 + w().gp(height(radius2));
         (c1 ^ c2).normalized()
     }
 
     /// numga's vortex: circles of radii 48° and 52° about the pole tilted toward x and toward y.
-    pub fn vortex() -> B {
+    pub fn vortex() -> Bivector {
         circle_intersection_vortex(
             zx(-0.35 / 2.0).exp() >> z(),
             48f64.to_radians(),
@@ -289,7 +290,7 @@ mod cga {
     }
 
     /// A quadric carried by `exp(generator phase / 2)`.
-    pub fn flow(q: Quadric, generator: B, phase: f64) -> Quadric {
+    pub fn flow(q: Quadric, generator: Bivector, phase: f64) -> Quadric {
         moved(q, generator.gp(phase / 2.0).exp())
     }
 }
@@ -352,7 +353,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let centre = grid.lo + Point2::direction(cw * (i + 0.5), ch * (j + 0.5) - label * 0.5);
         hemisphere(c, centre, r, &[(carried(q), gax_colour::hex(col, 0.8))]);
         let under = centre + down.gp(r + label * 1.3);
-        c.text(name, under, label, palette::grid(), Align::Center);
+        c.text(name, under, label, palette::GRID, Align::Center);
     }
     caption(
         c,
@@ -375,10 +376,7 @@ mod tests {
     use super::cga::*;
     use gax_numga_examples::measure::lift;
     use gax_numga_examples::signal::phasor;
-
-    fn close(a: f64, b: f64, tol: f64) -> bool {
-        (a - b).abs() <= tol
-    }
+    use gax_numga_examples::testing::close;
 
     /// Pixels of the hemisphere are null vectors of weight one.
     #[test]

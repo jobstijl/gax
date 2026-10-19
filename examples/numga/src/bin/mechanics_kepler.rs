@@ -31,8 +31,8 @@
 use gax::vga3d::{Rotor, Vector};
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, colormap, from_above,
-    palette, reach3, run,
+    Align, Anim, Axes, Canvas, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
+    from_above, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -42,14 +42,13 @@ mod kepler {
     use gax_numga_examples::measure;
     use gax_numga_examples::signal::phasor;
 
-    pub type V = Vector<(), f64>;
     /// A position spinor: an even element of VGA3D, scaled so that `U ~U` is the radius.
-    pub type Spinor = Rotor<(), f64>;
+    pub type Spinor = Rotor;
     /// The placement `U x ~U` with both spinors open: a vector from two spinors.
-    pub type Placement = Vector<(Rotor, Rotor), f64>;
+    pub type Placement = Vector<(Rotor, Rotor)>;
 
     /// The reference direction a spinor carries onto the position.
-    pub const REFERENCE: V = Vector::new(1.0, 0.0, 0.0);
+    pub const REFERENCE: Vector = Vector::new(1.0, 0.0, 0.0);
 
     /// The placement, the sandwich of the reference direction with both spinors open (its
     /// trivector part, which only the gauge rate reaches, cast away).
@@ -61,8 +60,8 @@ mod kepler {
     #[derive(Clone, Copy, Debug)]
     pub struct State {
         pub time: f64,
-        pub position: V,
-        pub velocity: V,
+        pub position: Vector,
+        pub velocity: Vector,
     }
 
     impl State {
@@ -176,7 +175,7 @@ mod kepler {
     }
 
     /// The inverse-square pull of a centre of strength `gravity` at the origin.
-    pub fn pull(position: V, gravity: f64) -> V {
+    pub fn pull(position: Vector, gravity: f64) -> Vector {
         position * (-gravity / position.norm().powi(3))
     }
 
@@ -281,7 +280,7 @@ mod kepler {
     /// The featured orbit sampled along the regularized clock: its positions and spinors.
     #[derive(Clone, Debug)]
     pub struct Lift {
-        pub positions: Vec<V>,
+        pub positions: Vec<Vector>,
         pub spinors: Vec<Spinor>,
     }
 
@@ -377,7 +376,7 @@ fn scene() -> &'static Scene {
 }
 
 /// A position in the orbital plane, as drawn.
-fn plane(v: V) -> Point2 {
+fn plane(v: Vector) -> Point2 {
     from_above(reach3(v))
 }
 
@@ -388,25 +387,19 @@ fn spinor_plane(u: Spinor) -> Point2 {
 
 /// The attracting centre.
 fn centre(ax: &Axes, c: &mut Canvas) {
-    ax.scatter(
-        c,
-        &[Point2::xy(0.0, 0.0)],
-        Marker::Dot,
-        9.0,
-        palette::yellow(),
-    );
+    ax.scatter(c, &[ORIGIN2], Marker::Dot, 9.0, palette::YELLOW);
 }
 
 /// A path through equal steps of the regularized clock, its samples coloured along it, and the
 /// body on it.
 fn lifted_path(c: &mut Canvas, ax: &Axes, path: &[Point2], dots: &[Point2], body: Point2) {
-    ax.polyline(c, path, 1.4, palette::sky().faded(0.7));
+    ax.polyline(c, path, 1.4, palette::SKY.faded(0.7));
     for (k, d) in dots.iter().enumerate() {
         let colour = colormap::viridis(k as f32 / (dots.len() - 1) as f32);
         ax.scatter(c, &[*d], Marker::Dot, 3.0, colour);
     }
     centre(ax, c);
-    ax.scatter(c, &[body], Marker::Dot, 11.0, palette::purple());
+    ax.scatter(c, &[body], Marker::Dot, 11.0, palette::PURPLE);
 }
 
 /// The featured orbit and the body on it.
@@ -433,7 +426,7 @@ fn draw_spinor(c: &mut Canvas, rect: Rect, s: &Scene, spinor: Spinor) {
         &[opposite],
         Marker::Ring,
         11.0,
-        palette::purple().faded(0.6),
+        palette::PURPLE.faded(0.6),
     );
 }
 
@@ -454,16 +447,10 @@ fn draw_errors(c: &mut Canvas, rect: Rect, (physical, regularized): &(Table, Tab
     let size = (rect.height() / 26.0).clamp(3.0, 14.0) * 0.8;
     for count in COUNTS {
         let foot = ax.px(Point2::xy(count as f32, y[0])) + Point2::direction(0.0, size * 1.6);
-        c.text(
-            &count.to_string(),
-            foot,
-            size,
-            palette::ink(),
-            Align::Center,
-        );
+        c.text(&count.to_string(), foot, size, palette::INK, Align::Center);
     }
     let markers = [Marker::Dot, Marker::Square, Marker::Triangle];
-    for (table, colour) in [(physical, palette::orange()), (regularized, palette::sky())] {
+    for (table, colour) in [(physical, palette::ORANGE), (regularized, palette::SKY)] {
         for (case, marker) in markers.iter().enumerate() {
             let points: Vec<Point2> = COUNTS
                 .iter()
@@ -483,15 +470,15 @@ fn draw_errors(c: &mut Canvas, rect: Rect, (physical, regularized): &(Table, Tab
             beside,
             &format!("E {e}"),
             size,
-            palette::orange(),
+            palette::ORANGE,
             Align::Left,
         );
     }
     ax.legend(
         c,
         &[
-            ("PHYSICAL CLOCK", palette::orange()),
-            ("SPINOR CLOCK", palette::sky()),
+            ("PHYSICAL CLOCK", palette::ORANGE),
+            ("SPINOR CLOCK", palette::SKY),
         ],
     );
 }
@@ -509,10 +496,10 @@ fn until(states: &[State], time: f64) -> Vec<Point2> {
 /// far, with their bodies.
 fn passage_on(c: &mut Canvas, ax: &Axes, p: &Passage, time: f64) {
     let exact: Vec<Point2> = p.exact.iter().map(|s| plane(s.position)).collect();
-    ax.polyline(c, &exact, 2.5, palette::grid());
+    ax.polyline(c, &exact, 2.5, palette::GRID);
     for (states, colour) in [
-        (&p.physical, palette::orange()),
-        (&p.regularized, palette::sky()),
+        (&p.physical, palette::ORANGE),
+        (&p.regularized, palette::SKY),
     ] {
         let shown = until(states, time);
         ax.polyline(c, &shown, 1.6, colour);
@@ -581,7 +568,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     let note = format!("ONE ORBIT AT {STEPS} STEPS, PHYSICAL TIME {time:.2}");
     let at = bottom.lo + Point2::direction(16.0, 0.0);
-    c.text(&note, at, 10.0, palette::ink().faded(0.6), Align::Left);
+    c.text(&note, at, 10.0, palette::INK.faded(0.6), Align::Left);
     caption(
         c,
         "KEPLER: THROUGH PERIAPSIS WITH A POSITION SPINOR",
@@ -599,10 +586,8 @@ mod tests {
     use core::f64::consts::{PI, TAU};
     use gax::vga3d::{Bivector, Vector};
 
-    type B = Bivector<(), f64>;
-
     /// The angular momentum per unit mass, a bivector.
-    fn momentum(s: &State) -> B {
+    fn momentum(s: &State) -> Bivector {
         s.position ^ s.velocity
     }
 
@@ -613,7 +598,7 @@ mod tests {
         }
     }
 
-    fn turn(plane: B) -> Spinor {
+    fn turn(plane: Bivector) -> Spinor {
         plane.exp().into_inner()
     }
 

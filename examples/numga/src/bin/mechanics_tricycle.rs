@@ -71,7 +71,7 @@ mod tricycle {
     }
 
     impl Ground for Pga2d {
-        type Plane = pga2d::Line<(), f64>;
+        type Plane = pga2d::Line;
         const X: Self::Plane = pga2d::Line::new(1.0, 0.0, 0.0);
         const Y: Self::Plane = pga2d::Line::new(0.0, 1.0, 0.0);
         const W: Self::Plane = pga2d::Line::new(0.0, 0.0, 1.0);
@@ -100,7 +100,7 @@ mod tricycle {
     }
 
     impl Ground for Pga3d {
-        type Plane = pga3d::Plane<(), f64>;
+        type Plane = pga3d::Plane;
         const X: Self::Plane = pga3d::Plane::new(1.0, 0.0, 0.0, 0.0);
         const Y: Self::Plane = pga3d::Plane::new(0.0, 1.0, 0.0, 0.0);
         const W: Self::Plane = pga3d::Plane::new(0.0, 0.0, 0.0, 1.0);
@@ -254,26 +254,26 @@ fn drives() -> &'static Drives {
 
 /// The frame's light.
 fn frame_light() -> Light {
-    palette::ink()
+    palette::INK
 }
 
 /// The wheels' light.
 fn wheel_light() -> Light {
-    palette::yellow()
+    palette::YELLOW
 }
 
 /// The light of the axles drawn on to the turning centre.
 fn axle_light() -> Light {
-    palette::red().faded(0.6)
+    palette::RED.faded(0.6)
 }
 
 /// The light of the trail of the middle of the rear axle.
 fn trail_light() -> Light {
-    palette::sky().faded(0.6)
+    palette::SKY.faded(0.6)
 }
 
 /// A point on the ground, as drawn in the plane.
-fn flat(p: pga2d::Point<(), f64>) -> Point2 {
+fn flat(p: pga2d::Point) -> Point2 {
     let [x, y] = coordinates::<Pga2d>(p);
     Point2::xy(x as f32, y as f32)
 }
@@ -302,7 +302,7 @@ fn draw_plane(c: &mut Canvas, rect: Rect, drive: &Drive<Pga2d>, k: usize) {
         for w in wheels {
             ax.dashed(c, &[w, at], 1.0, 5.0, axle_light());
         }
-        ax.scatter(c, &[at], Marker::Dot, 8.0, palette::red());
+        ax.scatter(c, &[at], Marker::Dot, 8.0, palette::RED);
     }
     let between = (wheels[0] + wheels[1]).unitized();
     ax.line(c, wheels[0], wheels[1], 3.0, frame_light());
@@ -325,7 +325,7 @@ fn hub<O: gax::Orientation>(
 
 /// A wheel in space: its contact turned about its axle, the line through its hub across the
 /// way it rolls (the heading turned a quarter turn about the vertical).
-fn wheel(s: &mut Scene3, contact: pga3d::Point<(), f64>, ahead: pga3d::Point<(), f64>) {
+fn wheel(s: &mut Scene3, contact: pga3d::Point, ahead: pga3d::Point) {
     let quarter = pga3d::Motor::rotation_about(
         pga3d::Point::direction(0.0, 0.0, 1.0),
         core::f64::consts::FRAC_PI_2,
@@ -343,15 +343,15 @@ fn wheel(s: &mut Scene3, contact: pga3d::Point<(), f64>, ahead: pga3d::Point<(),
 }
 
 /// A faint grid on the ground, a metre apart, around a point.
-fn floor(s: &mut Scene3, around: pga3d::Point<(), f64>) {
+fn floor(s: &mut Scene3, around: pga3d::Point) {
     let [x, y, _] = around.to_euclidean().map(f64::round);
     let reach = f64::from(GRID);
     for k in -GRID..=GRID {
         let k = f64::from(k);
         let along_x = [-reach, reach].map(|d| pga3d::Point::xyz(x + d, y + k, 0.0).point3());
         let along_y = [-reach, reach].map(|d| pga3d::Point::xyz(x + k, y + d, 0.0).point3());
-        s.seg(along_x[0], along_x[1], 1.0, palette::grid().faded(0.7));
-        s.seg(along_y[0], along_y[1], 1.0, palette::grid().faded(0.7));
+        s.seg(along_x[0], along_x[1], 1.0, palette::GRID.faded(0.7));
+        s.seg(along_y[0], along_y[1], 1.0, palette::GRID.faded(0.7));
     }
 }
 
@@ -380,7 +380,7 @@ fn draw_space(c: &mut Canvas, rect: Rect, drive: &Drive<Pga3d>, k: usize) {
                 0.0,
                 CENTRE_HEIGHT * WHEEL_RADIUS,
             ));
-            s.seg(foot.point3(), (up >> foot).point3(), 2.0, palette::red());
+            s.seg(foot.point3(), (up >> foot).point3(), 2.0, palette::RED);
             for w in wheels {
                 s.seg(hub(w).point3(), hub(foot).point3(), 1.0, axle_light());
             }
@@ -403,9 +403,9 @@ fn draw_space(c: &mut Canvas, rect: Rect, drive: &Drive<Pga3d>, k: usize) {
         }
     });
     let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
+    c.polyline(&corners, 1.0, palette::GRID, true);
     let title = rect.top_middle() - Point2::direction(0.0, 8.0);
-    c.text("SPACE (PGA3D)", title, 13.0, palette::ink(), Align::Center);
+    c.text("SPACE (PGA3D)", title, 13.0, palette::INK, Align::Center);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -430,7 +430,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let note = format!("STEERING {:.0} DEGREES", steering(k).to_degrees());
     let at = body.bottom_left() + Point2::direction(10.0, -10.0);
-    c.text(&note, at, 11.0, palette::ink().faded(0.6), Align::Left);
+    c.text(&note, at, 11.0, palette::INK.faded(0.6), Align::Left);
     caption(
         c,
         "TRICYCLE: ACKERMANN STEERING BY THE SAME CODE IN TWO ALGEBRAS",
@@ -468,8 +468,8 @@ mod tests {
                     "{rolling}"
                 );
             }
-            let [before, after] = [k, k + 1]
-                .map(|j| Vector::<(), f64>::from_coeffs(coordinates::<G>(drive.contacts[j][2])));
+            let [before, after] =
+                [k, k + 1].map(|j| Vector::from_coeffs(coordinates::<G>(drive.contacts[j][2])));
             let length = (after - before).norm();
             assert!(
                 (length - STEP * WHEELBASE).abs() <= 1e-3 * STEP * WHEELBASE,

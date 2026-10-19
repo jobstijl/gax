@@ -20,7 +20,7 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, palette, reach3, run,
+    backdrop, caption, on_sphere, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -43,31 +43,29 @@ mod spins {
     use super::pair::*;
     use gax_numga_examples::signal::linspace;
 
-    /// A direction of the first spin, of the second, and a state of the pair.
-    pub type F = First<(), f64>;
-    pub type G = Second<(), f64>;
-    pub type Sp = Spinor<(), f64>;
+    pub type G = Second;
+    pub type Sp = Spinor;
     /// The correlations as a map from the second spin's directions to the first's.
-    pub type Correlation = First<(Second,), f64>;
+    pub type Correlation = First<(Second,)>;
 
     /// The first spin's directions and planes.
-    pub fn x() -> F {
+    pub fn x() -> First {
         First::new(1.0, 0.0, 0.0)
     }
-    pub fn y() -> F {
+    pub fn y() -> First {
         First::new(0.0, 1.0, 0.0)
     }
     #[cfg_attr(not(test), allow(dead_code))]
-    pub fn z() -> F {
+    pub fn z() -> First {
         First::new(0.0, 0.0, 1.0)
     }
-    pub fn yz() -> FirstPlanes<(), f64> {
+    pub fn yz() -> FirstPlanes {
         FirstPlanes::new(1.0, 0.0, 0.0)
     }
-    pub fn zx() -> FirstPlanes<(), f64> {
+    pub fn zx() -> FirstPlanes {
         FirstPlanes::new(0.0, 1.0, 0.0)
     }
-    pub fn xy() -> FirstPlanes<(), f64> {
+    pub fn xy() -> FirstPlanes {
         FirstPlanes::new(0.0, 0.0, 1.0)
     }
     /// The second spin's directions and planes.
@@ -80,20 +78,20 @@ mod spins {
     pub fn big_z() -> G {
         Second::new(0.0, 0.0, 1.0)
     }
-    pub fn big_yz() -> SecondPlanes<(), f64> {
+    pub fn big_yz() -> SecondPlanes {
         SecondPlanes::new(1.0, 0.0, 0.0)
     }
-    pub fn big_zx() -> SecondPlanes<(), f64> {
+    pub fn big_zx() -> SecondPlanes {
         SecondPlanes::new(0.0, 1.0, 0.0)
     }
-    pub fn big_xy() -> SecondPlanes<(), f64> {
+    pub fn big_xy() -> SecondPlanes {
         SecondPlanes::new(0.0, 0.0, 1.0)
     }
     /// Each spin's pseudoscalar.
-    pub fn i_first() -> FirstVolume<(), f64> {
+    pub fn i_first() -> FirstVolume {
         FirstVolume::new(1.0)
     }
-    pub fn i_second() -> SecondVolume<(), f64> {
+    pub fn i_second() -> SecondVolume {
         SecondVolume::new(1.0)
     }
 
@@ -130,7 +128,7 @@ mod spins {
 
     /// Each spin's Bloch vector: the part of `2 state C xy ~state` in its own planes, read as a
     /// vector of its space.
-    pub fn bloch(state: Sp) -> (F, G) {
+    pub fn bloch(state: Sp) -> (First, G) {
         let spin = state * imaginary() * state.reverse() * 2.0;
         let first = i_first().inverse() * spin.cast::<FirstPlanes>();
         let second = i_second().inverse() * spin.cast::<SecondPlanes>();
@@ -156,7 +154,7 @@ mod spins {
 
     /// The Bell combination along two directions of each spin as a multivector acting on states
     /// from the left: `(I a)(I' b)` is minus the product of the two spins' values along a and b.
-    pub fn bell_element(a: F, a2: F, b: G, b2: G) -> Sp {
+    pub fn bell_element(a: First, a2: First, b: G, b2: G) -> Sp {
         -((i_first() * a) * (i_second() * (b + b2)) + (i_first() * a2) * (i_second() * (b - b2)))
     }
 
@@ -174,7 +172,7 @@ mod spins {
     /// Bloch vectors and the largest Bell combinations.
     pub struct Swap {
         pub angles: Vec<f64>,
-        pub first: Vec<F>,
+        pub first: Vec<First>,
         pub second: Vec<G>,
         pub bells: Vec<f64>,
     }
@@ -213,7 +211,7 @@ fn swapped() -> &'static Swap {
 }
 
 /// The drawing's space.
-type Space = gax::vga3d::Vector<(), f64>;
+type Space = gax::vga3d::Vector;
 
 /// The unit directions of space.
 fn axes() -> [Space; 3] {
@@ -225,23 +223,23 @@ fn axes() -> [Space; 3] {
 }
 
 /// Each spin's directions drawn as the directions of space: maps from the pair's algebra.
-fn first_in_space() -> gax::vga3d::Vector<(pair::First,), f64> {
+fn first_in_space() -> gax::vga3d::Vector<(pair::First,)> {
     gax::vga3d::Vector::from_images(axes())
 }
-fn second_in_space() -> gax::vga3d::Vector<(pair::Second,), f64> {
+fn second_in_space() -> gax::vga3d::Vector<(pair::Second,)> {
     gax::vga3d::Vector::from_images(axes())
 }
 
 /// The second spin's direction for each direction of space: the other way round.
-fn space_in_second() -> pair::Second<(gax::vga3d::Vector,), f64> {
+fn space_in_second() -> pair::Second<(gax::vga3d::Vector,)> {
     pair::Second::from_images([big_x(), big_y(), big_z()])
 }
 
 /// The unit reach3, faintly, with its three axes.
 fn draw_ball(s: &mut Scene3) {
-    s.sphere_wire(ORIGIN3, 1.0, 18, palette::grid().faded(0.55));
+    s.sphere_wire(ORIGIN3, 1.0, 18, palette::GRID.faded(0.55));
     for a in axes() {
-        s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
+        s.seg(reach3(-a), reach3(a), 1.0, palette::GRID);
     }
 }
 
@@ -250,18 +248,9 @@ fn axis_names(c: &mut Canvas, cam: &Camera) {
     for (name, a) in ["X", "Y", "Z"].iter().zip(axes()) {
         if let Some(p) = cam.px(reach3(a * 1.18)) {
             let at = p + Point2::direction(0.0, 4.0);
-            c.text(name, at, 11.0, palette::grid(), Align::Center);
+            c.text(name, at, 11.0, palette::GRID, Align::Center);
         }
     }
-}
-
-/// The direction of space at longitude `lon` and latitude `lat`: `x` raised towards `z`, then
-/// turned about `z`.
-fn on_sphere(lon: f64, lat: f64) -> Space {
-    use gax::vga3d::Bivector;
-    let turn = (Bivector::new(0.0, 0.0, 1.0) * (-lon / 2.0)).exp()
-        * (Bivector::new(0.0, 1.0, 0.0) * (lat / 2.0)).exp();
-    turn >> Space::new(1.0, 0.0, 0.0)
 }
 
 /// The image of the second spin's unit sphere under the correlation map, as a map of space.
@@ -299,7 +288,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let elevation = 18.0f32.to_radians();
     // The band of the three balls, in thirds.
     let band = Rect::new(0.0, 92.0, w, 392.0);
-    let colours: [Light; 3] = [palette::red(), palette::purple(), palette::sky()];
+    let colours: [Light; 3] = [palette::RED, palette::PURPLE, palette::SKY];
     let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
     // Each Bloch vector in space, with its tip's path over the whole exchange.
     let blochs: [(Space, Vec<Space>); 2] = [
@@ -345,7 +334,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (k, (now, _)) in [0, 2].into_iter().zip(&blochs) {
         let note = (band.column(k, 3)).bottom_middle() + down.gp(2.0);
         let text = format!("LENGTH {:.2}", now.norm());
-        c.text(&text, note, 11.0, palette::ink(), Align::Center);
+        c.text(&text, note, 11.0, palette::INK, Align::Center);
     }
     // The largest Bell combination along the exchange.
     let quarter = core::f32::consts::FRAC_PI_4;
@@ -359,16 +348,16 @@ fn draw(c: &mut Canvas, t: f32) {
     let root8 = 2.0 * core::f32::consts::SQRT_2;
     for (level, dash) in [(2.0, 6.0), (root8, 2.0)] {
         let across = [Point2::xy(0.0, level), Point2::xy(quarter, level)];
-        ax.dashed(c, &across, 1.0, dash, palette::grid());
+        ax.dashed(c, &across, 1.0, dash, palette::GRID);
     }
     let small = 9.0;
     let note = Point2::xy(quarter / 2.0, 2.04);
     let text = "EACH SPIN ITS OWN ANSWERS";
-    ax.text(c, note, text, small, palette::grid(), Align::Center);
+    ax.text(c, note, text, small, palette::GRID, Align::Center);
     // The bound's name under its line at the right end, where the curve is low, clear of the
     // axis label above the frame.
     let note = ax.px(Point2::xy(quarter, root8)) + Point2::direction(-4.0, small * 1.5);
-    c.text("2 SQRT 2", note, small, palette::grid(), Align::Right);
+    c.text("2 SQRT 2", note, small, palette::GRID, Align::Right);
     let curve: Vec<Point2> = data
         .angles
         .iter()
@@ -395,6 +384,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::pair::First;
     use super::spins::*;
     use gax_numga_examples::rng::{Draw, rng};
 
@@ -456,7 +446,7 @@ mod tests {
         // Any unit directions, drawn at random.
         let mut rng = rng(0x5eed);
         for _ in 0..20 {
-            let mut f = || rng.direction::<F>();
+            let mut f = || rng.direction::<First>();
             let (a, a2) = (f(), f());
             let mut g = || rng.direction::<G>();
             let (b, b2) = (g(), g());

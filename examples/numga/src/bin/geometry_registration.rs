@@ -26,9 +26,8 @@ use gax_numga_examples::{
 mod registration {
     use super::*;
 
-    pub type P = Point<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
-    pub type MotorForm = Scalar<(Motor, Motor), f64>;
+    pub type M = Unit<Motor>;
+    pub type MotorForm = Scalar<(Motor, Motor)>;
 
     /// The motor's own metric: the scalar part of `M ~M`, the squares of the rotor part.
     pub fn motor_metric() -> MotorForm {
@@ -38,14 +37,14 @@ mod registration {
 
     /// The residual of the one-sided equations for one correspondence, linear in the open motor:
     /// intrinsic, as the points are.
-    pub fn residual(source: P, target: P) -> gax::pga3d::intrinsic::Flector<(Motor,), f64> {
+    pub fn residual(source: Point, target: Point) -> gax::pga3d::intrinsic::Flector<(Motor,)> {
         let (s, t) = (source.unitized(), target.unitized());
         t * Motor::slot() - Motor::slot() * s
     }
 
     /// The summed squared coefficients of the residuals: the bulk norm (the scalar part of
     /// `r ~r`, blind to ideal blades) plus the weight norm (the bulk norm of the dual).
-    pub fn misfit(source: &[P], target: &[P]) -> MotorForm {
+    pub fn misfit(source: &[Point], target: &[Point]) -> MotorForm {
         source
             .iter()
             .zip(target)
@@ -58,15 +57,15 @@ mod registration {
 
     /// Fit a motor by the one-sided residual: the least finite mode of the misfit against the
     /// motor metric, normalized.
-    pub fn fit_motor(source: &[P], target: &[P]) -> M {
+    pub fn fit_motor(source: &[Point], target: &[Point]) -> M {
         let (_, modes) = misfit(source, target).eigh_semidefinite(motor_metric());
         modes[0].unit()
     }
 
     /// The rotor that maximizes the alignment of corresponding vectors (planes through the
     /// origin): `Σ target · (R source ~R)`, a symmetric form on rotors.
-    pub fn fit_rotor(source: &[Plane<(), f64>], target: &[Plane<(), f64>]) -> Unit<Rotor<(), f64>> {
-        let alignment: Scalar<(Rotor, Rotor), f64> = source
+    pub fn fit_rotor(source: &[Plane], target: &[Plane]) -> Unit<Rotor> {
+        let alignment: Scalar<(Rotor, Rotor)> = source
             .iter()
             .zip(target)
             .map(|(s, t)| t.scalar_product((Rotor::slot() * *s) * Rotor::slot().reverse()))
@@ -76,36 +75,36 @@ mod registration {
     }
 
     /// The mean of unit points (a point of unit weight).
-    pub fn mean(points: &[P]) -> P {
-        let sum: P = points.iter().map(|p| p.unitized()).sum();
+    pub fn mean(points: &[Point]) -> Point {
+        let sum: Point = points.iter().map(|p| p.unitized()).sum();
         sum.gp(1.0 / points.len() as f64)
     }
 
     /// A centered point as the plane through the origin normal to its offset: its vector.
-    fn vector(p: P, centre: P) -> Plane<(), f64> {
+    fn vector(p: Point, centre: Point) -> Plane {
         let d = p.unitized() - centre;
         Plane::orthogonal_to(d)
     }
 
     /// The centered fit: the rotor aligning the centered clouds, then the translation carrying
     /// the rotated source centroid onto the target's.
-    pub fn fit_motor_alignment(source: &[P], target: &[P]) -> M {
+    pub fn fit_motor_alignment(source: &[Point], target: &[Point]) -> M {
         let (sm, tm) = (mean(source), mean(target));
         let sv: Vec<_> = source.iter().map(|p| vector(*p, sm)).collect();
         let tv: Vec<_> = target.iter().map(|p| vector(*p, tm)).collect();
         let rotation = fit_rotor(&sv, &tv);
-        Motor::between(rotation >> sm, tm) * rotation.widen::<Motor<(), f64>>()
+        Motor::between(rotation >> sm, tm) * rotation.widen::<Motor>()
     }
 
     /// A cloud stretched along x.
-    pub fn cloud(n: usize, rng: &mut Rng) -> Vec<P> {
+    pub fn cloud(n: usize, rng: &mut Rng) -> Vec<Point> {
         (0..n)
             .map(|_| Point::xyz(2.0 * rng.normal(), rng.normal(), 0.5 * rng.normal()))
             .collect()
     }
 
     /// Move each point by an independent Gaussian translation.
-    pub fn jitter(points: &[P], sigma: f64, rng: &mut Rng) -> Vec<P> {
+    pub fn jitter(points: &[Point], sigma: f64, rng: &mut Rng) -> Vec<Point> {
         points
             .iter()
             .map(|p| {
@@ -126,17 +125,17 @@ mod registration {
     }
 
     /// The same seeded, noisy correspondences for both fits.
-    pub fn correspondences() -> (Vec<P>, Vec<P>) {
+    pub fn correspondences() -> (Vec<Point>, Vec<Point>) {
         let mut rng = rng(0x5eed_0001);
         let source = cloud(60, &mut rng);
-        let moved: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
+        let moved: Vec<Point> = source.iter().map(|p| truth() >> *p).collect();
         let target = jitter(&moved, 0.02, &mut rng);
         (source, target)
     }
 
     /// The squared distances summed between two clouds: two unit points differ by a
     /// direction, whose ideal norm is their distance.
-    pub fn cartesian(a: &[P], b: &[P]) -> f64 {
+    pub fn cartesian(a: &[Point], b: &[Point]) -> f64 {
         a.iter()
             .zip(b)
             .map(|(p, q)| (p.unitized() - q.unitized()).ideal_norm_squared())
@@ -153,8 +152,8 @@ use registration::*;
 fn panel(
     c: &mut Canvas,
     rect: Rect,
-    source: &[P],
-    target: &[P],
+    source: &[Point],
+    target: &[Point],
     estimate: M,
     s: f64,
     az: f32,
@@ -162,26 +161,26 @@ fn panel(
 ) {
     let centre = (mean(source) + mean(target)).gp(0.5);
     let cam = Camera::orbit(rect, centre, 15.0, az, 0.5, Lens::Perspective(0.6));
-    let identity = Motor::<(), f64>::translation(Point::direction(0.0, 0.0, 0.0));
+    let identity = Motor::translation(Point::direction(0.0, 0.0, 0.0));
     let along = Motor::interpolate(identity, estimate, s);
-    let moving: Vec<P> = source.iter().map(|p| along >> *p).collect();
+    let moving: Vec<Point> = source.iter().map(|p| along >> *p).collect();
     panel3(c, rect, cam, |scene| {
         for ((p, q), m) in source.iter().zip(target).zip(&moving) {
-            scene.dot(*p, Marker::Dot, 4.0, palette::grid());
-            scene.dot(*q, Marker::Cross, 7.0, palette::sky());
-            scene.seg(*m, *q, 0.8, palette::red().faded(0.45));
-            scene.dot(*m, Marker::Dot, 5.0, palette::red());
+            scene.dot(*p, Marker::Dot, 4.0, palette::GRID);
+            scene.dot(*q, Marker::Cross, 7.0, palette::SKY);
+            scene.seg(*m, *q, 0.8, palette::RED.faded(0.45));
+            scene.dot(*m, Marker::Dot, 5.0, palette::RED);
         }
     });
     // Scaled with the panel: 13 in a panel as tall as the canvas.
     let size = 13.0 * rect.height() / HEIGHT;
     // The title a sixth of the way down the middle, the distance near the bottom.
     let down = |f: f32| rect.top_middle() + Point2::direction(0.0, f * rect.height());
-    c.text(title, down(0.17), size, palette::ink(), Align::Center);
+    c.text(title, down(0.17), size, palette::INK, Align::Center);
     #[allow(clippy::disallowed_methods)] // a statistic: the root of the mean squared distance
     let rms = (cartesian(&moving, target) / source.len() as f64).sqrt();
     let note = format!("RMS DISTANCE {rms:.4}");
-    c.text(&note, down(0.94), size, palette::ink(), Align::Center);
+    c.text(&note, down(0.94), size, palette::INK, Align::Center);
 }
 
 const SECONDS: f32 = 6.0;
@@ -223,7 +222,7 @@ mod tests {
     use gax::pga3d::{Motor, Point};
     use gax_numga_examples::rng::rng;
 
-    fn close(a: &[P], b: &[P], tol: f64) -> bool {
+    fn close(a: &[Point], b: &[Point], tol: f64) -> bool {
         a.iter().zip(b).all(|(p, q)| p.approx_eq(q, tol))
     }
 
@@ -232,7 +231,7 @@ mod tests {
     #[test]
     fn correspondence_residual_is_linear_in_the_motor() {
         let source = cloud(20, &mut rng(1));
-        let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
+        let target: Vec<Point> = source.iter().map(|p| truth() >> *p).collect();
         for (s, t) in source.iter().zip(&target) {
             let r = residual(*s, *t).of(truth().into_inner());
             assert!(
@@ -247,9 +246,9 @@ mod tests {
     #[test]
     fn exact_correspondences_recover_the_motor() {
         let source = cloud(30, &mut rng(2));
-        let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
+        let target: Vec<Point> = source.iter().map(|p| truth() >> *p).collect();
         let estimate = fit_motor(&source, &target);
-        let moved: Vec<P> = source.iter().map(|p| estimate >> *p).collect();
+        let moved: Vec<Point> = source.iter().map(|p| estimate >> *p).collect();
         assert!(close(&moved, &target, 1e-10));
     }
 
@@ -259,7 +258,7 @@ mod tests {
     fn noisy_correspondences_recover_the_pose_within_noise() {
         let mut draws = rng(3);
         let source = cloud(200, &mut draws);
-        let moved: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
+        let moved: Vec<Point> = source.iter().map(|p| truth() >> *p).collect();
         let target = jitter(&moved, 0.05, &mut draws);
         let estimate = fit_motor(&source, &target);
         let error: f64 = source
@@ -273,10 +272,10 @@ mod tests {
     #[test]
     fn estimate_is_a_trusted_unit_motor() {
         let source = cloud(30, &mut rng(5));
-        let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
+        let target: Vec<Point> = source.iter().map(|p| truth() >> *p).collect();
         let estimate = fit_motor(&source, &target).into_inner();
         let one = estimate * estimate.reverse();
-        let identity = Motor::<(), f64>::translation(Point::direction(0.0, 0.0, 0.0)).into_inner();
+        let identity = Motor::translation(Point::direction(0.0, 0.0, 0.0)).into_inner();
         assert!(one.approx_eq(&identity, 1e-12));
     }
 
@@ -284,9 +283,9 @@ mod tests {
     fn translation_is_recovered_by_the_same_fit() {
         let source = cloud(100, &mut rng(6));
         let shift = gax::pga3d::Line::new(0.0, 0.0, 0.0, -0.75, 0.25, -1.0).exp();
-        let target: Vec<P> = source.iter().map(|p| shift >> *p).collect();
+        let target: Vec<Point> = source.iter().map(|p| shift >> *p).collect();
         let estimate = fit_motor(&source, &target);
-        let moved: Vec<P> = source.iter().map(|p| estimate >> *p).collect();
+        let moved: Vec<Point> = source.iter().map(|p| estimate >> *p).collect();
         assert!(close(&moved, &target, 1e-10));
     }
 
@@ -297,8 +296,8 @@ mod tests {
         let (source, target) = correspondences();
         let a = fit_motor_alignment(&source, &target);
         let b = fit_motor(&source, &target);
-        let aligned: Vec<P> = source.iter().map(|p| a >> *p).collect();
-        let one_sided: Vec<P> = source.iter().map(|p| b >> *p).collect();
+        let aligned: Vec<Point> = source.iter().map(|p| a >> *p).collect();
+        let one_sided: Vec<Point> = source.iter().map(|p| b >> *p).collect();
         assert!(cartesian(&aligned, &target) <= cartesian(&one_sided, &target) * (1.0 + 1e-12));
         // Both land within the noise of the target.
         assert!(cartesian(&one_sided, &target) / 60.0 < 4.0 * 3.0 * 0.02 * 0.02);

@@ -387,7 +387,7 @@ mod tests {
         let c = LinearRgb::rgb(0.6, 0.3, 0.1);
         let dimmer = LinearRgb::rgb(0.3, 0.15, 0.05);
         let (a, b) = (c.chromaticity().unwrap(), dimmer.chromaticity().unwrap());
-        assert!((a & b).norm() < 1e-6);
+        assert!(a.distance(b) < 1e-6);
         let back = Xyz::from_chromaticity(a, c.luminance());
         assert!(near(back.to::<LinearRgb>(), c, 1e-5));
         let warm = LinearRgb::from_temperature(2700.0, 1.0);

@@ -30,14 +30,14 @@ use gax::vga3d::{Bivector, Scalar, Vector, intrinsic};
 use gax::{Extensor, Kind};
 
 /// A vector of space: the default vertex.
-pub type Vector3 = Vector<(), f64>;
+pub type Vector3 = Vector;
 /// A normal: the dual of a face's bivector, so oriented by the face's winding, intrinsic
 /// (ADR-051), and reflected as such.
-pub type Normal3 = intrinsic::Vector<(), f64>;
+pub type Normal3 = intrinsic::Vector;
 /// A scalar of space's algebra.
-pub type Scalar3 = Scalar<(), f64>;
+pub type Scalar3 = Scalar;
 /// A bivector of space: a plane through the origin, with its orientation and area.
-pub type Bivector3 = Bivector<(), f64>;
+pub type Bivector3 = Bivector;
 /// The scalar of the algebra of `V`: the cells of the topology's operators on fields of `V`.
 pub type ScalarOf<V> = <<<V as Extensor>::Kind as Kind>::Scalar as Kind>::Mv<(), f64>;
 
@@ -82,12 +82,13 @@ impl<V: Extensor<Slots = (), Coef = f64>> Mesh<V> {
     pub fn new(vertices: Field<V>, faces: Vec<[usize; 3]>) -> Self {
         let topology = Topology::new(vertices.len(), &faces).unwrap_or_else(|e| panic!("{e}"));
         let edges = topology.simplices(1).map(|e| [e[0], e[1]]).collect();
-        let face_edges = (0..faces.len())
-            .map(|f| core::array::from_fn(|k| topology.faces(2, f)[k].0))
-            .collect();
-        let face_edge_orientation = (0..faces.len())
-            .map(|f| core::array::from_fn(|k| f64::from(topology.faces(2, f)[k].1)))
-            .collect();
+        let (face_edges, face_edge_orientation) = (0..faces.len())
+            .map(|f| {
+                let sides = topology.faces(2, f);
+                let edge = core::array::from_fn(|k| sides[k].0);
+                (edge, core::array::from_fn(|k| f64::from(sides[k].1)))
+            })
+            .unzip();
         Mesh {
             vertices,
             faces,
@@ -425,7 +426,7 @@ impl Mesh<Vector3> {
     /// `[F, E]`, cells `Vector <- Scalar`: the Whitney edge integrals evaluated at the face
     /// centroids, a vector on each face from a number on each edge.
     #[must_use]
-    pub fn reconstruction(&self) -> SparseMap<Vector<(Scalar,), f64>> {
+    pub fn reconstruction(&self) -> SparseMap<Vector<(Scalar,)>> {
         let gradients = self.hat_gradients();
         // All three hat functions are a third at the centroid; the difference of two gradients
         // reconstructs an oriented edge integral, with the mesh edge's sign.

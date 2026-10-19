@@ -27,23 +27,23 @@ macro_rules! engine {
         /// A point of the sphere: the pole of a plane, its dual, so intrinsic (ADR-051).
         pub type P = gax::Oriented<Point, gax::Intrinsic>;
         /// A rate: a bivector, in the body frame.
-        pub type B = Rate<(), f64>;
+        pub type B = Rate;
         /// A momentum: an antibivector, the join of a point with its motion, so intrinsic, in
         /// the body frame.
         pub type Mom = gax::Oriented<Momentum, gax::Intrinsic>;
         /// A rotation of the ambient space.
-        pub type M = gax::Unit<Rotor<(), f64>>;
+        pub type M = gax::Unit<Rotor>;
         /// The kinds of the slots of points and of momenta.
         pub type PointSlot = gax::Oriented<Point, gax::Intrinsic>;
         pub type MomentumSlot = gax::Oriented<Momentum, gax::Intrinsic>;
         /// The primal quadric: a point to its polar plane, negative inside.
-        pub type Quadric = Plane<(PointSlot,), f64>;
+        pub type Quadric = Plane<(PointSlot,)>;
         /// The dual quadric: a plane to its pole.
-        pub type DualQuadric = gax::Oriented<Point<(Plane,), f64>, gax::Intrinsic>;
+        pub type DualQuadric = gax::Oriented<Point<(Plane,)>, gax::Intrinsic>;
         /// The inertia: a rate to its momentum.
-        pub type Inertia = gax::Oriented<Momentum<(Rate,), f64>, gax::Intrinsic>;
+        pub type Inertia = gax::Oriented<Momentum<(Rate,)>, gax::Intrinsic>;
         /// The inverse inertia: a momentum to its rate.
-        pub type InverseInertia = Rate<(MomentumSlot,), f64>;
+        pub type InverseInertia = Rate<(MomentumSlot,)>;
 
         /// The poles of the basis planes.
         pub fn basis() -> [P; DIM] {
@@ -59,14 +59,14 @@ macro_rules! engine {
 
         /// The identity rotor.
         pub fn identity() -> M {
-            Rate::<(), f64>::zero().exp()
+            M::identity()
         }
 
         /// The angle between two unit points of the sphere, or between one and the other's
         /// antipode where that is smaller: the norm of the logarithm of the rotor `b / a` that
         /// turns one into the other, or its supplement.
         pub fn arc(a: P, b: P) -> f64 {
-            let log: B = (b / a).unit().log();
+            let log = (b / a).unit().log();
             let angle = log.norm();
             angle.min(core::f64::consts::PI - angle)
         }
@@ -185,7 +185,7 @@ macro_rules! engine {
         }
 
         /// The symmetric form `P ∨ Q⁻¹(P)` of a dual quadric, on points.
-        pub fn form(q: DualQuadric) -> Scalar<(PointSlot, PointSlot), f64> {
+        pub fn form(q: DualQuadric) -> Scalar<(PointSlot, PointSlot)> {
             P::slot() & q.solve(P::slot())
         }
 

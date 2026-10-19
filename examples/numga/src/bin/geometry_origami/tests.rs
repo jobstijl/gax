@@ -76,7 +76,7 @@ fn kabuto_preserves_area_and_facet_lengths_through_every_fold() {
     assert!(length_error < 1e-10, "{length_error}");
     assert!(hinge_error < 1e-11, "{hinge_error}");
     // The diagonal of the unit square.
-    let root_two = vga2d::Vector::<(), f64>::new(1.0, 1.0).norm();
+    let root_two = vga2d::Vector::new(1.0, 1.0).norm();
     for tip in [
         Point::xyz(-1.0, 1.0 - root_two, 0.0),
         Point::xyz(root_two - 1.0, 1.0, 0.0),
@@ -123,7 +123,7 @@ fn full_folding_sequence_follows_a_moved_sheet() {
 #[test]
 fn folds_keep_shared_material_points_joined() {
     let (mut paper, planes) = kabuto();
-    let mut placements: Vec<M> = vec![Line::zero().exp()];
+    let mut placements = vec![M::identity()];
     for k in 0..planes.len() {
         let (split, turning, parents) = paper.split(planes[k], SELECTIONS[k], CREASE_TOLERANCE);
         placements = parents.iter().map(|p| placements[*p]).collect();
@@ -296,7 +296,7 @@ fn folds_do_not_pull_buried_layers_through_stationary_paper() {
     for k in 0..planes.len() {
         let (split, turning, _) = paper.split(planes[k], SELECTIONS[k], CREASE_TOLERANCE);
         let faces = split.faces();
-        let flat = |f: usize| -> Vec<vga2d::Vector<(), f64>> {
+        let flat = |f: usize| -> Vec<vga2d::Vector> {
             let corners = split.points[faces[f].clone()].iter();
             corners
                 .map(|p| p.to_euclidean())
@@ -322,14 +322,14 @@ fn folds_do_not_pull_buried_layers_through_stationary_paper() {
 
 /// Whether two convex polygons overlap in their interiors: on every normal of their edges (the
 /// edge's dual) their shadows overlap by more than a hair.
-fn overlap(first: &[vga2d::Vector<(), f64>], second: &[vga2d::Vector<(), f64>]) -> bool {
+fn overlap(first: &[vga2d::Vector], second: &[vga2d::Vector]) -> bool {
     let mut normals = [first, second].into_iter().flat_map(|polygon| {
         (0..polygon.len()).map(|i| {
             let edge = polygon[(i + 1) % polygon.len()] - polygon[i];
             edge.dual().normalized()
         })
     });
-    let shadow = |polygon: &[vga2d::Vector<(), f64>], axis: vga2d::intrinsic::Vector<(), f64>| {
+    let shadow = |polygon: &[vga2d::Vector], axis: vga2d::intrinsic::Vector| {
         let along = polygon.iter().map(|p| (*p | axis).s());
         (
             along.clone().fold(f64::INFINITY, f64::min),

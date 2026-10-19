@@ -22,40 +22,37 @@
 //! dial, sweeping their cone about the pole; on the right the dial's face, with the hour lines,
 //! the seasons' paths, and the day's path.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop,
-    caption, colormap, palette, reach3, run, scene3::panel3,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
+    backdrop, caption, colormap, palette, reach3, run, scene3::panel3,
 };
 
 mod sundial {
     use gax::vga3d::{Bivector, Rotor, Vector};
     use gax_numga_examples::signal::wave;
 
-    pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
-    pub type R = Rotor<(), f64>;
-
-    pub fn east() -> V {
+    pub fn east() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
 
-    pub fn north() -> V {
+    pub fn north() -> Vector {
         Vector::new(0.0, 1.0, 0.0)
     }
 
-    pub fn up() -> V {
+    pub fn up() -> Vector {
         Vector::new(0.0, 0.0, 1.0)
     }
 
     /// The turn by an angle in a plane through the origin, from its first vector towards its
     /// second.
-    pub fn turn(plane: B, angle: f64) -> R {
+    pub fn turn(plane: Bivector, angle: f64) -> Rotor {
         plane.gp(-angle / 2.0).exp().into_inner()
     }
 
     /// The celestial pole, north raised towards up by the latitude, and the celestial
     /// equator's highest point, a quarter turn further: the sun at noon on the equinoxes.
-    pub fn sky(latitude: f64) -> (V, V) {
+    pub fn sky(latitude: f64) -> (Vector, Vector) {
         let meridian = north() ^ up();
         let quarter = core::f64::consts::FRAC_PI_2;
         (
@@ -67,14 +64,14 @@ mod sundial {
     /// The direction to the sun at a declination and hour angle: the equator's highest point
     /// turned towards the pole by the declination, then about the pole towards the west by the
     /// hour angle.
-    pub fn sun(pole: V, equator: V, declination: f64, hour: f64) -> V {
+    pub fn sun(pole: Vector, equator: Vector, declination: f64, hour: f64) -> Vector {
         let noon = turn(equator ^ pole, declination) >> equator;
         turn(equator ^ -east(), hour) >> noon
     }
 
     /// Where the shadow of the nodus falls on the dial, the horizontal plane through the
     /// origin: from the nodus, away from the sun, as far as the dial.
-    pub fn shadow(nodus: V, sun: V) -> V {
+    pub fn shadow(nodus: Vector, sun: Vector) -> Vector {
         nodus - sun.gp((nodus | up()).s() / (sun | up()).s())
     }
 
@@ -89,7 +86,7 @@ mod sundial {
     pub const HOURS: core::ops::RangeInclusive<i32> = 6..=18;
 
     /// The nodus, straight above the origin.
-    pub fn nodus() -> V {
+    pub fn nodus() -> Vector {
         up().gp(HEIGHT)
     }
 
@@ -108,7 +105,7 @@ mod sundial {
     }
 
     /// The sun through a day at a declination, from three in the morning to nine at night.
-    pub fn day(declination: f64) -> Vec<V> {
+    pub fn day(declination: f64) -> Vec<Vector> {
         let (pole, equator) = sky(LATITUDE);
         (0..=360)
             .map(|k| hour_angle(3.0 + 0.05 * f64::from(k)))
@@ -117,7 +114,7 @@ mod sundial {
     }
 
     /// The sun at an hour, from the winter solstice to the summer one.
-    pub fn hour_line(hour: i32) -> Vec<V> {
+    pub fn hour_line(hour: i32) -> Vec<Vector> {
         let (pole, equator) = sky(LATITUDE);
         (0..25)
             .map(|k| -TILT + 2.0 * TILT * f64::from(k) / 24.0)
@@ -143,7 +140,7 @@ const INSET: f64 = 0.3;
 const SUNWARD: f64 = 2.0;
 
 fn day_colour() -> Light {
-    palette::orange()
+    palette::ORANGE
 }
 
 /// A colour per season by how far it lies from the equinox: a summer and a winter season as
@@ -154,7 +151,7 @@ fn season_colour(declination: f64) -> Light {
 
 /// East and north of the nodus's shadow for a sun, or nothing where the sun is below the
 /// horizon or the shadow falls off the dial.
-fn shadow_on_dial(sun: V) -> Option<Point2> {
+fn shadow_on_dial(sun: Vector) -> Option<Point2> {
     let tip = shadow(nodus(), sun);
     let [x, y] = [tip.e1(), tip.e2()];
     let on_dial = x > DIAL_EAST[0] && x < DIAL_EAST[1] && y > DIAL_NORTH[0] && y < DIAL_NORTH[1];
@@ -162,7 +159,7 @@ fn shadow_on_dial(sun: V) -> Option<Point2> {
 }
 
 /// The shadows of a run of suns, broken where they leave the dial.
-fn shadow_paths(suns: &[V]) -> Vec<Vec<Point2>> {
+fn shadow_paths(suns: &[Vector]) -> Vec<Vec<Point2>> {
     let mut paths = vec![Vec::new()];
     for sun in suns {
         match shadow_on_dial(*sun) {
@@ -185,12 +182,12 @@ fn face_panel(c: &mut Canvas, rect: Rect, declination: f64) {
     let ax = Axes::equal(rect, Point2::xy(0.0, 1.25), half_height);
     let corners = [[0, 0], [1, 0], [1, 1], [0, 1]]
         .map(|[i, j]| Point2::xy(DIAL_EAST[i] as f32, DIAL_NORTH[j] as f32));
-    ax.fill(c, &corners, palette::grid(), 0.25);
+    ax.fill(c, &corners, palette::GRID, 0.25);
     for hour in HOURS {
         for path in shadow_paths(&hour_line(hour)) {
-            ax.polyline(c, &path, 1.0, palette::ink().faded(0.4));
+            ax.polyline(c, &path, 1.0, palette::INK.faded(0.4));
             let (first, last) = (path[0], path[path.len() - 1]);
-            let outward = (first - last).gp(1.0 / (first & last).norm());
+            let outward = (first - last).gp(1.0 / first.distance(last));
             let label = first - outward.gp(INSET as f32);
             let text = format!("{hour}");
             let lifted = label + Point2::direction(0.0, -0.1);
@@ -199,7 +196,7 @@ fn face_panel(c: &mut Canvas, rect: Rect, declination: f64) {
                 lifted,
                 &text,
                 9.0,
-                palette::ink().faded(0.7),
+                palette::INK.faded(0.7),
                 Align::Center,
             );
         }
@@ -212,8 +209,8 @@ fn face_panel(c: &mut Canvas, rect: Rect, declination: f64) {
     // The gnomon's edge seen from above, from the foot of the style to below the nodus.
     let (pole, _) = sky(LATITUDE);
     let foot = shadow(nodus(), pole);
-    let base = [Point2::xy(0.0, foot.e2() as f32), Point2::xy(0.0, 0.0)];
-    ax.polyline(c, &base, 3.0, palette::ink());
+    let base = [Point2::xy(0.0, foot.e2() as f32), ORIGIN2];
+    ax.polyline(c, &base, 3.0, palette::INK);
     for path in shadow_paths(&day(declination)) {
         ax.polyline(c, &path, 2.6, day_colour());
     }
@@ -233,24 +230,24 @@ fn sky_panel(c: &mut Canvas, rect: Rect, declination: f64) {
     panel3(c, rect, cam, |s| {
         let corner = |i: usize, j: usize| gax::pga3d::Point::xyz(DIAL_EAST[i], DIAL_NORTH[j], 0.0);
         let dial = [corner(0, 0), corner(1, 0), corner(1, 1), corner(0, 1)];
-        s.quad(dial[0], dial[1], dial[2], dial[3], palette::grid(), 0.45);
+        s.quad(dial[0], dial[1], dial[2], dial[3], palette::GRID, 0.45);
         s.polyline(
             &[dial[0], dial[1], dial[2], dial[3], dial[0]],
             1.0,
-            palette::grid(),
+            palette::GRID,
         );
         // The gnomon: the triangle of the style's foot, the nodus and the point below it.
         let (pole, equator) = sky(LATITUDE);
         let (tip, foot) = (reach3(nodus()), reach3(shadow(nodus(), pole)));
-        s.tri(foot, tip, ORIGIN3, palette::ink().faded(0.5), 0.8);
-        s.polyline(&[foot, tip, ORIGIN3], 1.5, palette::ink());
+        s.tri(foot, tip, ORIGIN3, palette::INK.faded(0.5), 0.8);
+        s.polyline(&[foot, tip, ORIGIN3], 1.5, palette::INK);
         // A ray every quarter of an hour, from four in the morning to nine at night.
         let hours = (0..68).map(|k| hour_angle(4.0 + 0.25 * f64::from(k)));
         for sun in hours.map(|h| sun(pole, equator, declination, h)) {
             if shadow_on_dial(sun).is_some() {
                 let sunward = reach3(nodus() + sun.gp(SUNWARD));
                 let end = reach3(shadow(nodus(), sun));
-                s.seg(sunward, end, 0.8, palette::yellow().faded(0.55));
+                s.seg(sunward, end, 0.8, palette::YELLOW.faded(0.55));
             }
         }
         for path in shadow_paths(&day(declination)) {
@@ -263,7 +260,7 @@ fn sky_panel(c: &mut Canvas, rect: Rect, declination: f64) {
                 .collect();
             s.polyline(&on_dial, 2.4, day_colour());
         }
-        s.dot(tip, Marker::Dot, 6.0, palette::yellow());
+        s.dot(tip, Marker::Dot, 6.0, palette::YELLOW);
     });
 }
 
@@ -297,22 +294,22 @@ fn main() {
 mod tests {
     use super::sundial::*;
     use gax::vga2d;
-    use gax::vga3d::Vector;
+    use gax::vga3d::{Bivector, Vector};
     use gax_numga_examples::signal::{phasor, wave};
 
     /// A quadratic form on rays.
-    type Cone = Vector<(Vector,), f64>;
+    type Cone = Vector<(Vector,)>;
 
     /// The cone of rays at a declination's angle from the celestial equator: zero on a ray
     /// exactly when its angle to the pole is a quarter turn less the declination, or more.
-    fn cone(pole: V, declination: f64) -> Cone {
+    fn cone(pole: Vector, declination: f64) -> Cone {
         let v = Vector::slot();
         let sine = wave(declination);
         pole * (pole | v) - v.gp(sine * sine)
     }
 
     /// The plane through the pole and the sun at an hour angle, on every day of the year.
-    fn hour_plane(pole: V, equator: V, hour: f64) -> B {
+    fn hour_plane(pole: Vector, equator: Vector, hour: f64) -> Bivector {
         pole ^ sun(pole, equator, 0.0, hour)
     }
 

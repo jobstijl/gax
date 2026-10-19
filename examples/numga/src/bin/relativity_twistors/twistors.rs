@@ -22,26 +22,26 @@ gax::algebra! {
 }
 
 /// A conformal vector.
-pub type V = cl42::Vector<(), f64>;
+pub type V = cl42::Vector;
 /// An event of spacetime.
-pub type Event = cl42::Event<(), f64>;
-pub type B = cl42::Bivector<(), f64>;
+pub type Event = cl42::Event;
+pub type B = cl42::Bivector;
 /// An even multivector: the conformal rotors. The algebra declares no versors (their sandwich
 /// kernels would slow its compilation), so rotors act by explicit sandwiches.
-pub type Even = cl42::Even<(), f64>;
+pub type Even = cl42::Even;
 /// A general multivector.
-pub type Full = cl42::Multivector<(), f64>;
+pub type Full = cl42::Multivector;
 /// An electromagnetic field: a bivector of spacetime.
-pub type Faraday = cl42::Faraday<(), f64>;
-pub type Twistor = cl42::Twistor<(), f64>;
+pub type Faraday = cl42::Faraday;
+pub type Twistor = cl42::Twistor;
 /// A linear map on twistors.
-pub type TwistorMap = cl42::Twistor<(cl42::Twistor,), f64>;
+pub type TwistorMap = cl42::Twistor<(cl42::Twistor,)>;
 /// A bilinear form on twistors.
-pub type Pairing = cl42::Scalar<(cl42::Twistor, cl42::Twistor), f64>;
+pub type Pairing = cl42::Scalar<(cl42::Twistor, cl42::Twistor)>;
 /// The null plane of a ray, from twistors.
-pub type RayMap = cl42::Bivector<(cl42::Twistor, cl42::Twistor), f64>;
+pub type RayMap = cl42::Bivector<(cl42::Twistor, cl42::Twistor)>;
 /// A point of space at one instant, in VGA3D (whose `x y z` are the algebra's).
-pub type Spatial = gax::vga3d::Vector<(), f64>;
+pub type Spatial = gax::vga3d::Vector;
 
 /// The event at `(x, y, z, t)`.
 pub fn event(x: f64, y: f64, z: f64, t: f64) -> Event {
@@ -76,7 +76,7 @@ pub fn infinity() -> V {
 }
 
 /// The spacetime volume `x y z t`, which squares to minus one.
-pub fn spacetime_volume() -> cl42::Phasor<(), f64> {
+pub fn spacetime_volume() -> cl42::Phasor {
     cl42::Phasor::new(0.0, 1.0)
 }
 
@@ -346,7 +346,7 @@ pub mod tests {
         let mut rng = rng(822);
         for _ in 0..SAMPLES {
             let e = random_event(&mut rng, 1.0);
-            let heading = t() + at(rng.direction::<vga3d::Vector<(), f64>>(), 0.0);
+            let heading = t() + at(rng.direction::<vga3d::Vector>(), 0.0);
             let separation = rng.range(0.2, 1.5);
             let (first, second) = (point(e), point(e + heading * separation));
             let twistor = through(first, second);

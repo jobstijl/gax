@@ -10,7 +10,7 @@
 
 use super::icosahedron::{R, mirrors, turns};
 use gax::vga3d::{Bivector, Rotor, Vector};
-use gax_numga_examples::{Axes, Canvas, Light, Point2};
+use gax_numga_examples::{Axes, Canvas, Light, ORIGIN2, Point2};
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
@@ -97,7 +97,7 @@ pub fn draw(c: &mut Canvas, t: f32) {
         Light::from_srgb(0.35, 0.55, 0.72, 1.6),
     );
     let rect = c.rect().part(0.2, 0.12, 0.8, 1.0);
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), 0.62);
+    let ax = Axes::equal(rect, ORIGIN2, 0.62);
     let depths = edges()
         .iter()
         .map(|&(i, j)| 0.5 * (points[i].1 + points[j].1));

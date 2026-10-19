@@ -24,36 +24,34 @@ mod dirac {
     use gax::vga3d;
     use gax_numga_examples::signal::linspace;
 
-    pub type V = Vector<(), f64>;
-    pub type B = Bivector<(), f64>;
     /// A Dirac spinor is an even multivector.
-    pub type Spinor = Even<(), f64>;
+    pub type Spinor = Even;
     /// A vector of the observer's space.
-    pub type Space = vga3d::Vector<(), f64>;
+    pub type Space = vga3d::Vector;
     /// A point of the observer's space.
-    pub type Place = gax::pga3d::Point<(), f64>;
+    pub type Place = gax::pga3d::Point;
     /// The spinor's map on spacetime.
-    pub type Frame = Vector<(Vector,), f64>;
+    pub type Frame = Vector<(Vector,)>;
     /// The plane-wave Dirac equation, a map on spinors.
-    pub type Hamiltonian = Even<(Even,), f64>;
+    pub type Hamiltonian = Even<(Even,)>;
 
     /// The observer's time axis.
-    pub fn time() -> V {
+    pub fn time() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
 
     /// The `x` axis.
-    pub fn x_axis() -> V {
+    pub fn x_axis() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
 
     /// The `z` axis.
-    pub fn z_axis() -> V {
+    pub fn z_axis() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
     /// The spin plane `y ^ x`: right multiplication by it squares to minus one.
-    pub fn spin_plane() -> B {
+    pub fn spin_plane() -> Bivector {
         Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, -1.0)
     }
 
@@ -63,7 +61,7 @@ mod dirac {
     }
 
     /// `exp(I angle)`, with `I = e0123` squaring to minus one: `cos + I sin`, a phasor.
-    pub fn phase(angle: f64) -> Phasor<(), f64> {
+    pub fn phase(angle: f64) -> Phasor {
         Pseudoscalar::new(angle).exp()
     }
 
@@ -84,7 +82,7 @@ mod dirac {
     // Used by the tests (part of numga's core).
     #[cfg_attr(not(test), allow(dead_code))]
     /// `ψ ψ̃ = exp(I β) ρ`: a scalar plus a pseudoscalar (its bivector part vanishes).
-    pub fn invariants(psi: Spinor) -> Phasor<(), f64> {
+    pub fn invariants(psi: Spinor) -> Phasor {
         (psi * psi.reverse()).cast::<Phasor>()
     }
 
@@ -99,64 +97,64 @@ mod dirac {
     /// What the spinor does to bivectors beyond what its frame does: its own sandwich on
     /// bivectors, composed with the inverse of the frame's extension to bivectors. It is
     /// multiplication by `exp(I β) / ρ`.
-    pub fn duality(psi: Spinor) -> Bivector<(Bivector,), f64> {
+    pub fn duality(psi: Spinor) -> Bivector<(Bivector,)> {
         (psi >> Bivector::slot()).of(frame(psi).outermorphism::<Bivector>().inverse())
     }
 
     /// The electron's current: the frame's image of the time axis.
-    pub fn current(psi: Spinor) -> V {
+    pub fn current(psi: Spinor) -> Vector {
         frame(psi).of(time())
     }
 
     /// The electron's spin, in units of half the reduced Planck constant: the frame's image of
     /// the `z` axis.
-    pub fn spin(psi: Spinor) -> V {
+    pub fn spin(psi: Spinor) -> Vector {
         frame(psi).of(z_axis())
     }
 
     /// The velocity a current carries, as the observer sees it: its relative vector (the part
     /// across the time axis) over its density (the part along it).
-    pub fn velocity(flow: V) -> B {
+    pub fn velocity(flow: Vector) -> Bivector {
         (flow ^ time()) * (1.0 / (flow | time()).s())
     }
 
     /// A relative vector (a bivector `eₖ e0` across the observer's time axis) as a vector of
     /// the observer's space: the inverse of gax's spacetime split, `sta::Bivector::from` a
     /// `vga3d::Vector`, on its image.
-    pub fn relative(b: B) -> Space {
+    pub fn relative(b: Bivector) -> Space {
         Space::new(b.e10(), b.e20(), b.e30())
     }
 
     /// The part of a spacetime vector across the observer's time axis, in the observer's space.
-    pub fn spatial(v: V) -> Space {
+    pub fn spatial(v: Vector) -> Space {
         relative(v ^ time())
     }
 
     /// The Dirac equation for a plane wave of the given spatial momentum, as a map on spinors:
     /// the momentum as a relative vector on the left, and the mass through the reflection in
     /// the time axis.
-    pub fn hamiltonian(momentum: V, mass: f64) -> Hamiltonian {
+    pub fn hamiltonian(momentum: Vector, mass: f64) -> Hamiltonian {
         let t = time();
         (momentum * t) * Even::slot() + (t * Even::slot() * t) * mass
     }
 
     /// The Hermitian product of spinors, `⟨(t ψ̃ t) φ⟩`: positive definite, the identity in
     /// the blade basis. The Hamiltonian is symmetric under it.
-    pub fn hermitian() -> gax::sta::Scalar<(Even, Even), f64> {
+    pub fn hermitian() -> gax::sta::Scalar<(Even, Even)> {
         form(Even::slot())
     }
 
     /// The energy of the plane wave, `√(m² + p²)`: a spatial vector squares to minus its
     /// length squared in this signature.
     #[allow(clippy::disallowed_methods)] // the energy-momentum relation: a physical law
-    pub fn energy(momentum: V, mass: f64) -> f64 {
+    pub fn energy(momentum: Vector, mass: f64) -> f64 {
         (mass * mass - momentum.norm_squared()).sqrt()
     }
 
     /// The plane wave's spinor at the given times. The projector onto positive energy,
     /// `(ψ + H(ψ) / E) / 2`, splits it into its positive- and negative-energy parts, which turn
     /// in the spin plane at the energy, in opposite senses.
-    pub fn evolve(momentum: V, mass: f64, psi: Spinor, times: &[f64]) -> Vec<Spinor> {
+    pub fn evolve(momentum: Vector, mass: f64, psi: Spinor, times: &[f64]) -> Vec<Spinor> {
         let e = energy(momentum, mass);
         let positive = (psi + hamiltonian(momentum, mass).of(psi) * (1.0 / e)) * 0.5;
         times
@@ -175,8 +173,8 @@ mod dirac {
 
     /// The points a velocity carries a point through, from the origin, one step at a time:
     /// each step the relative vector of the velocity times the step.
-    pub fn path(velocities: &[B], dt: f64) -> Vec<Place> {
-        let mut at = Place::xyz(0.0, 0.0, 0.0);
+    pub fn path(velocities: &[Bivector], dt: f64) -> Vec<Place> {
+        let mut at = Place::origin();
         let mut out = vec![at];
         for v in &velocities[..velocities.len() - 1] {
             at += along(relative(*v * dt));
@@ -192,13 +190,13 @@ mod dirac {
     pub const MIXTURES: [f64; 3] = [0.1, 0.25, 0.5];
 
     /// A spatial momentum.
-    pub fn momentum(x: f64, y: f64, z: f64) -> V {
+    pub fn momentum(x: f64, y: f64, z: f64) -> Vector {
         Vector::new(0.0, x, y, z)
     }
 
     /// The Hamiltonian's energies, ascending, and its eigenstates, over a grid of momenta in
     /// the `xy` plane: `(momentum, energies, states)` row by row.
-    pub fn mass_shell(extent: f64, count: usize) -> Vec<(V, [f64; 8], [Spinor; 8])> {
+    pub fn mass_shell(extent: f64, count: usize) -> Vec<(Vector, [f64; 8], [Spinor; 8])> {
         let along = |i: usize| -extent + 2.0 * extent * i as f64 / (count - 1) as f64;
         (0..count * count)
             .map(|k| {
@@ -210,7 +208,7 @@ mod dirac {
     }
 
     /// The form `⟨(t ψ̃ t) H(φ)⟩` of a map on spinors: symmetric when the map is Hermitian.
-    pub fn form(h: Hamiltonian) -> gax::sta::Scalar<(Even, Even), f64> {
+    pub fn form(h: Hamiltonian) -> gax::sta::Scalar<(Even, Even)> {
         let t = time();
         (t * Even::slot().reverse() * t).scalar_product(h)
     }
@@ -220,7 +218,7 @@ mod dirac {
     #[allow(clippy::type_complexity)]
     #[allow(clippy::disallowed_methods)] // a superposition's amplitudes √p from its probabilities
     pub fn trembling(
-        momentum: V,
+        momentum: Vector,
         seconds: f64,
         count: usize,
     ) -> (Vec<f64>, Vec<Vec<Spinor>>, Vec<Vec<Place>>) {
@@ -243,7 +241,7 @@ mod dirac {
                     electron * (1.0 - share).sqrt() + positron * share.sqrt(),
                     &times,
                 );
-                let velocities: Vec<B> = psi.iter().map(|p| velocity(current(*p))).collect();
+                let velocities: Vec<Bivector> = psi.iter().map(|p| velocity(current(*p))).collect();
                 (psi, path(&velocities, dt))
             })
             .unzip();
@@ -272,7 +270,7 @@ fn scene() -> &'static Scene {
         let n = 21;
         let shell = mass_shell(2.0, n);
         // Each momentum (in the xy plane, from the origin) raised by its `k`-th energy along z.
-        let origin = Place::xyz(0.0, 0.0, 0.0);
+        let origin = Place::origin();
         let sheet = |k: usize| -> Vec<Place> {
             shell
                 .iter()
@@ -293,8 +291,8 @@ fn scene() -> &'static Scene {
 
 fn colours() -> [Light; 3] {
     [
-        palette::sky(),
-        palette::purple(),
+        palette::SKY,
+        palette::PURPLE,
         Light::from_srgb(0.95, 0.42, 0.33, 1.8),
     ]
 }
@@ -336,7 +334,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = camera(view, Point3::xyz(0.0, 0.0, 1.7), azimuth, 0.2, 2.0);
     let mut scene3 = Scene3::new(cam);
     // A floor grid and the z axis.
-    let g = palette::grid().faded(0.7);
+    let g = palette::GRID.faded(0.7);
     for k in 0..=6 {
         let a = -0.6 + 0.2 * k as f32;
         let (x0, x1) = (Point3::xyz(a, -0.6, 0.0), Point3::xyz(a, 0.6, 0.0));
@@ -345,7 +343,7 @@ fn draw(c: &mut Canvas, t: f32) {
         scene3.seg(y0, y1, 1.0, g);
     }
     let up = Point3::direction(0.0, 0.0, 1.0);
-    let axis_light = palette::grid().faded(0.9);
+    let axis_light = palette::GRID.faded(0.9);
     scene3.seg(ORIGIN3, ORIGIN3 + up.gp(3.4), 1.0, axis_light);
     for (k, (path, spins)) in s.paths.iter().zip(&s.spins).enumerate() {
         scene3.polyline(&path[..upto], 1.6, colours[k]);
@@ -362,7 +360,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The clock under the key, clear of the paths below.
     let clock = key + down.gp(MIXTURES.len() as f32 * size * 1.6 + size * 0.6);
     let text = format!("T = {at:4.1} H/MC2");
-    c.text(&text, clock, size, palette::ink(), Align::Left);
+    c.text(&text, clock, size, palette::INK, Align::Left);
     for (k, share) in MIXTURES.iter().enumerate() {
         c.text(
             &format!("{:.0}% NEGATIVE ENERGY", share * 100.0),
@@ -379,7 +377,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let view = view_of(right, h * 0.06, h * 1.12);
     let cam = camera(view, ORIGIN3, azimuth, 0.3, 4.6);
     let mut scene3 = Scene3::new(cam);
-    for (sheet, colour) in [(top, palette::red()), (bottom, palette::sky())] {
+    for (sheet, colour) in [(top, palette::RED), (bottom, palette::SKY)] {
         let m = *n - 1;
         let at = |u: f32, v: f32| {
             let (i, j) = (
@@ -396,7 +394,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ORIGIN3 - reach,
         ORIGIN3 + reach,
         1.0,
-        palette::ink().faded(0.6),
+        palette::INK.faded(0.6),
     );
     c.clip(right);
     scene3.draw(c);
@@ -412,7 +410,7 @@ fn draw(c: &mut Canvas, t: f32) {
             line,
             title + down.gp(k as f32 * size * 1.4),
             size * 0.85,
-            palette::ink(),
+            palette::INK,
             Align::Center,
         );
     }
@@ -420,14 +418,14 @@ fn draw(c: &mut Canvas, t: f32) {
         "POSITIVE ENERGY",
         title + down.gp(size * 3.0),
         size * 0.8,
-        palette::red(),
+        palette::RED,
         Align::Center,
     );
     c.text(
         "NEGATIVE ENERGY, GAP 2 MC2",
         bottom_middle - down.gp(h * 0.05),
         size * 0.8,
-        palette::sky(),
+        palette::SKY,
         Align::Center,
     );
     caption(
@@ -463,7 +461,7 @@ mod tests {
         assert!(frame(psi).of(v).max_abs_diff(&((rotor >> v) * 2.0)) < 1e-12);
         // A phasor times a bivector is a bivector: the duality rotation stays in the kind.
         let b = Bivector::new(0.2, -0.4, 1.1, 0.3, -0.7, 0.5);
-        let expected: Bivector<(), f64> = phase(0.7) * b * 0.5;
+        let expected: Bivector = phase(0.7) * b * 0.5;
         assert!(duality(psi).of(b).max_abs_diff(&expected) < 1e-9);
     }
 
@@ -508,7 +506,7 @@ mod tests {
         }
         assert_eq!(paths.len(), 3);
         let mut rng = rng(1);
-        let probe = Even::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.normal()));
+        let probe: Even = Even::from_coeffs(core::array::from_fn(|_| rng.normal()));
         let h = hamiltonian(p, MASS);
         let unit = Even::slot() * spin_plane();
         assert!(h.of(unit.of(probe)).max_abs_diff(&unit.of(h.of(probe))) < 1e-12);

@@ -2,10 +2,11 @@
 //! `src/bin/` that computes with gax and draws its frames on a [`Canvas`]; [`run`] shows them in
 //! a window or writes a GIF or PNG.
 //!
-//! The drawing code's geometry goes through gax too, as in `examples/warp`: distances are the
-//! norms of joins, turns are rotation motors, the direction at an angle and the angle between
-//! two directions are gax's (`direction_from_angle`, `angle_between`, `angle_to`), shading is
-//! the inner product of planes. Square roots and trigonometry on floats are denied here
+//! The drawing code's geometry goes through gax too, as in `examples/warp`: distances are gax's
+//! (`distance`, and in the per-pixel loops the norms of joins), turns are rotation motors, the
+//! direction at an angle and the angle between two directions are gax's
+//! (`direction_from_angle`, `angle_between`, `angle_to`), shading is the inner product of
+//! planes. Square roots and trigonometry on floats are denied here
 //! (`clippy.toml`); normalizing a random direction is the one exception.
 //!
 //! The ports follow the examples of numga (Eelco Hoogendoorn,
@@ -27,7 +28,24 @@ pub mod plot;
 pub mod points;
 pub mod rng;
 pub mod scene3;
+/// What families of the examples share beyond drawing: the physics or the geometry of a few
+/// examples each (the doc of each module names them).
+pub mod shared {
+    pub mod electromagnetism_dipoles;
+    pub mod geometry_scenegraph;
+    pub mod mechanics_lie;
+    pub mod mechanics_simplex;
+    pub mod mechanics_vga2d;
+    pub mod mechanics_vga3d;
+    pub mod quadrics_s3;
+    pub mod quantum;
+    pub mod surfaces_hull;
+    pub mod surfaces_loop;
+    pub mod surfaces_sphere;
+    pub mod surfaces_spin;
+}
 pub mod signal;
+pub mod testing;
 pub mod view;
 
 pub use app::{Anim, run};
@@ -37,15 +55,15 @@ pub use gax_colour::{Light, light};
 pub use parallel::par_map;
 pub use plot::{Axes, Marker};
 pub use points::{
-    Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above, reach2, reach3, vector2,
-    vector3,
+    Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above, on_sphere, reach2,
+    reach3, vector2, vector3,
 };
 pub use scene3::Scene3;
-pub use view::{Camera, Lens, View2};
+pub use view::{Camera, Lens};
 
 /// The usual backdrop: a dark vertical gradient.
 pub fn backdrop(c: &mut Canvas) {
-    c.backdrop(palette::top(), palette::bottom());
+    c.backdrop(palette::TOP, palette::BOTTOM);
 }
 
 /// A title in the top left corner, and an optional caption under it. Placed by the canvas's
@@ -55,7 +73,7 @@ pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
     let s = (screen.height() / 30.0).min(22.0);
     let room = screen.width() - 1.6 * s;
     let fit = |size: f32, text: &str| size.min(room / font::width(text, 1.0).max(1e-6));
-    let ink = palette::ink();
+    let ink = palette::INK;
     c.text(
         title,
         Point2::xy(s * 0.8, s * 1.6),
@@ -69,13 +87,20 @@ pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
     }
 }
 
+/// A panel's title over its middle, `size` pixels tall, its baseline `gap` pixels above the
+/// panel.
+pub fn label_above(c: &mut Canvas, rect: Rect, title: &str, size: f32, gap: f32) {
+    let at = rect.top_middle() - Point2::direction(0.0, gap);
+    c.text(title, at, size, palette::INK, Align::Center);
+}
+
 /// A label under a panel's middle: a `rows`-th of the panel's height (between 7 and 12 pixels),
 /// shrunk to fit the `share` of its width (less where panels sit close).
 pub fn label_under(c: &mut Canvas, rect: Rect, label: &str, rows: f32, share: f32) {
     let fitting = share * rect.width() / font::width(label, 1.0);
     let size = (rect.height() / rows).clamp(7.0, 12.0).min(fitting);
     let at = rect.bottom_middle() - Point2::direction(0.0, size * 0.6);
-    c.text(label, at, size, palette::ink(), Align::Center);
+    c.text(label, at, size, palette::INK, Align::Center);
 }
 
 #[cfg(test)]
@@ -87,7 +112,7 @@ mod tests {
 
     /// Two pixel points within `eps` of each other.
     fn near(a: Point2, b: Point2, eps: f32) -> bool {
-        (a.unitized() & b.unitized()).norm() < eps
+        a.distance(b) < eps
     }
 
     #[test]
@@ -119,11 +144,7 @@ mod tests {
     fn fills_cover_their_area() {
         // A triangle, and a star with a hole by winding.
         let mut c = Canvas::with_scale(40, 40, 1.0);
-        let corners = [
-            Point2::xy(0.0, 0.0),
-            Point2::xy(40.0, 0.0),
-            Point2::xy(0.0, 40.0),
-        ];
+        let corners = [ORIGIN2, Point2::xy(40.0, 0.0), Point2::xy(0.0, 40.0)];
         c.fill(&corners, WHITE, 1.0);
         assert!((c.mean().luma() - 0.5).abs() < 2e-3, "{:?}", c.mean());
         let mut c = Canvas::with_scale(60, 60, 1.0);
@@ -167,7 +188,7 @@ mod tests {
         let (origin, dir) = cam.ray(Point2::xy(250.0, 100.0));
         // From the eye, straight ahead along +y.
         assert!(
-            (origin & Point3::xyz(0.0, -5.0, 0.0)).norm() < 1e-4,
+            origin.distance(Point3::xyz(0.0, -5.0, 0.0)) < 1e-4,
             "{origin:?}"
         );
         assert!(
@@ -197,7 +218,7 @@ mod tests {
         assert_eq!(ring.len(), 13);
         assert!(near(ring[0], ring[12], 1e-5) && near(ring[3], Point2::xy(2.0, 2.0), 1e-5));
         for p in &ring {
-            assert!(((*p & centre).norm() - 3.0).abs() < 1e-5, "{p:?}");
+            assert!((p.distance(centre) - 3.0).abs() < 1e-5, "{p:?}");
         }
         let v = gax::vga2d::Vector::new(0.25, -1.5);
         assert_eq!(vector2(reach2(v)), v);
@@ -221,7 +242,7 @@ mod tests {
         let segs = contour::of_fn(r2, [-2.0, 2.0], [-2.0, 2.0], 41, 1.0);
         assert!(segs.len() > 20);
         for p in segs.into_iter().flatten() {
-            let r = (p & ORIGIN2).norm();
+            let r = p.distance(ORIGIN2);
             assert!((r - 1.0).abs() < 0.02, "{p:?}");
         }
     }
@@ -290,10 +311,7 @@ mod tests {
         let ray = origin & (origin + dir);
         let hit =
             ray ^ gax::pga3d::Plane::with_normal(gax::pga3d::Point::direction(0.0, 0.0, 1.0), 0.0);
-        assert!(
-            (hit & Point3::xyz(1.0, 0.0, 0.0)).norm() < 1e-3 * hit.e123().abs(),
-            "{hit:?}"
-        );
+        assert!(hit.distance(Point3::xyz(1.0, 0.0, 0.0)) < 1e-3, "{hit:?}");
     }
 
     #[test]

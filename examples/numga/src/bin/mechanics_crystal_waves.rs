@@ -17,6 +17,7 @@ use gax::vga3d::{Bivector, Scalar, Vector};
 
 use gax_numga_examples::points::{Map2, box_map};
 use gax_numga_examples::rng::{Draw, rng};
+use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Pos2, Rect, backdrop, caption,
     colormap, font, palette, run,
@@ -26,9 +27,8 @@ use std::sync::OnceLock;
 mod crystal {
     use super::*;
 
-    pub type V = Vector<(), f64>;
     /// The traction on a face from its normal, the displacement and its gradient direction.
-    pub type Stiffness = Vector<(Vector, Vector, Vector), f64>;
+    pub type Stiffness = Vector<(Vector, Vector, Vector)>;
 
     pub const NAMES: [&str; 3] = ["FUSED SILICA", "SILICON", "BETA-BRASS"];
     /// Cubic elastic constants in GPa and density in g/cm³, so speeds come out in km/s. Fused
@@ -41,7 +41,7 @@ mod crystal {
     pub const MODES: [&str; 3] = ["SLOW SHEAR", "FAST SHEAR", "COMPRESSION"];
 
     /// The crystal's axes.
-    pub fn axes() -> [V; 3] {
+    pub fn axes() -> [Vector; 3] {
         [
             Vector::new(1.0, 0.0, 0.0),
             Vector::new(0.0, 1.0, 0.0),
@@ -81,9 +81,9 @@ mod crystal {
     /// The heading bound into the normal and gradient slots leaves the Christoffel map; numga
     /// takes its eigenpairs directly, gax as those of the form `u | Γ(v)` (Euclidean vectors
     /// have the identity metric in their layout).
-    pub fn waves(crystal: &Stiffness, heading: V) -> ([f64; 3], [V; 3]) {
+    pub fn waves(crystal: &Stiffness, heading: Vector) -> ([f64; 3], [Vector; 3]) {
         let christoffel = crystal.of(heading).at::<1>().of(heading);
-        let form: Scalar<(Vector, Vector), f64> = Vector::slot() | christoffel;
+        let form: Scalar<(Vector, Vector)> = Vector::slot() | christoffel;
         form.eigh(Scalar::identity())
     }
 
@@ -94,10 +94,10 @@ mod crystal {
     /// pairing is density times squared phase speed.)
     pub fn energy_flow(
         crystal: &Stiffness,
-        heading: V,
-        polarization: &[V; 3],
+        heading: Vector,
+        polarization: &[Vector; 3],
         density: f64,
-    ) -> [V; 3] {
+    ) -> [Vector; 3] {
         polarization.map(|p| {
             let squared = (p | crystal.of(heading).of(p).of(heading)).s();
             crystal
@@ -110,7 +110,7 @@ mod crystal {
 
     /// The group velocities of the three waves for one heading, in material `m`, with the
     /// checks of numga's `focusing`: along its heading the group velocity has the phase speed.
-    pub fn group_velocities(crystal: &Stiffness, m: usize, heading: V) -> [V; 3] {
+    pub fn group_velocities(crystal: &Stiffness, m: usize, heading: Vector) -> [Vector; 3] {
         let (values, polarization) = waves(crystal, heading);
         let velocity = energy_flow(crystal, heading, &polarization, DENSITY[m]);
         for (v, value) in velocity.iter().zip(values) {
@@ -121,7 +121,7 @@ mod crystal {
     }
 
     /// `count` headings spread uniformly over the sphere.
-    pub fn headings(count: usize, seed: u64) -> Vec<V> {
+    pub fn headings(count: usize, seed: u64) -> Vec<Vector> {
         let mut r = rng(seed);
         (0..count).map(|_| r.direction()).collect()
     }
@@ -148,8 +148,8 @@ mod crystal {
     }
 
     /// The heading at `angle` in the cube face `z = 0`: `x` turned by the angle.
-    pub fn face_heading(angle: f64) -> V {
-        let r = Bivector::<(), f64>::new(0.0, 0.0, -angle / 2.0).exp();
+    pub fn face_heading(angle: f64) -> Vector {
+        let r = Bivector::new(0.0, 0.0, -angle / 2.0).exp();
         r >> Vector::new(1.0, 0.0, 0.0)
     }
 
@@ -157,10 +157,10 @@ mod crystal {
     /// unit time, a section through its wave surface. The waves are ordered by speed, so where
     /// the two shear speeds cross they swap polarizations: each curve follows a speed rank. With
     /// numga's checks of the textbook speeds along a cube edge and a face diagonal.
-    pub fn wave_fronts(count: usize) -> [Vec<[V; 3]>; 3] {
+    pub fn wave_fronts(count: usize) -> [Vec<[Vector; 3]>; 3] {
         let crystals = crystals();
         for m in 0..3 {
-            let speeds = |h: V| waves(&crystals[m], h).0.map(|v| phase_speed(v, DENSITY[m]));
+            let speeds = |h: Vector| waves(&crystals[m], h).0.map(|v| phase_speed(v, DENSITY[m]));
             let edge = speeds(Vector::new(1.0, 0.0, 0.0));
             let expected = [C44[m], C44[m], C11[m]].map(|c| phase_speed(c, DENSITY[m]));
             for (a, b) in edge.iter().zip(expected) {
@@ -202,7 +202,7 @@ const FRONT: usize = 720;
 
 struct Data {
     focus: [[Vec<Point2>; 3]; 3],
-    fronts: [Vec<[V; 3]>; 3],
+    fronts: [Vec<[Vector; 3]>; 3],
 }
 
 fn data() -> &'static Data {
@@ -238,12 +238,12 @@ fn histogram(pts: &[Point2]) -> Vec<u32> {
 }
 
 /// A vector in the cube face `z = 0`, as plotted: the point at its tip, from its `x` and `y`.
-fn face(v: V) -> pga2d::Point<(), f64> {
+fn face(v: Vector) -> pga2d::Point {
     pga2d::Point::xy(v.e1(), v.e2())
 }
 
 fn mode_colour(w: usize) -> Light {
-    [palette::red(), palette::sky(), palette::purple()][w]
+    [palette::RED, palette::SKY, palette::PURPLE][w]
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -285,7 +285,7 @@ fn draw(c: &mut Canvas, t: f32) {
             });
             if m == current {
                 let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-                c.polyline(&corners, 1.5, palette::yellow().faded(0.9), true);
+                c.polyline(&corners, 1.5, palette::YELLOW.faded(0.9), true);
             }
             if m == 0 {
                 let above = rect.top_middle() + up.gp(6.0);
@@ -297,9 +297,9 @@ fn draw(c: &mut Canvas, t: f32) {
         let row = square(m, 0);
         let at = row.left_middle() - right.gp(6.0);
         let tone = if m == current {
-            palette::yellow()
+            palette::YELLOW
         } else {
-            palette::ink()
+            palette::INK
         };
         let words: Vec<&str> = if font::width(name, 10.0) + 16.0 > left {
             name.split(' ').collect()
@@ -315,7 +315,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let count = ((HEADINGS as f32 * share) as usize / 1000) * 1000;
     let at = screen.bottom_left() + Point2::direction(left, -h * 0.005);
     let text = format!("{count} HEADINGS");
-    c.text(&text, at, 10.0, palette::grid(), Align::Left);
+    c.text(&text, at, 10.0, palette::GRID, Align::Left);
 
     // The wave surfaces of the current crystal in the cube face, and the sweeping heading.
     let fronts = &d.fronts[current];
@@ -329,7 +329,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let ax = Axes::equal(rect, origin, reach * 1.12);
     ax.frame(c, NAMES[current], "KM/S ALONG (100)", "");
     for wv in 0..3 {
-        let pts: Vec<pga2d::Point<(), f64>> = fronts.iter().map(|v| face(v[wv])).collect();
+        let pts: Vec<pga2d::Point> = fronts.iter().map(|v| face(v[wv])).collect();
         // The dots lie closer than their glow reaches, so their light adds up along the
         // surface: each is faint.
         ax.scatter(c, &pts, Marker::Dot, 1.6, (mode_colour(wv)).faded(0.25));
@@ -339,9 +339,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let heading = face_heading(angle);
     let crystals = crystals();
     let (values, _) = waves(&crystals[current], heading);
-    let group = d.fronts[current][((s * FRONT as f32) as usize).min(FRONT - 1)];
+    let group = d.fronts[current][frame(s, FRONT)];
     let tip = face(heading.gp(f64::from(reach) * 1.1));
-    ax.line(c, origin, tip, 1.0, palette::ink().faded(0.6));
+    ax.line(c, origin, tip, 1.0, palette::INK.faded(0.6));
     for wv in 0..3 {
         // The phase velocity lies along the heading; the energy goes along the group velocity.
         let phase = phase_speed(values[wv], DENSITY[current]);

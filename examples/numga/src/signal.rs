@@ -38,6 +38,12 @@ pub fn smoothstep<T: Real>(s: T) -> T {
     s * s * (T::from_f64(3.0) - T::from_f64(2.0) * s)
 }
 
+/// Which of `n` frames (or records) shows at `phase`, from 0 to 1: an `n`-th of the way each,
+/// the last one at the end too.
+pub fn frame(phase: f32, n: usize) -> usize {
+    ((phase * n as f32) as usize).min(n - 1)
+}
+
 /// `count` values evenly from `from` to `to`, both ends included (numpy's `linspace`).
 pub fn linspace(from: f64, to: f64, count: usize) -> Vec<f64> {
     (0..count)

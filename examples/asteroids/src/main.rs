@@ -9,7 +9,7 @@
 
 mod game;
 
-use game::{Game, Input, WORLD};
+use game::{Game, Input, Point, WORLD, sides};
 use macroquad::prelude::*;
 
 fn window() -> Conf {
@@ -39,15 +39,15 @@ impl View {
         }
     }
     /// Where a world point lands on the screen (macroquad's vectors start here).
-    fn at(&self, p: gax::pga2d::Point<(), f32>) -> Vec2 {
+    fn at(&self, p: Point) -> Vec2 {
         let [x, y] = p.to_euclidean();
         vec2(self.cx + x * self.scale, self.cy - y * self.scale)
     }
 }
 
-fn polygon(view: &View, pts: &[gax::pga2d::Point<(), f32>], color: Color, width: f32) {
-    for (a, b) in pts.iter().zip(pts.iter().cycle().skip(1)) {
-        let (a, b) = (view.at(*a), view.at(*b));
+fn polygon(view: &View, pts: &[Point], color: Color, width: f32) {
+    for (a, b) in sides(pts) {
+        let (a, b) = (view.at(a), view.at(b));
         // Skip edges that wrap across the screen.
         if a.distance(b) < view.scale * WORLD[1] / 3.0 {
             draw_line(a.x, a.y, b.x, b.y, width, color);
@@ -82,7 +82,7 @@ async fn main() {
 
         clear_background(Color::from_rgba(8, 10, 20, 255));
         let view = View::new();
-        let border = view.at(gax::pga2d::Point::xy(-WORLD[0] / 2.0, WORLD[1] / 2.0));
+        let border = view.at(Point::xy(-WORLD[0] / 2.0, WORLD[1] / 2.0));
         draw_rectangle_lines(
             border.x,
             border.y,
@@ -113,9 +113,9 @@ async fn main() {
                 polygon(&view, &placed, Color::from_rgba(120, 220, 255, 255), line);
                 if game.thrusting && (get_time() * 20.0) as i64 % 2 == 0 {
                     let flame = [
-                        gax::pga2d::Point::xy(-0.8, -1.6),
-                        gax::pga2d::Point::xy(0.0, -3.6),
-                        gax::pga2d::Point::xy(0.8, -1.6),
+                        Point::xy(-0.8, -1.6),
+                        Point::xy(0.0, -3.6),
+                        Point::xy(0.8, -1.6),
                     ]
                     .map(|p| game.ship.pose >> p);
                     polygon(&view, &flame, Color::from_rgba(255, 140, 40, 255), line);

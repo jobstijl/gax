@@ -90,9 +90,9 @@ fn draw_paper(c: &mut Canvas, rect: Rect, paper: &Paper) {
 fn draw_recipe(c: &mut Canvas, at: Point2, current: usize) {
     for (k, name) in NAMES.iter().enumerate() {
         let colour = match k.cmp(&current) {
-            core::cmp::Ordering::Less => palette::ink().faded(0.5),
-            core::cmp::Ordering::Equal => palette::orange(),
-            core::cmp::Ordering::Greater => palette::ink().faded(0.25),
+            core::cmp::Ordering::Less => palette::INK.faded(0.5),
+            core::cmp::Ordering::Equal => palette::ORANGE,
+            core::cmp::Ordering::Greater => palette::INK.faded(0.25),
         };
         let line = format!("{:>2}  {name}", k + 1);
         c.text(

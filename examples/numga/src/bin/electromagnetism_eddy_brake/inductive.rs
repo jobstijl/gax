@@ -45,7 +45,7 @@ pub fn embedder(mesh: &Mesh, interior: &[usize]) -> Scalars {
 
 /// `[F, interior]`, cells `Vector <- Scalar`: the closed current of a streamfunction zero on the
 /// rim, its face gradient turned in the face's plane.
-pub fn closed_currents(mesh: &Mesh, embedder: &Scalars) -> SparseMap<Vector<(Scalar,), f64>> {
+pub fn closed_currents(mesh: &Mesh, embedder: &Scalars) -> SparseMap<Vector<(Scalar,)>> {
     let differences = &(&mesh.d0() * embedder) * Scalar::slot();
     let gradient = mesh.reconstruction().compose(&differences);
     let turn = mesh.face_planes().map(|plane| plane | Vector::slot());
@@ -148,7 +148,7 @@ pub struct CurrentModes {
     /// its amplitude.
     pub projection: Scalars,
     /// `[F, interior]`: the closed current of an interior streamfunction.
-    pub current: SparseMap<Vector<(Scalar,), f64>>,
+    pub current: SparseMap<Vector<(Scalar,)>>,
     /// `[V, interior]`: an interior streamfunction on the mesh.
     pub embedder: Scalars,
     /// `[F]`: each face's sheet resistance.

@@ -39,21 +39,21 @@ macro_rules! odometry_core {
         use gax::$ga::{Forque, Motor, Twist};
         use gax::{ApproxEq, Kind, Unit};
 
-        pub type M = Unit<Motor<(), f64>>;
-        pub type Tw = Twist<(), f64>;
-        pub type Fq = Forque<(), f64>;
+        pub type M = Unit<Motor>;
+        pub type Tw = Twist;
+        pub type Fq = Forque;
         /// A twist's uncertainty: `Twist <- Forque`.
-        pub type Covariance = Twist<(Forque,), f64>;
+        pub type Covariance = Twist<(Forque,)>;
         /// Its inverse, a quadric on twists: `Forque <- Twist`.
-        pub type Information = Forque<(Twist,), f64>;
+        pub type Information = Forque<(Twist,)>;
         /// The number of a twist's coefficients: 3 in the plane, 6 in space.
         pub const SIZE: usize = <Twist as Kind>::N;
 
         /// The open twist and the open forque.
-        pub fn twists() -> Twist<(Twist,), f64> {
+        pub fn twists() -> Twist<(Twist,)> {
             Tw::slot()
         }
-        pub fn forques() -> Forque<(Forque,), f64> {
+        pub fn forques() -> Forque<(Forque,)> {
             Fq::slot()
         }
 
@@ -62,11 +62,6 @@ macro_rules! odometry_core {
             Tw::from_coeffs(<Twist as Kind>::arr_from_fn(
                 |k| if k == i { 1.0 } else { 0.0 },
             ))
-        }
-
-        /// The identity motor.
-        pub fn identity() -> M {
-            Tw::zero().exp()
         }
 
         /// The pose after a small error on its right.
@@ -78,7 +73,7 @@ macro_rules! odometry_core {
 
         /// How far a relative motor is from what was read: a twist on the right of the reading.
         pub fn mismatch(reading: M, relative: M) -> Tw {
-            let r: Tw = (reading.inverse() * relative).log();
+            let r = (reading.inverse() * relative).log();
             r.gp(2.0)
         }
 
@@ -285,36 +280,24 @@ macro_rules! odometry_core {
                     .flat_map(|(s, c)| modes(*c).into_iter().map(move |m| (s, m)))
                     .collect();
                 let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
-                let chunk = sites.len().div_ceil(threads).max(1);
-                let partial: Vec<Vec<Covariance>> = std::thread::scope(|scope| {
-                    let handles: Vec<_> = sites
-                        .chunks(chunk)
-                        .map(|part| {
-                            let relative = &relative;
-                            scope.spawn(move || {
-                                let mut sum = vec![Twist::zero(); count];
-                                for (site, mode) in part {
-                                    let mut at_readings = vec![Tw::zero(); readings];
-                                    let mut at_anchors = vec![Tw::zero(); count];
-                                    if *site < readings {
-                                        at_readings[*site] = *mode;
-                                    } else {
-                                        at_anchors[*site - readings] = *mode;
-                                    }
-                                    let right = self.pull(relative, &at_readings, &at_anchors);
-                                    let errors = self.conjugate_gradients(relative, &right);
-                                    for (s, e) in sum.iter_mut().zip(&errors) {
-                                        *s += *e * (*e & forques());
-                                    }
-                                }
-                                sum
-                            })
-                        })
-                        .collect();
-                    handles
-                        .into_iter()
-                        .map(|h| h.join().expect("a solve"))
-                        .collect()
+                let parts: Vec<_> = sites.chunks(sites.len().div_ceil(threads).max(1)).collect();
+                let partial = gax_numga_examples::par_map(&parts, |part| {
+                    let mut sum = vec![Twist::zero(); count];
+                    for (site, mode) in *part {
+                        let mut at_readings = vec![Tw::zero(); readings];
+                        let mut at_anchors = vec![Tw::zero(); count];
+                        if *site < readings {
+                            at_readings[*site] = *mode;
+                        } else {
+                            at_anchors[*site - readings] = *mode;
+                        }
+                        let right = self.pull(&relative, &at_readings, &at_anchors);
+                        let errors = self.conjugate_gradients(&relative, &right);
+                        for (s, e) in sum.iter_mut().zip(&errors) {
+                            *s += *e * (*e & forques());
+                        }
+                    }
+                    sum
                 });
                 let mut total = vec![Twist::zero(); count];
                 for part in partial {
@@ -333,7 +316,7 @@ macro_rules! odometry_core {
             let n = steps.len();
             let mut rng = rng(seed);
             // Each step composes on the right, in the robot's own frame.
-            let mut truth = vec![identity()];
+            let mut truth = vec![M::identity()];
             for s in steps {
                 let last = *truth.last().expect("a pose");
                 truth.push(last * *s);
@@ -442,19 +425,14 @@ mod plane {
     use gax_numga_examples::signal::phasor;
 
     /// A point of the plane.
-    pub type P = Point<(), f64>;
+    pub type P = Point;
 
     /// The steps of a lap in the plane.
     pub const STEPS: usize = 36;
 
-    /// The point each pose carries: the origin.
-    pub fn origin() -> P {
-        Point::xy(0.0, 0.0)
-    }
-
     /// Where a pose carries the origin.
     pub fn position(pose: M) -> P {
-        pose >> origin()
+        pose >> Point::origin()
     }
 
     /// A lap of 36 steps of 0.7 m, turning counterclockwise faster and slower twice a lap, and
@@ -470,8 +448,9 @@ mod plane {
                 let twice = phasor(2.0 * phase);
                 let turn = (1.0 + 0.4 * twice.e01()) * core::f64::consts::TAU / STEPS as f64;
                 let slip = -0.1 * twice.e20();
-                (Twist::translation(Point::direction(0.7, slip)) + Twist::rotation(origin(), turn))
-                    .exp()
+                (Twist::translation(Point::direction(0.7, slip))
+                    + Twist::rotation(Point::origin(), turn))
+                .exp()
             })
             .collect()
     }
@@ -479,7 +458,7 @@ mod plane {
     /// How far out the ellipses lie, in standard deviations.
     pub const SIGMAS: f64 = 2.0;
     /// A quadric on points, as the polar map `Line <- Point`.
-    pub type Quadric = Line<(Point,), f64>;
+    pub type Quadric = Line<(Point,)>;
 
     /// The quadric `SIGMAS` standard deviations out within which a pose carries the origin. A
     /// twist moves the carried point by its commutator with it; reading that motion with a line
@@ -491,7 +470,7 @@ mod plane {
         let shift = twists().commutator(here).of(pose >> twists());
         let readout = (forques() & twists()).solve(Line::slot() & shift);
         let moment = here * (Line::slot() & here) + shift.of(uncertainty.of(readout));
-        let w = Line::new(0.0, 0.0, 1.0);
+        let w = Line::infinity();
         moment.inverse() - (w * (w & Point::slot())).gp(1.0 + SIGMAS * SIGMAS)
     }
 
@@ -524,8 +503,8 @@ mod space {
     pub const STEPS: usize = 6;
 
     /// Where a pose carries the origin.
-    pub fn position(pose: M) -> Point<(), f64> {
-        pose >> Point::xyz(0.0, 0.0, 0.0)
+    pub fn position(pose: M) -> Point {
+        pose >> Point::origin()
     }
 
     /// A turn of six steps of 0.7 m, pitching and rolling once a lap, and slipping sideways and
@@ -533,7 +512,7 @@ mod space {
     /// translation twist plus a rotation twist about the axis of its angular velocity (numga's
     /// lap, mirrored to turn counterclockwise).
     pub fn lap() -> Vec<M> {
-        let origin = Point::xyz(0.0, 0.0, 0.0);
+        let origin = Point::origin();
         (0..STEPS)
             .map(|k| {
                 let phase = core::f64::consts::TAU * k as f64 / STEPS as f64;
@@ -621,26 +600,26 @@ fn draw(c: &mut Canvas, t: f32) {
         truth.iter().chain(&dead).copied(),
         1.15,
     );
-    ax.polyline(c, &truth, 4.0, palette::grid());
-    ax.dashed(c, &dead, 1.5, 5.0, palette::orange().faded(0.9));
+    ax.polyline(c, &truth, 4.0, palette::GRID);
+    ax.dashed(c, &dead, 1.5, 5.0, palette::ORANGE.faded(0.9));
     for ((p, u), at) in lap.dead.iter().zip(&lap.reckoned).zip(&dead) {
         let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
-        ax.polyline(c, &ring, 1.0, palette::orange().faded(0.35));
+        ax.polyline(c, &ring, 1.0, palette::ORANGE.faded(0.35));
     }
     let likely = positions(&poses);
     for ((p, u), at) in poses.iter().zip(&uncertainty).zip(&likely) {
         let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
-        ax.polyline(c, &ring, 1.2, palette::sky().faded(0.85));
+        ax.polyline(c, &ring, 1.2, palette::SKY.faded(0.85));
     }
-    ax.polyline(c, &likely, 1.4, palette::sky());
-    ax.scatter(c, &likely, Marker::Dot, 4.0, palette::sky());
-    ax.scatter(c, &truth[..1], Marker::Dot, 9.0, palette::ink());
+    ax.polyline(c, &likely, 1.4, palette::SKY);
+    ax.scatter(c, &likely, Marker::Dot, 4.0, palette::SKY);
+    ax.scatter(c, &truth[..1], Marker::Dot, 9.0, palette::INK);
     ax.legend(
         c,
         &[
-            ("TRUTH", palette::grid()),
-            ("DEAD RECKONING", palette::orange()),
-            ("MOST LIKELY", palette::sky()),
+            ("TRUTH", palette::GRID),
+            ("DEAD RECKONING", palette::ORANGE),
+            ("MOST LIKELY", palette::SKY),
         ],
     );
     // Space, right: the short lap seen from an orbiting camera.
@@ -653,19 +632,15 @@ fn draw(c: &mut Canvas, t: f32) {
     let (x0, y0) = ((w * 0.6).floor(), 60.0);
     let mut sub = c.sub(Rect::new(x0, y0, w, h));
     sub.backdrop(
-        palette::top().mix_light(palette::bottom(), y0 / h),
-        palette::bottom(),
+        palette::TOP.mix_light(palette::BOTTOM, y0 / h),
+        palette::BOTTOM,
     );
-    let positions = |ps: &[space::M]| -> Vec<gax::pga3d::Point<(), f64>> {
+    let positions = |ps: &[space::M]| -> Vec<gax::pga3d::Point> {
         ps.iter().map(|p| space::position(*p)).collect()
     };
     let truth = positions(&space_lap.truth);
     // The camera circles the centre of the true lap: the sum of its points, unitized.
-    let centre = truth
-        .iter()
-        .copied()
-        .sum::<gax::pga3d::Point<(), f64>>()
-        .unitized();
+    let centre = truth.iter().copied().sum::<gax::pga3d::Point>().unitized();
     let cam = Camera::orbit(
         sub.rect(),
         centre,
@@ -675,24 +650,24 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.8),
     );
     let mut scene = Scene3::new(cam);
-    scene.polyline(&truth, 3.5, palette::grid());
+    scene.polyline(&truth, 3.5, palette::GRID);
     let dead = positions(&space_lap.dead);
-    scene.polyline(&dead, 1.4, palette::orange().faded(0.9));
+    scene.polyline(&dead, 1.4, palette::ORANGE.faded(0.9));
     let spath = positions(&sposes);
-    scene.polyline(&spath, 1.6, palette::sky());
+    scene.polyline(&spath, 1.6, palette::SKY);
     for (p, q) in sposes.iter().zip(&spath) {
-        scene.dot(*q, Marker::Dot, 5.0, palette::sky());
+        scene.dot(*q, Marker::Dot, 5.0, palette::SKY);
         // Each pose's heading, a short arrow along its local x.
         let ahead = *p >> gax::pga3d::Point::xyz(0.25, 0.0, 0.0);
-        scene.seg(*q, ahead, 1.4, palette::yellow().faded(0.9));
+        scene.seg(*q, ahead, 1.4, palette::YELLOW.faded(0.9));
     }
-    scene.dot(truth[0], Marker::Dot, 8.0, palette::ink());
+    scene.dot(truth[0], Marker::Dot, 8.0, palette::INK);
     scene.draw(&mut sub);
     sub.text(
         "A SHORT LAP IN SPACE (PGA3D)",
         sub.rect().lo + Point2::direction(8.0, 16.0),
         11.0,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
     c.blit(&sub, Point2::xy(x0, y0));
@@ -708,14 +683,14 @@ fn draw(c: &mut Canvas, t: f32) {
         &format!("GRADIENT {gradient:.1e}"),
         left.hi - Point2::direction(12.0, 32.0),
         12.0,
-        palette::grid(),
+        palette::GRID,
         Align::Right,
     );
     c.text(
         &format!("STEP {} / {ITERATIONS}, DAMPED TO 1/5", k.min(ITERATIONS)),
         left.hi - Point2::direction(12.0, 14.0),
         12.0,
-        palette::ink(),
+        palette::INK,
         Align::Right,
     );
 }

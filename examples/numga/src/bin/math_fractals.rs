@@ -21,8 +21,8 @@
 //! turning out of the constant's plane and back.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
-    signal::haversine,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
+    run, signal::haversine,
 };
 
 mod fractals {
@@ -30,9 +30,9 @@ mod fractals {
     use gax::{Gp, Norm};
 
     /// An even multivector of the plane: a complex number.
-    pub type Complex = gax::vga2d::Rotor<(), f64>;
+    pub type Complex = gax::vga2d::Rotor;
     /// An even multivector of space: a quaternion.
-    pub type Quaternion = gax::vga3d::Rotor<(), f64>;
+    pub type Quaternion = gax::vga3d::Rotor;
 
     /// The square of the radius a point escapes at.
     const ESCAPE: f64 = 4.0;
@@ -65,7 +65,7 @@ mod fractals {
 
     /// The unit bivector of the slice at an angle: the constant's own direction turned by the
     /// rotor in the plane of its normal and `z`, the commutator of `xy` with it.
-    pub fn slice_direction(angle: f64) -> Bivector<(), f64> {
+    pub fn slice_direction(angle: f64) -> Bivector {
         let direction = julia().grade::<2>().normalized();
         let xy = Bivector::new(0.0, 0.0, 1.0);
         let away = xy.commutator(direction).normalized();
@@ -73,7 +73,7 @@ mod fractals {
     }
 
     /// The start `x + y b` of the slice spanned by the scalar and the unit bivector `b`.
-    pub fn slice_point(direction: Bivector<(), f64>, x: f64, y: f64) -> Quaternion {
+    pub fn slice_point(direction: Bivector, x: f64, y: f64) -> Quaternion {
         gax::vga3d::Rotor::new(x, 0.0, 0.0, 0.0) + Quaternion::from(direction.gp(y))
     }
 
@@ -154,13 +154,13 @@ fn mandelbrot_panel(c: &mut Canvas, rect: Rect) {
     let shadow = julia();
     let size = shadow.grade::<2>().norm();
     let at = Point2::xy(shadow.s() as f32, size as f32);
-    ax.scatter(c, &[at], Marker::Ring, 10.0, palette::orange());
+    ax.scatter(c, &[at], Marker::Ring, 10.0, palette::ORANGE);
     ax.text(
         c,
         at + Point2::direction(0.1, 0.05),
         "C",
         11.0,
-        palette::orange(),
+        palette::ORANGE,
         Align::Left,
     );
     let label = "MANDELBROT: Z Z + C ON S + B E12, E12 E12 = -1";
@@ -168,14 +168,14 @@ fn mandelbrot_panel(c: &mut Canvas, rect: Rect) {
         label,
         rect.bottom_left() + Point2::direction(0.0, 18.0),
         10.0,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
 }
 
 /// The Julia set's slice in `rect`, turned by `angle` out of the constant's plane.
 fn julia_panel(c: &mut Canvas, rect: Rect, angle: f64) {
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), JULIA_HALF);
+    let ax = Axes::equal(rect, ORIGIN2, JULIA_HALF);
     let direction = slice_direction(angle);
     ax.image(c, 1, |p| {
         let [x, y] = p.to_euclidean().map(f64::from);
@@ -190,7 +190,7 @@ fn julia_panel(c: &mut Canvas, rect: Rect, angle: f64) {
         &label,
         rect.bottom_left() + Point2::direction(0.0, 18.0),
         10.0,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
 }

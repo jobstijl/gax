@@ -14,8 +14,8 @@ use super::{fold, tile};
 use gax::vga3d::{Bivector, Rotor, Vector};
 use gax_numga_examples::{Align, Canvas, Point2, measure::lift, palette};
 
-pub type V = Vector<(), f64>;
-pub type R = Rotor<(), f64>;
+pub type V = Vector;
+pub type R = Rotor;
 
 /// The second and third mirrors meet at a half turn over five.
 const FIVEFOLD: f64 = 5.0;
@@ -85,7 +85,7 @@ pub fn draw(c: &mut Canvas, t: f32) {
     ];
     for (k, note) in notes.into_iter().enumerate() {
         let at = Point2::xy(24.0, 120.0 + 22.0 * k as f32);
-        c.text(note, at, 11.0, palette::ink().faded(0.7), Align::Left);
+        c.text(note, at, 11.0, palette::INK.faded(0.7), Align::Left);
     }
 }
 

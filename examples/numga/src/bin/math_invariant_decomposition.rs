@@ -33,7 +33,7 @@
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop,
-    caption, palette, run,
+    caption, palette, run, signal::frame,
 };
 
 gax::algebra! {
@@ -65,13 +65,10 @@ mod decomposition {
     use gax_numga_examples::signal::phasor;
     use r6::{Bivector, Even, Pseudoscalar, Quadvector, Scalar, ScalarQuadvector, Vector};
 
-    pub type B = Bivector<(), f64>;
-    pub type V = Vector<(), f64>;
-    pub type E = Even<(), f64>;
-    pub type SQ = ScalarQuadvector<(), f64>;
+    pub type SQ = ScalarQuadvector;
 
     /// A scalar of the 6D algebra.
-    fn scalar(s: f64) -> Scalar<(), f64> {
+    fn scalar(s: f64) -> Scalar {
         Scalar::from_coeffs([s])
     }
 
@@ -79,9 +76,9 @@ mod decomposition {
     /// powers.
     // `b ^ b` is the bivector's wedge square, not a mistake: clippy reads it as one.
     #[allow(clippy::eq_op)]
-    pub fn from_wedge_powers(b: B) -> ([f64; 3], [B; 3]) {
-        let pair: Quadvector<(), f64> = (b ^ b).gp(0.5);
-        let triple: Pseudoscalar<(), f64> = (b ^ pair).gp(1.0 / 3.0);
+    pub fn from_wedge_powers(b: Bivector) -> ([f64; 3], [Bivector; 3]) {
+        let pair: Quadvector = (b ^ b).gp(0.5);
+        let triple: Pseudoscalar = (b ^ pair).gp(1.0 / 3.0);
         // The squares of the planes are the roots of the cubic with these coefficients after
         // the leading one.
         let squares = cubic_roots([
@@ -119,7 +116,7 @@ mod decomposition {
     /// direction of each pair gives its plane. A point turned by the rotation moves with
     /// velocity `point | B`: this is its acceleration, paired with a second open vector to make
     /// the symmetric form that `eigh` takes.
-    pub fn from_spectrum(b: B) -> ([f64; 3], [B; 3]) {
+    pub fn from_spectrum(b: Bivector) -> ([f64; 3], [Bivector; 3]) {
         let acceleration = (Vector::slot() | b) | b;
         let (values, directions) = (Vector::slot() | acceleration).eigh(Scalar::identity());
         // The eigenvalues come in equal pairs, in ascending order: one direction of each pair.
@@ -133,14 +130,14 @@ mod decomposition {
     /// A plane's rotor over a time, `cos(angle / 2) + part sin(angle / 2) / rate`: the plane's
     /// rate is its norm, and the cosine and sine are the reach and height of the unit direction
     /// turned by half its angle.
-    fn plane_rotor(part: B, time: f64) -> E {
+    fn plane_rotor(part: Bivector, time: f64) -> Even {
         let rate = part.norm();
         let half = phasor(time * rate / 2.0);
         scalar(half.e20()).cast::<Even>() + part.cast::<Even>().gp(half.e01() / rate)
     }
 
     /// The rotor the bivector generates over a time, as the product of its planes' rotors.
-    pub fn rotor(parts: [B; 3], time: f64) -> E {
+    pub fn rotor(parts: [Bivector; 3], time: f64) -> Even {
         parts
             .map(|part| plane_rotor(part, time))
             .into_iter()
@@ -149,13 +146,13 @@ mod decomposition {
     }
 
     /// The start turned by the rotation, at a time.
-    pub fn orbit(parts: [B; 3], start: V, time: f64) -> V {
+    pub fn orbit(parts: [Bivector; 3], start: Vector, time: f64) -> Vector {
         let r = rotor(parts, time);
         (r * start * r.reverse()).cast::<Vector>()
     }
 
     /// A point projected into each plane: `(point | part) part⁻¹`, a vector in the plane.
-    pub fn projected(point: V, parts: [B; 3]) -> [V; 3] {
+    pub fn projected(point: Vector, parts: [Bivector; 3]) -> [Vector; 3] {
         parts.map(|part| {
             let inverse = part.gp(1.0 / (part * part).s());
             ((point | part) * inverse).cast::<Vector>()
@@ -167,9 +164,7 @@ mod decomposition {
     /// each plane's placement is the null bivector that makes it commute with the motion and
     /// keeps it simple: both conditions are linear in the placement, one a bivector and the
     /// other a quadvector, and one least-squares solve with the placement open meets both.
-    pub fn placed(
-        motion: p6::Bivector<(), f64>,
-    ) -> ([p6::Bivector<(), f64>; 3], p6::Bivector<(), f64>) {
+    pub fn placed(motion: p6::Bivector) -> ([p6::Bivector; 3], p6::Bivector) {
         use p6::{Conditions, EuclideanBivector, EuclideanVector, NullBivector};
         let euclidean = motion.cast::<EuclideanBivector>();
         let acceleration = (EuclideanVector::slot() | euclidean) | euclidean;
@@ -210,18 +205,18 @@ mod decomposition {
     /// The example: a random bivector and unit start, the planes by both ways, the times of
     /// one turn of the slowest plane, and a random motion of the projective algebra.
     pub struct Example {
-        pub bivector: B,
-        pub start: V,
-        pub parts: [B; 3],
-        pub wedge: ([f64; 3], [B; 3]),
+        pub bivector: Bivector,
+        pub start: Vector,
+        pub parts: [Bivector; 3],
+        pub wedge: ([f64; 3], [Bivector; 3]),
         pub period: f64,
-        pub motion: p6::Bivector<(), f64>,
+        pub motion: p6::Bivector,
     }
 
     pub fn example(seed: u64) -> Example {
         let mut rng = rng(seed);
-        let bivector = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
-        let start = rng.direction::<V>();
+        let bivector = Bivector::from_coeffs(core::array::from_fn(|_| rng.normal()));
+        let start = rng.direction::<Vector>();
         let (_, parts) = from_spectrum(bivector);
         let wedge = from_wedge_powers(bivector);
         // The slowest plane's rate: the smallest of the planes' norms.
@@ -242,6 +237,7 @@ mod decomposition {
 use decomposition::*;
 use gax::ApproxEq;
 use gax::motions::Linear;
+use r6::Vector;
 
 /// The largest coefficient of a value: its difference from zero.
 fn size<X: Linear<f64> + ApproxEq>(x: X) -> f64 {
@@ -253,18 +249,18 @@ const SEED: u64 = 0;
 const SAMPLES: usize = 600;
 
 /// A point in one of the planes, in the plane's own frame.
-type Flat = gax::pga2d::Point<(), f64>;
+type Flat = gax::pga2d::Point;
 /// A point of the first three directions.
-type Space = gax::pga3d::Point<(), f64>;
+type Space = gax::pga3d::Point;
 
 fn plane_colour(k: usize) -> Light {
-    [palette::red(), palette::sky(), palette::green()][k]
+    [palette::RED, palette::SKY, palette::GREEN][k]
 }
 
 /// The orbit at the sample times, and its projections into each plane as points of the plane's
 /// own frame: along the direction of the first projected point, and a quarter turn on from it.
-fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
-    let points: Vec<V> = (0..SAMPLES)
+fn tracks(ex: &Example) -> (Vec<Vector>, [Vec<Flat>; 3]) {
+    let points: Vec<Vector> = (0..SAMPLES)
         .map(|k| {
             let time = ex.period * k as f64 / (SAMPLES - 1) as f64;
             orbit(ex.parts, ex.start, time)
@@ -292,7 +288,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let down = Point2::direction(0.0, 1.0);
     let ex = example(SEED);
     let (points, flat) = tracks(&ex);
-    let index = ((t / SECONDS * SAMPLES as f32) as usize).min(SAMPLES - 1);
+    let index = frame(t / SECONDS, SAMPLES);
 
     // The tangle in the first three directions.
     let left = Rect::new(0.0, 0.0, 0.4 * w, h);
@@ -310,16 +306,16 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|p| Space::xyz(p.c[0], p.c[1], p.c[2]))
         .collect();
     panel3(c, left, cam, |scene| {
-        scene.polyline(&path, 0.8, palette::grid().faded(0.9));
-        scene.polyline(&path[..=index], 1.6, palette::purple());
-        scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
+        scene.polyline(&path, 0.8, palette::GRID.faded(0.9));
+        scene.polyline(&path[..=index], 1.6, palette::PURPLE);
+        scene.dot(path[index], Marker::Dot, 9.0, palette::PURPLE);
     });
     let label = Point2::xy(0.2 * w, 0.88 * h);
-    c.text("X, Y AND Z", label, 12.0, palette::ink(), Align::Center);
+    c.text("X, Y AND Z", label, 12.0, palette::INK, Align::Center);
 
     // Each plane: a circle at the plane's own rate, in a square panel of its own.
     let side = 0.18 * w;
-    let centre = Flat::xy(0.0, 0.0);
+    let centre = Flat::origin();
     for (k, track) in flat.iter().enumerate() {
         let lo = Point2::xy(0.42 * w + k as f32 * 0.19 * w, 0.25 * h);
         let rect = Rect {
@@ -333,15 +329,15 @@ fn draw(c: &mut Canvas, t: f32) {
             .fold(0.0f64, |m, p| m.max((centre & *p).norm()));
         let extent = (radius * 1.2) as f32;
         let ax = Axes::equal(rect, centre, extent);
-        ax.polyline(c, track, 0.9, palette::grid());
+        ax.polyline(c, track, 0.9, palette::GRID);
         ax.polyline(c, &track[..=index], 1.8, plane_colour(k));
         ax.scatter(c, &track[index..=index], Marker::Dot, 9.0, plane_colour(k));
         // The plane's rate: the norm of its part, whose square is minus the rate's.
         let rate = ex.parts[k].norm();
         let name = format!("PLANE {}", k + 1);
         let above = Point2::xy(0.0, extent * 1.15);
-        ax.text(c, above, &name, 12.0, palette::ink(), Align::Center);
-        let tone = (plane_colour(k)).mix_light(palette::ink(), 0.4);
+        ax.text(c, above, &name, 12.0, palette::INK, Align::Center);
+        let tone = (plane_colour(k)).mix_light(palette::INK, 0.4);
         let below = Point2::xy(0.0, -extent * 1.3);
         ax.text(
             c,
@@ -373,7 +369,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = Point2::xy(0.43 * w, 0.78 * h);
     for (k, line) in lines.iter().enumerate() {
         let at = first + down.gp(k as f32 * 0.04 * h);
-        c.text(line, at, 10.0, palette::grid(), Align::Left);
+        c.text(line, at, 10.0, palette::GRID, Align::Left);
     }
     caption(
         c,
@@ -439,9 +435,9 @@ mod tests {
     fn the_cubic_is_an_inverse() {
         let b = example(2).bivector;
         let value = (b ^ b).gp(0.5).cast::<r6::ScalarQuadvector>()
-            + r6::Scalar::<(), f64>::from_coeffs([0.7]).cast::<r6::ScalarQuadvector>();
+            + r6::Scalar::from_coeffs([0.7]).cast::<r6::ScalarQuadvector>();
         let one = (value * inverse(value)).cast::<r6::ScalarQuadvector>();
-        let unit = r6::Scalar::<(), f64>::from_coeffs([1.0]).cast::<r6::ScalarQuadvector>();
+        let unit = r6::Scalar::from_coeffs([1.0]).cast::<r6::ScalarQuadvector>();
         assert!(one.max_abs_diff(&unit) < 1e-12);
     }
 
@@ -458,7 +454,7 @@ mod tests {
             }
         }
         assert!(size(leftover) < 1e-10, "{leftover:?}");
-        let _: p6::Bivector<(), f64> = leftover;
+        let _: p6::Bivector = leftover;
     }
 
     #[test]

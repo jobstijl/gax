@@ -13,8 +13,7 @@
 //! boxes are the unit cube pulled back through each body's map, the quadric's form bound to a
 //! ray is a quadratic in its parameter.
 
-#[path = "../shared/geometry_scenegraph.rs"]
-mod scenegraph;
+use gax_numga_examples::shared::geometry_scenegraph as scenegraph;
 
 use gax::pga3d::Point;
 use gax_colour::light;
@@ -29,17 +28,12 @@ mod manipulability {
 
     /// A joint's twist per unit rate: a rotation generator, a line oriented by the turn about
     /// it (extrinsic), as the meet of two planes through it is.
-    pub type Twist = Line<(), f64>;
+    pub type Twist = Line;
 
     /// A point quadric takes each point to its polar plane.
-    pub type Quadric = Plane<(Point,), f64>;
+    pub type Quadric = Plane<(Point,)>;
     /// A dual quadric takes each plane to its pole.
-    pub type DualQuadric = Point<(Plane,), f64>;
-
-    /// The plane at infinity.
-    pub fn w() -> Pl {
-        Plane::new(0.0, 0.0, 0.0, 1.0)
-    }
+    pub type DualQuadric = Point<(Plane,)>;
 
     /// The coordinate planes through the origin, normal to `x`, `y` and `z`.
     pub fn coordinate_planes() -> [Pl; 3] {
@@ -86,7 +80,7 @@ mod manipulability {
     /// joint's axis and the tip, a point quadric, `Σ T (T & Point) - w (w & Point)`.
     pub fn force_ellipsoid(tip: P, axes: &[Twist]) -> Quadric {
         let x = Point::slot();
-        let mut q = (w() * (w() & x)).gp(-1.0);
+        let mut q = (Plane::infinity() * (Plane::infinity() & x)).gp(-1.0);
         for a in axes {
             // This joint's axis joined with the tip.
             let torque_free = *a & tip;
@@ -100,9 +94,9 @@ mod manipulability {
     #[cfg(test)]
     pub fn unit_sphere(centre: P) -> Quadric {
         let x = Point::slot();
-        let mut q = (w() * (w() & x)).gp(-1.0);
+        let mut q = (Plane::infinity() * (Plane::infinity() & x)).gp(-1.0);
         for plane in coordinate_planes() {
-            let through = plane - w().gp((plane & centre).s());
+            let through = plane - Plane::infinity().gp((plane & centre).s());
             q += through * (through & x);
         }
         q
@@ -165,7 +159,7 @@ mod render {
     use gax_numga_examples::measure::roots;
 
     /// A point of the view's screen plane, its offsets from the centre.
-    pub type Screen = gax::pga2d::Point<(), f64>;
+    pub type Screen = gax::pga2d::Point;
 
     /// An orthographic view: its frame (the view's `x` axis towards the viewer, `y` to the
     /// screen's right and `z` up, from its centre), half width, and the plane facing the lamp.
@@ -180,7 +174,7 @@ mod render {
     /// The frame tilts `x` up by the elevation (about `-y`), turns by the azimuth about `z` and
     /// moves to the centre; the lamp is behind the viewer, up and to the left.
     pub fn view(elevation: f64, azimuth: f64, centre: P, extent: f64) -> View {
-        let frame = Motor::between(Point::xyz(0.0, 0.0, 0.0), centre)
+        let frame = Motor::between(Point::origin(), centre)
             * Motor::rotation(axis(0.0, 0.0, 1.0), azimuth.to_radians())
             * Motor::rotation(axis(0.0, -1.0, 0.0), elevation.to_radians());
         let lamp = frame >> Point::direction(1.0, -0.4, 0.7);
@@ -213,7 +207,7 @@ mod render {
     /// faces for their normals (the slabs pushed through the induced map on planes).
     #[derive(Clone, Copy)]
     pub struct BoxShape {
-        to_box: gax::pga3d::Point<(Point,), f64>,
+        to_box: gax::pga3d::Point<(Point,)>,
         faces: [Pl; 3],
     }
 
@@ -222,7 +216,7 @@ mod render {
         super::manipulability::coordinate_planes()
     }
 
-    pub fn prepare(body: gax::pga3d::Point<(Point,), f64>) -> BoxShape {
+    pub fn prepare(body: gax::pga3d::Point<(Point,)>) -> BoxShape {
         let to_box = body.inverse();
         // A world plane `F` with `F & x == slab & to_box(x)`: the slab's plane in the world.
         let on_planes = (Plane::slot() & Point::slot()).solve(Plane::slot() & to_box);
@@ -385,13 +379,13 @@ fn draw(c: &mut Canvas, t: f32) {
         });
         // The tip.
         let tip = to_view.inverse().of(view.screen(pose.tip).point2());
-        c.disk(tip, 2.5, palette::ink());
+        c.disk(tip, 2.5, palette::INK);
         c.unclip();
-        c.polyline(&corners, 1.0, palette::grid(), true);
+        c.polyline(&corners, 1.0, palette::GRID, true);
         let inside = |down: f32| rect.lo + Point2::direction(s * 0.6, s * down);
-        let tone = colour.mix_light(palette::ink(), 0.4);
+        let tone = colour.mix_light(palette::INK, 0.4);
         c.text(title, inside(1.5), s, tone, Align::Left);
-        let faint = palette::ink().faded(0.6);
+        let faint = palette::INK.faded(0.6);
         c.text(sub, inside(2.8), s * 0.75, faint, Align::Left);
     }
     caption(
@@ -449,7 +443,7 @@ mod tests {
             #[allow(clippy::disallowed_methods)] // the length of the joint torques, in joint space
             let reach = squared.sqrt();
             let normal = Plane::orthogonal_to(along);
-            let tangent = normal - w().gp((normal & (tip + along.gp(reach))).s());
+            let tangent = normal - Plane::infinity().gp((normal & (tip + along.gp(reach))).s());
             let touch = (tangent & unit_velocity.of(tangent)).s();
             assert!(touch.abs() < 1e-8, "{touch}");
         }

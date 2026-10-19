@@ -12,29 +12,18 @@ use gax::pga2d::{Line, Motor, Point};
 use gax_numga_examples::measure;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
+    run,
 };
 
 mod collision {
     use super::*;
 
-    pub type L = Line<(), f64>;
-    pub type P = Point<(), f64>;
     /// A dual quadric: a map from lines to points.
-    pub type Quadric = Point<(Line,), f64>;
+    pub type Quadric = Point<(Line,)>;
     /// A primal quadric: a map from points to their polar lines.
-    pub type Polarity = Line<(Point,), f64>;
-    pub type M = gax::Unit<Motor<(), f64>>;
-
-    /// The line at infinity.
-    pub fn infinity() -> L {
-        Line::new(0.0, 0.0, 1.0)
-    }
-
-    /// The origin.
-    pub fn origin() -> P {
-        Point::xy(0.0, 0.0)
-    }
+    pub type Polarity = Line<(Point,)>;
+    pub type M = gax::Unit<Motor>;
 
     /// The dual ellipse with semi-axes `rx` and `ry` along x and y, centred at the origin: its
     /// principal directions, the ideal points along x and y, each paired with itself and weighted
@@ -43,12 +32,12 @@ mod collision {
         let l = Line::slot();
         let (along_x, along_y) = (Point::direction(1.0, 0.0), Point::direction(0.0, 1.0));
         (l & along_x) * along_x.gp(rx * rx) + (l & along_y) * along_y.gp(ry * ry)
-            - (l & origin()) * origin()
+            - (l & Point::origin()) * Point::origin()
     }
 
     /// The rigid motion rotating by `angle` about the origin, then translating by `(tx, ty)`.
     pub fn motor(tx: f64, ty: f64, angle: f64) -> M {
-        Motor::translation(Point::direction(tx, ty)) * Motor::rotation(origin(), angle)
+        Motor::translation(Point::direction(tx, ty)) * Motor::rotation(Point::origin(), angle)
     }
 
     /// A quadric moved by a motor: its input pulled back, its output pushed forward.
@@ -61,9 +50,9 @@ mod collision {
     /// in the offset, `a offset² - 2 b offset + c = 0` for `a, b, c = ∞ ∨ Q(∞), n ∨ Q(∞), n ∨ Q(n)`.
     /// Its two roots lie either side of the centre's offset `b / a`, the outward one beyond it
     /// along `n`. Rescaling `q` rescales all three alike, so neither root moves.
-    pub fn tangent_line(q: Quadric, normal: L) -> L {
+    pub fn tangent_line(q: Quadric, normal: Line) -> Line {
         let n = normal.normalized();
-        let inf = infinity();
+        let inf = Line::infinity();
         let (a, b, c) = (
             (inf & q.of(inf)).s(),
             (n & q.of(inf)).s(),
@@ -114,7 +103,7 @@ mod collision {
         pub q1: Quadric,
         pub shape: Quadric,
         pub touch: M,
-        pub normal: L,
+        pub normal: Line,
     }
 
     /// The first ellipse, semi-axes 2 and 1, turned 25° and centred at (-1.2, 0); the second,
@@ -122,7 +111,8 @@ mod collision {
     /// opposite normal lands on the first's tangent point with a 22° normal.
     pub fn scene() -> Scene {
         let q1 = moved(motor(-1.2, 0.0, 25f64.to_radians()), ellipse(2.0, 1.0));
-        let normal = Motor::rotation(origin(), 22f64.to_radians()) >> Line::new(1.0, 0.0, 0.0);
+        let normal =
+            Motor::rotation(Point::origin(), 22f64.to_radians()) >> Line::new(1.0, 0.0, 0.0);
         let shape = ellipse(1.6, 0.9);
         let turn = motor(0.0, 0.0, (-35f64).to_radians());
         let turned = moved(turn, shape);
@@ -152,7 +142,7 @@ mod collision {
 
     /// The pose at contact: the parameter of the peak, the shared tangent (the blend's null
     /// line, its last singular vector) and the contact point.
-    pub fn contact(q1: Quadric, q2: Quadric) -> (f64, L, P) {
+    pub fn contact(q1: Quadric, q2: Quadric) -> (f64, Line, Point) {
         let (lambda, _) = peak(q1, q2);
         let lines = blend(q1, q2, lambda).dual().svd().inputs;
         let line = lines[2].normalized();
@@ -170,10 +160,10 @@ use collision::*;
 
 /// The outline of an ellipse: its contact points over the tangent normals, the line `x = 0`
 /// turned about the origin.
-fn outline(q: Quadric) -> Vec<P> {
+fn outline(q: Quadric) -> Vec<Point> {
     (0..150)
         .map(|k| {
-            let turn = Motor::rotation(origin(), core::f64::consts::TAU * k as f64 / 150.0);
+            let turn = Motor::rotation(Point::origin(), core::f64::consts::TAU * k as f64 / 150.0);
             q.of(tangent_line(q, turn >> Line::new(1.0, 0.0, 0.0)))
         })
         .collect()
@@ -181,9 +171,9 @@ fn outline(q: Quadric) -> Vec<P> {
 
 /// An infinite line, drawn through its point nearest the origin (its meet with the
 /// perpendicular from the origin) along its direction (its meet with the line at infinity).
-fn draw_line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Light) {
-    let foot = l ^ (l | origin());
-    ax.axline(c, foot, l ^ infinity(), width, color);
+fn draw_line(ax: &Axes, c: &mut Canvas, l: Line, width: f32, color: Light) {
+    let foot = l ^ (l | Point::origin());
+    ax.axline(c, foot, l ^ Line::infinity(), width, color);
 }
 
 /// An ellipse filled (a faint cover of its colour), outlined, and its centre `Q(infinity)`
@@ -192,7 +182,7 @@ fn ellipse_fill(ax: &Axes, c: &mut Canvas, q: Quadric, color: Light) {
     let pts = outline(q);
     ax.fill(c, &pts, color.faded(0.3), 0.35);
     ax.polyline(c, &[pts.clone(), vec![pts[0]]].concat(), 2.2, color);
-    ax.scatter(c, &[q.of(infinity())], Marker::Dot, 6.0, color);
+    ax.scatter(c, &[q.of(Line::infinity())], Marker::Dot, 6.0, color);
 }
 
 /// The offset of the second ellipse at time `t`: from 0.8 apart to 0.6 inside and back.
@@ -236,41 +226,41 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.contour(
             c,
             |p| {
-                let p: P = p.map_coefs(f64::from);
+                let p: Point = p.map_coefs(f64::from);
                 (p & field.of(p)).s() as f32
             },
             160,
             0.0,
             1.5,
-            palette::green(),
+            palette::GREEN,
         );
     } else {
         // The blend at the peak bridges the overlap.
         let pts = outline(blend(q1, q2, lambda));
-        ax.fill(c, &pts, palette::purple().faded(0.3), 0.25);
+        ax.fill(c, &pts, palette::PURPLE.faded(0.3), 0.25);
     }
-    ellipse_fill(&ax, c, q1, palette::sky());
-    ellipse_fill(&ax, c, q2, palette::orange());
+    ellipse_fill(&ax, c, q1, palette::SKY);
+    ellipse_fill(&ax, c, q2, palette::ORANGE);
     // The tangent lines along the normal and their midline, and the closest (or deepest) points.
     let first = tangent_line(q1, s.normal);
     let second = tangent_line(q2, -s.normal);
     let mid = (first - second).gp(0.5);
-    draw_line(&ax, c, first, 1.0, palette::sky().faded(0.7));
-    draw_line(&ax, c, second, 1.0, palette::orange().faded(0.7));
+    draw_line(&ax, c, first, 1.0, palette::SKY.faded(0.7));
+    draw_line(&ax, c, second, 1.0, palette::ORANGE.faded(0.7));
     let mid_colour = if top > 0.0 {
-        palette::green()
+        palette::GREEN
     } else {
-        palette::purple()
+        palette::PURPLE
     };
     draw_line(&ax, c, mid, 2.0, mid_colour);
     let (p1, p2) = (q1.of(first), q2.of(second));
-    ax.dashed(c, &[p1, p2], 1.5, 4.0, palette::ink());
-    ax.scatter(c, &[p1, p2], Marker::Dot, 7.0, palette::ink());
+    ax.dashed(c, &[p1, p2], 1.5, 4.0, palette::INK);
+    ax.scatter(c, &[p1, p2], Marker::Dot, 7.0, palette::INK);
     if top.abs() < 0.08 {
         // Near contact: the blend's null line and the contact point.
         let (_, line, point) = contact(q1, q2);
-        draw_line(&ax, c, line, 2.2, palette::red());
-        ax.scatter(c, &[point], Marker::Star, 13.0, palette::yellow());
+        draw_line(&ax, c, line, 2.2, palette::RED);
+        ax.scatter(c, &[point], Marker::Star, 13.0, palette::YELLOW);
     }
 
     // The cubic of the current pose, against the three reference poses.
@@ -285,13 +275,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The lowest tick a little above the corner, so its label clears the axis's.
     let ax = Axes::new(top_rect, [0.0, 1.0], [-3.5, 3.0]);
     ax.frame(c, "DET Q(L) ALONG THE BLEND", "L", "");
-    ax.line(
-        c,
-        Point2::xy(0.0, 0.0),
-        Point2::xy(1.0, 0.0),
-        1.0,
-        palette::grid(),
-    );
+    ax.line(c, ORIGIN2, Point2::xy(1.0, 0.0), 1.0, palette::GRID);
     let curve = |q2: Quadric| -> Vec<Point2> {
         (0..=100)
             .map(|k| {
@@ -301,16 +285,16 @@ fn draw(c: &mut Canvas, t: f32) {
             .collect()
     };
     for (k, o) in [0.8, 0.0, -0.6].into_iter().enumerate() {
-        let colour = [palette::green(), palette::orange(), palette::red()][k];
+        let colour = [palette::GREEN, palette::ORANGE, palette::RED][k];
         ax.polyline(c, &curve(s.second(o)), 1.0, colour.faded(0.35));
     }
-    ax.polyline(c, &curve(q2), 2.4, palette::ink());
+    ax.polyline(c, &curve(q2), 2.4, palette::INK);
     ax.scatter(
         c,
         &[Point2::xy(lambda as f32, top as f32)],
         Marker::Dot,
         8.0,
-        palette::yellow(),
+        palette::YELLOW,
     );
 
     // The peak against the offset: it crosses zero where they touch.
@@ -326,7 +310,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(-0.6, 0.0),
         Point2::xy(0.8, 0.0),
         1.0,
-        palette::grid(),
+        palette::GRID,
     );
     let sweep: Vec<Point2> = (0..=70)
         .map(|k| {
@@ -334,11 +318,11 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(o as f32, peak(q1, s.second(o)).1 as f32)
         })
         .collect();
-    ax.polyline(c, &sweep, 2.0, palette::sky());
+    ax.polyline(c, &sweep, 2.0, palette::SKY);
     let marker = if top > 0.0 {
-        palette::green()
+        palette::GREEN
     } else {
-        palette::red()
+        palette::RED
     };
     ax.scatter(
         c,
@@ -352,7 +336,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(-0.55, 2.2),
         &format!("MAX = {top:+.3}"),
         11.0,
-        palette::ink().mix_light(marker, 0.3),
+        palette::INK.mix_light(marker, 0.3),
         Align::Left,
     );
 }
@@ -371,7 +355,7 @@ mod tests {
         moved(motor(1.5, -0.8, 35f64.to_radians()), ellipse(2.0, 1.2))
     }
 
-    fn normals() -> Vec<L> {
+    fn normals() -> Vec<Line> {
         [0.0f64, 45.0, 90.0, 135.0, 210.0, 315.0]
             .iter()
             .map(|d| motor(0.0, 0.0, d.to_radians()) >> Line::new(1.0, 0.0, 0.0))
@@ -384,7 +368,7 @@ mod tests {
     fn motor_conventions() {
         let m = motor(1.0, 2.0, 0.3);
         // The origin lands on (1, 2): the line joining them has no length.
-        assert!(((m >> origin()) & Point::xy(1.0, 2.0)).norm() < 1e-14);
+        assert!(((m >> Point::origin()) & Point::xy(1.0, 2.0)).norm() < 1e-14);
         let d = motor(0.0, 0.0, 0.3) >> Point::direction(1.0, 0.0);
         assert!((d.e20() - 0.3f64.cos()).abs() < 1e-14 && (d.e01() - 0.3f64.sin()).abs() < 1e-14);
     }
@@ -466,8 +450,8 @@ mod tests {
         let s = scene();
         let q2 = s.second(0.8);
         let sep = separating(s.q1, q2);
-        let side = |p: P| (p & sep.of(p)).s();
-        let (c1, c2) = (s.q1.of(infinity()), q2.of(infinity()));
+        let side = |p: Point| (p & sep.of(p)).s();
+        let (c1, c2) = (s.q1.of(Line::infinity()), q2.of(Line::infinity()));
         assert!(side(c1) * side(c2) > 0.0);
         let at_infinity: Vec<f64> = (0..36)
             .map(|k| {

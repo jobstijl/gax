@@ -24,10 +24,10 @@
 use gax::vga3d::Vector;
 
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::signal::wave;
+use gax_numga_examples::signal::{frame, wave};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Scene3, backdrop,
-    caption, colormap, palette, reach3, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
+    backdrop, caption, colormap, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -36,8 +36,8 @@ mod condensate {
     use gax::vga3d::{Pseudoscalar, Vector};
 
     /// A pseudospin, and a map on pseudospins.
-    pub type Spin = Vector<(), f64>;
-    pub type Map = Vector<(Vector,), f64>;
+    pub type Spin = Vector;
+    pub type Map = Vector<(Vector,)>;
     /// A pseudospin at every energy level.
     pub type Spins = Field<Spin>;
 
@@ -48,7 +48,7 @@ mod condensate {
         Vector::new(0.0, 0.0, 1.0)
     }
     /// The pseudoscalar, which turns a field into the plane it precesses spins in.
-    fn i() -> Pseudoscalar<(), f64> {
+    fn i() -> Pseudoscalar {
         Pseudoscalar::new(1.0)
     }
 
@@ -313,7 +313,7 @@ fn data() -> &'static Data {
 }
 
 /// The drawing's space.
-type Space = Vector<(), f64>;
+type Space = Vector;
 
 /// A level's place on the energy axis, drawn along x.
 fn on_axis(energy: Spin) -> Space {
@@ -323,7 +323,7 @@ fn on_axis(energy: Spin) -> Space {
 /// A spin's coherence drawn across the energy axis: its x up, along the drawing's z, its y along
 /// the drawing's y (its occupation, along the energy axis, is left out).
 fn upright(spin: Spin) -> Space {
-    let across = Vector::<(Vector,), f64>::from_images([
+    let across = Vector::<(Vector,)>::from_images([
         Vector::new(0.0, 0.0, SPIN_SCALE),
         Vector::new(0.0, SPIN_SCALE, 0.0),
         Vector::zero(),
@@ -337,7 +337,7 @@ fn draw_levels(s: &mut Scene3, d: &Data, spins: &Spins) {
     let dispersion = &d.strong.after.dispersion;
     let first = on_axis(dispersion.site(d.shown[0]));
     let last = on_axis(dispersion.site(*d.shown.last().expect("levels")));
-    s.seg(reach3(first), reach3(last), 1.0, palette::grid());
+    s.seg(reach3(first), reach3(last), 1.0, palette::GRID);
     // A circle at every eighth level, as numga draws them.
     for k in d.shown.iter().step_by(8) {
         let centre = on_axis(dispersion.site(*k));
@@ -349,7 +349,7 @@ fn draw_levels(s: &mut Scene3, d: &Data, spins: &Spins) {
                 reach3(centre + (turn >> upright(x() * 0.5)))
             })
             .collect();
-        s.polyline(&ring, 0.8, palette::grid().faded(0.8));
+        s.polyline(&ring, 0.8, palette::GRID.faded(0.8));
     }
     let n = d.shown.len();
     let tips: Vec<_> = d
@@ -357,7 +357,7 @@ fn draw_levels(s: &mut Scene3, d: &Data, spins: &Spins) {
         .iter()
         .map(|k| reach3(on_axis(dispersion.site(*k)) + upright(spins.site(*k))))
         .collect();
-    s.polyline(&tips, 0.8, palette::ink().faded(0.25));
+    s.polyline(&tips, 0.8, palette::INK.faded(0.25));
     for (j, k) in d.shown.iter().enumerate() {
         let tone = colormap::coolwarm(0.08 + 0.84 * j as f32 / (n - 1) as f32);
         let base = reach3(on_axis(dispersion.site(*k)));
@@ -379,13 +379,13 @@ fn draw_ground_state(c: &mut Canvas, ax: &Axes, d: &Data) {
     };
     let occupation = along(|s| s.e3() + 0.5);
     let coherence = along(|s| s.e1());
-    ax.polyline(c, &occupation, 1.6, palette::sky());
-    ax.polyline(c, &coherence, 1.6, palette::green());
+    ax.polyline(c, &occupation, 1.6, palette::SKY);
+    ax.polyline(c, &coherence, 1.6, palette::GREEN);
     ax.legend(
         c,
         &[
-            ("OCCUPATION", palette::sky()),
-            ("COHERENCE X", palette::green()),
+            ("OCCUPATION", palette::SKY),
+            ("COHERENCE X", palette::GREEN),
         ],
     );
 }
@@ -396,28 +396,21 @@ fn draw_gap(c: &mut Canvas, ax: &Axes, d: &Data, now: usize) {
     let end = *d.strong.times.last().expect("records") as f32;
     let level = d.final_gap as f32;
     let across = [Point2::xy(0.0, level), Point2::xy(end, level)];
-    ax.dashed(c, &across, 1.0, 5.0, palette::ink().faded(0.5));
+    ax.dashed(c, &across, 1.0, 5.0, palette::INK.faded(0.5));
     let note = Point2::xy(end * 0.98, level - 0.03);
-    ax.text(
-        c,
-        note,
-        "NEW GROUND STATE",
-        9.0,
-        palette::ink(),
-        Align::Right,
-    );
+    ax.text(c, note, "NEW GROUND STATE", 9.0, palette::INK, Align::Right);
     let curve: Vec<Point2> = d.strong.times[..=now]
         .iter()
         .zip(&d.gaps)
         .map(|(t, g)| Point2::xy(*t as f32, *g as f32))
         .collect();
-    ax.polyline(c, &curve, 1.8, palette::green());
+    ax.polyline(c, &curve, 1.8, palette::GREEN);
     ax.scatter(
         c,
         &[*curve.last().expect("a record")],
         Marker::Dot,
         7.0,
-        palette::green(),
+        palette::GREEN,
     );
 }
 
@@ -433,15 +426,9 @@ fn draw_response(c: &mut Canvas, ax: &Axes, d: &Data, now: usize) {
             .collect()
     };
     let end = *times.last().expect("records") as f32;
-    ax.line(
-        c,
-        Point2::xy(0.0, 0.0),
-        Point2::xy(end, 0.0),
-        1.0,
-        palette::grid(),
-    );
-    ax.polyline(c, &curve(&d.exact), 3.5, palette::ink().faded(0.45));
-    let predictions = [palette::green(), palette::orange()];
+    ax.line(c, ORIGIN2, Point2::xy(end, 0.0), 1.0, palette::GRID);
+    ax.polyline(c, &curve(&d.exact), 3.5, palette::INK.faded(0.45));
+    let predictions = [palette::GREEN, palette::ORANGE];
     for (values, colour) in d.predicted.iter().zip(predictions) {
         ax.dashed(c, &curve(values), 1.4, 5.0, colour);
     }
@@ -451,10 +438,10 @@ fn draw_response(c: &mut Canvas, ax: &Axes, d: &Data, now: usize) {
         Point2::xy(t, ax.y[0]),
         Point2::xy(t, ax.y[1]),
         1.0,
-        palette::grid(),
+        palette::GRID,
     );
     let entries: [(&str, Light); 3] = [
-        ("NONLINEAR", palette::ink()),
+        ("NONLINEAR", palette::INK),
         ("WITH FEEDBACK", predictions[0]),
         ("GAP HELD FIXED", predictions[1]),
     ];
@@ -467,7 +454,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let screen = c.rect();
     let progress = (t / SECONDS).fract();
     let records = d.strong.history.len();
-    let now = ((progress * records as f32) as usize).min(records - 1);
+    let now = frame(progress, records);
     let spins = &d.strong.history[now];
 
     let levels_rect = screen.part(0.0, 0.12, 0.58, 0.68);
@@ -482,11 +469,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let drawn = panel3(c, levels_rect, cam, |s| draw_levels(s, d, spins));
     let axis_end = on_axis(Vector::new(0.0, 0.0, DISPLAY_CUTOFF * 1.1));
     if let Some(p) = drawn.px(reach3(axis_end)) {
-        c.text("ENERGY", p, 10.0, palette::ink(), Align::Left);
+        c.text("ENERGY", p, 10.0, palette::INK, Align::Left);
     }
     let title = levels_rect.top_middle() + Point2::direction(0.0, 14.0);
     let text = "PAIR COHERENCE OF EACH LEVEL";
-    c.text(text, title, 12.0, palette::ink(), Align::Center);
+    c.text(text, title, 12.0, palette::INK, Align::Center);
 
     let ground = Axes::new(
         screen.part(0.07, 0.74, 0.55, 0.92),
@@ -579,7 +566,7 @@ mod tests {
         let difference = (ahead - behind).scaled(0.5);
         assert!(largest((respond(&delta) - difference).iter()) < ROUND_OFF);
 
-        let xy = Bivector::<(), f64>::new(0.0, 0.0, 1.0);
+        let xy = Bivector::new(0.0, 0.0, 1.0);
         let phase: Spins = q.equilibrium.map(|s| -xy.commutator(s));
         let moved = response.local.zip_with(&phase, |m, d| m.of(d));
         assert!(largest(moved.iter()) > 0.1);

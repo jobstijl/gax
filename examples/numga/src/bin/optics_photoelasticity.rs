@@ -37,13 +37,13 @@ mod photoelasticity {
     use gax::vga3d;
 
     /// A vector lying in the plate: a position, a surface normal or a traction.
-    pub type Planar = vga2d::Vector<(), f64>;
+    pub type Planar = vga2d::Vector;
     /// The stress: a map from surface normals to tractions.
-    pub type Stress = vga2d::Vector<(vga2d::Vector,), f64>;
+    pub type Stress = vga2d::Vector<(vga2d::Vector,)>;
     /// A unit Stokes vector on the Poincaré sphere.
-    pub type Polarization = vga3d::Vector<(), f64>;
+    pub type Polarization = vga3d::Vector;
     /// Half a turn of the Poincaré sphere: a rotor's logarithm.
-    pub type HalfTurn = vga3d::Bivector<(), f64>;
+    pub type HalfTurn = vga3d::Bivector;
 
     /// The plate's `x` axis.
     pub fn x() -> Planar {
@@ -113,7 +113,7 @@ mod photoelasticity {
 
     /// The plate's turn of the Poincaré sphere.
     #[cfg_attr(not(test), allow(dead_code))] // numga's core, which the tests check
-    pub fn retarder(stress: Stress, stress_phase: f64) -> gax::Unit<vga3d::Rotor<(), f64>> {
+    pub fn retarder(stress: Stress, stress_phase: f64) -> gax::Unit<vga3d::Rotor> {
         half_turn(stress, stress_phase).exp()
     }
 
@@ -251,23 +251,23 @@ fn plate_panel(
     let ax = Axes::equal(rect, ORIGIN2, EXTENT as f32);
     ax.image(c, 1, |p| Some(shade(sample(values, p))));
     let hole = circle(ORIGIN2, RADIUS as f32, 96);
-    ax.fill(c, &hole, palette::bottom(), 1.0);
-    ax.polyline(c, &hole, 1.0, palette::grid().faded(2.0));
+    ax.fill(c, &hole, palette::BOTTOM, 1.0);
+    ax.polyline(c, &hole, 1.0, palette::GRID.faded(2.0));
     let r = ax.rect;
     c.polyline(
         &[r.lo, r.top_right(), r.hi, r.bottom_left()],
         1.0,
-        palette::grid(),
+        palette::GRID,
         true,
     );
     let size = (rect.height() / 14.0).clamp(5.0, 12.0);
     let above = r.lo + Point2::direction(0.0, -size * 0.6);
-    c.text(title, above, size, palette::ink(), Align::Left);
+    c.text(title, above, size, palette::INK, Align::Left);
 }
 
 /// Transmitted light as a light: white-blue on the dark plate, its intensity the share passed.
 fn light_through(share: f64) -> Light {
-    palette::ink().faded(share.clamp(0.0, 1.0) as f32 * 0.85)
+    palette::INK.faded(share.clamp(0.0, 1.0) as f32 * 0.85)
 }
 
 /// The colour scale of the stress difference, from none to its largest value, as a bar at the
@@ -280,7 +280,7 @@ fn colour_bar(c: &mut Canvas, rect: Rect, largest: f64, size: f32) {
         Some(colormap::viridis(v / largest as f32))
     });
     let beside = |fy: f32| ax.px(ax.at(1.0, fy)) + Point2::direction(size * 0.6, size * 0.4);
-    let ink = palette::ink();
+    let ink = palette::INK;
     c.text(
         &format!("{largest:.1}, AT THE RIM"),
         beside(1.0),
@@ -330,7 +330,7 @@ fn draw(c: &mut Canvas, t: f32) {
         &readout,
         below,
         (h / 40.0).clamp(6.0, 13.0),
-        palette::yellow(),
+        palette::YELLOW,
         Align::Center,
     );
 

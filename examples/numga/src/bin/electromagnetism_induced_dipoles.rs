@@ -18,14 +18,14 @@
 //! goes from along to across, and the ring, symmetric under a seventh of a turn, keeps its gain.
 
 use gax::field::Field;
+use gax::vga3d::Vector;
 use gax_numga_examples::mesh::direction;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, font, from_above,
-    palette, reach3, run,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, font,
+    from_above, palette, reach3, run,
 };
 
-#[path = "../shared/electromagnetism_dipoles.rs"]
-mod pairs;
+use gax_numga_examples::shared::electromagnetism_dipoles as pairs;
 
 /// The atoms' dipoles, in units in which four pi times the permittivity of the vacuum is one.
 mod dipoles {
@@ -35,9 +35,8 @@ mod dipoles {
     use gax_numga_examples::mesh::direction;
     use gax_numga_examples::signal::wave;
 
-    pub type V = Vector<(), f64>;
     /// The field one atom's dipole makes at another, `Vector <- Vector`.
-    pub type Coupling = Vector<(Vector,), f64>;
+    pub type Coupling = Vector<(Vector,)>;
     /// A field map over the atoms with coupling cells.
     pub type FieldMap = SparseMap<Coupling>;
 
@@ -55,21 +54,21 @@ mod dipoles {
     }
 
     /// The atoms one spacing apart along `axis`, centred on the origin.
-    pub fn chain(axis: V) -> Field<V> {
+    pub fn chain(axis: Vector) -> Field<Vector> {
         let offset = |i: usize| SPACING * (i as f64 - (ATOMS - 1) as f64 / 2.0);
         Field::from_fn(ATOMS, |i| axis * offset(i))
     }
 
     /// The atoms around a circle, one spacing from their neighbours: each turned from `x` by
     /// its share of a full turn, at the radius where a seventh of a turn spans one spacing.
-    pub fn ring() -> Field<V> {
+    pub fn ring() -> Field<Vector> {
         let radius = SPACING / (2.0 * wave(core::f64::consts::PI / ATOMS as f64));
         let turn = |i: usize| core::f64::consts::TAU * i as f64 / ATOMS as f64;
         Field::from_fn(ATOMS, |i| direction(turn(i)) * radius)
     }
 
     /// The three clusters: a chain along `x`, the chain a quarter turn across, and the ring.
-    pub fn clusters() -> [(&'static str, Field<V>); 3] {
+    pub fn clusters() -> [(&'static str, Field<Vector>); 3] {
         let quarter = core::f64::consts::FRAC_PI_2;
         [
             ("CHAIN ALONG X", chain(direction(0.0))),
@@ -81,7 +80,7 @@ mod dipoles {
     /// The field a dipole makes at separation `r` from it, as a map from the dipole: the dipole
     /// plus three times the dipole turned a half turn about `r` (in the plane its dual makes of
     /// it), over twice the cube of the distance.
-    pub fn dipole_field(r: V) -> Coupling {
+    pub fn dipole_field(r: Vector) -> Coupling {
         let squared = r.norm_squared();
         let turned = gax::vga3d::intrinsic::Rotor::from(r.dual()) >> open();
         (turned * 3.0 + open() * squared) * (1.0 / (2.0 * squared * squared * r.norm()))
@@ -89,7 +88,7 @@ mod dipoles {
 
     /// The fields every atom's dipole makes at every other atom, output atom first: an atom
     /// makes no field at itself.
-    pub fn coupling(positions: &Field<V>) -> FieldMap {
+    pub fn coupling(positions: &Field<Vector>) -> FieldMap {
         between_others(positions.len(), |i, j| {
             dipole_field(positions.site(i) - positions.site(j))
         })
@@ -102,20 +101,20 @@ mod dipoles {
 
     /// The map from the dipoles to the applied field at every atom that holds them: each
     /// atom's restoring field less the fields of the others.
-    pub fn response(positions: &Field<V>) -> FieldMap {
+    pub fn response(positions: &Field<Vector>) -> FieldMap {
         let others = coupling(positions).map_cells(|c| -c);
         &restoring(positions.len()) + &others
     }
 
     /// The dipoles of all the atoms in the same applied field, found together.
-    pub fn dipoles(response: &FieldMap, applied: V) -> Field<V> {
+    pub fn dipoles(response: &FieldMap, applied: Vector) -> Field<Vector> {
         let fields = Field::from_fn(response.shape().0, |_| applied);
         response.solve_direct(&fields)
     }
 
     /// The mean dipole per atom along the applied field, over the dipole of an isolated atom in
     /// the same field.
-    pub fn gain(dipoles: &Field<V>, applied: V) -> f64 {
+    pub fn gain(dipoles: &Field<Vector>, applied: Vector) -> f64 {
         let isolated = applied * ALPHA;
         (dipoles.mean() | isolated.inverse()).s()
     }
@@ -134,25 +133,25 @@ const REACH: f32 = 3.8;
 const GAIN_SAMPLES: usize = 73;
 
 /// A point of the plane, as drawn.
-fn planar(v: V) -> Point2 {
+fn planar(v: Vector) -> Point2 {
     from_above(reach3(v))
 }
 
 /// The applied field at `angle` from `x`.
-fn applied(angle: f64) -> V {
+fn applied(angle: f64) -> Vector {
     direction(angle) * FIELD
 }
 
 /// A cluster as drawn: its atoms, its response, and its gain over the field's angle in degrees.
 struct Cluster {
     name: &'static str,
-    positions: Field<V>,
+    positions: Field<Vector>,
     response: FieldMap,
     gains: Vec<Point2>,
 }
 
 impl Cluster {
-    fn new(name: &'static str, positions: Field<V>) -> Cluster {
+    fn new(name: &'static str, positions: Field<Vector>) -> Cluster {
         let response = response(&positions);
         let mut cluster = Cluster {
             name,
@@ -168,7 +167,7 @@ impl Cluster {
     }
 
     /// The dipoles in the applied field at `angle`.
-    fn dipoles(&self, angle: f64) -> Field<V> {
+    fn dipoles(&self, angle: f64) -> Field<Vector> {
         dipoles(&self.response, applied(angle))
     }
 
@@ -187,36 +186,30 @@ fn scene() -> &'static [Cluster; 3] {
 /// A cluster: each atom with its dipole as an arrow centred on it, over the dipole an isolated
 /// atom would carry, with its name and gain above.
 fn cluster(c: &mut Canvas, rect: Rect, cluster: &Cluster, angle: f64) {
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), REACH);
+    let ax = Axes::equal(rect, ORIGIN2, REACH);
     let field = applied(angle);
     let scale = ARROW / (field * ALPHA).norm();
     let isolated = field * (ALPHA * scale);
     let dipoles = cluster.dipoles(angle);
     for (site, dipole) in cluster.positions.iter().zip(dipoles.iter()) {
-        let faint = palette::blue().faded(0.3);
+        let faint = palette::BLUE.faded(0.3);
         centred_arrow(c, &ax, site, isolated, [5.0, 10.0], faint);
-        centred_arrow(c, &ax, site, dipole * scale, [2.2, 8.0], palette::orange());
+        centred_arrow(c, &ax, site, dipole * scale, [2.2, 8.0], palette::ORANGE);
     }
     let atoms: Vec<Point2> = cluster.positions.iter().map(planar).collect();
-    ax.scatter(c, &atoms, Marker::Dot, 7.0, palette::ink());
+    ax.scatter(c, &atoms, Marker::Dot, 7.0, palette::INK);
     let label = format!("{}: GAIN {:.3}", cluster.name, gain(&dipoles, field));
     let size = (rect.height() / 20.0).clamp(6.0, 12.0);
     let size = size.min(0.9 * rect.width() / font::width(&label, 1.0));
-    c.text(
-        &label,
-        rect.top_middle(),
-        size,
-        palette::ink(),
-        Align::Center,
-    );
+    c.text(&label, rect.top_middle(), size, palette::INK, Align::Center);
 }
 
 /// An arrow centred on `centre`, its stroke's width and its head's size `[width, head]`.
 fn centred_arrow(
     c: &mut Canvas,
     ax: &Axes,
-    centre: V,
-    arrow: V,
+    centre: Vector,
+    arrow: Vector,
     [width, head]: [f32; 2],
     light: Light,
 ) {
@@ -233,17 +226,17 @@ fn centred_arrow(
 
 /// The applied field, an arrow through the middle of its box.
 fn field_arrow(c: &mut Canvas, rect: Rect, angle: f64) {
-    let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), 1.0);
+    let ax = Axes::equal(rect, ORIGIN2, 1.0);
     // Seven tenths of the box's half width either way.
     let arrow = direction(angle) * 1.4;
-    centred_arrow(c, &ax, V::zero(), arrow, [3.0, 10.0], palette::yellow());
+    centred_arrow(c, &ax, Vector::zero(), arrow, [3.0, 10.0], palette::YELLOW);
     let label_at = ax.at(0.5, 0.0);
     ax.text(
         c,
         label_at,
         "APPLIED FIELD",
         9.0,
-        palette::ink(),
+        palette::INK,
         Align::Center,
     );
 }
@@ -253,7 +246,7 @@ fn gains(c: &mut Canvas, rect: Rect, angle: f64) {
     let ax = Axes::new(rect, [0.0, 360.0], [0.7, 1.8]);
     ax.frame(c, "GAIN OVER THE FIELD'S ANGLE", "DEGREES FROM X", "");
     let one = [Point2::xy(0.0, 1.0), Point2::xy(360.0, 1.0)];
-    ax.dashed(c, &one, 1.0, 5.0, palette::grid().faded(3.0));
+    ax.dashed(c, &one, 1.0, 5.0, palette::GRID.faded(3.0));
     let mut legend: Vec<(&str, Light)> = Vec::new();
     for (i, cluster) in scene().iter().enumerate() {
         let colour = palette::series(i + 1);
@@ -300,9 +293,10 @@ mod tests {
     use super::dipoles::*;
     use super::pairs::is_self_adjoint;
     use gax::field::Field;
+    use gax::vga3d::Vector;
 
     /// The largest coefficient of a field.
-    fn largest(field: &Field<V>) -> f64 {
+    fn largest(field: &Field<Vector>) -> f64 {
         field
             .iter()
             .flat_map(|v| v.c)
@@ -311,7 +305,7 @@ mod tests {
 
     #[test]
     fn the_chain_along_the_field_polarizes_most_and_the_chain_across_least() {
-        let applied = V::new(FIELD, 0.0, 0.0);
+        let applied = Vector::new(FIELD, 0.0, 0.0);
         let [along, across, ring] = clusters().map(|(_, positions)| {
             let response = response(&positions);
             let dipoles = dipoles(&response, applied);

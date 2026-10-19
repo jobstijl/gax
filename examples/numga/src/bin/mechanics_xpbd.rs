@@ -28,8 +28,7 @@ use gax_numga_examples::{
     signal,
 };
 
-#[path = "../shared/mechanics_lie.rs"]
-mod lie;
+use gax_numga_examples::shared::mechanics_lie as lie;
 
 mod xpbd {
     use super::*;
@@ -101,7 +100,7 @@ mod xpbd {
 
     /// The line joining an anchor with its velocity under an open rate: rate to world-frame
     /// velocity line (a join, so a forque), before the motor.
-    pub fn anchor_velocity(anchor: P) -> Forque<(Line,), f64> {
+    pub fn anchor_velocity(anchor: P) -> Forque<(Line,)> {
         anchor & anchor.commutator(Line::slot())
     }
 
@@ -210,7 +209,7 @@ mod xpbd {
 
     /// A link's anchors, halfway to its neighbours: on +x, then on -x.
     pub fn anchors(distance: f64) -> [P; 2] {
-        let (origin, x) = (Point::xyz(0.0, 0.0, 0.0), axes()[0]);
+        let (origin, x) = (Point::origin(), axes()[0]);
         [origin + x * (0.5 * distance), origin - x * (0.5 * distance)]
     }
 
@@ -230,7 +229,7 @@ mod xpbd {
     /// and `size` along x, y and z on either side, so its three moments of inertia differ.
     /// The first three are on the positive side.
     pub fn cloud(size: f64) -> Vec<P> {
-        let origin = Point::xyz(0.0, 0.0, 0.0);
+        let origin = Point::origin();
         [1.0, -1.0]
             .into_iter()
             .flat_map(|sign| {
@@ -309,7 +308,7 @@ mod xpbd {
             motors.push(state.motor.clone());
         }
         // --- checks
-        let origin = Point::xyz(0.0, 0.0, 0.0);
+        let origin = Point::origin();
         let worst = gaps.iter().flatten().fold(0.0, |a: f64, &b| a.max(b));
         assert!(worst < 1e-2 * LINK_SPACING, "{worst}");
         for m in &motors {
@@ -363,44 +362,30 @@ fn draw(c: &mut Canvas, t: f32) {
     let floor = |x: f64, y: f64| Point::xyz(x, y, -0.62);
     for i in -4..=6 {
         let x = f64::from(i) * 0.1;
-        s.seg(
-            floor(x, -0.3),
-            floor(x, 0.3),
-            1.0,
-            palette::grid().faded(0.6),
-        );
+        s.seg(floor(x, -0.3), floor(x, 0.3), 1.0, palette::GRID.faded(0.6));
     }
     for j in -3..=3 {
         let y = f64::from(j) * 0.1;
-        s.seg(
-            floor(-0.4, y),
-            floor(0.6, y),
-            1.0,
-            palette::grid().faded(0.6),
-        );
+        s.seg(floor(-0.4, y), floor(0.6, y), 1.0, palette::GRID.faded(0.6));
     }
     // The free end's path so far.
     let [end, start] = anchors(LINK_SPACING);
     let trail: Vec<P> = motors[..=k].iter().map(|m| m[LINKS - 1] >> end).collect();
-    s.polyline(&trail, 1.5, palette::yellow().faded(0.6));
+    s.polyline(&trail, 1.5, palette::YELLOW.faded(0.6));
     let cloud = cloud(5e-2);
-    let colours = [palette::orange(), palette::sky(), palette::green()];
-    let origin = Point::xyz(0.0, 0.0, 0.0);
+    let colours = [palette::ORANGE, palette::SKY, palette::GREEN];
+    let origin = Point::origin();
     for (i, &m) in motors[k].iter().enumerate() {
         // Each link's mass points, on its three axes, as three bars.
         for axis in 0..3 {
             s.seg(m >> cloud[axis], m >> cloud[axis + 3], 3.0, colours[axis]);
         }
         // The link's anchors and the rod between them.
-        s.seg(m >> start, m >> end, 1.5, palette::ink().faded(0.8));
-        let col = if i == 0 {
-            palette::red()
-        } else {
-            palette::ink()
-        };
+        s.seg(m >> start, m >> end, 1.5, palette::INK.faded(0.8));
+        let col = if i == 0 { palette::RED } else { palette::INK };
         s.dot(m >> origin, Marker::Dot, 5.0, col);
     }
-    s.dot(origin, Marker::Square, 9.0, palette::red());
+    s.dot(origin, Marker::Square, 9.0, palette::RED);
     s.draw(c);
     // The joint gaps over time, as numga's figure: the largest and the mean.
     let right = Rect::new(left, 0.0, w, h);
@@ -412,7 +397,7 @@ fn draw(c: &mut Canvas, t: f32) {
     .log_y();
     ax.frame(c, "JOINT GAPS (METRES)", "TIME (S)", "");
     // The chart's points: (time, gap).
-    let at = gax::pga2d::Point::<(), f64>::xy;
+    let at = gax::pga2d::Point::xy;
     let series = |f: &dyn Fn(&[f64]) -> f64| -> Vec<_> {
         gaps[1..=k.max(1)]
             .iter()
@@ -422,22 +407,22 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     let largest = series(&|g| g.iter().fold(0.0, |a: f64, &b| a.max(b)));
     let mean = series(&|g| g.iter().sum::<f64>() / g.len() as f64);
-    ax.polyline(c, &largest, 1.6, palette::red());
-    ax.dashed(c, &mean, 1.6, 5.0, palette::sky());
+    ax.polyline(c, &largest, 1.6, palette::RED);
+    ax.dashed(c, &mean, 1.6, 5.0, palette::SKY);
     // numga's bound: the joints stay closed to within 1% of the spacing.
     let bound = 1e-2 * LINK_SPACING;
     let level = [at(0.0, bound), at(f64::from(SECONDS), bound)];
-    ax.dashed(c, &level, 1.0, 3.0, palette::grid());
+    ax.dashed(c, &level, 1.0, 3.0, palette::GRID);
     let label = at(0.1, bound * 1.4);
     ax.text(
         c,
         label,
         "1% OF THE SPACING",
         9.0,
-        palette::grid(),
+        palette::GRID,
         Align::Left,
     );
-    ax.legend(c, &[("LARGEST", palette::red()), ("MEAN", palette::sky())]);
+    ax.legend(c, &[("LARGEST", palette::RED), ("MEAN", palette::SKY)]);
 }
 
 fn main() {
@@ -498,7 +483,7 @@ mod tests {
         let (motors, gaps) = swinging_chain(4, 20, 2, 0.02);
         assert_eq!((motors.len(), gaps[0].len()), (21, 3));
         // And it falls: the free end has dropped.
-        let end = (motors[20][3] >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean();
+        let end = (motors[20][3] >> Point::origin()).to_euclidean();
         assert!(end[2] < -1e-3, "{end:?}");
     }
 

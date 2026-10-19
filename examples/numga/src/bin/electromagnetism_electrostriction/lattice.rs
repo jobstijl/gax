@@ -7,7 +7,7 @@ use gax::field::{Field, SparseLu, SparseMap};
 use gax::jet::hessian;
 use gax::vga2d::{Scalar, Vector};
 
-pub type V = Vector<(), f64>;
+pub type V = Vector;
 /// A vector with coefficients `T`: a position, or one carrying derivatives.
 pub type Vt<T> = Vector<(), T>;
 /// A map on one site's vectors, `Vector <- Vector`, with coefficients `T`.
@@ -15,9 +15,9 @@ pub type Cell<T> = Vector<(Vector,), T>;
 /// A field map over the particles with map cells.
 pub type FieldMap<T> = SparseMap<Cell<T>>;
 /// A linear form on one site's displacement: the energy's first derivative there.
-pub type Form = Scalar<(Vector,), f64>;
+pub type Form = Scalar<(Vector,)>;
 /// A form on two sites' displacements: the energy's second derivative between them.
-pub type Form2 = Scalar<(Vector, Vector), f64>;
+pub type Form2 = Scalar<(Vector, Vector)>;
 
 pub const X: V = V::new(1.0, 0.0);
 pub const Y: V = V::new(0.0, 1.0);

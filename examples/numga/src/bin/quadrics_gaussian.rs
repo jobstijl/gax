@@ -14,9 +14,8 @@ use gax_numga_examples::{
 mod gaussian {
     use gax::pga2d::{Line, Motor, Point};
 
-    pub type P = Point<(), f64>;
     /// A polarity: points to lines.
-    pub type Polarity = Line<(Point,), f64>;
+    pub type Polarity = Line<(Point,)>;
 
     use gax_numga_examples::rng::{Draw, rng};
     use gax_numga_examples::signal::{phasor, wave};
@@ -28,20 +27,20 @@ mod gaussian {
     }
 
     /// Fit unit-weight points: the precision (the inverse second moment) and the 1σ polarity.
-    pub fn fit(points: &[P]) -> Fit {
+    pub fn fit(points: &[Point]) -> Fit {
         // Leave the line slot open: each point contributes a rank-one map from lines to
         // points. Their mean is the second moment.
         let n = points.len() as f64;
         let moment = points
             .iter()
             .map(|p| *p * (Line::slot() & *p))
-            .sum::<Point<(Line,), f64>>()
+            .sum::<Point<(Line,)>>()
             .gp(1.0 / n);
         let precision: Polarity = moment.inverse();
         // The weight line, from the data: `weight ∨ p == 1` on every unit-weight point. Its
         // dyad evaluates to that constant squared; subtracting it twice makes Mahalanobis
         // distance one the zero locus.
-        let mean = points.iter().copied().sum::<P>().gp(1.0 / n);
+        let mean = points.iter().copied().sum::<Point>().gp(1.0 / n);
         let weight = precision.of(mean);
         let quadric = precision - weight * (weight & Point::slot()).gp(2.0);
         Fit { precision, quadric }
@@ -49,20 +48,20 @@ mod gaussian {
 
     impl Fit {
         /// The density, with peak one: `exp(-d² / 2)` for the squared Mahalanobis distance d².
-        pub fn density(&self, p: P) -> f64 {
+        pub fn density(&self, p: Point) -> f64 {
             let squared_distance = (self.precision.of(p) & p).s() - 1.0;
             (-0.5 * squared_distance).exp()
         }
 
         /// The 1σ level, zero on the ellipse: `quadric(p) ∨ p`.
-        pub fn level(&self, p: P) -> f64 {
+        pub fn level(&self, p: Point) -> f64 {
             (self.quadric.of(p) & p).s()
         }
     }
 
     /// A cloud of `n` points about the origin, with the given standard deviations along x and
     /// y.
-    pub fn cloud(seed: u64, n: usize, sd: [f64; 2]) -> Vec<P> {
+    pub fn cloud(seed: u64, n: usize, sd: [f64; 2]) -> Vec<Point> {
         let mut rng = rng(seed);
         (0..n)
             .map(|_| Point::xy(rng.normal() * sd[0], rng.normal() * sd[1]))
@@ -72,9 +71,9 @@ mod gaussian {
     /// The cloud at phase `t` (radians): breathing in its aspect, turned and slid around a
     /// small loop (an ellipse, the turned direction stretched by 0.8 across and 0.6 up). The
     /// stretch and the motor compose into one map, applied to every point.
-    pub fn placed(base: &[P], t: f64) -> Vec<P> {
+    pub fn placed(base: &[Point], t: f64) -> Vec<Point> {
         let stretch = 1.0 + 0.35 * wave(2.0 * t);
-        let stretch: Point<(Point,), f64> = Point::from_images([
+        let stretch: Point<(Point,)> = Point::from_images([
             Point::new(stretch, 0.0, 0.0),
             Point::new(0.0, 1.0 / stretch, 0.0),
             Point::new(0.0, 0.0, 1.0),
@@ -83,7 +82,7 @@ mod gaussian {
         let placement = Motor::translation(Point::direction(
             0.6 + 0.8 * round.e20(),
             -0.4 + 0.6 * round.e01(),
-        )) * Motor::rotation(Point::xy(0.0, 0.0), 0.6 + t);
+        )) * Motor::rotation(Point::origin(), 0.6 + t);
         let map = (placement >> Point::slot()).of(stretch);
         base.iter().map(|p| map.of(*p)).collect()
     }
@@ -95,9 +94,9 @@ use gaussian::*;
 /// for the points and the conic to shine over it.
 fn shade(d: f32) -> Light {
     let d = d.clamp(0.0, 1.0);
-    let (blue, sky) = (palette::blue().faded(0.2), palette::sky().faded(0.45));
+    let (blue, sky) = (palette::BLUE.faded(0.2), palette::SKY.faded(0.45));
     if d < 0.5 {
-        palette::bottom().blend(blue, d * 2.0)
+        palette::BOTTOM.blend(blue, d * 2.0)
     } else {
         blue.blend(sky, d * 2.0 - 1.0)
     }
@@ -126,7 +125,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let d = fit.density(p.map_coefs(f64::from)) as f32;
         Some(shade(d))
     });
-    let cloud = palette::ink().faded(0.35);
+    let cloud = palette::INK.faded(0.35);
     ax.scatter(c, &points, Marker::Dot, 3.5, cloud);
     ax.contour(
         c,
@@ -134,19 +133,19 @@ fn draw(c: &mut Canvas, t: f32) {
         220,
         0.0,
         2.4,
-        palette::orange(),
+        palette::ORANGE,
     );
     // The y axis named at its middle, left of the ticks: above the frame it would meet the
     // caption.
     ax.frame(c, "", "X", "");
     let [_, middle] = rect.left_middle().to_euclidean();
     let side = Point2::xy(14.0, middle);
-    c.text("Y", side, 12.0, palette::ink(), Align::Left);
+    c.text("Y", side, 12.0, palette::INK, Align::Left);
     ax.legend(
         c,
         &[
             ("POINT CLOUD", cloud),
-            ("1 SIGMA: Q(P) & P = 0", palette::orange()),
+            ("1 SIGMA: Q(P) & P = 0", palette::ORANGE),
         ],
     );
     // A colour bar for the density: the point a fraction `x` across and `f` up the bar.
@@ -169,10 +168,10 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     for (v, s) in [(0.0, "0"), (0.5, "0.5"), (1.0, "1")] {
         let label = at(1.0, v) + Point2::direction(6.0, 4.0);
-        c.text(s, label, 11.0, palette::ink(), Align::Left);
+        c.text(s, label, 11.0, palette::INK, Align::Left);
     }
     let title = at(0.5, 1.0) + Point2::direction(0.0, -8.0);
-    c.text("DENSITY", title, 10.0, palette::grid(), Align::Center);
+    c.text("DENSITY", title, 10.0, palette::GRID, Align::Center);
     caption(
         c,
         "A GAUSSIAN AND ITS 1 SIGMA CONIC FROM POINT MOMENTS",
@@ -211,7 +210,7 @@ mod tests {
     #[test]
     fn density_peaks_at_the_mean_and_level_matches_the_covariance() {
         let shift = Motor::translation(Point::direction(1.0, -1.0));
-        let points: Vec<P> = cloud(1, 500, [2.0, 0.5])
+        let points: Vec<Point> = cloud(1, 500, [2.0, 0.5])
             .into_iter()
             .map(|p| shift >> p)
             .collect();

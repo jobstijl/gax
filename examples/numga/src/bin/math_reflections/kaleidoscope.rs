@@ -13,7 +13,7 @@ use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{Canvas, Light, Point2, light, palette};
 
-pub type V = Vector<(), f64>;
+pub type V = Vector;
 
 /// numga's kaleidoscopes: mirrors meeting at a half turn over three to six.
 pub const PANELS: [usize; 4] = [3, 4, 5, 6];
@@ -110,7 +110,7 @@ pub fn draw(c: &mut Canvas, t: f32) {
             at,
             &label,
             11.0,
-            palette::ink(),
+            palette::INK,
             gax_numga_examples::Align::Center,
         );
     }
@@ -121,7 +121,7 @@ mod tests {
     use super::*;
 
     /// The rotor of the kaleidoscope: the product of its mirrors, turning by twice their angle.
-    fn turn([first, second]: [V; 2]) -> gax::vga2d::Rotor<(), f64> {
+    fn turn([first, second]: [V; 2]) -> gax::vga2d::Rotor {
         second * first
     }
 

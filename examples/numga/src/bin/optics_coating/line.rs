@@ -14,12 +14,12 @@ pub fn swept<O: Orientation>(x: oriented::Bivector<(), f64, O>) -> oriented::Biv
 
 /// numga's regressive product of complementary grades (with numga's metric dual): minus
 /// gax's metric-free one in spacetime (see `electromagnetism_constitutive`).
-pub fn pair(a: B, b: Excitation) -> Scalar<(), f64> {
+pub fn pair(a: B, b: Excitation) -> Scalar {
     -(a & b)
 }
 
 /// An inverse response: an excitation in, its field out.
-type InverseResponse = Bivector<(intrinsic::Bivector,), f64>;
+type InverseResponse = Bivector<(intrinsic::Bivector,)>;
 
 /// A periodic line of cells along `z`. Electric planes sit on the nodes, magnetic planes
 /// halfway between each node and the next.
@@ -27,7 +27,7 @@ pub struct Line {
     response: Field<Constitutive>,
     inverse: Field<InverseResponse>,
     between: Constitutive,
-    difference: SparseMap<Scalar<(), f64>>,
+    difference: SparseMap<Scalar>,
     spacing: f64,
 }
 
@@ -52,7 +52,7 @@ impl Line {
 
     /// The field energy in each cell; magnetic planes pair with their excitation to minus
     /// their energy.
-    pub fn energy(&self, electric: &Field<B>, magnetic: &Field<B>) -> Field<Scalar<(), f64>> {
+    pub fn energy(&self, electric: &Field<B>, magnetic: &Field<B>) -> Field<Scalar> {
         Field::from_fn(electric.len(), |i| {
             let (e, m) = (electric.site(i), magnetic.site(i));
             let electric_part = pair(e, self.response.site(i).of(e));

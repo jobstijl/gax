@@ -6,21 +6,18 @@
 //! is the same in VGA3D. gax has no adjoint as a method either: it is a pairing solve against
 //! the metric `Vector | Vector`.
 
-// Each binary that includes this module uses a different part of it.
-#![allow(dead_code)]
-
 use core::ops::BitXor;
 use gax::vga3d::{Bivector, Rotor, Vector, oriented};
 use gax::{Of, Orientation, Slot, Slots, Unit};
 
 /// A direction of space.
-pub type V = Vector<(), f64>;
+pub type V = Vector;
 /// A plane through the origin.
-pub type B = Bivector<(), f64>;
+pub type B = Bivector;
 /// A rotation: a unit rotor.
-pub type Turn = Unit<Rotor<(), f64>>;
+pub type Turn = Unit<Rotor>;
 /// A map on directions, `Vector <- Vector`.
-pub type Map = Vector<(Vector,), f64>;
+pub type Map = Vector<(Vector,)>;
 
 /// The orthonormal basis.
 pub const AXES: [V; 3] = [

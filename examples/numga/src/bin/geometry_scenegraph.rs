@@ -7,8 +7,7 @@
 //! animation swings the arm through a loop of joint angles: the scene with the camera's optics
 //! and three traced rays on the left, the photograph on the sensor on the right.
 
-#[path = "../shared/geometry_scenegraph.rs"]
-mod scenegraph;
+use gax_numga_examples::shared::geometry_scenegraph as scenegraph;
 
 use gax::pga3d::{Motor, Plane, Point};
 use gax_numga_examples::points::box_map;
@@ -142,7 +141,7 @@ fn ray_colour(i: usize) -> Light {
 
 /// A face's edges: one faint stroke around it.
 fn edge_light() -> Light {
-    palette::grid().faded(0.8)
+    palette::GRID.faded(0.8)
 }
 
 /// A circle of `radius` at height `z` in the camera frame, in the world: a point of it turned
@@ -175,7 +174,7 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     let floor = |x: f64, y: f64| Point::xyz(x, y, 0.0);
     for k in 0..7 {
         let g = -1.2 + 0.4 * f64::from(k);
-        let line = (palette::grid().mix_light(palette::ink(), 0.25)).faded(0.8);
+        let line = (palette::GRID.mix_light(palette::INK, 0.25)).faded(0.8);
         s.seg(floor(g, -1.2), floor(g, 1.2), 1.0, line);
         s.seg(floor(-1.2, g), floor(1.2, g), 1.0, line);
     }
@@ -238,11 +237,11 @@ fn photograph_panel(c: &mut Canvas, rect: Rect, photo: &Photo) {
             c.polyline(&poly, 1.0, edge_light(), true);
         }
         for p in pixels {
-            c.disk(px(*p), 1.6, palette::ink().faded(0.9));
+            c.disk(px(*p), 1.6, palette::INK.faded(0.9));
         }
     }
     c.unclip();
-    c.polyline(&frame, 1.2, palette::grid(), true);
+    c.polyline(&frame, 1.2, palette::GRID, true);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -272,7 +271,7 @@ fn draw(c: &mut Canvas, t: f32) {
         "ON THE SENSOR, 640 X 480 PIXELS",
         rect.lo - down.gp(s * 0.8),
         s,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
     for (k, line) in [
@@ -283,7 +282,7 @@ fn draw(c: &mut Canvas, t: f32) {
     .enumerate()
     {
         let at = rect.bottom_left() + down.gp(s * (1.8 + 1.2 * k as f32));
-        c.text(line, at, s * 0.8, palette::grid(), Align::Left);
+        c.text(line, at, s * 0.8, palette::GRID, Align::Left);
     }
     caption(
         c,

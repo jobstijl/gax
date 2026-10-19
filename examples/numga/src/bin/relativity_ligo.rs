@@ -26,6 +26,7 @@
 //! detectors' combined sensitivity, and how alike their readings of one wave are (nearly
 //! opposite over most of the sky, as they were built).
 
+use gax::vga3d::Vector;
 use std::sync::OnceLock;
 
 use gax_numga_examples::points::circle;
@@ -38,40 +39,40 @@ mod ligo {
     use gax::Unit;
     use gax::vga3d::{Rotor, Vector};
 
-    pub type V = Vector<(), f64>;
     /// A frame: the rotor turning the axes to a place's zenith (or a wave's direction), east and
     /// north.
-    pub type Frame = Unit<Rotor<(), f64>>;
+    pub type Frame = Unit<Rotor>;
     /// A strain: the fractional stretch of each offset.
-    pub type Strain = Vector<(Vector,), f64>;
+    pub type Strain = Vector<(Vector,)>;
     /// A detector's responses to the plus and cross strains of one wave, as a vector of the plane
     /// of polarizations: a turn of the axes across the wave turns it by twice the angle.
-    pub type Responses = gax::vga2d::Vector<(), f64>;
+    pub type Responses = gax::vga2d::Vector;
 
     /// Fixed to the Earth: to longitude zero on the equator.
-    pub fn x() -> V {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
 
     /// To ninety degrees east on the equator.
-    pub fn y() -> V {
+    pub fn y() -> Vector {
         Vector::new(0.0, 1.0, 0.0)
     }
 
     /// To the north pole.
-    pub fn z() -> V {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 1.0)
     }
 
     /// The frame at a latitude and longitude, in radians: a turn from the equator towards the
     /// pole, then about the pole.
     pub fn place(latitude: f64, longitude: f64) -> Frame {
-        ((x() ^ y()) * (-longitude / 2.0)).exp() * ((x() ^ z()) * (-latitude / 2.0)).exp()
+        // From the equator towards the pole is about −y.
+        Rotor::rotation(z(), longitude) * Rotor::rotation(-y(), latitude)
     }
 
     /// The frame turned about its first axis, the wave's direction, by a polarization angle.
     pub fn polarized(frame: Frame, angle: f64) -> Frame {
-        frame * ((y() ^ z()) * (-angle / 2.0)).exp()
+        frame * Rotor::rotation(x(), angle)
     }
 
     /// The plus and cross strains of a wave from the direction of the frame's first axis, with
@@ -79,7 +80,7 @@ mod ligo {
     pub fn strains(frame: Frame) -> [Strain; 2] {
         let (east, north) = (frame >> y(), frame >> z());
         // The dyad `a (b · x)`: offsets along `b` to `a`.
-        let dyad = |a: V, b: V| a * (b | Vector::slot());
+        let dyad = |a: Vector, b: Vector| a * (b | Vector::slot());
         [
             dyad(east, east) - dyad(north, north),
             dyad(east, north) + dyad(north, east),
@@ -88,21 +89,21 @@ mod ligo {
 
     /// A detector's arms at its site, from their azimuths in radians clockwise from north: north
     /// turned towards east in the site's level plane.
-    pub fn arms(site: Frame, azimuths: [f64; 2]) -> [V; 2] {
+    pub fn arms(site: Frame, azimuths: [f64; 2]) -> [Vector; 2] {
         let (east, north) = (site >> y(), site >> z());
         azimuths.map(|azimuth| ((north ^ east) * (-azimuth / 2.0)).exp() >> north)
     }
 
     /// The interferometer's reading: the difference of its arms' stretches, each lengthening by
     /// the fraction `a · S(a) / 2`.
-    pub fn response(arms: [V; 2], strain: Strain) -> f64 {
-        let stretch = |arm: V| (arm | strain.of(arm)).s() / 2.0;
+    pub fn response(arms: [Vector; 2], strain: Strain) -> f64 {
+        let stretch = |arm: Vector| (arm | strain.of(arm)).s() / 2.0;
         stretch(arms[0]) - stretch(arms[1])
     }
 
     /// The detector's responses to the plus and cross strains of a wave from the frame's first
     /// axis.
-    pub fn responses(arms: [V; 2], frame: Frame) -> Responses {
+    pub fn responses(arms: [Vector; 2], frame: Frame) -> Responses {
         let [plus, cross] = strains(frame);
         Responses::new(response(arms, plus), response(arms, cross))
     }
@@ -130,7 +131,7 @@ mod ligo {
         }
 
         /// Its arms.
-        pub fn arms(&self) -> [V; 2] {
+        pub fn arms(&self) -> [Vector; 2] {
             arms(self.site(), self.azimuths.map(f64::to_radians))
         }
     }
@@ -184,7 +185,7 @@ mod ligo {
     /// A ring of free masses across a wave from straight above the site, stretched by the plus
     /// strain at the polarization angle: straight overhead, the axes across the wave are the
     /// site's east and north.
-    pub fn ring(site: Frame, angle: f64) -> Vec<V> {
+    pub fn ring(site: Frame, angle: f64) -> Vec<Vector> {
         let (east, north) = (site >> y(), site >> z());
         let [overhead, _] = strains(polarized(site, angle));
         (0..MASSES)
@@ -257,7 +258,7 @@ fn sky_panel(
         let [longitude, latitude] = p.to_euclidean();
         Some(colour(sample(values, longitude, latitude)))
     });
-    let faint = palette::ink().faded(0.12);
+    let faint = palette::INK.faded(0.12);
     let meridians = (-2..=2).map(|k| {
         let lon = 60.0 * k as f32;
         [Point2::xy(lon, -90.0), Point2::xy(lon, 90.0)]
@@ -270,18 +271,18 @@ fn sky_panel(
     ax.stroke(c, &graticule, 0.8, faint);
     for d in &DETECTORS {
         let at = Point2::xy(d.longitude as f32, d.latitude as f32);
-        ax.scatter(c, &[at], Marker::Star, 9.0, palette::sky());
+        ax.scatter(c, &[at], Marker::Star, 9.0, palette::SKY);
     }
     let r = ax.rect;
     c.polyline(
         &[r.lo, r.top_right(), r.hi, r.bottom_left()],
         1.0,
-        palette::grid(),
+        palette::GRID,
         true,
     );
     let size = (rect.height() / 12.0).clamp(5.0, 11.0);
     let above = r.lo + Point2::direction(0.0, -size * 0.6);
-    c.text(title, above, size, palette::ink(), Align::Left);
+    c.text(title, above, size, palette::INK, Align::Left);
 }
 
 /// The signed colour map: blue for minus one, red for plus one.
@@ -295,7 +296,7 @@ fn draw_ring(c: &mut Canvas, rect: Rect, angle: f64) {
     let detector = &DETECTORS[0];
     let site = detector.site();
     // East and north of a vector at the site: its coordinates in the site's frame.
-    let level = |v: V| {
+    let level = |v: Vector| {
         let local = site << v;
         Point2::xy(local.e2() as f32, local.e3() as f32)
     };
@@ -304,22 +305,22 @@ fn draw_ring(c: &mut Canvas, rect: Rect, angle: f64) {
     let square = Rect::around(rect.centre(), Point2::direction(side / 2.0, side / 2.0));
     let ax = Axes::equal(square, ORIGIN2, 1.5);
     let rest = circle(ORIGIN2, 1.0, 96);
-    ax.polyline(c, &rest, 1.0, palette::grid().faded(1.5));
+    ax.polyline(c, &rest, 1.0, palette::GRID.faded(1.5));
     for arm in detector.arms() {
-        ax.line(c, ORIGIN2, level(arm * ARM_REACH), 4.0, palette::orange());
+        ax.line(c, ORIGIN2, level(arm * ARM_REACH), 4.0, palette::ORANGE);
     }
     let mut masses: Vec<Point2> = ring(site, angle).into_iter().map(level).collect();
-    ax.scatter(c, &masses, Marker::Dot, 6.0, palette::sky());
+    ax.scatter(c, &masses, Marker::Dot, 6.0, palette::SKY);
     masses.push(masses[0]);
-    ax.polyline(c, &masses, 1.0, palette::sky().faded(0.5));
+    ax.polyline(c, &masses, 1.0, palette::SKY.faded(0.5));
     let size = (rect.height() / 26.0).clamp(6.0, 13.0);
     let below = rect.bottom_middle() + Point2::direction(0.0, -size * 0.5);
     let degrees = angle.to_degrees();
     let readout = format!("POLARIZATION {degrees:5.1} DEG");
-    c.text(&readout, below, size, palette::ink(), Align::Center);
+    c.text(&readout, below, size, palette::INK, Align::Center);
     let above = rect.top_middle() + Point2::direction(0.0, size * 1.2);
     let title = format!("FREE MASSES ABOVE {}", detector.name);
-    c.text(&title, above, size, palette::ink(), Align::Center);
+    c.text(&title, above, size, palette::INK, Align::Center);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -383,6 +384,7 @@ fn main() {
 mod tests {
     use super::ligo::*;
     use super::sky_maps;
+    use gax::vga3d::Vector;
     use gax_numga_examples::signal::phasor;
 
     /// For arms along two horizontal axes at the pole, a wave from polar angle `θ` and azimuth
@@ -407,7 +409,7 @@ mod tests {
     }
 
     /// The smallest turn that carries the unit vector `from` to the unit vector `to`.
-    fn turning(from: V, to: V) -> Frame {
+    fn turning(from: Vector, to: Vector) -> Frame {
         (gax::vga3d::Rotor::from(gax::vga3d::Scalar::new(1.0)) + to * from).unit()
     }
 

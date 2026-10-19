@@ -44,7 +44,7 @@ const EDGE_ON: f64 = 1e-10;
 #[derive(Clone, Copy, Debug)]
 pub struct View {
     /// From the world into the camera's frame: x right, y up, z towards the viewer.
-    turn: Unit<Motor<(), f64>>,
+    turn: Unit<Motor>,
     /// The middle of the framed points in the camera's frame, and the scale that fits them
     /// into a picture of unit size.
     centre: P,
@@ -96,8 +96,8 @@ impl View {
 /// A face in screen space: its corners and edges across the picture, its plane, its colour,
 /// and the box it covers.
 struct Facet {
-    corners: Vec<pga2d::Point<(), f64>>,
-    edges: Vec<pga2d::intrinsic::Line<(), f64>>,
+    corners: Vec<pga2d::Point>,
+    edges: Vec<pga2d::intrinsic::Line>,
     ends: Vec<[P; 2]>,
     plane: Winding,
     colour: Light,
@@ -105,7 +105,7 @@ struct Facet {
 }
 
 /// A plane oriented by a winding within it (intrinsic), as a join of points is.
-type Winding = intrinsic::Plane<(), f64>;
+type Winding = intrinsic::Plane;
 
 /// The plane of a polygon: the sum of the planes of its fan of triangles, each the join of its
 /// corners, so the polygon's plane weighted by its area and oriented by its winding.
@@ -116,7 +116,7 @@ fn polygon_plane(corners: &[P]) -> Winding {
 }
 
 /// A screen point seen from above: across and down.
-fn across(p: P) -> pga2d::Point<(), f64> {
+fn across(p: P) -> pga2d::Point {
     let [x, y, _] = p.to_euclidean();
     pga2d::Point::xy(x, y)
 }
@@ -159,7 +159,7 @@ impl Facet {
     }
 
     /// Whether the face covers a point across the picture: it lies on one side of every edge.
-    fn covers(&self, q: pga2d::Point<(), f64>) -> bool {
+    fn covers(&self, q: pga2d::Point) -> bool {
         let sides: Vec<f64> = self.edges.iter().map(|e| (*e & q).s()).collect();
         sides.iter().all(|s| *s >= 0.0) || sides.iter().all(|s| *s <= 0.0)
     }
@@ -172,7 +172,7 @@ impl Facet {
 
     /// The depth of the face's ink at a point within the pen of an edge, or `None` where no
     /// edge is that close: on the face's plane, or along the edge for a face seen edge on.
-    fn ink_depth(&self, q: pga2d::Point<(), f64>, x: f64, y: f64) -> Option<f64> {
+    fn ink_depth(&self, q: pga2d::Point, x: f64, y: f64) -> Option<f64> {
         let n = self.corners.len();
         let (i, along) = (0..n).find_map(|i| {
             let (a, b) = (self.corners[i], self.corners[(i + 1) % n]);
@@ -191,11 +191,7 @@ impl Facet {
 /// (`l | a` and `l | b`, whose joins with `q` differ in sign there) the nearest point is the
 /// foot on the line, and the distance the join of the unit line with `q`; beyond them, the
 /// nearer end, at the norm of its join with `q`.
-fn segment_foot(
-    a: pga2d::Point<(), f64>,
-    b: pga2d::Point<(), f64>,
-    q: pga2d::Point<(), f64>,
-) -> Option<f64> {
+fn segment_foot(a: pga2d::Point, b: pga2d::Point, q: pga2d::Point) -> Option<f64> {
     let line = a & b;
     if line.norm() > 0.0 {
         let l = line.normalized();
@@ -204,7 +200,7 @@ fn segment_foot(
             return ((l & q).s().abs() <= PEN).then(|| before / (before - after));
         }
     }
-    let (near_a, near_b) = ((q & a).norm(), (q & b).norm());
+    let (near_a, near_b) = (q.distance(a), q.distance(b));
     if near_a <= near_b {
         (near_a <= PEN).then_some(0.0)
     } else {

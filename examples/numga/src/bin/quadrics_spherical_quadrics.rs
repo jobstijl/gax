@@ -25,14 +25,14 @@ mod conic {
     /// A point of the sphere: the pole of a plane, on `e23`, `e31`, `e12`, the poles of the
     /// planes x, y and z. It is the dual of the vector of its coordinates, which `undual`
     /// recovers, and so intrinsic (ADR-051).
-    pub type P = intrinsic::Bivector<(), f64>;
+    pub type P = intrinsic::Bivector;
     /// A plane through the origin: a great circle.
-    pub type Plane = Vector<(), f64>;
+    pub type Plane = Vector;
     /// A polarity: a point to its polar plane.
-    pub type Polarity = Vector<(intrinsic::Bivector,), f64>;
+    pub type Polarity = Vector<(intrinsic::Bivector,)>;
     /// A dual polarity: a plane to its pole.
-    pub type DualPolarity = intrinsic::Bivector<(Vector,), f64>;
-    pub type R = gax::Unit<gax::vga3d::Rotor<(), f64>>;
+    pub type DualPolarity = intrinsic::Bivector<(Vector,)>;
+    pub type R = gax::Unit<gax::vga3d::Rotor>;
 
     /// The basis planes x, y and z.
     pub fn planes() -> [Plane; 3] {
@@ -90,7 +90,7 @@ mod conic {
     /// The turn from unit point `start` to unit point `end`, as the logarithm of the rotor
     /// `end / start`: that rotor turns `start` through twice their angle, so the logarithm's norm
     /// is the angle and half of it the turn.
-    fn turn(start: P, end: P) -> Bivector<(), f64> {
+    fn turn(start: P, end: P) -> Bivector {
         (end / start).unit().log()
     }
 
@@ -192,9 +192,9 @@ use conic::*;
 const SECONDS: f32 = 12.0;
 
 /// Where a point of the sphere is drawn: the origin plus the vector whose dual it is.
-fn drawn(p: P) -> gax::pga3d::Point<(), f64> {
+fn drawn(p: P) -> gax::pga3d::Point {
     let v = p.undual();
-    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
+    gax::pga3d::Point::origin() + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -251,19 +251,19 @@ fn draw(c: &mut Canvas, t: f32) {
                 s.polyline(&oval, 3.0, gold);
                 let anti: Vec<_> = conic.curve.iter().map(|p| drawn(-*p)).collect();
                 s.polyline(&anti, 1.5, gold.faded(0.6));
-                for (f, colour) in conic.foci.iter().zip([palette::green(), palette::sky()]) {
-                    s.dot(drawn(*f), Marker::Dot, 9.0, palette::red());
+                for (f, colour) in conic.foci.iter().zip([palette::GREEN, palette::SKY]) {
+                    s.dot(drawn(*f), Marker::Dot, 9.0, palette::RED);
                     let arc: Vec<_> = (0..=30)
                         .map(|j| drawn(geodesic(*f, sample, j as f64 / 30.0)))
                         .collect();
                     s.polyline(&arc, 2.2, colour);
                 }
-                s.dot(drawn(sample), Marker::Ring, 11.0, palette::ink());
+                s.dot(drawn(sample), Marker::Ring, 11.0, palette::INK);
             }
             1 => {
                 // The envelope: sixteen tangent great circles, the running one bright with its
                 // normal.
-                s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.25));
+                s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.25));
                 s.polyline(&oval, 3.0, gold);
                 // The great circle of a tangent plane, through its point of the oval.
                 let circle = |idx: usize| -> Vec<_> {
@@ -278,14 +278,14 @@ fn draw(c: &mut Canvas, t: f32) {
                     let colour = colormap::inferno(0.2 + 0.7 * j as f32 / 15.0);
                     s.polyline(&circle(j * 199 / 15), 1.0, colour.faded(0.45));
                 }
-                s.polyline(&circle(k), 2.4, palette::ink());
+                s.polyline(&circle(k), 2.4, palette::INK);
                 // The tangent plane's normal: the plane itself, a vector.
                 s.arrow(
                     drawn(sample),
                     conic.tangents[k].gp(0.4),
                     1.6,
                     7.0,
-                    palette::ink(),
+                    palette::INK,
                 );
                 // The dual conic: the normals of the planes with `π ∨ Q(π) = 0`, a level line
                 // of the dual form over the sphere of unit normals (each the plane whose pole is
@@ -295,13 +295,13 @@ fn draw(c: &mut Canvas, t: f32) {
                     (plane & conic.q.of(plane)).s() as f32
                 };
                 for [a, b] in contour::of_fn(dual, [0.0, 1.0], [0.0, 1.0], 120, 0.0) {
-                    s.seg(drawn(at(a)), drawn(at(b)), 2.0, palette::purple());
+                    s.seg(drawn(at(a)), drawn(at(b)), 2.0, palette::PURPLE);
                 }
-                s.dot(drawn(sample), Marker::Ring, 11.0, palette::ink());
+                s.dot(drawn(sample), Marker::Ring, 11.0, palette::INK);
             }
             _ => {
                 // The cone through the oval, and the polhodes: level lines of the potential.
-                s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.25));
+                s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.25));
                 let ev = conic.eigenvalues;
                 let rotor = conic.rotor;
                 s.surface(
@@ -320,7 +320,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 for (j, fraction) in [0.7, 0.4667, 0.2333].iter().enumerate() {
                     for (level, colour) in [
                         (lo * fraction, salmon),
-                        (hi * (0.7 - 0.2333 * j as f64), palette::sky()),
+                        (hi * (0.7 - 0.2333 * j as f64), palette::SKY),
                     ] {
                         let potential = |uv| conic.potential(at(uv)) as f32;
                         let segs =
@@ -335,7 +335,7 @@ fn draw(c: &mut Canvas, t: f32) {
         // Sized to fit the panel's width, in its top left corner.
         let size = (rect.width() / 35.0).min(13.0);
         let corner = rect.lo + Point2::direction(size, size * 1.6);
-        c.text(title, corner, size, palette::ink(), Align::Left);
+        c.text(title, corner, size, palette::INK, Align::Left);
     }
     let d = distance(sample, conic.foci[0]) + distance(sample, conic.foci[1]);
     caption(

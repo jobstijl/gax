@@ -19,30 +19,23 @@ mod lens {
     use gax::pga3d::{Motor, Plane, Point, intrinsic};
     use gax_numga_examples::measure;
 
-    pub type P = Point<(), f64>;
-    pub type Pl = Plane<(), f64>;
-    pub type M = Unit<Motor<(), f64>>;
+    pub type M = Unit<Motor>;
     /// A collineation maps points to points.
-    pub type PointMap = Point<(Point,), f64>;
+    pub type PointMap = Point<(Point,)>;
     /// A ray: the join of two points, a line oriented along itself (intrinsic).
-    pub type Ray = intrinsic::Line<(), f64>;
+    pub type Ray = intrinsic::Line;
     /// A map on rays.
-    pub type LineMap = intrinsic::Line<(intrinsic::Line,), f64>;
+    pub type LineMap = intrinsic::Line<(intrinsic::Line,)>;
     /// A primal quadric maps a point to its polar plane.
-    pub type Quadric = Plane<(Point,), f64>;
+    pub type Quadric = Plane<(Point,)>;
     /// A dual quadric maps a plane to its pole.
     #[cfg(test)]
-    pub type DualQuadric = Point<(Plane,), f64>;
+    pub type DualQuadric = Point<(Plane,)>;
     /// A camera maps a scene point and a pupil point to a sensor point.
-    pub type Camera = Point<(Point, Point), f64>;
-
-    /// The origin; every element is built in its home frame, centred on it in the plane `x = 0`.
-    pub fn origin() -> P {
-        Point::xyz(0.0, 0.0, 0.0)
-    }
+    pub type Camera = Point<(Point, Point)>;
 
     /// The home plane `x = 0`.
-    pub fn home() -> Pl {
+    pub fn home() -> Plane {
         Plane::new(1.0, 0.0, 0.0, 0.0)
     }
 
@@ -51,8 +44,8 @@ mod lens {
     pub fn thin_lens(focal: f64) -> (PointMap, LineMap) {
         let p = Point::slot();
         let l = Ray::slot();
-        let points = p + origin() * (home() & p).gp(1.0 / focal);
-        let lines = l - (origin() & (l ^ home())).gp(1.0 / focal);
+        let points = p + Point::origin() * (home() & p).gp(1.0 / focal);
+        let lines = l - (Point::origin() & (l ^ home())).gp(1.0 / focal);
         (points, lines)
     }
 
@@ -61,7 +54,7 @@ mod lens {
     /// squared distances add up), less the plane at infinity times the squared radius.
     pub fn ball(radius: f64) -> Quadric {
         let x = Point::slot();
-        let infinity = Plane::new(0.0, 0.0, 0.0, 1.0);
+        let infinity = Plane::infinity();
         let mut q = (infinity * (infinity & x)).gp(-radius * radius);
         for normal in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] {
             let e = Plane::with_normal(Point::direction(normal[0], normal[1], normal[2]), 0.0);
@@ -73,7 +66,7 @@ mod lens {
     /// The map on planes induced by a map on points, through incidence: for a plane `p` and a
     /// point `q`, `on_planes(collineation)(p) & q == p & collineation(q)`. It exists for a
     /// singular map too, such as a central projection.
-    pub fn on_planes(collineation: PointMap) -> Plane<(Plane,), f64> {
+    pub fn on_planes(collineation: PointMap) -> Plane<(Plane,)> {
         (Plane::slot() & Point::slot()).solve(Plane::slot() & collineation)
     }
 
@@ -89,23 +82,23 @@ mod lens {
         pub cam: Camera,
         pub frame: M,
         pub cones: Vec<Quadric>,
-        pub chief: Vec<P>,
-        pub planes: [Pl; 3],
-        pub legs: [[P; 3]; 4],
+        pub chief: Vec<Point>,
+        pub planes: [Plane; 3],
+        pub legs: [[Point; 3]; 4],
     }
 
     /// Place the lenses, focus the sensor, and carry each scene point's aperture cone to the
     /// sensor side.
     #[allow(clippy::too_many_arguments)]
     pub fn expose(
-        scene: &[P],
-        subject: P,
+        scene: &[Point],
+        subject: Point,
         focal: [f64; 2],
         placements: [M; 2],
-        focus: P,
+        focus: Point,
         tilt: M,
         radius: f64,
-        rim: [P; 3],
+        rim: [Point; 3],
     ) -> Exposure {
         // Place the lenses [front, rear], then compose their point maps and their line maps.
         let lenses = focal.map(thin_lens);
@@ -122,11 +115,11 @@ mod lens {
 
         // The focus point's image places the sensor; the tilt turns it about that image.
         let image = collineation.of(focus).unitized();
-        let frame = gax::pga3d::Motor::between(origin(), image) * tilt;
+        let frame = gax::pga3d::Motor::between(Point::origin(), image) * tilt;
         let sensor = frame >> home();
         // The camera: the train applied to the join of two open points (scene and pupil), met
         // with the sensor. (Written `p & Point::slot()`, as `p & p` trips clippy's `eq_op`.)
-        let p = Point::<(), f64>::slot();
+        let p = Point::slot();
         let cam: Camera = train.of(p & Point::slot()) ^ sensor;
 
         // Project through each scene point onto the pupil and pull back the pupil ball; then
@@ -143,7 +136,7 @@ mod lens {
             .collect();
 
         // The chief rays, through the front lens's centre: the camera with that pupil point bound.
-        let centre = placements[0] >> origin();
+        let centre = placements[0] >> Point::origin();
         let chief = scene.iter().map(|s| cam.of(*s).of(centre)).collect();
         let rays = rim.map(|r| subject & (placements[0] >> r));
         let legs = [
@@ -166,7 +159,7 @@ mod lens {
     /// The boundary of the sensor's section of a cone, traced from a point inside it along the
     /// sensor plane: along each direction the cone's form is a quadratic, and its root is the
     /// boundary.
-    pub fn section(cone: Quadric, start: P, frame: M, samples: usize) -> Vec<P> {
+    pub fn section(cone: Quadric, start: Point, frame: M, samples: usize) -> Vec<Point> {
         (0..samples)
             .map(|k| {
                 let theta = core::f64::consts::TAU * k as f64 / (samples - 1) as f64;
@@ -202,7 +195,7 @@ mod scenes {
 
     /// A grid of points at three depths in front of the camera, `[depth][height][width]`
     /// flattened (index `20 d + 4 h + w`).
-    pub fn scene() -> Vec<P> {
+    pub fn scene() -> Vec<Point> {
         [-3.2, -2.2, -1.6]
             .into_iter()
             .flat_map(|x| (0..5).flat_map(move |h| (0..4).map(move |w| (x, h, w))))
@@ -211,7 +204,7 @@ mod scenes {
     }
 
     /// The subject on the far layer whose rays through the aperture rim are traced.
-    pub fn subject() -> P {
+    pub fn subject() -> Point {
         Point::xyz(-3.2, 0.0, -1.0 / 6.0)
     }
 
@@ -267,6 +260,7 @@ mod raster {
     use gax::pga2d;
     use gax::pga3d::{Plane, Point};
     use gax_colour::{Light, light};
+    use gax_numga_examples::parallel::{par_map, par_rows};
 
     /// Half extents of the sensor window in its own frame.
     pub const SENSOR: [f64; 2] = [0.225, 0.175];
@@ -278,11 +272,11 @@ mod raster {
     /// A cone cut by the sensor: its form on sensor points (`(y, z)` in the sensor's frame, as
     /// PGA2D points), and the polar plane at each.
     struct Conic {
-        form: gax::pga3d::Scalar<(pga2d::Point, pga2d::Point), f64>,
-        polar: Plane<(pga2d::Point,), f64>,
+        form: gax::pga3d::Scalar<(pga2d::Point, pga2d::Point)>,
+        polar: Plane<(pga2d::Point,)>,
     }
 
-    fn conic(cone: Quadric, on_sensor: Point<(pga2d::Point,), f64>) -> Conic {
+    fn conic(cone: Quadric, on_sensor: Point<(pga2d::Point,)>) -> Conic {
         let polar = cone.of(on_sensor);
         Conic {
             form: on_sensor & polar,
@@ -293,27 +287,23 @@ mod raster {
     impl Conic {
         /// The first-order signed distance of a sensor point from the blur disc's edge: the
         /// cone's form over the length of its gradient, twice the polar plane's normal.
-        fn distance(&self, p: pga2d::Point<(), f64>) -> f64 {
+        fn distance(&self, p: pga2d::Point) -> f64 {
             let f = self.form.of(p).of(p).s();
             f / (2.0 * self.polar.of(p).norm())
         }
 
         /// The disc's coverage of a sensor point: a logistic edge two of numga's samples wide,
         /// a crude diffraction limit that spreads a focused point over a few pixels.
-        fn coverage(&self, p: pga2d::Point<(), f64>) -> f64 {
+        fn coverage(&self, p: pga2d::Point) -> f64 {
             1.0 / (1.0 + (-self.distance(p) / EDGE).exp())
         }
     }
 
     /// The sensor point at the centre of pixel `(row, col)` of a `rows` x `cols` raster.
-    fn sample(row: usize, col: usize, rows: usize, cols: usize) -> pga2d::Point<(), f64> {
+    fn sample(row: usize, col: usize, rows: usize, cols: usize) -> pga2d::Point {
         let y = -SENSOR[0] + 2.0 * SENSOR[0] * (col as f64 + 0.5) / cols as f64;
         let z = SENSOR[1] - 2.0 * SENSOR[1] * (row as f64 + 0.5) / rows as f64;
         pga2d::Point::xy(y, z)
-    }
-
-    fn threads() -> usize {
-        std::thread::available_parallelism().map_or(4, |t| t.get())
     }
 
     /// The pixel rows and columns a blur disc can light: the bounding box of its conic, traced
@@ -352,7 +342,7 @@ mod raster {
     pub fn rasterise(exposure: &Exposure, energy: f64, rows: usize, cols: usize) -> Vec<Light> {
         // Sensor points `(y, z)` in the sensor's own frame, carried into the world.
         let on_sensor = exposure.frame
-            >> Point::<(pga2d::Point,), f64>::from_images([
+            >> Point::<(pga2d::Point,)>::from_images([
                 Point::new(0.0, 1.0, 0.0, 0.0),
                 Point::new(0.0, 0.0, 1.0, 0.0),
                 Point::new(0.0, 0.0, 0.0, 1.0),
@@ -366,53 +356,33 @@ mod raster {
             .map(|k| reach(exposure, k, rows, cols))
             .collect();
         // Each disc's total coverage, to share its energy over the pixels it covers.
-        let n = threads();
-        let mut totals = vec![0.0; conics.len()];
-        std::thread::scope(|s| {
-            let per = conics.len().div_ceil(n).max(1);
-            for ((chunk, out), boxes) in conics
-                .chunks(per)
-                .zip(totals.chunks_mut(per))
-                .zip(boxes.chunks(per))
-            {
-                s.spawn(move || {
-                    for ((conic, total), [r0, r1, c0, c1]) in chunk.iter().zip(out).zip(boxes) {
-                        for row in *r0..*r1 {
-                            for col in *c0..*c1 {
-                                *total += conic.coverage(sample(row, col, rows, cols));
-                            }
-                        }
-                    }
-                });
-            }
+        let discs: Vec<(&Conic, &[usize; 4])> = conics.iter().zip(&boxes).collect();
+        let totals = par_map(&discs, |(conic, [r0, r1, c0, c1])| {
+            let cells = (*r0..*r1).flat_map(|row| (*c0..*c1).map(move |col| (row, col)));
+            cells
+                .map(|(row, col)| conic.coverage(sample(row, col, rows, cols)))
+                .sum::<f64>()
         });
         // numga's brightness, 550 per unit share at its resolution, kept at this one.
         let gain = 550.0 * (rows * cols) as f64 / NUMGA_SAMPLES * energy;
         let weights: Vec<f64> = totals.iter().map(|t| gain / t.max(1e-12)).collect();
         let mut image = vec![light(0.0, 0.0, 0.0, 1.0); rows * cols];
-        std::thread::scope(|s| {
-            let per = rows.div_ceil(n).max(1);
-            for (k, out) in image.chunks_mut(per * cols).enumerate() {
-                let (conics, weights, boxes) = (&conics, &weights, &boxes);
-                s.spawn(move || {
-                    let band = k * per..(k * per + out.len() / cols);
-                    let mut acc = vec![[0.0f64; 3]; out.len()];
-                    for (j, ((conic, w), [r0, r1, c0, c1])) in
-                        conics.iter().zip(weights).zip(boxes).enumerate()
-                    {
-                        for row in (*r0).max(band.start)..(*r1).min(band.end) {
-                            for col in *c0..*c1 {
-                                let p = sample(row, col, rows, cols);
-                                acc[(row - band.start) * cols + col][j / 20] +=
-                                    conic.coverage(p) * w;
-                            }
-                        }
+        par_rows(&mut image, cols, |first, out| {
+            let band = first..(first + out.len() / cols);
+            let mut acc = vec![[0.0f64; 3]; out.len()];
+            for (j, ((conic, w), [r0, r1, c0, c1])) in
+                conics.iter().zip(&weights).zip(&boxes).enumerate()
+            {
+                for row in (*r0).max(band.start)..(*r1).min(band.end) {
+                    for col in *c0..*c1 {
+                        let p = sample(row, col, rows, cols);
+                        acc[(row - band.start) * cols + col][j / 20] += conic.coverage(p) * w;
                     }
-                    for (px, rgb) in out.iter_mut().zip(acc) {
-                        let [r, g, b] = rgb.map(|v| v.clamp(0.0, 1.0) as f32);
-                        *px = Light::from_srgb(r, g, b, 1.0);
-                    }
-                });
+                }
+            }
+            for (px, rgb) in out.iter_mut().zip(acc) {
+                let [r, g, b] = rgb.map(|v| v.clamp(0.0, 1.0) as f32);
+                *px = Light::from_srgb(r, g, b, 1.0);
             }
         });
         image
@@ -462,7 +432,7 @@ fn stills_images(rows: usize, cols: usize) -> std::borrow::Cow<'static, [Vec<Lig
 }
 
 /// The side view: points of space seen along `z`, as points of the `x`-`y` plane (PGA2D).
-fn side_view() -> pga2d::Point<(Point,), f64> {
+fn side_view() -> pga2d::Point<(Point,)> {
     pga2d::Point::from_images([
         pga2d::Point::new(1.0, 0.0, 0.0),
         pga2d::Point::new(0.0, 1.0, 0.0),
@@ -486,9 +456,9 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
             (*plane ^ z ^ at(-h)).position(),
         );
         let colour = if name == "SENSOR" {
-            palette::orange()
+            palette::ORANGE
         } else {
-            palette::sky()
+            palette::SKY
         };
         let (top, bottom) = (flat.of(top), flat.of(bottom));
         ax.line(c, top, bottom, 2.5, colour);
@@ -498,11 +468,11 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         } else {
             pga2d::Motor::translation(pga2d::Point::direction(0.0, 0.12)) >> top
         };
-        ax.text(c, label, name, 7.0, palette::grid(), Align::Center);
+        ax.text(c, label, name, 7.0, palette::GRID, Align::Center);
     }
     let pts: Vec<_> = scene().iter().map(|p| flat.of(*p)).collect();
-    let layer = [palette::red(), palette::green(), palette::blue()];
-    let tone = |k: usize| layer[k].mix_light(palette::ink(), 0.3);
+    let layer = [palette::RED, palette::GREEN, palette::BLUE];
+    let tone = |k: usize| layer[k].mix_light(palette::INK, 0.3);
     for (k, chunk) in pts.chunks(20).enumerate() {
         ax.scatter(c, chunk, Marker::Dot, 3.5, tone(k));
     }
@@ -516,7 +486,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     }
     for ray in 0..3 {
         let fan: Vec<_> = exposure.legs.iter().map(|leg| flat.of(leg[ray])).collect();
-        ax.polyline(c, &fan, 1.0, palette::yellow().faded(0.9));
+        ax.polyline(c, &fan, 1.0, palette::YELLOW.faded(0.9));
     }
 }
 
@@ -538,13 +508,13 @@ fn draw(c: &mut Canvas, t: f32) {
     let image = raster::rasterise(&exposure, energy, rows, cols);
     paint(c, &image, live, cols);
     let corners = [live.lo, live.top_right(), live.hi, live.bottom_left()];
-    c.polyline(&corners, 1.0, palette::grid(), true);
+    c.polyline(&corners, 1.0, palette::GRID, true);
     let s = 9.0 * k;
     c.text(
         &format!("REAR LENS AT {rear_at:.2}, FOCUSED AT {focus_at:.2}, APERTURE {radius:.2}"),
         live.bottom_left() + down.gp(s * 1.6),
         s * 0.85,
-        palette::ink(),
+        palette::INK,
         Align::Left,
     );
     // The side view, top right: from beside the sensor to near the canvas's right edge.
@@ -568,7 +538,7 @@ fn draw(c: &mut Canvas, t: f32) {
             line,
             view.bottom_left() + down.gp(s * (1.3 + 1.0 * k as f32)),
             s * 0.7,
-            palette::grid(),
+            palette::GRID,
             Align::Left,
         );
     }
@@ -595,13 +565,13 @@ fn draw(c: &mut Canvas, t: f32) {
             paint(c, img, *thumb, thumb_size[1]);
         }
         let below = thumb.bottom_left() + down.gp(s * 1.2);
-        c.text(label, below, s * 0.7, palette::ink(), Align::Left);
+        c.text(label, below, s * 0.7, palette::INK, Align::Left);
     }
     c.text(
         "STILLS: APERTURE 0.45, FOCUSED AT 2.2",
         thumbs[0].lo - down.gp(s * 0.6),
         s * 0.7,
-        palette::grid(),
+        palette::GRID,
         Align::Left,
     );
     caption(
@@ -627,7 +597,7 @@ mod tests {
     use gax::pga3d::{Plane, Point};
 
     /// Whether a point is within `tol` of `want`, coordinate by coordinate.
-    fn near(p: P, want: [f64; 3], tol: f64) -> bool {
+    fn near(p: Point, want: [f64; 3], tol: f64) -> bool {
         p.unitized()
             .max_abs_diff(&Point::xyz(want[0], want[1], want[2]))
             <= tol
@@ -649,7 +619,7 @@ mod tests {
         } = &tilted;
         let place_front =
             gax::pga3d::Motor::translation(gax::pga3d::Point::direction(FRONT_AT, 0.0, 0.0));
-        let (sensor, centre) = (*frame >> home(), place_front >> origin());
+        let (sensor, centre) = (*frame >> home(), place_front >> Point::origin());
         // The train on lines is the join of the collineation's images: the lens is a
         // collineation.
         for other in [
@@ -676,16 +646,17 @@ mod tests {
         );
         let pl = Plane::slot();
         let r2 = 0.45f64 * 0.45;
-        let disc = (dy * (dy & pl) + dz * (dz & pl)).gp(r2) - origin() * (origin() & pl);
+        let disc =
+            (dy * (dy & pl) + dz * (dz & pl)).gp(r2) - Point::origin() * (Point::origin() & pl);
         let pupil = place_front >> disc.of(place_front << Plane::slot());
         // Sensor lines (PGA2D lines in the sensor's frame) as planes, and sensor-frame points
         // as PGA2D points: numga's subspaces `y z w` and `zxw xyw zyx`.
-        let lines_in = Plane::<(pga2d::Line,), f64>::from_images([
+        let lines_in = Plane::<(pga2d::Line,)>::from_images([
             Plane::new(0.0, 1.0, 0.0, 0.0),
             Plane::new(0.0, 0.0, 1.0, 0.0),
-            Plane::new(0.0, 0.0, 0.0, 1.0),
+            Plane::infinity(),
         ]);
-        let drop_x = pga2d::Point::<(Point,), f64>::from_images([
+        let drop_x = pga2d::Point::<(Point,)>::from_images([
             pga2d::Point::new(0.0, 0.0, 0.0),
             pga2d::Point::new(1.0, 0.0, 0.0),
             pga2d::Point::new(0.0, 1.0, 0.0),
@@ -752,7 +723,11 @@ mod tests {
             ),
         ];
         for (e, sensor_x, image, rear, hit, vertex) in cases {
-            assert!(near(e.frame >> origin(), [sensor_x, 0.0, 0.0], 1e-11));
+            assert!(near(
+                e.frame >> Point::origin(),
+                [sensor_x, 0.0, 0.0],
+                1e-11
+            ));
             assert!(near(e.collineation.of(subject()), image, 1e-11));
             assert!(near(e.legs[1][0], [1.0, 0.45, 0.0], 1e-12));
             assert!(near(e.legs[2][0], rear, 1e-11));

@@ -13,6 +13,7 @@
 //! the sky shows (the magnification) jumps. On the right, small round sources as the local map
 //! shows them: blue where the image keeps its orientation, red where it is mirrored.
 
+use gax::vga2d::Vector;
 use std::sync::OnceLock;
 
 use gax_colour::Srgb;
@@ -24,18 +25,17 @@ use gax_numga_examples::{
 mod lensing {
     use gax::vga2d::{Pseudoscalar, Vector};
 
-    pub type V = Vector<(), f64>;
     /// A map from a small displacement of a sightline to the displacement it makes at the
     /// source.
-    pub type LocalMap = Vector<(Vector,), f64>;
+    pub type LocalMap = Vector<(Vector,)>;
 
     /// A direction from its `x` and `y` components.
-    pub fn v(x: f64, y: f64) -> V {
+    pub fn v(x: f64, y: f64) -> Vector {
         Vector::new(x, y)
     }
 
     /// The source direction each observed direction reaches.
-    pub fn deflected(observed: V, positions: &[V], masses: &[f64]) -> V {
+    pub fn deflected(observed: Vector, positions: &[Vector], masses: &[f64]) -> Vector {
         positions
             .iter()
             .zip(masses)
@@ -46,7 +46,7 @@ mod lensing {
     /// at the source: the identity plus each mass's reflection in the line of its separation,
     /// scaled by the inverse square distance (`>>` by the inverse of the separation's dual, the
     /// normal of that line: a mirror vector is the mirror's normal).
-    pub fn local_map(observed: V, positions: &[V], masses: &[f64]) -> LocalMap {
+    pub fn local_map(observed: Vector, positions: &[Vector], masses: &[f64]) -> LocalMap {
         positions
             .iter()
             .zip(masses)
@@ -65,14 +65,14 @@ mod lensing {
     }
 
     /// A round Gaussian source of unit peak brightness and the given angular standard deviation.
-    pub fn brightness(direction: V, centre: V, width: f64) -> f64 {
+    pub fn brightness(direction: Vector, centre: Vector, width: f64) -> f64 {
         let offset = direction - centre;
         (-offset.norm_squared() / (2.0 * width * width)).exp()
     }
 
     /// Directions at the centres of a square of pixels about the optical axis, row by row
     /// (rows along `y`).
-    pub fn sky(half_width: f64, resolution: usize) -> Vec<V> {
+    pub fn sky(half_width: f64, resolution: usize) -> Vec<Vector> {
         let angle =
             |i: usize| (i as f64 + 0.5) * (2.0 * half_width / resolution as f64) - half_width;
         (0..resolution * resolution)
@@ -83,23 +83,23 @@ mod lensing {
     // --- the binary scene ---------------------------------------------------------------
 
     /// Two equal masses on the x axis, 1.1 Einstein angles apart: one caustic with six cusps.
-    pub fn positions() -> [V; 2] {
+    pub fn positions() -> [Vector; 2] {
         [v(-0.55, 0.0), v(0.55, 0.0)]
     }
     pub const MASSES: [f64; 2] = [0.5, 0.5];
 
     /// The source direction an observed direction reaches through the two masses.
-    pub fn binary(observed: V) -> V {
+    pub fn binary(observed: Vector) -> Vector {
         deflected(observed, &positions(), &MASSES)
     }
 
     /// The local map of the binary lens.
-    pub fn binary_local(observed: V) -> LocalMap {
+    pub fn binary_local(observed: Vector) -> LocalMap {
         local_map(observed, &positions(), &MASSES)
     }
 
     /// The sky's directions, the source direction each reaches, and the area ratio there.
-    pub fn lens(resolution: usize) -> (Vec<V>, Vec<V>, Vec<f64>) {
+    pub fn lens(resolution: usize) -> (Vec<Vector>, Vec<Vector>, Vec<f64>) {
         let directions = sky(1.9, resolution);
         let reached = directions.iter().map(|d| binary(*d)).collect();
         let areas = directions.iter().map(|d| area(binary_local(*d))).collect();
@@ -107,7 +107,7 @@ mod lensing {
     }
 
     /// The offsets of a small round source of the given radius, 64 around.
-    pub fn circle(radius: f64) -> Vec<V> {
+    pub fn circle(radius: f64) -> Vec<Vector> {
         (0..64)
             .map(|k| {
                 let angle = core::f64::consts::TAU * k as f64 / 63.0;
@@ -119,7 +119,7 @@ mod lensing {
     /// Small round sources behind a lattice of sightlines, as they appear on the sky: each
     /// circle of offsets carried by the inverse of the local map (a solve), about its
     /// sightline; with the area ratio there. Returns `(centre, outline, area)` per source.
-    pub fn tissot(count: usize, radius: f64) -> Vec<(V, Vec<V>, f64)> {
+    pub fn tissot(count: usize, radius: f64) -> Vec<(Vector, Vec<Vector>, f64)> {
         let spread = |i: usize| -1.25 + 2.5 * i as f64 / (count - 1) as f64;
         let offsets = circle(radius);
         (0..count * count)
@@ -162,8 +162,8 @@ fn starlight(t: f64) -> Light {
 struct Scene {
     critical: Vec<[Point2; 2]>,
     caustic: Vec<[Point2; 2]>,
-    tissot: Vec<(V, Vec<V>, f64)>,
-    grid: (Vec<V>, Vec<V>),
+    tissot: Vec<(Vector, Vec<Vector>, f64)>,
+    grid: (Vec<Vector>, Vec<Vector>),
 }
 
 fn scene() -> &'static Scene {
@@ -187,7 +187,7 @@ fn scene() -> &'static Scene {
 }
 
 /// The source's direction at time `t`: back and forth along a line just above the masses.
-fn source_at(t: f32) -> V {
+fn source_at(t: f32) -> Vector {
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     v(-0.6 * phasor(phase).e20(), 0.12)
 }
@@ -238,7 +238,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Some(starlight(brightness(binary(vector2(p)), centre, WIDTH)))
     });
     ax.stroke(c, &s.critical, 1.1, critical_colour);
-    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid());
+    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::GRID);
     ax.frame(c, "SKY", "", "");
     // The magnification: the light over the whole sky over the source's own.
     let (directions, reached) = &s.grid;
@@ -248,11 +248,11 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|d| brightness(*d, centre, WIDTH))
         .sum();
     let readout = format!("MAGNIFICATION {:.2}", seen / own);
-    below(c, &ax, 0.0, &readout, palette::yellow(), Align::Center);
+    below(c, &ax, 0.0, &readout, palette::YELLOW, Align::Center);
 
     // Small round sources, as seen.
     let ax = panel(2);
-    let preserved = palette::sky();
+    let preserved = palette::SKY;
     let reversed = Light::from_srgb(0.79, 0.41, 0.28, 1.7);
     for (_, outline, ratio) in &s.tissot {
         let colour = if *ratio >= 0.0 { preserved } else { reversed };
@@ -260,8 +260,8 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.fill(c, &outline, colour, 0.35);
         ax.polyline(c, &outline, 1.0, colour.faded(0.9));
     }
-    ax.stroke(c, &s.critical, 1.0, palette::grid());
-    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::ink().faded(0.8));
+    ax.stroke(c, &s.critical, 1.0, palette::GRID);
+    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::INK.faded(0.8));
     ax.frame(c, "ROUND SOURCES, AS SEEN", "", "");
     below(c, &ax, -size, "KEPT", preserved, Align::Right);
     below(c, &ax, size, "MIRRORED", reversed, Align::Left);
@@ -285,7 +285,7 @@ mod tests {
     use gax::ApproxEq;
     use gax::vga2d::{Pseudoscalar, Vector};
 
-    fn close_v(a: V, b: V, tol: f64) -> bool {
+    fn close_v(a: Vector, b: Vector, tol: f64) -> bool {
         a.max_abs_diff(&b) <= tol
     }
 
@@ -312,7 +312,7 @@ mod tests {
                 direction * (1.0 + 1.0 / (r * r)),
                 1e-13
             ));
-            let tangent: V = direction * Pseudoscalar::new(1.0);
+            let tangent: Vector = direction * Pseudoscalar::new(1.0);
             assert!(close_v(
                 local.of(tangent),
                 tangent * (1.0 - 1.0 / (r * r)),
@@ -335,8 +335,8 @@ mod tests {
         let observed = [v(-1.2, 0.8), v(0.3, -0.9), v(1.5, 1.2), v(-0.8, -1.4)];
         let small = [v(0.3, 0.8), v(-0.6, 0.1), v(0.4, -0.7), v(0.9, 0.2)];
         let step = 1e-4;
-        let lens = |d: V| deflected(d, &positions, &masses);
-        let turn = Pseudoscalar::<(), f64>::new(0.37).exp();
+        let lens = |d: Vector| deflected(d, &positions, &masses);
+        let turn = Pseudoscalar::new(0.37).exp();
         for (o, s) in observed.into_iter().zip(small) {
             let numerical = (lens(o + s * (2.0 * step)) * -1.0 + lens(o + s * step) * 8.0
                 - lens(o - s * step) * 8.0

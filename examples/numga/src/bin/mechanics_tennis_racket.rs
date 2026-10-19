@@ -16,14 +16,13 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
-    backdrop, caption, palette, run,
+    backdrop, caption, palette, reach3, run,
 };
 
 /// A point of a chart: (time, value).
-type Chart = gax::pga2d::Point<(), f64>;
+type Chart = gax::pga2d::Point;
 
-#[path = "../shared/mechanics_lie.rs"]
-mod lie;
+use gax_numga_examples::shared::mechanics_lie as lie;
 
 gax::algebra! {
     algebra vga4d "Euclidean 4-space, R(4,0,0).";
@@ -245,11 +244,6 @@ fn scenes() -> &'static Scenes {
     })
 }
 
-/// The point a vector of the body reaches from its centre, which stays at the origin.
-fn placed(v: gax::vga3d::Vector<(), f64>) -> gax::pga3d::Point<(), f64> {
-    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
-}
-
 /// One box of the 3D racket, turned by its rotor, drawn with its spin axis about pixel `centre`
 /// at `scale` pixels per unit.
 fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f32) {
@@ -269,9 +263,9 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f3
     let mut s = Scene3::new(cam);
     let corners: Vec<_> = corners::<D3>()
         .into_iter()
-        .map(|c| placed(rotor >> Vector::from_coeffs(c)))
+        .map(|c| reach3(rotor >> Vector::from_coeffs(c)))
         .collect();
-    let face_colours = [palette::orange(), palette::sky(), palette::green()];
+    let face_colours = [palette::ORANGE, palette::SKY, palette::GREEN];
     for a in 0..3 {
         let (b, d) = ((a + 1) % 3, (a + 2) % 3);
         for side in [0, 1] {
@@ -281,15 +275,15 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f3
             let col = s.lit(p, q, r, face_colours[a].faded(0.5));
             s.quad(p, q, r, t, col, 0.92);
             for (x, y) in [(p, q), (q, r), (r, t), (t, p)] {
-                s.seg(x, y, 1.0, palette::bottom().faded(0.5));
+                s.seg(x, y, 1.0, palette::BOTTOM.faded(0.5));
             }
         }
     }
     // The axis the body was spun about, carried with it.
     let along = core::array::from_fn(|i| if i == axis { 4.6 } else { 0.0 });
-    let tip = rotor >> Vector::<(), f64>::from_coeffs(along);
-    s.seg(placed(-tip), placed(tip), 2.5, palette::yellow());
-    s.dot(placed(tip), Marker::Dot, 7.0, palette::yellow());
+    let tip = rotor >> Vector::from_coeffs(along);
+    s.seg(reach3(-tip), reach3(tip), 2.5, palette::YELLOW);
+    s.dot(reach3(tip), Marker::Dot, 7.0, palette::YELLOW);
     s.draw(c);
 }
 
@@ -319,7 +313,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let label = Point2::xy(across, h * 0.51);
         for (line, text) in [axis, fate].into_iter().enumerate() {
             let at = label + down.gp(line as f32);
-            c.text(text, at, 10.0, palette::ink(), Align::Center);
+            c.text(text, at, 10.0, palette::INK, Align::Center);
         }
     }
     // The rates, each body's spin in its own plane: the three 3D bodies, and the six 4D ones,
@@ -348,7 +342,7 @@ fn draw(c: &mut Canvas, t: f32) {
     rate_curves(c, &rates4, 6, k, 1.4, |j, i| sc.rates4[j][i].c[i]);
     // The steppers' world-momentum drift, per dimension.
     let shown = ((time.min(COMPARE_RUN) / COMPARE_DT) as usize).max(1);
-    let colours = [palette::orange(), palette::sky(), palette::green()];
+    let colours = [palette::ORANGE, palette::SKY, palette::GREEN];
     let drifts = Rect::new(w * 0.5, h * 0.55, w, h);
     for (p, curves) in sc.drift.iter().enumerate() {
         // Each plot keeps room on its left for its decade labels, clear of the time labels of
@@ -378,7 +372,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The time cursor on the rate plots.
     for ax in [rates3, rates4] {
         let at = |rate: f64| Chart::xy(time, rate);
-        ax.line(c, at(-1.25), at(1.25), 1.0, palette::grid());
+        ax.line(c, at(-1.25), at(1.25), 1.0, palette::GRID);
     }
 }
 
@@ -415,8 +409,8 @@ mod tests {
     fn adjoint_is_the_open_commutator_in_five_dimensions() {
         use vga5d::Bivector;
         let mut rng = rng(0);
-        let h = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| 0.3 * rng.normal()));
-        let slot = Bivector::<(), f64>::slot();
+        let h = Bivector::from_coeffs(core::array::from_fn(|_| 0.3 * rng.normal()));
+        let slot = Bivector::slot();
         // gax's commutator, like numga's, is half the bracket.
         let ad = h.commutator(slot) * 2.0;
         let (mut term, mut series) = (slot, slot);
