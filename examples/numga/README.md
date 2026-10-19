@@ -1,7 +1,7 @@
 # numga's examples in gax
 
 The examples of [numga](https://github.com/EelcoHoogendoorn/numga) (Eelco Hoogendoorn's Python
-geometric algebra library), ported to gax: all of them, 105 binaries, each a small animation, each with
+geometric algebra library), ported to gax: all of them, 109 binaries, each a small animation, each with
 numga's tests and the numeric checks of its scenarios. The math of each example is a module that does not
 touch the drawing code (numga checks the same of its own).
 
@@ -31,6 +31,7 @@ cameras posed by gax motors.
 | relativity | `curvature`, `dirac`, `gravitational_lensing`, `impulse`, `kerr`, `ligo`, `spinors`, `twistors` |
 | quantum | `graphene`, `hubbard_dimer`, `hubbard_ring`, `kane_mele`, `kitaev_wire`, `magnetic_resonance`, `neutrino_isospin`, `process_tomography`, `stabilizer`, `superconductivity`, `two_spins` |
 | electromagnetism | `constitutive`, `eddy_brake`, `electrostriction`, `fresnel`, `induced_dipoles`, `maxwell`, `moving_charge`, `second_harmonic` |
+| orientation | `conformal_circle`, `mechanical_work`, `mirror_energy`, `normals` (intrinsic and extrinsic elements under a mirror, ADR-051) |
 
 Binaries are named `<area>_<example>`. A few keep the area numga had when they were ported: numga
 has since moved `camera_fit`, `epipolar`, `kalman`, `multiview`, `odometry` and `pose_diffusion`
