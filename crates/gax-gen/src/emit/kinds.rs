@@ -172,7 +172,8 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         Of::of(self, x)
     }}
 
-    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// This value or map as a `K` of its own orientation (`K` names only the kind, so turbofish
+    /// it: `x.cast::<Line>()`): the blades they share kept, `K`'s other blades zero (a
     /// projection, an embedding, or both; on maps and forms, of the output).
     #[inline(always)]
     pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>

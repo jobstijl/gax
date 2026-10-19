@@ -181,6 +181,13 @@ motors, and maps. `Unit<Motor>` certifies that `m ~m = 1`, and certified versors
 Get a unit with `unit()` (`normalized()` scales the same way and returns a plain value), `exp()`,
 or constructors such as `Motor::translation`.
 
+**A plain versor.** On a plain value, `v >> x` is the sandwich `v x ~v` of any element of `v`'s
+kind, versor or not, and is typed for all of them. A general element can leave the passenger's
+grades: a CGA3D `Even` that is not a versor moves a quadvector to a quadvector plus a scalar
+(`⟨v x ~v⟩₀ = ⟨x ~v v⟩₀`, zero only when `~v v` is a number), so `Even >> Quadvector` is an
+`Even`. A `Unit` versor keeps the passenger's grades: build versors from units
+(`a.unit() * b.exp()`), or call `unit()` before the sandwich.
+
 **Drift.** A product of units is certified without renormalizing, so a long chain drifts slightly
 from `m ~m = 1`. The simplified formulas are built so that drift only scales the result
 uniformly. In PGA that cancels: shapes stay rigid. Still, renormalize now and then:
@@ -737,7 +744,10 @@ kernel, with plain wgpu.
 The algebras are related, and gax converts between them with `From` wherever one algebra is a
 part of another. Each conversion is an algebra homomorphism: it sends every basis vector to a
 vector of the same square, so it keeps every product, `φ(a b) = φ(a) φ(b)`, and with it
-sandwiches, meets and joins. The generator proves this exactly for every pair of kinds.
+sandwiches, and where vectors go to vectors (all but `vga3d` to `sta`) inner products and meets.
+The generator proves this exactly for every pair of kinds. Joins and duals are not kept: they use the complement, which depends on the dimension (two 2D
+points join to a line, their vertical lines in space to a number). A 2D problem stated with 3D
+joins is solved in 3D, on the lifted values.
 
 | from | to | what it is |
 |---|---|---|
@@ -1098,7 +1108,9 @@ themselves (`crates/gax-bench/tests/interop.rs`).
 * **Two duals.** `dual()` is the metric-free complement (it works in PGA, where the metric is
   degenerate); `hodge()` is `~x I` with the metric, numga's `dual`. In STA and other algebras
   with negative squares they differ in sign on some blades: physics written with the Hodge dual
-  (Maxwell, constitutive relations) needs `hodge()`.
+  (Maxwell, constitutive relations) needs `hodge()`. In CGA's null basis they differ on more than
+  signs: `dual()` pairs `eo` with `eo`, so a round point's quadvector (numga's dual of a point)
+  is `Vector::up(x, y, z).hodge()`, and `dual()` gives a different round.
 * **Coming from numga.** Since numga 93c2ae3 (October 2026), its PGA3D has gax's basis: `w`
   first, the blades `wx wy wz wzy wxz wyx xyz wxyz` (gax's `e01 e02 e03 e032 e013 e021 e123
   e0123`). Joins, meets and `dual` agree in sign: the origin joined with a point on `+x` is
@@ -1111,7 +1123,9 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.
 * **Orientation in messages.** A mismatch reads ``expected `Line<…, Extrinsic>`, found
   `Line<…, Intrinsic>` ``: a join where a turn was expected (§5). `K::from(x)` converts into `K`'s
-  default orientation; `x.cast::<K>()` and `x.into()` keep `x`'s.
+  default orientation; `x.cast::<K>()` and `x.into()` keep `x`'s. `K` names only the kind, so
+  `let f: Forque = x.cast()` cannot infer it: name the kind (`x.cast::<Line>()`, intrinsic when
+  `x` is), or relabel with `with_orientation()`.
 * **`f32`.** The default coefficient type is `f64`, which float literals infer too; GPU and
   game code that wants `f32` names it (`Point<(), f32>`), and slot lists name kinds bare
   (`Point<(Point,), f32>` is an `f32` map on points).

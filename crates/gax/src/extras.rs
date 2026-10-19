@@ -277,8 +277,21 @@ mod pga3d_extras {
         /// ```
         #[inline]
         pub fn ideal_norm_squared(self) -> T {
-            let (x, y, z) = (self.e032(), self.e013(), self.e021());
-            x * x + y * y + z * z
+            self.ideal_dot(self)
+        }
+
+        /// The ideal inner product `x x' + y y' + z z'`: the dot product of two directions,
+        /// which the metric's inner product (`a | b`, zero for directions) cannot give.
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// let (a, b) = (Point::<(), f64>::direction(1.0, 2.0, 2.0), Point::direction(2.0, 0.0, -1.0));
+        /// assert_eq!(a.ideal_dot(b), 0.0);
+        /// assert_eq!((a | b).s(), 0.0); // as for any two directions
+        /// ```
+        #[inline]
+        pub fn ideal_dot(self, other: Self) -> T {
+            self.e032() * other.e032() + self.e013() * other.e013() + self.e021() * other.e021()
         }
 
         /// The distance between this point and `q`, both finite (of any non-zero weight, either
@@ -1075,8 +1088,20 @@ mod pga2d_extras {
         /// ```
         #[inline]
         pub fn ideal_norm_squared(self) -> T {
-            let (x, y) = (self.e20(), self.e01());
-            x * x + y * y
+            self.ideal_dot(self)
+        }
+
+        /// The ideal inner product `x x' + y y'`: the dot product of two directions, which the
+        /// metric's inner product (`a | b`, zero for directions) cannot give.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let (a, b) = (Point::<(), f64>::direction(3.0, 4.0), Point::direction(1.0, 2.0));
+        /// assert_eq!(a.ideal_dot(b), 11.0);
+        /// ```
+        #[inline]
+        pub fn ideal_dot(self, other: Self) -> T {
+            self.e20() * other.e20() + self.e01() * other.e01()
         }
 
         /// The distance between this point and `q`, both finite (of any non-zero weight, either
