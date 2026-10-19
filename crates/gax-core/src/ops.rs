@@ -15,6 +15,8 @@
 //! slots are the concatenation. The operators `*`, `^`, `&` and `|` forward to [`Gp`],
 //! [`Wedge`], [`Vee`] and [`Dot`].
 
+use crate::coef::{Coef, Real};
+
 macro_rules! binary_trait {
     ($(#[$doc:meta])* $Trait:ident, $method:ident, $msg:literal) => {
         $(#[$doc])*
@@ -179,11 +181,32 @@ pub trait Exp {
 /// The inverse under the geometric product, `x x⁻¹ = 1`: a closed form where a kind has one,
 /// else the general inverse. Implemented by the generated algebras for the kinds that have
 /// `inverse`. (Maps have their own `inverse`, `SquareMap::inverse`.)
+///
+/// The plain inverse does not check: where `x` has none it is not finite, or huge where
+/// rounding left a zero at `10⁻¹⁷`. The checked twin `try_inverse` returns `None` there. A
+/// closed form `~x (x ~x)⁻¹` divides by the Study number `N = x ~x` (through its norm
+/// `N conj(N)`), and `None` means that `N` is zero next to `x`, at most `n ε ‖x‖²` in size (`n`
+/// the number of coefficients, the size of `N`'s rounding), or that its norm cancels to at most
+/// `n ε |N|²`. The general inverse (Shirokov's, of a `Multivector`) has no Study number, so its
+/// twin tests the residual `x x⁻¹ − 1` against `√ε`, as conjugate gradients does.
+///
+/// ```
+/// use gax::Inverse;
+/// use gax::pga3d::{Plane, Point};
+/// let wall = Plane::<(), f64>::new(1.0, 0.0, 0.0, -2.0);
+/// assert_eq!(wall.try_inverse(), Some(wall.inverse()));
+/// assert_eq!(Plane::<(), f64>::infinity().try_inverse(), None); // e0 squares to zero
+/// // A line at infinity, the join of two directions, has no inverse either.
+/// let ideal = Point::<(), f64>::direction(1.0, 0.0, 0.0) & Point::direction(0.0, 1.0, 0.0);
+/// assert_eq!(Inverse::try_inverse(ideal), None);
+/// ```
 pub trait Inverse {
     /// The kind of the inverse.
     type Output;
     /// The inverse.
     fn inverse(self) -> Self::Output;
+    /// The inverse, or `None` where there is none to working precision (see above).
+    fn try_inverse(self) -> Option<Self::Output>;
 }
 
 /// The norm of a value: `norm_squared` is the scalar part of `x ~x`, `norm` the square root of
@@ -193,6 +216,55 @@ pub trait Norm: crate::kind::Extensor {
     fn norm_squared(self) -> Self::Coef;
     /// `sqrt(|norm_squared|)`.
     fn norm(self) -> Self::Coef;
+}
+
+/// The length of a PGA direction (a point at infinity, a velocity, a displacement): its ideal
+/// norm, `sqrt(x² + y²)` in the plane and `sqrt(x² + y² + z²)` in space, where [`Norm`] is the
+/// weight, 0 for a direction. Implemented by gax for the points and the `Direction`s of PGA2D
+/// and PGA3D, of either orientation, so that code on directions is written once for both
+/// dimensions. (For a finite point it reads the same coefficients: its weight times its
+/// distance from the origin.)
+///
+/// The helpers scale by a coefficient, so they run on SIMD lanes and trace as they are: no
+/// branch, and a zero direction stays zero.
+///
+/// ```
+/// use gax::{IdealNorm, pga2d, pga3d};
+/// // Written once, for directions of either dimension.
+/// fn capped<D: IdealNorm<Coef = f64>>(velocity: D) -> D {
+///     velocity.clamp_ideal_norm(2.5)
+/// }
+/// assert_eq!(capped(pga2d::Point::direction(3.0, 4.0)), pga2d::Point::direction(1.5, 2.0));
+/// assert_eq!(capped(pga3d::Point::direction(0.0, 0.0, 1.0)), pga3d::Point::direction(0.0, 0.0, 1.0));
+/// let d = pga3d::Point::direction(0.0, 3.0, 4.0).with_ideal_norm(10.0);
+/// assert_eq!(d, pga3d::Point::direction(0.0, 6.0, 8.0));
+/// assert_eq!(pga2d::Point::<(), f64>::direction(0.0, 0.0).with_ideal_norm(1.0), pga2d::Point::direction(0.0, 0.0));
+/// ```
+pub trait IdealNorm: crate::kind::Extensor<Coef: Real> + Gp<Self::Coef, Output = Self> {
+    /// The squared ideal norm, a squared length without the square root.
+    fn ideal_norm_squared(self) -> Self::Coef;
+
+    /// The ideal norm: the length.
+    #[inline]
+    fn ideal_norm(self) -> Self::Coef {
+        self.ideal_norm_squared().sqrt()
+    }
+
+    /// `self` scaled to ideal norm `length` (a zero direction stays zero).
+    #[inline]
+    #[must_use]
+    fn with_ideal_norm(self, length: Self::Coef) -> Self {
+        let (n, zero) = (self.ideal_norm(), Self::Coef::zero());
+        self.gp(Self::Coef::select_lt(zero, n, length / n, zero))
+    }
+
+    /// `self` shortened to ideal norm `max` if it is longer, else unchanged.
+    #[inline]
+    #[must_use]
+    fn clamp_ideal_norm(self, max: Self::Coef) -> Self {
+        let n = self.ideal_norm();
+        self.gp(Self::Coef::select_lt(max, n, max / n, Self::Coef::one()))
+    }
 }
 
 /// Normalization to unit norm. Implemented by the generated algebras for the kinds that have

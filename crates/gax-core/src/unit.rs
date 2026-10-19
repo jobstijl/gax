@@ -69,6 +69,35 @@ impl<M> Unit<M> {
         Unit(N::from(self.0))
     }
 
+    /// The first `n` steps of the orbit of `start` under this versor, as the pairs
+    /// `(x, self >> x)`: `(start, m >> start)`, `(m >> start, m >> m >> start)`, and so on.
+    /// The chords of a regular polygon, the arms of a reticle, the steps of a screw; each step
+    /// is one sandwich of the last, so no angle is multiplied out (a long orbit accumulates the
+    /// rounding of its steps).
+    ///
+    /// ```
+    /// use gax::ApproxEq;
+    /// use gax::pga2d::{Motor, Point};
+    /// // A square: the four edges of the quarter turns of (1, 0) about the origin.
+    /// let quarter = Motor::<(), f64>::rotation(Point::origin(), std::f64::consts::FRAC_PI_2);
+    /// let edges: Vec<_> = quarter.orbit(Point::xy(1.0, 0.0), 4).collect();
+    /// assert_eq!(edges.len(), 4);
+    /// assert!(edges[0].1.approx_eq(&Point::xy(0.0, 1.0), 1e-14));
+    /// assert_eq!(edges[1].0, edges[0].1); // each edge starts where the last ended
+    /// assert!(edges[3].1.approx_eq(&Point::xy(1.0, 0.0), 1e-14)); // and the square closes
+    /// ```
+    pub fn orbit<X: Copy>(self, start: X, n: usize) -> impl Iterator<Item = (X, X)>
+    where
+        M: Copy,
+        Self: crate::ops::Transform<X, Output = X>,
+    {
+        let mut x = start;
+        (0..n).map(move |_| {
+            let next = crate::ops::Transform::transform(self, x);
+            (core::mem::replace(&mut x, next), next)
+        })
+    }
+
     /// The logarithm, a bivector `B` with `B.exp() == self`.
     ///
     /// ```

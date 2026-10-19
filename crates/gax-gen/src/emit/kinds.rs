@@ -1051,7 +1051,7 @@ pub(super) fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, 
     if let Some(on) = &meta.inverse {
         let _ = writeln!(
             out,
-            "impl<T: gx::Real, O: gx::Orientation> gx::Inverse for {name}<(), T, O> {{\n    type Output = {on}<(), T, O>;\n    #[inline(always)]\n    fn inverse(self) -> Self::Output {{\n        Self::inverse(self)\n    }}\n}}\n"
+            "impl<T: gx::Real, O: gx::Orientation> gx::Inverse for {name}<(), T, O> {{\n    type Output = {on}<(), T, O>;\n    #[inline(always)]\n    fn inverse(self) -> Self::Output {{\n        Self::inverse(self)\n    }}\n    #[inline(always)]\n    fn try_inverse(self) -> Option<Self::Output> {{\n        Self::try_inverse(self)\n    }}\n}}\n"
         );
     }
     if meta.norm {

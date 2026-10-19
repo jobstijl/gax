@@ -814,6 +814,26 @@ impl<T: gx::Real, O: gx::Orientation> Scalar<(), T, O> {
         Scalar::from_coeffs([t4])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 1` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Scalar<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 * t0;
+        let (size, d) = (t0, t1);
+        let parts = t0 * t0;
+        let tol = T::from_i64(1) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -867,6 +887,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Scalar<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -1711,6 +1735,36 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
         Vector::from_coeffs([t21, t22, t23])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 3` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Vector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t5 = t0 * t2;
+        let t6 = t1 * t1;
+        let t9 = t0 + t1;
+        let t10 = t2 + t9;
+        let t11 = t0.mul_add(t0, t6);
+        let t12 = t2.mul_add(t2, t11);
+        let t13 = t0.mul_add(t1, t5);
+        let t14 = t1.mul_add(t2, t13);
+        let t16 = t14.mul_add(T::from_i64(2), t12);
+        let (size, d) = (t10, t16);
+        let parts = t10 * t10;
+        let tol = T::from_i64(3) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -1763,6 +1817,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Vector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -2574,6 +2632,36 @@ impl<T: gx::Real, O: gx::Orientation> Bivector<(), T, O> {
         Bivector::from_coeffs([t24, t25, t26])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 3` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Bivector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t5 = t0 * t2;
+        let t6 = t1 * t1;
+        let t9 = t0 + t1;
+        let t10 = t2 + t9;
+        let t11 = t0.mul_add(t0, t6);
+        let t12 = t2.mul_add(t2, t11);
+        let t13 = t0.mul_add(t1, t5);
+        let t14 = t1.mul_add(t2, t13);
+        let t16 = t14.mul_add(T::from_i64(2), t12);
+        let (size, d) = (t10, t16);
+        let parts = t10 * t10;
+        let tol = T::from_i64(3) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -2655,6 +2743,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Bivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -3417,6 +3509,26 @@ impl<T: gx::Real, O: gx::Orientation> Pseudoscalar<(), T, O> {
         Pseudoscalar::from_coeffs([t5])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 1` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Pseudoscalar<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 * t0;
+        let (size, d) = (t0, t1);
+        let parts = t0 * t0;
+        let tol = T::from_i64(1) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -3459,6 +3571,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Pseudoscalar<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -4284,6 +4400,29 @@ impl<T: gx::Real, O: gx::Orientation> Paravector<(), T, O> {
         })
     }
 
+    /// [`inverse`](Self::inverse), or `None` where it fails: where a coefficient of the
+    /// residual `x xâ»Â¹ â 1` is above `âÎµ`, in any lane, or the inverse is not finite. (The
+    /// general inverse has no Study number `x ~x` to test against `âxâÂ²`, as the closed forms'
+    /// `try_inverse` does; the residual is the test of the iterative solvers.)
+    #[inline]
+    pub fn try_inverse(self) -> Option<Multivector<(), T, O>> {
+        let y = self.inverse();
+        let mut x = Multivector::<(), T>::zero();
+        x.c[0] = self.c[0];
+        x.c[1] = self.c[1];
+        x.c[2] = self.c[2];
+        x.c[3] = self.c[3];
+        let y0: Multivector<(), T> = y.with_orientation();
+        let mut r = (x * y0).c;
+        r[0] = r[0] - T::one();
+        let tol = T::epsilon().sqrt();
+        if r.iter().all(|&c| T::all_lt(c.abs(), tol)) {
+            Some(y).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Paravector<(), T, O> {
@@ -4291,6 +4430,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Paravector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -5129,6 +5272,44 @@ impl<T: gx::Real, O: gx::Orientation> Rotor<(), T, O> {
         Rotor::from_coeffs([t32, t36, t37, t38])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 4` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Rotor<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t6 = t0 * t2;
+        let t8 = t1 * t1;
+        let t10 = t1 * t3;
+        let t13 = t3 * t3;
+        let t14 = t0 + t1;
+        let t15 = t2 + t3;
+        let t16 = t14 + t15;
+        let t17 = t0.mul_add(t0, t8);
+        let t18 = t2.mul_add(t2, t13);
+        let t19 = t17 + t18;
+        let t20 = t0.mul_add(t1, t6);
+        let t21 = t0.mul_add(t3, t20);
+        let t22 = t1.mul_add(t2, t10);
+        let t23 = t2.mul_add(t3, t22);
+        let t24 = t21 + t23;
+        let t26 = t24.mul_add(T::from_i64(2), t19);
+        let (size, d) = (t16, t26);
+        let parts = t16 * t16;
+        let tol = T::from_i64(4) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -5231,6 +5412,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Rotor<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -6082,6 +6267,44 @@ impl<T: gx::Real, O: gx::Orientation> Odd<(), T, O> {
         Odd::from_coeffs([t32, t33, t34, t36])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 4` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Odd<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t6 = t0 * t2;
+        let t8 = t1 * t1;
+        let t10 = t1 * t3;
+        let t13 = t3 * t3;
+        let t14 = t0 + t1;
+        let t15 = t2 + t3;
+        let t16 = t14 + t15;
+        let t17 = t0.mul_add(t0, t8);
+        let t18 = t2.mul_add(t2, t13);
+        let t19 = t17 + t18;
+        let t20 = t0.mul_add(t1, t6);
+        let t21 = t0.mul_add(t3, t20);
+        let t22 = t1.mul_add(t2, t10);
+        let t23 = t2.mul_add(t3, t22);
+        let t24 = t21 + t23;
+        let t26 = t24.mul_add(T::from_i64(2), t19);
+        let (size, d) = (t16, t26);
+        let parts = t16 * t16;
+        let tol = T::from_i64(4) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -6141,6 +6364,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Odd<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -7000,6 +7227,33 @@ impl<T: gx::Real, O: gx::Orientation> Multivector<(), T, O> {
         })
     }
 
+    /// [`inverse`](Self::inverse), or `None` where it fails: where a coefficient of the
+    /// residual `x xâ»Â¹ â 1` is above `âÎµ`, in any lane, or the inverse is not finite. (The
+    /// general inverse has no Study number `x ~x` to test against `âxâÂ²`, as the closed forms'
+    /// `try_inverse` does; the residual is the test of the iterative solvers.)
+    #[inline]
+    pub fn try_inverse(self) -> Option<Multivector<(), T, O>> {
+        let y = self.inverse();
+        let mut x = Multivector::<(), T>::zero();
+        x.c[0] = self.c[0];
+        x.c[1] = self.c[1];
+        x.c[2] = self.c[2];
+        x.c[3] = self.c[3];
+        x.c[4] = self.c[4];
+        x.c[5] = self.c[5];
+        x.c[6] = self.c[6];
+        x.c[7] = self.c[7];
+        let y0: Multivector<(), T> = y.with_orientation();
+        let mut r = (x * y0).c;
+        r[0] = r[0] - T::one();
+        let tol = T::epsilon().sqrt();
+        if r.iter().all(|&c| T::all_lt(c.abs(), tol)) {
+            Some(y).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Multivector<(), T, O> {
@@ -7007,6 +7261,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Multivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 

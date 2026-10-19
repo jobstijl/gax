@@ -296,10 +296,43 @@ let _ = (turn, rate.exp(), Unit::<Motor>::identity());
 
 The plane has the same helpers (`Line::with_normal`, `Line::normal`, `Line::direction`,
 `Line::through(p, d)` for the line through a point along a direction), and the vector algebras
-their rotors: `vga3d::Rotor::rotation(axis, angle)`, `vga2d::Rotor::rotation(angle)` and
+their rotors: `vga3d::Rotor::rotation(axis, angle)` and `rotation_in(plane, angle)` (the same
+rotation, named by the plane it turns in: `a ^ b` turns `a` towards `b`, and
+`rotation_in(axis.dual(), θ)` is `rotation(axis, θ)`), `vga2d::Rotor::rotation(angle)` and
 `angle()`, `Rotor::interpolate`, and `Rotor::between` for vectors (and VGA3D's planes), as
 `Motor::between` for flats. `Unit::identity()` (also `Default`) is the identity of any versor
 kind with a scalar part.
+
+**Named values as constants.** The named values are functions, generic over the coefficient
+type: `Point::origin()`, `Plane::infinity()` (PGA3D), `Line::infinity()` (PGA2D),
+`Unit::identity()`. The symbolic coefficients of the tracer and the jets build their zero at
+run time, so these cannot be `const`. For the coefficient types whose zero and one are
+constants (`gax::ConstCoef`: `f32`, `f64` and the `wide` lanes), the points and flats are also
+associated consts, `Point::ORIGIN`, `Plane::INFINITY` and `Line::INFINITY`, and every plain
+constructor (`new`) is `const`:
+
+```rust
+use gax::pga3d::{Plane, Point};
+
+const EYE: Point<(), f32> = Point::ORIGIN;
+const FLOOR: Plane<(), f32> = Plane::new(0.0, 0.0, 1.0, 0.0);
+assert_eq!(FLOOR & EYE, gax::pga3d::Scalar::new(0.0));
+```
+
+A versor's identity has no const: it would need one per versor kind, and
+`Unit::new_unchecked(Motor::new(1.0, 0.0, ..))` is `const` where a `static` needs one.
+
+**Orbits.** `m.orbit(start, n)`, on a unit versor, yields the first `n` steps of repeating it
+from `start`, as the pairs `(x, m >> x)`: the edges of a regular polygon, the arms of a
+reticle, the gates along a screw. Each step is one sandwich of the last.
+
+```rust
+use gax::pga2d::{Motor, Point};
+
+let sixth = Motor::<(), f64>::rotation(Point::origin(), std::f64::consts::TAU / 6.0);
+let hexagon: Vec<_> = sixth.orbit(Point::xy(1.0, 0.0), 6).collect(); // six edges
+assert_eq!(hexagon[1].0, hexagon[0].1);
+```
 
 The matrix of a motor is not a separate concept. It is the motor applied to an open slot:
 
@@ -442,7 +475,8 @@ Each solve has a checked twin that returns an `Option`:
 
 * `try_inverse()` and `try_solve(rhs)` on square maps;
 * `try_solve(rhs)` on pairings;
-* `try_solve(b)` (conjugate gradients) and `try_solve_direct(b)` (sparse LU) on field maps.
+* `try_solve(b)` (conjugate gradients) and `try_solve_direct(b)` (sparse LU) on field maps;
+* `try_inverse()` on values (below).
 
 The twin runs the same factorization and returns `None` if the map is singular or the result is
 not finite. Singular means one test everywhere: a pivot of the LU factorization at most
@@ -474,10 +508,30 @@ Values have closed-form methods where their type allows them:
 * `sqrt`.
 
 A method is generated only for the kinds with the structure it needs. `inverse` has a general
-form for the other kinds (CGA's and CSTA's `Even`, every `Multivector`): Shirokov's method, the
+form for the other kinds (CSTA's `Even`, every `Multivector`): Shirokov's method, the
 inverse as a polynomial in `x` from the scalar parts of its powers, refined by a Newton step
 (up to 9 products in the kind's product closure in the standard algebras; ADR-037). A kind none of whose values is
 invertible, such as a degenerate pseudoscalar, has no `inverse()`.
+
+A value's `inverse()` does not check either, and its twin `try_inverse()` (also a method of
+`gax::Inverse`) returns `None` where there is none to working precision. The closed form
+`~x (x ~x)⁻¹` divides by the Study number `N = x ~x`, so the test is on `N`, scaled like the
+LU test: `None` where `N` is at most `n ε ‖x‖²` in size (its own rounding, `n` the number of
+coefficients and `‖x‖²` the sum of their squares), or where its norm `N conj(N)` cancels to at
+most `n ε |N|²` (a zero divisor such as `1 + E` with `E² = 1`). The general inverse has no
+Study number; its twin tests the residual `x x⁻¹ − 1` against `√ε`. Like a map's test, this one
+is relative: a plane whose coefficients are all `10⁻¹⁷` is a plane, while one whose normal
+rounding left at `10⁻¹⁷` next to an offset of 1 is the plane at infinity.
+
+```rust
+use gax::pga3d::Plane;
+
+let wall = Plane::<(), f64>::new(1.0, 0.0, 0.0, -2.0);
+assert_eq!(wall.try_inverse(), Some(wall.inverse()));
+let horizon = Plane::<(), f64>::new(1e-17, 0.0, 0.0, 1.0);
+assert!(horizon.inverse().e1() > 1e16); // finite, and meaningless
+assert_eq!(horizon.try_inverse(), None);
+```
 
 The maps above couple the coefficients of one value. A map that couples the values at many
 sites, such as the beads of a string or the vertices of a mesh, is a *field map*: `gax::field`
@@ -818,6 +872,25 @@ kinds (`commutative struct` where rotations commute, and an optional `mobility`)
 examples' Lie-group steppers are written once this way (`shared/mechanics_lie.rs`), and the
 tennis racket runs them on VGA2D and VGA3D and on its own VGA4D and VGA5D.
 
+Smaller roles have a trait of their own. `gax::IdealNorm` is the length of a direction (a
+point at infinity: a velocity, an offset) in both PGAs, so code on directions is written once
+for the plane and for space: `ideal_norm()` and `ideal_norm_squared()`, `with_ideal_norm(len)`
+and `clamp_ideal_norm(max)`, branch free (a zero direction stays zero):
+
+```rust
+use gax::{IdealNorm, pga2d, pga3d};
+
+/// An inverse-square pull along the offset `d` to its source, with a softened core.
+fn pull<D: IdealNorm<Coef = f64>>(d: D, strength: f64, soft: f64) -> D {
+    let r2 = d.ideal_norm_squared() + soft;
+    d.gp(strength / (r2 * r2.sqrt()))
+}
+let flat = pull(pga2d::Point::direction(3.0, 4.0), 125.0, 0.0);
+let deep = pull(pga3d::Point::direction(0.0, 3.0, 4.0), 125.0, 0.0);
+assert_eq!(flat, pga2d::Point::direction(3.0, 4.0));
+assert_eq!(deep.ideal_norm(), 5.0);
+```
+
 ## 14. Mass properties
 
 `pga3d::Moments` and `pga2d::Moments` compute the size, the centre of mass and the inertia of a
@@ -1052,6 +1125,10 @@ themselves (`crates/gax-bench/tests/interop.rs`).
     coefficients for the parts that need them, `Strict::wrap(x)` and `Strict::unwrap(x)` at the
     boundary; the rest keeps plain `f32` with fused multiply-adds. The `deterministic` feature
     does the same for every `f32` and `f64` in the build.
+* **Comparing values.** `approx_eq(&b, tol)` is relative to the larger of 1 and the largest
+  coefficient, which suits results of any size; `abs_diff_eq(&b, tol)` is absolute, for a
+  tolerance in the units of the coefficients (a pixel, a field strength), and
+  `max_abs_diff(&b)` is the number both read. A NaN is never close.
 * **Degenerate metrics.** In PGA the metric pairing `|` of lines ignores the moment part, so energy
   forms built with it are singular. Build them with the regressive pairing `&`, as the modes example
   does.

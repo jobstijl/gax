@@ -814,6 +814,26 @@ impl<T: gx::Real, O: gx::Orientation> Scalar<(), T, O> {
         Scalar::from_coeffs([t4])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 1` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Scalar<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 * t0;
+        let (size, d) = (t0, t1);
+        let parts = t0 * t0;
+        let tol = T::from_i64(1) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -867,6 +887,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Scalar<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -1736,6 +1760,47 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
         Vector::from_coeffs([t34, t35, t36, t37, t38])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 5` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Vector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[4];
+        let t5 = x[4] * x[4];
+        let t8 = t0 * t2;
+        let t10 = t1 * t1;
+        let t14 = t2 * t3;
+        let t15 = t3 * t3;
+        let t16 = t0 + t1;
+        let t17 = t2 + t16;
+        let t18 = x[3].mul_add(x[3], t5);
+        let t19 = t17 + t18;
+        let t21 = (-t3).mul_add(T::from_i64(2), t17);
+        let t22 = t0.mul_add(t0, t10);
+        let t23 = t2.mul_add(t2, t22);
+        let t24 = t0.mul_add(t1, t8);
+        let t25 = t1.mul_add(t2, t24);
+        let t27 = (-t0).mul_add(t3, t15);
+        let t28 = t1.mul_add(t3, t14);
+        let t29 = t27 - t28;
+        let t31 = t25.mul_add(T::from_i64(2), t23);
+        let t32 = t29.mul_add(T::from_i64(4), t31);
+        let (size, d) = (t19, t32);
+        let parts = t21 * t21;
+        let tol = T::from_i64(5) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -1798,6 +1863,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Vector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -2642,6 +2711,45 @@ impl<T: gx::Real, O: gx::Orientation> Twist<(), T, O> {
         Twist::from_coeffs([t47, t48, t49, t53, t57, t62])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 6` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Twist<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t4 = x[4] * x[4];
+        let t7 = x[1] * x[4];
+        let t11 = t0 * t2;
+        let t12 = t1 * t1;
+        let t15 = t0 + t1;
+        let t16 = t2 + t15;
+        let t17 = x[3].mul_add(x[3], t4);
+        let t18 = x[5].mul_add(x[5], t16);
+        let t19 = t17 + t18;
+        let t20 = x[0].mul_add(x[3], t7);
+        let t21 = x[2].mul_add(x[5], t20);
+        let t22 = t21 * T::from_i64(2);
+        let t23 = -t22;
+        let t24 = t0.mul_add(t0, t12);
+        let t25 = t2.mul_add(t2, t24);
+        let t26 = t0.mul_add(t1, t11);
+        let t27 = t1.mul_add(t2, t26);
+        let t29 = t27.mul_add(T::from_i64(2), t25);
+        let (size, d) = (t19, t29);
+        let parts = t16 * t16 + t23 * t23;
+        let tol = T::from_i64(6) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -2774,6 +2882,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Twist<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -3791,6 +3903,136 @@ impl<T: gx::Real, O: gx::Orientation> Bivector<(), T, O> {
         Bivector::from_coeffs([t223, t227, t232, t236, t240, t244, t248, t252, t256, t260])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 10` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Bivector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[9] * x[9];
+        let t4 = x[3] * x[6];
+        let t5 = x[4] * x[7];
+        let t6 = x[5] * x[8];
+        let t7 = x[3] * x[7];
+        let t8 = x[3] * x[8];
+        let t9 = x[4] * x[6];
+        let t10 = x[4] * x[8];
+        let t11 = x[5] * x[6];
+        let t12 = x[5] * x[7];
+        let t13 = x[0] * x[9];
+        let t14 = x[1] * x[9];
+        let t15 = x[2] * x[9];
+        let t16 = x[0] * x[1];
+        let t17 = x[0] * x[2];
+        let t18 = x[1] * x[2];
+        let t21 = x[5] * x[5];
+        let t23 = x[7] * x[7];
+        let t26 = x[1] * x[4];
+        let t29 = x[1] * x[7];
+        let t33 = t0 * t2;
+        let t39 = t9 * t16;
+        let t43 = t12 * t13;
+        let t44 = t1 * t1;
+        let t46 = t1 * t4;
+        let t47 = t1 * t5;
+        let t49 = t1 * t3;
+        let t52 = t8 * t14;
+        let t53 = t11 * t14;
+        let t56 = t2 * t5;
+        let t62 = t7 * t7;
+        let t65 = t9 * t9;
+        let t68 = t3 * t5;
+        let t70 = t12 * t12;
+        let t72 = t3 * t6;
+        let t73 = t3 * t3;
+        let t74 = t0 + t1;
+        let t75 = t2 + t74;
+        let t76 = x[3].mul_add(x[3], t3);
+        let t77 = x[4].mul_add(x[4], t21);
+        let t78 = t76 + t77;
+        let t79 = x[6].mul_add(x[6], t23);
+        let t80 = x[8].mul_add(x[8], t75);
+        let t81 = t79 + t80;
+        let t82 = t78 + t81;
+        let t83 = t75 - t3;
+        let t84 = t4 + t5;
+        let t85 = t6 + t84;
+        let t87 = (-t85).mul_add(T::from_i64(2), t83);
+        let t88 = x[0].mul_add(x[3], t26);
+        let t89 = x[2].mul_add(x[5], t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = -t90;
+        let t92 = x[0].mul_add(x[6], t29);
+        let t93 = x[2].mul_add(x[8], t92);
+        let t94 = t93 * T::from_i64(2);
+        let t95 = -t94;
+        let t96 = t7 - t9;
+        let t97 = t96 - t15;
+        let t98 = t97 * T::from_i64(2);
+        let t99 = t8 + t14;
+        let t100 = t99 - t11;
+        let t101 = t100 * T::from_i64(2);
+        let t102 = t10 - t12;
+        let t103 = t102 - t13;
+        let t104 = t103 * T::from_i64(2);
+        let t105 = t0.mul_add(t0, t44);
+        let t106 = t2.mul_add(t2, t73);
+        let t107 = t105 + t106;
+        let t108 = t0.mul_add(t1, t33);
+        let t109 = t0.mul_add(t3, t108);
+        let t110 = t1.mul_add(t2, t49);
+        let t111 = t2.mul_add(t3, t110);
+        let t112 = t109 + t111;
+        let t114 = t0.mul_add(t4, t47);
+        let t115 = t2.mul_add(t6, t114);
+        let t116 = t4.mul_add(t4, t62);
+        let t117 = t8.mul_add(t8, t116);
+        let t118 = t115 + t117;
+        let t119 = t3.mul_add(t4, t65);
+        let t120 = t5.mul_add(t5, t119);
+        let t121 = t10.mul_add(t10, t68);
+        let t122 = t120 + t121;
+        let t123 = t118 + t122;
+        let t124 = t11.mul_add(t11, t70);
+        let t125 = t6.mul_add(t6, t124);
+        let t126 = (-t0).mul_add(t5, t72);
+        let t127 = t125 + t126;
+        let t128 = t0.mul_add(t6, t46);
+        let t129 = t1.mul_add(t6, t128);
+        let t130 = t2.mul_add(t4, t56);
+        let t131 = t129 + t130;
+        let t132 = t127 - t131;
+        let t133 = t123 + t132;
+        let t135 = t7.mul_add(t16, t39);
+        let t136 = t8.mul_add(t17, t135);
+        let t137 = t11.mul_add(t17, t43);
+        let t138 = t10.mul_add(t18, t137);
+        let t139 = t136 + t138;
+        let t140 = t12.mul_add(t18, t52);
+        let t141 = t9.mul_add(t15, t140);
+        let t142 = t10.mul_add(t13, t53);
+        let t143 = t7.mul_add(t15, t142);
+        let t144 = t141 - t143;
+        let t145 = t139 + t144;
+        let t146 = t145 * T::from_i64(8);
+        let t147 = t112.mul_add(T::from_i64(2), t107);
+        let t148 = t133.mul_add(T::from_i64(4), t146);
+        let t149 = t147 + t148;
+        let (size, d) = (t82, t149);
+        let parts = t87 * t87 + t91 * t91 + t95 * t95 + t98 * t98 + t101 * t101 + t104 * t104;
+        let tol = T::from_i64(10) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -4334,6 +4576,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Bivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -5350,6 +5596,135 @@ impl<T: gx::Real, O: gx::Orientation> Trivector<(), T, O> {
         Trivector::from_coeffs([t223, t227, t231, t235, t239, t243, t247, t251, t255, t259])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 10` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Trivector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[6] * x[6];
+        let t1 = x[7] * x[7];
+        let t2 = x[8] * x[8];
+        let t3 = x[9] * x[9];
+        let t4 = x[0] * x[3];
+        let t5 = x[1] * x[4];
+        let t6 = x[2] * x[5];
+        let t7 = x[0] * x[4];
+        let t8 = x[0] * x[5];
+        let t9 = x[1] * x[3];
+        let t10 = x[1] * x[5];
+        let t11 = x[2] * x[3];
+        let t12 = x[2] * x[4];
+        let t13 = x[6] * x[9];
+        let t14 = x[7] * x[9];
+        let t15 = x[8] * x[9];
+        let t16 = x[6] * x[7];
+        let t17 = x[6] * x[8];
+        let t18 = x[7] * x[8];
+        let t21 = x[2] * x[2];
+        let t23 = x[4] * x[4];
+        let t26 = x[1] * x[7];
+        let t29 = x[4] * x[7];
+        let t32 = t7 * t7;
+        let t36 = t2 * t4;
+        let t39 = t7 * t15;
+        let t44 = t10 * t10;
+        let t46 = t9 * t15;
+        let t48 = t1 * t5;
+        let t51 = t10 * t13;
+        let t53 = t11 * t11;
+        let t55 = t6 * t6;
+        let t57 = t11 * t14;
+        let t61 = t1 * t6;
+        let t63 = t3 * t6;
+        let t66 = t0 * t2;
+        let t68 = t1 * t1;
+        let t70 = t1 * t3;
+        let t73 = t3 * t3;
+        let t74 = t0 + t1;
+        let t75 = t2 + t74;
+        let t76 = x[0].mul_add(x[0], t3);
+        let t77 = x[1].mul_add(x[1], t21);
+        let t78 = t76 + t77;
+        let t79 = x[3].mul_add(x[3], t23);
+        let t80 = x[5].mul_add(x[5], t75);
+        let t81 = t79 + t80;
+        let t82 = t78 + t81;
+        let t83 = t3 - t75;
+        let t84 = t4 + t5;
+        let t85 = t6 + t84;
+        let t87 = (-t85).mul_add(T::from_i64(2), t83);
+        let t88 = x[0].mul_add(x[6], t26);
+        let t89 = x[2].mul_add(x[8], t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = x[3].mul_add(x[6], t29);
+        let t92 = x[5].mul_add(x[8], t91);
+        let t93 = t92 * T::from_i64(2);
+        let t94 = -t93;
+        let t95 = t7 - t9;
+        let t96 = t95 - t15;
+        let t97 = t96 * T::from_i64(2);
+        let t98 = t8 + t14;
+        let t99 = t98 - t11;
+        let t100 = t99 * T::from_i64(2);
+        let t101 = t10 - t12;
+        let t102 = t101 - t13;
+        let t103 = t102 * T::from_i64(2);
+        let t104 = t0.mul_add(t0, t68);
+        let t105 = t2.mul_add(t2, t73);
+        let t106 = t104 + t105;
+        let t107 = t0.mul_add(t1, t66);
+        let t108 = t0.mul_add(t3, t107);
+        let t109 = t1.mul_add(t2, t70);
+        let t110 = t2.mul_add(t3, t109);
+        let t111 = t108 + t110;
+        let t113 = t4.mul_add(t4, t32);
+        let t114 = t8.mul_add(t8, t113);
+        let t115 = t1.mul_add(t4, t36);
+        let t116 = t9.mul_add(t9, t115);
+        let t117 = t114 + t116;
+        let t118 = t5.mul_add(t5, t44);
+        let t119 = t0.mul_add(t5, t118);
+        let t120 = t2.mul_add(t5, t53);
+        let t121 = t119 + t120;
+        let t122 = t117 + t121;
+        let t123 = t12.mul_add(t12, t55);
+        let t124 = t0.mul_add(t6, t123);
+        let t125 = (-t0).mul_add(t4, t61);
+        let t126 = t124 + t125;
+        let t127 = t3.mul_add(t4, t48);
+        let t128 = t3.mul_add(t5, t127);
+        let t129 = t2.mul_add(t6, t63);
+        let t130 = t128 + t129;
+        let t131 = t126 - t130;
+        let t132 = t122 + t131;
+        let t134 = t8.mul_add(t14, t46);
+        let t135 = t12.mul_add(t13, t134);
+        let t136 = t7.mul_add(t16, t39);
+        let t137 = t8.mul_add(t17, t136);
+        let t138 = t135 - t137;
+        let t139 = t9.mul_add(t16, t51);
+        let t140 = t10.mul_add(t18, t139);
+        let t141 = t11.mul_add(t17, t57);
+        let t142 = t12.mul_add(t18, t141);
+        let t143 = t140 + t142;
+        let t144 = t138 - t143;
+        let t145 = t144 * T::from_i64(8);
+        let t146 = t111.mul_add(T::from_i64(2), t106);
+        let t147 = t132.mul_add(T::from_i64(4), t145);
+        let t148 = t146 + t147;
+        let (size, d) = (t82, t148);
+        let parts = t87 * t87 + t90 * t90 + t94 * t94 + t97 * t97 + t100 * t100 + t103 * t103;
+        let tol = T::from_i64(10) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -5678,6 +6053,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Trivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -6517,6 +6896,48 @@ impl<T: gx::Real, O: gx::Orientation> Quadvector<(), T, O> {
         Quadvector::from_coeffs([t39, t40, t41, t42, t43])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 5` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Quadvector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[4];
+        let t5 = x[4] * x[4];
+        let t8 = t0 * t2;
+        let t10 = t1 * t1;
+        let t12 = t1 * t3;
+        let t15 = t3 * t3;
+        let t16 = t0 + t1;
+        let t17 = t2 + t16;
+        let t18 = x[3].mul_add(x[3], t5);
+        let t19 = t17 + t18;
+        let t21 = t3.mul_add(T::from_i64(2), t17);
+        let t22 = -t21;
+        let t23 = t0.mul_add(t0, t10);
+        let t24 = t2.mul_add(t2, t23);
+        let t25 = t0.mul_add(t1, t8);
+        let t26 = t1.mul_add(t2, t25);
+        let t28 = t0.mul_add(t3, t12);
+        let t29 = t2.mul_add(t3, t15);
+        let t30 = t28 + t29;
+        let t32 = t26.mul_add(T::from_i64(2), t24);
+        let t33 = t30.mul_add(T::from_i64(4), t32);
+        let (size, d) = (t19, t33);
+        let parts = t22 * t22;
+        let tol = T::from_i64(5) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -6580,6 +7001,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Quadvector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -7343,6 +7768,27 @@ impl<T: gx::Real, O: gx::Orientation> Pseudoscalar<(), T, O> {
         Pseudoscalar::from_coeffs([t5])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 1` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Pseudoscalar<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 * t0;
+        let t2 = -t0;
+        let (size, d) = (t0, t1);
+        let parts = t2 * t2;
+        let tol = T::from_i64(1) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -7386,6 +7832,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Pseudoscalar<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -8291,6 +8741,55 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
         Motor::from_coeffs([t48, t68, t69, t70, t74, t78, t82, t86])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 8` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Motor<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t5 = x[5] * x[5];
+        let t8 = x[0] * x[7];
+        let t11 = x[3] * x[6];
+        let t14 = t0 * t2;
+        let t16 = t1 * t1;
+        let t18 = t1 * t3;
+        let t21 = t3 * t3;
+        let t22 = t0 + t1;
+        let t23 = t2 + t3;
+        let t24 = t22 + t23;
+        let t25 = x[4].mul_add(x[4], t5);
+        let t26 = x[6].mul_add(x[6], t25);
+        let t27 = x[7].mul_add(x[7], t24);
+        let t28 = t26 + t27;
+        let t29 = (-x[1]).mul_add(x[4], t8);
+        let t30 = x[2].mul_add(x[5], t11);
+        let t31 = t29 - t30;
+        let t32 = t31 * T::from_i64(2);
+        let t33 = t0.mul_add(t0, t16);
+        let t34 = t2.mul_add(t2, t21);
+        let t35 = t33 + t34;
+        let t36 = t0.mul_add(t1, t14);
+        let t37 = t0.mul_add(t3, t36);
+        let t38 = t1.mul_add(t2, t18);
+        let t39 = t2.mul_add(t3, t38);
+        let t40 = t37 + t39;
+        let t42 = t40.mul_add(T::from_i64(2), t35);
+        let (size, d) = (t28, t42);
+        let parts = t24 * t24 + t32 * t32;
+        let tol = T::from_i64(8) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -8455,6 +8954,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Motor<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -9933,6 +10436,335 @@ impl<T: gx::Real, O: gx::Orientation> Even<(), T, O> {
         Even::from_coeffs([t664, t671, t678, t685, t690, t695, t700, t705, t710, t715, t722, t729, t736, t743, t748, t753])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 16` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Even<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = x[10] * x[10];
+        let t5 = x[11] * x[11];
+        let t6 = x[12] * x[12];
+        let t7 = x[13] * x[13];
+        let t8 = x[4] * x[7];
+        let t9 = x[5] * x[8];
+        let t10 = x[6] * x[9];
+        let t11 = x[14] * x[15];
+        let t12 = x[4] * x[8];
+        let t13 = x[4] * x[9];
+        let t14 = x[4] * x[15];
+        let t15 = x[5] * x[7];
+        let t16 = x[5] * x[9];
+        let t17 = x[5] * x[15];
+        let t18 = x[6] * x[7];
+        let t19 = x[6] * x[8];
+        let t20 = x[6] * x[15];
+        let t21 = x[7] * x[14];
+        let t22 = x[8] * x[14];
+        let t23 = x[9] * x[14];
+        let t24 = x[0] * x[11];
+        let t25 = x[0] * x[12];
+        let t26 = x[0] * x[13];
+        let t27 = x[1] * x[10];
+        let t28 = x[1] * x[12];
+        let t29 = x[1] * x[13];
+        let t30 = x[2] * x[10];
+        let t31 = x[2] * x[11];
+        let t32 = x[2] * x[13];
+        let t33 = x[3] * x[10];
+        let t34 = x[3] * x[11];
+        let t35 = x[3] * x[12];
+        let t36 = x[0] * x[1];
+        let t37 = x[0] * x[2];
+        let t38 = x[0] * x[3];
+        let t39 = x[1] * x[2];
+        let t40 = x[1] * x[3];
+        let t41 = x[2] * x[3];
+        let t42 = x[10] * x[11];
+        let t43 = x[10] * x[12];
+        let t44 = x[10] * x[13];
+        let t45 = x[11] * x[12];
+        let t46 = x[11] * x[13];
+        let t47 = x[12] * x[13];
+        let t49 = x[5] * x[5];
+        let t52 = x[8] * x[8];
+        let t54 = x[14] * x[14];
+        let t58 = x[2] * x[5];
+        let t60 = x[4] * x[11];
+        let t62 = x[6] * x[13];
+        let t63 = x[10] * x[14];
+        let t66 = x[2] * x[8];
+        let t68 = x[7] * x[11];
+        let t70 = x[9] * x[13];
+        let t71 = x[10] * x[15];
+        let t74 = t0 * t2;
+        let t78 = t0 * t10;
+        let t80 = t0 * t5;
+        let t82 = t0 * t7;
+        let t85 = t21 * t36;
+        let t88 = t22 * t37;
+        let t90 = t20 * t38;
+        let t92 = t26 * t33;
+        let t96 = t16 * t24;
+        let t98 = t19 * t24;
+        let t99 = t1 * t1;
+        let t102 = t1 * t8;
+        let t105 = t1 * t4;
+        let t108 = t1 * t7;
+        let t109 = t1 * t11;
+        let t110 = t12 * t39;
+        let t113 = t13 * t40;
+        let t115 = t29 * t34;
+        let t117 = t17 * t29;
+        let t119 = t20 * t28;
+        let t127 = t2 * t4;
+        let t129 = t2 * t6;
+        let t131 = t2 * t11;
+        let t132 = t16 * t41;
+        let t135 = t13 * t30;
+        let t137 = t18 * t30;
+        let t139 = t21 * t32;
+        let t141 = t3 * t3;
+        let t145 = t3 * t4;
+        let t147 = t3 * t6;
+        let t149 = t3 * t11;
+        let t151 = t14 * t35;
+        let t152 = t15 * t33;
+        let t154 = t21 * t35;
+        let t156 = t8 * t8;
+        let t159 = t14 * t14;
+        let t163 = t7 * t8;
+        let t165 = t13 * t46;
+        let t169 = t16 * t16;
+        let t173 = t5 * t9;
+        let t177 = t17 * t43;
+        let t179 = t19 * t19;
+        let t182 = t18 * t46;
+        let t184 = t4 * t10;
+        let t187 = t7 * t10;
+        let t189 = t21 * t21;
+        let t192 = t22 * t43;
+        let t197 = t4 * t6;
+        let t200 = t5 * t5;
+        let t202 = t5 * t7;
+        let t203 = t5 * t11;
+        let t205 = t6 * t7;
+        let t207 = t7 * t7;
+        let t209 = t11 * t11;
+        let t210 = t0 + t1;
+        let t211 = t2 + t3;
+        let t212 = t4 + t5;
+        let t213 = t6 + t7;
+        let t214 = t210 + t211;
+        let t215 = t212 + t213;
+        let t216 = x[4].mul_add(x[4], t49);
+        let t217 = x[6].mul_add(x[6], t216);
+        let t218 = x[7].mul_add(x[7], t52);
+        let t219 = t217 + t218;
+        let t220 = x[9].mul_add(x[9], t54);
+        let t221 = x[15].mul_add(x[15], t220);
+        let t222 = t214 + t215;
+        let t223 = t221 + t222;
+        let t224 = t219 + t223;
+        let t225 = t214 - t215;
+        let t226 = t8 + t9;
+        let t227 = t10 + t11;
+        let t228 = t226 + t227;
+        let t230 = (-t228).mul_add(T::from_i64(2), t225);
+        let t231 = x[0].mul_add(x[14], t60);
+        let t232 = x[5].mul_add(x[12], t62);
+        let t233 = t231 + t232;
+        let t234 = x[1].mul_add(x[4], t58);
+        let t235 = x[3].mul_add(x[6], t63);
+        let t236 = t234 + t235;
+        let t237 = t233 - t236;
+        let t238 = t237 * T::from_i64(2);
+        let t239 = x[0].mul_add(x[15], t71);
+        let t240 = x[1].mul_add(x[7], t66);
+        let t241 = t239 - t240;
+        let t242 = x[3].mul_add(x[9], t68);
+        let t243 = x[8].mul_add(x[12], t70);
+        let t244 = t242 + t243;
+        let t245 = t241 - t244;
+        let t246 = t245 * T::from_i64(2);
+        let t247 = t12 + t23;
+        let t248 = t26 + t31;
+        let t249 = t247 + t248;
+        let t250 = t15 + t20;
+        let t251 = t28 + t33;
+        let t252 = t250 + t251;
+        let t253 = t249 - t252;
+        let t254 = t253 * T::from_i64(2);
+        let t255 = t13 + t17;
+        let t256 = t30 + t34;
+        let t257 = t255 + t256;
+        let t258 = t18 + t22;
+        let t259 = t25 + t29;
+        let t260 = t258 + t259;
+        let t261 = t257 - t260;
+        let t262 = t261 * T::from_i64(2);
+        let t263 = t16 + t21;
+        let t264 = t24 + t35;
+        let t265 = t263 + t264;
+        let t266 = t14 + t19;
+        let t267 = t27 + t32;
+        let t268 = t266 + t267;
+        let t269 = t265 - t268;
+        let t270 = t269 * T::from_i64(2);
+        let t271 = t0.mul_add(t0, t99);
+        let t272 = t2.mul_add(t2, t141);
+        let t273 = t271 + t272;
+        let t274 = t4.mul_add(t4, t200);
+        let t275 = t6.mul_add(t6, t207);
+        let t276 = t274 + t275;
+        let t277 = t273 + t276;
+        let t278 = t0.mul_add(t1, t74);
+        let t279 = t0.mul_add(t3, t80);
+        let t280 = t278 + t279;
+        let t281 = t0.mul_add(t6, t82);
+        let t282 = t1.mul_add(t2, t281);
+        let t283 = t280 + t282;
+        let t284 = t1.mul_add(t3, t105);
+        let t285 = t1.mul_add(t6, t108);
+        let t286 = t284 + t285;
+        let t287 = t2.mul_add(t3, t127);
+        let t288 = t2.mul_add(t5, t287);
+        let t289 = t286 + t288;
+        let t290 = t283 + t289;
+        let t291 = t2.mul_add(t7, t145);
+        let t292 = t3.mul_add(t5, t147);
+        let t293 = t291 + t292;
+        let t294 = t4.mul_add(t5, t197);
+        let t295 = t4.mul_add(t7, t294);
+        let t296 = t293 + t295;
+        let t297 = t5.mul_add(t6, t202);
+        let t298 = (-t0).mul_add(t4, t205);
+        let t299 = t297 + t298;
+        let t300 = t1.mul_add(t5, t129);
+        let t301 = t3.mul_add(t7, t300);
+        let t302 = t299 - t301;
+        let t303 = t296 + t302;
+        let t304 = t290 + t303;
+        let t306 = t0.mul_add(t11, t102);
+        let t307 = t2.mul_add(t9, t306);
+        let t308 = t3.mul_add(t10, t156);
+        let t309 = t12.mul_add(t12, t308);
+        let t310 = t307 + t309;
+        let t311 = t13.mul_add(t13, t159);
+        let t312 = t4.mul_add(t8, t311);
+        let t313 = t6.mul_add(t8, t163);
+        let t314 = t15.mul_add(t15, t313);
+        let t315 = t312 + t314;
+        let t316 = t310 + t315;
+        let t317 = t9.mul_add(t9, t169);
+        let t318 = t17.mul_add(t17, t317);
+        let t319 = t4.mul_add(t9, t173);
+        let t320 = t7.mul_add(t9, t319);
+        let t321 = t318 + t320;
+        let t322 = t18.mul_add(t18, t179);
+        let t323 = t10.mul_add(t10, t322);
+        let t324 = t20.mul_add(t20, t184);
+        let t325 = t5.mul_add(t10, t324);
+        let t326 = t323 + t325;
+        let t327 = t321 + t326;
+        let t328 = t316 + t327;
+        let t329 = t6.mul_add(t10, t189);
+        let t330 = t22.mul_add(t22, t329);
+        let t331 = t23.mul_add(t23, t203);
+        let t332 = t6.mul_add(t11, t331);
+        let t333 = t330 + t332;
+        let t334 = t7.mul_add(t11, t209);
+        let t335 = (-t0).mul_add(t8, t334);
+        let t336 = t0.mul_add(t9, t78);
+        let t337 = t1.mul_add(t9, t336);
+        let t338 = t335 - t337;
+        let t339 = t333 + t338;
+        let t340 = t1.mul_add(t10, t109);
+        let t341 = t2.mul_add(t8, t340);
+        let t342 = t2.mul_add(t10, t131);
+        let t343 = t3.mul_add(t8, t342);
+        let t344 = t341 + t343;
+        let t345 = t3.mul_add(t9, t149);
+        let t346 = t5.mul_add(t8, t345);
+        let t347 = t6.mul_add(t9, t187);
+        let t348 = t4.mul_add(t11, t347);
+        let t349 = t346 + t348;
+        let t350 = t344 + t349;
+        let t351 = t339 - t350;
+        let t352 = t328 + t351;
+        let t354 = t12.mul_add(t26, t96);
+        let t355 = t18.mul_add(t25, t110);
+        let t356 = t354 + t355;
+        let t357 = t15.mul_add(t39, t113);
+        let t358 = t18.mul_add(t40, t357);
+        let t359 = t356 + t358;
+        let t360 = t19.mul_add(t27, t119);
+        let t361 = t22.mul_add(t29, t132);
+        let t362 = t360 + t361;
+        let t363 = t19.mul_add(t41, t135);
+        let t364 = t14.mul_add(t32, t363);
+        let t365 = t362 + t364;
+        let t366 = t359 + t365;
+        let t367 = t23.mul_add(t31, t152);
+        let t368 = t17.mul_add(t34, t154);
+        let t369 = t367 + t368;
+        let t370 = t14.mul_add(t42, t177);
+        let t371 = t20.mul_add(t44, t370);
+        let t372 = t369 + t371;
+        let t373 = t21.mul_add(t42, t192);
+        let t374 = t23.mul_add(t44, t373);
+        let t375 = t14.mul_add(t36, t85);
+        let t376 = t24.mul_add(t27, t375);
+        let t377 = t374 - t376;
+        let t378 = t372 + t377;
+        let t379 = t366 + t378;
+        let t380 = t17.mul_add(t37, t88);
+        let t381 = t25.mul_add(t30, t90);
+        let t382 = t380 + t381;
+        let t383 = t23.mul_add(t38, t92);
+        let t384 = t13.mul_add(t25, t383);
+        let t385 = t382 + t384;
+        let t386 = t15.mul_add(t26, t98);
+        let t387 = t28.mul_add(t31, t115);
+        let t388 = t386 + t387;
+        let t389 = t16.mul_add(t27, t117);
+        let t390 = t23.mul_add(t28, t389);
+        let t391 = t388 + t390;
+        let t392 = t385 + t391;
+        let t393 = t32.mul_add(t35, t137);
+        let t394 = t20.mul_add(t31, t139);
+        let t395 = t393 + t394;
+        let t396 = t12.mul_add(t33, t151);
+        let t397 = t22.mul_add(t34, t396);
+        let t398 = t395 + t397;
+        let t399 = t12.mul_add(t45, t165);
+        let t400 = t15.mul_add(t45, t399);
+        let t401 = t16.mul_add(t47, t182);
+        let t402 = t19.mul_add(t47, t401);
+        let t403 = t400 + t402;
+        let t404 = t398 + t403;
+        let t405 = t392 + t404;
+        let t406 = t379 - t405;
+        let t407 = t406 * T::from_i64(8);
+        let t408 = t304.mul_add(T::from_i64(2), t277);
+        let t409 = t352.mul_add(T::from_i64(4), t407);
+        let t410 = t408 + t409;
+        let (size, d) = (t224, t410);
+        let parts = t230 * t230 + t238 * t238 + t246 * t246 + t254 * t254 + t262 * t262 + t270 * t270;
+        let tol = T::from_i64(16) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -10411,1054 +11243,4 @@ impl<T: gx::Real> Even<(), T, gx::Extrinsic> {
         Even::from_coeffs(c).unit()
     }
 
-}
-
-impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Even<(), T, O> {
-    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
-    #[inline(always)]
-    fn newton_step(self) -> Self {
-        let x = self.c;
-        let t0 = x[0] * x[0];
-        let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
-        let t3 = x[3] * x[3];
-        let t4 = x[4] * x[7];
-        let t5 = x[5] * x[8];
-        let t6 = x[6] * x[9];
-        let t7 = x[10] * x[10];
-        let t8 = x[11] * x[11];
-        let t9 = x[12] * x[12];
-        let t10 = x[13] * x[13];
-        let t11 = x[14] * x[15];
-        let t12 = t0 + t1;
-        let t13 = t2 - t7;
-        let t14 = t12 + t13;
-        let t15 = t8 + t9;
-        let t16 = t15 + T::from_i64(3);
-        let t17 = t14 - t16;
-        let t19 = t3 - t10;
-        let t21 = t4 + t5;
-        let t22 = t11 + t21;
-        let t23 = t22 * T::from_i64(4);
-        let t24 = t19.mul_add(T::from_i64(3), t17);
-        let t25 = t6.mul_add(T::from_i64(2), t23);
-        let t26 = t24 - t25;
-        let t27 = t3 - t7;
-        let t28 = t12 + t27;
-        let t29 = t8 + t10;
-        let t30 = t29 + T::from_i64(3);
-        let t31 = t28 - t30;
-        let t33 = t2 - t9;
-        let t35 = t4 + t6;
-        let t36 = t11 + t35;
-        let t37 = t36 * T::from_i64(4);
-        let t38 = t33.mul_add(T::from_i64(3), t31);
-        let t39 = t5.mul_add(T::from_i64(2), t37);
-        let t40 = t38 - t39;
-        let t41 = t0 + t2;
-        let t42 = t27 + t41;
-        let t43 = t9 + t10;
-        let t44 = t43 + T::from_i64(3);
-        let t45 = t42 - t44;
-        let t47 = t1 - t8;
-        let t49 = t5 + t6;
-        let t50 = t11 + t49;
-        let t51 = t50 * T::from_i64(4);
-        let t52 = t47.mul_add(T::from_i64(3), t45);
-        let t53 = t4.mul_add(T::from_i64(2), t51);
-        let t54 = t52 - t53;
-        let t55 = t1 + t2;
-        let t56 = t3 - t8;
-        let t57 = t55 + t56;
-        let t58 = t57 - t44;
-        let t59 = t11 * T::from_i64(2);
-        let t61 = t6 + t21;
-        let t62 = t61 * T::from_i64(4);
-        let t63 = t58 - t59;
-        let t64 = t7.mul_add(T::from_i64(3), t62);
-        let t65 = t63 - t64;
-        let t66 = x[0] * x[1];
-        let t67 = x[2] * x[13];
-        let t68 = x[3] * x[12];
-        let t69 = x[4] * x[15];
-        let t70 = x[10] * x[11];
-        let t71 = t66 + t68;
-        let t72 = t71 - t67;
-        let t73 = t69 + t70;
-        let t74 = t72 - t73;
-        let t75 = x[7] * x[14];
-        let t76 = t66 + t67;
-        let t77 = t76 - t68;
-        let t78 = t70 + t75;
-        let t79 = t77 - t78;
-        let t80 = x[0] * x[2];
-        let t81 = x[1] * x[13];
-        let t82 = x[3] * x[11];
-        let t83 = x[8] * x[14];
-        let t84 = x[10] * x[12];
-        let t85 = t80 + t82;
-        let t86 = t85 - t81;
-        let t87 = t83 + t84;
-        let t88 = t86 - t87;
-        let t89 = x[5] * x[15];
-        let t90 = t80 + t81;
-        let t91 = t90 - t82;
-        let t92 = t84 + t89;
-        let t93 = t91 - t92;
-        let t94 = x[0] * x[3];
-        let t95 = x[1] * x[12];
-        let t96 = x[2] * x[11];
-        let t97 = x[6] * x[15];
-        let t98 = x[10] * x[13];
-        let t99 = t94 + t96;
-        let t100 = t99 - t95;
-        let t101 = t97 + t98;
-        let t102 = t100 - t101;
-        let t103 = x[9] * x[14];
-        let t104 = t94 + t95;
-        let t105 = t104 - t96;
-        let t106 = t98 + t103;
-        let t107 = t105 - t106;
-        let t108 = x[0] * x[11];
-        let t109 = x[1] * x[10];
-        let t110 = x[2] * x[3];
-        let t111 = x[6] * x[8];
-        let t112 = x[12] * x[13];
-        let t113 = t108 + t112;
-        let t114 = t113 - t109;
-        let t115 = t110 + t111;
-        let t116 = t114 - t115;
-        let t117 = x[5] * x[9];
-        let t118 = t108 + t110;
-        let t119 = t117 + t118;
-        let t120 = t109 + t112;
-        let t121 = t119 - t120;
-        let t122 = x[0] * x[12];
-        let t123 = x[1] * x[3];
-        let t124 = x[2] * x[10];
-        let t125 = x[4] * x[9];
-        let t126 = x[11] * x[13];
-        let t127 = t122 + t126;
-        let t128 = t127 - t123;
-        let t129 = t124 + t125;
-        let t130 = t128 - t129;
-        let t131 = x[6] * x[7];
-        let t132 = t122 + t123;
-        let t133 = t131 + t132;
-        let t134 = t124 + t126;
-        let t135 = t133 - t134;
-        let t136 = x[0] * x[13];
-        let t137 = x[1] * x[2];
-        let t138 = x[3] * x[10];
-        let t139 = x[5] * x[7];
-        let t140 = x[11] * x[12];
-        let t141 = t136 + t140;
-        let t142 = t141 - t137;
-        let t143 = t138 + t139;
-        let t144 = t142 - t143;
-        let t145 = x[4] * x[8];
-        let t146 = t136 + t137;
-        let t147 = t145 + t146;
-        let t148 = t138 + t140;
-        let t149 = t147 - t148;
-        let t150 = x[0] * x[10];
-        let t151 = x[1] * x[11];
-        let t152 = t150 + t151;
-        let t153 = x[2] * x[12];
-        let t154 = x[3] * x[13];
-        let t155 = t153 + t154;
-        let t156 = t145 - t139;
-        let t157 = t139 + t145;
-        let t158 = t125 - t131;
-        let t159 = t125 + t131;
-        let t160 = t69 - t75;
-        let t161 = t69 + t75;
-        let t162 = t117 - t111;
-        let t163 = t111 + t117;
-        let t164 = t89 - t83;
-        let t165 = t83 + t89;
-        let t166 = t97 - t103;
-        let t167 = t97 + t103;
-        let t168 = t66 - t161;
-        let t170 = t70.mul_add(T::from_ratio(1, 2), t168);
-        let t171 = t110 + t163;
-        let t173 = t112.mul_add(T::from_ratio(1, 2), t171);
-        let t174 = t70 + t161;
-        let t176 = t174.mul_add(T::from_i64(2), t66);
-        let t177 = t112 - t163;
-        let t179 = t177.mul_add(T::from_i64(2), t110);
-        let t181 = t65.mul_add(T::from_ratio(1, 3), t0);
-        let t182 = t165 * T::from_i64(2);
-        let t183 = t80 + t182;
-        let t184 = t167 * T::from_i64(2);
-        let t185 = t94 + t184;
-        let t186 = t155 * T::from_i64(2);
-        let t187 = t150 - t186;
-        let t188 = t162 * T::from_ratio(2, 3);
-        let t189 = t108 + t188;
-        let t190 = t158 * T::from_ratio(2, 3);
-        let t191 = t122 - t190;
-        let t192 = t156 * T::from_ratio(2, 3);
-        let t193 = t136 + t192;
-        let t195 = (-t157).mul_add(T::from_i64(2), t137);
-        let t197 = (-t159).mul_add(T::from_i64(2), t123);
-        let t198 = t109 - t188;
-        let t199 = t151 - t186;
-        let t200 = t166 * T::from_ratio(2, 3);
-        let t201 = t95 + t200;
-        let t202 = t164 * T::from_ratio(2, 3);
-        let t203 = t81 - t202;
-        let t204 = t124 + t190;
-        let t205 = t96 - t200;
-        let t206 = t152 * T::from_i64(2);
-        let t207 = t153 - t206;
-        let t208 = t160 * T::from_ratio(2, 3);
-        let t209 = t67 + t208;
-        let t210 = t138 - t192;
-        let t211 = t82 + t202;
-        let t212 = t68 - t208;
-        let t213 = t4 + t11;
-        let t214 = t154 - t206;
-        let t215 = t84 - t182;
-        let t216 = t35 + T::from_ratio(3, 2);
-        let t217 = t98 - t184;
-        let t219 = t6.mul_add(T::from_i64(3), t5);
-        let t220 = t8 + t59;
-        let t223 = x[0] * t11;
-        let t224 = x[0] * t49;
-        let t227 = x[3] * t185;
-        let t228 = x[10] * t187;
-        let t231 = x[13] * t193;
-        let t234 = x[1] * t4;
-        let t236 = x[1] * t49;
-        let t238 = x[3] * t197;
-        let t240 = x[11] * t199;
-        let t242 = x[13] * t203;
-        let t246 = x[2] * t5;
-        let t248 = x[2] * t213;
-        let t249 = x[3] * t179;
-        let t252 = x[12] * t207;
-        let t253 = x[13] * t209;
-        let t257 = x[3] * t3;
-        let t259 = x[3] * t219;
-        let t262 = x[12] * t212;
-        let t263 = x[13] * t214;
-        let t264 = x[4] * t54;
-        let t267 = x[14] * t79;
-        let t269 = x[5] * t40;
-        let t271 = x[14] * t88;
-        let t274 = x[6] * t26;
-        let t275 = x[14] * t107;
-        let t276 = x[7] * t54;
-        let t279 = x[15] * t74;
-        let t281 = x[8] * t40;
-        let t283 = x[15] * t93;
-        let t286 = x[9] * t26;
-        let t287 = x[15] * t102;
-        let t290 = x[2] * t204;
-        let t294 = x[10] * t11;
-        let t295 = x[10] * t216;
-        let t297 = x[12] * t215;
-        let t298 = x[13] * t217;
-        let t302 = x[3] * t211;
-        let t303 = x[11] * t4;
-        let t305 = x[11] * t6;
-        let t308 = x[11] * t9;
-        let t309 = x[11] * t10;
-        let t311 = x[12] * t157;
-        let t314 = x[1] * t201;
-        let t317 = x[12] * t5;
-        let t320 = x[12] * t9;
-        let t321 = x[12] * t216;
-        let t322 = x[12] * t220;
-        let t326 = x[2] * t209;
-        let t330 = x[11] * t159;
-        let t332 = x[13] * t10;
-        let t333 = x[13] * t219;
-        let t334 = x[13] * t220;
-        let t336 = x[5] * t93;
-        let t338 = x[14] * t181;
-        let t340 = x[8] * t88;
-        let t342 = x[15] * t181;
-        let t343 = x[0].mul_add(t4, t224);
-        let t344 = (-x[0]).mul_add(t0, t228);
-        let t345 = (-x[1]).mul_add(t176, t344);
-        let t346 = x[2].mul_add(t183, t227);
-        let t347 = t345 - t346;
-        let t350 = x[11].mul_add(t189, x[0]);
-        let t351 = x[12].mul_add(t191, t231);
-        let t352 = t350 + t351;
-        let t353 = t352 * T::from_ratio(3, 2);
-        let t354 = t347.mul_add(T::from_ratio(1, 2), t343);
-        let t355 = t223.mul_add(T::from_i64(3), t353);
-        let t356 = t354 + t355;
-        let t357 = x[1].mul_add(t11, t236);
-        let t358 = (-x[0]).mul_add(t176, t240);
-        let t359 = (-x[1]).mul_add(t1, t358);
-        let t360 = x[2].mul_add(t195, t238);
-        let t361 = t359 - t360;
-        let t364 = x[10].mul_add(t198, x[1]);
-        let t365 = x[12].mul_add(t201, t242);
-        let t366 = t364 + t365;
-        let t367 = t366 * T::from_ratio(3, 2);
-        let t368 = t361.mul_add(T::from_ratio(1, 2), t357);
-        let t369 = t234.mul_add(T::from_i64(3), t367);
-        let t370 = t368 + t369;
-        let t371 = x[2].mul_add(t6, t248);
-        let t372 = (-x[0]).mul_add(t183, t252);
-        let t373 = (-x[1]).mul_add(t195, t372);
-        let t374 = x[2].mul_add(t2, t249);
-        let t375 = t373 - t374;
-        let t378 = x[10].mul_add(t204, x[2]);
-        let t379 = x[11].mul_add(t205, t253);
-        let t380 = t378 + t379;
-        let t381 = t380 * T::from_ratio(3, 2);
-        let t382 = t375.mul_add(T::from_ratio(1, 2), t371);
-        let t383 = t246.mul_add(T::from_i64(3), t381);
-        let t384 = t382 + t383;
-        let t385 = x[3].mul_add(t213, t259);
-        let t386 = (-x[0]).mul_add(t185, t263);
-        let t387 = (-x[1]).mul_add(t197, t386);
-        let t388 = x[2].mul_add(t179, t257);
-        let t389 = t387 - t388;
-        let t391 = x[10].mul_add(t210, x[3]);
-        let t392 = x[11].mul_add(t211, t262);
-        let t393 = t391 + t392;
-        let t395 = t389.mul_add(T::from_ratio(1, 2), t385);
-        let t396 = t393.mul_add(T::from_ratio(3, 2), t395);
-        let t397 = x[5].mul_add(t144, t267);
-        let t398 = (-x[6]).mul_add(t135, t397);
-        let t400 = (-t264).mul_add(T::from_ratio(1, 2), t398);
-        let t401 = x[6].mul_add(t116, t271);
-        let t402 = (-x[4]).mul_add(t149, t401);
-        let t404 = (-t269).mul_add(T::from_ratio(1, 2), t402);
-        let t405 = x[4].mul_add(t130, t275);
-        let t406 = (-x[5]).mul_add(t121, t405);
-        let t408 = (-t274).mul_add(T::from_ratio(1, 2), t406);
-        let t409 = x[9].mul_add(t130, t279);
-        let t410 = (-x[8]).mul_add(t149, t409);
-        let t412 = (-t276).mul_add(T::from_ratio(1, 2), t410);
-        let t413 = x[7].mul_add(t144, t283);
-        let t414 = (-x[9]).mul_add(t121, t413);
-        let t416 = (-t281).mul_add(T::from_ratio(1, 2), t414);
-        let t417 = x[8].mul_add(t116, t287);
-        let t418 = (-x[7]).mul_add(t135, t417);
-        let t420 = (-t286).mul_add(T::from_ratio(1, 2), t418);
-        let t421 = x[10].mul_add(t5, t295);
-        let t422 = x[11].mul_add(t170, t421);
-        let t423 = x[10].mul_add(t7, t297);
-        let t424 = (-x[0]).mul_add(t187, t298);
-        let t425 = t423 + t424;
-        let t427 = t294 * T::from_i64(3);
-        let t428 = x[1].mul_add(t198, t290);
-        let t429 = x[3].mul_add(t210, t428);
-        let t431 = t425.mul_add(T::from_ratio(1, 2), t422);
-        let t432 = (-t429).mul_add(T::from_ratio(3, 2), t427);
-        let t433 = t431 + t432;
-        let t434 = x[11].mul_add(t5, t305);
-        let t435 = x[10].mul_add(t170, t434);
-        let t436 = x[11].mul_add(t11, t311);
-        let t437 = x[13].mul_add(t159, t436);
-        let t438 = t435 + t437;
-        let t439 = x[11].mul_add(t8, t308);
-        let t440 = (-x[1]).mul_add(t199, t309);
-        let t441 = t439 + t440;
-        let t444 = (-x[0]).mul_add(t189, x[11]);
-        let t445 = x[2].mul_add(t205, t302);
-        let t446 = t444 - t445;
-        let t447 = t446 * T::from_ratio(3, 2);
-        let t448 = t441.mul_add(T::from_ratio(1, 2), t438);
-        let t449 = t303.mul_add(T::from_i64(3), t447);
-        let t450 = t448 + t449;
-        let t451 = x[11].mul_add(t157, t321);
-        let t452 = x[13].mul_add(t173, t451);
-        let t453 = x[10].mul_add(t215, t320);
-        let t454 = (-x[2]).mul_add(t207, t322);
-        let t455 = t453 + t454;
-        let t457 = t317 * T::from_i64(3);
-        let t458 = x[0].mul_add(t191, t314);
-        let t459 = x[3].mul_add(t212, t458);
-        let t461 = t455.mul_add(T::from_ratio(1, 2), t452);
-        let t462 = (-t459).mul_add(T::from_ratio(3, 2), t457);
-        let t463 = t461 + t462;
-        let t464 = x[13].mul_add(t4, t330);
-        let t465 = x[12].mul_add(t173, t333);
-        let t466 = t464 + t465;
-        let t467 = x[10].mul_add(t217, t332);
-        let t468 = (-x[3]).mul_add(t214, t334);
-        let t469 = t467 + t468;
-        let t471 = (-x[0]).mul_add(t193, x[13]);
-        let t472 = x[1].mul_add(t203, t326);
-        let t473 = t471 - t472;
-        let t475 = t469.mul_add(T::from_ratio(1, 2), t466);
-        let t476 = t473.mul_add(T::from_ratio(3, 2), t475);
-        let t477 = x[4].mul_add(t74, t336);
-        let t478 = x[6].mul_add(t102, t477);
-        let t480 = (-t338).mul_add(T::from_ratio(3, 2), t478);
-        let t481 = x[7].mul_add(t79, t340);
-        let t482 = x[9].mul_add(t107, t481);
-        let t484 = (-t342).mul_add(T::from_ratio(3, 2), t482);
-        Even::from_coeffs([t356, t370, t384, t396, t400, t404, t408, t412, t416, t420, t433, t450, t463, t476, t480, t484])
-    }
-
-    #[inline(always)]
-    fn note_renormalize() {
-        T::note_renormalize();
-    }
-}
-
-impl<T: gx::Real> gx::Log for Even<(), T, gx::Extrinsic> {
-    type Output = Bivector<(), T, gx::Extrinsic>;
-    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
-    #[inline]
-    #[allow(unused_variables)]
-    fn log(unit: gx::Unit<Self>) -> Bivector<(), T, gx::Extrinsic> {
-        T::vectorize(#[inline(always)] move || {
-        let x = unit.into_inner().c;
-        let p1 = x[12] * x[12];
-        let p3 = x[14] * x[15];
-        let p4 = x[11].mul_add(x[11], p1);
-        let p5 = x[13].mul_add(x[13], p4);
-        let p7 = p3.mul_add(T::from_i64(2), p5);
-        let p8 = -p7;
-        let [h0, h1] = gx::__private::study::log_coeffs_q(x[0], p8);
-        let t0 = x[11] * h1;
-        let t1 = x[12] * h1;
-        let t2 = x[13] * h1;
-        let t3 = x[14] * h1;
-        let t4 = x[15] * h1;
-        let t6 = x[4] * t4;
-        let t8 = x[10] * t0;
-        let t10 = x[5] * t4;
-        let t12 = x[10] * t1;
-        let t14 = x[6] * t4;
-        let t16 = x[10] * t2;
-        let t19 = x[5] * t2;
-        let t20 = x[6] * t1;
-        let t23 = x[5] * h0;
-        let t24 = x[6] * t0;
-        let t26 = x[4] * t1;
-        let t28 = x[6] * h0;
-        let t31 = x[8] * t2;
-        let t32 = x[9] * t1;
-        let t34 = x[7] * t2;
-        let t36 = x[9] * t0;
-        let t39 = x[8] * t0;
-        let t40 = x[9] * h0;
-        let t43 = x[3] * t2;
-        let t44 = x[10] * h0;
-        let t45 = x[1].mul_add(h0, t6);
-        let t46 = x[7].mul_add(t3, t8);
-        let t47 = t45 + t46;
-        let t48 = x[2].mul_add(h0, t10);
-        let t49 = x[8].mul_add(t3, t12);
-        let t50 = t48 + t49;
-        let t51 = x[3].mul_add(h0, t14);
-        let t52 = x[9].mul_add(t3, t16);
-        let t53 = t51 + t52;
-        let t54 = x[4].mul_add(h0, t20);
-        let t55 = x[1].mul_add(t3, t19);
-        let t56 = t54 - t55;
-        let t57 = x[4].mul_add(t2, t23);
-        let t58 = x[2].mul_add(t3, t24);
-        let t59 = t57 - t58;
-        let t60 = x[5].mul_add(t0, t28);
-        let t61 = x[3].mul_add(t3, t26);
-        let t62 = t60 - t61;
-        let t63 = x[7].mul_add(h0, t31);
-        let t64 = x[1].mul_add(t4, t32);
-        let t65 = t63 - t64;
-        let t66 = x[8].mul_add(h0, t36);
-        let t67 = x[2].mul_add(t4, t34);
-        let t68 = t66 - t67;
-        let t69 = x[7].mul_add(t1, t40);
-        let t70 = x[3].mul_add(t4, t39);
-        let t71 = t69 - t70;
-        let t72 = (-x[1]).mul_add(t0, t44);
-        let t73 = x[2].mul_add(t1, t43);
-        let t74 = t72 - t73;
-        Bivector::from_coeffs([t47, t50, t53, t56, t59, t62, t65, t68, t71, t74])
-        })
-    }
-}
-
-impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Even<(), T, O> {
-    type Output = Even<(), T, O>;
-    #[inline(always)]
-    fn inverse(self) -> Self::Output {
-        Self::inverse(self)
-    }
-}
-
-impl<T: gx::Real, O: gx::Orientation> gx::Norm for Even<(), T, O> {
-    #[inline(always)]
-    fn norm_squared(self) -> T {
-        Self::norm_squared(self)
-    }
-    #[inline(always)]
-    fn norm(self) -> T {
-        Self::norm(self)
-    }
-}
-
-impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Even<(), T, O> {
-    #[inline(always)]
-    fn unit(self) -> gx::Unit<Self> {
-        Self::unit(self)
-    }
-}
-
-impl<T: gx::Real> gx::Sqrt for Even<(), T, gx::Extrinsic> {
-    type Output = gx::Unit<Self>;
-    #[inline(always)]
-    fn sqrt(self) -> Self::Output {
-        Self::sqrt(self)
-    }
-}
-
-#[doc = "The odd subalgebra."]
-///
-/// Blades, in coefficient order: `[e1, e2, e3, eo, ei, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e123oi]`.
-///
-/// `S` lists the open slots: `Odd` (that is, `Odd<()>`) is a value, `Odd<(A,)>` a
-/// linear map from `A`, `Odd<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
-/// the orientation of the output, extrinsic by default (ADR-051).
-#[repr(C)]
-pub struct Odd<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
-    /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
-    pub c: [S::Arr<T>; 16],
-    o: core::marker::PhantomData<O>,
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Clone for Odd<S, T, O> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Copy for Odd<S, T, O> {}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> PartialEq for Odd<S, T, O> {
-    fn eq(&self, other: &Self) -> bool {
-        self.c == other.c
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Odd<S, T, O> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut d = f.debug_struct(if O::SIGN < 0 { "intrinsic Odd" } else { "Odd" });
-        for (b, c) in <Odd as gx::Kind>::BLADES.iter().zip(self.c.iter()) {
-            d.field(b, c);
-        }
-        d.finish()
-    }
-}
-
-// SAFETY: `Arr<X>` is `[X; 16]`, the layout `gx::FlatKind` promises.
-unsafe impl<O: gx::Orientation> gx::FlatKind for Odd<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Kind for Odd<(), f64, O> {
-    const N: usize = 16;
-    const NAME: &'static str = "Odd";
-    const MODULE: &'static str = module_path!();
-    const BLADES: &'static [&'static str] = &["e1", "e2", "e3", "eo", "ei", "e23o", "e31o", "e12o", "e23i", "e31i", "e12i", "e1oi", "e2oi", "e3oi", "e123", "e123oi"];
-    type Arr<X: gx::Elem> = [X; 16];
-    type Mv<S: gx::Slots, T: gx::Coef> = Odd<S, T, O>;
-    type Scalar = Scalar;
-    type Orientation = O;
-    const DEFAULT_INTRINSIC: bool = false;
-    #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 16] {
-        [f(0), f(1), f(2), f(3), f(4), f(5), f(6), f(7), f(8), f(9), f(10), f(11), f(12), f(13), f(14), f(15)]
-    }
-    #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 16], mut f: impl FnMut(&X) -> Y) -> [Y; 16] {
-        [f(&a[0]), f(&a[1]), f(&a[2]), f(&a[3]), f(&a[4]), f(&a[5]), f(&a[6]), f(&a[7]), f(&a[8]), f(&a[9]), f(&a[10]), f(&a[11]), f(&a[12]), f(&a[13]), f(&a[14]), f(&a[15])]
-    }
-    #[inline(always)]
-    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
-        a: &[X; 16],
-        b: &[Y; 16],
-        mut f: impl FnMut(&X, &Y) -> Z,
-    ) -> [Z; 16] {
-        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2]), f(&a[3], &b[3]), f(&a[4], &b[4]), f(&a[5], &b[5]), f(&a[6], &b[6]), f(&a[7], &b[7]), f(&a[8], &b[8]), f(&a[9], &b[9]), f(&a[10], &b[10]), f(&a[11], &b[11]), f(&a[12], &b[12]), f(&a[13], &b[13]), f(&a[14], &b[14]), f(&a[15], &b[15])]
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Odd<S, T, O> {
-    type Kind = Odd<(), f64, O>;
-    type Slots = S;
-    type Coef = T;
-    #[inline(always)]
-    fn from_coeffs(c: [S::Arr<T>; 16]) -> Self {
-        Odd { o: core::marker::PhantomData, c }
-    }
-    #[inline(always)]
-    fn coeffs(&self) -> &[S::Arr<T>; 16] {
-        &self.c
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Odd<S, T, O> {
-    /// Construct from output-first coefficients.
-    #[inline(always)]
-    pub const fn from_coeffs(c: [S::Arr<T>; 16]) -> Self {
-        Odd { o: core::marker::PhantomData, c }
-    }
-
-    /// All coefficients zero.
-    #[inline(always)]
-    pub fn zero() -> Self {
-        Odd { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0); 16] }
-    }
-
-    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
-    /// (see [`gx::Extensor::map_coefs`]).
-    #[inline]
-    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Odd<S, U, O> {
-        gx::Extensor::map_coefs(self, f)
-    }
-
-    /// Fill the first open slot with a value, or compose a map into it.
-    #[inline(always)]
-    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
-    where
-        Self: gx::Of<X>,
-    {
-        gx::Of::of(self, x)
-    }
-
-    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
-    /// projection, an embedding, or both; on maps and forms, of the output).
-    #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
-    where
-        K: gx::__private::Reorient<O>,
-        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
-        Odd<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
-    {
-        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
-    }
-
-    /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
-    /// (a file, a GPU buffer, a raw `new`) whose orientation the type does not know.
-    #[inline(always)]
-    pub fn with_orientation<O2: gx::Orientation>(self) -> Odd<S, T, O2> {
-        Odd { o: core::marker::PhantomData, c: self.c }
-    }
-
-    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
-    /// output).
-    #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Odd<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
-    where
-        Odd<(), f64, O>: gx::GradePart<G>,
-    {
-        gx::cast::grade::<Self, G>(&self)
-    }
-
-    /// Least squares: the least-norm `x` of the first slot's kind minimizing
-    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
-    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
-    #[inline]
-    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
-    where
-        Self: gx::LeastSquares<X>,
-    {
-        gx::LeastSquares::lstsq(self, rhs)
-    }
-
-    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
-    #[inline]
-    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
-    where
-        Self: gx::LeastSquares<X, Coef = T>,
-    {
-        gx::LeastSquares::lstsq_with(self, rhs, rcond)
-    }
-
-    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
-    #[inline]
-    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
-    where
-        Self: gx::LeastSquaresDyad<X>,
-    {
-        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
-    }
-
-    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
-    #[inline]
-    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
-    where
-        Self: gx::LeastSquaresDyad<X, Coef = T>,
-    {
-        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
-    }
-
-    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
-    #[inline]
-    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
-    where
-        Self: gx::OfDyad,
-    {
-        gx::OfDyad::of_dyad(self, x)
-    }
-
-    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
-    #[inline(always)]
-    pub fn at<const I: usize>(self) -> Odd<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
-    where
-        S: gx::__private::MoveToFront<I>,
-    {
-        Odd { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
-    }
-
-    /// Contract the output with open slot `I` (which must be of kind `Odd`): a trace with no
-    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
-    #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Odd<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
-    where
-        S: gx::__private::MoveToFront<I>,
-        Odd<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
-    {
-        gx::TraceFirst::trace_first(self.at::<I>())
-    }
-
-    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
-    #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Odd<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
-    where
-        X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::__private::FillList<X::Kind>,
-    {
-        let xc = x.coeffs();
-        Odd { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
-    }
-
-    /// See [`gx::Gp`].
-    #[inline(always)]
-    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
-    where
-        Self: gx::Gp<R>,
-    {
-        gx::Gp::gp(self, rhs)
-    }
-
-    /// See [`gx::Wedge`].
-    #[inline(always)]
-    pub fn wedge<R>(self, rhs: R) -> <Self as gx::Wedge<R>>::Output
-    where
-        Self: gx::Wedge<R>,
-    {
-        gx::Wedge::wedge(self, rhs)
-    }
-
-    /// See [`gx::Vee`].
-    #[inline(always)]
-    pub fn vee<R>(self, rhs: R) -> <Self as gx::Vee<R>>::Output
-    where
-        Self: gx::Vee<R>,
-    {
-        gx::Vee::vee(self, rhs)
-    }
-
-    /// See [`gx::Dot`].
-    #[inline(always)]
-    pub fn dot<R>(self, rhs: R) -> <Self as gx::Dot<R>>::Output
-    where
-        Self: gx::Dot<R>,
-    {
-        gx::Dot::dot(self, rhs)
-    }
-
-    /// See [`gx::Lc`].
-    #[inline(always)]
-    pub fn lc<R>(self, rhs: R) -> <Self as gx::Lc<R>>::Output
-    where
-        Self: gx::Lc<R>,
-    {
-        gx::Lc::lc(self, rhs)
-    }
-
-    /// See [`gx::Rc`].
-    #[inline(always)]
-    pub fn rc<R>(self, rhs: R) -> <Self as gx::Rc<R>>::Output
-    where
-        Self: gx::Rc<R>,
-    {
-        gx::Rc::rc(self, rhs)
-    }
-
-    /// See [`gx::ScalarProduct`].
-    #[inline(always)]
-    pub fn scalar_product<R>(self, rhs: R) -> <Self as gx::ScalarProduct<R>>::Output
-    where
-        Self: gx::ScalarProduct<R>,
-    {
-        gx::ScalarProduct::scalar_product(self, rhs)
-    }
-
-    /// See [`gx::Commutator`].
-    #[inline(always)]
-    pub fn commutator<R>(self, rhs: R) -> <Self as gx::Commutator<R>>::Output
-    where
-        Self: gx::Commutator<R>,
-    {
-        gx::Commutator::commutator(self, rhs)
-    }
-
-    /// See [`gx::Anticommutator`].
-    #[inline(always)]
-    pub fn anticommutator<R>(self, rhs: R) -> <Self as gx::Anticommutator<R>>::Output
-    where
-        Self: gx::Anticommutator<R>,
-    {
-        gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// See [`gx::Reverse`].
-    #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
-        gx::Reverse::reverse(self)
-    }
-
-    /// See [`gx::Involute`].
-    #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
-        gx::Involute::involute(self)
-    }
-
-    /// See [`gx::Conjugate`].
-    #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
-        gx::Conjugate::conjugate(self)
-    }
-
-    /// See [`gx::Dual`].
-    #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
-        gx::Dual::dual(self)
-    }
-
-    /// See [`gx::Undual`].
-    #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
-        gx::Undual::undual(self)
-    }
-
-    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
-    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
-    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
-    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
-    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
-    /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Odd<S, T, O> {
-    type Out = Odd<S, T, O2>;
-    #[inline(always)]
-    fn reorient(self) -> Odd<S, T, O2> {
-        Odd { o: core::marker::PhantomData, c: self.c }
-    }
-}
-
-impl<T: gx::Coef> Odd<(), T, gx::Extrinsic> {
-    /// A value from its coefficients, in blade order.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(e1: T, e2: T, e3: T, eo: T, ei: T, e23o: T, e31o: T, e12o: T, e23i: T, e31i: T, e12i: T, e1oi: T, e2oi: T, e3oi: T, e123: T, e123oi: T) -> Self {
-        Odd { o: core::marker::PhantomData, c: [e1, e2, e3, eo, ei, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e123oi] }
-    }
-
-    /// The identity map on `Odd`: a `Odd` with one open `Odd` slot, both of this
-    /// orientation.
-    #[inline(always)]
-    pub fn slot() -> Odd<(Odd<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
-        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef> Odd<(), T, gx::Intrinsic> {
-    /// A value from its coefficients, in blade order.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(e1: T, e2: T, e3: T, eo: T, ei: T, e23o: T, e31o: T, e12o: T, e23i: T, e31i: T, e12i: T, e1oi: T, e2oi: T, e3oi: T, e123: T, e123oi: T) -> Self {
-        Odd { o: core::marker::PhantomData, c: [e1, e2, e3, eo, ei, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e123oi] }
-    }
-
-    /// The identity map on `Odd`: a `Odd` with one open `Odd` slot, both of this
-    /// orientation.
-    #[inline(always)]
-    pub fn slot() -> Odd<(Odd<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
-        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Odd<(), T, O> {
-    type Map = Odd<(Odd<(), f64, O>,), T, O>;
-    #[inline(always)]
-    fn slot() -> Self::Map {
-        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef, O: gx::Orientation> Odd<(), T, O> {
-    /// See [`gx::Transform`].
-    #[inline(always)]
-    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
-    where
-        Self: gx::Transform<R>,
-    {
-        gx::Transform::transform(self, rhs)
-    }
-
-    /// See [`gx::TransformInv`].
-    #[inline(always)]
-    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
-    where
-        Self: gx::TransformInv<R>,
-    {
-        gx::TransformInv::transform_inv(self, rhs)
-    }
-
-    /// This versor's action on kind `X`, prepared for applying it to many objects (see
-    /// [`gx::Prepared`]).
-    #[inline(always)]
-    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
-    where
-        Self: gx::Prepare<X>,
-    {
-        gx::Prepare::prepare(self)
-    }
-
-    /// Coefficient of `e1`.
-    #[inline(always)]
-    pub fn e1(&self) -> T {
-        self.c[0]
-    }
-
-    /// Coefficient of `e2`.
-    #[inline(always)]
-    pub fn e2(&self) -> T {
-        self.c[1]
-    }
-
-    /// Coefficient of `e3`.
-    #[inline(always)]
-    pub fn e3(&self) -> T {
-        self.c[2]
-    }
-
-    /// Coefficient of `eo`.
-    #[inline(always)]
-    pub fn eo(&self) -> T {
-        self.c[3]
-    }
-
-    /// Coefficient of `ei`.
-    #[inline(always)]
-    pub fn ei(&self) -> T {
-        self.c[4]
-    }
-
-    /// Coefficient of `e23o`.
-    #[inline(always)]
-    pub fn e23o(&self) -> T {
-        self.c[5]
-    }
-
-    /// Coefficient of `e31o`.
-    #[inline(always)]
-    pub fn e31o(&self) -> T {
-        self.c[6]
-    }
-
-    /// Coefficient of `e12o`.
-    #[inline(always)]
-    pub fn e12o(&self) -> T {
-        self.c[7]
-    }
-
-    /// Coefficient of `e23i`.
-    #[inline(always)]
-    pub fn e23i(&self) -> T {
-        self.c[8]
-    }
-
-    /// Coefficient of `e31i`.
-    #[inline(always)]
-    pub fn e31i(&self) -> T {
-        self.c[9]
-    }
-
-    /// Coefficient of `e12i`.
-    #[inline(always)]
-    pub fn e12i(&self) -> T {
-        self.c[10]
-    }
-
-    /// Coefficient of `e1oi`.
-    #[inline(always)]
-    pub fn e1oi(&self) -> T {
-        self.c[11]
-    }
-
-    /// Coefficient of `e2oi`.
-    #[inline(always)]
-    pub fn e2oi(&self) -> T {
-        self.c[12]
-    }
-
-    /// Coefficient of `e3oi`.
-    #[inline(always)]
-    pub fn e3oi(&self) -> T {
-        self.c[13]
-    }
-
-    /// Coefficient of `e123`.
-    #[inline(always)]
-    pub fn e123(&self) -> T {
-        self.c[14]
-    }
-
-    /// Coefficient of `e123oi`.
-    #[inline(always)]
-    pub fn e123oi(&self) -> T {
-        self.c[15]
-    }
-}
-
-impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A,), T, O> {
-    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
-    /// `Odd`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
-    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
-    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
-    /// the input blade `i`.
-    #[inline]
-    pub fn from_images(images: A::Arr<Odd<(), T, O>>) -> Self {
-        let images = images.as_ref();
-        Odd { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A, B), T, O> {
-    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
-    /// `Odd <- (X, Y)` (see [`gx::OfBoth`]).
-    #[inline]
-    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
-    where
-        Self: gx::OfBoth<P, Q>,
-    {
-        gx::OfBoth::of_both(self, p, q)
-    }
 }

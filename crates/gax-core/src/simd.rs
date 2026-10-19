@@ -4,13 +4,18 @@
 //! `Point<(), f32x8>` holds eight points, and every generated kernel, map and solver runs on
 //! all lanes at once without change.
 
-use crate::coef::{Coef, Real};
+use crate::coef::{Coef, ConstCoef, Real};
 #[cfg(feature = "deterministic")]
 use crate::strict::StrictElementary;
 use wide::{f32x4, f32x8, f64x2, f64x4};
 
 macro_rules! lanes {
     ($t:ident, $s:ident) => {
+        impl ConstCoef for $t {
+            const ZERO: Self = $t::ZERO;
+            const ONE: Self = $t::ONE;
+        }
+
         impl Coef for $t {
             #[inline(always)]
             fn zero() -> Self {

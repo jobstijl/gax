@@ -71,7 +71,7 @@ pub mod unit;
 pub use bind::Of;
 pub use calculus::Reciprocal;
 pub use cast::{Cast, GradePart, SubKind};
-pub use coef::{Coef, Elem, Real};
+pub use coef::{Coef, ConstCoef, Elem, Real};
 pub use complex::Complex;
 pub use extensor::{
     Endomorphism, Form, FormAsMap, LeastSquares, LeastSquaresDyad, OfBoth, OfDyad, Pairing,
@@ -81,9 +81,9 @@ pub use gpu::GpuMat;
 pub use kind::{ApproxEq, Coeffs, Extensor, FlatKind, Kind, Retype, Slot, select_lt};
 pub use map::{LinearMap, SquareLinearMap};
 pub use ops::{
-    Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Exp, Gp, Inverse, Involute, Lc, Log,
-    Norm, Normalize, Outermorphism, Rc, Reverse, ScalarProduct, Sqrt, Transform, TransformInv,
-    Undual, Vee, Wedge,
+    Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Exp, Gp, IdealNorm, Inverse, Involute,
+    Lc, Log, Norm, Normalize, Outermorphism, Rc, Reverse, ScalarProduct, Sqrt, Transform,
+    TransformInv, Undual, Vee, Wedge,
 };
 pub use orientation::{Extrinsic, Intrinsic, Orientation, Oriented};
 pub use prepared::{Prepare, Prepared};

@@ -61,6 +61,34 @@ pub trait Coef:
     }
 }
 
+/// A coefficient type whose zero and one are constants: `f32`, `f64` and the SIMD lanes of
+/// `wide`. Named values of the standard algebras are associated consts for these types
+/// (`Point::ORIGIN`, `Plane::INFINITY`), beside the functions (`Point::origin()`) that every
+/// coefficient type has: the tracer's symbolic coefficients and the jets build their zero at
+/// run time, so a function generic over [`Real`] cannot be `const`.
+///
+/// ```
+/// use gax::pga3d::Point;
+/// const EYE: Point<(), f32> = Point::ORIGIN;
+/// assert_eq!(EYE, Point::origin());
+/// ```
+pub trait ConstCoef: Coef {
+    /// The additive identity.
+    const ZERO: Self;
+    /// The multiplicative identity.
+    const ONE: Self;
+}
+
+impl ConstCoef for f32 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+}
+
+impl ConstCoef for f64 {
+    const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+}
+
 /// A real field with the elementary functions used by norms, inverses, solvers and exp/log.
 ///
 /// For SIMD lane types every function acts lane-wise, and [`Real::select_lt`] replaces

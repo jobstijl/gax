@@ -177,7 +177,9 @@ where
 
 /// Approximate equality of values, maps and forms: every coefficient within `tol` of the
 /// other's, relative to the larger of 1 and the largest coefficient of the two (so it is an
-/// absolute tolerance near zero and a relative one for large values).
+/// absolute tolerance near zero and a relative one for large values). [`abs_diff_eq`] is
+/// absolute at every size, for a tolerance in the units of the coefficients (a distance in
+/// pixels, a field strength).
 ///
 /// ```
 /// use gax::ApproxEq;
@@ -186,12 +188,23 @@ where
 /// assert!((m >> Point::xyz(1.0, 0.0, 0.0)).approx_eq(&Point::xyz(0.0, 1.0, 0.0), 1e-12));
 /// // A NaN coefficient is never close.
 /// assert!(!Point::<(), f64>::xyz(f64::NAN, 0.0, 0.0).approx_eq(&Point::xyz(0.0, 0.0, 0.0), 1.0));
+/// // Far from the origin the relative test scales up, the absolute one does not.
+/// let (p, q) = (Point::<(), f64>::xyz(1000.0, 0.0, 0.0), Point::xyz(1000.5, 0.0, 0.0));
+/// assert!(p.approx_eq(&q, 1e-3) && !p.abs_diff_eq(&q, 1e-3));
 /// ```
+///
+/// [`abs_diff_eq`]: ApproxEq::abs_diff_eq
 pub trait ApproxEq {
     /// Whether every coefficient is within `tol` (relative to the magnitude, see above).
     fn approx_eq(&self, other: &Self, tol: f64) -> bool;
     /// The largest difference of two coefficients (absolute); NaN if any difference is NaN.
     fn max_abs_diff(&self, other: &Self) -> f64;
+    /// Whether every coefficient is within `tol` of the other's, absolutely:
+    /// [`max_abs_diff`](Self::max_abs_diff) at most `tol` (never for a NaN).
+    #[inline]
+    fn abs_diff_eq(&self, other: &Self, tol: f64) -> bool {
+        self.max_abs_diff(other) <= tol
+    }
 }
 
 impl<M: Extensor> ApproxEq for M

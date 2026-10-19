@@ -362,7 +362,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
             &scalar_mv(n0.clone()),
             &scale_mv(&q, &Poly::constant(-Rational::ONE)),
         );
-        meta.inverse = emit_inverse_by(spec, k, &rev, &conj, &(&(&n0 * &n0) - &qq), &mut body);
+        let d = &(&n0 * &n0) - &qq;
+        meta.inverse = emit_inverse_by(spec, k, &rev, &conj, &d, &mut body);
+        if let Some(on) = &meta.inverse {
+            emit_try_inverse(k, &norm, &d, on, &mut body);
+        }
         meta.normalized =
             emit_normalized_q(spec, k, &x, &n0, &q, &qq, &mut body, &mut meta.kernels);
         emit_newton_step(spec, k, &x, &norm, &mut traits, &mut meta.kernels);
@@ -526,7 +530,40 @@ fn emit_inverse(
         conj = symbolic::add(&conj, &blade_mv(b, -&nb));
     }
     let d = &(&n0 * &n0) - &(&nb * &nb).scale(Rational::int(i128::from(study.isq)));
-    emit_inverse_by(spec, k, rev, &conj, &d, body)
+    let on = emit_inverse_by(spec, k, rev, &conj, &d, body)?;
+    emit_try_inverse(k, norm, &d, &on, body);
+    Some(on)
+}
+
+/// The checked twin of a closed-form inverse, `try_inverse`: `None` where `x ~x`, the Study
+/// number `N` the inverse divides by (through its norm `d = N conj(N)`), is zero to working
+/// precision. Two tests, in any lane: `N` vanishes next to `x`, `|N| ≤ n ε ‖x‖²` (the size of
+/// its rounding, with `|N|` the root of the sum of its coefficients' squares, `‖x‖²` of `x`'s,
+/// and `n` the number of `x`'s coefficients), or `d` is lost to cancellation,
+/// `|d| ≤ n ε |N|²` (a Study number `a + bB` with `a² ≈ B² b²`); and the inverse is finite.
+fn emit_try_inverse(k: &KindSpec, norm: &SymMv, d: &Poly, on: &str, body: &mut String) {
+    let n = k.layout.len();
+    let size = (0..n as Var).fold(Poly::zero(), |s, i| &s + &(&Poly::var(i) * &Poly::var(i)));
+    let parts: Vec<Poly> = symbolic::support(norm)
+        .into_iter()
+        .map(|b| coef(norm, b))
+        .collect();
+    let mut polys = vec![size];
+    polys.extend(parts.iter().cloned());
+    polys.push(d.clone());
+    let prog = cse::compile_plain(&polys);
+    let (lets, outs) = prog.lets_and_outputs(&x_var, "t");
+    let squares: Vec<String> = outs[1..=parts.len()]
+        .iter()
+        .map(|p| format!("{p} * {p}"))
+        .collect();
+    let _ = write!(
+        body,
+        "    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:\n    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`\n    /// (`|N| ≤ n ε ‖x‖²`, with `|N|²` and `‖x‖²` the sums of the squared coefficients of `N`\n    /// and `x`, and `n = {n}` the number of `x`'s), or its norm `d = N conj(N)` is lost to\n    /// cancellation (`|d| ≤ n ε |N|²`), in any lane; or where the inverse is not finite.\n    #[inline]\n    pub fn try_inverse(self) -> Option<{on}<(), T, O>> {{\n        let x = self.c;\n{lets}        let (size, d) = ({}, {});\n        let parts = {};\n        let tol = T::from_i64({n}) * T::epsilon();\n        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {{\n            Some(self.inverse()).filter(gx::Extensor::is_finite)\n        }} else {{\n            None\n        }}\n    }}\n\n",
+        outs[0],
+        outs[parts.len() + 1],
+        squares.join(" + "),
+    );
 }
 
 /// `~x (x ~x)⁻¹ = ~x conj / d`, with `conj` the conjugate of the norm and `d = (x ~x) conj` a
@@ -603,7 +640,8 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
         1u32 << ((p + q).div_ceil(2) + r)
     };
     let (en, name) = (&e.name, &k.name);
-    let embed = embed_lines(&k.layout.embed_in(&e.layout)?, "scale");
+    let embedding = k.layout.embed_in(&e.layout)?;
+    let embed = embed_lines(&embedding, "scale");
     let (one, one_sign) = e.layout.position(0)?;
     // `⟨u⟩₀` and `u − c` in `e`'s layout, whose scalar blade may be stored negated.
     let (get, put) = if one_sign > 0 { ("", "-") } else { ("-", "+") };
@@ -648,6 +686,13 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
         "    /// The inverse under the geometric product, by Shirokov's method in `{en}` (no closed form\n    /// for `{name}` here): the inverse as a polynomial of degree {d} whose coefficients come\n    /// from the scalar parts of powers (the Faddeev–LeVerrier recursion on left multiplication,\n    /// {d} products in `{en}`), {what} (docs/design.md, ADR-037). `x` is scaled to its largest\n    /// coefficient first. Not finite where `x` has no inverse.\n    #[inline]\n    pub fn inverse(self) -> {en}<(), T, O>\n    where\n        T: Real,\n    {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut size = T::zero();\n        for c in self.c {{\n            size = size.max(c.abs());\n        }}\n        let scale = size.recip();\n        let mut x = {en}::<(), T>::zero();\n{embed}{body_of}        // U₁ = a, Cₖ = (N/k) ⟨Uₖ⟩₀, Uₖ₊₁ = a (Uₖ − Cₖ); then a⁻¹ = (U_{{N−1}} − C_{{N−1}}) / C_N.\n        let mut prev = a;\n        let c = {get}a.c[{one}] * T::from_i64({n});\n        prev.c[{one}] = prev.c[{one}] {put} c;\n        for k in 2..{n}i64 {{\n            let u = a * prev;\n            let c = {get}u.c[{one}] * T::from_ratio({n}, k);\n            prev = u;\n            prev.c[{one}] = prev.c[{one}] {put} c;\n        }}\n        let det = {get}(a * prev).c[{one}];\n        let mut y = prev.gp(det.recip());\n{neumann}        // Newton–Schulz, y ← y (2 − x y), squares the residual: the recursion loses digits as\n        // its degree grows (to 10⁻⁴ at degree 32), and the step(s) restore them.\n        for _ in 0..{steps} {{\n            let mut t = -(x * y);\n            t.c[{one}] = t.c[{one}] {two};\n            y = y * t;\n        }}\n        y.gp(scale).with_orientation()\n        }})\n    }}\n\n",
         d = degree - 1,
         n = degree,
+    );
+    // The checked twin: there is no Study number to test, so the residual, as for the
+    // iterative solvers (conjugate gradients' `try_solve`).
+    let unscaled = embed_lines(&embedding, "");
+    let _ = write!(
+        body,
+        "    /// [`inverse`](Self::inverse), or `None` where it fails: where a coefficient of the\n    /// residual `x x⁻¹ − 1` is above `√ε`, in any lane, or the inverse is not finite. (The\n    /// general inverse has no Study number `x ~x` to test against `‖x‖²`, as the closed forms'\n    /// `try_inverse` does; the residual is the test of the iterative solvers.)\n    #[inline]\n    pub fn try_inverse(self) -> Option<{en}<(), T, O>> {{\n        let y = self.inverse();\n        let mut x = {en}::<(), T>::zero();\n{unscaled}        let y0: {en}<(), T> = y.with_orientation();\n        let mut r = (x * y0).c;\n        r[{one}] = r[{one}] {put} T::one();\n        let tol = T::epsilon().sqrt();\n        if r.iter().all(|&c| T::all_lt(c.abs(), tol)) {{\n            Some(y).filter(gx::Extensor::is_finite)\n        }} else {{\n            None\n        }}\n    }}\n\n",
     );
     Some(en.clone())
 }
@@ -2017,14 +2062,19 @@ fn emit_exp_closed(
 }
 
 /// `x.c[pos] = ±self.c[i] * {scale};` per coefficient `i` of a value embedded in `x` (at
-/// `pos`, flipped where the orientations differ).
+/// `pos`, flipped where the orientations differ); with no `* {scale}` for an empty `scale`.
 fn embed_lines(embedding: &[(usize, bool)], scale: &str) -> String {
+    let scale = if scale.is_empty() {
+        String::new()
+    } else {
+        format!(" * {scale}")
+    };
     embedding
         .iter()
         .enumerate()
         .fold(String::new(), |mut s, (i, &(pos, flip))| {
             let sign = if flip { "-" } else { "" };
-            let _ = writeln!(s, "        x.c[{pos}] = {sign}self.c[{i}] * {scale};");
+            let _ = writeln!(s, "        x.c[{pos}] = {sign}self.c[{i}]{scale};");
             s
         })
 }

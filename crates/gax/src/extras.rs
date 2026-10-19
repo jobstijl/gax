@@ -109,6 +109,32 @@ mod shared {
     }
 }
 
+/// [`IdealNorm`](crate::IdealNorm) for the points (the inherent `ideal_norm_squared`) and the
+/// `Direction`s of a PGA, of either orientation.
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
+macro_rules! ideal_norm {
+    ($alg:ident: $($c:ident),+) => {
+        impl<T: crate::Real, O: crate::Orientation> crate::IdealNorm for crate::$alg::oriented::Point<(), T, O> {
+            #[inline]
+            fn ideal_norm_squared(self) -> T {
+                crate::$alg::oriented::Point::ideal_norm_squared(self)
+            }
+        }
+
+        impl<T: crate::Real, O: crate::Orientation> crate::IdealNorm for crate::$alg::oriented::Direction<(), T, O> {
+            #[inline]
+            fn ideal_norm_squared(self) -> T {
+                let ($($c),+) = ($(self.$c()),+);
+                T::zero() $(+ $c * $c)+
+            }
+        }
+    };
+}
+#[cfg(feature = "pga3d")]
+ideal_norm!(pga3d: e032, e013, e021);
+#[cfg(feature = "pga2d")]
+ideal_norm!(pga2d: e20, e01);
+
 #[cfg(feature = "pga3d")]
 mod pga3d_extras {
     use crate::map::{Dense, LinearMap, SquareLinearMap};
@@ -152,6 +178,19 @@ mod pga3d_extras {
         pub fn direction(x: T, y: T, z: T) -> Self {
             Point::new(x, y, z, T::zero())
         }
+    }
+
+    impl<T: crate::ConstCoef> Point<(), T> {
+        /// The origin as a constant, for the coefficient types with constant zero and one
+        /// ([`ConstCoef`](crate::ConstCoef)); [`origin`](Point::origin) is the same for every
+        /// coefficient type.
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// const EYE: Point<(), f32> = Point::ORIGIN;
+        /// assert_eq!(EYE, Point::xyz(0.0, 0.0, 0.0));
+        /// ```
+        pub const ORIGIN: Self = Point::new(T::ZERO, T::ZERO, T::ZERO, T::ONE);
     }
 
     // Methods of points of either orientation (ADR-051): positions are intrinsic, meets of
@@ -300,6 +339,18 @@ mod pga3d_extras {
         pub fn orthogonal_to<O: crate::Orientation>(d: oriented::Point<(), T, O>) -> Self {
             Self::with_normal(d, T::zero())
         }
+    }
+
+    impl<T: crate::ConstCoef> Plane<(), T> {
+        /// The plane at infinity as a constant ([`infinity`](Plane::infinity), for the
+        /// coefficient types of [`ConstCoef`](crate::ConstCoef)).
+        ///
+        /// ```
+        /// use gax::pga3d::Plane;
+        /// const HORIZON: Plane<(), f32> = Plane::INFINITY;
+        /// assert_eq!(HORIZON, Plane::infinity());
+        /// ```
+        pub const INFINITY: Self = Plane::new(T::ZERO, T::ZERO, T::ZERO, T::ONE);
     }
 
     impl<T: Real, M: crate::Orientation> oriented::Plane<(), T, M> {
@@ -913,6 +964,19 @@ mod pga2d_extras {
         }
     }
 
+    impl<T: crate::ConstCoef> Point<(), T> {
+        /// The origin as a constant, for the coefficient types with constant zero and one
+        /// ([`ConstCoef`](crate::ConstCoef)); [`origin`](Point::origin) is the same for every
+        /// coefficient type.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// const CENTRE: Point<(), f32> = Point::ORIGIN;
+        /// assert_eq!(CENTRE, Point::xy(0.0, 0.0));
+        /// ```
+        pub const ORIGIN: Self = Point::new(T::ZERO, T::ZERO, T::ONE);
+    }
+
     // Methods of points of either orientation (ADR-051).
     impl<T: Real, O: crate::Orientation> oriented::Point<(), T, O> {
         /// The signed angle from this direction to `other`, counterclockwise, in `[-π, π]`. With
@@ -1123,6 +1187,18 @@ mod pga2d_extras {
         ) -> Self {
             (p.position() & Point::direction(d.e20(), d.e01())).with_orientation()
         }
+    }
+
+    impl<T: crate::ConstCoef> Line<(), T> {
+        /// The line at infinity as a constant ([`infinity`](Line::infinity), for the
+        /// coefficient types of [`ConstCoef`](crate::ConstCoef)).
+        ///
+        /// ```
+        /// use gax::pga2d::Line;
+        /// const HORIZON: Line<(), f32> = Line::INFINITY;
+        /// assert_eq!(HORIZON, Line::infinity());
+        /// ```
+        pub const INFINITY: Self = Line::new(T::ZERO, T::ZERO, T::ONE);
     }
 
     // Methods of lines of either orientation: a join's coefficients and an extrinsic line's
@@ -1418,7 +1494,32 @@ mod vga3d_extras {
             axis: oriented::Vector<(), T, O>,
             angle: T,
         ) -> Unit<Self> {
-            let plane = Bivector::new(axis.e1(), axis.e2(), axis.e3());
+            Self::rotation_in(Bivector::new(axis.e1(), axis.e2(), axis.e3()), angle)
+        }
+
+        /// The rotation by `angle` in the plane `plane` (a bivector of either orientation, of
+        /// any size), in the sense of its orientation: `exp(−B angle / 2)` with `B` the unit
+        /// bivector, so that `a ^ b` turns `a` towards `b`. The same rotation as
+        /// [`rotation`](Self::rotation) about the axis `plane.dual()` (or about `a × b`).
+        ///
+        /// ```
+        /// use gax::ApproxEq;
+        /// use gax::vga3d::{Rotor, Vector};
+        /// let (a, b) = (Vector::<(), f64>::new(0.0, 1.0, 0.0), Vector::new(0.0, 0.0, 3.0));
+        /// let r = Rotor::rotation_in(a ^ b, std::f64::consts::FRAC_PI_2);
+        /// assert!((r >> a).approx_eq(&Vector::new(0.0, 0.0, 1.0), 1e-15)); // a towards b
+        /// // As the rotation about the axis the plane is dual to, x for the plane yz.
+        /// assert!(r.approx_eq(&Rotor::rotation((a ^ b).dual(), std::f64::consts::FRAC_PI_2), 1e-15));
+        /// assert!(r.approx_eq(&Rotor::rotation(Vector::new(1.0, 0.0, 0.0), std::f64::consts::FRAC_PI_2), 1e-15));
+        /// let axis = Vector::new(1.0, -2.0, 0.5);
+        /// assert!(Rotor::rotation_in(axis.dual(), 0.4).approx_eq(&Rotor::rotation(axis, 0.4), 1e-15));
+        /// ```
+        #[inline]
+        pub fn rotation_in<O: crate::Orientation>(
+            plane: oriented::Bivector<(), T, O>,
+            angle: T,
+        ) -> Unit<Self> {
+            let plane = Bivector::new(plane.e23(), plane.e31(), plane.e12());
             crate::extras::shared::rotation_twist(plane, angle).exp()
         }
 

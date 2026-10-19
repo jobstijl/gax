@@ -298,6 +298,17 @@ where
 /// assert!(values.iter().all(|v| (v - 0.5).abs() < 1e-10));
 /// let _: Point<(), f64> = modes[0];
 /// ```
+///
+/// The trait is implemented for every extensor with two slots of one kind, and refuses at
+/// compile time one whose output kind is not a scalar (its other coefficients would be
+/// ignored):
+///
+/// ```compile_fail
+/// use gax::Form;
+/// use gax::pga3d::{Plane, Point};
+/// let f = Point::<(Plane, Plane), f64>::zero(); // point-valued
+/// let _ = Form::eigh(f, f);
+/// ```
 pub trait Form: Extensor<Coef: Real> {
     /// The slot kind.
     type Slot: Kind;
@@ -353,6 +364,7 @@ where
     type Slot = A;
 
     fn eigh(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
+        scalar_valued::<M>();
         let a = &self.coeffs().as_ref()[0];
         let b = &metric.coeffs().as_ref()[0];
         let n = <A::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
@@ -362,6 +374,7 @@ where
 
     fn eigh_semidefinite(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
         type T<M> = <M as Extensor>::Coef;
+        scalar_valued::<M>();
         let a = symmetrize(&self.coeffs().as_ref()[0]);
         let b = symmetrize(&metric.coeffs().as_ref()[0]);
         let n = <A::Arr<A::Arr<T<M>>> as SquareArr<T<M>>>::N;
@@ -403,6 +416,7 @@ where
     }
 
     fn identity() -> M {
+        scalar_valued::<M>();
         let n = A::N;
         M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|k| {
             <M::Slots as Slots>::from_flat(
@@ -430,6 +444,15 @@ where
 /// let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & t);
 /// let (l, p) = (Plane::new(1.0, 0.0, 0.0, -2.0), Point::xyz(3.0, 1.0, 0.0));
 /// assert!(((on_planes.of(l) & p).s() - (l & t.of(p)).s()).abs() < 1e-12);
+/// ```
+///
+/// As for [`Form`], an output kind that is not a scalar is refused at compile time:
+///
+/// ```compile_fail
+/// use gax::Pairing;
+/// use gax::pga3d::{Plane, Point};
+/// let f = Point::<(Plane, Point), f64>::zero(); // point-valued
+/// let _ = Pairing::solve(f, Point::<(Point,), f64>::zero());
 /// ```
 pub trait Pairing: Extensor<Coef: Real> {
     /// The first slot's kind.
@@ -491,6 +514,7 @@ where
         R: Extensor<Kind = M::Kind, Coef = M::Coef>,
         R::Slots: SplitLast<Last = B>,
     {
+        scalar_valued::<M>();
         let ft = transposed::<M, A, B>(&self);
         solve_pairing::<M, A, B, R>(&linalg::lu(&ft), &rhs)
     }
@@ -500,12 +524,26 @@ where
         R: Extensor<Kind = M::Kind, Coef = M::Coef>,
         R::Slots: SplitLast<Last = B>,
     {
+        scalar_valued::<M>();
         let ft = transposed::<M, A, B>(&self);
         let f = linalg::lu(&ft);
         linalg::regular(&ft, &f)
             .then(|| solve_pairing::<M, A, B, R>(&f, &rhs))
             .filter(Extensor::is_finite)
     }
+}
+
+/// Refuses, at compile time, a form or a pairing whose output kind is not scalar: the blanket
+/// impls of [`Form`] and [`Pairing`] take any extensor with two slots, and read coefficient 0
+/// only, which for a larger output kind would silently drop the rest (as [`FormAsMap`] refuses).
+#[inline(always)]
+fn scalar_valued<M: Extensor>() {
+    const {
+        assert!(
+            <M::Kind as Kind>::N == 1,
+            "forms and pairings are scalar-valued (`Scalar<(A, B)>`): this extensor has a larger output kind"
+        );
+    };
 }
 
 /// The transposed coefficients `Fᵀ` of a pairing: `form(x, y) = Σ_ij F[i][j] x_i y_j`, so

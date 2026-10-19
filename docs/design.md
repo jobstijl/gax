@@ -2129,6 +2129,48 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   * Every standard spec names the roles (`Twist`, the rate of a motion, extrinsic; `Forque`, its
     dual, intrinsic; `Even` and `Odd`, the versors) where they are not kinds already, so generic
     code and documents can rely on the names; they are the kinds `Motions` uses.
+* **What the example cleanups asked for** (2026-10-19). Five helpers the examples had written
+  for themselves, and two refusals:
+  * *Constants.* The named values stay functions generic over `T: Real` (`Point::origin()`,
+    `Plane::infinity()`, `Line::infinity()`, `Unit::identity()`), since the tracer's `Sym` and
+    the jets build their zero at run time. The coefficient types whose zero and one are
+    constants implement `ConstCoef` (`ZERO`, `ONE`: `f32`, `f64`, the `wide` lanes), and the
+    points and flats are associated consts generic over it, `Point::ORIGIN`, `Plane::INFINITY`,
+    PGA2D's `Line::INFINITY`: one impl, so the coefficient type is inferred as for `new` (consts
+    on the concrete `Point<(), f32>` and `Point<(), f64>` would be two impls, ambiguous where
+    the type is not named, E0034). The constructors `new` were `const` already. Not every
+    kind gets one: only these values have names, and a versor identity would need a const per
+    versor kind (`Unit` is gax-core's and builds its value through trait methods), while
+    `Unit::new_unchecked(Motor::new(1.0, ..))` is `const` today.
+  * *`IdealNorm`*, the length of a PGA direction, in both PGAs and either orientation (points
+    and `Direction`s): `ideal_norm_squared`, `ideal_norm`, and the scalings `with_ideal_norm`
+    and `clamp_ideal_norm`, branch free through `select_lt` (a zero direction stays zero, a NaN
+    stays NaN), so warp's `geom::Direction` needs no local trait. The inherent `ideal_norm`
+    methods stay, so concrete code needs no import. It is the ideal norm, not a "length" of
+    every kind: VGA vectors have `norm`, and a trait over both would name two ideas once.
+  * *VGA3D `Rotor::rotation_in(plane, angle)`*, in the plane's sense (`a ^ b` turns `a`
+    towards `b`); `rotation(axis, angle)` is `rotation_in` of the plane with the axis's
+    coefficients, `axis.dual()`, as its doctest pins.
+  * *`ApproxEq::abs_diff_eq(&b, tol)`*, an absolute comparison (`max_abs_diff(&b) <= tol`, the
+    `approx` crate's name), beside the relative `approx_eq`: the examples compare positions in
+    pixels and fields in their units.
+  * *`Unit::orbit(start, n)`*, the `n` steps `(x, m >> x)` of repeating a unit versor, generic
+    over what it moves: warp's chords of circles and screws, the arms of reticles.
+  * *Forms and pairings refuse a larger output kind.* The blanket impls of `Form` and
+    `Pairing` take any extensor with two slots and read coefficient 0; each method now asserts
+    at compile time that the output kind has one coefficient, as `FormAsMap::as_map` does (a
+    post-monomorphization error, pinned by `compile_fail` doctests, since `cargo check` and so
+    the trybuild tests do not reach it).
+  * *A value's `try_inverse()`*, generated beside `inverse()` and a method of `Inverse`: the
+    one failure policy above, for values. A closed form divides by the Study number
+    `N = x ~x`, and the test is on it, scaled as the LU test is: `None` where `|N| ≤ n ε ‖x‖²`
+    (`n` coefficients, `‖x‖²` and `|N|²` the sums of the squared coefficients; `N` vanishes to
+    its own rounding, an ideal plane or line, a round point) or where its norm cancels,
+    `|N conj(N)| ≤ n ε |N|²` (a zero divisor `1 + E` with `E² = 1`, as in CGA3D's `Even`), in
+    any lane, and then where the result is not finite. The general inverse (Shirokov's) has no
+    Study number, so its twin tests the residual `x x⁻¹ − 1` against `√ε`, as conjugate
+    gradients does. Both tests are relative: a value whose coefficients are all at rounding
+    size is a scaled value like another, as for maps.
 * **Plan.** Three batches, each merged when CI is green: (1) the generator and types (orientation
   by name, the arithmetic, `f64`, `Slot`, `Log`, `normalized`/`unit`); (2) names and linear
   algebra; (3) geometry helpers and uniform roles. Internal cleanups of the generator (output

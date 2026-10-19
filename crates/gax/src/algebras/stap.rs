@@ -117,7 +117,8 @@ pub mod extrinsic {
 pub mod oriented {
 use super::gx;
 
-include!("stap/kinds.rs");
+include!("stap/kinds_1.rs");
+include!("stap/kinds_2.rs");
 include!("stap/products_gp.rs");
 include!("stap/products_wedge.rs");
 include!("stap/products_vee.rs");

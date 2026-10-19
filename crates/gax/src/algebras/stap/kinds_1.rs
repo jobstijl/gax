@@ -814,6 +814,26 @@ impl<T: gx::Real, O: gx::Orientation> Scalar<(), T, O> {
         Scalar::from_coeffs([t4])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 1` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Scalar<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 * t0;
+        let (size, d) = (t0, t1);
+        let parts = t0 * t0;
+        let tol = T::from_i64(1) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -867,6 +887,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Scalar<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -1736,6 +1760,46 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
         Vector::from_coeffs([t32, t33, t34, t35, t36])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 5` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Vector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[1] * x[1];
+        let t1 = x[2] * x[2];
+        let t2 = x[3] * x[3];
+        let t3 = x[4] * x[4];
+        let t7 = t0 * t2;
+        let t9 = t1 * t1;
+        let t11 = t1 * t3;
+        let t14 = t3 * t3;
+        let t15 = t0 + t1;
+        let t16 = t2 + t15;
+        let t17 = x[0].mul_add(x[0], t3);
+        let t18 = t16 + t17;
+        let t19 = t16 - t3;
+        let t20 = t0.mul_add(t0, t9);
+        let t21 = t2.mul_add(t2, t14);
+        let t22 = t20 + t21;
+        let t23 = t0.mul_add(t1, t7);
+        let t24 = t1.mul_add(t2, t23);
+        let t25 = t0.mul_add(t3, t11);
+        let t26 = t2.mul_add(t3, t25);
+        let t27 = t24 - t26;
+        let t29 = t27.mul_add(T::from_i64(2), t22);
+        let (size, d) = (t18, t29);
+        let parts = t19 * t19;
+        let tol = T::from_i64(5) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -1798,6 +1862,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Vector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -2762,6 +2830,97 @@ impl<T: gx::Real, O: gx::Orientation> Bivector<(), T, O> {
         Bivector::from_coeffs([t156, t161, t167, t172, t175, t178, t181, t184, t187, t190])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 10` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Bivector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[4] * x[4];
+        let t1 = x[5] * x[5];
+        let t2 = x[6] * x[6];
+        let t3 = x[7] * x[7];
+        let t4 = x[8] * x[8];
+        let t5 = x[9] * x[9];
+        let t6 = x[4] * x[7];
+        let t7 = x[5] * x[8];
+        let t8 = x[6] * x[9];
+        let t10 = x[1] * x[1];
+        let t14 = x[1] * x[5];
+        let t16 = x[0] * x[8];
+        let t21 = x[3] * x[5];
+        let t22 = x[1] * x[9];
+        let t27 = t0 * t2;
+        let t32 = t6 * t8;
+        let t33 = t1 * t1;
+        let t34 = t1 * t2;
+        let t35 = t1 * t3;
+        let t40 = t2 * t3;
+        let t42 = t2 * t5;
+        let t45 = t3 * t5;
+        let t46 = t4 * t4;
+        let t47 = t4 * t5;
+        let t49 = t0 + t1;
+        let t50 = t2 + t49;
+        let t51 = t3 + t4;
+        let t52 = t5 + t51;
+        let t53 = x[0].mul_add(x[0], t10);
+        let t54 = x[2].mul_add(x[2], t53);
+        let t55 = x[3].mul_add(x[3], t50);
+        let t56 = t52 + t55;
+        let t57 = t54 + t56;
+        let t58 = t50 - t52;
+        let t59 = x[0].mul_add(x[4], t14);
+        let t60 = x[2].mul_add(x[6], t59);
+        let t61 = t60 * T::from_i64(2);
+        let t62 = -t61;
+        let t63 = (-x[1]).mul_add(x[7], t16);
+        let t64 = (-x[3]).mul_add(x[6], t63);
+        let t65 = t64 * T::from_i64(2);
+        let t66 = x[0].mul_add(x[9], t21);
+        let t67 = (-x[2]).mul_add(x[7], t66);
+        let t68 = t67 * T::from_i64(2);
+        let t69 = (-x[2]).mul_add(x[8], t22);
+        let t70 = (-x[3]).mul_add(x[4], t69);
+        let t71 = t70 * T::from_i64(2);
+        let t72 = t6 + t7;
+        let t73 = t8 + t72;
+        let t74 = t73 * T::from_i64(2);
+        let t75 = t0.mul_add(t0, t33);
+        let t76 = t2.mul_add(t2, t75);
+        let t77 = t3.mul_add(t3, t46);
+        let t78 = t5.mul_add(t5, t77);
+        let t79 = t76 + t78;
+        let t80 = t0.mul_add(t1, t27);
+        let t81 = t0.mul_add(t3, t34);
+        let t82 = t80 + t81;
+        let t83 = t1.mul_add(t4, t42);
+        let t84 = t3.mul_add(t4, t45);
+        let t85 = t83 + t84;
+        let t86 = t82 + t85;
+        let t87 = (-t0).mul_add(t4, t47);
+        let t88 = t0.mul_add(t5, t35);
+        let t89 = t87 - t88;
+        let t90 = t1.mul_add(t5, t40);
+        let t91 = t2.mul_add(t4, t90);
+        let t92 = t89 - t91;
+        let t93 = t86 + t92;
+        let t95 = t6.mul_add(t7, t32);
+        let t96 = t7.mul_add(t8, t95);
+        let t98 = t93.mul_add(T::from_i64(2), t79);
+        let t99 = t96.mul_add(T::from_i64(8), t98);
+        let (size, d) = (t57, t99);
+        let parts = t58 * t58 + t62 * t62 + t65 * t65 + t68 * t68 + t71 * t71 + t74 * t74;
+        let tol = T::from_i64(10) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -3118,6 +3277,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Bivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -4032,6 +4195,69 @@ impl<T: gx::Real, O: gx::Orientation> Trivector<(), T, O> {
         Trivector::from_coeffs([t86, t91, t96, t101, t106, t111, t112, t113, t114, t115])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 10` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Trivector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[6] * x[6];
+        let t1 = x[7] * x[7];
+        let t2 = x[8] * x[8];
+        let t3 = x[9] * x[9];
+        let t6 = x[2] * x[2];
+        let t8 = x[4] * x[4];
+        let t11 = x[4] * x[8];
+        let t15 = x[5] * x[6];
+        let t16 = x[0] * x[9];
+        let t21 = x[3] * x[6];
+        let t24 = t0 * t2;
+        let t26 = t1 * t1;
+        let t28 = t1 * t3;
+        let t31 = t3 * t3;
+        let t32 = t1 + t2;
+        let t33 = t3 + t32;
+        let t34 = x[0].mul_add(x[0], t0);
+        let t35 = x[1].mul_add(x[1], t6);
+        let t36 = t34 + t35;
+        let t37 = x[3].mul_add(x[3], t8);
+        let t38 = x[5].mul_add(x[5], t33);
+        let t39 = t37 + t38;
+        let t40 = t36 + t39;
+        let t41 = t0 - t33;
+        let t42 = x[3].mul_add(x[7], t11);
+        let t43 = x[5].mul_add(x[9], t42);
+        let t44 = t43 * T::from_i64(2);
+        let t45 = x[0].mul_add(x[8], t15);
+        let t46 = (-x[1]).mul_add(x[7], t45);
+        let t47 = t46 * T::from_i64(2);
+        let t48 = (-x[2]).mul_add(x[7], t16);
+        let t49 = (-x[4]).mul_add(x[6], t48);
+        let t50 = t49 * T::from_i64(2);
+        let t51 = x[1].mul_add(x[9], t21);
+        let t52 = (-x[2]).mul_add(x[8], t51);
+        let t53 = t52 * T::from_i64(2);
+        let t54 = t0.mul_add(t0, t26);
+        let t55 = t2.mul_add(t2, t31);
+        let t56 = t54 + t55;
+        let t57 = t1.mul_add(t2, t28);
+        let t58 = t2.mul_add(t3, t57);
+        let t59 = t0.mul_add(t1, t24);
+        let t60 = t0.mul_add(t3, t59);
+        let t61 = t58 - t60;
+        let t63 = t61.mul_add(T::from_i64(2), t56);
+        let (size, d) = (t40, t63);
+        let parts = t41 * t41 + t44 * t44 + t47 * t47 + t50 * t50 + t53 * t53;
+        let tol = T::from_i64(10) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -4206,6 +4432,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Trivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -5023,6 +5253,32 @@ impl<T: gx::Real, O: gx::Orientation> Quadvector<(), T, O> {
         Quadvector::from_coeffs([t10, t11, t12, t13, t14])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 5` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Quadvector<(), T, O>> {
+        let x = self.c;
+        let t0 = x[4] * x[4];
+        let t4 = x[3] * x[3];
+        let t5 = t0 * t0;
+        let t6 = x[0].mul_add(x[0], t0);
+        let t7 = x[1].mul_add(x[1], t6);
+        let t8 = x[2].mul_add(x[2], t4);
+        let t9 = t7 + t8;
+        let t10 = -t0;
+        let (size, d) = (t9, t5);
+        let parts = t10 * t10;
+        let tol = T::from_i64(5) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
     #[inline(always)]
     pub fn unit(self) -> gx::Unit<Self> {
@@ -5078,6 +5334,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Quadvector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -6943,6 +7203,166 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
         Motor::from_coeffs([t312, t319, t326, t333, t340, t344, t347, t351, t354, t356, t359, t366, t373, t380, t387, t389])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 16` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Motor<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[5] * x[5];
+        let t2 = x[6] * x[6];
+        let t3 = x[7] * x[7];
+        let t4 = x[8] * x[8];
+        let t5 = x[9] * x[9];
+        let t6 = x[10] * x[10];
+        let t7 = x[15] * x[15];
+        let t8 = x[0] * x[15];
+        let t9 = x[5] * x[8];
+        let t10 = x[6] * x[9];
+        let t11 = x[7] * x[10];
+        let t13 = x[2] * x[2];
+        let t16 = x[11] * x[11];
+        let t18 = x[13] * x[13];
+        let t22 = x[2] * x[6];
+        let t24 = x[4] * x[15];
+        let t25 = x[8] * x[11];
+        let t27 = x[10] * x[13];
+        let t30 = x[2] * x[8];
+        let t31 = x[3] * x[15];
+        let t34 = x[6] * x[11];
+        let t35 = x[10] * x[14];
+        let t37 = x[1] * x[10];
+        let t39 = x[3] * x[8];
+        let t41 = x[5] * x[13];
+        let t43 = x[9] * x[14];
+        let t46 = x[2] * x[10];
+        let t47 = x[3] * x[9];
+        let t50 = x[7] * x[12];
+        let t51 = x[8] * x[14];
+        let t54 = t0 * t2;
+        let t57 = t0 * t5;
+        let t59 = t0 * t7;
+        let t61 = t8 * t10;
+        let t63 = t1 * t1;
+        let t65 = t1 * t3;
+        let t67 = t1 * t5;
+        let t71 = t9 * t11;
+        let t74 = t2 * t4;
+        let t75 = t2 * t5;
+        let t77 = t2 * t7;
+        let t79 = t3 * t3;
+        let t81 = t3 * t5;
+        let t85 = t4 * t5;
+        let t87 = t4 * t7;
+        let t88 = t5 * t5;
+        let t92 = t6 * t7;
+        let t93 = t7 * t7;
+        let t94 = t0 + t1;
+        let t95 = t2 + t3;
+        let t96 = t4 + t5;
+        let t97 = t6 + t7;
+        let t98 = t94 + t95;
+        let t99 = t96 + t97;
+        let t100 = x[1].mul_add(x[1], t13);
+        let t101 = x[3].mul_add(x[3], t100);
+        let t102 = x[4].mul_add(x[4], t16);
+        let t103 = t101 + t102;
+        let t104 = x[12].mul_add(x[12], t18);
+        let t105 = x[14].mul_add(x[14], t104);
+        let t106 = t98 + t99;
+        let t107 = t105 + t106;
+        let t108 = t103 + t107;
+        let t109 = t98 - t99;
+        let t110 = x[0].mul_add(x[14], t24);
+        let t111 = x[1].mul_add(x[5], t22);
+        let t112 = t110 - t111;
+        let t113 = x[3].mul_add(x[7], t25);
+        let t114 = x[9].mul_add(x[12], t27);
+        let t115 = t113 + t114;
+        let t116 = t112 - t115;
+        let t117 = t116 * T::from_i64(2);
+        let t118 = x[1].mul_add(x[9], t31);
+        let t119 = x[5].mul_add(x[12], t35);
+        let t120 = t118 + t119;
+        let t121 = x[0].mul_add(x[13], t30);
+        let t122 = x[4].mul_add(x[7], t34);
+        let t123 = t121 + t122;
+        let t124 = t120 - t123;
+        let t125 = t124 * T::from_i64(2);
+        let t126 = x[0].mul_add(x[12], t37);
+        let t127 = x[4].mul_add(x[6], t41);
+        let t128 = t126 + t127;
+        let t129 = x[2].mul_add(x[15], t39);
+        let t130 = x[7].mul_add(x[11], t43);
+        let t131 = t129 + t130;
+        let t132 = t128 - t131;
+        let t133 = t132 * T::from_i64(2);
+        let t134 = x[1].mul_add(x[15], t46);
+        let t135 = x[6].mul_add(x[13], t51);
+        let t136 = t134 + t135;
+        let t137 = x[0].mul_add(x[11], t47);
+        let t138 = x[4].mul_add(x[5], t50);
+        let t139 = t137 + t138;
+        let t140 = t136 - t139;
+        let t141 = t140 * T::from_i64(2);
+        let t142 = t8 + t9;
+        let t143 = t10 + t11;
+        let t144 = t142 + t143;
+        let t145 = t144 * T::from_i64(2);
+        let t146 = t0.mul_add(t0, t63);
+        let t147 = t2.mul_add(t2, t79);
+        let t148 = t146 + t147;
+        let t149 = t4.mul_add(t4, t88);
+        let t150 = t6.mul_add(t6, t93);
+        let t151 = t149 + t150;
+        let t152 = t148 + t151;
+        let t153 = t0.mul_add(t1, t54);
+        let t154 = t0.mul_add(t3, t59);
+        let t155 = t153 + t154;
+        let t156 = t1.mul_add(t2, t65);
+        let t157 = t1.mul_add(t4, t156);
+        let t158 = t155 + t157;
+        let t159 = t2.mul_add(t3, t75);
+        let t160 = t3.mul_add(t6, t85);
+        let t161 = t159 + t160;
+        let t162 = t4.mul_add(t6, t87);
+        let t163 = t5.mul_add(t6, t162);
+        let t164 = t161 + t163;
+        let t165 = t158 + t164;
+        let t166 = t5.mul_add(t7, t92);
+        let t167 = t0.mul_add(t4, t57);
+        let t168 = t166 - t167;
+        let t169 = t0.mul_add(t6, t67);
+        let t170 = t1.mul_add(t6, t169);
+        let t171 = t168 - t170;
+        let t172 = t1.mul_add(t7, t74);
+        let t173 = t2.mul_add(t6, t77);
+        let t174 = t172 + t173;
+        let t175 = t3.mul_add(t4, t81);
+        let t176 = t3.mul_add(t7, t175);
+        let t177 = t174 + t176;
+        let t178 = t171 - t177;
+        let t179 = t165 + t178;
+        let t181 = t8.mul_add(t9, t61);
+        let t182 = t8.mul_add(t11, t181);
+        let t183 = t9.mul_add(t10, t71);
+        let t184 = t10.mul_add(t11, t183);
+        let t185 = t182 + t184;
+        let t187 = t179.mul_add(T::from_i64(2), t152);
+        let t188 = t185.mul_add(T::from_i64(8), t187);
+        let (size, d) = (t108, t188);
+        let parts = t109 * t109 + t117 * t117 + t125 * t125 + t133 * t133 + t141 * t141 + t145 * t145;
+        let tol = T::from_i64(16) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -7509,6 +7929,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Motor<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -8697,6 +9121,166 @@ impl<T: gx::Real, O: gx::Orientation> Odd<(), T, O> {
         Odd::from_coeffs([t315, t317, t320, t322, t325, t332, t339, t346, t353, t360, t367, t370, t372, t375, t377, t384])
     }
 
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 16` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Odd<(), T, O>> {
+        let x = self.c;
+        let t0 = x[1] * x[1];
+        let t1 = x[2] * x[2];
+        let t2 = x[3] * x[3];
+        let t3 = x[4] * x[4];
+        let t4 = x[11] * x[11];
+        let t5 = x[12] * x[12];
+        let t6 = x[13] * x[13];
+        let t7 = x[14] * x[14];
+        let t8 = x[1] * x[12];
+        let t9 = x[2] * x[13];
+        let t10 = x[3] * x[14];
+        let t11 = x[4] * x[11];
+        let t13 = x[5] * x[5];
+        let t16 = x[8] * x[8];
+        let t18 = x[10] * x[10];
+        let t22 = x[2] * x[6];
+        let t24 = x[4] * x[15];
+        let t25 = x[8] * x[12];
+        let t27 = x[10] * x[14];
+        let t30 = x[2] * x[8];
+        let t32 = x[4] * x[7];
+        let t34 = x[6] * x[12];
+        let t35 = x[10] * x[11];
+        let t37 = x[1] * x[10];
+        let t40 = x[4] * x[6];
+        let t41 = x[5] * x[14];
+        let t43 = x[9] * x[11];
+        let t45 = x[1] * x[15];
+        let t48 = x[4] * x[5];
+        let t50 = x[7] * x[13];
+        let t51 = x[8] * x[11];
+        let t54 = t0 * t2;
+        let t57 = t0 * t5;
+        let t58 = t0 * t6;
+        let t61 = t8 * t10;
+        let t63 = t1 * t1;
+        let t65 = t1 * t3;
+        let t66 = t1 * t4;
+        let t71 = t9 * t11;
+        let t73 = t2 * t3;
+        let t76 = t2 * t6;
+        let t77 = t2 * t7;
+        let t79 = t3 * t3;
+        let t81 = t3 * t5;
+        let t83 = t3 * t7;
+        let t86 = t4 * t6;
+        let t88 = t5 * t5;
+        let t92 = t6 * t7;
+        let t93 = t7 * t7;
+        let t94 = t0 + t1;
+        let t95 = t2 + t4;
+        let t96 = t3 + t5;
+        let t97 = t6 + t7;
+        let t98 = t94 + t95;
+        let t99 = t96 + t97;
+        let t100 = x[0].mul_add(x[0], t13);
+        let t101 = x[6].mul_add(x[6], t100);
+        let t102 = x[7].mul_add(x[7], t16);
+        let t103 = t101 + t102;
+        let t104 = x[9].mul_add(x[9], t18);
+        let t105 = x[15].mul_add(x[15], t104);
+        let t106 = t98 + t99;
+        let t107 = t105 + t106;
+        let t108 = t103 + t107;
+        let t109 = t98 - t99;
+        let t110 = x[1].mul_add(x[5], t22);
+        let t111 = x[3].mul_add(x[7], t25);
+        let t112 = t110 + t111;
+        let t113 = x[9].mul_add(x[13], t27);
+        let t114 = x[0].mul_add(x[11], t24);
+        let t115 = t113 - t114;
+        let t116 = t112 + t115;
+        let t117 = t116 * T::from_i64(2);
+        let t118 = x[1].mul_add(x[9], t32);
+        let t119 = x[5].mul_add(x[13], t35);
+        let t120 = t118 + t119;
+        let t121 = x[0].mul_add(x[14], t30);
+        let t122 = x[3].mul_add(x[15], t34);
+        let t123 = t121 + t122;
+        let t124 = t120 - t123;
+        let t125 = t124 * T::from_i64(2);
+        let t126 = x[0].mul_add(x[13], t37);
+        let t127 = x[2].mul_add(x[15], t41);
+        let t128 = t126 + t127;
+        let t129 = x[3].mul_add(x[8], t40);
+        let t130 = x[7].mul_add(x[12], t43);
+        let t131 = t129 + t130;
+        let t132 = t128 - t131;
+        let t133 = t132 * T::from_i64(2);
+        let t134 = x[2].mul_add(x[10], t48);
+        let t135 = x[6].mul_add(x[14], t51);
+        let t136 = t134 + t135;
+        let t137 = x[0].mul_add(x[12], t45);
+        let t138 = x[3].mul_add(x[9], t50);
+        let t139 = t137 + t138;
+        let t140 = t136 - t139;
+        let t141 = t140 * T::from_i64(2);
+        let t142 = t11 - t8;
+        let t143 = t9 + t10;
+        let t144 = t142 - t143;
+        let t145 = t144 * T::from_i64(2);
+        let t146 = t0.mul_add(t0, t63);
+        let t147 = t2.mul_add(t2, t79);
+        let t148 = t146 + t147;
+        let t149 = t4.mul_add(t4, t88);
+        let t150 = t6.mul_add(t6, t93);
+        let t151 = t149 + t150;
+        let t152 = t148 + t151;
+        let t153 = t0.mul_add(t1, t54);
+        let t154 = t0.mul_add(t4, t57);
+        let t155 = t153 + t154;
+        let t156 = t1.mul_add(t2, t66);
+        let t157 = t1.mul_add(t6, t156);
+        let t158 = t155 + t157;
+        let t159 = t2.mul_add(t4, t77);
+        let t160 = t3.mul_add(t4, t81);
+        let t161 = t159 + t160;
+        let t162 = t3.mul_add(t6, t83);
+        let t163 = t5.mul_add(t6, t162);
+        let t164 = t161 + t163;
+        let t165 = t158 + t164;
+        let t166 = t5.mul_add(t7, t92);
+        let t167 = t0.mul_add(t3, t58);
+        let t168 = t166 - t167;
+        let t169 = t0.mul_add(t7, t65);
+        let t170 = t1.mul_add(t5, t169);
+        let t171 = t168 - t170;
+        let t172 = t1.mul_add(t7, t73);
+        let t173 = t2.mul_add(t5, t76);
+        let t174 = t172 + t173;
+        let t175 = t4.mul_add(t5, t86);
+        let t176 = t4.mul_add(t7, t175);
+        let t177 = t174 + t176;
+        let t178 = t171 - t177;
+        let t179 = t165 + t178;
+        let t181 = t8.mul_add(t9, t61);
+        let t182 = t9.mul_add(t10, t181);
+        let t183 = t8.mul_add(t11, t71);
+        let t184 = t10.mul_add(t11, t183);
+        let t185 = t182 - t184;
+        let t187 = t179.mul_add(T::from_i64(2), t152);
+        let t188 = t185.mul_add(T::from_i64(8), t187);
+        let (size, d) = (t108, t188);
+        let parts = t109 * t109 + t117 * t117 + t125 * t125 + t133 * t133 + t141 * t141 + t145 * t145;
+        let tol = T::from_i64(16) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
     /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
     #[inline(always)]
@@ -9190,6 +9774,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Odd<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -10241,6 +10829,57 @@ impl<T: gx::Real, O: gx::Orientation> Multivector<(), T, O> {
         })
     }
 
+    /// [`inverse`](Self::inverse), or `None` where it fails: where a coefficient of the
+    /// residual `x xâ»Â¹ â 1` is above `âÎµ`, in any lane, or the inverse is not finite. (The
+    /// general inverse has no Study number `x ~x` to test against `âxâÂ²`, as the closed forms'
+    /// `try_inverse` does; the residual is the test of the iterative solvers.)
+    #[inline]
+    pub fn try_inverse(self) -> Option<Multivector<(), T, O>> {
+        let y = self.inverse();
+        let mut x = Multivector::<(), T>::zero();
+        x.c[0] = self.c[0];
+        x.c[1] = self.c[1];
+        x.c[2] = self.c[2];
+        x.c[3] = self.c[3];
+        x.c[4] = self.c[4];
+        x.c[5] = self.c[5];
+        x.c[6] = self.c[6];
+        x.c[7] = self.c[7];
+        x.c[8] = self.c[8];
+        x.c[9] = self.c[9];
+        x.c[10] = self.c[10];
+        x.c[11] = self.c[11];
+        x.c[12] = self.c[12];
+        x.c[13] = self.c[13];
+        x.c[14] = self.c[14];
+        x.c[15] = self.c[15];
+        x.c[16] = self.c[16];
+        x.c[17] = self.c[17];
+        x.c[18] = self.c[18];
+        x.c[19] = self.c[19];
+        x.c[20] = self.c[20];
+        x.c[21] = self.c[21];
+        x.c[22] = self.c[22];
+        x.c[23] = self.c[23];
+        x.c[24] = self.c[24];
+        x.c[25] = self.c[25];
+        x.c[26] = self.c[26];
+        x.c[27] = self.c[27];
+        x.c[28] = self.c[28];
+        x.c[29] = self.c[29];
+        x.c[30] = self.c[30];
+        x.c[31] = self.c[31];
+        let y0: Multivector<(), T> = y.with_orientation();
+        let mut r = (x * y0).c;
+        r[0] = r[0] - T::one();
+        let tol = T::epsilon().sqrt();
+        if r.iter().all(|&c| T::all_lt(c.abs(), tol)) {
+            Some(y).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Multivector<(), T, O> {
@@ -10248,6 +10887,10 @@ impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Multivector<(), T, O> {
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
     }
 }
 
@@ -10694,183 +11337,3 @@ impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Quadvector<(), f64, O> 
 }
 
 impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Quadvector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Quadvector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 26, false), (1, 27, false), (2, 28, false), (3, 29, false), (4, 30, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Quadvector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<4> for Quadvector<(), f64, O> {
-    type Out = Quadvector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Pseudoscalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Pseudoscalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Pseudoscalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 31, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Pseudoscalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<5> for Pseudoscalar<(), f64, O> {
-    type Out = Pseudoscalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Motor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Motor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Motor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false), (15, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Motor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Motor<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Motor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 6, false), (2, 7, false), (3, 8, false), (4, 9, false), (5, 10, false), (6, 11, false), (7, 12, false), (8, 13, false), (9, 14, false), (10, 15, false), (11, 26, false), (12, 27, false), (13, 28, false), (14, 29, false), (15, 30, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Motor<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<0> for Motor<(), f64, O> {
-    type Out = Scalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<2> for Motor<(), f64, O> {
-    type Out = Bivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<4> for Motor<(), f64, O> {
-    type Out = Quadvector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false), (15, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Odd<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 16, false), (6, 17, false), (7, 18, false), (8, 19, false), (9, 20, false), (10, 21, false), (11, 22, false), (12, 23, false), (13, 24, false), (14, 25, false), (15, 31, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Odd<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Odd<(), f64, O> {
-    type Out = Vector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<3> for Odd<(), f64, O> {
-    type Out = Trivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<5> for Odd<(), f64, O> {
-    type Out = Pseudoscalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(16, 0, false), (17, 1, false), (18, 2, false), (19, 3, false), (20, 4, false), (21, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Quadvector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(26, 0, false), (27, 1, false), (28, 2, false), (29, 3, false), (30, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(31, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false), (15, 10, false), (26, 11, false), (27, 12, false), (28, 13, false), (29, 14, false), (30, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (16, 5, false), (17, 6, false), (18, 7, false), (19, 8, false), (20, 9, false), (21, 10, false), (22, 11, false), (23, 12, false), (24, 13, false), (25, 14, false), (31, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false), (20, 20, false), (21, 21, false), (22, 22, false), (23, 23, false), (24, 24, false), (25, 25, false), (26, 26, false), (27, 27, false), (28, 28, false), (29, 29, false), (30, 30, false), (31, 31, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Multivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<0> for Multivector<(), f64, O> {
-    type Out = Scalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Multivector<(), f64, O> {
-    type Out = Vector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<2> for Multivector<(), f64, O> {
-    type Out = Bivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<3> for Multivector<(), f64, O> {
-    type Out = Trivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(16, 0, false), (17, 1, false), (18, 2, false), (19, 3, false), (20, 4, false), (21, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<4> for Multivector<(), f64, O> {
-    type Out = Quadvector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(26, 0, false), (27, 1, false), (28, 2, false), (29, 3, false), (30, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<5> for Multivector<(), f64, O> {
-    type Out = Pseudoscalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(31, 0, false)];
-}
