@@ -36,6 +36,7 @@ use crate::light::{self, Light};
 use crate::sim::body::Pose;
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Phase};
+use crate::store::Scheme;
 use crate::tunnel::lattice::{AROUND, RADIUS, RINGS};
 use crate::tunnel::track::Frame;
 use crate::tunnel::{
@@ -74,6 +75,8 @@ pub struct ViewSettings {
     pub assist: f32,
     /// Singularities lens what lies behind them (off with reduced motion).
     pub lensing: bool,
+    /// The colour scheme for enemies and shards.
+    pub scheme: Scheme,
 }
 
 /// A wall node as seen this frame: where, how far it is displaced (for its glow), and how
@@ -147,6 +150,7 @@ impl View {
                 flash_scale: 1.0,
                 assist: 1.1,
                 lensing: true,
+                scheme: Scheme::Standard,
             },
             proj: Proj::new(cam, focal),
             shake: 0.0,
@@ -252,7 +256,7 @@ impl View {
         out.clear();
         let shaken = self.shaken().map(|cam| self.projection(cam, w));
         let p = shaken.as_ref().unwrap_or(&self.proj);
-        let sight = Sight::new(p, w, alpha, time, &mut self.maps);
+        let sight = Sight::new(p, w, alpha, time, self.settings.scheme, &mut self.maps);
         sight.draw_wall(&mut self.wall, out);
         sight.draw_dust(&self.dust, out);
         sight.draw_warpins(out);
@@ -308,6 +312,8 @@ struct Sight<'a> {
     w: &'a World,
     alpha: f32,
     time: f32,
+    /// The colour scheme for enemies and shards.
+    scheme: Scheme,
     maps: CameraMaps<'a>,
     wells: Wells,
     /// The ship between ticks.
@@ -315,15 +321,23 @@ struct Sight<'a> {
 }
 
 impl<'a> Sight<'a> {
-    /// The frame through `p` at `alpha` between ticks, its camera maps along the track built
-    /// into the kept buffer `maps`.
-    fn new(p: &'a Proj, w: &'a World, alpha: f32, time: f32, maps: &'a mut Vec<CamMap>) -> Self {
+    /// The frame through `p` at `alpha` between ticks, in the colour scheme `scheme`, its
+    /// camera maps along the track built into the kept buffer `maps`.
+    fn new(
+        p: &'a Proj,
+        w: &'a World,
+        alpha: f32,
+        time: f32,
+        scheme: Scheme,
+        maps: &'a mut Vec<CamMap>,
+    ) -> Self {
         let ship = lerp(w.ship.prev, w.ship.pos, alpha);
         Sight {
             p,
             w,
             alpha,
             time,
+            scheme,
             maps: CameraMaps::build(maps, p, w, arc(ship)),
             wells: w.wells(),
             ship,
@@ -421,7 +435,7 @@ impl<'a> Sight<'a> {
     fn draw_warpins(&self, out: &mut Vec<LineInstance>) {
         for pd in &self.w.pending {
             let k = (pd.t / 0.8).clamp(0.0, 1.0);
-            let c = (scene::color(pd.foe.kind())).faded(0.8);
+            let c = (self.scheme.color(pd.foe.kind())).faded(0.8);
             let view = self.small(pd.pos);
             self.p.ring(out, &view, pd.pos, 0.4 + 2.0 * k, c, 10, 0.04);
         }
@@ -474,7 +488,7 @@ impl<'a> Sight<'a> {
         let p = self.p;
         for e in &self.w.enemies {
             let q = lerp(e.prev, e.pos, self.alpha);
-            let c = scene::color(e.foe.kind());
+            let c = self.scheme.color(e.foe.kind());
             let c = (c.whitened(e.flash)).faded(1.0 + e.flash);
             let c = if e.foe == Foe::Singularity {
                 c
@@ -510,7 +524,7 @@ impl<'a> Sight<'a> {
         let p = self.p;
         let pose = Motor::rotation_between(dir(0.0, 0.0, 1.0), e.vel);
         p.solid(out, &self.object(q, pose), &HEAD, 0.95, c);
-        let base = scene::color(Foe::Serpent.kind());
+        let base = self.scheme.color(Foe::Serpent.kind());
         let n = e.body.len().max(1) as f32;
         let mut last = q;
         for (k, seg) in e.body.iter().enumerate() {
@@ -577,7 +591,7 @@ impl<'a> Sight<'a> {
                 &self.object(sh.pos, spin),
                 &OCTAHEDRON,
                 0.3,
-                scene::shard(),
+                self.scheme.shard(),
             );
         }
         for b in &w.shots {

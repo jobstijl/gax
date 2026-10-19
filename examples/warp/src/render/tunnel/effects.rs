@@ -84,18 +84,24 @@ impl View {
         for e in events {
             match *e {
                 Event::Hit { pos, foe } => {
-                    self.burst(pos, scene::color(foe.kind()), 6, 6.0, 0.25);
+                    self.burst(pos, self.settings.scheme.color(foe.kind()), 6, 6.0, 0.25);
                 }
                 Event::Kill { pos, foe, points } => self.on_kill(pos, foe, points),
                 Event::Wall { pos } => self.burst(pos, palette::BULLET, 4, 4.0, 0.2),
                 Event::Bolt { pos } => self.burst(pos, BOLT, 10, 3.0, 0.3),
                 Event::Dive { pos } => {
-                    self.burst(pos, scene::color(Foe::Drone.kind()), 14, 5.0, 0.3);
+                    self.burst(
+                        pos,
+                        self.settings.scheme.color(Foe::Drone.kind()),
+                        14,
+                        5.0,
+                        0.3,
+                    );
                 }
                 Event::Pickup { pos, mult } => {
-                    self.burst(pos, scene::shard(), 8, 4.0, 0.3);
+                    self.burst(pos, self.settings.scheme.shard(), 8, 4.0, 0.3);
                     if mult % 10 == 0 {
-                        self.popup(pos, format!("X{mult}"), scene::shard());
+                        self.popup(pos, format!("X{mult}"), self.settings.scheme.shard());
                     }
                 }
                 Event::Death { pos } => {
@@ -127,16 +133,16 @@ impl View {
                     self.burst(pos, grey.faded(0.5), 20, 4.0, 0.4);
                 }
                 Event::Absorb { pos, .. } => {
-                    let c = scene::color(Foe::Singularity.kind());
+                    let c = self.settings.scheme.color(Foe::Singularity.kind());
                     self.burst(pos, c.whitened(0.4), 30, 5.0, 0.3);
                 }
                 Event::Burst { pos } => {
-                    let c = scene::color(Foe::Singularity.kind());
+                    let c = self.settings.scheme.color(Foe::Singularity.kind());
                     self.burst(pos, c, 300, 18.0, 1.0);
                     self.shake = self.shake.max(0.8);
                 }
                 Event::Slingshot { pos } => {
-                    let c = (scene::color(Foe::Singularity.kind())).whitened(0.3);
+                    let c = (self.settings.scheme.color(Foe::Singularity.kind())).whitened(0.3);
                     self.popup(pos + dir(0.0, 1.4, 0.0), "SLINGSHOT".into(), c);
                 }
                 Event::Roll { .. }
@@ -152,7 +158,7 @@ impl View {
     /// A kill: sparks in its colour and a white flash of them, a shake, its points; a
     /// singularity collapses in a shock ripple, a flash and a storm of light.
     fn on_kill(&mut self, pos: P, foe: Foe, points: u64) {
-        let c = scene::color(foe.kind());
+        let c = self.settings.scheme.color(foe.kind());
         let big = matches!(foe, Foe::Turret | Foe::Singularity);
         self.burst(pos, c, if big { 160 } else { 70 }, 11.0, 0.9);
         self.burst(pos, light::light(1.0, 1.0, 1.0, 3.0), 12, 16.0, 0.3);

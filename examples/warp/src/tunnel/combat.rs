@@ -2,7 +2,7 @@
 //! turrets' bolts, hits on the ship, bombs and blasts on the wall, death and respawn.
 
 use super::entities::{Enemy, Event, Foe, Shot};
-use super::lattice::Source;
+use super::lattice::Bulge;
 use super::space::{P, arc, at, dir, off_axis, segment_hits_sphere};
 use super::wells::Wells;
 use super::{Input, LOCK_AHEAD, World};
@@ -90,10 +90,10 @@ impl World {
         self.spawn_cooldown = self.spawn_cooldown.max(2.0);
     }
 
-    /// A blast on the wall at `pos` for `time` seconds: a lattice source that pushes.
+    /// A blast on the wall at `pos` for `time` seconds: a bulge.
     pub(super) fn blast(&mut self, pos: P, push: f32, r2: f32, time: f32) {
         self.blasts.push((
-            Source {
+            Bulge {
                 pos,
                 push,
                 r2,
@@ -170,23 +170,28 @@ impl World {
                 }
             }
         }
-        // Body segments shot away (highest first, so the indices hold).
+        // Highest first, so that the indices hold.
         segments.sort_unstable();
         for &(i, j) in segments.iter().rev() {
-            let s = self.enemies[i].body.remove(j);
-            let points = (50.0 * self.ledger.mult as f32 * self.speed_bonus()).round() as u64;
-            self.ledger.award(points);
-            self.events.push(Event::Kill {
-                pos: s.pos,
-                foe: Foe::Serpent,
-                points,
-            });
-            self.blast(s.pos, 160.0, 3.0, 0.08);
+            self.shoot_away(i, j);
         }
         dead.sort_unstable();
         for (i, bent) in dead.into_iter().rev() {
             self.kill(i, true, bent);
         }
+    }
+
+    /// Segment `j` of serpent `i`'s body shot away: scored, with a small blast on the wall.
+    fn shoot_away(&mut self, i: usize, j: usize) {
+        let s = self.enemies[i].body.remove(j);
+        let points = (50.0 * self.ledger.mult as f32 * self.speed_bonus()).round() as u64;
+        self.ledger.award(points);
+        self.events.push(Event::Kill {
+            pos: s.pos,
+            foe: Foe::Serpent,
+            points,
+        });
+        self.blast(s.pos, 160.0, 3.0, 0.08);
     }
 
     /// The bolts' tick: pulled by the singularities; gone when spent or behind the ship.

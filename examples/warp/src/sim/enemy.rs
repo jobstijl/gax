@@ -391,7 +391,7 @@ fn dodge(p: P, shots: &[Shot]) -> P {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{ARENA, Bullet, Input, at};
+    use super::super::{ARENA_X, ARENA_Y, Bullet, Input, at};
     use super::*;
 
     #[test]
@@ -430,14 +430,14 @@ mod tests {
         let mut w = World::new(9);
         w.director.enabled = false;
         w.phase = Phase::Over;
-        w.spawn(Kind::Carrier, at(ARENA[0] - 2.0, 0.0)).intent = dir(1.4, 0.0);
+        w.spawn(Kind::Carrier, at(ARENA_X - 2.0, 0.0)).intent = dir(1.4, 0.0);
         for _ in 0..240 {
             w.tick(&Input::default());
         }
         let v = w.enemies[0].body.vel;
         assert!(v.e20() < 0.0, "did not bounce: {v:?}");
         let [x, _] = w.enemies[0].body.pos().to_euclidean();
-        assert!(x < ARENA[0]);
+        assert!(x < ARENA_X);
     }
 
     /// A carrier against a wall launches its motes inside the arena.
@@ -446,13 +446,13 @@ mod tests {
         for seed in 0..64 {
             let mut w = World::new(seed);
             w.director.enabled = false;
-            let edge = at(ARENA[0] - 1.15, 0.0);
+            let edge = at(ARENA_X - 1.15, 0.0);
             w.launch(edge);
             for e in w.enemies.iter().filter(|e| e.kind == Kind::Mote) {
                 let [x, y] = e.body.pos().to_euclidean();
                 let r = Kind::Mote.stats().radius;
                 assert!(
-                    x.abs() <= ARENA[0] - r + 1e-4 && y.abs() <= ARENA[1] - r + 1e-4,
+                    x.abs() <= ARENA_X - r + 1e-4 && y.abs() <= ARENA_Y - r + 1e-4,
                     "{x} {y}"
                 );
             }
@@ -509,7 +509,7 @@ mod tests {
                 for e in &w.enemies {
                     let [x, y] = e.body.pos().to_euclidean();
                     assert!(
-                        x.abs() <= ARENA[0] && y.abs() <= ARENA[1],
+                        x.abs() <= ARENA_X && y.abs() <= ARENA_Y,
                         "seed {seed}, tick {t}: a {:?} at ({x}, {y})",
                         e.kind
                     );

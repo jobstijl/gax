@@ -39,9 +39,9 @@ impl View<'_> {
     }
 }
 
-/// Towards `place` from `from`, capped so that it glides in (on top of the motion it follows).
-fn glide(from: P, place: P, cap: f32) -> P {
-    ((place - from) * 2.5).clamp_ideal_norm(cap)
+/// Towards `spot` from `from`, capped so that it glides in (on top of the motion it follows).
+fn glide(from: P, spot: P, cap: f32) -> P {
+    ((spot - from) * 2.5).clamp_ideal_norm(cap)
 }
 
 impl World {
@@ -95,6 +95,19 @@ impl World {
 
     /// Singularities eat the mines and loose drones that fall in, and burst when overfed.
     fn feed(&mut self) {
+        self.eat();
+        let overfed = self
+            .enemies
+            .iter()
+            .position(|e| e.foe == Foe::Singularity && e.mass >= WELL_BURST);
+        if let Some(i) = overfed {
+            self.burst(i);
+        }
+    }
+
+    /// Every singularity eats the mines and loose drones within its radius (each one once),
+    /// and grows.
+    fn eat(&mut self) {
         let mut eaten: Vec<(usize, usize)> = Vec::new();
         for (wi, w) in self.enemies.iter().enumerate() {
             if w.foe != Foe::Singularity {
@@ -124,14 +137,10 @@ impl World {
         for &i in gone.iter().rev() {
             self.enemies.swap_remove(i);
         }
-        let Some(i) = self
-            .enemies
-            .iter()
-            .position(|e| e.foe == Foe::Singularity && e.mass >= WELL_BURST)
-        else {
-            return;
-        };
-        // Overfed: it bursts into a ring of drones.
+    }
+
+    /// Singularity `i`, overfed, bursts into a ring of drones.
+    fn burst(&mut self, i: usize) {
         let w = self.enemies.swap_remove(i);
         self.events.push(Event::Burst { pos: w.pos });
         self.blast(w.pos, 1800.0, 6.0, 0.25);
@@ -157,7 +166,7 @@ impl World {
         let e = self.enemies.swap_remove(i);
         let sling = if bent { 2.0 } else { 1.0 };
         let points = if scored {
-            (e.foe.points() as f32
+            (e.foe.stats().points as f32
                 * (1.0 + e.mass)
                 * self.ledger.mult as f32
                 * self.speed_bonus()
@@ -175,12 +184,7 @@ impl World {
         if bent && scored {
             self.events.push(Event::Slingshot { pos: e.pos });
         }
-        let size = match e.foe {
-            Foe::Turret | Foe::Serpent => 700.0,
-            Foe::Singularity => 2600.0,
-            _ => 260.0,
-        };
-        self.blast(e.pos, size, 3.0, 0.12);
+        self.blast(e.pos, e.foe.stats().blast, 3.0, 0.12);
         match e.foe {
             // The head gone, the body goes up segment by segment.
             Foe::Serpent => {
@@ -210,22 +214,18 @@ impl World {
 
     /// The shards a scored kill leaves: one, or a ring of them for the big ones.
     fn drop_shards(&mut self, e: &Enemy) {
-        let n = match e.foe {
-            Foe::Serpent => 3,
-            Foe::Singularity => 4 + e.mass as usize,
-            _ => 1,
-        };
-        for k in 0..n {
+        let n = e.foe.stats().shards + e.mass as usize;
+        self.shards.extend((0..n).map(|k| {
             let off = if n > 1 {
                 radial(1.2, k as f32 * core::f32::consts::TAU / n as f32)
             } else {
                 P::zero()
             };
-            self.shards.push(Shard {
+            Shard {
                 pos: e.pos + off,
                 life: 6.0,
-            });
-        }
+            }
+        }));
     }
 }
 
@@ -259,7 +259,7 @@ impl Enemy {
         bolt
     }
 
-    /// A drone: to its place in its ring, holding there, and diving at the ship.
+    /// A drone: to its spot in its ring, holding there, and diving at the ship.
     fn fly_drone(&mut self, view: &View) {
         self.angle += DT * RING_TURN;
         // An escort's ring turns about its singularity; a lost escort joins the ship's band.
@@ -272,14 +272,14 @@ impl Enemy {
             self.depth = 8.0;
             self.flight = Flight::Approach;
         }
-        // Its place moves with the ship (or the singularity), and turns with the ring: along
+        // Its spot moves with the ship (or the singularity), and turns with the ring: along
         // its radial offset turned a quarter about the axis, at the ring's rate. Gliding with
-        // both motions, a drone reaches its place instead of trailing it.
+        // both motions, a drone reaches its spot instead of trailing it.
         let quarter = core::f32::consts::FRAC_PI_2;
         let turning = radial(self.orbit, self.angle + quarter) * RING_TURN;
-        let (place, place_vel) = match well {
+        let (spot, spot_vel) = match well {
             Some(&(_, w, v)) => (w + radial(self.orbit, self.angle), v + turning),
-            // Its place in the ring, which holds `depth` ahead of the ship.
+            // Its spot in the ring, which holds `depth` ahead of the ship.
             None => (
                 around(self.orbit, self.angle, view.s_ship + self.depth),
                 view.with_ship() + turning,
@@ -287,17 +287,17 @@ impl Enemy {
         };
         self.vel = match self.flight {
             Flight::Approach | Flight::Hold => {
-                if self.flight == Flight::Approach && place.distance(self.pos) < 1.5 {
+                if self.flight == Flight::Approach && spot.distance(self.pos) < 1.5 {
                     self.flight = Flight::Hold;
                 }
-                glide(self.pos, place, 26.0) + place_vel
+                glide(self.pos, spot, 26.0) + spot_vel
             }
             Flight::Dive => {
                 self.timer -= DT;
                 if self.timer > 0.0 {
                     // The warning: it flashes in place.
                     self.flash = self.flash.max(0.6);
-                    (place - self.pos) * 2.5 + place_vel
+                    (spot - self.pos) * 2.5 + spot_vel
                 } else {
                     // At the ship, at a speed you can dodge.
                     let to = view.ship - self.pos;
@@ -349,20 +349,20 @@ impl Enemy {
     /// so that the ship must fly past it.
     fn hold(&mut self, view: &View) {
         self.angle += DT * 0.3;
-        let place = around(self.orbit, self.angle, view.s_ship + self.depth);
+        let spot = around(self.orbit, self.angle, view.s_ship + self.depth);
         self.vel = match self.flight {
             Flight::Approach => {
-                if place.distance(self.pos) < 1.5 {
+                if spot.distance(self.pos) < 1.5 {
                     self.flight = Flight::Hold;
                 }
-                glide(self.pos, place, 26.0) + view.with_ship()
+                glide(self.pos, spot, 26.0) + view.with_ship()
             }
             Flight::Hold => {
                 self.timer -= DT;
                 if self.timer <= 0.0 {
                     self.flight = Flight::Dive;
                 }
-                glide(self.pos, place, 26.0) + view.with_ship()
+                glide(self.pos, spot, 26.0) + view.with_ship()
             }
             Flight::Dive => P::zero(),
         };

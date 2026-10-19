@@ -2,7 +2,7 @@
 //! formations that are always telegraphed and never land within the safe radius.
 
 use super::rng::Rng;
-use super::{ARENA, DT, Event, Kind, P, Phase, SAFE_RADIUS, World, at, dir};
+use super::{ARENA_X, ARENA_Y, DT, Event, Kind, P, Phase, SAFE_RADIUS, World, at, dir};
 use crate::geom::ORIGIN;
 use gax::IdealNorm;
 use gax::pga2d::Motor;
@@ -40,8 +40,8 @@ impl World {
         let inside = |p: P| {
             let [x, y] = p.to_euclidean();
             at(
-                x.clamp(-ARENA[0] + 1.5, ARENA[0] - 1.5),
-                y.clamp(-ARENA[1] + 1.5, ARENA[1] - 1.5),
+                x.clamp(-ARENA_X + 1.5, ARENA_X - 1.5),
+                y.clamp(-ARENA_Y + 1.5, ARENA_Y - 1.5),
             )
         };
         let p = inside(p);
@@ -198,8 +198,8 @@ impl Director {
         if self.clock > 35.0 && singularities < 1 + (i * 2.5) as usize && roll < 0.12 + 0.1 * i {
             // A singularity, away from the player.
             let p = at(
-                rng.range(-ARENA[0] + 6.0, ARENA[0] - 6.0),
-                rng.range(-ARENA[1] + 5.0, ARENA[1] - 5.0),
+                rng.range(-ARENA_X + 6.0, ARENA_X - 6.0),
+                rng.range(-ARENA_Y + 5.0, ARENA_Y - 5.0),
             );
             vec![(Kind::Singularity, p)]
         } else if !features.is_empty() && feature_roll < 0.3 + 0.25 * i {
@@ -215,8 +215,8 @@ impl Director {
                 if rng.chance(0.25 + 0.5 * i) || spawns.is_empty() {
                     spawns.extend((0..n).map(|_| {
                         let p = at(
-                            cx * (ARENA[0] - 2.0) - cx * rng.range(0.0, 3.0),
-                            cy * (ARENA[1] - 2.0) - cy * rng.range(0.0, 3.0),
+                            cx * (ARENA_X - 2.0) - cx * rng.range(0.0, 3.0),
+                            cy * (ARENA_Y - 2.0) - cy * rng.range(0.0, 3.0),
                         );
                         (kind(rng), p)
                     }));
@@ -235,18 +235,14 @@ impl Director {
             // A line of drifters along a wall.
             let n = 5 + (i * 8.0) as usize;
             let top = rng.chance(0.5);
-            let y = if top { ARENA[1] - 2.0 } else { -ARENA[1] + 2.0 };
-            let ends = (at(-ARENA[0] + 3.0, y), at(ARENA[0] - 3.0, y));
+            let y = if top { ARENA_Y - 2.0 } else { -ARENA_Y + 2.0 };
+            let ends = (at(-ARENA_X + 3.0, y), at(ARENA_X - 3.0, y));
             spread(ends, n).map(|p| (Kind::Drifter, p)).collect()
         } else {
             // A flank: a column on the side away from the player.
             let n = 3 + (i * 7.0) as usize;
-            let x = if right {
-                -ARENA[0] + 2.5
-            } else {
-                ARENA[0] - 2.5
-            };
-            let ends = (at(x, -ARENA[1] + 3.0), at(x, ARENA[1] - 3.0));
+            let x = if right { -ARENA_X + 2.5 } else { ARENA_X - 2.5 };
+            let ends = (at(x, -ARENA_Y + 3.0), at(x, ARENA_Y - 3.0));
             spread(ends, n).map(|p| (kind(rng), p)).collect()
         }
     }
@@ -278,8 +274,8 @@ fn feature(kind: Kind, i: f32, right: bool, rng: &mut Rng) -> Vec<(Kind, P)> {
     let far = |rng: &mut Rng| {
         let side = if right { -1.0 } else { 1.0 };
         at(
-            side * rng.range(4.0, ARENA[0] - 3.0),
-            rng.range(-ARENA[1] + 3.0, ARENA[1] - 3.0),
+            side * rng.range(4.0, ARENA_X - 3.0),
+            rng.range(-ARENA_Y + 3.0, ARENA_Y - 3.0),
         )
     };
     match kind {
@@ -294,8 +290,8 @@ fn feature(kind: Kind, i: f32, right: bool, rng: &mut Rng) -> Vec<(Kind, P)> {
                 let cx = if rng.chance(0.5) { 1.0 } else { -1.0 };
                 let cy = if rng.chance(0.5) { 1.0 } else { -1.0 };
                 let p = at(
-                    cx * (ARENA[0] - 2.0 - rng.range(0.0, 4.0)),
-                    cy * (ARENA[1] - 2.0 - rng.range(0.0, 3.0)),
+                    cx * (ARENA_X - 2.0 - rng.range(0.0, 4.0)),
+                    cy * (ARENA_Y - 2.0 - rng.range(0.0, 3.0)),
                 );
                 (kind, p)
             })

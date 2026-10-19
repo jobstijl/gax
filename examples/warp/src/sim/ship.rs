@@ -224,7 +224,7 @@ impl World {
 mod tests {
     use super::super::kind::Kind;
     use super::super::ledger::{BOMB_EVERY, LIFE_EVERY};
-    use super::super::{ARENA, at, dir};
+    use super::super::{ARENA_X, at, dir};
     use super::*;
 
     #[test]
@@ -279,7 +279,7 @@ mod tests {
             });
         }
         let [x, _] = w.ship.body.pos().to_euclidean();
-        assert!((x - (ARENA[0] - SHIP_RADIUS)).abs() < 1e-3, "{x}");
+        assert!((x - (ARENA_X - SHIP_RADIUS)).abs() < 1e-3, "{x}");
         assert!(w.ship.body.vel.e20().abs() < 1e-3);
     }
 

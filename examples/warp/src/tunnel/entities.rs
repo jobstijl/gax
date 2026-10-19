@@ -26,47 +26,71 @@ pub enum Foe {
 impl Foe {
     /// The Plane family whose colour and sounds it borrows.
     pub fn kind(self) -> Kind {
-        match self {
-            Foe::Drone => Kind::Drifter,
-            Foe::Mine => Kind::Splitter,
-            Foe::Turret => Kind::Warden,
-            Foe::Serpent => Kind::Serpent,
-            Foe::Singularity => Kind::Singularity,
-        }
+        self.stats().kind
     }
 
-    /// Its size (the radius of its hit sphere).
-    pub fn radius(self) -> f32 {
+    /// The foe's numbers (and the Plane family it borrows from).
+    pub const fn stats(self) -> &'static Stats {
         match self {
-            Foe::Drone => 0.75,
-            Foe::Mine => 0.9,
-            Foe::Turret => 1.0,
-            Foe::Serpent => 0.9,
-            Foe::Singularity => 1.1,
+            Foe::Drone => &Stats {
+                kind: Kind::Drifter,
+                radius: 0.75,
+                hp: 1.0,
+                points: 100,
+                blast: 260.0,
+                shards: 1,
+            },
+            Foe::Mine => &Stats {
+                kind: Kind::Splitter,
+                radius: 0.9,
+                hp: 2.0,
+                points: 150,
+                blast: 260.0,
+                shards: 1,
+            },
+            Foe::Turret => &Stats {
+                kind: Kind::Warden,
+                radius: 1.0,
+                hp: 4.0,
+                points: 400,
+                blast: 700.0,
+                shards: 1,
+            },
+            Foe::Serpent => &Stats {
+                kind: Kind::Serpent,
+                radius: 0.9,
+                hp: 8.0,
+                points: 800,
+                blast: 700.0,
+                shards: 3,
+            },
+            Foe::Singularity => &Stats {
+                kind: Kind::Singularity,
+                radius: 1.1,
+                hp: 24.0,
+                points: 2000,
+                blast: 2600.0,
+                shards: 4,
+            },
         }
     }
+}
 
+/// A foe's numbers.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Stats {
+    /// The Plane family whose colour and sounds it borrows.
+    pub kind: Kind,
+    /// Its size: the radius of its hit sphere (a singularity's grows as it eats).
+    pub radius: f32,
     /// Its hit points when it lands.
-    fn hp(self) -> f32 {
-        match self {
-            Foe::Drone => 1.0,
-            Foe::Mine => 2.0,
-            Foe::Turret => 4.0,
-            Foe::Serpent => 8.0,
-            Foe::Singularity => 24.0,
-        }
-    }
-
+    pub hp: f32,
     /// What a kill is worth, before the multipliers.
-    pub(super) fn points(self) -> u64 {
-        match self {
-            Foe::Drone => 100,
-            Foe::Mine => 150,
-            Foe::Turret => 400,
-            Foe::Serpent => 800,
-            Foe::Singularity => 2000,
-        }
-    }
+    pub points: u64,
+    /// How hard its death's blast pushes the wall.
+    pub blast: f32,
+    /// Shards a scored kill drops (a singularity drops one more per mass eaten).
+    pub shards: usize,
 }
 
 /// What a drone (or a singularity) is doing.
@@ -151,7 +175,7 @@ impl Enemy {
             pos,
             prev: pos,
             vel: P::zero(),
-            hp: foe.hp(),
+            hp: foe.stats().hp,
             age: 0.0,
             flash: 0.0,
             angle: 0.0,
@@ -168,7 +192,7 @@ impl Enemy {
 
     /// Its hit radius: a singularity grows as it eats.
     pub fn radius(&self) -> f32 {
-        self.foe.radius() + 0.12 * self.mass
+        self.foe.stats().radius + 0.12 * self.mass
     }
 
     /// A singularity's pull strength.

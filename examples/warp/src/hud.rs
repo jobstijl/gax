@@ -212,7 +212,7 @@ fn scores(g: &Game, h: &mut Hud) {
     for (r, e) in entries.iter().enumerate() {
         let y = 6.0 - r as f32 * 1.75;
         let c = if g.highlight == Some(r) {
-            scene::shard()
+            g.settings.scheme.shard()
         } else if r == g.sel {
             hot
         } else {
@@ -305,7 +305,7 @@ fn counters(g: &Game, s: &Stats, h: &mut Hud) {
         left,
         top - 2.2,
         0.9,
-        scene::shard(),
+        g.settings.scheme.shard(),
     );
     if s.chain > 0 {
         let gates = format!("GATES X{}", s.chain);
@@ -346,7 +346,7 @@ fn initials(g: &Game, s: &Stats, h: &mut Hud) {
     let HudStyle {
         hud, dim, blink, ..
     } = h.st;
-    h.center("A NEW HIGH SCORE", 6.0, 2.2, scene::shard());
+    h.center("A NEW HIGH SCORE", 6.0, 2.2, g.settings.scheme.shard());
     h.center(&scene::grouped(s.score), 2.5, 1.6, hud);
     for (k, &letter) in g.initials.iter().enumerate() {
         let x = (k as f32 - 1.0) * 3.2;
@@ -377,7 +377,7 @@ fn over(g: &Game, s: &Stats, h: &mut Hud) {
     let score = format!("SCORE {}", scene::grouped(s.score));
     h.center(&score, -0.8, 1.4, h.st.hud);
     if s.score >= g.tables[g.run.mode()].best && s.score > 0 {
-        h.center("NEW BEST", -3.2, 1.0, scene::shard());
+        h.center("NEW BEST", -3.2, 1.0, g.settings.scheme.shard());
     }
     if g.over_timer > 1.5 && h.st.blink {
         h.center("PRESS ENTER", -6.5, 1.0, h.st.dim);

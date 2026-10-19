@@ -7,7 +7,7 @@ use crate::hud::hud;
 use crate::render::font::Align;
 use crate::render::scene::{self, palette};
 use crate::render::{self, GridSpec, Renderer};
-use crate::sim::ARENA;
+use crate::sim::{ARENA_X, ARENA_Y};
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, RawHandleWrapper};
 
@@ -26,8 +26,8 @@ pub fn grid_spec() -> GridSpec {
     GridSpec {
         cols: 129,
         rows: 73,
-        origin: gax::pga2d::Point::xy(-ARENA[0], -ARENA[1]),
-        spacing: 2.0 * ARENA[0] / 128.0,
+        origin: gax::pga2d::Point::xy(-ARENA_X, -ARENA_Y),
+        spacing: 2.0 * ARENA_X / 128.0,
     }
 }
 
@@ -219,7 +219,7 @@ fn plane_frame(game: &mut Game, size: [u32; 2]) -> Layers {
     };
     let w = &run.world;
     let out = &mut game.world_lines;
-    scene::world_lines(w, game.alpha, game.time, out);
+    scene::world_lines(w, game.settings.scheme, game.alpha, game.time, out);
     for p in &game.fx.wreckage {
         let c = p.color.faded(p.life / fx::WRECK_LIFE);
         scene::outline(out, &p.tri, 1.0, c, scene::THIN, p.body.pose);

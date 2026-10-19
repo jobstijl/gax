@@ -8,8 +8,8 @@
 //! * A facing test (for shielded enemies) is the side of a point against the line through the
 //!   enemy along its heading's normal.
 
-use super::ARENA;
 use super::body::Pose;
+use super::{ARENA_X, ARENA_Y, at, dir};
 use gax::pga2d::{Point, intrinsic};
 
 /// Does the segment from `a` to `b` (both unit points) pass within `r` of `c`? Its distance,
@@ -30,12 +30,7 @@ pub type Wall = intrinsic::Line<(), f32>;
 /// The walls of the box `[-hw, hw] x [-hh, hh]`, counterclockwise and normalized: each has
 /// the inside on its positive side, so `(wall & p).s()` is the signed distance inwards.
 pub fn walls(hw: f32, hh: f32) -> [Wall; 4] {
-    let c = [
-        Point::xy(-hw, -hh),
-        Point::xy(hw, -hh),
-        Point::xy(hw, hh),
-        Point::xy(-hw, hh),
-    ];
+    let c = [at(-hw, -hh), at(hw, -hh), at(hw, hh), at(-hw, hh)];
     core::array::from_fn(|i| (c[i] & c[(i + 1) % 4]).normalized())
 }
 
@@ -43,7 +38,7 @@ pub fn walls(hw: f32, hh: f32) -> [Wall; 4] {
 /// from its edge: of the walls `to` is outside of, the one met first along the path (at a
 /// corner, the one it really crossed). A path that starts outside a wall crossed it first.
 pub fn outside(from: Point<(), f32>, to: Point<(), f32>, margin: f32) -> Option<Wall> {
-    walls(ARENA[0] - margin, ARENA[1] - margin)
+    walls(ARENA_X - margin, ARENA_Y - margin)
         .into_iter()
         .filter_map(|w| {
             // Signed distances inwards at the ends; where between them the wall is met.
@@ -89,7 +84,7 @@ impl SpatialHash {
             cell,
             cols,
             rows,
-            origin: Point::xy(-hw - cell, -hh - cell),
+            origin: at(-hw - cell, -hh - cell),
             cells: vec![Vec::new(); cols * rows],
         }
     }
@@ -116,7 +111,7 @@ impl SpatialHash {
 
     /// Insert `id` over the disc at `p` of radius `r`.
     pub fn insert(&mut self, id: u32, p: Point<(), f32>, r: f32) {
-        let corner = Point::direction(r, r);
+        let corner = dir(r, r);
         let (c0, r0) = self.index(p - corner);
         let (c1, r1) = self.index(p + corner);
         for row in r0..=r1 {
@@ -159,57 +154,50 @@ mod tests {
 
     #[test]
     fn swept_segments_hit_circles_they_pass() {
-        let c = Point::xy(5.0, 0.3);
+        let c = at(5.0, 0.3);
         // Passes by at distance 0.3: a hit for radius 0.5, not for 0.2.
-        assert!(segment_hits_circle(ORIGIN, Point::xy(10.0, 0.0), c, 0.5));
-        assert!(!segment_hits_circle(ORIGIN, Point::xy(10.0, 0.0), c, 0.2));
+        assert!(segment_hits_circle(ORIGIN, at(10.0, 0.0), c, 0.5));
+        assert!(!segment_hits_circle(ORIGIN, at(10.0, 0.0), c, 0.2));
         // Stops short of the closest approach: no hit, though the line passes close.
-        assert!(!segment_hits_circle(ORIGIN, Point::xy(3.0, 0.0), c, 0.5));
+        assert!(!segment_hits_circle(ORIGIN, at(3.0, 0.0), c, 0.5));
         // Tunnelling: a fast bullet crossing a small target in one tick still hits it.
         assert!(segment_hits_circle(
-            Point::xy(-50.0, 0.0),
-            Point::xy(50.0, 0.0),
-            Point::xy(0.0, 0.1),
+            at(-50.0, 0.0),
+            at(50.0, 0.0),
+            at(0.0, 0.1),
             0.15
         ));
         // Degenerate segment.
-        assert!(segment_hits_circle(
-            Point::xy(5.0, 0.0),
-            Point::xy(5.0, 0.0),
-            c,
-            0.5
-        ));
+        assert!(segment_hits_circle(at(5.0, 0.0), at(5.0, 0.0), c, 0.5));
     }
 
     #[test]
     fn walls_face_inwards() {
         for w in walls(10.0, 5.0) {
             assert!((w & ORIGIN).s() > 0.0);
-            assert!(
-                (w & Point::xy(30.0, 30.0)).s() < 0.0 || (w & Point::xy(-30.0, -30.0)).s() < 0.0
-            );
+            assert!((w & at(30.0, 30.0)).s() < 0.0 || (w & at(-30.0, -30.0)).s() < 0.0);
         }
         let right = walls(10.0, 5.0)[1];
-        assert!(((right & Point::xy(9.0, 0.0)).s() - 1.0).abs() < 1e-5);
+        assert!(((right & at(9.0, 0.0)).s() - 1.0).abs() < 1e-5);
     }
 
     #[test]
     fn facing_is_the_side_of_the_heading() {
-        assert_eq!(Y_AXIS, ORIGIN & Point::xy(0.0, 1.0));
-        let pose = pose_at(Point::xy(2.0, 2.0), core::f32::consts::FRAC_PI_2); // facing +y
-        assert!(in_front(pose, Point::xy(2.0, 5.0)));
-        assert!(!in_front(pose, Point::xy(2.0, -1.0)));
+        assert_eq!(Y_AXIS, ORIGIN & at(0.0, 1.0));
+        let pose = pose_at(at(2.0, 2.0), core::f32::consts::FRAC_PI_2); // facing +y
+        assert!(in_front(pose, at(2.0, 5.0)));
+        assert!(!in_front(pose, at(2.0, -1.0)));
     }
 
     #[test]
     fn the_hash_finds_what_it_holds() {
         let mut h = SpatialHash::new(32.0, 18.0, 2.0);
-        h.insert(7, Point::xy(3.0, 3.0), 0.5);
-        h.insert(9, Point::xy(-20.0, 10.0), 3.0);
+        h.insert(7, at(3.0, 3.0), 0.5);
+        h.insert(9, at(-20.0, 10.0), 3.0);
         let mut out = Vec::new();
-        h.query(Point::xy(2.5, 2.5), Point::xy(3.5, 3.5), 0.0, &mut out);
+        h.query(at(2.5, 2.5), at(3.5, 3.5), 0.0, &mut out);
         assert_eq!(out, vec![7]);
-        h.query(Point::xy(-18.0, 9.0), Point::xy(-18.0, 9.0), 0.1, &mut out);
+        h.query(at(-18.0, 9.0), at(-18.0, 9.0), 0.1, &mut out);
         assert_eq!(out, vec![9]);
     }
 }

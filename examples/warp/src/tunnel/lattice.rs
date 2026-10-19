@@ -3,7 +3,7 @@
 //! Nodes sit on rings along the track. Each has a displacement from its rest position and a
 //! velocity, both PGA3D directions, held as gax fields over the nodes. The forces are linear in
 //! the displacements: springs to the four neighbours (around the ring, which wraps, and along
-//! the track, where the end rings are free), an anchor spring to rest, damping, and sources
+//! the track, where the end rings are free), an anchor spring to rest, damping, and bulges
 //! (blasts bulge the wall, singularities pinch it):
 //!
 //! `a = SPRING L d - ANCHOR d - DAMPING v + f`,
@@ -37,12 +37,12 @@ const ANCHOR: f32 = 7.0;
 const SPRING: f32 = 60.0;
 const DAMPING: f32 = 4.0;
 
-/// A force source in straightened coordinates, with a softening radius: it pushes nodes away
-/// for a positive `push` (a blast bulges the wall) and pulls them in for a negative one (a
-/// singularity pinches it). The sign is the opposite of `kernels::source_force`'s strength,
+/// A bulge in the wall (or a pinch): a force source in straightened coordinates, with a
+/// softening radius, that pushes nodes away for a positive `push` (a blast bulges the wall)
+/// and pulls them in for a negative one (a singularity pinches it). The sign is the opposite of `kernels::source_force`'s strength,
 /// which pulls when positive.
 #[derive(Clone, Copy, Debug)]
-pub struct Source {
+pub struct Bulge {
     /// Where.
     pub pos: Point<(), f32>,
     /// How hard it pushes nodes away (negative: pulls them in).
@@ -54,7 +54,7 @@ pub struct Source {
     pub reach2: f32,
 }
 
-impl Source {
+impl Bulge {
     /// Its force on a node at `at`: away from it, softened, `push (p - s) / (|p - s|² + r²)`,
     /// times the reach's fall-off.
     fn force(&self, at: Point<(), f32>) -> Dir {
@@ -155,9 +155,9 @@ impl Lattice {
         self.first = want;
     }
 
-    /// One step of `dt` with the given sources: the springs' pull from the field map, then
+    /// One step of `dt` with the given bulges: the springs' pull from the field map, then
     /// each node's velocity and displacement (symplectic Euler).
-    pub fn step(&mut self, dt: f32, sources: &[Source]) {
+    pub fn step(&mut self, dt: f32, bulges: &[Bulge]) {
         self.laplacian.mul_into(&self.displacement, &mut self.pull);
         let pull = self.pull.sites();
         let d = self.displacement.sites_mut();
@@ -167,7 +167,7 @@ impl Lattice {
             for (j, &home) in self.ring.iter().enumerate() {
                 let i = r * AROUND + j;
                 let at = home + along;
-                let f = sources.iter().fold(Dir::zero(), |f, src| f + src.force(at));
+                let f = bulges.iter().fold(Dir::zero(), |f, b| f + b.force(at));
                 let a = pull[i] * SPRING - d[i] * ANCHOR - v[i] * DAMPING + f;
                 v[i] += a * dt;
                 d[i] += v[i] * dt;
@@ -216,7 +216,7 @@ mod tests {
     #[test]
     fn a_blast_ripples_and_settles() {
         let mut l = Lattice::new(0.0);
-        let blast = [Source {
+        let blast = [Bulge {
             pos: Point::xyz(RADIUS - 1.0, 0.0, 20.0),
             push: 400.0,
             r2: 2.0,
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn a_pull_pinches_the_wall() {
         let mut l = Lattice::new(0.0);
-        let well = [Source {
+        let well = [Bulge {
             pos: Point::xyz(1.0, 0.0, 30.0),
             push: -crate::tunnel::PINCH,
             r2: 8.0,
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn following_far_ahead_starts_at_rest() {
         let mut l = Lattice::new(0.0);
-        let blast = [Source {
+        let blast = [Bulge {
             pos: Point::xyz(RADIUS - 1.0, 0.0, 20.0),
             push: 400.0,
             r2: 2.0,

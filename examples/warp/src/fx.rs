@@ -18,7 +18,8 @@ use crate::render::scene::{self, palette};
 use crate::render::{GridSteps, Particle, PostSettings, Shock, Source};
 use crate::sim::body::{Body, Pose, turned};
 use crate::sim::rng::Rng;
-use crate::sim::{ARENA, Event, Kind, World, Wreck};
+use crate::sim::{ARENA_X, ARENA_Y, Event, Kind, World, Wreck};
+use crate::store::Scheme;
 use gax::pga2d::{Moments, Motor, Point, Twist};
 
 type P = Point<(), f32>;
@@ -111,6 +112,8 @@ pub struct Fx {
     pub flash_scale: f32,
     /// Less motion (a setting): no shock ripple.
     pub reduced_motion: bool,
+    /// The colour scheme for enemies and shards (a setting).
+    pub scheme: Scheme,
     /// The grid's sources per simulation tick this frame.
     pub grid_steps: GridSteps,
     /// Floating texts.
@@ -137,6 +140,7 @@ impl Fx {
             shake_scale: 1.0,
             flash_scale: 1.0,
             reduced_motion: false,
+            scheme: Scheme::Standard,
             grid_steps: GridSteps::default(),
             popups: Vec::new(),
             half_height: 14.0,
@@ -144,12 +148,14 @@ impl Fx {
         }
     }
 
-    fn particle(&mut self, p: P, v: P, color: Light, life: [f32; 4]) {
+    /// A particle leaving `p` at `v`, living `life` seconds, slowed by `drag` and drawn as a
+    /// streak `streak` seconds of its velocity long.
+    fn particle(&mut self, p: P, v: P, color: Light, life: f32, drag: f32, streak: f32) {
         self.spawn.push(Particle {
             p: p.into(),
             v: v.into(),
             color: color.into(),
-            life,
+            life: [0.0, life, drag, streak],
         });
     }
 
@@ -178,13 +184,10 @@ impl Fx {
             } else {
                 color
             };
-            let life = [
-                0.0,
-                self.rng.range(life.0, life.1),
-                self.rng.range(1.2, 3.0),
-                self.rng.range(0.025, 0.05),
-            ];
-            self.particle(pos, v, c, life);
+            let life = self.rng.range(life.0, life.1);
+            let drag = self.rng.range(1.2, 3.0);
+            let streak = self.rng.range(0.025, 0.05);
+            self.particle(pos, v, c, life, drag, streak);
         }
     }
 
@@ -216,14 +219,14 @@ impl Fx {
                     for _ in 0..2 {
                         let d = turned(dir, self.rng.range(-0.4, 0.4));
                         let v = d * self.rng.range(6.0, 14.0);
-                        self.particle(muzzle, v, palette::BULLET, [0.0, 0.12, 6.0, 0.02]);
+                        self.particle(muzzle, v, palette::BULLET, 0.12, 6.0, 0.02);
                     }
                 }
                 Event::Hit { pos, kind } => {
                     // Sparks in the enemy's colour; a singularity's stay violet (it takes many hits).
                     let hot = if kind == Kind::Singularity { 0.0 } else { 0.3 };
                     let n = if kind == Kind::Singularity { 4 } else { 10 };
-                    let c = scene::color(kind);
+                    let c = self.scheme.color(kind);
                     self.burst(pos, c, n, (4.0, 12.0), (0.15, 0.4), hot);
                     if kind == Kind::Singularity {
                         self.blast(pos, 30.0, 2.0, 0.06);
@@ -238,7 +241,7 @@ impl Fx {
                     wreck,
                 } => {
                     let p = pos;
-                    let c = scene::color(kind);
+                    let c = self.scheme.color(kind);
                     if let (Some(w), Some(hull)) = (wreck, scene::hull(kind)) {
                         for (body, tri) in shatter(&hull, &w, 4.0) {
                             self.wreckage.push(Piece {
@@ -265,7 +268,7 @@ impl Fx {
                     }
                 }
                 Event::Deflect { pos, kind } => {
-                    let c = scene::color(kind);
+                    let c = self.scheme.color(kind);
                     self.burst(pos, c, 6, (6.0, 14.0), (0.1, 0.25), 0.5);
                 }
                 Event::Wall { pos } => {
@@ -284,15 +287,15 @@ impl Fx {
                 }
                 Event::Warn { pos, kind } => {
                     // Particles converging on the spot: from a ring around it, inwards.
-                    let c = (scene::color(kind)).faded(0.6);
+                    let c = (self.scheme.color(kind)).faded(0.6);
                     for _ in 0..24 {
                         let out = Point::direction_from_angle(self.rng.angle())
                             * self.rng.range(1.5, 3.0);
-                        self.particle(pos + out, out * -2.5, c, [0.0, 0.4, 0.5, 0.03]);
+                        self.particle(pos + out, out * -2.5, c, 0.4, 0.5, 0.03);
                     }
                 }
                 Event::Spawn { pos, kind } => {
-                    let c = scene::color(kind);
+                    let c = self.scheme.color(kind);
                     self.burst(pos, c, 16, (2.0, 6.0), (0.2, 0.5), 0.5);
                     if kind == Kind::Singularity {
                         self.blast(pos, 300.0, 6.0, 0.4);
@@ -300,9 +303,9 @@ impl Fx {
                 }
                 Event::Pickup { pos, mult } => {
                     if mult % 10 == 0 {
-                        self.popup(pos, format!("X{mult}"), scene::shard());
+                        self.popup(pos, format!("X{mult}"), self.scheme.shard());
                     }
-                    self.burst(pos, scene::shard(), 6, (2.0, 6.0), (0.2, 0.45), 0.3);
+                    self.burst(pos, self.scheme.shard(), 6, (2.0, 6.0), (0.2, 0.45), 0.3);
                 }
                 Event::Death { pos } => {
                     let p = pos;
@@ -319,8 +322,8 @@ impl Fx {
                     let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / 2400.0);
                     for (dir, _) in step.orbit(Point::direction(1.0, 0.0), 2400) {
                         let v = dir * self.rng.range(28.0, 42.0);
-                        let life = [0.0, self.rng.range(0.8, 1.3), 1.2, 0.03];
-                        self.particle(p, v, c, life);
+                        let life = self.rng.range(0.8, 1.3);
+                        self.particle(p, v, c, life, 1.2, 0.03);
                     }
                     self.blast(p, -2600.0, 60.0, 0.35);
                     self.shake = 1.2;
@@ -398,8 +401,8 @@ impl Fx {
         let (hw, hh) = (self.half_height * self.aspect, self.half_height);
         let room = |arena: f32, half: f32| (arena + 2.0 - half).max(0.0);
         let target = Motor::translation(Point::direction(
-            (sx * 0.9).clamp(-room(ARENA[0], hw), room(ARENA[0], hw)),
-            (sy * 0.9).clamp(-room(ARENA[1], hh), room(ARENA[1], hh)),
+            (sx * 0.9).clamp(-room(ARENA_X, hw), room(ARENA_X, hw)),
+            (sy * 0.9).clamp(-room(ARENA_Y, hh), room(ARENA_Y, hh)),
         ));
         // Critically damped spring on the twist error log(target ~cam).
         let omega = 5.0;

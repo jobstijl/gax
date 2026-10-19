@@ -38,7 +38,7 @@ pub use wells::{PINCH, PINCH_REACH2, Wells};
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Ledger, Phase};
 use gax::IdealNorm;
-use lattice::{Lattice, Source};
+use lattice::{Bulge, Lattice};
 use track::Track;
 
 /// The ship stays this close to the axis.
@@ -121,8 +121,8 @@ pub struct World {
     pub phase: Phase,
     /// This tick's events.
     pub events: Vec<Event>,
-    /// Lattice sources that last a while (blasts), with their time left.
-    blasts: Vec<(Source, f32)>,
+    /// Bulges that last a while (blasts), with their time left.
+    blasts: Vec<(Bulge, f32)>,
     /// Intensity, `0..1`.
     pub intensity: f32,
     /// The director's clock (seconds).
@@ -373,15 +373,15 @@ impl World {
     fn step_lattice(&mut self) {
         let s = self.ship.s();
         self.lattice.follow(s);
-        let mut sources: Vec<Source> = Vec::with_capacity(self.blasts.len() + 2);
-        self.blasts.retain_mut(|(src, t)| {
-            sources.push(*src);
+        let mut bulges: Vec<Bulge> = Vec::with_capacity(self.blasts.len() + 2);
+        self.blasts.retain_mut(|(bulge, t)| {
+            bulges.push(*bulge);
             *t -= DT;
             *t > 0.0
         });
         // Singularities pinch the wall in around them.
         for (pos, strength) in self.wells().iter() {
-            sources.push(Source {
+            bulges.push(Bulge {
                 pos,
                 push: -PINCH * strength,
                 r2: 8.0,
@@ -390,14 +390,14 @@ impl World {
         }
         // The ship's wake: a gentle push on the wall nearest to it.
         if self.phase == Phase::Playing {
-            sources.push(Source {
+            bulges.push(Bulge {
                 pos: self.ship.pos + dir(0.0, 0.0, 1.0),
                 push: 6.0 * self.ship.speed / CRUISE,
                 r2: 1.5,
                 reach2: 0.0,
             });
         }
-        self.lattice.step(DT, &sources);
+        self.lattice.step(DT, &bulges);
     }
 
     /// The extra lives and bombs the score has earned.

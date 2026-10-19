@@ -6,6 +6,7 @@ use super::lattice::RADIUS;
 use super::space::{AXIS, P, about_axis, around, dir, radial};
 use super::{CRUISE, SHIP_RADIUS, SPAWN_AHEAD, World};
 use crate::sim::DT;
+use crate::sim::rng::Rng;
 use gax::Unit;
 use gax::pga3d::{Motor, Twist};
 
@@ -58,15 +59,6 @@ impl World {
         let s = self.ship.s() + SPAWN_AHEAD;
         let roll = self.rng.unit();
         let r = &mut self.rng;
-        let pend = |foe, pos, angle, orbit, depth| Pending {
-            foe,
-            pos,
-            t: 0.8,
-            angle,
-            orbit,
-            depth,
-            escort: false,
-        };
         let late_serpent = !self.serpent_introduced && self.clock > 40.0;
         let late_well = !self.well_introduced && self.clock > 60.0;
         let well_band = roll < 0.16 || late_well;
@@ -74,66 +66,18 @@ impl World {
         let serpent_band = (0.48..0.64).contains(&roll) || late_serpent;
         let mine_band = (0.64..0.82).contains(&roll);
         if well_band && self.clock > 40.0 && !has_well && self.well_cooldown <= 0.0 {
-            // A singularity, holding ahead, with a ring of drones orbiting it.
-            let a0 = r.angle();
-            let depth = r.range(24.0, 30.0);
-            let off = r.range(1.0, 2.0);
-            let well = around(off, a0, s);
-            let n = 6 + (i * 4.0) as usize;
-            let escorts = (0..n).map(|k| {
-                let a = k as f32 * core::f32::consts::TAU / n as f32;
-                Pending {
-                    escort: true,
-                    ..pend(Foe::Drone, well + radial(3.4, a), a, 3.4, depth)
-                }
-            });
-            let spawn = core::iter::once(pend(Foe::Singularity, well, a0, off, depth))
-                .chain(escorts)
-                .collect();
             self.well_cooldown = 45.0;
             self.well_introduced = true;
-            spawn
+            escorted_well(r, s, i)
         } else if turret_band && self.clock > 25.0 {
-            // Turrets on the wall, spaced along the track and around it.
-            let n = 1 + (i * 3.0) as usize;
-            let a0 = r.angle();
-            (0..n)
-                .map(|k| {
-                    let a = a0 + k as f32 * 2.1;
-                    let p = around(RADIUS - 0.5, a, s + k as f32 * 7.0);
-                    pend(Foe::Turret, p, a, 0.0, 0.0)
-                })
-                .collect()
+            turrets(r, s, i)
         } else if serpent_band && self.clock > 30.0 {
-            // A serpent, coming out of the fog on its helix.
-            let a = r.angle();
-            let orbit = r.range(3.2, 4.4);
             self.serpent_introduced = true;
-            vec![pend(Foe::Serpent, around(orbit, a, s), a, orbit, 0.0)]
+            serpent(r, s)
         } else if (turret_band || mine_band) && self.clock > 10.0 {
-            // Mines scattered in the lane.
-            let n = 3 + (i * 6.0) as usize;
-            (0..n)
-                .map(|k| {
-                    let p = around(r.range(0.0, SHIP_RADIUS), r.angle(), s + k as f32 * 5.0);
-                    pend(Foe::Mine, p, 0.0, 0.0, 0.0)
-                })
-                .collect()
+            mines(r, s, i)
         } else {
-            // A ring of drones, which will hold in the band ahead.
-            let n = 6 + (i * 6.0) as usize;
-            let a0 = r.angle();
-            // Close and wide: the ring spreads across the screen, not at the vanishing point.
-            let orbit = r.range(4.0, 5.3);
-            let depth = r.range(6.0, 10.0);
-            // Nearer than the rest, and quick to come in: a ring is a close-range fight.
-            let at = s - SPAWN_AHEAD * 0.45;
-            (0..n)
-                .map(|k| {
-                    let a = a0 + k as f32 * core::f32::consts::TAU / n as f32;
-                    pend(Foe::Drone, around(orbit, a, at), a, orbit, depth)
-                })
-                .collect()
+            drone_ring(r, s, i)
         }
     }
 
@@ -234,6 +178,96 @@ impl World {
             .collect();
         ((twist * DT).exp(), body)
     }
+}
+
+impl Pending {
+    /// A `foe` announced at `pos`, at `angle` around the axis, to circle at `orbit` and (a
+    /// drone) to hold `depth` ahead of the ship.
+    fn announced(foe: Foe, pos: P, angle: f32, orbit: f32, depth: f32) -> Pending {
+        Pending {
+            foe,
+            pos,
+            t: 0.8,
+            angle,
+            orbit,
+            depth,
+            escort: false,
+        }
+    }
+}
+
+/// A singularity at arc length `s`, holding ahead, with a ring of drones orbiting it (more at
+/// intensity `i`).
+fn escorted_well(r: &mut Rng, s: f32, i: f32) -> Vec<Pending> {
+    let a0 = r.angle();
+    let depth = r.range(24.0, 30.0);
+    let off = r.range(1.0, 2.0);
+    let well = around(off, a0, s);
+    let n = 6 + (i * 4.0) as usize;
+    let escorts = (0..n).map(|k| {
+        let a = k as f32 * core::f32::consts::TAU / n as f32;
+        Pending {
+            escort: true,
+            ..Pending::announced(Foe::Drone, well + radial(3.4, a), a, 3.4, depth)
+        }
+    });
+    core::iter::once(Pending::announced(Foe::Singularity, well, a0, off, depth))
+        .chain(escorts)
+        .collect()
+}
+
+/// Turrets on the wall from arc length `s`, spaced along the track and around it.
+fn turrets(r: &mut Rng, s: f32, i: f32) -> Vec<Pending> {
+    let n = 1 + (i * 3.0) as usize;
+    let a0 = r.angle();
+    (0..n)
+        .map(|k| {
+            let a = a0 + k as f32 * 2.1;
+            let p = around(RADIUS - 0.5, a, s + k as f32 * 7.0);
+            Pending::announced(Foe::Turret, p, a, 0.0, 0.0)
+        })
+        .collect()
+}
+
+/// A serpent at arc length `s`, coming out of the fog on its helix.
+fn serpent(r: &mut Rng, s: f32) -> Vec<Pending> {
+    let a = r.angle();
+    let orbit = r.range(3.2, 4.4);
+    vec![Pending::announced(
+        Foe::Serpent,
+        around(orbit, a, s),
+        a,
+        orbit,
+        0.0,
+    )]
+}
+
+/// Mines scattered in the lane from arc length `s`.
+fn mines(r: &mut Rng, s: f32, i: f32) -> Vec<Pending> {
+    let n = 3 + (i * 6.0) as usize;
+    (0..n)
+        .map(|k| {
+            let p = around(r.range(0.0, SHIP_RADIUS), r.angle(), s + k as f32 * 5.0);
+            Pending::announced(Foe::Mine, p, 0.0, 0.0, 0.0)
+        })
+        .collect()
+}
+
+/// A ring of drones, which will hold in the band ahead (announced from arc length `s`).
+fn drone_ring(r: &mut Rng, s: f32, i: f32) -> Vec<Pending> {
+    let n = 6 + (i * 6.0) as usize;
+    let a0 = r.angle();
+    // Close and wide: the ring spreads across the screen, not at the vanishing point.
+    let orbit = r.range(4.0, 5.3);
+    let depth = r.range(6.0, 10.0);
+    // Nearer than the rest, and quick to come in: a ring is a close-range fight.
+    let at = s - SPAWN_AHEAD * 0.45;
+    (0..n)
+        .map(|k| {
+            let a = a0 + k as f32 * core::f32::consts::TAU / n as f32;
+            Pending::announced(Foe::Drone, around(orbit, a, at), a, orbit, depth)
+        })
+        .collect()
 }
 
 #[cfg(test)]

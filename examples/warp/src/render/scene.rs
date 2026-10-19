@@ -12,7 +12,7 @@ use crate::geom::{ORIGIN, lerp};
 use crate::light::{Light, light};
 use crate::sim::body::{Pose, pose_at};
 use crate::sim::ship::SHIP_SPEED;
-use crate::sim::{ARENA, Kind, Phase, World, at};
+use crate::sim::{ARENA_X, ARENA_Y, Kind, Phase, World, at};
 use crate::store::Scheme;
 use gax::pga2d::{Motor, Point};
 
@@ -55,68 +55,56 @@ pub mod palette {
     pub const FLAME: Light = light(1.0, 0.45, 0.15, 3.0);
 }
 
-static SCHEME: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
-
-/// Choose the colour scheme for enemies and shards (a setting).
-pub fn set_scheme(s: Scheme) {
-    SCHEME.store(s as u8, std::sync::atomic::Ordering::Relaxed);
-}
-
-fn scheme() -> Scheme {
-    match SCHEME.load(std::sync::atomic::Ordering::Relaxed) {
-        1 => Scheme::RedGreen,
-        2 => Scheme::BlueYellow,
-        _ => Scheme::Standard,
+/// The colours of enemies and shards in a scheme (a setting).
+impl Scheme {
+    /// The light of a family. Shapes carry the identity of every family; the schemes keep
+    /// neighbours in the roster apart for colour-blind players (each scheme moves the colours,
+    /// a family keeps its intensity).
+    pub fn color(self, kind: Kind) -> Light {
+        let standard = match kind {
+            Kind::Drifter => palette::DRIFTER,
+            Kind::Chaser => palette::CHASER,
+            Kind::Mote => palette::MOTE,
+            Kind::Singularity => palette::SINGULARITY,
+            Kind::Evader => palette::EVADER,
+            Kind::Splitter | Kind::Fragment => palette::SPLITTER,
+            Kind::Serpent => palette::SERPENT,
+            Kind::Warden => palette::WARDEN,
+            Kind::Carrier => palette::CARRIER,
+        };
+        let [r, g, b] = match (self, kind) {
+            (Scheme::Standard, _) => return standard,
+            // Blue, orange, yellow, purple and white, after Okabe and Ito; no red against green.
+            (Scheme::RedGreen, Kind::Drifter) => [0.35, 0.72, 1.0],
+            (Scheme::RedGreen, Kind::Chaser) => [1.0, 0.62, 0.0],
+            (Scheme::RedGreen, Kind::Mote) => [0.95, 0.55, 0.85],
+            (Scheme::RedGreen, Kind::Singularity) => [0.45, 0.35, 1.0],
+            (Scheme::RedGreen, Kind::Evader) => [1.0, 0.95, 0.25],
+            (Scheme::RedGreen, Kind::Splitter | Kind::Fragment) => [0.75, 0.45, 1.0],
+            (Scheme::RedGreen, Kind::Serpent) => [0.0, 0.8, 0.65],
+            (Scheme::RedGreen, Kind::Warden) => [0.85, 0.92, 1.0],
+            (Scheme::RedGreen, Kind::Carrier) => [0.15, 0.4, 1.0],
+            // Reds against cyans; no blue against green or yellow against violet.
+            (Scheme::BlueYellow, Kind::Drifter) => [0.1, 0.9, 1.0],
+            (Scheme::BlueYellow, Kind::Chaser) => [1.0, 0.2, 0.62],
+            (Scheme::BlueYellow, Kind::Mote) => [1.0, 0.55, 0.75],
+            (Scheme::BlueYellow, Kind::Singularity) => [0.55, 0.3, 1.0],
+            (Scheme::BlueYellow, Kind::Evader) => [1.0, 0.22, 0.15],
+            (Scheme::BlueYellow, Kind::Splitter | Kind::Fragment) => [0.45, 1.0, 0.3],
+            (Scheme::BlueYellow, Kind::Serpent) => [0.1, 0.8, 0.8],
+            (Scheme::BlueYellow, Kind::Warden) => [0.95, 0.95, 1.0],
+            (Scheme::BlueYellow, Kind::Carrier) => [0.3, 0.5, 1.0],
+        };
+        light(r, g, b, standard.intensity())
     }
-}
 
-/// The light of a family, in the current scheme. Shapes carry the identity of every family;
-/// the schemes keep neighbours in the roster apart for colour-blind players (each scheme
-/// moves the colours, a family keeps its intensity).
-pub fn color(kind: Kind) -> Light {
-    let standard = match kind {
-        Kind::Drifter => palette::DRIFTER,
-        Kind::Chaser => palette::CHASER,
-        Kind::Mote => palette::MOTE,
-        Kind::Singularity => palette::SINGULARITY,
-        Kind::Evader => palette::EVADER,
-        Kind::Splitter | Kind::Fragment => palette::SPLITTER,
-        Kind::Serpent => palette::SERPENT,
-        Kind::Warden => palette::WARDEN,
-        Kind::Carrier => palette::CARRIER,
-    };
-    let [r, g, b] = match (scheme(), kind) {
-        (Scheme::Standard, _) => return standard,
-        // Blue, orange, yellow, purple and white, after Okabe and Ito; no red against green.
-        (Scheme::RedGreen, Kind::Drifter) => [0.35, 0.72, 1.0],
-        (Scheme::RedGreen, Kind::Chaser) => [1.0, 0.62, 0.0],
-        (Scheme::RedGreen, Kind::Mote) => [0.95, 0.55, 0.85],
-        (Scheme::RedGreen, Kind::Singularity) => [0.45, 0.35, 1.0],
-        (Scheme::RedGreen, Kind::Evader) => [1.0, 0.95, 0.25],
-        (Scheme::RedGreen, Kind::Splitter | Kind::Fragment) => [0.75, 0.45, 1.0],
-        (Scheme::RedGreen, Kind::Serpent) => [0.0, 0.8, 0.65],
-        (Scheme::RedGreen, Kind::Warden) => [0.85, 0.92, 1.0],
-        (Scheme::RedGreen, Kind::Carrier) => [0.15, 0.4, 1.0],
-        // Reds against cyans; no blue against green or yellow against violet.
-        (Scheme::BlueYellow, Kind::Drifter) => [0.1, 0.9, 1.0],
-        (Scheme::BlueYellow, Kind::Chaser) => [1.0, 0.2, 0.62],
-        (Scheme::BlueYellow, Kind::Mote) => [1.0, 0.55, 0.75],
-        (Scheme::BlueYellow, Kind::Singularity) => [0.55, 0.3, 1.0],
-        (Scheme::BlueYellow, Kind::Evader) => [1.0, 0.22, 0.15],
-        (Scheme::BlueYellow, Kind::Splitter | Kind::Fragment) => [0.45, 1.0, 0.3],
-        (Scheme::BlueYellow, Kind::Serpent) => [0.1, 0.8, 0.8],
-        (Scheme::BlueYellow, Kind::Warden) => [0.95, 0.95, 1.0],
-        (Scheme::BlueYellow, Kind::Carrier) => [0.3, 0.5, 1.0],
-    };
-    light(r, g, b, standard.intensity())
-}
-
-/// The shards' light, in the current scheme.
-pub fn shard() -> Light {
-    match scheme() {
-        Scheme::Standard => palette::SHARD,
-        Scheme::RedGreen => light(0.85, 1.0, 1.0, 2.6),
-        Scheme::BlueYellow => light(1.0, 0.95, 0.6, 2.6),
+    /// The shards' light.
+    pub fn shard(self) -> Light {
+        match self {
+            Scheme::Standard => palette::SHARD,
+            Scheme::RedGreen => light(0.85, 1.0, 1.0, 2.6),
+            Scheme::BlueYellow => light(1.0, 0.95, 0.6, 2.6),
+        }
     }
 }
 
@@ -253,12 +241,13 @@ pub fn hull(kind: Kind) -> Option<Vec<Point<(), f32>>> {
     }
 }
 
-/// The shape of a family, drawn at pose `m` (time `t` animates it); nothing at radius zero
-/// (an enemy appearing, a warp-in's first frame).
+/// The shape of a family in its colour in `scheme`, drawn at pose `m` (time `t` animates it);
+/// nothing at radius zero (an enemy appearing, a warp-in's first frame).
 #[allow(clippy::too_many_arguments)]
 pub fn draw_enemy(
     out: &mut Vec<LineInstance>,
     kind: Kind,
+    scheme: Scheme,
     m: Pose,
     radius: f32,
     mass: f32,
@@ -277,7 +266,7 @@ pub fn draw_enemy(
     } else {
         flash
     };
-    let c = ((color(kind)).whitened(0.45 * flash)).faded((1.0 + 0.45 * flash) * bright);
+    let c = ((scheme.color(kind)).whitened(0.45 * flash)).faded((1.0 + 0.45 * flash) * bright);
     match kind {
         Kind::Drifter => {
             outline(out, &DIAMOND, radius, c, THIN, m);
@@ -447,30 +436,41 @@ pub fn to_uv(view: &Point<(Point,), f32>, p: Point<(), f32>) -> Point<(), f32> {
     at(0.5 + 0.5 * x, 0.5 - 0.5 * y)
 }
 
-/// All world segments of a frame, `alpha` of the way from the last tick to the current one.
-pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>) {
+/// All world segments of a frame, `alpha` of the way from the last tick to the current one, in
+/// the colour scheme `scheme`.
+pub fn world_lines(w: &World, scheme: Scheme, alpha: f32, time: f32, out: &mut Vec<LineInstance>) {
     out.clear();
     // Things drawn where they are in the world.
     let still = Pose::identity();
     // The arena's border, breathing with the director's intensity.
     let glow = 0.8 + 0.6 * w.director.intensity;
     let border = Stroke::new(0.07, 0.9 * glow, 0.45);
-    let (hw, hh) = (ARENA[0], ARENA[1]);
+    let (hw, hh) = (ARENA_X, ARENA_Y);
     let corners = [at(-hw, -hh), at(hw, -hh), at(hw, hh), at(-hw, hh)];
     outline(out, &corners, 1.0, palette::BORDER, border, still);
     // Warp-ins.
     for p in &w.pending {
         let f = 1.0 - (p.t / p.total).clamp(0.0, 1.0);
         let m = pose_at(p.pos, f * 6.0);
-        let c = (color(p.kind)).faded(0.4 + 0.8 * f);
+        let c = (scheme.color(p.kind)).faded(0.4 + 0.8 * f);
         let r = p.kind.stats().radius;
         circle(out, r * (3.0 - 2.0 * f), 20, time * 4.0, c, THIN, m);
-        draw_enemy(out, p.kind, m, r * f, 0.0, 0.0, time, 0.25 + 0.5 * f);
+        draw_enemy(
+            out,
+            p.kind,
+            scheme,
+            m,
+            r * f,
+            0.0,
+            0.0,
+            time,
+            0.25 + 0.5 * f,
+        );
     }
     for e in &w.enemies {
         // A serpent's body: shrinking diamonds on a spine.
         if !e.chain.is_empty() {
-            let c = color(Kind::Serpent);
+            let c = scheme.color(Kind::Serpent);
             let mut prev = e.body.interpolated(alpha) >> ORIGIN;
             for (k, body) in e.chain.iter().enumerate() {
                 let pose = body.interpolated(alpha);
@@ -484,7 +484,17 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         let m = e.body.interpolated(alpha);
         let appear = (e.age * 6.0).min(1.0);
         let t = time + e.phase;
-        draw_enemy(out, e.kind, m, e.radius * appear, e.mass, e.flash, t, 1.0);
+        draw_enemy(
+            out,
+            e.kind,
+            scheme,
+            m,
+            e.radius * appear,
+            e.mass,
+            e.flash,
+            t,
+            1.0,
+        );
     }
     for s in &w.shards {
         let blink = if s.life < 1.5 && crate::signal::wave(s.life * 10.0) < 0.0 {
@@ -493,7 +503,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
             1.0
         };
         let m = s.body.interpolated(alpha);
-        outline(out, &GEM, 1.0, shard().faded(blink), THIN, m);
+        outline(out, &GEM, 1.0, scheme.shard().faded(blink), THIN, m);
     }
     for b in &w.bullets {
         // A short streak behind the shot, along its velocity.
@@ -588,7 +598,13 @@ mod tests {
                 &mut sound,
             );
             let world = &g.run.plane().expect("a Plane run").world;
-            world_lines(world, g.alpha, g.time, &mut g.world_lines);
+            world_lines(
+                world,
+                g.settings.scheme,
+                g.alpha,
+                g.time,
+                &mut g.world_lines,
+            );
             crate::hud::hud(&mut g, [1600, 900], None);
             for (k, l) in g.world_lines.iter().chain(&g.hud_lines).enumerate() {
                 assert!(finite(l), "at {t:.2} s, line {k}: {l:?}");

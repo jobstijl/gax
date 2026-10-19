@@ -5,7 +5,6 @@ use crate::audio::{self, music};
 use crate::fx::Fx;
 use crate::input;
 use crate::render::LineInstance;
-use crate::render::scene;
 use crate::render::tunnel::{View, ViewSettings};
 use crate::sim::body::Pose;
 use crate::sim::replay::{Packed, Record, Replay};
@@ -335,6 +334,7 @@ fn view_settings(s: &Settings) -> ViewSettings {
         flash_scale: if s.reduced_flashes { 0.3 } else { 1.0 },
         assist: s.aim_reach(),
         lensing: !s.reduced_motion,
+        scheme: s.scheme,
     }
 }
 
@@ -642,7 +642,7 @@ impl Game {
         };
         self.fx.flash_scale = if s.reduced_flashes { 0.3 } else { 1.0 };
         self.fx.reduced_motion = s.reduced_motion;
-        scene::set_scheme(s.scheme);
+        self.fx.scheme = s.scheme;
         if let Run::Tunnel(run) = &mut self.run {
             run.view.settings = view_settings(s);
         }

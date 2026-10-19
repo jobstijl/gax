@@ -3,6 +3,7 @@
 //! one Newton step every tick (docs/numerics.md: drift policy).
 
 use super::collide::{Wall, outside};
+use super::dir;
 use crate::geom::ORIGIN;
 use gax::Unit;
 use gax::pga2d::{Motor, Point, Twist};
@@ -51,7 +52,7 @@ impl Body {
 
     /// The direction its local x axis points to.
     pub fn heading(&self) -> Point<(), f32> {
-        self.pose >> Point::direction(1.0, 0.0)
+        self.pose >> dir(1.0, 0.0)
     }
 
     /// The world-frame twist of its motion: translation at `vel` plus rotation at `spin`
@@ -125,6 +126,7 @@ pub fn turned(d: Point<(), f32>, angle: f32) -> Point<(), f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::at;
 
     /// Two points within rounding of each other.
     fn close(a: Point<(), f32>, b: Point<(), f32>) -> bool {
@@ -133,33 +135,30 @@ mod tests {
 
     #[test]
     fn a_body_moves_and_turns_as_its_twist_says() {
-        let mut b = Body::new(pose_at(Point::xy(1.0, 2.0), 0.0));
-        b.vel = Point::direction(3.0, -1.0);
+        let mut b = Body::new(pose_at(at(1.0, 2.0), 0.0));
+        b.vel = dir(3.0, -1.0);
         for _ in 0..120 {
             b.step(1.0 / 120.0);
         }
-        assert!(close(b.pos(), Point::xy(4.0, 1.0)), "{:?}", b.pos());
+        assert!(close(b.pos(), at(4.0, 1.0)), "{:?}", b.pos());
         // Spinning in place: the heading turns, the centre stays.
-        let mut s = Body::new(pose_at(Point::xy(1.0, 2.0), 0.0));
+        let mut s = Body::new(pose_at(at(1.0, 2.0), 0.0));
         s.spin = core::f32::consts::FRAC_PI_2;
         for _ in 0..120 {
             s.step(1.0 / 120.0);
         }
-        assert!(close(s.pos(), Point::xy(1.0, 2.0)), "{:?}", s.pos());
+        assert!(close(s.pos(), at(1.0, 2.0)), "{:?}", s.pos());
         // Directions: their difference has no length.
         let h = s.heading();
-        assert!(
-            (h - Point::direction(0.0, 1.0)).ideal_norm() < 1e-4,
-            "{h:?}"
-        );
+        assert!((h - dir(0.0, 1.0)).ideal_norm() < 1e-4, "{h:?}");
     }
 
     #[test]
     fn interpolation_is_a_screw_between_the_ends() {
         let a = Pose::identity();
-        let b = pose_at(Point::xy(2.0, 0.0), 1.0);
+        let b = pose_at(at(2.0, 0.0), 1.0);
         assert!(close(interpolate(a, b, 0.0) >> ORIGIN, ORIGIN));
-        assert!(close(interpolate(a, b, 1.0) >> ORIGIN, Point::xy(2.0, 0.0)));
+        assert!(close(interpolate(a, b, 1.0) >> ORIGIN, at(2.0, 0.0)));
         let mid = interpolate(a, b, 0.5);
         assert!(drift(mid) < 1e-5);
     }
@@ -167,7 +166,7 @@ mod tests {
     #[test]
     fn renormalization_keeps_long_runs_on_the_unit_condition() {
         let mut b = Body::new(pose_at(ORIGIN, 0.3));
-        b.vel = Point::direction(1.7, -0.4);
+        b.vel = dir(1.7, -0.4);
         b.spin = 2.3;
         for _ in 0..120 * 600 {
             b.step(1.0 / 120.0);
@@ -182,10 +181,10 @@ mod tests {
     #[test]
     fn a_twist_moves_a_point_with_its_velocity_and_spin() {
         // v + ω × r, with r the arm from the centre: the formula the commutator replaces.
-        let mut b = Body::new(Motor::translation(Point::direction(1.0, 2.0)));
-        b.vel = Point::direction(3.0, -1.0);
+        let mut b = Body::new(Motor::translation(dir(1.0, 2.0)));
+        b.vel = dir(3.0, -1.0);
         b.spin = 0.5;
-        let p = Point::xy(4.0, 6.0);
+        let p = at(4.0, 6.0);
         let v = velocity_at(b.twist(), p);
         let want = [3.0 - 0.5 * 4.0, -1.0 + 0.5 * 3.0];
         assert!(

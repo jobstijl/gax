@@ -161,7 +161,7 @@ impl World {
 mod tests {
     use super::super::body::{Pose, pose_at};
     use super::super::kind::SERPENT_GAP;
-    use super::super::{ARENA, Input, at, dir};
+    use super::super::{ARENA_X, ARENA_Y, Input, at, dir};
     use super::*;
 
     fn aim(x: f32, y: f32) -> Input {
@@ -231,7 +231,7 @@ mod tests {
                 if let Event::Wall { pos } = e {
                     hits += 1;
                     let [x, y] = pos.to_euclidean();
-                    let (dx, dy) = (ARENA[0] - x.abs(), ARENA[1] - y.abs());
+                    let (dx, dy) = (ARENA_X - x.abs(), ARENA_Y - y.abs());
                     assert!(
                         dx > -1e-3 && dy > -1e-3 && dx.min(dy) < 1e-3,
                         "tick {t}: a wall hit at ({x}, {y})"

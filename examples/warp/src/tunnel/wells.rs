@@ -6,7 +6,7 @@ use super::entities::Foe;
 use super::space::P;
 use crate::geom::inverse_square;
 
-/// How strongly a singularity pulls the wall in (a lattice source per unit of strength), and
+/// How strongly a singularity pulls the wall in (its pinch's pull per unit of strength), and
 /// how far along the tunnel (the squared reach).
 pub const PINCH: f32 = 480.0;
 pub const PINCH_REACH2: f32 = 49.0;

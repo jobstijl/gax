@@ -7,7 +7,7 @@
 //! `tunnel::replay`.
 
 use super::body::Body;
-use super::{Input, Phase, World};
+use super::{Input, Phase, World, dir};
 use gax::pga2d::Point;
 
 /// Ticks between state hashes (one second).
@@ -90,7 +90,7 @@ impl Packed {
         let (mx, my) = pack_stick(i.movement.e20(), i.movement.e01());
         // The aim's angle: of the rotation from the x axis to it.
         let aiming = i.aim.ideal_norm() > 0.2;
-        let angle = Point::direction(1.0, 0.0).angle_to(i.aim);
+        let angle = dir(1.0, 0.0).angle_to(i.aim);
         let turn = (angle / core::f32::consts::TAU).rem_euclid(1.0);
         Packed {
             mx,
@@ -115,7 +115,7 @@ impl Packed {
             Point::zero()
         };
         Input {
-            movement: Point::direction(mx, my),
+            movement: dir(mx, my),
             aim,
             fire: self.flags & FIRE != 0,
             bomb: self.flags & BOMB != 0,
@@ -436,7 +436,7 @@ mod tests {
         }
         // A diagonal from the keyboard stays within the unit disc.
         let d = quantize(&Input {
-            movement: Point::direction(1.0, 1.0),
+            movement: dir(1.0, 1.0),
             ..Input::default()
         });
         assert!(d.movement.ideal_norm() <= 1.0 + 1e-6);

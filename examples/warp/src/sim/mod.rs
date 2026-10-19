@@ -40,8 +40,9 @@ pub type P = Point<(), f32>;
 
 /// The fixed timestep.
 pub const DT: f32 = 1.0 / 120.0;
-/// Half the arena's width and height.
-pub const ARENA: [f32; 2] = [32.0, 18.0];
+/// The arena's walls: at `x = ±ARENA_X` and `y = ±ARENA_Y`.
+pub const ARENA_X: f32 = 32.0;
+pub const ARENA_Y: f32 = 18.0;
 /// No spawn lands closer than this to the player.
 pub const SAFE_RADIUS: f32 = 7.0;
 
@@ -203,7 +204,7 @@ impl World {
             events: Vec::new(),
             worst_drift: 0.0,
             next_id: 1,
-            hash: SpatialHash::new(ARENA[0], ARENA[1], 2.0),
+            hash: SpatialHash::new(ARENA_X, ARENA_Y, 2.0),
             scratch: Vec::new(),
         }
     }
