@@ -1598,6 +1598,12 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       moved there, and then grew its space to 240 vectors favouring the values around 8.3;
       with the bound, it moves after the second check and stops at 40 to 50 (2.2 s to 0.9 s a
       solve). The anchored grid and the icosphere's modes are unchanged, within the noise.
+    * Nor does the shift move while the space is settling: when, at the last check's rate, the
+      strict tolerance is two checks away. A move costs a factorization and the images of the
+      whole space again, more than two checks of growth. Spot's solves then keep their first
+      factorization and stop at 40 to 50 vectors (0.9 s to about 0.6 s a solve). A rate read from an
+      untrustworthy first check can only delay a move by a check: the rule is asked again at
+      the next one.
     * Single-vector Lanczos finds one vector per eigenspace, and a field map of isotropic
       cells repeats every value `K::N` times. The blocks have `2 K::N + 2` vectors, which also
       covers a doubling by a symmetry of the sites (a square grid); `eigh_block` takes

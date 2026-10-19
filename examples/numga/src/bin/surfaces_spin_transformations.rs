@@ -111,15 +111,17 @@ mod spin {
     /// The vertices whose edges best match the given ones under the cotangent weights: the
     /// least-squares solve of the Laplacian, its translation left at zero (centred). The
     /// Laplacian is symmetric and the divergence lies in its range, so conjugate gradients
-    /// solves it, far faster than LSQR (which squares the condition); removing the mean, the
+    /// solves it, far faster than LSQR (which squares the condition), to a relative residual of
+    /// `10⁻¹²` (`solve`'s `16 ε` is out of reach of a singular map); removing the mean, the
     /// Laplacian's null space, makes the solution the least-norm one.
     pub fn matching(mesh: &Mesh, edges: &Field<Vector3>) -> Field<Vector3> {
         let d0 = mesh.d0();
         let weights = SparseMap::from_diagonal(&mesh.edge_ratio());
         let divergence = &(&d0.reverse() * &weights) * edges;
-        let x = (&mesh.laplacian() * Vector3::slot()).solve(&divergence);
-        let mean = x.mean();
-        x.map(|v| v - mean)
+        let solved = (&mesh.laplacian() * Vector3::slot()).cg(&divergence, 1e-12, 10_000);
+        assert!(solved.converged, "matching: {:e}", solved.residual);
+        let mean = solved.x.mean();
+        solved.x.map(|v| v - mean)
     }
 
     /// The mesh after the spin transformation that changes each face's mean curvature by `ρ`:

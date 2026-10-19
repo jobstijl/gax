@@ -154,15 +154,21 @@ where
                 // error times the pencil's scale at the value, counts in the spread: a first
                 // estimate from a small space can be far above the cluster (Spot's spin
                 // transformation's 8.3 for 0.0045), and a shift there would favour the values
-                // around it over the wanted ones. (The pairs are ordered by distance from zero,
-                // not by value; an indefinite pencil, with wanted values on both sides of zero,
-                // is never re-shifted.)
+                // around it over the wanted ones. Nor does it move when the space is settling,
+                // the strict tolerance two checks away at the last check's rate: a move costs a
+                // factorization and the images of the whole space again, more than those checks
+                // (Spot's spin transformation, its error falling a thousandfold a check, keeps
+                // its first factorization). A rate read from a first, untrustworthy check can
+                // only delay a move by a check: the rule is asked again at the next.
+                // (The pairs are ordered by distance from zero, not by value; an indefinite
+                // pencil, with wanted values on both sides of zero, is never re-shifted.)
                 let low = pairs.iter().fold(pairs[0].0, |m, p| m.min(p.0));
                 let high = pairs.iter().fold(pairs[0].0, |m, p| m.max(p.0));
                 let bound = progress.worst * (a_scale + low.abs() * m_scale);
                 let spread = (high - low).max(bound).max(T::epsilon() * high.abs());
                 let target = low - spread;
                 if reshifts < 16
+                    && !progress.settling()
                     && T::all_lt(T::zero(), target)
                     && T::all_lt(sigma, target)
                     && T::all_lt(spread, (low - sigma) * T::from_f64(0.5))
@@ -238,8 +244,10 @@ struct Progress<T> {
     loose: T,
     best: T,
     stalled: usize,
-    /// The worst backward error of the last check.
+    /// The worst backward error of the last check, and of the one before.
     worst: T,
+    previous: Option<T>,
+    checked: bool,
 }
 
 impl<T: Real> Progress<T> {
@@ -251,7 +259,18 @@ impl<T: Real> Progress<T> {
             best: T::from_f64(f64::MAX),
             stalled: 0,
             worst: T::from_f64(f64::MAX),
+            previous: None,
+            checked: false,
         }
+    }
+
+    /// Whether the space is settling: at the rate of the last check, the strict tolerance is at
+    /// most two checks away.
+    fn settling(&self) -> bool {
+        self.previous.is_some_and(|previous| {
+            let rate = self.worst / previous;
+            T::all_lt(rate, T::one()) && T::all_lt(self.worst * rate * rate, self.strict)
+        })
     }
 
     /// Whether the pairs (value, coefficients) have converged, by `residual`. They are checked
@@ -266,6 +285,8 @@ impl<T: Real> Progress<T> {
                 break; // not even near: no need to look further
             }
         }
+        self.previous = self.checked.then_some(self.worst);
+        self.checked = true;
         self.worst = worst;
         if !T::all_lt(self.strict, worst) {
             return true;
