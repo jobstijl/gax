@@ -3,10 +3,7 @@
 
 use gax::pga2d::Point;
 
-/// The height of the unit phasor at `phase` from `(1, 0)`: a sine wave in time.
-pub fn wave(phase: f32) -> f32 {
-    phasor(phase).e01()
-}
+pub use crate::kernels::wave;
 
 /// The unit phasor at `phase`: the unit direction at that angle from `(1, 0)`. Its height is the
 /// sine, its width the cosine.

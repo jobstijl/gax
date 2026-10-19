@@ -235,7 +235,7 @@ mod tests {
             ..Input::default()
         };
         let p = Packed::pack(&i, 100.0).unpack(100.0);
-        assert!((p.aim & i.aim).norm() < 0.3, "{:?}", p.aim.to_euclidean());
+        assert!(p.aim.distance(i.aim) < 0.3, "{:?}", p.aim.to_euclidean());
         assert_eq!(Packed::pack(&p, 100.0).unpack(100.0), p);
     }
 }

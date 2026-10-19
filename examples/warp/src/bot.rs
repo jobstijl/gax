@@ -2,9 +2,10 @@
 //! yet, the headless shots and the tests.
 
 use crate::game::{Run, TunnelRun};
+use crate::geom::{ORIGIN, clamp_length, with_length};
 use crate::input::Flight;
 use crate::signal::wave;
-use crate::sim::body::{distance, turned, with_length};
+use crate::sim::body::turned;
 use crate::{sim, tunnel};
 use gax::pga2d::Point;
 
@@ -23,7 +24,7 @@ pub fn plane(w: &sim::World, t: f32) -> sim::Input {
         .enemies
         .iter()
         .map(|e| e.body.pos())
-        .min_by(|a, b| distance(*a, p).total_cmp(&distance(*b, p)));
+        .min_by(|a, b| a.distance(p).total_cmp(&b.distance(p)));
     let mut input = sim::Input::default();
     // Wander: a direction turning with time.
     let mut go = Point::direction_from_angle(t * 0.9) * 0.6;
@@ -35,17 +36,12 @@ pub fn plane(w: &sim::World, t: f32) -> sim::Input {
             // Away and around: the way back from it, turned a little.
             go = with_length(turned(-to, -0.6), 1.0);
         }
-        let crowd = w.enemies.iter().filter(|e| distance(e.body.pos(), p) < 3.0);
+        let crowd = w.enemies.iter().filter(|e| e.body.pos().distance(p) < 3.0);
         input.bomb = crowd.count() >= 5;
     }
     // Stay off the walls: pulled back towards the middle.
-    let home = (sim::at(0.0, 0.0) - p) * (0.6 / 32.0);
-    let m = go + home;
-    input.movement = if m.ideal_norm() > 1.0 {
-        with_length(m, 1.0)
-    } else {
-        m
-    };
+    let home = (ORIGIN - p) * (0.6 / 32.0);
+    input.movement = clamp_length(go + home, 1.0);
     input
 }
 
@@ -72,7 +68,7 @@ pub fn tunnel(run: &TunnelRun, t: f32) -> (sim::Input, Flight) {
         ..sim::Input::default()
     };
     let flight = Flight {
-        cursor: cursor.or(Some(crate::geom::ORIGIN)),
+        cursor: cursor.or(Some(ORIGIN)),
         stick: None,
         roll: i8::from(bolt || dive),
         throttle: wave(t * 0.2),

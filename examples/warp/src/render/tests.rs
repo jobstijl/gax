@@ -8,7 +8,7 @@ use super::lattice::MAX_GRID_STEPS;
 use super::particles::MAX_PARTICLES;
 use super::scene::{self, seg};
 use super::*;
-use crate::sim::{self, body::identity, rng::Rng};
+use crate::sim::{self, body::Pose, rng::Rng};
 
 /// The headless shots' format.
 const SRGB: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
@@ -62,12 +62,12 @@ fn view(t: &wgpu::Texture) -> wgpu::TextureView {
 
 /// The camera every test frame looks through: 20 units above and below the origin.
 fn camera(size: [u32; 2]) -> CameraUniform {
-    scene::camera(identity(), 20.0, size, 0.0)
+    scene::camera(Pose::identity(), 20.0, size, 0.0)
 }
 
 /// The game's post-processing at rest.
 fn post(size: [u32; 2]) -> PostSettings {
-    crate::fx::Fx::new().post(&scene::view_map(identity(), 20.0, size))
+    crate::fx::Fx::new().post(&scene::view_map(Pose::identity(), 20.0, size))
 }
 
 /// A Plane frame of 64×64 with only the lattice's `steps`, the particles' `wells` and `spawn`.
@@ -265,7 +265,7 @@ fn the_lattice_rests_after_the_tunnel() {
         read_grid(r)
             .iter()
             .zip(&rest.p)
-            .map(|(n, &p)| difference((n.p.into(), n.v.into()), (p, Point::direction(0.0, 0.0))))
+            .map(|(n, &p)| difference((n.p.into(), n.v.into()), (p, Point::zero())))
             .fold(0.0, f32::max)
     };
     assert!(moved(&r) > 1e-3, "the blast moves the lattice");
@@ -290,7 +290,7 @@ fn particle_kernels_agree_between_cpu_and_gpu() {
     // Dead filler up to 100 before the ring's end.
     let dead = Particle {
         p: Point::xy(0.0, 0.0).into(),
-        v: Point::direction(0.0, 0.0).into(),
+        v: Point::zero().into(),
         color: crate::light::light(1.0, 1.0, 1.0, 1.0).into(),
         life: [1.0, 1.0, 0.0, 0.0],
     };
@@ -324,7 +324,7 @@ fn particle_kernels_agree_between_cpu_and_gpu() {
         r.particles.buffer(),
         MAX_PARTICLES * size_of::<Particle>(),
     );
-    let zero = Point::direction(0.0, 0.0);
+    let zero = Point::zero();
     let worst = ps
         .iter()
         .enumerate()
@@ -373,8 +373,8 @@ fn line(y: f32) -> LineInstance {
         Point::xy(-6.0, y),
         Point::xy(6.0, y),
         c,
-        [0.1, 0.3, 0.3, 0.0],
-        identity(),
+        scene::Stroke::new(0.1, 0.3, 0.3),
+        Pose::identity(),
     )
 }
 

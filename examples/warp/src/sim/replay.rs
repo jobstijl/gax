@@ -112,7 +112,7 @@ impl Packed {
         let aim = if self.flags & AIMING != 0 {
             Point::direction_from_angle(f32::from(self.aim) / 65536.0 * core::f32::consts::TAU)
         } else {
-            Point::direction(0.0, 0.0)
+            Point::zero()
         };
         Input {
             movement: Point::direction(mx, my),

@@ -159,7 +159,7 @@ impl World {
 
 #[cfg(test)]
 mod tests {
-    use super::super::body::{distance, place, pose_at};
+    use super::super::body::{Pose, pose_at};
     use super::super::kind::SERPENT_GAP;
     use super::super::{ARENA, Input, at, dir};
     use super::*;
@@ -177,7 +177,7 @@ mod tests {
         let mut w = World::new(1);
         w.director.enabled = false;
         let e = w.spawn(Kind::Drifter, at(8.0, 0.0));
-        e.intent = dir(0.0, 0.0);
+        e.intent = P::zero();
         e.body.spin = 0.0;
         let mut killed = false;
         for _ in 0..120 {
@@ -248,12 +248,12 @@ mod tests {
         w.director.enabled = false;
         // Facing -x, towards the shots from the left: they glance off.
         let e = w.spawn(Kind::Warden, at(8.0, 0.0));
-        e.body = Body::new(place(at(8.0, 0.0), core::f32::consts::PI));
+        e.body = Body::new(pose_at(at(8.0, 0.0), core::f32::consts::PI));
         e.age = 1.0;
-        w.ship.body = Body::new(pose_at(0.0, 0.0, 0.0));
+        w.ship.body = Body::new(Pose::identity());
         let mut deflected = false;
         for _ in 0..30 {
-            w.enemies[0].intent = dir(0.0, 0.0);
+            w.enemies[0].intent = P::zero();
             w.enemies[0].body.spin = 0.0;
             w.tick(&aim(1.0, 0.0));
             deflected |= w.events.iter().any(|e| {
@@ -275,12 +275,12 @@ mod tests {
         let mut w = World::new(12);
         w.director.enabled = false;
         let e = w.spawn(Kind::Warden, at(8.0, 0.0));
-        e.body = Body::new(place(at(8.0, 0.0), 0.0));
+        e.body = Body::new(pose_at(at(8.0, 0.0), 0.0));
         e.age = 1.0;
         let mut killed = false;
         for _ in 0..60 {
             w.enemies.iter_mut().for_each(|e| {
-                e.intent = dir(0.0, 0.0);
+                e.intent = P::zero();
                 e.body.spin = 0.0;
             });
             w.tick(&aim(1.0, 0.0));
@@ -303,18 +303,18 @@ mod tests {
         let mut w = World::new(13);
         w.director.enabled = false;
         // Playing (bullets fly), with the ship far away and untouchable.
-        w.ship.body = Body::new(pose_at(-28.0, -15.0, 0.0));
+        w.ship.body = Body::new(pose_at(at(-28.0, -15.0), 0.0));
         w.ship.invulnerable = 1e9;
         let e = w.spawn(Kind::Serpent, at(0.0, 5.0));
-        e.body = Body::new(place(at(0.0, 5.0), 0.0));
+        e.body = Body::new(pose_at(at(0.0, 5.0), 0.0));
         e.age = 1.0;
         // Let the body settle behind the head.
         for _ in 0..120 {
-            w.enemies[0].intent = dir(0.0, 0.0);
+            w.enemies[0].intent = P::zero();
             w.tick(&Input::default());
         }
         let chain: Vec<P> = w.enemies[0].chain.iter().map(|s| s.pos()).collect();
-        let gap = distance(chain[0], w.enemies[0].body.pos());
+        let gap = chain[0].distance(w.enemies[0].body.pos());
         // Moving, each segment lags a little behind its spot (speed / follow rate).
         assert!(
             gap > SERPENT_GAP - 0.05 && gap < SERPENT_GAP + 0.3,

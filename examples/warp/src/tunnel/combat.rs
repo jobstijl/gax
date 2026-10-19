@@ -1,12 +1,12 @@
 //! Fighting: the ship's shots (aimed, leading a locked enemy, bent by singularities), the
 //! turrets' bolts, hits on the ship, bombs and blasts on the wall, death and respawn.
 
-use super::entities::{Enemy, Event, Foe, Segment, Shot};
+use super::entities::{Enemy, Event, Foe, Shot};
 use super::lattice::Source;
 use super::space::{P, arc, at, dir, off_axis, segment_hits_sphere};
 use super::wells::Wells;
 use super::{Input, LOCK_AHEAD, World};
-use crate::sim::{DT, Phase};
+use crate::sim::Phase;
 
 /// The shots' speed along the track, relative to the ship.
 const SHOT_SPEED: f32 = 60.0;
@@ -27,7 +27,7 @@ impl World {
             .iter()
             .enumerate()
             .filter(|(_, e)| arc(e.pos) > s + LOCK_AHEAD)
-            .map(|(i, e)| (i, (e.pos & p).norm()))
+            .map(|(i, e)| (i, e.pos.distance(p)))
             .filter(|&(_, d)| d < reach)
             .min_by(|a, b| a.1.total_cmp(&b.1))
             .map(|(i, _)| i)
@@ -112,23 +112,12 @@ impl World {
         let mut walls = Vec::new();
         let lattice = &self.lattice;
         for b in &mut self.shots {
-            b.prev = b.pos;
-            if !wells.is_empty() {
-                b.vel += wells.pull(b.pos, 900.0) * DT;
-            }
-            b.pos += b.vel * DT;
-            b.life -= DT;
-            let hit = self.enemies.iter().enumerate().find_map(|(i, e)| {
-                if segment_hits_sphere(b.prev, b.pos, e.pos, e.radius() + HIT_MARGIN) {
-                    return Some((i, None));
-                }
-                e.body
-                    .iter()
-                    .position(|seg| {
-                        segment_hits_sphere(b.prev, b.pos, seg.pos, Segment::RADIUS + HIT_MARGIN)
-                    })
-                    .map(|j| (i, Some(j)))
-            });
+            b.advance(wells, 900.0);
+            let hit = self
+                .enemies
+                .iter()
+                .enumerate()
+                .find_map(|(i, e)| e.swept(b.prev, b.pos, HIT_MARGIN).map(|seg| (i, seg)));
             if let Some((i, seg)) = hit {
                 hits.push((i, seg, b.bend() > SLINGSHOT));
                 b.life = -1.0;
@@ -137,10 +126,15 @@ impl World {
                 b.life = -1.0;
             }
         }
-        for pos in walls {
-            self.events.push(Event::Wall { pos });
-        }
+        self.events
+            .extend(walls.into_iter().map(|pos| Event::Wall { pos }));
         self.shots.retain(|b| b.life > 0.0);
+        self.take_hits(hits);
+    }
+
+    /// The shots' hits (each the enemy, the segment of a serpent's body or `None`, and whether
+    /// the shot was bent): damage, body segments shot away, and kills.
+    fn take_hits(&mut self, hits: Vec<(usize, Option<usize>, bool)>) {
         let mut dead: Vec<(usize, bool)> = Vec::new();
         let mut segments: Vec<(usize, usize)> = Vec::new();
         for (i, seg, bent) in hits {
@@ -199,12 +193,7 @@ impl World {
     pub(super) fn step_bolts(&mut self, wells: &Wells) {
         let s = self.ship.s();
         for b in &mut self.bolts {
-            b.prev = b.pos;
-            if !wells.is_empty() {
-                b.vel += wells.pull(b.pos, 300.0) * DT;
-            }
-            b.pos += b.vel * DT;
-            b.life -= DT;
+            b.advance(wells, 300.0);
         }
         self.bolts.retain(|b| b.life > 0.0 && arc(b.pos) > s - 4.0);
     }
@@ -215,12 +204,10 @@ impl World {
             return;
         }
         let (p, prev) = (self.ship.pos, self.ship.prev);
-        let hit_enemy = self.enemies.iter().any(|e| {
-            segment_hits_sphere(prev, p, e.pos, e.radius() + SHIP_SIZE)
-                || e.body
-                    .iter()
-                    .any(|s| segment_hits_sphere(prev, p, s.pos, Segment::RADIUS + SHIP_SIZE))
-        });
+        let hit_enemy = self
+            .enemies
+            .iter()
+            .any(|e| e.swept(prev, p, SHIP_SIZE).is_some());
         let hit_bolt = self
             .bolts
             .iter()

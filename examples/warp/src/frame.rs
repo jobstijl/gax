@@ -75,10 +75,9 @@ fn advance_plane(g: &mut Game, input: sim::Input, dt: f32, aspect: f32, sound: &
         }
         g.alpha = g.acc / DT;
     }
-    sound.update(
-        &run.world,
-        matches!(g.screen, Screen::Playing | Screen::Watch),
-    );
+    let w = &run.world;
+    let (intensity, darkness) = (w.director.intensity, w.darkness());
+    steer_music(sound, g.screen, intensity, w.phase, darkness, w.ledger.mult);
     // A view about 28 units tall (wider screens see more), moving over the arena.
     g.half_height = 14.0_f32.max(24.0 / aspect);
     g.fx.half_height = g.half_height;
@@ -111,7 +110,7 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut Sound) -
             }
             run.view.on_events(&run.world.events);
             audio::tunnel::sounds(&run.world, &run.view, &mut run.heard);
-            let listener = sim::body::identity();
+            let listener = sim::body::Pose::identity();
             sound.play(
                 &run.heard,
                 run.world.ledger.mult,
@@ -124,15 +123,31 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut Sound) -
         g.alpha = g.acc / DT;
     }
     run.view.update(&run.world, g.alpha, dt);
-    let alive = run.world.phase == Phase::Playing;
-    let intensity = run.world.intensity * if alive { 1.0 } else { 0.5 };
-    sound.steer(
-        intensity,
-        run.world.darkness(),
-        run.world.ledger.mult,
-        matches!(g.screen, Screen::Playing | Screen::Watch),
+    let w = &run.world;
+    steer_music(
+        sound,
+        g.screen,
+        w.intensity,
+        w.phase,
+        w.darkness(),
+        w.ledger.mult,
     );
     over
+}
+
+/// Steer the music from a run: its intensity (halved while the ship is gone), how near the
+/// ship is to a singularity, its multiplier, and whether it is being played.
+fn steer_music(
+    sound: &mut Sound,
+    screen: Screen,
+    intensity: f32,
+    phase: Phase,
+    darkness: f32,
+    mult: u32,
+) {
+    let presence = if phase == Phase::Playing { 1.0 } else { 0.5 };
+    let playing = matches!(screen, Screen::Playing | Screen::Watch);
+    sound.steer(intensity * presence, darkness, mult, playing);
 }
 
 /// The player's Tunnel controls for the next tick, through the camera: screen directions

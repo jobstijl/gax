@@ -490,7 +490,7 @@ impl Game {
             hitstop: 0.0,
             device: input::Device::Mouse,
             latch: input::Latch::default(),
-            cam: sim::body::identity(),
+            cam: sim::body::Pose::identity(),
             half_height: 20.0,
             time: 0.0,
             debug: false,

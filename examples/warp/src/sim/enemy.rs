@@ -1,12 +1,13 @@
 //! The enemies: landing, moving by their family's rule, bouncing off the walls, and dying.
 
-use super::body::{Body, ORIGIN, distance, interpolate, place, turned, with_length};
+use super::body::{Body, interpolate, pose_at, turned};
 use super::collide::outside;
 use super::kind::{Kind, SERPENT_GAP, SERPENT_LEN};
 use super::shots::Wreck;
 use super::wells::{Well, pull};
 use super::{DT, Event, P, Phase, World, dir};
-use gax::pga2d::{Motor, Point, intrinsic};
+use crate::geom::{ORIGIN, clamp_length, orbit, with_length};
+use gax::pga2d::{Motor, intrinsic};
 
 /// An enemy.
 #[derive(Clone, Debug)]
@@ -71,7 +72,7 @@ impl World {
     pub fn spawn(&mut self, kind: Kind, at: P) -> &mut Enemy {
         let id = self.next_id();
         let stats = kind.stats();
-        let mut body = Body::new(place(at, self.rng.angle()));
+        let mut body = Body::new(pose_at(at, self.rng.angle()));
         let intent = P::direction_from_angle(self.rng.angle()) * stats.launch;
         body.vel = intent;
         let [lo, hi] = stats.spin;
@@ -79,10 +80,7 @@ impl World {
         let chain = if kind == Kind::Serpent {
             (1..=SERPENT_LEN)
                 .map(|k| {
-                    Body::new(
-                        body.pose
-                            * Motor::translation(Point::direction(-SERPENT_GAP * k as f32, 0.0)),
-                    )
+                    Body::new(body.pose * Motor::translation(dir(-SERPENT_GAP * k as f32, 0.0)))
                 })
                 .collect()
         } else {
@@ -94,7 +92,7 @@ impl World {
             kind,
             body,
             intent,
-            pull: dir(0.0, 0.0),
+            pull: P::zero(),
             dead: false,
             hp: stats.hp,
             radius: stats.radius,
@@ -111,34 +109,35 @@ impl World {
     /// Kill enemy `i` (it is removed once the enemies have moved); when `scored`, with
     /// points, shards and what it carried.
     pub(super) fn kill(&mut self, i: usize, scored: bool) {
-        self.enemies[i].dead = true;
-        let e = self.enemies[i].clone();
-        let pos = e.body.pos();
-        let points = if scored { self.reward(&e) } else { 0 };
+        let e = &mut self.enemies[i];
+        e.dead = true;
+        let (kind, mass, body, radius) = (e.kind, e.mass, e.body, e.radius);
+        let pos = body.pos();
+        let points = if scored {
+            self.reward(kind, mass, pos)
+        } else {
+            0
+        };
         self.events.push(Event::Kill {
             pos,
-            kind: e.kind,
-            size: e.kind.stats().size + 0.3 * e.mass,
+            kind,
+            size: kind.stats().size + 0.3 * mass,
             scored,
             points,
-            wreck: Some(Wreck {
-                body: e.body,
-                radius: e.radius,
-            }),
+            wreck: Some(Wreck { body, radius }),
         });
         // A serpent's body goes with its head.
-        for seg in &e.chain {
-            self.events.push(Event::Kill {
+        self.events
+            .extend(self.enemies[i].chain.iter().map(|seg| Event::Kill {
                 pos: seg.pos(),
                 kind: Kind::Serpent,
                 size: 0.4,
                 scored: false,
                 points: 0,
                 wreck: None,
-            });
-        }
+            }));
         if scored {
-            self.unload(e.kind, pos);
+            self.unload(kind, pos);
         }
     }
 
@@ -152,16 +151,16 @@ impl World {
         self.enemies.clear();
     }
 
-    /// Score a kill (a singularity is worth more for what it ate) and drop its shards; the
-    /// points gained.
-    fn reward(&mut self, e: &Enemy) -> u64 {
-        let stats = e.kind.stats();
+    /// Score the kill of a `kind` that ate `mass` at `pos` (a singularity is worth more for
+    /// what it ate) and drop its shards; the points gained.
+    fn reward(&mut self, kind: Kind, mass: f32, pos: P) -> u64 {
+        let stats = kind.stats();
         let points = self
             .ledger
-            .award((stats.value + 100 * e.mass as u64) * u64::from(self.ledger.mult));
+            .award((stats.value + 100 * mass as u64) * u64::from(self.ledger.mult));
         let extra = stats.extra_shard > 0.0 && self.rng.chance(stats.extra_shard);
-        let shards = stats.shards + e.mass as usize + usize::from(extra);
-        self.drop_shards(e.body.pos(), shards);
+        let shards = stats.shards + mass as usize + usize::from(extra);
+        self.drop_shards(pos, shards);
         points
     }
 
@@ -170,20 +169,18 @@ impl World {
         match kind {
             // Three fragments, flung apart: a direction turned a third at a time.
             Kind::Splitter => {
-                let mut d = P::direction_from_angle(self.rng.angle());
-                for _ in 0..3 {
+                let third = Motor::rotation(ORIGIN, core::f32::consts::TAU / 3.0);
+                for (d, _) in orbit(P::direction_from_angle(self.rng.angle()), 3, third) {
                     let f = self.spawn(Kind::Fragment, pos + d * 0.5);
                     f.intent = d * 9.0;
                     f.age = 0.25;
-                    d = turned(d, core::f32::consts::TAU / 3.0);
                 }
             }
             // A carrier's cargo: a ring of motes.
             Kind::Carrier => {
-                let mut d = dir(1.0, 0.0);
-                for _ in 0..10 {
+                let tenth = Motor::rotation(ORIGIN, core::f32::consts::TAU / 10.0);
+                for (d, _) in orbit(dir(1.0, 0.0), 10, tenth) {
                     self.spawn(Kind::Mote, pos + d * 1.5).intent = d * 7.0;
-                    d = turned(d, core::f32::consts::TAU / 10.0);
                 }
                 self.events.push(Event::Burst { pos });
             }
@@ -342,12 +339,7 @@ impl Enemy {
             stats.hunting_spin
         };
         if self.kind == Kind::Evader {
-            let v = self.intent + dodge(p, view.shots);
-            self.intent = if v.ideal_norm() > 11.0 {
-                with_length(v, 11.0)
-            } else {
-                v
-            };
+            self.intent = clamp_length(self.intent + dodge(p, view.shots), 11.0);
         }
     }
 
@@ -357,7 +349,7 @@ impl Enemy {
         let k = 1.0 - (-30.0 * DT).exp();
         let mut ahead = self.body.pose;
         for seg in &mut self.chain {
-            let target = ahead * Motor::translation(Point::direction(-SERPENT_GAP, 0.0));
+            let target = ahead * Motor::translation(dir(-SERPENT_GAP, 0.0));
             seg.prev = seg.pose;
             seg.pose = interpolate(seg.pose, target, k);
             ahead = seg.pose;
@@ -367,42 +359,37 @@ impl Enemy {
     /// Bounce off the walls, by reflection in the wall it crossed: the position mirrored back
     /// inside, the intent and the pull mirrored.
     fn bounce(&mut self) {
-        for _ in 0..2 {
-            let Some(wall) = outside(self.body.prev >> ORIGIN, self.body.pos(), self.radius) else {
-                break;
-            };
-            self.body.move_to(wall.reflect(self.body.pos()));
-            self.intent = wall.reflect(self.intent);
-            self.pull = wall.reflect(self.pull);
-            self.body.vel = self.intent + self.pull;
-        }
+        let (intent, pull) = (&mut self.intent, &mut self.pull);
+        self.body.walls_crossed(self.radius, |body, wall| {
+            body.move_to(wall.reflect(body.pos()));
+            *intent = wall.reflect(*intent);
+            *pull = wall.reflect(*pull);
+            body.vel = *intent + *pull;
+        });
     }
 }
 
 /// An evader's sidestep: for each shot coming its way whose line of flight passes close to `p`,
 /// away from its foot on the line.
 fn dodge(p: P, shots: &[Shot]) -> P {
-    let mut dodge = dir(0.0, 0.0);
-    for s in shots {
-        // Ahead of the shot: on the side of the perpendicular through it that the shot moves
-        // towards.
-        let across = s.line | s.pos;
-        let ahead = (across & p).s() * (across & s.vel).s() > 0.0;
-        if !ahead || distance(p, s.pos) > 8.0 {
-            continue;
-        }
-        let away = p - crate::geom::foot(p, s.line).unitized();
-        let off = away.ideal_norm();
-        if off < 1.8 {
-            dodge += with_length(away, (1.8 - off) * 9.0);
-        }
-    }
-    dodge
+    shots
+        .iter()
+        .filter(|s| {
+            // Ahead of the shot: on the side of the perpendicular through it that the shot
+            // moves towards.
+            let across = s.line | s.pos;
+            (across & p).s() * (across & s.vel).s() > 0.0 && p.distance(s.pos) <= 8.0
+        })
+        .map(|s| p - crate::geom::foot(p, s.line).unitized())
+        .map(|away| (away, away.ideal_norm()))
+        .filter(|&(_, off)| off < 1.8)
+        .fold(P::zero(), |dodge, (away, off)| {
+            dodge + with_length(away, (1.8 - off) * 9.0)
+        })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::body::place;
     use super::super::{ARENA, Bullet, Input, at};
     use super::*;
 
@@ -412,7 +399,7 @@ mod tests {
         w.director.enabled = false;
         w.phase = Phase::Over; // no hunting: only the dodge moves it sideways
         let e = w.spawn(Kind::Evader, at(10.0, 0.3));
-        e.body = Body::new(place(at(10.0, 0.3), 0.0));
+        e.body = Body::new(pose_at(at(10.0, 0.3), 0.0));
         e.age = 1.0;
         w.bullets.push(Bullet {
             pos: at(0.0, 0.0),

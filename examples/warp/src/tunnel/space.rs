@@ -9,20 +9,18 @@ use gax::pga3d::{Motor, Point, intrinsic};
 pub type P = Point<(), f32>;
 
 /// The point `(x, y)` across the tunnel at arc length `s`.
-pub fn at(x: f32, y: f32, s: f32) -> P {
-    Point::xyz(x, y, s)
+pub const fn at(x: f32, y: f32, s: f32) -> P {
+    Point::new(x, y, s, 1.0)
 }
 
-/// The direction `(x, y, s)`.
-pub fn dir(x: f32, y: f32, s: f32) -> P {
-    Point::direction(x, y, s)
+/// The direction `(x, y, s)` (also a model's vertex, from its centre).
+pub const fn dir(x: f32, y: f32, s: f32) -> P {
+    Point::new(x, y, s, 0.0)
 }
 
 /// The tunnel's axis, the join of the origin and the direction `z`: an intrinsic line
-/// (ADR-051).
-pub fn axis() -> intrinsic::Line<(), f32> {
-    at(0.0, 0.0, 0.0) & dir(0.0, 0.0, 1.0)
-}
+/// (ADR-051), along `+z`.
+pub const AXIS: intrinsic::Line<(), f32> = intrinsic::Line::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
 
 /// The arc length of a point.
 pub fn arc(p: P) -> f32 {
@@ -32,17 +30,29 @@ pub fn arc(p: P) -> f32 {
 /// The foot of `p` on the axis: the meet of the axis with the plane through `p` orthogonal to
 /// it (weight 1).
 pub fn foot(p: P) -> P {
-    crate::geom::foot(p, axis()).unitized()
+    crate::geom::foot(p, AXIS).unitized()
 }
 
 /// The distance of `p` from the axis: the norm of their join (the axis is a unit line).
 pub fn off_axis(p: P) -> f32 {
-    (axis() & p).norm()
+    (AXIS & p).norm()
 }
 
-/// The rotation about the tunnel's axis by `angle`.
+/// The rotation about the tunnel's axis by `angle` (in an object's own frame, about its line
+/// along the track: a roll).
 pub fn about_axis(angle: f32) -> Unit<Motor<(), f32>> {
-    Motor::rotation(axis(), angle)
+    Motor::rotation(AXIS, angle)
+}
+
+/// The direction of length `r` from the axis at `angle` around it: `(r, 0, 0)` turned about
+/// the axis.
+pub fn radial(r: f32, angle: f32) -> P {
+    about_axis(angle) >> dir(r, 0.0, 0.0)
+}
+
+/// The part of the direction `v` across the tunnel: without its part along the axis.
+pub fn across(v: P) -> P {
+    dir(v.e032(), v.e013(), 0.0)
 }
 
 /// The point at distance `r` from the axis, at `angle` around it, at arc length `s`: `(r, 0, s)`
@@ -56,8 +66,7 @@ pub fn around(r: f32, angle: f32, s: f32) -> P {
 /// point lies between the ends is the sign of `c` against the planes through the ends
 /// orthogonal to the line (`l | a`, `l | b`).
 pub fn segment_hits_sphere(a: P, b: P, c: P, r: f32) -> bool {
-    let dist = |p: P, q: P| (p & q).norm();
-    if dist(a, c) < r || dist(b, c) < r {
+    if a.distance(c) < r || b.distance(c) < r {
         return true;
     }
     let l: intrinsic::Line<(), f32> = a & b;
@@ -90,6 +99,7 @@ mod tests {
 
     #[test]
     fn the_axis_the_foot_and_turns_about_it() {
+        assert_eq!(AXIS, at(0.0, 0.0, 0.0) & dir(0.0, 0.0, 1.0));
         let p = at(3.0, 4.0, 7.0);
         assert!((off_axis(p) - 5.0).abs() < 1e-5);
         assert!(close(foot(p), at(0.0, 0.0, 7.0)));

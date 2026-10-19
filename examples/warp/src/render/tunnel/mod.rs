@@ -30,9 +30,10 @@ mod proj;
 
 use super::LineInstance;
 use super::font::Align;
-use super::scene::{self, palette};
+use super::scene::{self, Stroke, palette};
+use crate::geom::{ORIGIN, lerp, orbit};
 use crate::light::{self, Light};
-use crate::sim::body::identity;
+use crate::sim::body::Pose;
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Phase};
 use crate::tunnel::lattice::{AROUND, RADIUS, RINGS};
@@ -113,11 +114,6 @@ pub struct View {
     started: bool,
 }
 
-/// `a` to `b` by `t` (points of weight 1, or directions).
-fn lerp(a: P, b: P, t: f32) -> P {
-    a + (b - a) * t
-}
-
 /// The camera's eye for the ship at `ship`: just behind it, a little above, and close to the
 /// axis.
 fn eye(ship: P) -> P {
@@ -141,7 +137,7 @@ impl View {
             })
             .collect();
         let focal = View::focal_for(fov_degrees);
-        let cam = Motor::translation(Point::direction(0.0, 0.0, 0.0));
+        let cam = Frame::identity();
         View {
             cam,
             settings: ViewSettings {
@@ -155,7 +151,7 @@ impl View {
             proj: Proj::new(cam, focal),
             shake: 0.0,
             flash: 0.0,
-            reticle: Point2::xy(0.0, 0.0),
+            reticle: ORIGIN,
             lock: None,
             shock: None,
             sparks: Vec::new(),
@@ -243,12 +239,11 @@ impl View {
             return None;
         }
         let r = &mut self.rng;
-        let jitter =
-            Motor::translation(Point::direction(
-                r.range(-1.0, 1.0) * a * 0.3,
-                r.range(-1.0, 1.0) * a * 0.3,
-                0.0,
-            )) * Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), r.range(-0.015, 0.015) * a);
+        let jitter = Motor::translation(dir(
+            r.range(-1.0, 1.0) * a * 0.3,
+            r.range(-1.0, 1.0) * a * 0.3,
+            0.0,
+        )) * about_axis(r.range(-0.015, 0.015) * a);
         Some(self.cam * jitter)
     }
 
@@ -366,7 +361,7 @@ impl<'a> Sight<'a> {
         self.wells
             .iter()
             .map(|(c, strength)| {
-                let d = (q & c).norm();
+                let d = q.distance(c);
                 1.1 * strength / (1.0 + d * d / 4.0)
             })
             .fold(0.0f32, f32::max)
@@ -487,7 +482,7 @@ impl<'a> Sight<'a> {
                 tint(c, self.shift(q))
             };
             let spin = e.age * 2.0 + e.id as f32;
-            let tumble = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), spin)
+            let tumble = about_axis(spin)
                 * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 0.7 * spin);
             match e.foe {
                 Foe::Drone => p.solid(out, &self.object(q, tumble), &OCTAHEDRON, 0.7, c),
@@ -521,10 +516,7 @@ impl<'a> Sight<'a> {
         for (k, seg) in e.body.iter().enumerate() {
             let sq = lerp(seg.prev, seg.pos, self.alpha);
             let sc = tint(base.faded(1.0 - 0.45 * k as f32 / n), self.shift(sq));
-            let spin = Motor::rotation_about(
-                Point::direction(0.0, 0.0, 1.0),
-                e.age * 3.0 + k as f32 * 0.5,
-            );
+            let spin = about_axis(e.age * 3.0 + k as f32 * 0.5);
             p.solid(out, &self.object(sq, spin), &OCTAHEDRON, 0.5, sc);
             let (a, b) = (self.place(last), self.place(sq));
             p.line(out, a, b, sc.faded(0.5), 0.03, Fog::Objects);
@@ -543,31 +535,22 @@ impl<'a> Sight<'a> {
         let view = self.near(q);
         let eye = eye(self.ship);
         let grow = 1.0 + 0.1 * e.mass;
-        let tilt = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.15 * time)
-            * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 1.25);
-        let quarter = Motor::rotation_about(
-            Point::direction(0.0, 0.0, 1.0),
-            core::f32::consts::FRAC_PI_2,
-        );
-        let step = Motor::rotation_about(
-            Point::direction(0.0, 0.0, 1.0),
-            core::f32::consts::TAU / N as f32,
-        );
+        let tilt =
+            about_axis(0.15 * time) * Motor::rotation_about(Point::direction(1.0, 0.0, 0.0), 1.25);
+        let quarter = about_axis(core::f32::consts::FRAC_PI_2);
+        let step = about_axis(core::f32::consts::TAU / N as f32);
         for (k, r) in [1.9f32, 2.5, 3.2].into_iter().enumerate() {
             let heat = 1.0 - 0.3 * k as f32;
             let base = (c.whitened(0.55 * heat)).faded(heat);
             let spin = time * (2.4 - 0.6 * k as f32);
-            let mut radial = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), spin)
-                >> dir(r * grow, 0.0, 0.0);
-            for _ in 0..N {
-                let next = step >> radial;
+            let radial = about_axis(spin) >> dir(r * grow, 0.0, 0.0);
+            for (radial, next) in orbit(radial, N, step) {
                 let a = q + (tilt >> radial);
                 let b = q + (tilt >> next);
-                let orbit = tilt >> (quarter >> radial);
-                let z = -0.55 * cosine(orbit, eye - a);
+                let velocity = tilt >> (quarter >> radial);
+                let z = -0.55 * cosine(velocity, eye - a);
                 let (a, b) = (view.of(a), view.of(b));
                 p.cam_line(out, a, b, light::redshift(base, z), 0.05, Fog::Objects);
-                radial = next;
             }
         }
         let rim = (c.whitened(0.75)).faded(1.3);
@@ -579,7 +562,7 @@ impl<'a> Sight<'a> {
     fn draw_bolts_shards_shots(&self, out: &mut Vec<LineInstance>) {
         let (p, w, time) = (self.p, self.w, self.time);
         let s_ship = arc(self.ship);
-        let spin = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), time * 9.0);
+        let spin = about_axis(time * 9.0);
         for b in &w.bolts {
             let q = lerp(b.prev, b.pos, self.alpha);
             let bolt = tint(BOLT, self.shift(q));
@@ -644,7 +627,7 @@ impl<'a> Sight<'a> {
         });
         // Banking into the movement across the tunnel.
         let sideways = (ship.pos - ship.prev).e032() / DT / 12.0;
-        let pose = Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), roll - 0.25 * sideways);
+        let pose = about_axis(roll - 0.25 * sideways);
         p.solid(out, &self.object(q, pose), &SHIP, 0.7, c);
         self.draw_shadow(q, out);
     }
@@ -681,19 +664,15 @@ impl<'a> Sight<'a> {
         out: &mut Vec<LineInstance>,
     ) {
         let (p, w) = (self.p, self.w);
-        let hud = palette::HUD;
-        let style = [0.05, 0.25, 0.3, 0.0];
+        let (hud, still) = (palette::HUD, Pose::identity());
+        let style = Stroke::new(0.05, 0.25, 0.3);
         // Four arms: a short segment turned a quarter at a time about the reticle.
         let o = reticle;
-        let quarter = gax::pga2d::Motor::rotation(o, core::f32::consts::FRAC_PI_2);
-        let (mut a, mut b) = (
+        let (a, b) = (
             o + Point2::direction(0.35, 0.0),
             o + Point2::direction(0.7, 0.0),
         );
-        for _ in 0..4 {
-            out.push(scene::seg(a, b, hud, style, identity()));
-            (a, b) = (quarter >> a, quarter >> b);
-        }
+        out.extend(quarters(o).map(|q| scene::seg(q >> a, q >> b, hud, style, still)));
         let Some(e) = lock.and_then(|id| w.enemies.iter().find(|e| e.id == id)) else {
             return;
         };
@@ -703,20 +682,17 @@ impl<'a> Sight<'a> {
         let centre = p.screen(c);
         let r = 1.0 + 0.1 * crate::signal::wave(self.time * 10.0);
         let lock = light::light(1.0, 0.9, 0.5, 2.0);
-        let st = [0.05, 0.2, 0.3, 0.0];
+        let st = Stroke::new(0.05, 0.2, 0.3);
         // Four corner brackets, each a turn of the first.
-        let quarter = gax::pga2d::Motor::rotation(centre, core::f32::consts::FRAC_PI_2);
-        let corner = centre + Point2::direction(r, r);
-        let (mut k, mut u, mut v) = (
-            corner,
-            corner - Point2::direction(0.4, 0.0),
-            corner - Point2::direction(0.0, 0.4),
+        let k = centre + Point2::direction(r, r);
+        let (u, v) = (
+            k - Point2::direction(0.4, 0.0),
+            k - Point2::direction(0.0, 0.4),
         );
-        for _ in 0..4 {
-            out.push(scene::seg(k, u, lock, st, identity()));
-            out.push(scene::seg(k, v, lock, st, identity()));
-            (k, u, v) = (quarter >> k, quarter >> u, quarter >> v);
-        }
+        out.extend(
+            quarters(centre)
+                .flat_map(|q| [u, v].map(|end| scene::seg(q >> k, q >> end, lock, st, still))),
+        );
         // Lead: where the enemy will be when the shots cross its depth.
         if let Some(lc) = p.camera(self.place(w.lead(e))) {
             let d = p.screen(lc);
@@ -724,7 +700,8 @@ impl<'a> Sight<'a> {
                 d - Point2::direction(0.12, 0.0),
                 d + Point2::direction(0.12, 0.0),
             );
-            out.push(scene::seg(a, b, lock, [0.12, 0.3, 0.4, 0.0], identity()));
+            let dot = Stroke::new(0.12, 0.3, 0.4);
+            out.push(scene::seg(a, b, lock, dot, still));
         }
     }
 
@@ -740,6 +717,11 @@ impl<'a> Sight<'a> {
             }
         }
     }
+}
+
+/// The four quarter turns about the screen point `o`, from none.
+fn quarters(o: Point2<(), f32>) -> impl Iterator<Item = gax::Unit<gax::pga2d::Motor<(), f32>>> {
+    (0..4).map(move |k| gax::pga2d::Motor::rotation(o, k as f32 * core::f32::consts::FRAC_PI_2))
 }
 
 #[cfg(test)]
@@ -783,7 +765,7 @@ pub(crate) mod tests {
         let edge = crate::tunnel::around(crate::tunnel::SHIP_RADIUS, 0.0, s);
         let c = p.camera(w.track.place(edge)).expect("in front");
         let centre = p.camera(w.track.place(at(0.0, 0.0, s))).expect("in front");
-        let r = (p.screen(c) & p.screen(centre)).norm();
+        let r = p.screen(c).distance(p.screen(centre));
         assert!(r > 10.0, "the cross-section is {r} of 18 units");
     }
 
@@ -813,9 +795,7 @@ pub(crate) mod tests {
                 target = next;
                 // The view direction moves by a small angle per frame.
                 let f = |m: Frame| m >> dir(0.0, 0.0, 1.0);
-                let (a, b) = (f(before), f(v.cam));
-                let cos = (a.e032() * b.e032() + a.e013() * b.e013() + a.e021() * b.e021())
-                    / (a.ideal_norm() * b.ideal_norm());
+                let cos = cosine(f(before), f(v.cam));
                 assert!(
                     cos > 0.999,
                     "seed {seed}, tick {t}: the camera swung ({cos})"

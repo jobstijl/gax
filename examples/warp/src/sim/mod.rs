@@ -46,13 +46,13 @@ pub const ARENA: [f32; 2] = [32.0, 18.0];
 pub const SAFE_RADIUS: f32 = 7.0;
 
 /// The point `(x, y)`.
-pub fn at(x: f32, y: f32) -> P {
-    Point::xy(x, y)
+pub const fn at(x: f32, y: f32) -> P {
+    Point::new(x, y, 1.0)
 }
 
 /// The direction `(x, y)`.
-pub fn dir(x: f32, y: f32) -> P {
-    Point::direction(x, y)
+pub const fn dir(x: f32, y: f32) -> P {
+    Point::new(x, y, 0.0)
 }
 
 /// One tick's input, in gax types (see `input.rs`, the only boundary with Bevy's vectors).
@@ -71,8 +71,8 @@ pub struct Input {
 impl Default for Input {
     fn default() -> Input {
         Input {
-            movement: dir(0.0, 0.0),
-            aim: dir(0.0, 0.0),
+            movement: P::zero(),
+            aim: P::zero(),
             fire: false,
             bomb: false,
         }
@@ -133,6 +133,19 @@ pub enum Phase {
     Dead(f32),
     /// No lives left.
     Over,
+}
+
+impl Phase {
+    /// A tick of a death's countdown: whether it has run out (time to respawn).
+    pub fn count_down(&mut self) -> bool {
+        match self {
+            Phase::Dead(t) => {
+                *t -= DT;
+                *t <= 0.0
+            }
+            _ => false,
+        }
+    }
 }
 
 /// The whole simulation state.
@@ -201,22 +214,14 @@ impl World {
         self.tick += 1;
         self.time += DT;
         self.find_wells();
-        match self.phase {
-            Phase::Over => {
-                // The run is over: the enemies wander on, the shards drift away.
-                self.step_enemies();
-                self.step_shards();
-                return;
-            }
-            Phase::Dead(t) => {
-                let t = t - DT;
-                if t <= 0.0 {
-                    self.respawn();
-                } else {
-                    self.phase = Phase::Dead(t);
-                }
-            }
-            Phase::Playing => {}
+        if self.phase == Phase::Over {
+            // The run is over: the enemies wander on, the shards drift away.
+            self.step_enemies();
+            self.step_shards();
+            return;
+        }
+        if self.phase.count_down() {
+            self.respawn();
         }
         if self.phase == Phase::Playing {
             self.steer_ship(input);

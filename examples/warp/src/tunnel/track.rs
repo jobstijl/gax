@@ -7,6 +7,7 @@
 //! Gameplay lives in *straightened* coordinates `(x, y, s)`: across the tunnel and along it.
 //! `M(s) >> (x, y, 0)` is the world point. Forward is the frame's `+z`.
 
+use crate::geom::ORIGIN3;
 use crate::sim::rng::Rng;
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Point, Twist};
@@ -50,7 +51,7 @@ impl Track {
         let mut t = Track {
             rng: Rng::new(seed ^ 0x7ac0),
             segments: Vec::new(),
-            end: Motor::translation(Point::direction(0.0, 0.0, 0.0)),
+            end: Frame::identity(),
             first: 0,
             pitch: 0.0,
             yaw: 0.0,
@@ -66,7 +67,7 @@ impl Track {
     /// The twist of a segment: forward at unit speed, with the given rotation rates about the
     /// frame's own axes (the body frame, so it multiplies on the right).
     pub fn twist(pitch: f32, yaw: f32, roll: f32) -> Line<(), f32> {
-        let o = Point::xyz(0.0, 0.0, 0.0);
+        let o = ORIGIN3;
         Twist::translation(Point::direction(0.0, 0.0, 1.0))
             + Twist::rotation(o & Point::direction(1.0, 0.0, 0.0), pitch)
             + Twist::rotation(o & Point::direction(0.0, 1.0, 0.0), yaw)
@@ -82,8 +83,10 @@ impl Track {
         let up = last << Point::direction(0.0, 1.0, 0.0);
         let (ux, uy, uz) = (up.e032(), up.e013(), up.e021());
         let across = Point::direction(ux, uy, 0.0).ideal_norm().max(1e-3);
-        let o = Point::xyz(0.0, 0.0, 0.0);
-        let level = Twist::rotation(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
+        let level = Twist::rotation(
+            ORIGIN3 & Point::direction(-uy, ux, 0.0),
+            -0.05 * uz / across,
+        );
         let twist = Track::twist(pitch, yaw, roll) + level;
         self.segments.push(Segment { start: last, twist });
         self.end = last.mul_renormalized((twist * SEG).exp());
@@ -152,10 +155,6 @@ impl Track {
 mod tests {
     use super::*;
 
-    fn dist(a: Point<(), f32>, b: Point<(), f32>) -> f32 {
-        (a & b).norm()
-    }
-
     fn on_axis(t: &Track, s: f32) -> Point<(), f32> {
         t.place(Point::xyz(0.0, 0.0, s))
     }
@@ -172,7 +171,7 @@ mod tests {
         while s < 2000.0 {
             let a = on_axis(&t, s);
             let b = on_axis(&t, s + ds);
-            let d = dist(a, b);
+            let d = a.distance(b);
             assert!((d - ds).abs() < 2e-3, "at {s}: {d}");
             // The forward axis is the direction of travel: the line from `a` towards it
             // passes through `b`.
@@ -198,7 +197,10 @@ mod tests {
                 let s = (t.first + i) as f32 * SEG + u * SEG;
                 let p = Point::xyz(1.5, -2.0, 0.5);
                 let expect = Motor::interpolate(a, b, u).renormalize_fast() >> p;
-                assert!(dist(t.frame(s) >> p, expect) < 2e-4, "segment {i} at {u}");
+                assert!(
+                    (t.frame(s) >> p).distance(expect) < 2e-4,
+                    "segment {i} at {u}"
+                );
             }
         }
     }
@@ -209,7 +211,7 @@ mod tests {
         let m = (Track::twist(0.0, 0.1, 0.0) * 5.0).exp();
         let up = (m >> Point::direction(0.0, 1.0, 0.0)).e013();
         assert!((up - 1.0).abs() < 1e-5);
-        let p = (m >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean();
+        let p = (m >> ORIGIN3).to_euclidean();
         assert!(p[1].abs() < 1e-5 && p[0] > 0.1 && p[2] > 4.0, "{p:?}");
     }
 
@@ -220,7 +222,7 @@ mod tests {
         let p = Point::xyz(1.0, -2.0, 420.0);
         let at = t.place(p);
         t.extend(600.0, 400.0);
-        assert!(dist(at, t.place(p)) < 1e-4);
+        assert!(at.distance(t.place(p)) < 1e-4);
     }
 
     /// Straightening undoes placing, near the track.
@@ -231,7 +233,7 @@ mod tests {
         for k in 0..40 {
             let p = Point::xyz(2.0, -3.0, 13.0 + 17.0 * k as f32);
             let back = t.straighten(t.place(p), 13.0 + 17.0 * k as f32 - 2.5);
-            assert!(dist(back, p) < 2e-3, "{:?}", back.to_euclidean());
+            assert!(back.distance(p) < 2e-3, "{:?}", back.to_euclidean());
         }
     }
 }

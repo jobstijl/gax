@@ -32,9 +32,10 @@ pub mod track;
 mod wells;
 
 pub use entities::{Enemy, Event, Flight, Foe, Gate, GateState, Pending, Roll, Shard, Ship, Shot};
-pub use space::{P, about_axis, arc, around, at, dir, foot, off_axis};
+pub use space::{P, about_axis, across, arc, around, at, dir, foot, off_axis};
 pub use wells::{PINCH, PINCH_REACH2, Wells};
 
+use crate::geom::clamp_length;
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Ledger, Phase};
 use lattice::{Lattice, Source};
@@ -77,7 +78,7 @@ pub struct Input {
 impl Default for Input {
     fn default() -> Input {
         Input {
-            movement: dir(0.0, 0.0, 0.0),
+            movement: P::zero(),
             aim: at(0.0, 0.0, AIM_DEPTH),
             fire: false,
             bomb: false,
@@ -214,12 +215,8 @@ impl World {
         self.time += DT;
         let alive = self.phase == Phase::Playing;
         let wells = self.wells();
-        if let Phase::Dead(t) = self.phase {
-            if t - DT <= 0.0 {
-                self.respawn();
-            } else {
-                self.phase = Phase::Dead(t - DT);
-            }
+        if self.phase.count_down() {
+            self.respawn();
         }
         if self.phase != Phase::Over {
             self.fly(input, alive, &wells);
@@ -251,10 +248,7 @@ impl World {
     fn fly(&mut self, input: &Input, alive: bool, wells: &Wells) {
         // A singularity pulls the ship across the tunnel (not along it), capped so that it can
         // always be flown out of; and where it pinches the wall, the ship must stay further in.
-        let pull = wells.pull(self.ship.pos, 30.0);
-        let pull = dir(pull.e032(), pull.e013(), 0.0);
-        let n = pull.ideal_norm();
-        let pull = if n > 7.0 { pull * (7.0 / n) } else { pull };
+        let pull = clamp_length(across(wells.pull(self.ship.pos, 30.0)), 7.0);
         let limit = self.ship_radius(self.ship.s() + self.ship.speed * DT);
         let ship = &mut self.ship;
         ship.prev = ship.pos;
@@ -266,7 +260,7 @@ impl World {
         let across = if alive {
             input.movement * 12.0 + pull
         } else {
-            dir(0.0, 0.0, 0.0)
+            P::zero()
         };
         let mut pos = ship.pos + (across + dir(0.0, 0.0, ship.speed)) * DT;
         // A barrel roll: a rotation about the tunnel's axis, spread over its duration.
@@ -314,8 +308,8 @@ impl World {
             if arc(b) < arc(g.pos) {
                 continue;
             }
-            let meet = ((a & b) ^ g.plane()).unitized();
-            let through = alive && (meet & g.pos).norm() < GATE_RADIUS;
+            let meet = (a & b) ^ g.plane();
+            let through = alive && meet.distance(g.pos) < GATE_RADIUS;
             g.state = if through {
                 GateState::Passed
             } else {
@@ -366,11 +360,12 @@ impl World {
             }
             sh.life > 0.0 && arc(sh.pos) > arc(ship) - 4.0
         });
-        for _ in 0..got {
-            let mult = self.ledger.raise();
-            let pos = self.ship.pos;
-            self.events.push(Event::Pickup { pos, mult });
-        }
+        let pos = self.ship.pos;
+        let pickups = (0..got).map(|_| Event::Pickup {
+            pos,
+            mult: self.ledger.raise(),
+        });
+        self.events.extend(pickups);
     }
 
     /// The wall's tick: it scrolls with the ship, and the blasts, the singularities' pinch and
@@ -419,7 +414,7 @@ pub(crate) mod tests {
 
     /// Whether two points (of weight 1) are within `1e-3`.
     pub(crate) fn close(a: P, b: P) -> bool {
-        (a & b).norm() < 1e-3
+        a.distance(b) < 1e-3
     }
 
     /// A bot's aim: the nearest enemy more than 5 ahead, or straight down the tunnel.
@@ -430,16 +425,8 @@ pub(crate) mod tests {
 
     /// An enemy put down at `pos`, holding there (a serpent with its body): its index.
     pub(crate) fn spawn(w: &mut World, foe: Foe, pos: P) -> usize {
-        let id = w.next_id;
-        w.next_id += 1;
-        let (swim, body) = if foe == Foe::Serpent {
-            w.serpent(pos)
-        } else {
-            (
-                gax::pga3d::Motor::translation(gax::pga3d::Point::direction(0.0, 0.0, 0.0)),
-                Vec::new(),
-            )
-        };
+        let id = w.next_id();
+        let (swim, body) = w.swim(foe, pos);
         w.enemies.push(Enemy {
             age: 1.0,
             orbit: off_axis(pos),

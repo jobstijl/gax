@@ -1,10 +1,9 @@
 //! Gravity wells: singularities pull shots, enemies, the grid and the particles with an
 //! inverse-square law, eat what falls in, and burst when overfed.
 
-use super::body::distance;
 use super::kind::Kind;
-use super::{Event, P, World, dir};
-use crate::geom::length_cubed;
+use super::{Event, P, World};
+use crate::geom::inverse_square;
 
 /// A gravity well: a singularity, as the shots, the enemies, the lattice and the particles
 /// feel it.
@@ -25,6 +24,13 @@ impl World {
             pos: e.body.pos(),
             strength: 18.0 + 6.0 * e.mass,
         }));
+    }
+
+    /// How near the ship is to a singularity, `0..1` (the music darkens with it).
+    pub fn darkness(&self) -> f32 {
+        let ship = self.ship.body.pos();
+        let near = |well: &Well| (1.0 - well.pos.distance(ship) / 14.0).clamp(0.0, 1.0);
+        self.wells.iter().map(near).fold(0.0, f32::max)
     }
 
     /// The acceleration the wells give a body at `p`, times `scale`.
@@ -65,7 +71,7 @@ impl World {
             if e.dead
                 || !e.kind.stats().edible
                 || e.age <= 0.3
-                || distance(e.body.pos(), at) >= reach
+                || e.body.pos().distance(at) >= reach
             {
                 continue;
             }
@@ -82,22 +88,21 @@ impl World {
 /// The pull of `wells` on a body at `p`: `k s d / (|d|² + r²)^(3/2)` towards each, an
 /// inverse square with a softened core.
 pub fn pull(wells: &[Well], p: P, k: f32) -> P {
-    wells.iter().fold(dir(0.0, 0.0), |acc, w| {
-        let d = w.pos - p;
-        acc + d * (k * w.strength / length_cubed(d.ideal_norm_squared() + 1.5))
+    wells.iter().fold(P::zero(), |acc, w| {
+        acc + inverse_square(w.pos - p, k * w.strength, 1.5)
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Bullet, Input, at};
+    use super::super::{Bullet, Input, at, dir};
     use super::*;
 
     #[test]
     fn singularities_bend_shots_and_eat_enemies() {
         let mut w = World::new(3);
         w.director.enabled = false;
-        w.spawn(Kind::Singularity, at(0.0, 6.0)).intent = dir(0.0, 0.0);
+        w.spawn(Kind::Singularity, at(0.0, 6.0)).intent = P::zero();
         // A shot passing beside the well curves towards it.
         w.bullets.push(Bullet {
             pos: at(-20.0, 3.5),

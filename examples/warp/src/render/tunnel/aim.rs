@@ -4,6 +4,7 @@
 
 use super::View;
 use super::proj::{CamMap, SECTION};
+use crate::geom::{ORIGIN, ORIGIN3};
 use crate::tunnel::{AIM_DEPTH, LOCK_AHEAD, P, World, arc, dir};
 use gax::pga2d::Point as Point2;
 use gax::pga3d::Point;
@@ -18,7 +19,7 @@ impl View {
         self.lock = w
             .enemies
             .iter()
-            .find(|e| (e.pos & aim).norm() < 0.5)
+            .find(|e| e.pos.distance(aim) < 0.5)
             .map(|e| e.id);
     }
 
@@ -39,7 +40,7 @@ impl View {
                 let on_screen = p.lensed(c);
                 // Within reach on screen: a margin plus the enemy's own apparent size.
                 let reach = self.settings.assist + e.radius() * p.focal / p.depth(c);
-                let d = (on_screen & reticle).norm();
+                let d = on_screen.distance(reticle);
                 (d < reach).then_some((e, d))
             })
             .min_by(|a, b| a.1.total_cmp(&b.1));
@@ -70,10 +71,10 @@ impl View {
     pub fn across(&self, w: &World, v: Point2<(), f32>) -> P {
         let p = &self.proj;
         let Some(c) = p.camera(w.track.place(w.ship.pos)) else {
-            return dir(0.0, 0.0, 0.0);
+            return P::zero();
         };
         let cam = w.track.frame(w.ship.s()).reverse() * p.cam;
-        let eye = cam >> Point::xyz(0.0, 0.0, 0.0);
+        let eye = cam >> ORIGIN3;
         let hit: CamMap = (eye & (cam >> Point::slot())) ^ SECTION;
         let z = c.e021();
         let (a, b) = (
@@ -84,7 +85,7 @@ impl View {
         let d = dir(d.e032(), d.e013(), 0.0);
         let n = d.ideal_norm();
         if n < 1e-6 {
-            dir(0.0, 0.0, 0.0)
+            P::zero()
         } else {
             d * (v.ideal_norm().min(1.0) / n)
         }
@@ -107,7 +108,7 @@ impl View {
     pub fn ship_on_screen(&self, w: &World) -> Point2<(), f32> {
         let p = &self.proj;
         p.camera(w.track.place(w.ship.pos))
-            .map_or(Point2::xy(0.0, 0.0), |c| p.screen(c))
+            .map_or(ORIGIN, |c| p.screen(c))
     }
 }
 
@@ -139,11 +140,7 @@ mod tests {
         let q = v.through(&w, at_screen, s);
         assert!((arc(q) - s).abs() < 0.05, "{} vs {s}", arc(q));
         let back = p.screen(p.camera(w.track.place(q)).unwrap());
-        assert!(
-            (back & at_screen).norm() < 0.05,
-            "{:?}",
-            back.to_euclidean()
-        );
+        assert!(back.distance(at_screen) < 0.05, "{:?}", back.to_euclidean());
     }
 
     /// The reticle locks onto the enemy under it, at any depth, and the aim is that enemy.
@@ -161,6 +158,6 @@ mod tests {
         let on_screen = p.screen(p.camera(w.track.place(e.pos)).unwrap());
         let aim = v.aim(&w, on_screen + Point2::direction(0.08, -0.05));
         assert_eq!(v.lock, Some(e.id));
-        assert!((aim & e.pos).norm() < 1e-4);
+        assert!(aim.distance(e.pos) < 1e-4);
     }
 }

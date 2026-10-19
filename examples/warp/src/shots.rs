@@ -199,7 +199,7 @@ fn singularity(cam: &mut Camera, mut g: Game) {
     w.ship.body.shift(sim::dir(-20.0, -10.0));
     w.spawn(sim::Kind::Singularity, sim::at(0.0, 0.0));
     for _ in 0..120 {
-        plane(&mut g).enemies[0].intent = Point::direction(0.0, 0.0);
+        plane(&mut g).enemies[0].intent = Point::zero();
         cam.frame(&mut g, sim::Input::default());
     }
     cam.save("singularity.png");
@@ -330,7 +330,7 @@ fn roster(cam: &mut Camera, mut g: Game) {
     for e in w.enemies.iter_mut().filter(|e| e.kind == Warden) {
         let here = e.body.pos();
         let facing = Point::direction(1.0, 0.0).angle_to(sim::at(0.0, -9.0) - here);
-        e.body = sim::body::Body::new(sim::body::place(here, facing));
+        e.body = sim::body::Body::new(sim::body::pose_at(here, facing));
     }
     // Pinned in place (the serpent's chain still winds), so every shape is seen whole.
     let poses: Vec<_> = w.enemies.iter().map(|e| (e.id, e.body.pose)).collect();

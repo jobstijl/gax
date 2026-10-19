@@ -1,7 +1,8 @@
 //! Kernels written once and traced at build time (`build.rs`) into fused Rust functions (with
 //! SIMD batch forms) and WGSL functions: the GPU runs them in its shaders, and the tests run the
 //! same programs on the CPU as the GPU's oracle (`render/cpu_grid.rs`). The simulation calls
-//! `segment_distance` for its collisions.
+//! the generic `segment_distance` (on `f32`) for its collisions, and the game `wave` for its
+//! oscillations.
 //!
 //! Points are PGA2D points: a finite point is `(x, y, 1)`, a direction (a velocity, a force)
 //! a point at infinity `(x, y, 0)`. The difference of two finite points is the direction
@@ -83,24 +84,24 @@ pub fn particle_step<T: Real>(
 
 /// A corner of the quad drawn around the segment `a → b` (the line renderer's vertex shader):
 /// `k` is `[along, side, extent]`, with `along` and `side` in `{-1, 1}`. The quad reaches
-/// `extent` past both ends and to both sides. The side direction is the segment's direction
-/// turned a quarter about the origin; a degenerate segment points along `x`.
+/// `extent` past both ends and to both sides. The directions are the line `a & b`'s: along it
+/// `b - a`, and its normal, that turned a quarter counterclockwise; a degenerate segment points
+/// along `x`.
 pub fn segment_corner<T: Real>(a: Point<(), T>, b: Point<(), T>, k: [T; 3]) -> Point<(), T> {
     let [along, side, extent] = k;
     let (zero, one) = (T::zero(), T::one());
-    let d = b - a;
-    let len = d.ideal_norm();
-    let u = gax::select_lt(
-        len,
-        T::from_f64(1e-6),
-        Point::direction(one, zero),
-        d * (one / (len + T::from_f64(1e-30))),
-    );
-    let quarter = gax::pga2d::Motor::rotation(
-        Point::xy(zero, zero),
-        T::from_f64(core::f64::consts::FRAC_PI_2),
-    );
-    let n = quarter >> u;
+    let l = a & b;
+    let len = l.norm();
+    let degenerate = |fallback, d: Point<(), T>| {
+        gax::select_lt(
+            len,
+            T::from_f64(1e-6),
+            fallback,
+            d * (one / (len + T::from_f64(1e-30))),
+        )
+    };
+    let u = degenerate(Point::direction(one, zero), l.direction());
+    let n = degenerate(Point::direction(zero, one), l.normal());
     let reach = T::select_lt(along, zero, -extent, len + extent);
     a + u * reach + n * (side * extent)
 }
@@ -168,16 +169,25 @@ pub fn distance<T: Real>(a: Point<(), T>, b: Point<(), T>) -> T {
     (a & b).norm()
 }
 
-/// A phasor's height: `(1, 0)` turned by `phase` (a sine in time).
+/// The height of the unit phasor at `phase` from `(1, 0)`: a sine wave in time.
 pub fn wave<T: Real>(phase: T) -> T {
-    let o = Point::xy(T::zero(), T::zero());
-    (gax::pga2d::Motor::rotation(o, phase) >> Point::direction(T::one(), T::zero())).e01()
+    Point::direction_from_angle(phase).e01()
 }
 
 #[cfg(test)]
 mod tests {
     use crate::sim::rng::Rng;
     use gax::pga2d::Point;
+
+    /// Two numbers equal to within rounding.
+    fn close(x: f32, y: f32) -> bool {
+        (x - y).abs() <= 1e-4 * (1.0 + y.abs())
+    }
+
+    /// Two coefficient arrays equal to within rounding.
+    fn same(a: &[f32], b: &[f32]) -> bool {
+        a.iter().zip(b).all(|(&x, &y)| close(x, y))
+    }
 
     /// The traced kernels equal the code they were traced from.
     #[test]
@@ -194,45 +204,47 @@ mod tests {
                 crate::grid_node(p, v, rest, n, f, k),
                 crate::kernels::grid_node(p, v, rest, n, f, k),
             );
-            for (x, y) in a.0.c.iter().zip(&b.0.c).chain(a.1.c.iter().zip(&b.1.c)) {
-                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()), "{x} {y}");
-            }
+            assert!(same(&a.0.c, &b.0.c) && same(&a.1.c, &b.1.c), "{a:?} {b:?}");
             let (a, b) = (
                 crate::particle_step(p, v, f, [2.0, crate::sim::DT]),
                 crate::kernels::particle_step(p, v, f, [2.0, crate::sim::DT]),
             );
-            for (x, y) in a.0.c.iter().zip(&b.0.c).chain(a.1.c.iter().zip(&b.1.c)) {
-                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
+            assert!(same(&a.0.c, &b.0.c) && same(&a.1.c, &b.1.c));
+            let pairs = [
+                (
+                    crate::source_force(p, s, [-40.0, 2.0]),
+                    crate::kernels::source_force(p, s, [-40.0, 2.0]),
+                ),
+                (
+                    crate::add_source_force(f, p, s, [60.0, 2.0]),
+                    crate::kernels::add_source_force(f, p, s, [60.0, 2.0]),
+                ),
+                (
+                    crate::lattice_rest(rest, [7.0, 3.0, 0.5]),
+                    crate::kernels::lattice_rest(rest, [7.0, 3.0, 0.5]),
+                ),
+                // The line renderer's geometry, a streak, and post-processing: the ripple and
+                // edge scaling.
+                (
+                    crate::segment_corner(p, rest, [1.0, -1.0, 0.3]),
+                    crate::kernels::segment_corner(p, rest, [1.0, -1.0, 0.3]),
+                ),
+                (
+                    crate::streak_tail(p, v, 0.03),
+                    crate::kernels::streak_tail(p, v, 0.03),
+                ),
+                (
+                    crate::ripple(p, s, [0.3, 0.05]),
+                    crate::kernels::ripple(p, s, [0.3, 0.05]),
+                ),
+                (
+                    crate::scale_about(p, s, 0.9),
+                    crate::kernels::scale_about(p, s, 0.9),
+                ),
+            ];
+            for (a, b) in pairs {
+                assert!(same(&a.c, &b.c), "{a:?} {b:?}");
             }
-            let (a, b) = (
-                crate::source_force(p, s, [-40.0, 2.0]),
-                crate::kernels::source_force(p, s, [-40.0, 2.0]),
-            );
-            for (x, y) in a.c.iter().zip(&b.c) {
-                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
-            }
-            let (a, b) = (
-                crate::add_source_force(f, p, s, [60.0, 2.0]),
-                crate::kernels::add_source_force(f, p, s, [60.0, 2.0]),
-            );
-            for (x, y) in a.c.iter().zip(&b.c) {
-                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
-            }
-            let (a, b) = (
-                crate::lattice_rest(rest, [7.0, 3.0, 0.5]),
-                crate::kernels::lattice_rest(rest, [7.0, 3.0, 0.5]),
-            );
-            for (x, y) in a.c.iter().zip(&b.c) {
-                assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
-            }
-            // The line renderer's geometry, the lattice's heat, and the light kernels.
-            let close = |x: f32, y: f32| (x - y).abs() <= 1e-4 * (1.0 + y.abs());
-            let k = [1.0, -1.0, 0.3];
-            let (a, b) = (
-                crate::segment_corner(p, rest, k),
-                crate::kernels::segment_corner(p, rest, k),
-            );
-            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
             assert!(close(
                 crate::segment_distance(p, rest, s),
                 crate::kernels::segment_distance(p, rest, s)
@@ -242,11 +254,6 @@ mod tests {
                 crate::edge_heat(p, rest, v, f, k),
                 crate::kernels::edge_heat(p, rest, v, f, k)
             ));
-            let (a, b) = (
-                crate::streak_tail(p, v, 0.03),
-                crate::kernels::streak_tail(p, v, 0.03),
-            );
-            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
             // The traced kernels work on the lights' bare points.
             let l1 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 2.0).point();
             let l2 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 0.5).point();
@@ -263,26 +270,15 @@ mod tests {
                 (crate::light_fade(l1, t), crate::kernels::light_fade(l1, t)),
             ];
             for (a, b) in pairs {
-                assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+                assert!(same(&a.c, &b.c));
             }
-            // Post-processing: luminance, the tonemapper, the ripple, edge scaling, distance,
-            // the phasor.
+            // Luminance, the tonemapper, distance, the phasor.
             assert!(close(crate::luma(l1), crate::kernels::luma(l1)));
             let (a, b) = (crate::agx(l1, 1.35), crate::kernels::agx(l1, 1.35));
             assert!(
                 a.c.iter().zip(&b.c).all(|(x, y)| (x - y).abs() < 1e-3),
                 "{a:?} {b:?}"
             );
-            let (a, b) = (
-                crate::ripple(p, s, [0.3, 0.05]),
-                crate::kernels::ripple(p, s, [0.3, 0.05]),
-            );
-            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
-            let (a, b) = (
-                crate::scale_about(p, s, 0.9),
-                crate::kernels::scale_about(p, s, 0.9),
-            );
-            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
             assert!(close(crate::distance(p, s), crate::kernels::distance(p, s)));
             assert!(close(crate::wave(t * 7.0), crate::kernels::wave(t * 7.0)));
         }
@@ -311,7 +307,7 @@ mod tests {
             Point::xy(1.0, 1.5),
             Point::xy(1.0, 2.5),
         ];
-        let zero = Point::direction(0.0, 0.0);
+        let zero = Point::zero();
         let (q, v) = super::grid_node(p, zero, p, n, zero, [95.0, 5.0, 4.5, crate::sim::DT]);
         assert_eq!((q, v), (p, zero));
     }

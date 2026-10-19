@@ -12,10 +12,11 @@
 //! the kicks' momenta cancel (the centroid is the area-weighted mean of the pieces'), and being
 //! radial they add no angular momentum, so the pieces carry the body's motion on.
 
+use crate::geom::{ORIGIN, orbit};
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
 use crate::render::{GridSteps, Particle, PostSettings, Shock, Source};
-use crate::sim::body::{Body, ORIGIN, Pose, pose_at, turned};
+use crate::sim::body::{Body, Pose, turned};
 use crate::sim::rng::Rng;
 use crate::sim::{ARENA, Event, Kind, World, Wreck};
 use gax::pga2d::{Moments, Motor, Point, Twist};
@@ -47,13 +48,13 @@ pub fn shatter(hull: &[P], wreck: &Wreck, kick: f32) -> Vec<(Body, [P; 3])> {
         .map(|&p| crate::render::scene::scaled(p, r))
         .collect();
     let g = Moments::of_polygon(&pts).centroid();
-    (0..pts.len())
-        .map(|i| {
-            let tri = [g, pts[i], pts[(i + 1) % pts.len()]];
-            let c = Moments::of_polygon(&tri).centroid();
-            let [cx, cy] = c.to_euclidean();
-            let local = Motor::translation(Point::direction(-cx, -cy));
-            let pose = wreck.body.pose * Motor::translation(Point::direction(cx, cy));
+    pts.iter()
+        .zip(pts.iter().cycle().skip(1))
+        .map(|(&a, &b)| {
+            let tri = [g, a, b];
+            let c = Moments::of_polygon(&tri).centroid().position();
+            let local = Motor::translation(ORIGIN - c);
+            let pose = wreck.body.pose * Motor::translation(c - ORIGIN);
             // The body's velocity at the piece's centroid, then the kick, along the offset from
             // the centre of area.
             let mut body = Body::new(pose);
@@ -124,7 +125,7 @@ impl Fx {
     /// Effects at rest.
     pub fn new() -> Fx {
         Fx {
-            cam: pose_at(0.0, 0.0, 0.0),
+            cam: Pose::identity(),
             cam_vel: Twist::zero(),
             shake: 0.0,
             rng: Rng::new(0xf00d),
@@ -315,14 +316,11 @@ impl Fx {
                     // A ring of light: one spark every 1/2400 of a turn.
                     let p = pos;
                     let c = light::light(0.55, 0.8, 1.0, 3.5 * (0.35 + 0.65 * self.flash_scale));
-                    let step =
-                        Motor::rotation(Point::xy(0.0, 0.0), core::f32::consts::TAU / 2400.0);
-                    let mut dir = Point::direction(1.0, 0.0);
-                    for _ in 0..2400 {
+                    let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / 2400.0);
+                    for (dir, _) in orbit(Point::direction(1.0, 0.0), 2400, step) {
                         let v = dir * self.rng.range(28.0, 42.0);
                         let life = [0.0, self.rng.range(0.8, 1.3), 1.2, 0.03];
                         self.particle(p, v, c, life);
-                        dir = step >> dir;
                     }
                     self.blast(p, -2600.0, 60.0, 0.35);
                     self.shake = 1.2;
@@ -330,9 +328,8 @@ impl Fx {
                     self.shock = Some((p, 0.0));
                 }
                 Event::Respawn => {
-                    let o = Point::xy(0.0, 0.0);
-                    self.burst(o, palette::SHIP, 200, (2.0, 10.0), (0.3, 0.8), 0.5);
-                    self.blast(o, 450.0, 9.0, 0.25);
+                    self.burst(ORIGIN, palette::SHIP, 200, (2.0, 10.0), (0.3, 0.8), 0.5);
+                    self.blast(ORIGIN, 450.0, 9.0, 0.25);
                 }
                 Event::Extra { .. } | Event::GameOver => {}
             }
@@ -414,10 +411,7 @@ impl Fx {
             let jitter = Twist::translation(Point::direction(
                 self.rng.range(-1.0, 1.0) * a,
                 self.rng.range(-1.0, 1.0) * a,
-            )) + Twist::rotation(
-                self.cam >> Point::xy(0.0, 0.0),
-                self.rng.range(-0.02, 0.02) * a,
-            );
+            )) + Twist::rotation(self.cam >> ORIGIN, self.rng.range(-0.02, 0.02) * a);
             jitter.exp() * self.cam
         } else {
             self.cam
@@ -451,15 +445,16 @@ impl Fx {
 mod tests {
     use super::*;
     use crate::render::scene;
+    use crate::sim::at;
     use crate::sim::body::pose_at;
 
     /// A drifter shot down leaves wreckage, which drifts with it and is gone after its life.
     #[test]
     fn a_kill_leaves_wreckage_that_fades() {
-        use crate::sim::{DT, Input, at, dir};
+        use crate::sim::{DT, Input, dir};
         let mut w = World::new(1);
         w.director.enabled = false;
-        w.spawn(Kind::Drifter, at(8.0, 0.0)).intent = dir(0.0, 0.0);
+        w.spawn(Kind::Drifter, at(8.0, 0.0)).intent = P::zero();
         let mut fx = Fx::new();
         let fire = Input {
             aim: dir(1.0, 0.0),
@@ -479,7 +474,7 @@ mod tests {
             || fx
                 .wreckage
                 .iter()
-                .all(|p| crate::sim::body::distance(p.body.pos(), at(8.0, 0.0)) < 8.0);
+                .all(|p| p.body.pos().distance(at(8.0, 0.0)) < 8.0);
         assert!(near);
         for _ in 0..240 {
             fx.frame(DT);
@@ -498,7 +493,7 @@ mod tests {
     /// and their spins and orbits to its angular momentum, for every family's outline.
     #[test]
     fn wreckage_conserves_momentum() {
-        let mut body = Body::new(pose_at(1.0, 2.0, 0.7));
+        let mut body = Body::new(pose_at(at(1.0, 2.0), 0.7));
         body.vel = Point::direction(3.0, -1.0);
         body.spin = 2.0;
         let wreck = Wreck { body, radius: 1.3 };
@@ -522,7 +517,7 @@ mod tests {
             let whole = wreck.body.pose >> Moments::of_polygon(&pts);
             let (area, g) = (whole.area(), whole.centroid());
             let v_g = wreck.velocity_at(g);
-            let (mut p, mut l, mut a) = (Point::direction(0.0, 0.0), 0.0, 0.0);
+            let (mut p, mut l, mut a) = (P::zero(), 0.0, 0.0);
             for (body, tri) in shatter(&hull, &wreck, 4.0) {
                 let m = Moments::of_polygon(&tri);
                 a += m.area();

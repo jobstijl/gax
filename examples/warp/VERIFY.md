@@ -25,11 +25,11 @@ The only exception is a test that checks a phasor against `sin`.
 |---|---|---|
 | `Unit<Motor>` poses, `exp` of twists, `renormalize_fast` every tick | `sim/body.rs`: every body, `pose ← exp(dt B) pose` | Over a 10-minute integration, `m ~m` stays within `1e-5` (a test); in play, the worst drift per session is below `4e-7` (F3 shows it) |
 | Twists add: translation plus rotation | `Body::twist` | Works as intended, once the twist constructors existed (friction 1) |
-| Motor interpolation, `a exp(t log(~a b))` | drawing between ticks (`Body::lerp`); serpent segments following the one ahead | Every entity, every frame; the serpent keeps its spacing through turns (a test) |
+| Motor interpolation, `a exp(t log(~a b))` | drawing between ticks (`Body::interpolated`); serpent segments following the one ahead | Every entity, every frame; the serpent keeps its spacing through turns (a test) |
 | The signed angle between directions | `Point::angle_to`: steering (chasers, wardens, the ship's nose), and the replays' aim (its angle from `+x`) | Replaces every `atan2` and angle wrap: already in `[-π, π]`, precise to a few ulps even near a half turn (friction 12). The game wrote it as `body::turn` and `body::angle_of` (the angle of `rotation_between`) until gax had it (friction 19) |
 | Directions at an angle, and turns of them | `Point::direction_from_angle` for headings (spawns, particle bursts, rings of motes, the bots), `turned` (a rotation motor) for the barrels' offset and the like | Every `cos`/`sin` pair became a direction or a turn; the game's `body::heading` and `geom::phasor` (a rotation motor on `(1, 0)`) gave way to gax's (friction 19) |
 | Walls as lines | `collide::walls`: the arena's four edges, inside on the positive side | Bounces reflect position and velocity in the wall (`Line::reflect`); the ship stops at its foot `(l \| p) ^ l` and keeps the mean of its velocity and the reflection, the motion along the wall; a shot's wall hit is the meet of its path with the wall |
-| Joins and perpendiculars | `collide`: swept bullets (`a & b`, `l & c`, `l \| c`); `body::distance` | Catches tunnelling (a test) |
+| Joins and perpendiculars | `collide`: swept bullets (`a & b`, `l & c`, `l \| c`) | Catches tunnelling (a test) |
 | Lines of flight | evaders take every shot as the line `p & (p + v)`, and step away from their foot on it | A test fires at an evader and it survives |
 | Reflection in a line | wardens' shields; wall bounces | `Line::reflect`, fixed in gax (friction 7) |
 | Maps: `cam << Point::slot()`, `proj.of(view)`, `GpuMat` | `render/scene.rs`: the view map; screen effects place points through it (`to_uv`) | The view-projection is a gax map, uploaded in the WGSL layout |
@@ -106,8 +106,9 @@ The only exception is a test that checks a phasor against `sin`.
     forces; with springs of a rest length it was 57 mul, 57 add, 4 div, 8 calls);
   * `lattice_rest`: 2 mul, 2 add; `add_source_force`: 10 mul, 10 add, 1 div;
     `source_force`: 10 mul, 7 add, 1 div; `particle_step`: 10 mul, 7 add;
-  * `segment_corner`: 14 mul, 14 add, 1 div, 5 calls (generic: 41 mul, 23 add, 3 div,
-    12 calls; the quarter-turn motor folds away, friction 9);
+  * `segment_corner`: 13 mul, 9 add, 1 div, 6 calls (generic: 18 mul, 11 add, 1 div,
+    7 calls), from the line's direction and normal; with a quarter-turn motor it was 14 mul,
+    14 add, 1 div and 5 calls (the motor folded away, friction 9);
   * `segment_distance`: 35 mul, 19 add, 1 div, 9 calls;
   * `edge_heat`: 13 mul, 7 add, 1 div, 7 calls;
   * the light kernels: 4 to 8 mul; `luma`: 3 mul, 2 add;

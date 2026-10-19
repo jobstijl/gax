@@ -100,7 +100,7 @@ impl Hud<'_> {
     }
 
     fn at(&mut self, s: &str, x: f32, y: f32, size: f32, light: Light, align: Align) {
-        scene::text(self.out, s, scene::pt(x, y), size, light, align);
+        scene::text(self.out, s, sim::at(x, y), size, light, align);
     }
 
     /// A vertical menu of `items` from height `y0`, centred, the selected one marked.
@@ -181,17 +181,17 @@ fn settings(g: &Game, h: &mut Hud) {
 
 /// A volume: ten bars ending at `right`, lit up to `level`.
 fn bars(h: &mut Hud, right: f32, y: f32, level: u8, c: Light) {
-    for k in 0..10u8 {
+    h.out.extend((0..10u8).map(|k| {
         let x = right - 9.5 * 0.9 + f32::from(k) * 0.9;
         let bc = c.faded(if k < level { 1.2 } else { 0.25 });
-        h.out.push(scene::seg(
-            scene::pt(x, y + 0.15),
-            scene::pt(x, y + 0.35 + 0.1 * f32::from(k)),
+        scene::seg(
+            sim::at(x, y + 0.15),
+            sim::at(x, y + 0.35 + 0.1 * f32::from(k)),
             bc,
-            [0.09, 0.3, 0.2, 0.0],
-            sim::body::identity(),
-        ));
-    }
+            scene::Stroke::new(0.09, 0.3, 0.2),
+            sim::body::Pose::identity(),
+        )
+    }));
 }
 
 /// The high scores of the game the screen shows.
@@ -322,14 +322,22 @@ fn counters(g: &Game, s: &Stats, h: &mut Hud) {
     }
     for k in 0..s.lives.saturating_sub(1).min(8) {
         let x = right - 0.5 - k as f32 * 1.4;
-        let m = sim::body::pose_at(x, top + 0.3, core::f32::consts::FRAC_PI_2);
+        let m = sim::body::pose_at(sim::at(x, top + 0.3), core::f32::consts::FRAC_PI_2);
         scene::draw_ship(h.out, m, 0.0, g.time, 0.8);
     }
     for k in 0..s.bombs.min(8) {
         let x = right - 0.5 - k as f32 * 1.3;
-        let m = sim::body::pose_at(x, top - 1.9, 0.0);
+        let m = sim::body::pose_at(sim::at(x, top - 1.9), 0.0);
         let ring = light::light(0.55, 0.8, 1.0, 2.0);
-        scene::circle(h.out, 0.45, 12, 0.0, ring, [0.04, 0.2, 0.2, 0.0], m);
+        scene::circle(
+            h.out,
+            0.45,
+            12,
+            0.0,
+            ring,
+            scene::Stroke::new(0.04, 0.2, 0.2),
+            m,
+        );
     }
 }
 

@@ -91,7 +91,7 @@ impl GridSpec {
         (0..self.nodes())
             .map(|k| Node {
                 p: self.rest(k).into(),
-                v: Point::direction(0.0, 0.0).into(),
+                v: Point::zero().into(),
             })
             .collect()
     }
@@ -123,7 +123,7 @@ impl Source {
 
     /// A slot no source fills: no force (and none of the 0/0 a zero radius gives at its point).
     pub(super) fn none() -> Source {
-        Source::new(Point::xy(0.0, 0.0), 0.0, 1.0)
+        Source::new(crate::geom::ORIGIN, 0.0, 1.0)
     }
 }
 

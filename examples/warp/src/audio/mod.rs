@@ -24,7 +24,7 @@ pub mod sfx;
 pub mod tunnel;
 
 use crate::sim::body::Pose;
-use crate::sim::{Event, Kind, Phase, World};
+use crate::sim::{Event, Kind, World};
 use bevy::prelude::*;
 use bevy_seedling::firewheel::StreamInfo;
 use bevy_seedling::firewheel::channel_config::{ChannelConfig, ChannelCount};
@@ -580,25 +580,8 @@ impl Sound {
         self.to_music.push(m);
     }
 
-    /// Per frame, for the Plane: steer the music from the world (whether a run is being
-    /// played). A run's start is `begin_run`.
-    pub fn update(&mut self, w: &World, playing: bool) {
-        let ship = w.ship.body.pos();
-        let darkness = w
-            .wells
-            .iter()
-            .map(|well| {
-                let d = crate::sim::body::distance(well.pos, ship);
-                (1.0 - d / 14.0).clamp(0.0, 1.0)
-            })
-            .fold(0.0f32, f32::max);
-        let alive = w.phase == Phase::Playing;
-        let intensity = w.director.intensity * if alive { 1.0 } else { 0.5 };
-        self.steer(intensity, darkness, w.ledger.mult, playing);
-    }
-
-    /// Steer the music within a run (the Tunnel): intensity, a singularity's darkness, the
-    /// multiplier, and whether a run is being played. A run's start is `begin_run`.
+    /// Steer the music within a run: intensity, a singularity's darkness, the multiplier, and
+    /// whether a run is being played. A run's start is `begin_run`.
     pub fn steer(&mut self, intensity: f32, darkness: f32, mult: u32, playing: bool) {
         self.controls = Controls {
             intensity,
@@ -613,7 +596,7 @@ impl Sound {
 mod tests {
     use super::*;
     use crate::sim::at;
-    use crate::sim::body::identity;
+    use crate::sim::body::Pose;
 
     /// Every message the game queues, through its bytes into the engines.
     fn deliver(sound: &mut Sound, sfx: &mut Sfx, music: &mut Music) {
@@ -658,7 +641,7 @@ mod tests {
             &[Event::Death { pos: o }, Event::Bomb { pos: at(30.0, 0.0) }],
             1,
             o,
-            identity(),
+            Pose::identity(),
         );
         deliver(&mut sound, &mut sfx, &mut music);
         assert_eq!(sfx.active_in(Family::Death), 1);
@@ -672,7 +655,7 @@ mod tests {
             }],
             1,
             o,
-            identity(),
+            Pose::identity(),
         );
         deliver(&mut sound, &mut sfx, &mut music);
         assert_eq!(sfx.active_in(Family::Shot), 0);
@@ -687,7 +670,7 @@ mod tests {
         let mut sound = Sound::new();
         let o = at(0.0, 0.0);
         for x in [-20.0, 0.0, 20.0] {
-            sound.play(&[Event::Wall { pos: at(x, 5.0) }], 1, o, identity());
+            sound.play(&[Event::Wall { pos: at(x, 5.0) }], 1, o, Pose::identity());
         }
         let gains: Vec<(f32, f32)> = sound
             .to_sfx
@@ -711,7 +694,7 @@ mod tests {
         sound.begin_run(3, music::TEMPO);
         let o = at(0.0, 0.0);
         for _ in 0..2000 {
-            sound.play(&[Event::Death { pos: o }], 1, o, identity());
+            sound.play(&[Event::Death { pos: o }], 1, o, Pose::identity());
         }
         assert!(sound.to_sfx.len() <= QUEUE && sound.to_music.len() <= QUEUE);
         assert!(sound.to_sfx.contains(&SfxMsg::Sync {

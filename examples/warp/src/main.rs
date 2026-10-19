@@ -18,7 +18,8 @@ mod geom;
 mod gfx;
 mod hud;
 mod input;
-// The kernels run traced (below); the tests use the generic forms to check them.
+// The kernels run traced (below); the simulation calls the generic `segment_distance` and
+// `wave`, and the tests use the generic forms to check the traced ones.
 #[cfg_attr(not(test), allow(dead_code))]
 mod kernels;
 mod light;
@@ -31,8 +32,9 @@ mod sim;
 mod store;
 mod tunnel;
 
-// The traced kernels (`grid_node`, `source_force`, `particle_step`), their batch forms, and
-// their WGSL (`FUSED_WESL`).
+// The traced kernels (every function of `kernels` that `build.rs` traces: the lattice, the
+// particles, the line renderer, post-processing and the lights), their batch forms, and their
+// WGSL (`FUSED_WESL`).
 include!(concat!(env!("OUT_DIR"), "/fused.rs"));
 
 use bevy::prelude::*;

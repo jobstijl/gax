@@ -3,8 +3,8 @@
 
 use super::World;
 use super::entities::Foe;
-use super::space::{P, dir};
-use crate::geom::length_cubed;
+use super::space::P;
+use crate::geom::inverse_square;
 
 /// How strongly a singularity pulls the wall in (a lattice source per unit of strength), and
 /// how far along the tunnel (the squared reach).
@@ -18,13 +18,9 @@ impl Wells {
     /// The pull at `p`, `k s d / (|d|² + 1)^(3/2)` towards each singularity: an inverse
     /// square with a softened core.
     pub fn pull(&self, p: P, k: f32) -> P {
-        self.0
-            .iter()
-            .fold(dir(0.0, 0.0, 0.0), |acc, &(w, strength)| {
-                let d = w - p;
-                let soft = length_cubed(d.ideal_norm_squared() + 1.0);
-                acc + d * (k * strength / soft)
-            })
+        self.0.iter().fold(P::zero(), |acc, &(w, strength)| {
+            acc + inverse_square(w - p, k * strength, 1.0)
+        })
     }
 
     /// Whether there are any.
@@ -55,7 +51,7 @@ impl World {
         let ship = self.ship.pos;
         self.wells()
             .iter()
-            .map(|(w, strength)| (1.0 - (w & ship).norm() / (22.0 + 8.0 * strength)).max(0.0))
+            .map(|(w, strength)| (1.0 - w.distance(ship) / (22.0 + 8.0 * strength)).max(0.0))
             .fold(0.0, f32::max)
     }
 }
@@ -63,10 +59,9 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::DT;
     use crate::tunnel::entities::{Event, Flight, Shot};
     use crate::tunnel::lattice::RADIUS;
-    use crate::tunnel::space::{arc, at};
+    use crate::tunnel::space::{arc, at, dir};
     use crate::tunnel::tests::spawn;
     use crate::tunnel::{Input, SHIP_RADIUS};
 
@@ -93,8 +88,7 @@ mod tests {
         let mut shot = Shot::new(from, dir(0.0, 0.0, 70.0), 1.0);
         let wells = w.wells();
         for _ in 0..40 {
-            shot.vel += wells.pull(shot.pos, 900.0) * DT;
-            shot.pos += shot.vel * DT;
+            shot.advance(&wells, 900.0);
         }
         assert!(shot.bend() > 0.1, "{}", shot.bend());
         assert!(

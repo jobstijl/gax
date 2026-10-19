@@ -1,10 +1,12 @@
 //! What flies in the tunnel: the ship, its enemies, shots and bolts, gates, shards, spawns on
 //! their way, and the events a tick reports.
 
-use super::space::{P, arc, axis, dir};
+use super::space::{AXIS, P, arc, segment_hits_sphere};
+use super::wells::Wells;
+use crate::sim::DT;
 use crate::sim::Kind;
 use gax::Unit;
-use gax::pga3d::{Motor, Plane, Point};
+use gax::pga3d::{Motor, Plane};
 
 /// The tunnel's enemies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,7 +150,7 @@ impl Enemy {
             foe,
             pos,
             prev: pos,
-            vel: dir(0.0, 0.0, 0.0),
+            vel: P::zero(),
             hp: foe.hp(),
             age: 0.0,
             flash: 0.0,
@@ -158,7 +160,7 @@ impl Enemy {
             timer: 0.0,
             flight: Flight::Approach,
             mass: 0.0,
-            swim: Motor::translation(Point::direction(0.0, 0.0, 0.0)),
+            swim: Unit::identity(),
             body: Vec::new(),
             anchor: None,
         }
@@ -172,6 +174,20 @@ impl Enemy {
     /// A singularity's pull strength.
     pub fn strength(&self) -> f32 {
         1.0 + 0.35 * self.mass
+    }
+
+    /// What the segment `a → b` passes within `margin` of (beyond the hit spheres): the enemy
+    /// itself (`Some(None)`), segment `j` of a serpent's body (`Some(Some(j))`), or nothing.
+    pub fn swept(&self, a: P, b: P, margin: f32) -> Option<Option<usize>> {
+        if segment_hits_sphere(a, b, self.pos, self.radius() + margin) {
+            return Some(None);
+        }
+        let r = Segment::RADIUS + margin;
+        let seg = self
+            .body
+            .iter()
+            .position(|s| segment_hits_sphere(a, b, s.pos, r));
+        seg.map(Some)
     }
 }
 
@@ -200,6 +216,16 @@ impl Shot {
             from: vel,
             life,
         }
+    }
+
+    /// One tick of flight, pulled by the singularities `wells` (as strongly as `k` says).
+    pub fn advance(&mut self, wells: &Wells, k: f32) {
+        self.prev = self.pos;
+        if !wells.is_empty() {
+            self.vel += wells.pull(self.pos, k) * DT;
+        }
+        self.pos += self.vel * DT;
+        self.life -= DT;
     }
 
     /// How far it has been bent: the angle between the velocity it left with and the one it
@@ -234,7 +260,7 @@ pub struct Gate {
 impl Gate {
     /// Its plane: the cross-section through its centre, orthogonal to the axis.
     pub fn plane(&self) -> Plane<(), f32> {
-        self.pos | axis()
+        self.pos | AXIS
     }
 }
 

@@ -8,9 +8,11 @@
 
 use super::font::{self, Align};
 use super::{CameraUniform, LineInstance};
+use crate::geom::{ORIGIN, lerp, orbit};
 use crate::light::{Light, light};
-use crate::sim::body::{Pose, identity};
-use crate::sim::{ARENA, Kind, Phase, World};
+use crate::sim::body::{Pose, pose_at};
+use crate::sim::ship::SHIP_SPEED;
+use crate::sim::{ARENA, Kind, Phase, World, at};
 use crate::store::Scheme;
 use gax::pga2d::{Motor, Point};
 
@@ -118,15 +120,31 @@ pub fn shard() -> Light {
     }
 }
 
-/// The default stroke: half width, glow radius, glow strength.
-pub const THIN: [f32; 4] = [0.032, 0.32, 0.22, 0.0];
-
-/// The point `(x, y)`.
-pub const fn pt(x: f32, y: f32) -> Point<(), f32> {
-    Point::new(x, y, 1.0)
+/// How a line is drawn, in world units: its half width, its glow's radius and its glow's
+/// strength.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Stroke {
+    /// Half the line's width.
+    pub width: f32,
+    /// How far its glow reaches.
+    pub glow: f32,
+    /// How bright its glow is.
+    pub strength: f32,
 }
 
-pub use crate::geom::ORIGIN;
+impl Stroke {
+    /// The stroke of half width `width` with a glow of radius `glow` and strength `strength`.
+    pub const fn new(width: f32, glow: f32, strength: f32) -> Stroke {
+        Stroke {
+            width,
+            glow,
+            strength,
+        }
+    }
+}
+
+/// The default stroke.
+pub const THIN: Stroke = Stroke::new(0.032, 0.32, 0.22);
 
 /// `p` scaled by `s` about the origin: the same coordinates with weight `w / s`.
 pub fn scaled(p: Point<(), f32>, s: f32) -> Point<(), f32> {
@@ -135,7 +153,7 @@ pub fn scaled(p: Point<(), f32>, s: f32) -> Point<(), f32> {
 
 /// The point at distance `r` from the origin at `angle`: `(r, 0)` turned by a rotation motor.
 pub fn polar(r: f32, angle: f32) -> Point<(), f32> {
-    Motor::rotation(ORIGIN, angle) >> pt(r, 0.0)
+    Motor::rotation(ORIGIN, angle) >> at(r, 0.0)
 }
 
 /// The segment `a → b`, in the frame of `motor`.
@@ -143,14 +161,14 @@ pub fn seg(
     a: Point<(), f32>,
     b: Point<(), f32>,
     color: Light,
-    style: [f32; 4],
+    style: Stroke,
     motor: Pose,
 ) -> LineInstance {
     LineInstance {
         a: a.into(),
         b: b.into(),
         color: color.into(),
-        style,
+        style: [style.width, style.glow, style.strength, 0.0],
         motor: motor.into(),
     }
 }
@@ -162,7 +180,7 @@ pub fn outline(
     pts: &[Point<(), f32>],
     size: f32,
     color: Light,
-    style: [f32; 4],
+    style: Stroke,
     m: Pose,
 ) {
     if size == 0.0 {
@@ -180,38 +198,33 @@ pub fn circle(
     n: usize,
     phase: f32,
     color: Light,
-    style: [f32; 4],
+    style: Stroke,
     m: Pose,
 ) {
     let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / n as f32);
-    let mut a = polar(r, phase);
-    for _ in 0..n {
-        let b = step >> a;
-        out.push(seg(a, b, color, style, m));
-        a = b;
-    }
+    out.extend(orbit(polar(r, phase), n, step).map(|(a, b)| seg(a, b, color, style, m)));
 }
 
-const DIAMOND: [Point<(), f32>; 4] = [pt(1.0, 0.0), pt(0.0, 1.0), pt(-1.0, 0.0), pt(0.0, -1.0)];
-const SQUARE: [Point<(), f32>; 4] = [pt(0.8, 0.8), pt(-0.8, 0.8), pt(-0.8, -0.8), pt(0.8, -0.8)];
-const DART: [Point<(), f32>; 3] = [pt(1.0, 0.0), pt(-0.6, 0.7), pt(-0.6, -0.7)];
-const BOW: [Point<(), f32>; 3] = [pt(0.0, 0.0), pt(0.95, 0.7), pt(0.95, -0.7)];
-const GEM: [Point<(), f32>; 4] = [pt(0.22, 0.0), pt(0.0, 0.16), pt(-0.22, 0.0), pt(0.0, -0.16)];
-const SHARP: [Point<(), f32>; 3] = [pt(0.55, 0.0), pt(0.15, 0.22), pt(0.15, -0.22)];
+const DIAMOND: [Point<(), f32>; 4] = [at(1.0, 0.0), at(0.0, 1.0), at(-1.0, 0.0), at(0.0, -1.0)];
+const SQUARE: [Point<(), f32>; 4] = [at(0.8, 0.8), at(-0.8, 0.8), at(-0.8, -0.8), at(0.8, -0.8)];
+const DART: [Point<(), f32>; 3] = [at(1.0, 0.0), at(-0.6, 0.7), at(-0.6, -0.7)];
+const BOW: [Point<(), f32>; 3] = [at(0.0, 0.0), at(0.95, 0.7), at(0.95, -0.7)];
+const GEM: [Point<(), f32>; 4] = [at(0.22, 0.0), at(0.0, 0.16), at(-0.22, 0.0), at(0.0, -0.16)];
+const SHARP: [Point<(), f32>; 3] = [at(0.55, 0.0), at(0.15, 0.22), at(0.15, -0.22)];
 const ARROW: [Point<(), f32>; 4] = [
-    pt(1.0, 0.0),
-    pt(-0.7, 0.55),
-    pt(-0.35, 0.0),
-    pt(-0.7, -0.55),
+    at(1.0, 0.0),
+    at(-0.7, 0.55),
+    at(-0.35, 0.0),
+    at(-0.7, -0.55),
 ];
-const HEAD: [Point<(), f32>; 4] = [pt(1.1, 0.0), pt(-0.3, 0.75), pt(-0.1, 0.0), pt(-0.3, -0.75)];
-const TAIL: [Point<(), f32>; 4] = [pt(0.45, 0.0), pt(-0.6, 0.5), pt(-0.35, 0.0), pt(-0.6, -0.5)];
-const CARGO: [Point<(), f32>; 3] = [pt(0.14, 0.0), pt(-0.1, 0.1), pt(-0.1, -0.1)];
+const HEAD: [Point<(), f32>; 4] = [at(1.1, 0.0), at(-0.3, 0.75), at(-0.1, 0.0), at(-0.3, -0.75)];
+const TAIL: [Point<(), f32>; 4] = [at(0.45, 0.0), at(-0.6, 0.5), at(-0.35, 0.0), at(-0.6, -0.5)];
+const CARGO: [Point<(), f32>; 3] = [at(0.14, 0.0), at(-0.1, 0.1), at(-0.1, -0.1)];
 const HULL: [Point<(), f32>; 4] = [
-    pt(0.75, 0.0),
-    pt(-0.45, 0.48),
-    pt(-0.18, 0.0),
-    pt(-0.45, -0.48),
+    at(0.75, 0.0),
+    at(-0.45, 0.48),
+    at(-0.18, 0.0),
+    at(-0.45, -0.48),
 ];
 
 /// The regular hexagon on the unit circle (the carriers'), turned out once.
@@ -296,21 +309,17 @@ pub fn draw_enemy(
             outline(out, &HEAD, radius, c, THIN, m);
             // Eyes: a short stroke and its mirror image across the heading.
             for side in [1.0f32, -1.0] {
-                let (a, b) = (pt(0.25, 0.22 * side), pt(0.4, 0.22 * side));
+                let (a, b) = (at(0.25, 0.22 * side), at(0.4, 0.22 * side));
                 out.push(seg(a, b, c.faded(1.4), THIN, m));
             }
         }
         Kind::Warden => {
             // The shield: a bright arc across the front, as chords of a turning radius.
-            let shield = [0.06, 0.4, 0.4, 0.0];
+            let shield = Stroke::new(0.06, 0.4, 0.4);
             let n = 12;
             let step = Motor::rotation(ORIGIN, 2.6 / n as f32);
-            let mut a = polar(1.05 * radius, -1.3);
-            for _ in 0..n {
-                let b = step >> a;
-                out.push(seg(a, b, c.faded(1.3), shield, m));
-                a = b;
-            }
+            let arc = orbit(polar(1.05 * radius, -1.3), n, step);
+            out.extend(arc.map(|(a, b)| seg(a, b, c.faded(1.3), shield, m)));
             outline(out, &TAIL, radius, c, THIN, m);
         }
         Kind::Carrier => {
@@ -327,7 +336,7 @@ pub fn draw_enemy(
         }
         Kind::Singularity => {
             let pulse = 1.0 + 0.08 * crate::signal::wave(t * 5.0) + 0.02 * mass + 0.06 * swell;
-            let style = [0.04, 0.3, 0.3, 0.0];
+            let style = Stroke::new(0.04, 0.3, 0.3);
             circle(out, radius * pulse, 40, t, c, style, m);
             circle(
                 out,
@@ -341,24 +350,22 @@ pub fn draw_enemy(
             // Spiral arms falling inwards: a direction turned step by step while the radius
             // shrinks (the point's weight grows).
             let turn = Motor::rotation(ORIGIN, 2.4 / 8.0);
+            let f = |s: usize| s as f32 / 8.0;
+            let size = |s: usize| radius * (1.35 - 1.2 * f(s));
             for arm in 0..5 {
                 let a0 = arm as f32 * core::f32::consts::TAU / 5.0 + t * 2.2;
-                let mut dir = polar(1.0, a0);
-                let mut prev = scaled(dir, radius * 1.35);
-                for s in 1..9 {
-                    let f = s as f32 / 8.0;
-                    dir = turn >> dir;
-                    let p = scaled(dir, radius * (1.35 - 1.2 * f));
-                    out.push(seg(prev, p, c.faded(0.55 * (1.0 - 0.5 * f)), THIN, m));
-                    prev = p;
-                }
+                let turns = orbit(polar(1.0, a0), 8, turn).enumerate();
+                out.extend(turns.map(|(s, (a, b))| {
+                    let (a, b) = (scaled(a, size(s)), scaled(b, size(s + 1)));
+                    seg(a, b, c.faded(0.55 * (1.0 - 0.5 * f(s + 1))), THIN, m)
+                }));
             }
             // A white-hot core.
             out.push(seg(
-                pt(-0.05, 0.0),
-                pt(0.05, 0.0),
+                at(-0.05, 0.0),
+                at(0.05, 0.0),
                 palette::HOT.faded(bright),
-                [0.1, 0.35, 0.5, 0.0],
+                Stroke::new(0.1, 0.35, 0.5),
                 m,
             ));
         }
@@ -368,12 +375,12 @@ pub fn draw_enemy(
 /// The ship.
 pub fn draw_ship(out: &mut Vec<LineInstance>, m: Pose, speed: f32, t: f32, alpha: f32) {
     let c = palette::SHIP.faded(alpha);
-    let style = [0.04, 0.38, 0.28, 0.0];
+    let style = Stroke::new(0.04, 0.38, 0.28);
     outline(out, &HULL, 1.2, c, style, m);
     for side in [1.0f32, -1.0] {
         out.push(seg(
-            pt(0.35, 0.0),
-            pt(-0.05, 0.18 * side),
+            at(0.35, 0.0),
+            at(-0.05, 0.18 * side),
             c.faded(0.6),
             THIN,
             m,
@@ -382,12 +389,12 @@ pub fn draw_ship(out: &mut Vec<LineInstance>, m: Pose, speed: f32, t: f32, alpha
     // Engine flame, flickering with speed.
     if speed > 0.5 {
         let flicker = 0.75 + 0.25 * crate::signal::wave(t * 47.0);
-        let len = 0.25 + 0.35 * (speed / 11.5).min(1.0) * flicker;
+        let len = 0.25 + 0.35 * (speed / SHIP_SPEED).min(1.0) * flicker;
         out.push(seg(
-            pt(-0.2, 0.0),
-            pt(-0.2 - len, 0.0),
+            at(-0.2, 0.0),
+            at(-0.2 - len, 0.0),
             palette::FLAME.faded(alpha),
-            [0.06, 0.35, 0.5, 0.0],
+            Stroke::new(0.06, 0.35, 0.5),
             m,
         ));
     }
@@ -400,7 +407,7 @@ pub const HUD_HALF_HEIGHT: f32 = 18.0;
 /// The HUD's camera on a target of `size` pixels at `time`: the identity pose, showing
 /// [`HUD_HALF_HEIGHT`] above and below the centre.
 pub fn hud_camera(size: [u32; 2], time: f32) -> CameraUniform {
-    camera(identity(), HUD_HALF_HEIGHT, size, time)
+    camera(Pose::identity(), HUD_HALF_HEIGHT, size, time)
 }
 
 /// The view of a camera at `cam` showing `half_height` world units above and below its
@@ -434,22 +441,24 @@ pub fn camera(cam: Pose, half_height: f32, size: [u32; 2], time: f32) -> CameraU
 /// view map applied to the point.
 pub fn to_uv(view: &Point<(Point,), f32>, p: Point<(), f32>) -> Point<(), f32> {
     let [x, y] = view.of(p).to_euclidean();
-    pt(0.5 + 0.5 * x, 0.5 - 0.5 * y)
+    at(0.5 + 0.5 * x, 0.5 - 0.5 * y)
 }
 
 /// All world segments of a frame, `alpha` of the way from the last tick to the current one.
 pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>) {
     out.clear();
+    // Things drawn where they are in the world.
+    let still = Pose::identity();
     // The arena's border, breathing with the director's intensity.
     let glow = 0.8 + 0.6 * w.director.intensity;
-    let border = [0.07, 0.9 * glow, 0.45, 0.0];
+    let border = Stroke::new(0.07, 0.9 * glow, 0.45);
     let (hw, hh) = (ARENA[0], ARENA[1]);
-    let corners = [pt(-hw, -hh), pt(hw, -hh), pt(hw, hh), pt(-hw, hh)];
-    outline(out, &corners, 1.0, palette::BORDER, border, identity());
+    let corners = [at(-hw, -hh), at(hw, -hh), at(hw, hh), at(-hw, hh)];
+    outline(out, &corners, 1.0, palette::BORDER, border, still);
     // Warp-ins.
     for p in &w.pending {
         let f = 1.0 - (p.t / p.total).clamp(0.0, 1.0);
-        let m = crate::sim::body::place(p.pos, f * 6.0);
+        let m = pose_at(p.pos, f * 6.0);
         let c = (color(p.kind)).faded(0.4 + 0.8 * f);
         let r = p.kind.stats().radius;
         circle(out, r * (3.0 - 2.0 * f), 20, time * 4.0, c, THIN, m);
@@ -459,17 +468,17 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         // A serpent's body: shrinking diamonds on a spine.
         if !e.chain.is_empty() {
             let c = color(Kind::Serpent);
-            let mut prev = e.body.lerp(alpha) >> ORIGIN;
+            let mut prev = e.body.interpolated(alpha) >> ORIGIN;
             for (k, body) in e.chain.iter().enumerate() {
-                let pose = body.lerp(alpha);
+                let pose = body.interpolated(alpha);
                 let p = pose >> ORIGIN;
                 let f = 1.0 - 0.5 * k as f32 / e.chain.len() as f32;
-                out.push(seg(prev, p, c.faded(0.35), THIN, identity()));
+                out.push(seg(prev, p, c.faded(0.35), THIN, still));
                 outline(out, &DIAMOND, 0.38 * f, c.faded(0.9 * f), THIN, pose);
                 prev = p;
             }
         }
-        let m = e.body.lerp(alpha);
+        let m = e.body.interpolated(alpha);
         let appear = (e.age * 6.0).min(1.0);
         let t = time + e.phase;
         draw_enemy(out, e.kind, m, e.radius * appear, e.mass, e.flash, t, 1.0);
@@ -480,18 +489,18 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         } else {
             1.0
         };
-        let m = s.body.lerp(alpha);
+        let m = s.body.interpolated(alpha);
         outline(out, &GEM, 1.0, shard().faded(blink), THIN, m);
     }
     for b in &w.bullets {
         // A short streak behind the shot, along its velocity.
-        let p = b.prev + (b.pos - b.prev) * alpha;
+        let p = lerp(b.prev, b.pos, alpha);
         let tail = p - b.vel * 0.03;
-        let style = [0.035, 0.28, 0.35, 0.0];
-        out.push(seg(tail, p, palette::BULLET, style, identity()));
+        let style = Stroke::new(0.035, 0.28, 0.35);
+        out.push(seg(tail, p, palette::BULLET, style, still));
     }
     if w.phase == Phase::Playing {
-        let m = w.ship.body.lerp(alpha);
+        let m = w.ship.body.interpolated(alpha);
         let blink =
             w.ship.invulnerable > 0.0 && crate::signal::wave(w.ship.invulnerable * 14.0) < 0.0;
         let speed = w.ship.body.vel.ideal_norm();
@@ -513,9 +522,9 @@ pub fn text(
     align: Align,
 ) {
     // Stroke width grows with the glyph; the glow does not, beyond a point.
-    let style = [0.045 * size / 1.2, (0.3 * size / 1.2).min(0.45), 0.3, 0.0];
+    let style = Stroke::new(0.045 * size / 1.2, (0.3 * size / 1.2).min(0.45), 0.3);
     for [a, b] in font::segments(s, at, size, align) {
-        out.push(seg(a, b, color, style, identity()));
+        out.push(seg(a, b, color, style, Pose::identity()));
     }
 }
 
@@ -539,7 +548,7 @@ mod tests {
 
     #[test]
     fn weights_scale_and_motors_turn() {
-        let p = scaled(pt(1.0, -2.0), 3.0).to_euclidean();
+        let p = scaled(at(1.0, -2.0), 3.0).to_euclidean();
         assert!((p[0] - 3.0).abs() < 1e-6 && (p[1] + 6.0).abs() < 1e-6);
         let q = polar(2.0, core::f32::consts::FRAC_PI_2).to_euclidean();
         assert!(q[0].abs() < 1e-6 && (q[1] - 2.0).abs() < 1e-6);

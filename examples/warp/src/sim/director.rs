@@ -1,8 +1,10 @@
 //! The spawn director: an intensity curve over time with calm stretches between spikes, and
 //! formations that are always telegraphed and never land within the safe radius.
 
-use super::body::{distance, turned, with_length};
+use super::rng::Rng;
 use super::{ARENA, DT, Event, Kind, P, Phase, SAFE_RADIUS, World, at, dir};
+use crate::geom::{ORIGIN, orbit, with_length};
+use gax::pga2d::Motor;
 
 /// A telegraphed spawn.
 #[derive(Clone, Copy, Debug)]
@@ -44,7 +46,7 @@ impl World {
         let p = inside(p);
         let s = self.ship.body.pos();
         let need = SAFE_RADIUS + 1.0;
-        if distance(p, s) >= need {
+        if p.distance(s) >= need {
             return p;
         }
         let away = p - s;
@@ -54,7 +56,7 @@ impl World {
             dir(need, 0.0)
         };
         let (out, back) = (inside(s + u), inside(s - u));
-        if distance(out, s) >= distance(back, s) {
+        if out.distance(s) >= back.distance(s) {
             out
         } else {
             back
@@ -72,7 +74,7 @@ impl World {
                 return true;
             }
             // Never land inside the safe radius: wait until the player has moved away.
-            if playing && distance(p.pos, ship) < SAFE_RADIUS {
+            if playing && p.pos.distance(ship) < SAFE_RADIUS {
                 p.t = 0.1;
                 return true;
             }
@@ -162,37 +164,27 @@ impl Director {
             return;
         }
         self.wave += 1;
+        for (k, p) in self.formation(w) {
+            w.announce(k, p, k.stats().warning);
+        }
+        self.cooldown = 2.2 + 3.5 * (1.0 - self.intensity) + w.rng.range(0.0, 1.5);
+    }
+
+    /// The next formation: a singularity, a newcomer from the roster, or a swarm, a ring, a
+    /// line or a flank of the basic families; heavier ones as intensity rises.
+    fn formation(&self, w: &mut World) -> Vec<(Kind, P)> {
         let i = self.intensity;
-        let rng = &mut w.rng;
-        // Pick a formation; heavier ones as intensity rises.
-        let roll = rng.unit();
+        let roll = w.rng.unit();
         let count = |k: Kind| {
             w.enemies.iter().filter(|e| e.kind == k).count()
                 + w.pending.iter().filter(|p| p.kind == k).count()
         };
         let singularities = count(Kind::Singularity);
-        // The roster unlocks over the run; each newcomer is a "feature" formation.
-        let heavy = count(Kind::Serpent) + count(Kind::Carrier);
-        let features: Vec<Kind> = [
-            (Kind::Evader, 20.0),
-            (Kind::Splitter, 30.0),
-            (Kind::Warden, 50.0),
-            (Kind::Serpent, 70.0),
-            (Kind::Carrier, 90.0),
-        ]
-        .into_iter()
-        .filter(|&(kind, from)| {
-            let room = match kind {
-                Kind::Serpent | Kind::Carrier => heavy < 1 + (i * 2.0) as usize,
-                _ => true,
-            };
-            self.clock > from && room
-        })
-        .map(|(kind, _)| kind)
-        .collect();
+        let features = self.features(count(Kind::Serpent) + count(Kind::Carrier));
+        let rng = &mut w.rng;
         let feature_roll = rng.unit();
         let chaser_share = (0.25 + 0.6 * i).min(0.8);
-        let kind = |rng: &mut super::rng::Rng| {
+        let kind = |rng: &mut Rng| {
             if rng.chance(chaser_share) {
                 Kind::Chaser
             } else {
@@ -202,91 +194,49 @@ impl Director {
         let ship = w.ship.body.pos();
         // Which half of the arena the player is in.
         let right = ship.to_euclidean()[0] > 0.0;
-        let mut spawns: Vec<(Kind, P)> = Vec::new();
         if self.clock > 35.0 && singularities < 1 + (i * 2.5) as usize && roll < 0.12 + 0.1 * i {
             // A singularity, away from the player.
             let p = at(
                 rng.range(-ARENA[0] + 6.0, ARENA[0] - 6.0),
                 rng.range(-ARENA[1] + 5.0, ARENA[1] - 5.0),
             );
-            spawns.push((Kind::Singularity, p));
+            vec![(Kind::Singularity, p)]
         } else if !features.is_empty() && feature_roll < 0.3 + 0.25 * i {
             // A newcomer from the roster; the newest ones are a little likelier.
             let pick = ((gax::Real::sqrt(rng.unit()) * features.len() as f32) as usize)
                 .min(features.len() - 1);
-            let far = |rng: &mut super::rng::Rng| {
-                // A spot on the far half of the arena from the player.
-                let side = if right { -1.0 } else { 1.0 };
-                at(
-                    side * rng.range(4.0, ARENA[0] - 3.0),
-                    rng.range(-ARENA[1] + 3.0, ARENA[1] - 3.0),
-                )
-            };
-            match features[pick] {
-                Kind::Evader => {
-                    let c = far(rng);
-                    for _ in 0..2 + (i * 4.0) as usize {
-                        let p = c + dir(rng.range(-3.0, 3.0), rng.range(-3.0, 3.0));
-                        spawns.push((Kind::Evader, p));
-                    }
-                }
-                Kind::Splitter => {
-                    let n = 2 + (i * 3.0) as usize;
-                    for _ in 0..n {
-                        let cx = if rng.chance(0.5) { 1.0 } else { -1.0 };
-                        let cy = if rng.chance(0.5) { 1.0 } else { -1.0 };
-                        let p = at(
-                            cx * (ARENA[0] - 2.0 - rng.range(0.0, 4.0)),
-                            cy * (ARENA[1] - 2.0 - rng.range(0.0, 3.0)),
-                        );
-                        spawns.push((Kind::Splitter, p));
-                    }
-                }
-                Kind::Warden => {
-                    // A shield arc on the far side, facing the player.
-                    let n = 2 + (i * 2.5) as usize;
-                    let c = far(rng);
-                    for k in 0..n {
-                        let along = dir(0.0, (k as f32 - (n - 1) as f32 / 2.0) * 2.5);
-                        spawns.push((Kind::Warden, c + along));
-                    }
-                }
-                Kind::Serpent => spawns.push((Kind::Serpent, far(rng))),
-                Kind::Carrier => spawns.push((Kind::Carrier, far(rng))),
-                _ => {}
-            }
+            feature(features[pick], i, right, rng)
         } else if roll < 0.35 {
             // Corner swarms.
             let n = 2 + (i * 5.0) as usize;
+            let mut spawns = Vec::new();
             for (cx, cy) in [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
                 if rng.chance(0.25 + 0.5 * i) || spawns.is_empty() {
-                    for _ in 0..n {
+                    spawns.extend((0..n).map(|_| {
                         let p = at(
                             cx * (ARENA[0] - 2.0) - cx * rng.range(0.0, 3.0),
                             cy * (ARENA[1] - 2.0) - cy * rng.range(0.0, 3.0),
                         );
-                        spawns.push((kind(rng), p));
-                    }
+                        (kind(rng), p)
+                    }));
                 }
             }
+            spawns
         } else if roll < 0.55 && self.clock > 20.0 {
-            // A ring around the player.
+            // A ring around the player: a radius turned an n-th of a circle at a time.
             let n = 6 + (i * 10.0) as usize;
-            // A radius turned an n-th of a circle at a time.
-            let mut d = P::direction_from_angle(rng.angle()) * 13.0;
-            for _ in 0..n {
-                spawns.push((Kind::Chaser, ship + d));
-                d = turned(d, core::f32::consts::TAU / n as f32);
-            }
+            let d = P::direction_from_angle(rng.angle()) * 13.0;
+            let step = Motor::rotation(ORIGIN, core::f32::consts::TAU / n as f32);
+            orbit(d, n, step)
+                .map(|(d, _)| (Kind::Chaser, ship + d))
+                .collect()
         } else if roll < 0.75 {
             // A line of drifters along a wall.
             let n = 5 + (i * 8.0) as usize;
             let top = rng.chance(0.5);
             let y = if top { ARENA[1] - 2.0 } else { -ARENA[1] + 2.0 };
-            for k in 0..n {
-                let x = -ARENA[0] + 3.0 + (2.0 * ARENA[0] - 6.0) * k as f32 / (n - 1).max(1) as f32;
-                spawns.push((Kind::Drifter, at(x, y)));
-            }
+            let ends = (at(-ARENA[0] + 3.0, y), at(ARENA[0] - 3.0, y));
+            spread(ends, n).map(|p| (Kind::Drifter, p)).collect()
         } else {
             // A flank: a column on the side away from the player.
             let n = 3 + (i * 7.0) as usize;
@@ -295,21 +245,79 @@ impl Director {
             } else {
                 ARENA[0] - 2.5
             };
-            for k in 0..n {
-                let y = -ARENA[1] + 3.0 + (2.0 * ARENA[1] - 6.0) * k as f32 / (n - 1).max(1) as f32;
-                spawns.push((kind(rng), at(x, y)));
-            }
+            let ends = (at(x, -ARENA[1] + 3.0), at(x, ARENA[1] - 3.0));
+            spread(ends, n).map(|p| (kind(rng), p)).collect()
         }
-        for (k, p) in spawns {
-            w.announce(k, p, k.stats().warning);
-        }
-        self.cooldown = 2.2 + 3.5 * (1.0 - i) + w.rng.range(0.0, 1.5);
     }
+
+    /// The newcomers the roster has unlocked by now, each a "feature" formation; the heavy
+    /// ones (serpents and carriers, `heavy` of them about) only while there is room.
+    fn features(&self, heavy: usize) -> Vec<Kind> {
+        let room = 1 + (self.intensity * 2.0) as usize;
+        [
+            (Kind::Evader, 20.0),
+            (Kind::Splitter, 30.0),
+            (Kind::Warden, 50.0),
+            (Kind::Serpent, 70.0),
+            (Kind::Carrier, 90.0),
+        ]
+        .into_iter()
+        .filter(|&(kind, from)| {
+            let heavy_room = !matches!(kind, Kind::Serpent | Kind::Carrier) || heavy < room;
+            self.clock > from && heavy_room
+        })
+        .map(|(kind, _)| kind)
+        .collect()
+    }
+}
+
+/// A newcomer's formation at intensity `i`, on the far half of the arena from the player
+/// (who is on the `right` or not).
+fn feature(kind: Kind, i: f32, right: bool, rng: &mut Rng) -> Vec<(Kind, P)> {
+    let far = |rng: &mut Rng| {
+        let side = if right { -1.0 } else { 1.0 };
+        at(
+            side * rng.range(4.0, ARENA[0] - 3.0),
+            rng.range(-ARENA[1] + 3.0, ARENA[1] - 3.0),
+        )
+    };
+    match kind {
+        Kind::Evader => {
+            let c = far(rng);
+            (0..2 + (i * 4.0) as usize)
+                .map(|_| (kind, c + dir(rng.range(-3.0, 3.0), rng.range(-3.0, 3.0))))
+                .collect()
+        }
+        Kind::Splitter => (0..2 + (i * 3.0) as usize)
+            .map(|_| {
+                let cx = if rng.chance(0.5) { 1.0 } else { -1.0 };
+                let cy = if rng.chance(0.5) { 1.0 } else { -1.0 };
+                let p = at(
+                    cx * (ARENA[0] - 2.0 - rng.range(0.0, 4.0)),
+                    cy * (ARENA[1] - 2.0 - rng.range(0.0, 3.0)),
+                );
+                (kind, p)
+            })
+            .collect(),
+        Kind::Warden => {
+            // A shield arc on the far side, facing the player, 2.5 apart.
+            let n = 2 + (i * 2.5) as usize;
+            let c = far(rng);
+            let half = dir(0.0, (n - 1) as f32 * 1.25);
+            spread((c - half, c + half), n).map(|p| (kind, p)).collect()
+        }
+        Kind::Serpent | Kind::Carrier => vec![(kind, far(rng))],
+        _ => Vec::new(),
+    }
+}
+
+/// `n` points evenly from `a` to `b`, both ends included (one: `a`).
+fn spread((a, b): (P, P), n: usize) -> impl Iterator<Item = P> {
+    (0..n).map(move |k| a + (b - a) * (k as f32 / (n - 1).max(1) as f32))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::body::distance;
     use super::super::{Event, Input, Kind, P, SAFE_RADIUS, World};
 
     /// Over many seeded runs with a wandering player, no spawn ever lands within the safe
@@ -335,7 +343,7 @@ mod tests {
                     {
                         spawns += 1;
                         seen.insert(*kind);
-                        let d = distance(*pos, ship);
+                        let d = pos.distance(ship);
                         assert!(d >= SAFE_RADIUS, "seed {seed}: a spawn {d} from the ship");
                     }
                 }

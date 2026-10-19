@@ -3,8 +3,9 @@
 
 use super::super::LineInstance;
 use super::super::scene;
+use crate::geom::{ORIGIN3, orbit};
 use crate::light::Light;
-use crate::sim::body::identity;
+use crate::sim::body::Pose;
 use crate::tunnel::track::{Frame, Track};
 use crate::tunnel::{P, arc, dir};
 use gax::pga2d::Point as Point2;
@@ -131,7 +132,7 @@ impl Proj {
                 continue;
             }
             let e = gax::Real::sqrt((l.k * (z - l.depth) / z).min(100.0));
-            let beta = (q & l.centre).norm().max(1e-3);
+            let beta = q.distance(l.centre).max(1e-3);
             let theta = 0.5 * (beta + Point2::direction(beta, 2.0 * e).ideal_norm());
             q = crate::scale_about(q, l.centre, theta / beta);
         }
@@ -151,7 +152,7 @@ impl Proj {
     pub(super) fn ray(&self, at: Point2<(), f32>) -> gax::pga3d::intrinsic::Line<(), f32> {
         let [x, y] = at.to_euclidean();
         let d = dir(-x / self.focal, y / self.focal, 1.0);
-        let eye = self.cam >> Point::xyz(0.0, 0.0, 0.0);
+        let eye = self.cam >> ORIGIN3;
         eye & (self.cam >> d)
     }
 
@@ -186,13 +187,18 @@ impl Proj {
         } else {
             (0.035, 0.3)
         };
-        let style = [
+        let style = scene::Stroke::new(
             (width * scale).clamp(wmin, wmax),
             (glow * scale).clamp(0.08, 0.6),
             0.3,
-            0.0,
-        ];
-        out.push(scene::seg(a.at, b.at, color.faded(k), style, identity()));
+        );
+        out.push(scene::seg(
+            a.at,
+            b.at,
+            color.faded(k),
+            style,
+            Pose::identity(),
+        ));
     }
 
     /// A segment between two world points, cut at the near plane by its meet with it.
@@ -256,9 +262,8 @@ impl Proj {
         size: f32,
         color: Light,
     ) {
-        let o = Point::xyz(0.0, 0.0, 0.0);
         for &(a, b) in edges {
-            let (a, b) = (model.of(o + a * size), model.of(o + b * size));
+            let (a, b) = (model.of(ORIGIN3 + a * size), model.of(ORIGIN3 + b * size));
             self.cam_line(out, a, b, color, 0.05, Fog::Objects);
         }
     }
@@ -278,11 +283,8 @@ impl Proj {
         width: f32,
     ) {
         let spin = Motor::rotation(q & dir(0.0, 0.0, 1.0), core::f32::consts::TAU / n as f32);
-        let mut a = q + dir(r, 0.0, 0.0);
-        for _ in 0..n {
-            let b = spin >> a;
+        for (a, b) in orbit(q + dir(r, 0.0, 0.0), n, spin) {
             self.cam_line(out, view.of(a), view.of(b), color, width, Fog::Objects);
-            a = b;
         }
     }
 }
@@ -302,7 +304,7 @@ mod tests {
 
     #[test]
     fn a_projection_is_a_weight() {
-        let p = Proj::new(Motor::translation(Point::direction(0.0, 0.0, 0.0)), 10.0);
+        let p = Proj::new(Frame::identity(), 10.0);
         let s = p
             .screen(p.camera(at(2.0, 1.0, 4.0)).unwrap())
             .to_euclidean();
@@ -324,7 +326,7 @@ mod tests {
     /// lens, the outer root of `θ² - βθ - θ_E² = 0`; a point in front of the lens is not moved.
     #[test]
     fn a_singularity_lenses_what_lies_behind_it() {
-        let mut p = Proj::new(Motor::translation(Point::direction(0.0, 0.0, 0.0)), 10.0);
+        let mut p = Proj::new(Frame::identity(), 10.0);
         let centre = Point2::xy(1.0, -0.5);
         let lens = Lens {
             centre,
@@ -335,8 +337,8 @@ mod tests {
         for (x, y, z) in [(0.8, 0.3, 25.0), (-1.5, 2.0, 40.0), (3.0, -1.0, 12.0)] {
             let c = p.camera(at(x, y, z)).unwrap();
             let (q, seen) = (p.screen(c), p.lensed(c));
-            let beta = (q & centre).norm();
-            let theta = (seen & centre).norm();
+            let beta = q.distance(centre);
+            let theta = seen.distance(centre);
             let e2 = lens.k * (z - lens.depth) / z;
             let residual = theta * theta - beta * theta - e2;
             assert!(residual.abs() < 1e-3 * (1.0 + e2), "{residual}");

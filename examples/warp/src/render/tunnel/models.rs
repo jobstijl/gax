@@ -1,13 +1,7 @@
 //! The wireframe models: edges between vertices given as directions from the centre, in each
 //! object's own frame (forward is `+z`).
 
-use crate::tunnel::P;
-use gax::pga3d::Point;
-
-/// The direction `(x, y, z)`, a model's vertex.
-const fn v(x: f32, y: f32, z: f32) -> P {
-    Point::new(x, y, z, 0.0)
-}
+use crate::tunnel::{P, dir as v};
 
 /// Drones, bolts, shards and a serpent's body segments.
 pub(super) const OCTAHEDRON: [(P, P); 12] = [

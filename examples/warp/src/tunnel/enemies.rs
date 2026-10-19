@@ -3,9 +3,10 @@
 
 use super::entities::{Enemy, Event, Flight, Foe, Shard, Shot};
 use super::lattice::RADIUS;
-use super::space::{P, arc, around, at, dir, foot, off_axis};
+use super::space::{P, arc, around, dir, foot, off_axis, radial};
 use super::wells::Wells;
 use super::{SHIP_RADIUS, World};
+use crate::geom::clamp_length;
 use crate::sim::{DT, Phase};
 use gax::pga3d::Plane;
 
@@ -16,13 +17,37 @@ const WELL_BURST: f32 = 5.0;
 /// How fast a ring of drones turns (radians per second).
 const RING_TURN: f32 = 0.9;
 
+/// What an enemy sees of the tunnel in a tick.
+struct View<'a> {
+    /// The ship's position, its arc length and its speed.
+    ship: P,
+    s_ship: f32,
+    speed: f32,
+    /// Whether the ship is there to fight.
+    alive: bool,
+    /// The singularities: each one's id, where it is and how it moves (their escorts' rings
+    /// move with them).
+    singularities: &'a [(u32, P, P)],
+    /// Their pull.
+    wells: &'a Wells,
+}
+
+impl View<'_> {
+    /// Moving along with the ship.
+    fn with_ship(&self) -> P {
+        dir(0.0, 0.0, self.speed)
+    }
+}
+
+/// Towards `place` from `from`, capped so that it glides in (on top of the motion it follows).
+fn glide(from: P, place: P, cap: f32) -> P {
+    clamp_length((place - from) * 2.5, cap)
+}
+
 impl World {
     /// Every enemy's tick, in the singularities' pull `wells`.
     pub(super) fn step_enemies(&mut self, wells: &Wells) {
-        let ship = self.ship.pos;
-        let (s_ship, speed) = (self.ship.s(), self.ship.speed);
         let alive = self.phase == Phase::Playing;
-        let mut fired = Vec::new();
         // One drone dives at a time: the one that has held longest (escorts stay with their
         // singularity).
         self.dive_cooldown -= DT;
@@ -39,144 +64,33 @@ impl World {
                 self.dive_cooldown = 1.6 - 0.8 * self.intensity;
             }
         }
-        // The singularities, where they are and how they move (their escorts' rings move with
-        // them).
         let singularities: Vec<(u32, P, P)> = self
             .enemies
             .iter()
             .filter(|e| e.foe == Foe::Singularity)
             .map(|e| (e.id, e.pos, e.vel))
             .collect();
-        let with_ship = dir(0.0, 0.0, speed);
-        // Towards `place`, moving along with the ship; capped so that it glides in.
-        let glide = |from: P, place: P, cap: f32| {
-            let to = (place - from) * 2.5;
-            let n = to.ideal_norm();
-            if n > cap { to * (cap / n) } else { to }
+        let view = View {
+            ship: self.ship.pos,
+            s_ship: self.ship.s(),
+            speed: self.ship.speed,
+            alive,
+            singularities: &singularities,
+            wells,
         };
-        for e in &mut self.enemies {
-            e.prev = e.pos;
-            e.age += DT;
-            e.flash = (e.flash - DT * 6.0).max(0.0);
-            let ahead = arc(e.pos) - s_ship;
-            match e.foe {
-                Foe::Drone => {
-                    e.angle += DT * RING_TURN;
-                    // An escort's ring turns about its singularity; a lost escort joins the
-                    // ship's band.
-                    let well = e
-                        .anchor
-                        .and_then(|id| singularities.iter().find(|w| w.0 == id));
-                    if e.anchor.is_some() && well.is_none() {
-                        e.anchor = None;
-                        e.orbit = 4.6;
-                        e.depth = 8.0;
-                        e.flight = Flight::Approach;
-                    }
-                    // Its place moves with the ship (or the singularity), and turns with the
-                    // ring: along its radial offset turned a quarter about the axis, at the
-                    // ring's rate. Gliding with both motions, a drone reaches its place instead
-                    // of trailing it.
-                    let quarter = core::f32::consts::FRAC_PI_2;
-                    let turning =
-                        (around(e.orbit, e.angle + quarter, 0.0) - at(0.0, 0.0, 0.0)) * RING_TURN;
-                    let (place, place_vel) = match well {
-                        Some(&(_, w, v)) => (
-                            w + (around(e.orbit, e.angle, 0.0) - at(0.0, 0.0, 0.0)),
-                            v + turning,
-                        ),
-                        // Its place in the ring, which holds `depth` ahead of the ship.
-                        None => (
-                            around(e.orbit, e.angle, s_ship + e.depth),
-                            with_ship + turning,
-                        ),
-                    };
-                    e.vel = match e.flight {
-                        Flight::Approach | Flight::Hold => {
-                            if e.flight == Flight::Approach && (place & e.pos).norm() < 1.5 {
-                                e.flight = Flight::Hold;
-                            }
-                            glide(e.pos, place, 26.0) + place_vel
-                        }
-                        Flight::Dive => {
-                            e.timer -= DT;
-                            if e.timer > 0.0 {
-                                // The warning: it flashes in place.
-                                e.flash = e.flash.max(0.6);
-                                (place - e.pos) * 2.5 + place_vel
-                            } else {
-                                // At the ship, at a speed you can dodge.
-                                let to = ship - e.pos;
-                                to * (10.0 / to.ideal_norm().max(1e-3)) + with_ship * 0.7
-                            }
-                        }
-                    };
-                }
-                Foe::Mine => {
-                    // Drift, bouncing off the tunnel's inner radius: a reflection in the plane
-                    // tangent to it there. Singularities pull.
-                    let outward = off_axis(e.pos + e.vel * DT) > off_axis(e.pos);
-                    if off_axis(e.pos) > SHIP_RADIUS + 0.3 && outward {
-                        let tangent = Plane::orthogonal_to(e.pos - foot(e.pos));
-                        e.vel = tangent.reflect(e.vel);
-                    }
-                    e.vel += wells.pull(e.pos, 20.0) * DT;
-                }
-                Foe::Turret => {
-                    e.timer -= DT;
-                    if e.timer <= 0.0 {
-                        e.timer = 1.5;
-                        if alive && (12.0..62.0).contains(&ahead) {
-                            // Aim where the ship will be when the bolt arrives; you read it by
-                            // its growth and its colour.
-                            let t = ahead / (speed + BOLT_SPEED);
-                            let there = ship + dir(0.0, 0.0, speed * t);
-                            fired.push((e.pos, (there - e.pos) * (1.0 / t)));
-                        }
-                    }
-                }
-                Foe::Serpent => {
-                    // Swim: the head along its screw, and each segment the head moved back by
-                    // its own lag.
-                    let next = e.swim >> e.pos;
-                    e.vel = (next - e.pos) * (1.0 / DT);
-                    for seg in &mut e.body {
-                        seg.prev = seg.pos;
-                        seg.pos = seg.behind >> next;
-                    }
-                }
-                Foe::Singularity => {
-                    // Holding ahead of the ship, turning slowly about the axis; then let go, so
-                    // that the ship must fly past it.
-                    e.angle += DT * 0.3;
-                    let place = around(e.orbit, e.angle, s_ship + e.depth);
-                    e.vel = match e.flight {
-                        Flight::Approach => {
-                            if (place & e.pos).norm() < 1.5 {
-                                e.flight = Flight::Hold;
-                            }
-                            glide(e.pos, place, 26.0) + with_ship
-                        }
-                        Flight::Hold => {
-                            e.timer -= DT;
-                            if e.timer <= 0.0 {
-                                e.flight = Flight::Dive;
-                            }
-                            glide(e.pos, place, 26.0) + with_ship
-                        }
-                        Flight::Dive => dir(0.0, 0.0, 0.0),
-                    };
-                }
-            }
-            e.pos += e.vel * DT;
-        }
+        let fired: Vec<(P, P)> = self
+            .enemies
+            .iter_mut()
+            .filter_map(|e| e.step(&view))
+            .collect();
         for (pos, vel) in fired {
             self.bolts.push(Shot::new(pos, vel, 8.0));
             self.events.push(Event::Bolt { pos });
         }
         self.feed();
         // Behind the ship: gone.
-        self.enemies.retain(|e| arc(e.pos) > s_ship - 6.0);
+        let s = self.ship.s();
+        self.enemies.retain(|e| arc(e.pos) > s - 6.0);
     }
 
     /// Singularities eat the mines and loose drones that fall in, and burst when overfed.
@@ -188,7 +102,7 @@ impl World {
             }
             for (i, e) in self.enemies.iter().enumerate() {
                 let food = e.foe == Foe::Mine || (e.foe == Foe::Drone && e.anchor.is_none());
-                if food && e.age > 0.3 && (e.pos & w.pos).norm() < w.radius() {
+                if food && e.age > 0.3 && e.pos.distance(w.pos) < w.radius() {
                     eaten.push((wi, i));
                 }
             }
@@ -223,9 +137,8 @@ impl World {
         self.blast(w.pos, 1800.0, 6.0, 0.25);
         for k in 0..8 {
             let a = k as f32 * core::f32::consts::TAU / 8.0;
-            let pos = w.pos + (around(1.0, a, 0.0) - at(0.0, 0.0, 0.0));
-            let id = self.next_id;
-            self.next_id += 1;
+            let pos = w.pos + radial(1.0, a);
+            let id = self.next_id();
             self.enemies.push(Enemy {
                 flash: 1.0,
                 angle: a,
@@ -304,9 +217,9 @@ impl World {
         };
         for k in 0..n {
             let off = if n > 1 {
-                around(1.2, k as f32 * core::f32::consts::TAU / n as f32, 0.0) - at(0.0, 0.0, 0.0)
+                radial(1.2, k as f32 * core::f32::consts::TAU / n as f32)
             } else {
-                dir(0.0, 0.0, 0.0)
+                P::zero()
             };
             self.shards.push(Shard {
                 pos: e.pos + off,
@@ -316,12 +229,152 @@ impl World {
     }
 }
 
+impl Enemy {
+    /// One tick: its family's flight, then the step. A turret that fires returns its bolt:
+    /// where from, and at what velocity.
+    fn step(&mut self, view: &View) -> Option<(P, P)> {
+        self.prev = self.pos;
+        self.age += DT;
+        self.flash = (self.flash - DT * 6.0).max(0.0);
+        let bolt = match self.foe {
+            Foe::Drone => {
+                self.fly_drone(view);
+                None
+            }
+            Foe::Mine => {
+                self.drift(view);
+                None
+            }
+            Foe::Turret => self.fire(view),
+            Foe::Serpent => {
+                self.swim();
+                None
+            }
+            Foe::Singularity => {
+                self.hold(view);
+                None
+            }
+        };
+        self.pos += self.vel * DT;
+        bolt
+    }
+
+    /// A drone: to its place in its ring, holding there, and diving at the ship.
+    fn fly_drone(&mut self, view: &View) {
+        self.angle += DT * RING_TURN;
+        // An escort's ring turns about its singularity; a lost escort joins the ship's band.
+        let well = self
+            .anchor
+            .and_then(|id| view.singularities.iter().find(|w| w.0 == id));
+        if self.anchor.is_some() && well.is_none() {
+            self.anchor = None;
+            self.orbit = 4.6;
+            self.depth = 8.0;
+            self.flight = Flight::Approach;
+        }
+        // Its place moves with the ship (or the singularity), and turns with the ring: along
+        // its radial offset turned a quarter about the axis, at the ring's rate. Gliding with
+        // both motions, a drone reaches its place instead of trailing it.
+        let quarter = core::f32::consts::FRAC_PI_2;
+        let turning = radial(self.orbit, self.angle + quarter) * RING_TURN;
+        let (place, place_vel) = match well {
+            Some(&(_, w, v)) => (w + radial(self.orbit, self.angle), v + turning),
+            // Its place in the ring, which holds `depth` ahead of the ship.
+            None => (
+                around(self.orbit, self.angle, view.s_ship + self.depth),
+                view.with_ship() + turning,
+            ),
+        };
+        self.vel = match self.flight {
+            Flight::Approach | Flight::Hold => {
+                if self.flight == Flight::Approach && place.distance(self.pos) < 1.5 {
+                    self.flight = Flight::Hold;
+                }
+                glide(self.pos, place, 26.0) + place_vel
+            }
+            Flight::Dive => {
+                self.timer -= DT;
+                if self.timer > 0.0 {
+                    // The warning: it flashes in place.
+                    self.flash = self.flash.max(0.6);
+                    (place - self.pos) * 2.5 + place_vel
+                } else {
+                    // At the ship, at a speed you can dodge.
+                    let to = view.ship - self.pos;
+                    to * (10.0 / to.ideal_norm().max(1e-3)) + view.with_ship() * 0.7
+                }
+            }
+        };
+    }
+
+    /// A mine: drifting, bouncing off the tunnel's inner radius (a reflection in the plane
+    /// tangent to it there), pulled by the singularities.
+    fn drift(&mut self, view: &View) {
+        let outward = off_axis(self.pos + self.vel * DT) > off_axis(self.pos);
+        if off_axis(self.pos) > SHIP_RADIUS + 0.3 && outward {
+            let tangent = Plane::orthogonal_to(self.pos - foot(self.pos));
+            self.vel = tangent.reflect(self.vel);
+        }
+        self.vel += view.wells.pull(self.pos, 20.0) * DT;
+    }
+
+    /// A turret: every 1.5 s, a bolt aimed where the ship will be when it arrives (you read
+    /// it by its growth and its colour), if the ship is in range ahead.
+    fn fire(&mut self, view: &View) -> Option<(P, P)> {
+        self.timer -= DT;
+        if self.timer > 0.0 {
+            return None;
+        }
+        self.timer = 1.5;
+        let ahead = arc(self.pos) - view.s_ship;
+        (view.alive && (12.0..62.0).contains(&ahead)).then(|| {
+            let t = ahead / (view.speed + BOLT_SPEED);
+            let there = view.ship + dir(0.0, 0.0, view.speed * t);
+            (self.pos, (there - self.pos) * (1.0 / t))
+        })
+    }
+
+    /// A serpent: the head along its screw, and each segment the head moved back by its own
+    /// lag.
+    fn swim(&mut self) {
+        let next = self.swim >> self.pos;
+        self.vel = (next - self.pos) * (1.0 / DT);
+        for seg in &mut self.body {
+            seg.prev = seg.pos;
+            seg.pos = seg.behind >> next;
+        }
+    }
+
+    /// A singularity: holding ahead of the ship, turning slowly about the axis; then let go,
+    /// so that the ship must fly past it.
+    fn hold(&mut self, view: &View) {
+        self.angle += DT * 0.3;
+        let place = around(self.orbit, self.angle, view.s_ship + self.depth);
+        self.vel = match self.flight {
+            Flight::Approach => {
+                if place.distance(self.pos) < 1.5 {
+                    self.flight = Flight::Hold;
+                }
+                glide(self.pos, place, 26.0) + view.with_ship()
+            }
+            Flight::Hold => {
+                self.timer -= DT;
+                if self.timer <= 0.0 {
+                    self.flight = Flight::Dive;
+                }
+                glide(self.pos, place, 26.0) + view.with_ship()
+            }
+            Flight::Dive => P::zero(),
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tunnel::director::{SEGMENT_LAG, SEGMENTS};
     use crate::tunnel::tests::spawn;
-    use crate::tunnel::{Input, World};
+    use crate::tunnel::{Input, World, at};
 
     /// Drones come in, hold a ring ahead of the ship, and dive one at a time.
     #[test]
@@ -448,11 +501,7 @@ mod tests {
             // Where the head was `lag` seconds ago.
             let lag = (k + 1) as f32 * SEGMENT_LAG;
             let then = trail[trail.len() - 1 - (lag / DT).round() as usize];
-            assert!(
-                (then & seg.pos).norm() < 0.05,
-                "{}",
-                (then & seg.pos).norm()
-            );
+            assert!(then.distance(seg.pos) < 0.05, "{}", then.distance(seg.pos));
         }
     }
 }

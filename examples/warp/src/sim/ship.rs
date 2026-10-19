@@ -1,12 +1,13 @@
 //! The ship: flying and firing, dying and coming back, bombs, extra lives and bombs, and the
 //! shards it collects.
 
-use super::body::{Body, ORIGIN, distance, place, pose_at, turned, with_length};
-use super::collide::outside;
+use super::body::{Body, pose_at, turned};
 use super::shots::Bullet;
 use super::{DT, Event, Input, P, Phase, World};
+use crate::geom::{ORIGIN, with_length};
 
-const SHIP_SPEED: f32 = 11.5;
+/// The ship's top speed.
+pub const SHIP_SPEED: f32 = 11.5;
 /// The ship's collision radius.
 pub const SHIP_RADIUS: f32 = 0.42;
 /// Seconds between shots.
@@ -49,7 +50,7 @@ impl Default for Ship {
 
 /// A body at rest at the arena's centre, facing up: where the ship starts.
 fn at_start() -> Body {
-    Body::new(pose_at(0.0, 0.0, core::f32::consts::FRAC_PI_2))
+    Body::new(pose_at(ORIGIN, core::f32::consts::FRAC_PI_2))
 }
 
 /// A shard dropped by a kill; collecting it raises the multiplier.
@@ -79,14 +80,10 @@ impl World {
         ship.body.step(DT);
         // Walls: stop at the wall, keeping only the motion along it (the mean of the velocity
         // and its reflection in the wall).
-        for _ in 0..2 {
-            let Some(wall) = outside(ship.body.prev >> ORIGIN, ship.body.pos(), SHIP_RADIUS) else {
-                break;
-            };
-            ship.body
-                .move_to(crate::geom::foot(ship.body.pos(), wall).unitized());
-            ship.body.vel = (ship.body.vel + wall.reflect(ship.body.vel)) * 0.5;
-        }
+        ship.body.walls_crossed(SHIP_RADIUS, |body, wall| {
+            body.stop_at(wall);
+            body.vel = (body.vel + wall.reflect(body.vel)) * 0.5;
+        });
         ship.cooldown -= DT;
         if input.fire && input.aim.ideal_norm() > 0.2 && ship.cooldown <= 0.0 {
             ship.cooldown += FIRE_INTERVAL;
@@ -118,10 +115,10 @@ impl World {
         let s = self.ship.body.pos();
         let hit = self.enemies.iter().any(|e| {
             e.age > 0.25
-                && (distance(e.body.pos(), s) < e.radius * 0.8 + SHIP_RADIUS
+                && (e.body.pos().distance(s) < e.radius * 0.8 + SHIP_RADIUS
                     || e.chain
                         .iter()
-                        .any(|seg| distance(seg.pos(), s) < 0.35 + SHIP_RADIUS))
+                        .any(|seg| seg.pos().distance(s) < 0.35 + SHIP_RADIUS))
         });
         if hit {
             self.die();
@@ -178,7 +175,7 @@ impl World {
     pub(super) fn drop_shards(&mut self, pos: P, count: usize) {
         for _ in 0..count {
             let a = self.rng.angle();
-            let mut body = Body::new(place(pos, a));
+            let mut body = Body::new(pose_at(pos, a));
             body.vel = P::direction_from_angle(a) * self.rng.range(2.0, 7.0);
             body.spin = self.rng.range(-5.0, 5.0);
             self.shards.push(Shard { body, life: 7.0 });
@@ -210,20 +207,15 @@ impl World {
             s.body.vel = v;
             s.body.step(DT);
             // Kept in the arena: onto the wall it crossed.
-            for _ in 0..2 {
-                let Some(wall) = outside(s.body.prev >> ORIGIN, s.body.pos(), 0.0) else {
-                    break;
-                };
-                s.body
-                    .move_to(crate::geom::foot(s.body.pos(), wall).unitized());
-            }
+            s.body.walls_crossed(0.0, Body::stop_at);
             true
         });
-        for _ in 0..picked {
-            let mult = self.ledger.raise();
-            let pos = self.ship.body.pos();
-            self.events.push(Event::Pickup { pos, mult });
-        }
+        let pos = self.ship.body.pos();
+        let pickups = (0..picked).map(|_| Event::Pickup {
+            pos,
+            mult: self.ledger.raise(),
+        });
+        self.events.extend(pickups);
     }
 }
 
@@ -268,8 +260,7 @@ mod tests {
     fn multiplier_rises_with_shards() {
         let mut w = World::new(5);
         w.director.enabled = false;
-        let mut s = Body::new(pose_at(0.5, 0.0, 0.0));
-        s.vel = dir(0.0, 0.0);
+        let s = Body::new(pose_at(at(0.5, 0.0), 0.0));
         w.shards.push(Shard { body: s, life: 5.0 });
         w.tick(&Input::default());
         assert_eq!(w.ledger.mult, 2);

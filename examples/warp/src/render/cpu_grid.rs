@@ -30,7 +30,7 @@ impl CpuGrid {
     pub fn new(spec: GridSpec) -> CpuGrid {
         let rest: Vec<P> = (0..spec.nodes()).map(|k| spec.rest(k)).collect();
         let n = rest.len();
-        let zero = Point::direction(0.0, 0.0);
+        let zero = Point::zero();
         CpuGrid {
             spec,
             p: rest.clone(),
@@ -45,26 +45,25 @@ impl CpuGrid {
 
     /// Set the state from GPU nodes.
     pub fn set(&mut self, nodes: &[Node]) {
-        for (k, node) in nodes.iter().enumerate() {
-            self.p[k] = node.p.into();
-            self.v[k] = node.v.into();
+        for ((p, v), node) in self.p.iter_mut().zip(&mut self.v).zip(nodes) {
+            (*p, *v) = (node.p.into(), node.v.into());
         }
     }
 
     /// One step of `dt` with `sources`.
     pub fn step(&mut self, sources: &[Source], dt: f32) {
         // External forces, source by source in the GPU's order.
-        self.f.fill(Point::direction(0.0, 0.0));
+        self.f.fill(Point::zero());
         for s in sources {
             crate::add_source_force_batch(&self.f, &self.p, &[s.at], &[s.k()], &mut self.tmp);
             core::mem::swap(&mut self.f, &mut self.tmp);
         }
-        let w = self.spec.cols as usize;
-        for k in 0..self.p.len() {
-            self.n[k] = if self.spec.is_border(k) {
-                [self.p[k]; 4]
+        let (w, p, spec) = (self.spec.cols as usize, &self.p, &self.spec);
+        for (k, n) in self.n.iter_mut().enumerate() {
+            *n = if spec.is_border(k) {
+                [p[k]; 4]
             } else {
-                [self.p[k - 1], self.p[k + 1], self.p[k - w], self.p[k + w]]
+                [p[k - 1], p[k + 1], p[k - w], p[k + w]]
             };
         }
         let k = [SPRINGS.k(dt)];
@@ -77,12 +76,12 @@ impl CpuGrid {
             &k,
             &mut self.out,
         );
-        for (idx, &(p, v)) in self.out.iter().enumerate() {
+        for (k, &next) in self.out.iter().enumerate() {
             // The border is pinned.
-            (self.p[idx], self.v[idx]) = if self.spec.is_border(idx) {
-                (self.rest[idx], Point::direction(0.0, 0.0))
+            (self.p[k], self.v[k]) = if self.spec.is_border(k) {
+                (self.rest[k], Point::zero())
             } else {
-                (p, v)
+                next
             };
         }
     }

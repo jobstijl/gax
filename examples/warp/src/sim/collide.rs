@@ -55,10 +55,14 @@ pub fn outside(from: Point<(), f32>, to: Point<(), f32>, margin: f32) -> Option<
         .map(|(_, w)| w)
 }
 
+/// A body's own y axis, the join of its centre and `(0, 1)`: across its heading, which is on
+/// its negative side.
+const Y_AXIS: Wall = Wall::new(-1.0, 0.0, 0.0);
+
 /// The shield line of a body at `pose`: through its centre along its local y axis, across its
 /// heading.
 pub fn shield(pose: Pose) -> Wall {
-    (pose >> crate::geom::ORIGIN) & (pose >> Point::xy(0.0, 1.0))
+    pose >> Y_AXIS
 }
 
 /// Is `p` in front of a body at `pose` (on the side its local x axis points to)? The heading
@@ -90,10 +94,10 @@ impl SpatialHash {
         }
     }
 
-    /// The cell of a point displaced by `(dx, dy)`: its offset from the grid's origin, in
+    /// The cell of a point (of any non-zero weight): its offset from the grid's origin, in
     /// cells.
-    fn index(&self, p: Point<(), f32>, dx: f32, dy: f32) -> (usize, usize) {
-        let d = p.unitized() - self.origin + Point::direction(dx, dy);
+    fn index(&self, p: Point<(), f32>) -> (usize, usize) {
+        let d = p.position() - self.origin;
         let c = (d.e20() / self.cell)
             .floor()
             .clamp(0.0, (self.cols - 1) as f32) as usize;
@@ -112,8 +116,9 @@ impl SpatialHash {
 
     /// Insert `id` over the disc at `p` of radius `r`.
     pub fn insert(&mut self, id: u32, p: Point<(), f32>, r: f32) {
-        let (c0, r0) = self.index(p, -r, -r);
-        let (c1, r1) = self.index(p, r, r);
+        let corner = Point::direction(r, r);
+        let (c0, r0) = self.index(p - corner);
+        let (c1, r1) = self.index(p + corner);
         for row in r0..=r1 {
             for col in c0..=c1 {
                 self.cells[row * self.cols + col].push(id);
@@ -125,8 +130,8 @@ impl SpatialHash {
     /// repeated.
     pub fn query(&self, a: Point<(), f32>, b: Point<(), f32>, m: f32, out: &mut Vec<u32>) {
         out.clear();
-        let (ca, ra) = self.index(a, 0.0, 0.0);
-        let (cb, rb) = self.index(b, 0.0, 0.0);
+        let (ca, ra) = self.index(a);
+        let (cb, rb) = self.index(b);
         let k = (m / self.cell).ceil() as usize;
         let (c0, c1) = (
             ca.min(cb).saturating_sub(k),
@@ -150,30 +155,16 @@ impl SpatialHash {
 mod tests {
     use super::super::body::pose_at;
     use super::*;
+    use crate::geom::ORIGIN;
 
     #[test]
     fn swept_segments_hit_circles_they_pass() {
         let c = Point::xy(5.0, 0.3);
         // Passes by at distance 0.3: a hit for radius 0.5, not for 0.2.
-        assert!(segment_hits_circle(
-            crate::geom::ORIGIN,
-            Point::xy(10.0, 0.0),
-            c,
-            0.5
-        ));
-        assert!(!segment_hits_circle(
-            crate::geom::ORIGIN,
-            Point::xy(10.0, 0.0),
-            c,
-            0.2
-        ));
+        assert!(segment_hits_circle(ORIGIN, Point::xy(10.0, 0.0), c, 0.5));
+        assert!(!segment_hits_circle(ORIGIN, Point::xy(10.0, 0.0), c, 0.2));
         // Stops short of the closest approach: no hit, though the line passes close.
-        assert!(!segment_hits_circle(
-            crate::geom::ORIGIN,
-            Point::xy(3.0, 0.0),
-            c,
-            0.5
-        ));
+        assert!(!segment_hits_circle(ORIGIN, Point::xy(3.0, 0.0), c, 0.5));
         // Tunnelling: a fast bullet crossing a small target in one tick still hits it.
         assert!(segment_hits_circle(
             Point::xy(-50.0, 0.0),
@@ -193,7 +184,7 @@ mod tests {
     #[test]
     fn walls_face_inwards() {
         for w in walls(10.0, 5.0) {
-            assert!((w & crate::geom::ORIGIN).s() > 0.0);
+            assert!((w & ORIGIN).s() > 0.0);
             assert!(
                 (w & Point::xy(30.0, 30.0)).s() < 0.0 || (w & Point::xy(-30.0, -30.0)).s() < 0.0
             );
@@ -204,7 +195,8 @@ mod tests {
 
     #[test]
     fn facing_is_the_side_of_the_heading() {
-        let pose = pose_at(2.0, 2.0, core::f32::consts::FRAC_PI_2); // facing +y
+        assert_eq!(Y_AXIS, ORIGIN & Point::xy(0.0, 1.0));
+        let pose = pose_at(Point::xy(2.0, 2.0), core::f32::consts::FRAC_PI_2); // facing +y
         assert!(in_front(pose, Point::xy(2.0, 5.0)));
         assert!(!in_front(pose, Point::xy(2.0, -1.0)));
     }

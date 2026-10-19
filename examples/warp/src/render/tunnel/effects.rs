@@ -196,7 +196,11 @@ impl View {
         let flash_scale = self.settings.flash_scale;
         // The collapse's ripple, from where the singularity was on screen (in HUD units, which
         // the HUD's view map takes to the target's uv).
-        let hud = scene::view_map(crate::sim::body::identity(), scene::HUD_HALF_HEIGHT, size);
+        let hud = scene::view_map(
+            crate::sim::body::Pose::identity(),
+            scene::HUD_HALF_HEIGHT,
+            size,
+        );
         let shock = self
             .shock
             .filter(|_| self.settings.lensing)

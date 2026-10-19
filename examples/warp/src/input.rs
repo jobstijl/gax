@@ -93,7 +93,7 @@ fn deadzone(x: f32, y: f32, dz: f32) -> Point<(), f32> {
     let v = Point::direction(x, y);
     let l = v.ideal_norm();
     if l < dz {
-        return Point::direction(0.0, 0.0);
+        return Point::zero();
     }
     v * (((l - dz) / (1.0 - dz)).min(1.0) / l)
 }
@@ -121,7 +121,7 @@ pub fn read(
     let mut flight = flight_keys(keys, mouse);
     let mut input = sim::Input {
         movement: movement_keys(keys),
-        aim: Point::direction(0.0, 0.0),
+        aim: Point::zero(),
         fire: mouse.pressed(MouseButton::Left),
         bomb: flight.bomb,
     };

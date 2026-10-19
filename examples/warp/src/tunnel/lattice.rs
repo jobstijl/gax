@@ -148,7 +148,7 @@ impl Lattice {
             let sites = field.sites_mut();
             sites.rotate_left(n);
             let len = sites.len();
-            sites[len - n..].fill(dir(0.0, 0.0, 0.0));
+            sites[len - n..].fill(Dir::zero());
         }
         self.radii.rotate_left(shift);
         self.radii[RINGS - shift..].fill(RADIUS);
@@ -167,9 +167,7 @@ impl Lattice {
             for (j, &home) in self.ring.iter().enumerate() {
                 let i = r * AROUND + j;
                 let at = home + along;
-                let f = sources
-                    .iter()
-                    .fold(dir(0.0, 0.0, 0.0), |f, src| f + src.force(at));
+                let f = sources.iter().fold(Dir::zero(), |f, src| f + src.force(at));
                 let a = pull[i] * SPRING - d[i] * ANCHOR - v[i] * DAMPING + f;
                 v[i] += a * dt;
                 d[i] += v[i] * dt;

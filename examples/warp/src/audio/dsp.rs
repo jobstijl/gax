@@ -211,7 +211,7 @@ pub struct Resonator {
 impl Default for Resonator {
     fn default() -> Resonator {
         Resonator {
-            state: Point::direction(0.0, 0.0),
+            state: Point::zero(),
             step: Motor::rotation(ORIGIN, 0.0),
             step_fc: 0.0,
         }
