@@ -2079,8 +2079,10 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   result is not finite. Singular is one test: an LU pivot at most `n ε max|aᵢⱼ|` in magnitude,
   `numpy.linalg.matrix_rank`'s tolerance with the pivots in place of the singular values, in any
   lane. A test on the result alone (non-finite) misses the usual case, a pivot that rounding left
-  at `10⁻¹⁷` instead of zero, whose inverse is huge and finite. The sparse `factor` reports
-  `Singular` by the same test (it was an exactly zero column), and conjugate gradients fails
+  at `10⁻¹⁷` instead of zero, whose inverse is huge and finite. The sparse `factor` keeps its
+  exact test (a column with no nonzero pivot), since shift-and-invert eigensolvers factor nearly
+  singular maps on purpose (the relative test refused the numga Dirac spheres' shifted pencils),
+  and `try_solve_direct` adds the finiteness test; conjugate gradients fails
   where `solve` panics, a residual above `√ε`. The eigenproblems have no twin: a symmetric
   eigenproblem has no singular case, and a form's `eigh` against a metric that is not positive
   definite returns NaN, as documented.

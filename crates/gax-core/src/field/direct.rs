@@ -25,8 +25,7 @@ use std::vec::Vec;
 const DIAGONAL_PREFERENCE: f64 = 0.1;
 
 /// The factorization of a field map found no pivot: the map is singular. `site` and `blade` name
-/// the unknown (an input site and a coefficient of its kind) whose column had no entry left
-/// above the tolerance ([`SparseMap::factor`]).
+/// the unknown (an input site and a coefficient of its kind) whose column had no nonzero left.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Singular {
     /// The input site of the column.
@@ -182,9 +181,8 @@ where
     /// factors of meshes stay sparse. For scalar coefficients.
     ///
     /// # Errors
-    /// [`Singular`] if a column has no pivot left larger in magnitude than `n ε max|aᵢⱼ|`
-    /// (`n` the unknowns, `aᵢⱼ` the coefficients, the tolerance of the dense
-    /// [`SquareMap::try_inverse`](crate::SquareMap::try_inverse)): the map is singular.
+    /// [`Singular`] if a column has no nonzero pivot left: the map is singular. (No relative
+    /// tolerance: shift-and-invert eigensolvers factor nearly singular maps on purpose.)
     ///
     /// # Panics
     /// If the map is not square.
@@ -229,8 +227,8 @@ where
         }
     }
 
-    /// [`solve_direct`](Self::solve_direct), or `None` where the map is singular (as
-    /// [`factor`](Self::factor) finds it) or the solution is not finite.
+    /// [`solve_direct`](Self::solve_direct), or `None` where the map is singular (a column with
+    /// no nonzero pivot, as [`factor`](Self::factor) finds it) or the solution is not finite.
     ///
     /// ```
     /// use gax::field::{Field, SparseMap};
@@ -402,9 +400,6 @@ fn lu<T: Real>(
     let mut pattern = Vec::with_capacity(n);
     let mut search = Reach::new(n);
     let tol = T::from_f64(DIAGONAL_PREFERENCE);
-    // A pivot at most this large is a zero: the column depends on the others.
-    let largest_entry = a.x.iter().fold(T::zero(), |m, x| m.max(x.abs()));
-    let singular = T::epsilon() * T::from_i64(n as i64) * largest_entry;
     for (k, &col) in q.iter().enumerate() {
         l.p.push(l.i.len());
         u.p.push(u.i.len());
@@ -441,7 +436,7 @@ fn lu<T: Real>(
                 u.x.push(x[i]);
             }
         }
-        if pivot_row == none || !T::all_lt(singular, largest) {
+        if pivot_row == none {
             return Err(Singular {
                 site: col / blades,
                 blade: col % blades,

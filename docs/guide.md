@@ -448,7 +448,9 @@ The twin runs the same factorization and returns `None` if the map is singular o
 not finite. Singular means one test everywhere: a pivot of the LU factorization at most
 `n ε max|aᵢⱼ|` in magnitude, with `n` the number of unknowns and `aᵢⱼ` the coefficients. That
 is NumPy's `matrix_rank` tolerance, applied to the pivots instead of the singular values.
-`factor` uses the same test for its `Err(Singular)`. Conjugate gradients fails when its residual
+The sparse `factor` reports `Err(Singular)` only for a column with no nonzero pivot left, with
+no relative tolerance, since shift-and-invert eigensolvers factor nearly singular maps on
+purpose; `try_solve_direct` adds the finiteness test. Conjugate gradients fails when its residual
 stays above `√ε`. On SIMD lanes, `None` means that some lane failed.
 
 ```rust

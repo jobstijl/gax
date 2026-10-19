@@ -103,8 +103,10 @@ keeps, with `of_into` (map cells) and `mul_into` (multivector cells), and alloca
   system of constraints, where conjugate gradients fails.
   * The sites are ordered by minimum degree, which keeps the factors of meshes sparse.
   * The rows are pivoted for stability.
-  * A singular map, one with a pivot at most `n ε max|aᵢⱼ|`, is reported as
-    `Err(Singular { site, blade })`; `try_solve_direct` returns `None` for it.
+  * A singular map, one with a column left without a nonzero pivot, is reported as
+    `Err(Singular { site, blade })`; `try_solve_direct` returns `None` for it, and for a
+    solution that is not finite. There is no relative tolerance: shift-and-invert eigensolvers
+    factor nearly singular maps on purpose.
   * The factors solve again for every new right-hand side, as the steps of an implicit time
     integration need.
 
