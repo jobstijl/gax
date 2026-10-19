@@ -2129,6 +2129,20 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   * Every standard spec names the roles (`Twist`, the rate of a motion, extrinsic; `Forque`, its
     dual, intrinsic; `Even` and `Odd`, the versors) where they are not kinds already, so generic
     code and documents can rely on the names; they are the kinds `Motions` uses.
+* **Conformal and Lorentz motions** (2026-10-19), as batch 3 for the algebras it left. CGA3D's
+  `Motor::translation(d)` (the Euclidean part of `d`, so `q - p` of round points of weight one),
+  `Motor::rotation_about(d, angle)` and `Motor::rotation(axis, angle)` about a direct line
+  `p ^ q ^ ei` (right-handed about `q - p`, as PGA3D's `p & q`; the rotation about the parallel
+  axis through the origin, conjugated by the translation to the line's foot), CGA2D's
+  `translation` and `rotation(centre, angle)`, and in both `Even::dilation(centre, factor)`
+  (`exp(½ ln s eo ∧ ei)`, built from `√s`, moved to the centre). A test pins the rigid ones to
+  PGA's through the homomorphism, which already carried PGA's motors over with `widen()`; the
+  constructors keep CGA code in CGA and add the dilation, which PGA cannot express. STA's
+  rotor kind is `Even`: `Even::boost(direction, rapidity)` (`exp(½ζ d̂ e0)`, taking `e0` to
+  `cosh ζ e0 + sinh ζ d̂`; rapidities add, and a speed enters as `β.atanh()`) and
+  `Even::boost_between(from, to)`, the pure boost `(1 + w u)/√(2(1 + w·u))` between unit
+  four-velocities. Rotations about a circle (conformal, the exponential of its dual) stay
+  `exp` of the user's bivector.
 * **What the example cleanups asked for** (2026-10-19). Five helpers the examples had written
   for themselves, and two refusals:
   * *Constants.* The named values stay functions generic over `T: Real` (`Point::origin()`,

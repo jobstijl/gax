@@ -310,6 +310,26 @@ rotation, named by the plane it turns in: `a ^ b` turns `a` towards `b`, and
 `Motor::between` for flats. `Unit::identity()` (also `Default`) is the identity of any versor
 kind with a scalar part.
 
+CGA has the rigid motions too, from round points and Euclidean vectors (`Motor::translation(q - p)`,
+`Motor::rotation_about(d, angle)`, and `Motor::rotation(axis, angle)` about a line `p ^ q ^ ei`
+in 3D or a round point in 2D, PGA's signs: `widen()` carries PGA's motors over as the same
+motors), and the dilation PGA has not, `Even::dilation(centre, factor)`. STA's Lorentz rotors
+are `Even::boost(direction, rapidity)` and `Even::boost_between(from, to)`, the pure boost
+between two four-velocities:
+
+```rust
+# #[cfg(all(feature = "cga3d", feature = "sta"))] {
+use gax::{cga3d, sta};
+
+let (p, q) = (cga3d::Vector::<(), f64>::up(1.0, 0.0, 0.0), cga3d::Vector::up(1.0, 0.0, 2.0));
+let grow = cga3d::Even::dilation(p, 3.0);       // three times as far from p
+assert!((grow >> q).down().iter().zip([1.0, 0.0, 6.0]).all(|(a, b)| (a - b).abs() < 1e-12));
+let rest = sta::Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
+let u = sta::Even::boost(sta::Vector::new(0.0, 1.0, 0.0, 0.0), 0.5) >> rest;
+assert!((u.e1() / u.e0() - 0.5f64.tanh()).abs() < 1e-12); // the speed is tanh of the rapidity
+# }
+```
+
 **Named values as constants.** The named values are functions, generic over the coefficient
 type: `Point::origin()`, `Plane::infinity()` (PGA3D), `Line::infinity()` (PGA2D),
 `Unit::identity()`. The symbolic coefficients of the tracer and the jets build their zero at

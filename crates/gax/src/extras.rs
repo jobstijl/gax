@@ -1668,6 +1668,256 @@ cga_points!(
     "The round point `eo + x + ½|x|² ei` of the Euclidean point `(x, y)`: a null vector, and `X · Y = -½|x - y|²` for two of them."
 );
 
+// Conformal motions (ADR-052): CGA's rigid motors from gax values, as in PGA (where `widen()`
+// also carries PGA's motors over), and the dilation, which PGA has not. Round points enter as
+// `Vector::up`; a Euclidean vector is a CGA vector without `eo` and `ei` parts.
+#[cfg(feature = "cga3d")]
+mod cga3d_extras {
+    use crate::cga3d::{Even, Motor, Vector, oriented};
+    use crate::{Real, Unit};
+
+    impl<T: Real> Motor<(), T> {
+        /// The translation by the Euclidean part of `d` (of either orientation): a Euclidean
+        /// vector `Vector::new(x, y, z, 0, 0)`, or the difference `q - p` of two round points of
+        /// weight one, the translation from `p` to `q` (their `eo` parts cancel; the `ei` part is
+        /// not read). The translator `1 − ½ d ei`.
+        ///
+        /// ```
+        /// use gax::cga3d::{Motor, Vector};
+        /// let (p, q) = (Vector::<(), f64>::up(1.0, 2.0, 3.0), Vector::up(0.0, -1.0, 5.0));
+        /// let moved = Motor::translation(q - p) >> p;
+        /// assert_eq!(moved.down(), [0.0, -1.0, 5.0]);
+        /// ```
+        #[inline]
+        pub fn translation<O: crate::Orientation>(d: oriented::Vector<(), T, O>) -> Unit<Self> {
+            let (h, o) = (T::from_f64(-0.5), T::zero());
+            let t = Motor::new(T::one(), o, o, o, d.e1() * h, d.e2() * h, d.e3() * h, o);
+            Unit::new_unchecked(t)
+        }
+
+        /// The rotation by `angle` about the axis through the origin along the Euclidean part
+        /// of `d` (of either orientation, any length), right-handed about it.
+        ///
+        /// ```
+        /// use gax::cga3d::{Motor, Vector};
+        /// let up = Vector::<(), f64>::new(0.0, 0.0, 1.0, 0.0, 0.0);
+        /// let r = Motor::rotation_about(up, std::f64::consts::FRAC_PI_2);
+        /// let [x, y, z] = (r >> Vector::up(1.0, 0.0, 0.0)).down();
+        /// assert!(x.abs() < 1e-12 && (y - 1.0).abs() < 1e-12 && z.abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn rotation_about<O: crate::Orientation>(
+            d: oriented::Vector<(), T, O>,
+            angle: T,
+        ) -> Unit<Self> {
+            let (x, y, z, o) = (d.e1(), d.e2(), d.e3(), T::zero());
+            let (s, c) = (angle * T::from_f64(0.5)).sin_cos();
+            let k = -s / (x * x + y * y + z * z).sqrt();
+            Unit::new_unchecked(Motor::new(c, x * k, y * k, z * k, o, o, o, o))
+        }
+
+        /// The rotation by `angle` about the line `axis`, which may be any line: the direct line
+        /// `p ^ q ^ ei` through the round points `p` and `q` (of either orientation, any
+        /// weight), right-handed about the direction from `p` to `q`, as PGA3D's
+        /// `Motor::rotation(p & q, angle)`. The rotation about the parallel axis through the
+        /// origin, moved to the line's point nearest the origin. Not for a circle (whose rotation
+        /// is conformal, not rigid: the exponential of its dual).
+        ///
+        /// ```
+        /// use gax::cga3d::{Motor, Vector};
+        /// let ei = Vector::<(), f64>::new(0.0, 0.0, 0.0, 0.0, 1.0);
+        /// let axis = Vector::up(1.0, 0.0, 0.0) ^ Vector::up(1.0, 0.0, 1.0) ^ ei;
+        /// let r = Motor::rotation(axis, std::f64::consts::FRAC_PI_2);
+        /// let [x, y, z] = (r >> Vector::up(0.0, 0.0, 0.0)).down();
+        /// assert!((x - 1.0).abs() < 1e-12 && (y + 1.0).abs() < 1e-12 && z.abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn rotation<O: crate::Orientation>(
+            axis: oriented::Trivector<(), T, O>,
+            angle: T,
+        ) -> Unit<Self> {
+            // `p ^ q ^ ei = eo ^ d ^ ei + (p ^ d) ^ ei` for `d = q - p`: the direction is read
+            // from the `e_k eo ei` parts (negated), the moment `p × d` from the `e_jk ei` parts,
+            // and the point nearest the origin is `d × m / |d|²`.
+            let d = [-axis.e1oi(), -axis.e2oi(), -axis.e3oi()];
+            let m = [axis.e23i(), axis.e31i(), axis.e12i()];
+            let r = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).recip();
+            let o = T::zero();
+            let foot = Vector::new(
+                (d[1] * m[2] - d[2] * m[1]) * r,
+                (d[2] * m[0] - d[0] * m[2]) * r,
+                (d[0] * m[1] - d[1] * m[0]) * r,
+                o,
+                o,
+            );
+            let t = Self::translation(foot);
+            t * Self::rotation_about(Vector::new(d[0], d[1], d[2], o, o), angle) * t.inverse()
+        }
+    }
+
+    impl<T: Real> Even<(), T> {
+        /// The dilation by `factor` (positive) about the round point `centre` (of either
+        /// orientation, any weight): `exp(½ ln(factor) eo ∧ ei)`, moved to the centre. It moves
+        /// a round point to the round point `factor` times as far from the centre, of weight
+        /// `1 / factor`; spheres stay spheres, their radii scaled.
+        ///
+        /// ```
+        /// use gax::cga3d::{Even, Vector};
+        /// let d = Even::dilation(Vector::<(), f64>::up(1.0, 1.0, 1.0), 3.0);
+        /// let [x, y, z] = (d >> Vector::up(2.0, 1.0, 0.0)).down();
+        /// assert!((x - 4.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12 && (z + 2.0).abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn dilation<O: crate::Orientation>(
+            centre: oriented::Vector<(), T, O>,
+            factor: T,
+        ) -> Unit<Self> {
+            // cosh and sinh of `½ ln factor`, from its square root.
+            let (r, h, o) = (factor.sqrt(), T::from_f64(0.5), T::zero());
+            let (c, s) = ((r + r.recip()) * h, (r - r.recip()) * h);
+            let at_origin =
+                Unit::new_unchecked(Even::new(c, o, o, o, o, o, o, o, o, o, s, o, o, o, o, o));
+            let w = centre.eo().recip();
+            let to = Vector::new(centre.e1() * w, centre.e2() * w, centre.e3() * w, o, o);
+            let t = Motor::translation(to).widen::<Even<(), T>>();
+            t * at_origin * t.inverse()
+        }
+    }
+}
+
+#[cfg(feature = "cga2d")]
+mod cga2d_extras {
+    use crate::cga2d::{Even, Motor, Vector, oriented};
+    use crate::{Real, Unit};
+
+    impl<T: Real> Motor<(), T> {
+        /// The translation by the Euclidean part of `d` (of either orientation): a Euclidean
+        /// vector `Vector::new(x, y, 0, 0)`, or the difference `q - p` of two round points of
+        /// weight one, the translation from `p` to `q`. The translator `1 − ½ d ei`.
+        ///
+        /// ```
+        /// use gax::cga2d::{Motor, Vector};
+        /// let (p, q) = (Vector::<(), f64>::up(1.0, 2.0), Vector::up(-3.0, 0.5));
+        /// assert_eq!((Motor::translation(q - p) >> p).down(), [-3.0, 0.5]);
+        /// ```
+        #[inline]
+        pub fn translation<O: crate::Orientation>(d: oriented::Vector<(), T, O>) -> Unit<Self> {
+            let h = T::from_f64(-0.5);
+            Unit::new_unchecked(Motor::new(T::one(), T::zero(), d.e1() * h, d.e2() * h))
+        }
+
+        /// The rotation by `angle` (counterclockwise) about the round point `centre` (of either
+        /// orientation, any weight), as PGA2D's `Motor::rotation(point, angle)`.
+        ///
+        /// ```
+        /// use gax::cga2d::{Motor, Vector};
+        /// let r = Motor::rotation(Vector::<(), f64>::up(1.0, 0.0), std::f64::consts::FRAC_PI_2);
+        /// let [x, y] = (r >> Vector::up(2.0, 0.0)).down();
+        /// assert!((x - 1.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn rotation<O: crate::Orientation>(
+            centre: oriented::Vector<(), T, O>,
+            angle: T,
+        ) -> Unit<Self> {
+            let (s, c) = (angle * T::from_f64(0.5)).sin_cos();
+            let o = T::zero();
+            let w = centre.eo().recip();
+            let t = Self::translation(Vector::new(centre.e1() * w, centre.e2() * w, o, o));
+            t * Unit::new_unchecked(Motor::new(c, -s, o, o)) * t.inverse()
+        }
+    }
+
+    impl<T: Real> Even<(), T> {
+        /// The dilation by `factor` (positive) about the round point `centre` (of either
+        /// orientation, any weight): `exp(½ ln(factor) eo ∧ ei)`, moved to the centre. It moves
+        /// a round point to the round point `factor` times as far from the centre, of weight
+        /// `1 / factor`; circles stay circles, their radii scaled.
+        ///
+        /// ```
+        /// use gax::cga2d::{Even, Vector};
+        /// let d = Even::dilation(Vector::<(), f64>::up(1.0, 1.0), 0.5);
+        /// let [x, y] = (d >> Vector::up(3.0, 1.0)).down();
+        /// assert!((x - 2.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn dilation<O: crate::Orientation>(
+            centre: oriented::Vector<(), T, O>,
+            factor: T,
+        ) -> Unit<Self> {
+            let (r, h, o) = (factor.sqrt(), T::from_f64(0.5), T::zero());
+            let (c, s) = ((r + r.recip()) * h, (r - r.recip()) * h);
+            let at_origin = Unit::new_unchecked(Even::new(c, o, o, o, o, o, s, o));
+            let w = centre.eo().recip();
+            let to = Vector::new(centre.e1() * w, centre.e2() * w, o, o);
+            let t = Motor::translation(to).widen::<Even<(), T>>();
+            t * at_origin * t.inverse()
+        }
+    }
+}
+
+// Boosts (ADR-052): Lorentz rotors from gax values, in the observer `e0`'s split.
+#[cfg(feature = "sta")]
+mod sta_extras {
+    use crate::sta::{Even, Vector, oriented};
+    use crate::{Real, Unit};
+
+    impl<T: Real> Even<(), T> {
+        /// The boost by `rapidity` along the spatial direction `d` (its `e1, e2, e3` part, of
+        /// either orientation, any length; the observer is `e0`): `exp(½ rapidity d̂ e0)`. It
+        /// takes the observer at rest to the four-velocity `cosh ζ e0 + sinh ζ d̂`, moving at
+        /// speed `tanh ζ` along `d̂` (for a speed `β`, the rapidity is `β.atanh()`). Rapidities
+        /// along one direction add.
+        ///
+        /// ```
+        /// use gax::sta::{Even, Vector};
+        /// let x = Vector::<(), f64>::new(0.0, 1.0, 0.0, 0.0);
+        /// let u = Even::boost(x, 0.8) >> Vector::new(1.0, 0.0, 0.0, 0.0);
+        /// assert!((u.e0() - 0.8f64.cosh()).abs() < 1e-12 && (u.e1() - 0.8f64.sinh()).abs() < 1e-12);
+        /// let twice = Even::boost(x, 0.3) * Even::boost(x, 0.5);
+        /// assert!(twice.c.iter().zip(Even::boost(x, 0.8).c).all(|(a, b)| (a - b).abs() < 1e-12));
+        /// ```
+        #[inline]
+        pub fn boost<O: crate::Orientation>(
+            d: oriented::Vector<(), T, O>,
+            rapidity: T,
+        ) -> Unit<Self> {
+            let (x, y, z, o) = (d.e1(), d.e2(), d.e3(), T::zero());
+            let h = rapidity * T::from_f64(0.5);
+            let s = h.sinh() / (x * x + y * y + z * z).sqrt();
+            Unit::new_unchecked(Even::new(h.cosh(), x * s, y * s, z * s, o, o, o, o))
+        }
+
+        /// The pure boost (no rotation) that takes the timelike direction `from` to `to` (both
+        /// future-pointing, or both past-pointing, of either orientation, any length):
+        /// `(1 + to from)` for unit four-velocities, normalized. A four-velocity's boost from
+        /// the observer at rest is `boost_between(e0, u)`.
+        ///
+        /// ```
+        /// use gax::sta::{Even, Vector};
+        /// let rest = Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
+        /// let u = Vector::new(1.25, 0.0, 0.75, 0.0); // speed 0.6 along y, (1.25² − 0.75² = 1)
+        /// let b = Even::boost_between(rest, u);
+        /// assert!((b >> rest).c.iter().zip(u.c).all(|(a, b)| (a - b).abs() < 1e-12));
+        /// let y = Vector::new(0.0, 0.0, 1.0, 0.0);
+        /// let direct = Even::boost(y, 0.6f64.atanh());
+        /// assert!(b.c.iter().zip(direct.c).all(|(a, b)| (a - b).abs() < 1e-12));
+        /// ```
+        #[inline]
+        pub fn boost_between<O: crate::Orientation, P: crate::Orientation>(
+            from: oriented::Vector<(), T, O>,
+            to: oriented::Vector<(), T, P>,
+        ) -> Unit<Self> {
+            let unit = |v: Vector<(), T>| v.gp(v.dot(v).s().sqrt().recip());
+            let u = unit(from.with_orientation());
+            let w = unit(to.with_orientation());
+            let r = (w * u).cast::<Even>() + Unit::<Self>::identity().into_inner();
+            let n = (T::from_f64(2.0) * (T::one() + (w | u).s())).sqrt();
+            Unit::new_unchecked(r.gp(n.recip()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "pga3d")]
@@ -1953,6 +2203,34 @@ mod tests {
         let dual: cga3d::Vector<(), f64> = plane.into();
         assert!(((x | dual).s() - (plane & p).s()).abs() < 1e-12);
         assert!(((x | dual).s() - 2.0).abs() < 1e-12);
+    }
+
+    /// CGA's rigid motors are PGA's, through the homomorphism (`e0` to `-ei`): a rotation about
+    /// a skew line and a translation, each widened from PGA3D, equal the CGA constructors' on
+    /// the same line and direction.
+    #[cfg(all(feature = "cga3d", feature = "pga3d"))]
+    #[test]
+    fn cga_motors_are_pga_motors() {
+        use crate::{cga3d, pga3d};
+        let close = |a: cga3d::Motor<(), f64>, b: cga3d::Motor<(), f64>| {
+            a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-12)
+        };
+        let (p, q) = ([0.5, -1.0, 2.0], [1.5, 0.25, -0.5]);
+        let pga = |[x, y, z]: [f64; 3]| pga3d::Point::xyz(x, y, z);
+        let cga = |[x, y, z]: [f64; 3]| cga3d::Vector::up(x, y, z);
+        let ei = cga3d::Vector::new(0.0, 0.0, 0.0, 0.0, 1.0);
+        let wide: cga3d::Motor<(), f64> = pga3d::Motor::rotation(pga(p) & pga(q), 0.7)
+            .widen::<cga3d::Motor<(), f64>>()
+            .into_inner();
+        let own = cga3d::Motor::rotation(cga(p) ^ cga(q) ^ ei.gp(3.0), 0.7);
+        assert!(close(wide, own.into_inner()));
+        let wide: cga3d::Motor<(), f64> = pga3d::Motor::translation(pga(q) - pga(p))
+            .widen::<cga3d::Motor<(), f64>>()
+            .into_inner();
+        assert!(close(
+            wide,
+            cga3d::Motor::translation(cga(q) - cga(p)).into_inner()
+        ));
     }
 
     #[cfg(feature = "pga3d")]
