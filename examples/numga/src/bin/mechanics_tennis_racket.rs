@@ -16,7 +16,7 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
-    backdrop, caption, palette, reach3, run,
+    backdrop, caption, palette, reach3, run_with,
 };
 
 /// A point of a chart: (time, value).
@@ -222,26 +222,23 @@ struct Scenes {
 const COMPARE_DT: f64 = 0.25;
 const COMPARE_RUN: f64 = 100.0;
 
-fn scenes() -> &'static Scenes {
-    static SCENES: std::sync::OnceLock<Scenes> = std::sync::OnceLock::new();
-    SCENES.get_or_init(|| {
-        let steps = (SPAN / SHOW_DT).round() as usize;
-        let body3 = racket::<D3>(42);
-        let (motors3, rates3) = simulate::<D3>(&body3, D3::explicit_rkmk4, SHOW_DT, steps);
-        let body4 = racket::<D4>(42);
-        let (_, rates4) = simulate::<D4>(&body4, D4::explicit_rkmk4, SHOW_DT, steps);
-        let drift = [
-            STEPPERS.map(|name| drift_per_step::<D3>(name, COMPARE_DT, COMPARE_RUN)),
-            STEPPERS.map(|name| drift_per_step::<D4>(name, COMPARE_DT, COMPARE_RUN)),
-            STEPPERS.map(|name| drift_per_step::<D5>(name, COMPARE_DT, COMPARE_RUN)),
-        ];
-        Scenes {
-            motors3,
-            rates3,
-            rates4,
-            drift,
-        }
-    })
+fn scenes() -> Scenes {
+    let steps = (SPAN / SHOW_DT).round() as usize;
+    let body3 = racket::<D3>(42);
+    let (motors3, rates3) = simulate::<D3>(&body3, D3::explicit_rkmk4, SHOW_DT, steps);
+    let body4 = racket::<D4>(42);
+    let (_, rates4) = simulate::<D4>(&body4, D4::explicit_rkmk4, SHOW_DT, steps);
+    let drift = [
+        STEPPERS.map(|name| drift_per_step::<D3>(name, COMPARE_DT, COMPARE_RUN)),
+        STEPPERS.map(|name| drift_per_step::<D4>(name, COMPARE_DT, COMPARE_RUN)),
+        STEPPERS.map(|name| drift_per_step::<D5>(name, COMPARE_DT, COMPARE_RUN)),
+    ];
+    Scenes {
+        motors3,
+        rates3,
+        rates4,
+        drift,
+    }
 }
 
 /// One box of the 3D racket, turned by its rotor, drawn with its spin axis about pixel `centre`
@@ -287,9 +284,8 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f3
     s.draw(c);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, sc: &Scenes, t: f32) {
     backdrop(c);
-    let sc = scenes();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let time = f64::from(t.rem_euclid(LOOP) / LOOP) * SPAN;
@@ -394,7 +390,11 @@ fn rate_curves(
 }
 
 fn main() {
-    run(Anim::new("tennis racket", LOOP).size(960, 540), draw);
+    run_with(
+        Anim::new("tennis racket", LOOP).size(960, 540),
+        scenes,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -503,6 +503,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scenes(), 0.5);
     }
 }

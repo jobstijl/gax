@@ -24,10 +24,9 @@ use gax::vga3d::Vector;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
-    backdrop, caption, colormap, from_above, palette, reach3, run, vector3,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect, Scene3,
+    backdrop, caption, colormap, from_above, palette, reach3, run_with, vector3,
 };
-use std::sync::OnceLock;
 
 mod graphene {
     use gax::Unit;
@@ -237,20 +236,17 @@ struct Data {
     phases: Vec<[Vec<f64>; 2]>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let radii: Vec<f64> = (0..30).map(|k| 0.01 + 0.59 * k as f64 / 29.0).collect();
-        let phases = berry(&radii, &GAPS, 400)
-            .into_iter()
-            .map(|pair| pair.map(|row| row.into_iter().map(|(r, s)| phase(r, s)).collect()))
-            .collect();
-        Data {
-            bands: bands(4.5, 31, 0.0),
-            radii,
-            phases,
-        }
-    })
+fn data() -> Data {
+    let radii: Vec<f64> = (0..30).map(|k| 0.01 + 0.59 * k as f64 / 29.0).collect();
+    let phases = berry(&radii, &GAPS, 400)
+        .into_iter()
+        .map(|pair| pair.map(|row| row.into_iter().map(|(r, s)| phase(r, s)).collect()))
+        .collect();
+    Data {
+        bands: bands(4.5, 31, 0.0),
+        radii,
+        phases,
+    }
 }
 
 /// A momentum as a point of the drawn momentum plane.
@@ -295,19 +291,10 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let d = data();
-    let screen = c.rect();
+/// The two bands over the momentum plane, turning once per loop of the animation.
+fn draw_turning_bands(c: &mut Canvas, bands_rect: Rect, d: &Data, phase_t: f64) {
     let down = Point2::direction(0.0, 1.0);
     let tau = core::f64::consts::TAU;
-    let phase_t = f64::from(t / SECONDS);
-    // The loop's radius grows and shrinks; a marker runs round it six times per cycle.
-    let radius = 0.01 + 0.59 * haversine(tau * phase_t);
-    let around = (6.0 * phase_t).fract();
-
-    // The bands, turning.
-    let bands_rect = screen.part(0.0, 0.13, 0.42, 1.0);
     let cam = Camera::orbit(
         bands_rect,
         ORIGIN3,
@@ -321,10 +308,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let title = bands_rect.top_middle() + down.gp(12.0);
     let text = "THE TWO BANDS: CONES WHERE THEY MEET";
     c.text(text, title, 10.0, palette::INK, Align::Center);
+}
 
-    // The field over the momentum plane, with the loop about K.
+/// The field over the momentum plane, with the loop of the given radius about K and a marker
+/// a fraction `around` of the way round it.
+fn draw_field(c: &mut Canvas, rect: Rect, radius: f64, around: f64) {
+    let tau = core::f64::consts::TAU;
     let [valley_k, _] = valleys();
-    let ax = Axes::equal(screen.part(0.46, 0.16, 0.72, 0.56), ORIGIN2, 3.2);
+    let ax = Axes::equal(rect, ORIGIN2, 3.2);
     ax.image(c, 1, |p| {
         let f = pseudospin(vector3(p), 0.0);
         let len = f.norm() as f32;
@@ -357,8 +348,21 @@ fn draw(c: &mut Canvas, t: f32) {
     let label = on_map(valley_k + Vector::new(0.25, 0.2, 0.0));
     ax.text(c, label, "K", 12.0, palette::INK, Align::Left);
     ax.frame(c, "THE PSEUDOSPIN FIELD", "MOMENTUM X (1/A)", "");
+}
 
-    // The pseudospin met around the loop, on the sphere, with a gap; and a frame carried along.
+/// The pseudospin met around the loop, on the sphere, with a gap; and a frame carried along,
+/// the camera swaying with the animation's phase. Returns the Berry phase of the loop, in
+/// half turns.
+fn draw_loop_on_sphere(
+    c: &mut Canvas,
+    sphere_rect: Rect,
+    radius: f64,
+    around: f64,
+    phase_t: f64,
+) -> f64 {
+    let down = Point2::direction(0.0, 1.0);
+    let tau = core::f64::consts::TAU;
+    let [valley_k, _] = valleys();
     let count = 240;
     let gap = GAPS[SHOWN];
     let dirs = loop_directions(valley_k, radius, gap, count);
@@ -379,7 +383,6 @@ fn draw(c: &mut Canvas, t: f32) {
     // in the plane: its phase in closed form.
     let field = z() * gap + x() * (VELOCITY * radius);
     let cone = 1.0 - gap / field.norm();
-    let sphere_rect = screen.part(0.74, 0.13, 1.0, 0.6);
     let cam = Camera::orbit(
         sphere_rect,
         ORIGIN3,
@@ -415,9 +418,13 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::GREEN,
         Align::Center,
     );
+    gamma
+}
 
-    // The Berry phase against the loop's radius, per gap; solid K, dashed K'.
-    let ax = Axes::new(screen.part(0.49, 0.7, 0.97, 0.9), [0.0, 0.6], [-1.15, 1.15]);
+/// The Berry phase against the loop's radius, per gap; solid K, dashed K'. A cursor marks the
+/// loop's radius now, and a dot its phase `gamma`.
+fn draw_berry_phases(c: &mut Canvas, rect: Rect, d: &Data, radius: f64, gamma: f64) {
+    let ax = Axes::new(rect, [0.0, 0.6], [-1.15, 1.15]);
     ax.frame(c, "", "LOOP RADIUS (1/A)", "BERRY PHASE (PI)");
     ax.line(
         c,
@@ -456,6 +463,21 @@ fn draw(c: &mut Canvas, t: f32) {
     let shown = palette::series(SHOWN + 1);
     ax.scatter(c, &[Point::xy(radius, gamma)], Marker::Dot, 7.0, shown);
     ax.legend(c, &legend);
+}
+
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let tau = core::f64::consts::TAU;
+    let phase_t = f64::from(t / SECONDS);
+    // The loop's radius grows and shrinks; a marker runs round it six times per cycle.
+    let radius = 0.01 + 0.59 * haversine(tau * phase_t);
+    let around = (6.0 * phase_t).fract();
+    draw_turning_bands(c, screen.part(0.0, 0.13, 0.42, 1.0), d, phase_t);
+    draw_field(c, screen.part(0.46, 0.16, 0.72, 0.56), radius, around);
+    let sphere_rect = screen.part(0.74, 0.13, 1.0, 0.6);
+    let gamma = draw_loop_on_sphere(c, sphere_rect, radius, around, phase_t);
+    draw_berry_phases(c, screen.part(0.49, 0.7, 0.97, 0.9), d, radius, gamma);
     caption(
         c,
         "GRAPHENE: DIRAC CONES AND THE BERRY PHASE",
@@ -464,7 +486,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("graphene", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("graphene", SECONDS).size(960, 540), data, draw);
 }
 
 #[cfg(test)]
@@ -588,7 +610,8 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
+        let d = super::data();
+        let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &d, t);
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 4.0, &mut draw);

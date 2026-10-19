@@ -36,10 +36,9 @@ use gax_numga_examples::plot::mark;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, contour, measure, palette, reach3, run,
+    backdrop, caption, contour, measure, palette, reach3, run_with,
 };
 use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, PI, SQRT_2, TAU};
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga3d as space;
 
@@ -222,11 +221,6 @@ const AZIMUTH: f32 = -60.0;
 /// The radius of the compass on the ground.
 const COMPASS: f64 = 1.1;
 
-fn faults_drawn() -> &'static [Mechanism; 4] {
-    static F: OnceLock<[Mechanism; 4]> = OnceLock::new();
-    F.get_or_init(faults)
-}
-
 /// The sweep's rake at time `t`: once around, from -180 to 180 degrees.
 fn rake_at(t: f32) -> f64 {
     -PI + TAU * f64::from(t.rem_euclid(SECONDS) / SECONDS)
@@ -398,7 +392,7 @@ fn label(c: &mut Canvas, rect: Rect, title: &str, detail: &str) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, faults: &[Mechanism; 4], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -406,7 +400,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The four faults, two by two on the left.
     let cell_w = w * 0.25;
     let cell_h = (h - top) * 0.5;
-    for (k, (fault, name)) in faults_drawn().iter().zip(NAMES).enumerate() {
+    for (k, (fault, name)) in faults.iter().zip(NAMES).enumerate() {
         let corner = Point2::xy(cell_w * (k % 2) as f32, top + cell_h * (k / 2) as f32);
         let side = cell_h * 0.72;
         let centre = corner + Point2::direction(cell_w * 0.5, cell_h * 0.42);
@@ -439,7 +433,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("earthquake", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("earthquake", SECONDS).size(960, 540),
+        faults,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -588,6 +586,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &faults(), 1.0);
     }
 }

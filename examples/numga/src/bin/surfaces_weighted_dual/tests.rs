@@ -46,8 +46,9 @@ fn points_on_the_sphere_give_its_delaunay_mesh_with_poles_as_circumcentres() {
 
 #[test]
 fn the_figure_and_two_frames_draw() {
+    let shown = super::shown();
     for t in [0.0, 0.08] {
-        gax_numga_examples::app::assert_draws(super::draw, t);
+        gax_numga_examples::app::assert_draws_with(super::draw, &shown, t);
     }
 }
 

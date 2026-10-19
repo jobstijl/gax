@@ -46,9 +46,8 @@ use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{Anim, Canvas, Light, Marker, Point3, Rect, Scene3, backdrop, caption};
-use gax_numga_examples::{palette, run};
+use gax_numga_examples::{palette, run_with};
 use koebe::{Circle, apexes, face_circles, spatial, touching};
-use std::sync::OnceLock;
 use surfaces_hull::{beside, camera, drawn, facing, ghost, near_side};
 
 mod koebe {
@@ -285,13 +284,10 @@ struct Shown {
     dual_edges: Vec<[usize; 2]>,
 }
 
-fn shown() -> &'static Shown {
-    static SHOWN: OnceLock<Shown> = OnceLock::new();
-    SHOWN.get_or_init(|| {
-        let mesh = centred();
-        let dual_edges = beside(&mesh);
-        Shown { mesh, dual_edges }
-    })
+fn shown() -> Shown {
+    let mesh = centred();
+    let dual_edges = beside(&mesh);
+    Shown { mesh, dual_edges }
 }
 
 /// One turn of the boosts: numga's 48 frames of 80 ms.
@@ -315,8 +311,7 @@ fn dual() -> Light {
 /// The polyhedron of the circles' apexes and its dual, the polyhedron of the face circles'
 /// apexes, every edge of both touching the sphere where the circles of its ends touch; only the
 /// edges whose touching point faces the viewer.
-fn polyhedra(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
-    let s = shown();
+fn polyhedra(c: &mut Canvas, rect: Rect, s: &Shown, circles: &Field<Circle>) {
     let cam = camera(rect);
     ghost(c, &cam, rect);
     let toward = facing(&cam);
@@ -368,8 +363,7 @@ fn circle_points<O: gax::Orientation>(
 }
 
 /// The vertex circles and the face circles on the sphere, their near side.
-fn pattern(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
-    let s = shown();
+fn pattern(c: &mut Canvas, rect: Rect, s: &Shown, circles: &Field<Circle>) {
     let cam = camera(rect);
     ghost(c, &cam, rect);
     let toward = facing(&cam);
@@ -384,14 +378,13 @@ fn pattern(c: &mut Canvas, rect: Rect, circles: &Field<Circle>) {
     });
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Shown, t: f32) {
     backdrop(c);
-    let s = shown();
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
     let circles = boosted(&s.mesh.vertices, phase);
     let [left, right] = panel_row(c, 6.0);
-    polyhedra(c, left, &circles);
-    pattern(c, right, &circles);
+    polyhedra(c, left, s, &circles);
+    pattern(c, right, s, &circles);
     let (_, rapidity) = boost_at(phase);
     label_under(
         c,
@@ -415,7 +408,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("koebe", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("koebe", SECONDS).size(960, 540), shown, draw);
 }
 
 #[cfg(test)]
@@ -494,7 +487,7 @@ mod tests {
             .map(spatial)
             .fold(Vector3::zero(), |sum, p| sum + p);
         assert!((mean * (1.0 / touch.len() as f64)).norm() < 1e-4);
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::shown(), 1.0);
     }
 
     /// The hull the triangulation comes from uses every point, and is closed: two faces at each

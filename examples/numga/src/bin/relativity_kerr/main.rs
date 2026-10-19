@@ -38,15 +38,13 @@ mod emission;
 mod kerr;
 mod scenes;
 
-use std::sync::OnceLock;
-
-use emission::{Sky, blackbody, blackbody_colour, emissivity, flowing_waves};
+use emission::{Clumps, Sky, blackbody, blackbody_colour, emissivity, flowing_waves};
 use gax::{vga2d, vga3d};
 use gax_numga_examples::points;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, ORIGIN2, Point2, Rect, backdrop, caption, colormap, light,
-    palette, par_map, run,
+    palette, par_map, run_with,
 };
 use kerr::V;
 use scenes::Glint;
@@ -74,11 +72,12 @@ struct Shine {
 }
 
 /// What the frames share: the sweep's equatorial paths at each spin, as points of the plane,
-/// and the camera's disk crossings and the sky's light in each pixel.
+/// the camera's disk crossings and the sky's light in each pixel, and the disk's clumps.
 struct Scene {
     sweep: Vec<Vec<Vec<Point2>>>,
     shines: Vec<Shine>,
     sky: Vec<Light>,
+    clumps: Clumps,
 }
 
 /// An event's place in the equatorial plane, for drawing.
@@ -128,16 +127,14 @@ fn camera_view() -> (Vec<Shine>, Vec<Light>) {
     (shines, skies)
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let (shines, sky) = camera_view();
-        Scene {
-            sweep: sweep_paths(),
-            shines,
-            sky,
-        }
-    })
+fn scene() -> Scene {
+    let (shines, sky) = camera_view();
+    Scene {
+        sweep: sweep_paths(),
+        shines,
+        sky,
+        clumps: Clumps::new(),
+    }
 }
 
 /// The camera's pixels at time `t`, as seen and through the polarizer: the sky, and each
@@ -149,7 +146,7 @@ fn camera_lights(s: &Scene, t: f32) -> (Vec<Light>, Vec<Light>) {
     let turn = core::f64::consts::PI * progress;
     let analyzer = (kerr::xy() * (turn / 2.0)).exp() >> kerr::x();
     let lit = par_map(&s.shines, |shine| {
-        let waves = flowing_waves(&shine.glint, progress);
+        let waves = flowing_waves(&s.clumps, &shine.glint, progress);
         let light = shine.glow * emissivity(shine.glint.radius, waves) as f32;
         let passed = 2.0 * disk::transmitted(shine.glint.coherency, analyzer);
         (light, light * passed as f32)
@@ -197,8 +194,7 @@ fn titled_view(c: &mut Canvas, rect: Rect, pixels: &[Light], title: &str) {
 /// The sweep: the equatorial rays at the frame's spin, coloured across the bundle, and the
 /// horizon, where a constant oblate radius cuts the equatorial plane in a circle of radius
 /// `√(r₊² + a²)`.
-fn draw_sweep(c: &mut Canvas, ax: &Axes, t: f32) {
-    let s = scene();
+fn draw_sweep(c: &mut Canvas, ax: &Axes, s: &Scene, t: f32) {
     let frame = ((t / SECONDS * SWEEP_FRAMES as f32).round() as usize) % SWEEP_FRAMES;
     let spin = scenes::sweep_spin(frame, SWEEP_FRAMES);
     let paths = &s.sweep[frame];
@@ -258,7 +254,7 @@ fn draw_analyzer(c: &mut Canvas, centre: Point2, radius: f32, angle: f32) {
     c.line(centre - across, centre + across, 1.5, palette::SKY);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
     let (w, h) = (c.rect().width(), c.rect().height());
     let (size, margin) = (12.0, 20.0);
@@ -267,10 +263,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // The sweep in a square on the left, with room below for its tick and axis labels.
     let side = h - top - 4.5 * size - margin;
     let square = Rect::new(w * 0.06, top, w * 0.06 + side, top + side);
-    draw_sweep(c, &Axes::equal(square, ORIGIN2, scenes::EXTENT as f32), t);
+    draw_sweep(
+        c,
+        &Axes::equal(square, ORIGIN2, scenes::EXTENT as f32),
+        s,
+        t,
+    );
 
     // The camera's view on the right, and below it the polarized view and the colours.
-    let (seen, polarized) = camera_lights(scene(), t);
+    let (seen, polarized) = camera_lights(s, t);
     let aspect = CAMERA_SIZE[1] as f32 / CAMERA_SIZE[0] as f32;
     let view_width = (h * 0.56) / aspect;
     let left = w - margin - view_width;
@@ -300,13 +301,13 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("kerr", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("kerr", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 1.0);
     }
 }

@@ -17,9 +17,8 @@ use gax::{Unit, vga2d};
 
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, ORIGIN2, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, ORIGIN2, Point2, Rect, backdrop, caption, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod station {
     use super::*;
@@ -241,24 +240,20 @@ const DT: f64 = 0.01;
 const EVERY: usize = 5;
 const EXTENT: f32 = 1.0;
 
-/// Both runs, simulated once.
-fn runs() -> &'static [(String, Diffusion); 2] {
-    static RUNS: OnceLock<[(String, Diffusion); 2]> = OnceLock::new();
-    RUNS.get_or_init(|| {
-        rates().map(|(name, rate)| {
-            (
-                name.to_string(),
-                diffuse(rate, kicks(), SECONDS, DT, 2000, EVERY, 0),
-            )
-        })
+/// Both runs, simulated.
+fn runs() -> [(String, Diffusion); 2] {
+    rates().map(|(name, rate)| {
+        (
+            name.to_string(),
+            diffuse(rate, kicks(), SECONDS, DT, 2000, EVERY, 0),
+        )
     })
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, runs: &[(String, Diffusion); 2], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let runs = runs();
     let frames = runs[0].1.errors.len();
     let index = ((t / (DT as f32 * EVERY as f32)) as usize).min(frames - 1);
     let seconds = index as f32 * DT as f32 * EVERY as f32;
@@ -320,7 +315,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("pose diffusion", 9.0).size(960, 540), draw);
+    run_with(Anim::new("pose diffusion", 9.0).size(960, 540), runs, draw);
 }
 
 #[cfg(test)]
@@ -425,6 +420,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 2.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::runs(), 2.5);
     }
 }

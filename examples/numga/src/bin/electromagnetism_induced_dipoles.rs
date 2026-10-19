@@ -22,7 +22,7 @@ use gax::vga3d::Vector;
 use gax_numga_examples::mesh::direction;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, font,
-    from_above, palette, reach3, run,
+    from_above, palette, reach3, run_with,
 };
 
 use gax_numga_examples::shared::electromagnetism_dipoles as pairs;
@@ -177,10 +177,9 @@ impl Cluster {
     }
 }
 
-/// The clusters, built once.
-fn scene() -> &'static [Cluster; 3] {
-    static SCENE: std::sync::OnceLock<[Cluster; 3]> = std::sync::OnceLock::new();
-    SCENE.get_or_init(|| clusters().map(|(name, positions)| Cluster::new(name, positions)))
+/// The clusters, built once, before the first frame.
+fn scene() -> [Cluster; 3] {
+    clusters().map(|(name, positions)| Cluster::new(name, positions))
 }
 
 /// A cluster: each atom with its dipole as an arrow centred on it, over the dipole an isolated
@@ -242,13 +241,13 @@ fn field_arrow(c: &mut Canvas, rect: Rect, angle: f64) {
 }
 
 /// Each cluster's gain over the field's angle, with a cursor at the angle now.
-fn gains(c: &mut Canvas, rect: Rect, angle: f64) {
+fn gains(c: &mut Canvas, rect: Rect, clusters: &[Cluster; 3], angle: f64) {
     let ax = Axes::new(rect, [0.0, 360.0], [0.7, 1.8]);
     ax.frame(c, "GAIN OVER THE FIELD'S ANGLE", "DEGREES FROM X", "");
     let one = [Point2::xy(0.0, 1.0), Point2::xy(360.0, 1.0)];
     ax.dashed(c, &one, 1.0, 5.0, palette::GRID.faded(3.0));
     let mut legend: Vec<(&str, Light)> = Vec::new();
-    for (i, cluster) in scene().iter().enumerate() {
+    for (i, cluster) in clusters.iter().enumerate() {
         let colour = palette::series(i + 1);
         ax.polyline(c, &cluster.gains, 1.8, colour);
         let cursor = [Point2::xy(
@@ -261,7 +260,7 @@ fn gains(c: &mut Canvas, rect: Rect, angle: f64) {
     ax.legend(c, &legend);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, clusters: &[Cluster; 3], t: f32) {
     backdrop(c);
     let angle = core::f64::consts::TAU * f64::from(t / SECONDS).rem_euclid(1.0);
     let screen = c.rect();
@@ -269,14 +268,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let top = (h / 30.0).clamp(10.0, 22.0) * 3.6;
     let split = top + (h - top) * 0.56;
     let row = Rect::new(0.0, top, w, split);
-    for (i, each) in scene().iter().enumerate() {
+    for (i, each) in clusters.iter().enumerate() {
         cluster(c, row.column(i, 3).inset(6.0, 10.0, 6.0, 4.0), each, angle);
     }
     let lower = Rect::new(0.0, split, w, h);
     let arrow_box = lower.part(0.0, 0.0, 0.16, 1.0).inset(8.0, 20.0, 8.0, 20.0);
     field_arrow(c, arrow_box, angle);
     let plot = lower.part(0.2, 0.0, 0.97, 1.0).inset(30.0, 22.0, 4.0, 34.0);
-    gains(c, plot, angle);
+    gains(c, plot, clusters, angle);
     caption(
         c,
         "INDUCED DIPOLES: ONE SOLVE OF A FIELD MAP OVER THE ATOMS",
@@ -285,7 +284,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("induced_dipoles", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("induced_dipoles", SECONDS).size(960, 540),
+        scene,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -331,6 +334,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 1.0);
     }
 }

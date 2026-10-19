@@ -1,8 +1,13 @@
 //! Running an example: a window that plays the animation (space pauses, `r` restarts, escape
 //! quits), or, headless, a GIF of one loop (`--gif PATH`) or a PNG of one moment
 //! (`--png PATH --at SECONDS`). `--size WxH` overrides the size.
+//!
+//! An example whose frames share data computed up front (a simulation, a solve, a table) runs
+//! with [`run_with`]: its setup runs once, before the first frame, and each frame is drawn from
+//! what it returned, `draw(canvas, &data, t)`.
 
 use crate::canvas::Canvas;
+use std::borrow::Borrow;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::time::Instant;
@@ -64,6 +69,11 @@ pub fn frame(anim: &Anim, t: f32, draw: &mut impl FnMut(&mut Canvas, f32)) -> Ca
 pub fn assert_draws(mut draw: impl FnMut(&mut Canvas, f32), t: f32) {
     let c = frame(&Anim::new("t", 1.0).size(320, 180), t, &mut draw);
     assert!(c.mean().luma() > 0.0);
+}
+
+/// For tests: the same for an example run with [`run_with`], drawn from its `data`.
+pub fn assert_draws_with<D: ?Sized>(mut draw: impl FnMut(&mut Canvas, &D, f32), data: &D, t: f32) {
+    assert_draws(|c, t| draw(c, data, t), t);
 }
 
 /// Write one loop of the animation as a GIF.
@@ -141,6 +151,17 @@ pub fn run(mut anim: Anim, mut draw: impl FnMut(&mut Canvas, f32) + 'static) {
         paused: None,
     };
     event_loop.run_app(&mut app).expect("the window");
+}
+
+/// Run an example whose frames share data: `setup` once, then as [`run`], each frame drawn by
+/// `draw` from what `setup` returned (or what it borrows as: a `Vec` as a slice).
+pub fn run_with<O: Borrow<D> + 'static, D: ?Sized + 'static>(
+    anim: Anim,
+    setup: impl FnOnce() -> O,
+    mut draw: impl FnMut(&mut Canvas, &D, f32) + 'static,
+) {
+    let data = setup();
+    run(anim, move |c, t| draw(c, data.borrow(), t));
 }
 
 struct App<F> {

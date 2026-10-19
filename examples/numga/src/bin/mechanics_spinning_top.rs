@@ -24,7 +24,8 @@ use gax::pga3d::{Direction, Line, Motor, Plane, Point, intrinsic};
 use gax_colour::light;
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, par_map, run,
+    Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, par_map,
+    run_with,
 };
 
 use gax_numga_examples::shared::mechanics_lie as lie;
@@ -483,17 +484,14 @@ struct Runs {
     samples: Vec<Vec<Sample>>,
 }
 
-fn runs() -> &'static Runs {
-    static RUNS: std::sync::OnceLock<Runs> = std::sync::OnceLock::new();
-    RUNS.get_or_init(|| {
-        let all = par_map(&VARIATIONS, |(_, setup)| spin(*setup, SECONDS, DT, EVERY));
-        let (base, ground, _) = &all[0];
-        Runs {
-            parts: base.parts.clone(),
-            ground: *ground,
-            samples: all.iter().map(|(_, _, s)| s.clone()).collect(),
-        }
-    })
+fn runs() -> Runs {
+    let all = par_map(&VARIATIONS, |(_, setup)| spin(*setup, SECONDS, DT, EVERY));
+    let (base, ground, _) = &all[0];
+    Runs {
+        parts: base.parts.clone(),
+        ground: *ground,
+        samples: all.iter().map(|(_, _, s)| s.clone()).collect(),
+    }
 }
 
 /// The colours of the disc, the stem and the tip (sRGB), and their sector contrasts.
@@ -560,9 +558,8 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Re
     c.unclip();
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, runs: &Runs, t: f32) {
     backdrop(c);
-    let runs = runs();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let u = h / 270.0;
@@ -622,10 +619,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("spinning top", SECONDS as f32)
             .size(480, 270)
             .scale(2),
+        runs,
         draw,
     );
 }
@@ -712,11 +710,11 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
+        let runs = super::runs();
         let c = gax_numga_examples::app::frame(
             &gax_numga_examples::Anim::new("t", 1.0).size(160, 90),
             0.5,
-            &mut draw,
+            &mut |c, t| super::draw(c, &runs, t),
         );
         assert!(c.mean().luma() > 0.0);
     }

@@ -24,12 +24,10 @@
 //! stress difference over the applied stress, and two crossed linear polariscopes at the same
 //! load, whose dark bands (isoclinics) mark where a principal direction lies along the polarizer.
 
-use std::sync::OnceLock;
-
 use gax_numga_examples::points::circle;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, ORIGIN2, Point2, Rect, backdrop, caption, colormap, palette,
-    plot, run, signal::haversine,
+    plot, run_with, signal::haversine,
 };
 
 mod photoelasticity {
@@ -203,26 +201,23 @@ struct Plate {
     largest: f64,
 }
 
-fn plate() -> &'static Plate {
-    static PLATE: OnceLock<Plate> = OnceLock::new();
-    PLATE.get_or_init(|| {
-        let stress = stress_field();
-        let difference: Vec<f64> = stress
-            .iter()
-            .map(|s| principal_difference(*s) / TENSION)
-            .collect();
-        let outside = window().into_iter().map(|p| p.norm() >= RADIUS);
-        let largest = difference
-            .iter()
-            .zip(outside)
-            .filter(|(_, out)| *out)
-            .fold(0.0f64, |m, (d, _)| m.max(*d));
-        Plate {
-            turns: stress.iter().map(|s| half_turn(*s, STRESS_PHASE)).collect(),
-            difference,
-            largest,
-        }
-    })
+fn plate() -> Plate {
+    let stress = stress_field();
+    let difference: Vec<f64> = stress
+        .iter()
+        .map(|s| principal_difference(*s) / TENSION)
+        .collect();
+    let outside = window().into_iter().map(|p| p.norm() >= RADIUS);
+    let largest = difference
+        .iter()
+        .zip(outside)
+        .filter(|(_, out)| *out)
+        .fold(0.0f64, |m, (d, _)| m.max(*d));
+    Plate {
+        turns: stress.iter().map(|s| half_turn(*s, STRESS_PHASE)).collect(),
+        difference,
+        largest,
+    }
 }
 
 /// The load at time `t`: a smooth cycle from nothing to the full tension and back.
@@ -298,9 +293,8 @@ fn colour_bar(c: &mut Canvas, rect: Rect, largest: f64, size: f32) {
     c.text("0", beside(0.0), size, ink, Align::Left);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, p: &Plate, t: f32) {
     backdrop(c);
-    let p = plate();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let load = load(t);
@@ -366,7 +360,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("photoelasticity", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("photoelasticity", SECONDS).size(960, 540),
+        plate,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -543,6 +541,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::plate(), 0.5);
     }
 }

@@ -13,9 +13,8 @@ use gax::pga3d::{Forque, Line, Motor, Plane, Point};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, palette, run, signal,
+    caption, palette, run_with, signal,
 };
-use std::sync::OnceLock;
 
 mod arm {
     use super::*;
@@ -206,11 +205,6 @@ use arm::*;
 /// The loop's length in seconds: a tenth of a second per target.
 const SECONDS: f32 = 7.2;
 
-fn states() -> &'static [State] {
-    static S: OnceLock<Vec<State>> = OnceLock::new();
-    S.get_or_init(tracking)
-}
-
 /// The box faces by corner index (`4 i + 2 j + k`).
 const FACES: [[usize; 4]; 6] = [
     [0, 1, 3, 2],
@@ -221,27 +215,22 @@ const FACES: [[usize; 4]; 6] = [
     [1, 5, 7, 3],
 ];
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let states = states();
+/// The links' colours, from the base out.
+const LINK_COLOURS: [Light; 3] = [palette::SKY, palette::BLUE, palette::PURPLE];
+
+/// The arm in 3D at state `i` and `frac` of the way to the next, the camera swinging gently
+/// (its azimuth swings with a wave, once per loop): the floor, the loop of targets, the tip's
+/// trail, the links as lit boxes, the joints, the tip and its target.
+fn draw_arm(c: &mut Canvas, rect: Rect, states: &[State], i: usize, frac: f64, t: f32) {
     let n = states.len();
-    let s = (t / SECONDS).rem_euclid(1.0) * n as f32;
-    let i = (s.floor() as usize).min(n - 1);
-    let frac = f64::from(s - i as f32);
     let (a, b) = (states[i], states[(i + 1) % n]);
     // Between solves, each link moves along the screw between its two solved poses.
     let links: [M; 3] = core::array::from_fn(|k| Motor::interpolate(a.links[k], b.links[k], frac));
     let target = a.target + (b.target - a.target).gp(frac);
-    let (axis, tip_home, _) = arm();
-
-    // The arm in 3D on the left, the camera swinging gently: its azimuth swings with a wave,
-    // once per loop.
-    let scene_w = (w * 0.62).floor();
+    let (_, tip_home, _) = arm();
     let phase = core::f32::consts::TAU * t / SECONDS;
     let cam = Camera::orbit(
-        Rect::new(0.0, 0.0, scene_w, h),
+        rect,
         Point::xyz(0.6, 0.2, 1.2),
         6.2,
         -0.87 + 0.35 * signal::wave(phase),
@@ -272,8 +261,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // The links, as lit translucent boxes with their edges.
     let boxes = link_boxes(0.15, 0.06);
-    let colours = [palette::SKY, palette::BLUE, palette::PURPLE];
-    for ((corners, m), colour) in boxes.iter().zip(links).zip(colours) {
+    for ((corners, m), colour) in boxes.iter().zip(links).zip(LINK_COLOURS) {
         let p: Vec<Point> = corners.iter().map(|q| m >> *q).collect();
         for f in FACES {
             // The faces cover what is behind them: a dimmer light than the glowing strokes.
@@ -292,15 +280,13 @@ fn draw(c: &mut Canvas, t: f32) {
     sc.dot(links[2] >> tip_home, Marker::Dot, 7.0, palette::YELLOW);
     sc.dot(target, Marker::Star, 14.0, palette::RED);
     sc.draw(c);
+}
 
-    caption(
-        c,
-        "ROBOT ARM: THE JACOBIAN IS THE JOINT AXES",
-        "THREE JOINTS FOLLOW A LOOP BY LEAST SQUARES (PGA3D)",
-    );
-
-    // The joint angles over the loop, with the current ones marked.
-    let rect = Rect::new(w * 0.62, 0.0, w, h * 0.62).inset(w * 0.05, h * 0.15, w * 0.02, h * 0.075);
+/// The joint angles over the loop, with the current ones marked at `s` states into it, `frac`
+/// of the way from state `i` to the next.
+fn draw_angles(c: &mut Canvas, rect: Rect, states: &[State], i: usize, s: f32, frac: f64) {
+    let n = states.len();
+    let (axis, _, _) = arm();
     let all: Vec<[f64; 3]> = states.iter().map(|st| angles(&st.joints, &axis)).collect();
     let (lo, hi) = all
         .iter()
@@ -309,7 +295,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let ax = Axes::new(rect, [0.0, 1.0], [(lo - 0.2) as f32, (hi + 0.2) as f32]);
     ax.frame(c, "JOINT ANGLES (RAD)", "FRACTION OF THE LOOP", "");
     let names = ["YAW", "PITCH 1", "PITCH 2"];
-    for (k, colour) in colours.iter().enumerate() {
+    for (k, colour) in LINK_COLOURS.iter().enumerate() {
         let pts: Vec<Point2> = all
             .iter()
             .enumerate()
@@ -320,13 +306,16 @@ fn draw(c: &mut Canvas, t: f32) {
         let head = Point2::xy(s / n as f32, now as f32);
         ax.scatter(c, &[head], Marker::Dot, 8.0, *colour);
     }
-    let legend: Vec<(&str, Light)> = names.iter().copied().zip(colours).collect();
+    let legend: Vec<(&str, Light)> = names.iter().copied().zip(LINK_COLOURS).collect();
     ax.legend(c, &legend);
+}
 
-    // The statics at rest, in text.
+/// The statics at rest in text from `first` down, with the homing error and the tracking error
+/// of `state`.
+fn draw_statics(c: &mut Canvas, first: Point2, state: State) {
     let (velocity, torques) = statics();
     let (error, _) = homing();
-    let (first, down) = (Point2::xy(w * 0.6, h * 0.7), Point2::direction(0.0, 20.0));
+    let down = Point2::direction(0.0, 20.0);
     let lines = [
         "AT REST, FORCE (0,2,-1) AT (1,0,3):".to_string(),
         format!(
@@ -340,7 +329,7 @@ fn draw(c: &mut Canvas, t: f32) {
             velocity.e021()
         ),
         format!("HOMING ERROR   {error:.1E}"),
-        format!("TRACKING ERROR {:.1E}", a.target.distance(a.tip)),
+        format!("TRACKING ERROR {:.1E}", state.target.distance(state.tip)),
     ];
     for (k, l) in lines.iter().enumerate() {
         let tone = if k == 0 { palette::GRID } else { palette::INK };
@@ -348,8 +337,33 @@ fn draw(c: &mut Canvas, t: f32) {
     }
 }
 
+fn draw(c: &mut Canvas, states: &[State], t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let n = states.len();
+    let s = (t / SECONDS).rem_euclid(1.0) * n as f32;
+    let i = (s.floor() as usize).min(n - 1);
+    let frac = f64::from(s - i as f32);
+    // The arm on the left, the joint angles and the statics on the right.
+    let scene_w = (w * 0.62).floor();
+    draw_arm(c, Rect::new(0.0, 0.0, scene_w, h), states, i, frac, t);
+    caption(
+        c,
+        "ROBOT ARM: THE JACOBIAN IS THE JOINT AXES",
+        "THREE JOINTS FOLLOW A LOOP BY LEAST SQUARES (PGA3D)",
+    );
+    let rect = Rect::new(w * 0.62, 0.0, w, h * 0.62).inset(w * 0.05, h * 0.15, w * 0.02, h * 0.075);
+    draw_angles(c, rect, states, i, s, frac);
+    draw_statics(c, Point2::xy(w * 0.6, h * 0.7), states[i]);
+}
+
 fn main() {
-    run(Anim::new("robot arm", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("robot arm", SECONDS).size(960, 540),
+        tracking,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -411,6 +425,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &tracking(), 0.5);
     }
 }

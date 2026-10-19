@@ -13,8 +13,8 @@ use gax::vga3d::{Bivector, Vector, intrinsic};
 use gax_colour::Light;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, colormap,
-    contour, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Scene3, backdrop, caption,
+    colormap, contour, palette, run,
 };
 
 mod conic {
@@ -197,6 +197,132 @@ fn drawn(p: P) -> gax::pga3d::Point {
     gax::pga3d::Point::origin() + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
 }
 
+/// The oval's gold.
+fn gold() -> Light {
+    Light::from_srgb(1.0, 0.8, 0.1, 1.7)
+}
+
+/// The sphere over the unit square of longitude and polar angle.
+fn grid(u: f32, v: f32) -> P {
+    sphere(
+        f64::from(u) * std::f64::consts::TAU,
+        f64::from(v) * std::f64::consts::PI,
+    )
+}
+
+/// The same at a point of the unit square, where the level lines are found.
+fn at(uv: Point2) -> P {
+    let [u, v] = uv.to_euclidean();
+    grid(u, v)
+}
+
+/// The point form: the potential on the sphere (coloured over its range `lo..hi`), the oval,
+/// its antipodal loop, the foci, and the geodesics from the running point to both foci.
+fn draw_points(
+    s: &mut Scene3,
+    conic: &Conic,
+    oval: &[gax::pga3d::Point],
+    sample: P,
+    (lo, hi): (f64, f64),
+) {
+    let pot = |u: f32, v: f32| conic.potential(grid(u, v));
+    let on_sphere = |u: f32, v: f32| drawn(grid(u, v));
+    s.surface(
+        on_sphere,
+        36,
+        18,
+        |u, v| (colormap::coolwarm(((pot(u, v) - lo) / (hi - lo)) as f32)).faded(0.45),
+        0.45,
+        None,
+    );
+    s.polyline(oval, 3.0, gold());
+    let anti: Vec<_> = conic.curve.iter().map(|p| drawn(-*p)).collect();
+    s.polyline(&anti, 1.5, gold().faded(0.6));
+    for (f, colour) in conic.foci.iter().zip([palette::GREEN, palette::SKY]) {
+        s.dot(drawn(*f), Marker::Dot, 9.0, palette::RED);
+        let arc: Vec<_> = (0..=30)
+            .map(|j| drawn(geodesic(*f, sample, j as f64 / 30.0)))
+            .collect();
+        s.polyline(&arc, 2.2, colour);
+    }
+    s.dot(drawn(sample), Marker::Ring, 11.0, palette::INK);
+}
+
+/// The plane form: the envelope of sixteen tangent great circles, the one at the running point
+/// `k` of the oval bright with its normal, and the dual conic.
+fn draw_planes(s: &mut Scene3, conic: &Conic, oval: &[gax::pga3d::Point], k: usize) {
+    let tau = core::f32::consts::TAU;
+    let sample = conic.curve[k];
+    s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.25));
+    s.polyline(oval, 3.0, gold());
+    // The great circle of a tangent plane, through its point of the oval.
+    let circle = |idx: usize| -> Vec<_> {
+        (0..=90)
+            .map(|a| {
+                let angle = tau as f64 * a as f64 / 90.0;
+                drawn(great_circle(conic.tangents[idx], conic.curve[idx], angle))
+            })
+            .collect()
+    };
+    for j in 0..16 {
+        let colour = colormap::inferno(0.2 + 0.7 * j as f32 / 15.0);
+        s.polyline(&circle(j * 199 / 15), 1.0, colour.faded(0.45));
+    }
+    s.polyline(&circle(k), 2.4, palette::INK);
+    // The tangent plane's normal: the plane itself, a vector.
+    s.arrow(
+        drawn(sample),
+        conic.tangents[k].gp(0.4),
+        1.6,
+        7.0,
+        palette::INK,
+    );
+    // The dual conic: the normals of the planes with `π ∨ Q(π) = 0`, a level line of the dual
+    // form over the sphere of unit normals (each the plane whose pole is that point of the
+    // sphere).
+    let dual = |uv: Point2| {
+        let plane = at(uv).undual();
+        (plane & conic.q.of(plane)).s() as f32
+    };
+    for [a, b] in contour::of_fn(dual, [0.0, 1.0], [0.0, 1.0], 120, 0.0) {
+        s.seg(drawn(at(a)), drawn(at(b)), 2.0, palette::PURPLE);
+    }
+    s.dot(drawn(sample), Marker::Ring, 11.0, palette::INK);
+}
+
+/// The cone through the oval, and the polhodes: level lines of the potential, at fractions of
+/// its range `lo..hi`.
+fn draw_cone(s: &mut Scene3, conic: &Conic, oval: &[gax::pga3d::Point], (lo, hi): (f64, f64)) {
+    s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.25));
+    let ev = conic.eigenvalues;
+    let rotor = conic.rotor;
+    s.surface(
+        |u, v| {
+            let r = 0.1 + 1.15 * f64::from(u);
+            drawn(rotor >> cone(ev, r, f64::from(v) * std::f64::consts::TAU))
+        },
+        12,
+        40,
+        |_, _| Light::from_srgb(0.94, 0.9, 0.55, 0.4),
+        0.3,
+        None,
+    );
+    s.polyline(oval, 3.0, gold());
+    let salmon = Light::from_srgb(0.98, 0.5, 0.45, 1.6);
+    for (j, fraction) in [0.7, 0.4667, 0.2333].iter().enumerate() {
+        for (level, colour) in [
+            (lo * fraction, salmon),
+            (hi * (0.7 - 0.2333 * j as f64), palette::SKY),
+        ] {
+            let potential = |uv| conic.potential(at(uv)) as f32;
+            let segs = contour::of_fn(potential, [0.0, 1.0], [0.0, 1.0], 90, level as f32);
+            for [a, b] in segs {
+                s.seg(drawn(at(a)), drawn(at(b)), 1.4, colour.faded(0.85));
+            }
+        }
+    }
+}
+
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
@@ -213,124 +339,19 @@ fn draw(c: &mut Canvas, t: f32) {
     // The point running along the oval.
     let k = ((t / SECONDS * 2.0).fract() * 199.0) as usize;
     let sample = conic.curve[k];
-    let gold = Light::from_srgb(1.0, 0.8, 0.1, 1.7);
     let oval: Vec<_> = conic.curve.iter().map(|p| drawn(*p)).collect();
-    // The sphere over the unit square of longitude and polar angle, and the potential over it,
-    // for its colours and its level lines.
-    let grid = |u: f32, v: f32| {
-        sphere(
-            f64::from(u) * std::f64::consts::TAU,
-            f64::from(v) * std::f64::consts::PI,
-        )
-    };
+    // The potential's range over the sphere, for its colours and its level lines.
     let pot = |u: f32, v: f32| conic.potential(grid(u, v));
-    let on_sphere = |u: f32, v: f32| drawn(grid(u, v));
-    // The same at a point of the unit square, where the level lines are found.
-    let at = |uv: Point2| {
-        let [u, v] = uv.to_euclidean();
-        grid(u, v)
-    };
-    let (lo, hi) = (0..=60)
+    let range = (0..=60)
         .flat_map(|i| (0..=30).map(move |j| pot(i as f32 / 60.0, j as f32 / 30.0)))
         .fold((f64::MAX, f64::MIN), |(lo, hi), v| (lo.min(v), hi.max(v)));
     for (i, title) in titles.iter().enumerate() {
         let rect = panels.column(i, 3);
         let cam = Camera::orbit(rect, ORIGIN3, 6.0, azimuth, 0.45, Lens::Parallel(1.45));
         panel3(c, rect, cam, |s| match i {
-            0 => {
-                // The potential on the sphere, the oval, its antipodal loop, the foci, and the
-                // geodesics from the running point to both foci.
-                s.surface(
-                    on_sphere,
-                    36,
-                    18,
-                    |u, v| (colormap::coolwarm(((pot(u, v) - lo) / (hi - lo)) as f32)).faded(0.45),
-                    0.45,
-                    None,
-                );
-                s.polyline(&oval, 3.0, gold);
-                let anti: Vec<_> = conic.curve.iter().map(|p| drawn(-*p)).collect();
-                s.polyline(&anti, 1.5, gold.faded(0.6));
-                for (f, colour) in conic.foci.iter().zip([palette::GREEN, palette::SKY]) {
-                    s.dot(drawn(*f), Marker::Dot, 9.0, palette::RED);
-                    let arc: Vec<_> = (0..=30)
-                        .map(|j| drawn(geodesic(*f, sample, j as f64 / 30.0)))
-                        .collect();
-                    s.polyline(&arc, 2.2, colour);
-                }
-                s.dot(drawn(sample), Marker::Ring, 11.0, palette::INK);
-            }
-            1 => {
-                // The envelope: sixteen tangent great circles, the running one bright with its
-                // normal.
-                s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.25));
-                s.polyline(&oval, 3.0, gold);
-                // The great circle of a tangent plane, through its point of the oval.
-                let circle = |idx: usize| -> Vec<_> {
-                    (0..=90)
-                        .map(|a| {
-                            let angle = tau as f64 * a as f64 / 90.0;
-                            drawn(great_circle(conic.tangents[idx], conic.curve[idx], angle))
-                        })
-                        .collect()
-                };
-                for j in 0..16 {
-                    let colour = colormap::inferno(0.2 + 0.7 * j as f32 / 15.0);
-                    s.polyline(&circle(j * 199 / 15), 1.0, colour.faded(0.45));
-                }
-                s.polyline(&circle(k), 2.4, palette::INK);
-                // The tangent plane's normal: the plane itself, a vector.
-                s.arrow(
-                    drawn(sample),
-                    conic.tangents[k].gp(0.4),
-                    1.6,
-                    7.0,
-                    palette::INK,
-                );
-                // The dual conic: the normals of the planes with `π ∨ Q(π) = 0`, a level line
-                // of the dual form over the sphere of unit normals (each the plane whose pole is
-                // that point of the sphere).
-                let dual = |uv: Point2| {
-                    let plane = at(uv).undual();
-                    (plane & conic.q.of(plane)).s() as f32
-                };
-                for [a, b] in contour::of_fn(dual, [0.0, 1.0], [0.0, 1.0], 120, 0.0) {
-                    s.seg(drawn(at(a)), drawn(at(b)), 2.0, palette::PURPLE);
-                }
-                s.dot(drawn(sample), Marker::Ring, 11.0, palette::INK);
-            }
-            _ => {
-                // The cone through the oval, and the polhodes: level lines of the potential.
-                s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.25));
-                let ev = conic.eigenvalues;
-                let rotor = conic.rotor;
-                s.surface(
-                    |u, v| {
-                        let r = 0.1 + 1.15 * f64::from(u);
-                        drawn(rotor >> cone(ev, r, f64::from(v) * std::f64::consts::TAU))
-                    },
-                    12,
-                    40,
-                    |_, _| Light::from_srgb(0.94, 0.9, 0.55, 0.4),
-                    0.3,
-                    None,
-                );
-                s.polyline(&oval, 3.0, gold);
-                let salmon = Light::from_srgb(0.98, 0.5, 0.45, 1.6);
-                for (j, fraction) in [0.7, 0.4667, 0.2333].iter().enumerate() {
-                    for (level, colour) in [
-                        (lo * fraction, salmon),
-                        (hi * (0.7 - 0.2333 * j as f64), palette::SKY),
-                    ] {
-                        let potential = |uv| conic.potential(at(uv)) as f32;
-                        let segs =
-                            contour::of_fn(potential, [0.0, 1.0], [0.0, 1.0], 90, level as f32);
-                        for [a, b] in segs {
-                            s.seg(drawn(at(a)), drawn(at(b)), 1.4, colour.faded(0.85));
-                        }
-                    }
-                }
-            }
+            0 => draw_points(s, &conic, &oval, sample, range),
+            1 => draw_planes(s, &conic, &oval, k),
+            _ => draw_cone(s, &conic, &oval, range),
         });
         // Sized to fit the panel's width, in its top left corner.
         let size = (rect.width() / 35.0).min(13.0);

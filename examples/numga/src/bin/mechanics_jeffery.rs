@@ -34,9 +34,8 @@
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Light, Marker, ORIGIN3, Point2, Point3, Rect, backdrop, caption,
-    colormap, palette, run,
+    colormap, palette, run_with,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga3d as space;
 
@@ -115,30 +114,22 @@ mod jeffery {
     }
 
     /// Each body from each start over the time span: `[body][start][step]`.
-    pub fn tumbling() -> Vec<Vec<Vec<Turn>>> {
+    pub fn tumbling() -> [Vec<Vec<Turn>>; 3] {
         let [x, _, z] = AXES;
         // The long axis turned from the flow towards the vorticity axis, to its tilt from it.
         let starts = TILTS.map(|tilt| turn(x ^ z, core::f64::consts::FRAC_PI_2 - tilt));
-        SEMI_AXES
-            .iter()
-            .map(|semi_axes| {
-                let shape = stretch(*semi_axes);
-                let steps = PERIODS * STEPS_PER_PERIOD;
-                starts
-                    .iter()
-                    .map(|s| tumble(*s, shape, flow(), dt(), steps))
-                    .collect()
-            })
-            .collect()
+        SEMI_AXES.map(|semi_axes| {
+            let shape = stretch(semi_axes);
+            let steps = PERIODS * STEPS_PER_PERIOD;
+            starts
+                .iter()
+                .map(|s| tumble(*s, shape, flow(), dt(), steps))
+                .collect()
+        })
     }
 }
 
 use jeffery::*;
-
-fn bodies() -> &'static Vec<Vec<Vec<Turn>>> {
-    static T: OnceLock<Vec<Vec<Vec<Turn>>>> = OnceLock::new();
-    T.get_or_init(tumbling)
-}
 
 /// The length of the loop in seconds: the two periods of the rod's orbit.
 const LOOP: f32 = 14.0;
@@ -198,7 +189,7 @@ fn step_at(t: f32) -> usize {
 
 /// The sphere of directions: the path of the long axis from each start, both ends drawn, a dot
 /// where it is now, and the flow and vorticity axes.
-fn draw_orbits(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
+fn draw_orbits(c: &mut Canvas, rect: Rect, starts: &[Vec<Turn>], now: usize) {
     let [x, _, z] = AXES;
     let cam = panel3(c, rect, camera(rect, ORBIT_REACH), |s| {
         s.sphere_wire(ORIGIN3, 1.0, 24, palette::GRID.faded(0.6));
@@ -211,7 +202,7 @@ fn draw_orbits(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
                 palette::INK.faded(0.4),
             );
         }
-        for (start, turns) in bodies()[body].iter().enumerate() {
+        for (start, turns) in starts.iter().enumerate() {
             let colour = start_colour(start);
             for end in [1.0, -1.0] {
                 let path: Vec<Point3> = turns.iter().map(|t| position(*t >> (x * end))).collect();
@@ -233,9 +224,9 @@ fn draw_orbits(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
 
 /// One body at one step: its surface checkered by its octants and lit, the stubs of its long
 /// axis, the paths of the axis's tips from the start, and the shear flow's velocity around it.
-fn draw_body(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
+fn draw_body(c: &mut Canvas, rect: Rect, starts: &[Vec<Turn>], body: usize, now: usize) {
     let [x, y, _] = AXES;
-    let turns = &bodies()[body][SHOWN];
+    let turns = &starts[SHOWN];
     let turn = turns[now];
     let shape = stretch(SEMI_AXES[body]);
     let long = SEMI_AXES[body][0];
@@ -273,7 +264,7 @@ fn draw_body(c: &mut Canvas, rect: Rect, body: usize, now: usize) {
     });
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, bodies: &[Vec<Vec<Turn>>; 3], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -284,8 +275,14 @@ fn draw(c: &mut Canvas, t: f32) {
         let column = Rect::new(0.0, top, w, h).column(body, 3);
         let orbits = Rect::new(column.lo.e20(), top, column.hi.e20(), middle);
         let tumbling = Rect::new(column.lo.e20(), middle, column.hi.e20(), h);
-        draw_orbits(c, orbits.inset(4.0, 16.0, 4.0, 0.0), body, now);
-        draw_body(c, tumbling.inset(4.0, 0.0, 4.0, 4.0), body, now);
+        draw_orbits(c, orbits.inset(4.0, 16.0, 4.0, 0.0), &bodies[body], now);
+        draw_body(
+            c,
+            tumbling.inset(4.0, 0.0, 4.0, 4.0),
+            &bodies[body],
+            body,
+            now,
+        );
         let at = Point2::xy(column.centre().e20(), top + 8.0);
         c.text(name, at, 12.0, palette::INK, Align::Center);
     }
@@ -300,7 +297,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("jeffery", LOOP).size(960, 540), draw);
+    run_with(Anim::new("jeffery", LOOP).size(960, 540), tumbling, draw);
 }
 
 #[cfg(test)]
@@ -353,7 +350,7 @@ mod tests {
     /// The rotors stay unit over the whole span: the bodies stay rigid.
     #[test]
     fn the_bodies_stay_rigid() {
-        for turn in super::bodies().iter().flatten().flatten() {
+        for turn in tumbling().iter().flatten().flatten() {
             assert!((turn.into_inner().norm_squared() - 1.0).abs() < 1e-11);
         }
     }
@@ -361,7 +358,7 @@ mod tests {
     /// A sphere spins at the fluid's own rate, half the curl of the gradient.
     #[test]
     fn a_sphere_spins_with_the_fluid() {
-        for turns in &super::bodies()[0] {
+        for turns in &tumbling()[0] {
             let sphere = placed(stretch(SEMI_AXES[0]), turns[turns.len() - 1]);
             let error = spin(sphere, flow()) - curl(flow()) * 0.5;
             assert!(error.norm() < 1e-14, "{error:?}");
@@ -380,7 +377,7 @@ mod tests {
                 / (ASPECT.powi(2) * spinning.powi(2))
         };
         let (mut near, mut all) = (0, 0);
-        for turns in &super::bodies()[1] {
+        for turns in &tumbling()[1] {
             let axes: Vec<V> = turns.iter().map(|t| *t >> x).collect();
             let back = (axes[STEPS_PER_PERIOD] - axes[0]).norm();
             assert!(back < 2e-2, "{back}");
@@ -401,6 +398,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 3.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &tumbling(), 3.0);
     }
 }

@@ -361,5 +361,5 @@ fn the_loading_matches_numga() {
 
 #[test]
 fn a_frame_draws() {
-    gax_numga_examples::app::assert_draws(super::draw, 1.0);
+    gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 1.0);
 }

@@ -17,9 +17,8 @@ use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Rect, Scene3,
-    backdrop, caption, from_above, palette, run,
+    backdrop, caption, from_above, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod camera_fit {
     use super::*;
@@ -106,12 +105,6 @@ mod camera_fit {
 
 use camera_fit::*;
 
-/// The descent, computed once.
-fn path() -> &'static [(Line, f64)] {
-    static PATH: OnceLock<Vec<(Line, f64)>> = OnceLock::new();
-    PATH.get_or_init(|| descend(STEPS))
-}
-
 /// A camera's frustum: its centre, and the corners of its screen.
 fn frustum(s: &mut Scene3, generator: Line, colour: Light, width: f32) {
     let rig: Unit<_> = generator.exp();
@@ -134,11 +127,11 @@ fn frustum(s: &mut Scene3, generator: Line, colour: Light, width: f32) {
 
 const SECONDS: f32 = 10.0;
 
-fn draw(c: &mut Canvas, t: f32) {
+/// The frame at `t` of the descent `path`, its estimates and their misfits step by step.
+fn draw(c: &mut Canvas, path: &[(Line, f64)], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let path = path();
     // Replay the descent on a logarithmic clock, so that the fast start is seen, then hold.
     let s = ((t / SECONDS) / 0.85).min(1.0);
     let k = (((STEPS + 1) as f32).powf(s) - 1.0).round() as usize;
@@ -234,7 +227,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("camera fit", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("camera fit", SECONDS).size(960, 540),
+        || descend(STEPS),
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -287,6 +284,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &descend(STEPS), 0.5);
     }
 }

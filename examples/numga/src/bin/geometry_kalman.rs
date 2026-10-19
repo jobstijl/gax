@@ -255,18 +255,9 @@ use kalman::*;
 
 const SECONDS: f32 = 12.0;
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    // A column of the screen by fractions of its width, inset for the frame's labels: the
-    // paths on the left, the errors on the right.
-    let (w, h) = (screen.width(), screen.height());
-    let column =
-        |x0: f32, x1: f32| Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0, 104.0, 16.0, 46.0);
-    let scene = tracking(SEED);
-    let n = scene.truth.len();
-    // The cursor runs over the drive in the first 85% of the loop, then holds.
-    let shown = (((t / SECONDS) / 0.85).min(1.0) * n as f32).ceil().max(1.0) as usize;
+/// The paths over the first `shown` steps: the truth, dead reckoning, the pose readings and
+/// the filtered estimate with its 2 sigma ellipses at the readings and its live one now.
+fn draw_paths(c: &mut Canvas, rect: Rect, scene: &Tracking, shown: usize) {
     let path = |ms: &[M]| -> Vec<Point> { ms.iter().map(|m| *m >> Point::origin()).collect() };
     let (truth, dead) = (path(&scene.truth), path(&scene.dead));
     let filtered: Vec<Point> = scene
@@ -275,9 +266,8 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|s| s.estimate >> Point::origin())
         .collect();
     // The axes hold every path at every time.
-    let left = column(0.0, 0.58);
     let every = truth.iter().chain(&dead).chain(&filtered).copied();
-    let ax = Axes::fitting(left, every, 1.12);
+    let ax = Axes::fitting(rect, every, 1.12);
     ax.frame(c, "PATHS AND 2 SIGMA ELLIPSES", "", "");
     // The states up to the cursor: a prediction per step, plus an update at each reading.
     let readings_seen = shown / STEPS_PER_READING;
@@ -304,7 +294,12 @@ fn draw(c: &mut Canvas, t: f32) {
             ("POSE READINGS", palette::GREEN),
         ],
     );
-    // The errors at the readings so far.
+}
+
+/// The errors at the readings so far: dead reckoning's and the filter's, with the filter's own
+/// 2 sigma, and a cursor at the step shown.
+fn draw_errors(c: &mut Canvas, rect: Rect, scene: &Tracking, shown: usize) {
+    let readings_seen = shown / STEPS_PER_READING;
     let (dead_err, filt_err) = scene.errors();
     let updates = scene.updates();
     // Twice the deviation along the ellipse's major axis, the root of its variance.
@@ -317,8 +312,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|k| (k * STEPS_PER_READING) as f32 * DT as f32)
         .collect();
     let top = dead_err.iter().fold(0.0f64, |m, v| m.max(*v)) as f32 * 1.1;
-    let right = column(0.58, 1.0);
-    let ex = Axes::new(right, [0.0, times[READINGS - 1] + 1.0], [0.0, top]);
+    let ex = Axes::new(rect, [0.0, times[READINGS - 1] + 1.0], [0.0, top]);
     ex.frame(c, "ERROR AT THE READINGS", "TIME", "");
     // The chart's points: (time, error).
     let series = |v: &[f64]| -> Vec<Point2> {
@@ -353,6 +347,22 @@ fn draw(c: &mut Canvas, t: f32) {
             ("FILTER'S OWN 2 SIGMA", own),
         ],
     );
+}
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    // A column of the screen by fractions of its width, inset for the frame's labels: the
+    // paths on the left, the errors on the right.
+    let (w, h) = (screen.width(), screen.height());
+    let column =
+        |x0: f32, x1: f32| Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0, 104.0, 16.0, 46.0);
+    let scene = tracking(SEED);
+    let n = scene.truth.len();
+    // The cursor runs over the drive in the first 85% of the loop, then holds.
+    let shown = (((t / SECONDS) / 0.85).min(1.0) * n as f32).ceil().max(1.0) as usize;
+    draw_paths(c, column(0.0, 0.58), &scene, shown);
+    draw_errors(c, column(0.58, 1.0), &scene, shown);
     caption(
         c,
         "KALMAN FILTER ON MOTORS: COVARIANCE, LINE TO TWIST",

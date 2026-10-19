@@ -26,9 +26,8 @@
 
 use gax::vga2d::Vector;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, reach2, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, reach2, run_with,
 };
-use std::sync::OnceLock;
 
 mod hanging_chain {
     use gax::Real;
@@ -198,24 +197,21 @@ struct Solve {
     catenary: Vec<Vector>,
 }
 
-fn solve() -> &'static Solve {
-    static SOLVE: OnceLock<Solve> = OnceLock::new();
-    SOLVE.get_or_init(|| {
-        let chains = iterates();
-        let residuals = chains.iter().map(largest_residual).collect();
-        let scale = catenary_scale();
-        let catenary = (0..=CURVE_SAMPLES)
-            .map(|i| {
-                let across = SPAN * (i as f64 / CURVE_SAMPLES as f64 - 0.5);
-                X * across + Y * catenary_height(scale, across)
-            })
-            .collect();
-        Solve {
-            chains,
-            residuals,
-            catenary,
-        }
-    })
+fn solve() -> Solve {
+    let chains = iterates();
+    let residuals = chains.iter().map(largest_residual).collect();
+    let scale = catenary_scale();
+    let catenary = (0..=CURVE_SAMPLES)
+        .map(|i| {
+            let across = SPAN * (i as f64 / CURVE_SAMPLES as f64 - 0.5);
+            X * across + Y * catenary_height(scale, across)
+        })
+        .collect();
+    Solve {
+        chains,
+        residuals,
+        catenary,
+    }
 }
 
 /// A chain as the polyline from pin to pin through its beads.
@@ -231,8 +227,7 @@ fn polyline(beads: &Chain) -> Vec<Point2> {
 
 /// The chain's shape: the iterates so far, earlier ones fainter, the current one with its
 /// beads, over the catenary.
-fn draw_shapes(c: &mut Canvas, rect: Rect, shown: usize) {
-    let s = solve();
+fn draw_shapes(c: &mut Canvas, rect: Rect, s: &Solve, shown: usize) {
     let ax = Axes::equal(rect, Point2::xy(0.0, -0.4), 0.95);
     let catenary: Vec<Point2> = s.catenary.iter().map(|v| reach2(*v)).collect();
     ax.dashed(c, &catenary, 2.2, 7.0, palette::ORANGE.faded(0.8));
@@ -269,12 +264,12 @@ fn draw_shapes(c: &mut Canvas, rect: Rect, shown: usize) {
 
 /// The largest unbalanced force at each iterate shown, in bead weights, over the level of one
 /// weight, below which each step squares it.
-fn draw_residuals(c: &mut Canvas, rect: Rect, shown: usize) {
+fn draw_residuals(c: &mut Canvas, rect: Rect, residuals: &[f64], shown: usize) {
     let steps = [-0.4, STEPS as f32 + 0.4];
     let ax = Axes::new(rect, steps, [FLOOR, 1e2]).log_y();
     ax.frame(c, "FORCE / BEAD WEIGHT", "NEWTON STEP", "");
     // Rounding leaves residuals below the axes' floor; they are drawn on it.
-    let points: Vec<Point2> = solve().residuals[..shown]
+    let points: Vec<Point2> = residuals[..shown]
         .iter()
         .enumerate()
         .map(|(k, r)| Point2::xy(k as f32, (*r as f32).max(FLOOR)))
@@ -285,7 +280,7 @@ fn draw_residuals(c: &mut Canvas, rect: Rect, shown: usize) {
     ax.scatter(c, &points, Marker::Dot, 7.0, palette::SKY);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Solve, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -293,10 +288,11 @@ fn draw(c: &mut Canvas, t: f32) {
     draw_shapes(
         c,
         Rect::new(0.0, 0.1 * h, 0.58 * w, h).inset(16.0, 10.0, 8.0, 16.0),
+        s,
         shown,
     );
     let chart = Rect::new(0.58 * w, 0.0, w, h).inset(0.09 * w, 0.24 * h, 0.05 * w, 0.13 * h);
-    draw_residuals(c, chart, shown);
+    draw_residuals(c, chart, &s.residuals, shown);
     caption(
         c,
         "A HANGING CHAIN BY NEWTON'S METHOD",
@@ -305,7 +301,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("hanging_chain", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("hanging_chain", SECONDS).size(960, 540),
+        solve,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -369,6 +369,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &solve(), 0.5);
     }
 }

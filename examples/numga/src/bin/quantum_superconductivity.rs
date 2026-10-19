@@ -27,9 +27,8 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{frame, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
-    backdrop, caption, colormap, palette, reach3, run,
+    backdrop, caption, colormap, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod condensate {
     use gax::field::Field;
@@ -280,36 +279,33 @@ struct Data {
     predicted: [Vec<f64>; 2],
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let strong = quench(QUENCH_RATIO);
-        let gaps = strong
-            .history
-            .iter()
-            .map(|s| strong.after.gap(s).norm())
-            .collect();
-        let final_gap = strong.after.gap(&strong.equilibrium).norm();
-        let energies: Vec<f64> = strong.after.dispersion.iter().map(|d| d.e3()).collect();
-        let visible: Vec<usize> = (0..LEVELS)
-            .filter(|k| energies[*k].abs() < DISPLAY_CUTOFF)
-            .collect();
-        let shown = (0..DISPLAY_LEVELS)
-            .map(|k| visible[k * (visible.len() - 1) / (DISPLAY_LEVELS - 1)])
-            .collect();
-        let weak = weak_quench();
-        let along_x = |gaps: &[Spin]| -> Vec<f64> { gaps.iter().map(|g| g.e1()).collect() };
-        let exact = along_x(&weak.exact);
-        let predicted = weak.predicted.each_ref().map(|p| along_x(p));
-        Data {
-            strong,
-            gaps,
-            final_gap,
-            shown,
-            exact,
-            predicted,
-        }
-    })
+fn data() -> Data {
+    let strong = quench(QUENCH_RATIO);
+    let gaps = strong
+        .history
+        .iter()
+        .map(|s| strong.after.gap(s).norm())
+        .collect();
+    let final_gap = strong.after.gap(&strong.equilibrium).norm();
+    let energies: Vec<f64> = strong.after.dispersion.iter().map(|d| d.e3()).collect();
+    let visible: Vec<usize> = (0..LEVELS)
+        .filter(|k| energies[*k].abs() < DISPLAY_CUTOFF)
+        .collect();
+    let shown = (0..DISPLAY_LEVELS)
+        .map(|k| visible[k * (visible.len() - 1) / (DISPLAY_LEVELS - 1)])
+        .collect();
+    let weak = weak_quench();
+    let along_x = |gaps: &[Spin]| -> Vec<f64> { gaps.iter().map(|g| g.e1()).collect() };
+    let exact = along_x(&weak.exact);
+    let predicted = weak.predicted.each_ref().map(|p| along_x(p));
+    Data {
+        strong,
+        gaps,
+        final_gap,
+        shown,
+        exact,
+        predicted,
+    }
 }
 
 /// The drawing's space.
@@ -448,9 +444,8 @@ fn draw_response(c: &mut Canvas, ax: &Axes, d: &Data, now: usize) {
     ax.legend(c, &entries);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let progress = (t / SECONDS).fract();
     let records = d.strong.history.len();
@@ -504,7 +499,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("superconductivity", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("superconductivity", SECONDS).size(960, 540),
+        data,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -625,6 +624,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

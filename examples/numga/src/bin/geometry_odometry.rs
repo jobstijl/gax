@@ -18,9 +18,8 @@ use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption,
-    palette, run,
+    palette, run_with,
 };
-use std::sync::OnceLock;
 
 /// How far a step reading and the closing reading are trusted, how well the first pose is known,
 /// and how vaguely the others are known before any reading, as translation and rotation standard
@@ -539,14 +538,11 @@ const ITERATIONS: usize = 20;
 const HOLD: f32 = 2.5;
 
 /// Both laps, closed a fifth of the way at a time.
-fn runs() -> &'static (plane::Run, space::Run) {
-    static RUNS: OnceLock<(plane::Run, space::Run)> = OnceLock::new();
-    RUNS.get_or_init(|| {
-        (
-            plane::damped(&plane::lap(), 0.2, ITERATIONS, 9),
-            space::damped(&space::lap(), 0.2, ITERATIONS, 9),
-        )
-    })
+fn runs() -> (plane::Run, space::Run) {
+    (
+        plane::damped(&plane::lap(), 0.2, ITERATIONS, 9),
+        space::damped(&space::lap(), 0.2, ITERATIONS, 9),
+    )
 }
 
 /// The state between two iterates: poses interpolated along the motor between them, and
@@ -580,20 +576,16 @@ fn between<P: Copy, C: Copy + core::ops::Add<Output = C> + core::ops::Sub<Output
     (poses, unc, k)
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let (lap, space_lap) = runs();
+/// The plane, left: truth, dead reckoning with its ellipses, and the poses with theirs. Returns
+/// the step under way.
+fn draw_plane(c: &mut Canvas, left: Rect, lap: &plane::Run, t: f32) -> usize {
     let (poses, uncertainty, k) =
         between(&lap.iterates, t, gax::pga2d::Motor::interpolate, |c, f| {
             c.gp(f)
         });
-    // The plane, left: truth, dead reckoning with its ellipses, and the poses with theirs.
     let positions =
         |ps: &[plane::M]| -> Vec<plane::P> { ps.iter().map(|p| plane::position(*p)).collect() };
     let (truth, dead) = (positions(&lap.truth), positions(&lap.dead));
-    let left = Rect::new(0.0, 50.0, w * 0.6, h);
     let margin = 10.0;
     let ax = Axes::fitting(
         left.inset(margin, margin, margin, margin),
@@ -622,15 +614,20 @@ fn draw(c: &mut Canvas, t: f32) {
             ("MOST LIKELY", palette::SKY),
         ],
     );
-    // Space, right: the short lap seen from an orbiting camera.
+    k
+}
+
+/// Space, right: the short lap seen from an orbiting camera, on its own backdrop.
+fn draw_space(c: &mut Canvas, rect: Rect, space_lap: &space::Run, t: f32) {
     let (sposes, _, _) = between(
         &space_lap.iterates,
         t,
         gax::pga3d::Motor::interpolate,
         |c, f| c.gp(f),
     );
-    let (x0, y0) = ((w * 0.6).floor(), 60.0);
-    let mut sub = c.sub(Rect::new(x0, y0, w, h));
+    let h = c.rect().height();
+    let (x0, y0) = (rect.lo.e20(), rect.lo.e01());
+    let mut sub = c.sub(rect);
     sub.backdrop(
         palette::TOP.mix_light(palette::BOTTOM, y0 / h),
         palette::BOTTOM,
@@ -671,14 +668,12 @@ fn draw(c: &mut Canvas, t: f32) {
         Align::Left,
     );
     c.blit(&sub, Point2::xy(x0, y0));
-    caption(
-        c,
-        "ODOMETRY: CLOSING THE LAP",
-        "POSE-GRAPH GAUSS-NEWTON BY CONJUGATE GRADIENTS, 2 SIGMA ELLIPSES",
-    );
-    // The gradient at the iterate the animation is leaving.
+}
+
+/// The gradient at the iterate the animation is leaving, step `k`, and the step, in the bottom
+/// right corner of the plane's side.
+fn draw_step(c: &mut Canvas, left: Rect, lap: &plane::Run, k: usize) {
     let gradient = plane::max_abs(&lap.problem.gradient(&lap.iterates[k].0));
-    // Two lines in the bottom right corner of the plane's side.
     c.text(
         &format!("GRADIENT {gradient:.1e}"),
         left.hi - Point2::direction(12.0, 32.0),
@@ -695,9 +690,26 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 }
 
+fn draw(c: &mut Canvas, runs: &(plane::Run, space::Run), t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let (lap, space_lap) = runs;
+    let left = Rect::new(0.0, 50.0, w * 0.6, h);
+    let k = draw_plane(c, left, lap, t);
+    draw_space(c, Rect::new((w * 0.6).floor(), 60.0, w, h), space_lap, t);
+    caption(
+        c,
+        "ODOMETRY: CLOSING THE LAP",
+        "POSE-GRAPH GAUSS-NEWTON BY CONJUGATE GRADIENTS, 2 SIGMA ELLIPSES",
+    );
+    // The notes over the plane's side last, as they may reach under the space's backdrop.
+    draw_step(c, left, lap, k);
+}
+
 fn main() {
     let seconds = PER_STEP * ITERATIONS as f32 + HOLD;
-    run(Anim::new("odometry", seconds).size(960, 540), draw);
+    run_with(Anim::new("odometry", seconds).size(960, 540), runs, draw);
 }
 
 #[cfg(test)]
@@ -807,6 +819,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::runs(), 1.0);
     }
 }

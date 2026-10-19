@@ -25,9 +25,8 @@ use gax_numga_examples::points;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, palette, reach3, run,
+    backdrop, caption, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga3d as space;
 
@@ -207,11 +206,6 @@ const CIRCLE_SAMPLES: usize = 96;
 const AZIMUTH: f32 = 25.0;
 const ELEVATION: f32 = 22.0;
 
-fn scene() -> &'static Material {
-    static S: OnceLock<Material> = OnceLock::new();
-    S.get_or_init(material)
-}
-
 /// The undeformed cube, faint, and the deformed one, shaded with its edges.
 fn cube(s: &mut Scene3, view: &View) {
     let rest = corners();
@@ -347,9 +341,8 @@ fn draw_mohr(c: &mut Canvas, rect: Rect, material: &Material, turning: &View) {
     ax.legend(c, &entries);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, material: &Material, t: f32) {
     backdrop(c);
-    let material = scene();
     let angle = core::f64::consts::PI * f64::from((t / SECONDS).rem_euclid(1.0));
     let turning = view(material, turned(material, angle));
     let screen = c.rect();
@@ -369,7 +362,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("stress", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("stress", SECONDS).size(960, 540), material, draw);
 }
 
 #[cfg(test)]
@@ -461,6 +454,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &material(), 0.5);
     }
 }

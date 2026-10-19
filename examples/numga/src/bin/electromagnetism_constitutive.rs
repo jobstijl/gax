@@ -22,7 +22,7 @@ use gax::sta::Bivector;
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
-    palette, run,
+    palette, run_with,
     signal::{haversine, linspace, phasor},
 };
 
@@ -356,39 +356,36 @@ struct Scans {
     crystal: ([f64; 2], [Bivector; 2]),
 }
 
-fn scans() -> &'static Scans {
-    static S: std::sync::OnceLock<Scans> = std::sync::OnceLock::new();
-    S.get_or_init(|| {
-        let speeds = linspace(0.05, 1.5, 1161);
-        let dispersion = dispersion_media()
-            .into_iter()
-            .map(|(name, medium, expected)| (name, dispersion_scan(&speeds, medium, z()), expected))
-            .collect();
-        let angles = linspace(0.0, core::f64::consts::TAU, 49);
-        let fresnel_speeds = linspace(0.4, 1.0, 301);
-        let sheets = fresnel_surface(&angles, &fresnel_speeds)
-            .into_iter()
-            .map(|(name, scans)| {
-                let per_angle = scans
-                    .iter()
-                    .map(|s| minimum_speeds(&fresnel_speeds, s, 4e-3))
-                    .collect();
-                (name, per_angle)
-            })
-            .collect();
-        let betas = linspace(-0.6, 0.6, 13);
-        let drag = fresnel_drag_velocities(EPS_GLASS, MU_GLASS, &betas, &linspace(0.05, 1.2, 576));
-        Scans {
-            speeds,
-            dispersion,
-            angles,
-            sheets,
-            betas,
-            drag,
-            glass: glass_modes(),
-            crystal: field_modes(),
-        }
-    })
+fn scans() -> Scans {
+    let speeds = linspace(0.05, 1.5, 1161);
+    let dispersion = dispersion_media()
+        .into_iter()
+        .map(|(name, medium, expected)| (name, dispersion_scan(&speeds, medium, z()), expected))
+        .collect();
+    let angles = linspace(0.0, core::f64::consts::TAU, 49);
+    let fresnel_speeds = linspace(0.4, 1.0, 301);
+    let sheets = fresnel_surface(&angles, &fresnel_speeds)
+        .into_iter()
+        .map(|(name, scans)| {
+            let per_angle = scans
+                .iter()
+                .map(|s| minimum_speeds(&fresnel_speeds, s, 4e-3))
+                .collect();
+            (name, per_angle)
+        })
+        .collect();
+    let betas = linspace(-0.6, 0.6, 13);
+    let drag = fresnel_drag_velocities(EPS_GLASS, MU_GLASS, &betas, &linspace(0.05, 1.2, 576));
+    Scans {
+        speeds,
+        dispersion,
+        angles,
+        sheets,
+        betas,
+        drag,
+        glass: glass_modes(),
+        crystal: field_modes(),
+    }
 }
 
 /// The travelling wave of two modes at time `tau`: each mode normalized to a unit electric
@@ -453,8 +450,7 @@ fn text_scale(rect: Rect) -> f32 {
     (rect.height() / 240.0).clamp(0.5, 1.0)
 }
 
-fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
-    let s = scans();
+fn draw_dispersion(c: &mut Canvas, rect: Rect, s: &Scans, cursor: f64) {
     let inset = rect.inset(40.0, 26.0, 10.0, 34.0);
     let ax = Axes::new(inset, [0.05, 1.5], [1e-4, 3.0]).log_y();
     ax.frame(c, "SMALLEST SINGULAR VALUE", "PHASE SPEED", "");
@@ -494,8 +490,8 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
     ax.legend(c, &names);
 }
 
-fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
-    let (_, fields) = scans().crystal;
+fn draw_polarizations(c: &mut Canvas, rect: Rect, s: &Scans, tau: f64) {
+    let (_, fields) = s.crystal;
     let origin = Point::origin();
     let inset = rect.inset(14.0, 26.0, 10.0, 34.0);
     let ax = Axes::equal(inset, origin, 1.3);
@@ -528,8 +524,7 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     ax.text(c, fast, "FAST", size, palette::BLUE, Align::Left);
 }
 
-fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
-    let s = scans();
+fn draw_fresnel(c: &mut Canvas, rect: Rect, s: &Scans, angle: f64) {
     let ax = Axes::equal(
         rect.inset(14.0, 26.0, 10.0, 34.0),
         Point::xy(0.0, 0.05),
@@ -582,8 +577,7 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
     ax.line(c, origin, d, 1.0, palette::INK.faded(0.6));
 }
 
-fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
-    let s = scans();
+fn draw_drag(c: &mut Canvas, rect: Rect, s: &Scans, beta: f64) {
     #[allow(clippy::disallowed_methods)] // the refractive index √(εμ): a physical law
     let n = (EPS_GLASS * MU_GLASS).sqrt();
     let inset = rect.inset(40.0, 26.0, 10.0, 34.0);
@@ -620,13 +614,12 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
     ax.legend(c, &[("WITH FLOW", down), ("AGAINST", up)]);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scans, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let at = f64::from((t / SECONDS).rem_euclid(1.0));
     let tau = core::f64::consts::TAU * 2.0 * at;
-    let s = scans();
     // Below the caption (its subtitle's baseline three caption sizes down), two rows: the
     // waves above, the plots below, by fractions across.
     let top = (h / 30.0).clamp(10.0, 22.0) * 3.0 + 4.0;
@@ -648,10 +641,10 @@ fn draw(c: &mut Canvas, t: f32) {
         "CRYSTAL: SLOW AND FAST MODES SLIP",
     );
     let sweep = haversine(core::f64::consts::TAU * at);
-    draw_dispersion(c, lower(0.0, 0.34), 0.05 + 1.45 * sweep);
-    draw_polarizations(c, lower(0.34, 0.5), tau);
-    draw_fresnel(c, lower(0.5, 0.75), core::f64::consts::TAU * at);
-    draw_drag(c, lower(0.75, 1.0), -0.6 + 1.2 * sweep);
+    draw_dispersion(c, lower(0.0, 0.34), s, 0.05 + 1.45 * sweep);
+    draw_polarizations(c, lower(0.34, 0.5), s, tau);
+    draw_fresnel(c, lower(0.5, 0.75), s, core::f64::consts::TAU * at);
+    draw_drag(c, lower(0.75, 1.0), s, -0.6 + 1.2 * sweep);
     caption(
         c,
         "CONSTITUTIVE MAPS: GLASS, CRYSTALS, MOVING MEDIA",
@@ -660,7 +653,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("constitutive", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("constitutive", SECONDS).size(960, 540),
+        scans,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -948,6 +945,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scans(), 0.5);
     }
 }

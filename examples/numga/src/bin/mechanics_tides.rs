@@ -26,9 +26,8 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, from_above,
-    palette, reach3, run, vector3,
+    palette, reach3, run_with, vector3,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga3d as space;
 
@@ -289,12 +288,11 @@ struct Scene {
     states: Vec<(Stars, Shape)>,
 }
 
-fn scene() -> &'static Scene {
-    static S: OnceLock<Scene> = OnceLock::new();
-    S.get_or_init(|| Scene {
+fn scene() -> Scene {
+    Scene {
         masses: setting().0,
         states: flyby(FRAMES),
-    })
+    }
 }
 
 /// A point of the plane `z = 0`, as drawn.
@@ -376,9 +374,8 @@ fn draw_cluster(c: &mut Canvas, rect: Rect, stars: &Stars, shape: &Shape) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     let frame = ((t / SECONDS).rem_euclid(1.0) * FRAMES as f32) as usize;
     let (stars, shape) = &s.states[frame.min(FRAMES - 1)];
     let body = c
@@ -400,7 +397,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("tides", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("tides", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -470,6 +467,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

@@ -33,9 +33,8 @@
 use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    from_above, label_above, palette, reach3, run,
+    from_above, label_above, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod slip {
     use gax::vga3d::{Vector, intrinsic};
@@ -248,15 +247,12 @@ struct Scene {
     paths: Vec<(Vec<Vector>, Vec<Systems<Factor>>)>,
 }
 
-fn scene() -> &'static Scene {
-    static S: OnceLock<Scene> = OnceLock::new();
-    S.get_or_init(|| {
-        let crystal = Crystal::fcc();
-        Scene {
-            crystal,
-            paths: crystal.paths(),
-        }
-    })
+fn scene() -> Scene {
+    let crystal = Crystal::fcc();
+    Scene {
+        crystal,
+        paths: crystal.paths(),
+    }
 }
 
 /// A direction on the chart, as drawn.
@@ -397,9 +393,8 @@ fn draw_paths(c: &mut Canvas, rect: Rect, s: &Scene, reached: usize) {
     label_above(c, rect, "PULLS TURNING TOWARDS [112]", 13.0, 8.0);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     let growth = (t.rem_euclid(SECONDS) / GROWING).min(1.0);
     let reached = 1 + (growth * (STEPS - 1) as f32).round() as usize;
     let body = c
@@ -416,7 +411,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("slip_systems", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("slip_systems", SECONDS).size(960, 540),
+        scene,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -481,7 +480,8 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
-        gax_numga_examples::app::assert_draws(super::draw, 5.5);
+        let scene = super::scene();
+        gax_numga_examples::app::assert_draws_with(super::draw, &scene, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &scene, 5.5);
     }
 }

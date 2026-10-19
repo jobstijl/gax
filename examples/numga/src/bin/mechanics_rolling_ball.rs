@@ -20,9 +20,8 @@ use gax::vga3d::Bivector;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, from_above, label_above, measure, on_sphere, palette, reach3, run,
+    backdrop, caption, from_above, label_above, measure, on_sphere, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga3d as space;
 
@@ -138,11 +137,6 @@ const FRAME_DISTANCE: f32 = 4.6;
 const SHELL: [usize; 2] = [18, 36];
 /// The light falling on the table from the upper left.
 const LIGHT: V = gax::vga3d::Vector::new(-0.4, 0.4, 0.82);
-
-fn scene() -> &'static Rolling {
-    static S: OnceLock<Rolling> = OnceLock::new();
-    S.get_or_init(rolling)
-}
 
 /// A point of the table, as drawn from above.
 fn table(v: V) -> Point2 {
@@ -297,9 +291,8 @@ fn shell(s: &mut Scene3) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, r: &Rolling, t: f32) {
     backdrop(c);
-    let r = scene();
     let last = r.orientation.len() - 1;
     let step = ((t / SECONDS).rem_euclid(1.0) * last as f32).round() as usize;
     let body = c
@@ -334,7 +327,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("rolling_ball", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("rolling_ball", SECONDS).size(960, 540),
+        rolling,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -379,6 +376,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &rolling(), 1.0);
     }
 }

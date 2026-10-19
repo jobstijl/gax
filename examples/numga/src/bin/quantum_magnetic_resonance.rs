@@ -26,10 +26,9 @@ use gax_numga_examples::points::circle;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{frame, haversine};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, ORIGIN3, Point2, backdrop, caption,
-    colormap, from_above, palette, reach3, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
+    backdrop, caption, colormap, from_above, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod resonance {
     use gax::Unit;
@@ -321,28 +320,25 @@ struct Data {
     faded: Vec<St>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let (detunings, ensemble) = spin_echo(300, 2.0, DELAY, 8.0, ECHO_DT, ECHO_EVERY, 0);
-        let signal = ensemble.iter().map(|e| signal(e)).collect();
-        let (nutation, _, settled) = nutation(&[0.0, 0.5, 1.0], 1.0, 40.0, 0.02, 5);
-        let line_detunings: Vec<f64> = (0..241).map(|k| -3.0 + 6.0 * k as f64 / 240.0).collect();
-        let lines = lines(&line_detunings, &DRIVES);
-        let (decay_times, echoed, faded) = echo_decay(300, 2.0, 0.01, 11, 0);
-        Data {
-            detunings,
-            ensemble,
-            signal,
-            nutation,
-            settled,
-            line_detunings,
-            lines,
-            decay_times,
-            echoed,
-            faded,
-        }
-    })
+fn data() -> Data {
+    let (detunings, ensemble) = spin_echo(300, 2.0, DELAY, 8.0, ECHO_DT, ECHO_EVERY, 0);
+    let signal = ensemble.iter().map(|e| signal(e)).collect();
+    let (nutation, _, settled) = nutation(&[0.0, 0.5, 1.0], 1.0, 40.0, 0.02, 5);
+    let line_detunings: Vec<f64> = (0..241).map(|k| -3.0 + 6.0 * k as f64 / 240.0).collect();
+    let lines = lines(&line_detunings, &DRIVES);
+    let (decay_times, echoed, faded) = echo_decay(300, 2.0, 0.01, 11, 0);
+    Data {
+        detunings,
+        ensemble,
+        signal,
+        nutation,
+        settled,
+        line_detunings,
+        lines,
+        decay_times,
+        echoed,
+        faded,
+    }
 }
 
 /// The unit directions of space.
@@ -350,20 +346,15 @@ fn axes() -> [Vector; 3] {
     [x(), Vector::new(0.0, 1.0, 0.0), z()]
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let d = data();
-    let screen = c.rect();
-    let phase = (t / SECONDS).clamp(0.0, 1.0);
-    let small = (screen.height() / 50.0).clamp(7.0, 11.0);
-    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
+/// The colours of the three spins nutating, and of the absorption lines under the three drives.
+fn colours() -> [Light; 3] {
+    [palette::RED, palette::PURPLE, palette::SKY]
+}
 
-    // The ensemble seen from above the field, coloured by detuning.
-    let records = d.ensemble.len();
-    let index = frame(phase, records);
-    let dt = (ECHO_DT * ECHO_EVERY as f64) as f32;
-    let now = index as f32 * dt;
-    let top_rect = screen.part(0.02, 0.15, 0.34, 0.58);
+/// The ensemble seen from above the field at record `index` (time `now`), coloured by
+/// detuning, with its mean transverse spin and the stage of the echo.
+fn draw_ensemble(c: &mut Canvas, top_rect: Rect, d: &Data, index: usize, now: f32, small: f32) {
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let ax = Axes::equal(top_rect, ORIGIN2, 1.12);
     // The unit circle about the field.
     ax.polyline(c, &circle(Point::origin(), 1.0, 96), 1.0, palette::GRID);
@@ -404,14 +395,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let note = top_rect.bottom_middle() + down.gp(small * 1.2);
     let text = format!("T = {now:.2} US: {stage}");
     c.text(&text, note, small * 0.9, palette::INK, Align::Center);
+}
 
-    // The signal so far.
-    let total = records as f32 * dt;
-    let ax = Axes::new(
-        screen.part(0.42, 0.17, 0.97, 0.52),
-        [0.0, total],
-        [0.0, 1.05],
-    );
+/// The signal so far, the mean transverse spin, against the true dephasing, with the pulse and
+/// the echo marked.
+fn draw_signal(c: &mut Canvas, rect: Rect, d: &Data, index: usize, dt: f32, small: f32) {
+    let now = index as f32 * dt;
+    let total = d.ensemble.len() as f32 * dt;
+    let ax = Axes::new(rect, [0.0, total], [0.0, 1.05]);
     ax.frame(c, "MEAN TRANSVERSE SPIN", "TIME (US)", "");
     for (at, name) in [(DELAY as f32, "PI PULSE"), (2.0 * DELAY as f32, "ECHO")] {
         ax.line(
@@ -439,9 +430,12 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.polyline(c, &trace, 1.8, palette::SKY);
     let head = Point2::xy(now, d.signal[index] as f32);
     ax.scatter(c, &[head], Marker::Dot, 6.0, palette::SKY);
+}
 
-    // Spins switched on to a steady drive, nutating into their steady states.
-    let ball_rect = screen.part(0.0, 0.64, 0.3, 1.0);
+/// Spins switched on to a steady drive, nutating into their steady states, the camera turning
+/// with the animation's phase.
+fn draw_nutation(c: &mut Canvas, ball_rect: Rect, d: &Data, phase: f32, small: f32) {
+    let down = Point2::direction(0.0, 1.0);
     let cam = Camera::orbit(
         ball_rect,
         ORIGIN3,
@@ -451,7 +445,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.6),
     );
     let shown = ((phase * d.nutation.len() as f32) as usize).clamp(1, d.nutation.len());
-    let colours = [palette::RED, palette::PURPLE, palette::SKY];
+    let colours = colours();
     panel3(c, ball_rect, cam, |s| {
         s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.45));
         for a in axes() {
@@ -475,9 +469,13 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::INK,
         Align::Center,
     );
+}
 
-    // Absorption against detuning, per unit drive: a stronger drive broadens and flattens it.
-    let ax = Axes::new(screen.part(0.36, 0.7, 0.63, 0.9), [-3.0, 3.0], [0.0, 4.2]);
+/// Absorption against detuning, per unit drive: a stronger drive broadens and flattens it. A
+/// cursor sweeps the detuning.
+fn draw_absorption(c: &mut Canvas, rect: Rect, d: &Data, phase: f32) {
+    let colours = colours();
+    let ax = Axes::new(rect, [-3.0, 3.0], [0.0, 4.2]);
     ax.frame(c, "ABSORPTION PER UNIT DRIVE", "DETUNING (RAD/US)", "");
     let mut legend = Vec::new();
     for (j, drive) in DRIVES.iter().enumerate() {
@@ -500,14 +498,12 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::GRID,
     );
     ax.legend(c, &legend);
+}
 
-    // The echo against the free decay, from composed maps, on a logarithmic time axis.
-    let ax = Axes::new(
-        screen.part(0.69, 0.7, 0.97, 0.9),
-        [0.015, 30.0],
-        [0.0, 1.05],
-    )
-    .log_x();
+/// The echo against the free decay, from composed maps, on a logarithmic time axis, with a
+/// cursor at the time `now`.
+fn draw_echo(c: &mut Canvas, rect: Rect, d: &Data, now: f32) {
+    let ax = Axes::new(rect, [0.015, 30.0], [0.0, 1.05]).log_x();
     ax.frame(c, "ECHO AND FREE DECAY", "TIME AFTER TIP (US)", "");
     let fine: Vec<Point2> = (0..=60)
         .map(|k| {
@@ -531,7 +527,22 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.line(c, Point2::xy(now, 0.0), Point2::xy(now, 1.05), 1.0, cursor);
     }
     ax.legend(c, &[("ECHO", palette::SKY), ("FREE DECAY", palette::RED)]);
+}
 
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let phase = (t / SECONDS).clamp(0.0, 1.0);
+    let small = (screen.height() / 50.0).clamp(7.0, 11.0);
+    // The record of the echo shown now, and its time.
+    let index = frame(phase, d.ensemble.len());
+    let dt = (ECHO_DT * ECHO_EVERY as f64) as f32;
+    let now = index as f32 * dt;
+    draw_ensemble(c, screen.part(0.02, 0.15, 0.34, 0.58), d, index, now, small);
+    draw_signal(c, screen.part(0.42, 0.17, 0.97, 0.52), d, index, dt, small);
+    draw_nutation(c, screen.part(0.0, 0.64, 0.3, 1.0), d, phase, small);
+    draw_absorption(c, screen.part(0.36, 0.7, 0.63, 0.9), d, phase);
+    draw_echo(c, screen.part(0.69, 0.7, 0.97, 0.9), d, now);
     caption(
         c,
         "MAGNETIC RESONANCE: A SPIN ECHO",
@@ -540,8 +551,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("magnetic resonance", SECONDS).size(960, 540),
+        data,
         draw,
     );
 }
@@ -662,7 +674,8 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
+        let d = super::data();
+        let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &d, t);
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 6.0, &mut draw);

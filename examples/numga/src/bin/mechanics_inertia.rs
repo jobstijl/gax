@@ -24,7 +24,7 @@ use gax::pga3d::{Line, Motor, Point};
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Rect, Scene3, backdrop, caption, palette,
-    run,
+    run_with,
 };
 
 use gax_numga_examples::shared::mechanics_lie as lie;
@@ -282,96 +282,84 @@ type Chart = gax::pga2d::Point;
 const SECONDS: f32 = 12.0;
 const DT: f64 = 0.01;
 
-fn scene() -> &'static Scene {
-    static SCENE: std::sync::OnceLock<Scene> = std::sync::OnceLock::new();
-    SCENE.get_or_init(|| {
-        let raw = [
-            Point::xyz(1.3, 0.0, -0.2),
-            Point::xyz(-0.6, 0.9, 0.0),
-            Point::xyz(-0.5, -0.8, 0.1),
-            Point::xyz(0.1, 0.3, 1.5),
-        ];
-        // Centred: moved by the translation from the centroid to the origin.
-        let centroid = raw.iter().copied().sum::<simplex::P>().unitized();
-        let centre = Motor::between(centroid, Point::origin());
-        let corners: Vec<simplex::P> = raw.iter().map(|p| centre >> *p).collect();
-        let inertia = simplex::lumped(&corners);
-        let inertia_inv = rigid::G::mobility(inertia);
-        // A spin about a skew axis through the centre of mass.
-        let mut motor = rigid::G::identity();
-        let mut rate = Line::new(0.4, 2.2, 0.9, 0.0, 0.0, 0.0);
-        let mut motors = vec![motor];
-        for _ in 0..(f64::from(SECONDS) / DT).round() as usize {
-            (motor, rate) =
-                rigid::G::explicit_rkmk4(motor, rate, inertia, inertia_inv, DT, &rigid::G::free);
-            motors.push(motor);
+fn scene() -> Scene {
+    let raw = [
+        Point::xyz(1.3, 0.0, -0.2),
+        Point::xyz(-0.6, 0.9, 0.0),
+        Point::xyz(-0.5, -0.8, 0.1),
+        Point::xyz(0.1, 0.3, 1.5),
+    ];
+    // Centred: moved by the translation from the centroid to the origin.
+    let centroid = raw.iter().copied().sum::<simplex::P>().unitized();
+    let centre = Motor::between(centroid, Point::origin());
+    let corners: Vec<simplex::P> = raw.iter().map(|p| centre >> *p).collect();
+    let inertia = simplex::lumped(&corners);
+    let inertia_inv = rigid::G::mobility(inertia);
+    // A spin about a skew axis through the centre of mass.
+    let mut motor = rigid::G::identity();
+    let mut rate = Line::new(0.4, 2.2, 0.9, 0.0, 0.0, 0.0);
+    let mut motors = vec![motor];
+    for _ in 0..(f64::from(SECONDS) / DT).round() as usize {
+        (motor, rate) =
+            rigid::G::explicit_rkmk4(motor, rate, inertia, inertia_inv, DT, &rigid::G::free);
+        motors.push(motor);
+    }
+    // numga's demo tetrahedron, sampled.
+    let tetra = simplex::tetrahedron();
+    let exact = simplex::lumped(&tetra);
+    let grid = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 100]
+        .iter()
+        .map(|&n| {
+            let w = simplex::grid(n);
+            Chart::xy(
+                w.len() as f64,
+                simplex::relative(simplex::inertia(&w, &tetra), exact),
+            )
+        })
+        .collect();
+    // One Monte Carlo stream, its running mean read at logarithmic checkpoints.
+    let draws = simplex::random_weights(100_000, 4, &mut rng(0));
+    let mut sum = e3::Inertia::zero();
+    let mut monte_carlo = Vec::new();
+    let mut next = 10;
+    for (i, row) in draws.iter().enumerate() {
+        // Unit mass per draw; the running mean divides by the count.
+        let unit: Vec<f64> = row.iter().map(|w| w * draws.len() as f64).collect();
+        sum += simplex::inertia(&[unit], &tetra);
+        if i + 1 == next {
+            monte_carlo.push(Chart::xy(
+                next as f64,
+                simplex::relative(sum * (1.0 / next as f64), exact),
+            ));
+            next = (next as f64 * 1.5).ceil() as usize;
         }
-        // numga's demo tetrahedron, sampled.
-        let tetra = simplex::tetrahedron();
-        let exact = simplex::lumped(&tetra);
-        let grid = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 100]
-            .iter()
-            .map(|&n| {
-                let w = simplex::grid(n);
-                Chart::xy(
-                    w.len() as f64,
-                    simplex::relative(simplex::inertia(&w, &tetra), exact),
-                )
-            })
-            .collect();
-        // One Monte Carlo stream, its running mean read at logarithmic checkpoints.
-        let draws = simplex::random_weights(100_000, 4, &mut rng(0));
-        let mut sum = e3::Inertia::zero();
-        let mut monte_carlo = Vec::new();
-        let mut next = 10;
-        for (i, row) in draws.iter().enumerate() {
-            // Unit mass per draw; the running mean divides by the count.
-            let unit: Vec<f64> = row.iter().map(|w| w * draws.len() as f64).collect();
-            sum += simplex::inertia(&[unit], &tetra);
-            if i + 1 == next {
-                monte_carlo.push(Chart::xy(
-                    next as f64,
-                    simplex::relative(sum * (1.0 / next as f64), exact),
-                ));
-                next = (next as f64 * 1.5).ceil() as usize;
-            }
+    }
+    // gax's mesh moments of the same tetrahedron, per unit volume.
+    let faces = [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]];
+    let mesh = gax::pga3d::Moments::of_faces(&tetra, &faces);
+    let moment = e3::second_moment(exact);
+    let planes: Vec<e3::Pl> = (0..4).map(e3::plane_blade).collect();
+    let mut worst: f64 = 0.0;
+    for a in &planes {
+        for b in &planes {
+            let ours = (*b & moment.of(*a)).s();
+            let theirs = mesh.form.of(*a).of(*b).s() / mesh.volume();
+            worst = worst.max((ours - theirs).abs());
         }
-        // gax's mesh moments of the same tetrahedron, per unit volume.
-        let faces = [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]];
-        let mesh = gax::pga3d::Moments::of_faces(&tetra, &faces);
-        let moment = e3::second_moment(exact);
-        let planes: Vec<e3::Pl> = (0..4).map(e3::plane_blade).collect();
-        let mut worst: f64 = 0.0;
-        for a in &planes {
-            for b in &planes {
-                let ours = (*b & moment.of(*a)).s();
-                let theirs = mesh.form.of(*a).of(*b).s() / mesh.volume();
-                worst = worst.max((ours - theirs).abs());
-            }
-        }
-        Scene {
-            corners,
-            inertia,
-            motors,
-            grid,
-            monte_carlo,
-            mesh: worst,
-        }
-    })
+    }
+    Scene {
+        corners,
+        inertia,
+        motors,
+        grid,
+        monte_carlo,
+        mesh: worst,
+    }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let sc = scene();
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(sc.motors.len() - 1);
-    let m = sc.motors[k];
-    caption(
-        c,
-        "INERTIA: PRINCIPAL FRAMES FROM INERTIA ALONE",
-        "LEAST SQUARES, THEN TWO EIGENPROBLEMS (PGA3D)",
-    );
+/// The body moved by `m`, seen from a camera circling at time `t`: its faces, and the principal
+/// axes and second-moment ellipsoid of the frame recovered from its inertia alone.
+fn draw_body(c: &mut Canvas, rect: Rect, sc: &Scene, m: rigid::M, t: f32) {
     // The body's inertia in the world, and its principal frame recovered from it alone.
     let world = e3::moved(m, sc.inertia);
     let moment = e3::second_moment(world);
@@ -395,9 +383,8 @@ fn draw(c: &mut Canvas, t: f32) {
         [0.0, 0.0, 0.0, 1.0],
     ]);
     let ellipsoid = frame.reverse() >> stretch;
-    let left = w * 0.55;
     let cam = Camera::orbit(
-        Rect::new(0.0, 0.0, left, h),
+        rect,
         ORIGIN3,
         9.0,
         0.5 + 0.2 * t,
@@ -439,11 +426,13 @@ fn draw(c: &mut Canvas, t: f32) {
         s.polyline(&ring, 1.2, colours[k].faded(0.6));
     }
     s.draw(c);
-    // Sampling a tetrahedron's inertia: the error of a grid and of Monte Carlo against the
-    // lumped inertia, revealed over the loop.
-    let right = Rect::new(left, 0.0, w, h);
+}
+
+/// Sampling a tetrahedron's inertia: the error of a grid and of Monte Carlo against the lumped
+/// inertia, revealed over the loop.
+fn draw_sampling(c: &mut Canvas, rect: Rect, sc: &Scene, t: f32) {
     let ax = Axes::new(
-        right.inset(60.0, 110.0, 24.0, 64.0),
+        rect.inset(60.0, 110.0, 24.0, 64.0),
         [1.0, 1e5],
         [1e-17, 1e5],
     )
@@ -451,11 +440,10 @@ fn draw(c: &mut Canvas, t: f32) {
     .log_y();
     ax.frame(c, "SAMPLED SIMPLEX INERTIA", "SAMPLES", "RELATIVE ERROR");
     let shown = (t.rem_euclid(SECONDS) / SECONDS * 1.25).min(1.0);
-    let reveal = |pts: &'static [Chart]| -> &'static [Chart] {
-        let n = ((pts.len() as f32 * shown).ceil() as usize).clamp(1, pts.len());
-        &pts[..n]
-    };
-    let (g, r) = (reveal(&sc.grid), reveal(&sc.monte_carlo));
+    // The first points of a series, as many as shown so far.
+    let reveal = |len: usize| ((len as f32 * shown).ceil() as usize).clamp(1, len);
+    let g = &sc.grid[..reveal(sc.grid.len())];
+    let r = &sc.monte_carlo[..reveal(sc.monte_carlo.len())];
     ax.polyline(c, g, 1.8, palette::ORANGE);
     ax.scatter(c, g, Marker::Dot, 5.0, palette::ORANGE);
     ax.polyline(c, r, 1.4, palette::SKY);
@@ -478,8 +466,23 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 }
 
+fn draw(c: &mut Canvas, sc: &Scene, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(sc.motors.len() - 1);
+    caption(
+        c,
+        "INERTIA: PRINCIPAL FRAMES FROM INERTIA ALONE",
+        "LEAST SQUARES, THEN TWO EIGENPROBLEMS (PGA3D)",
+    );
+    let left = w * 0.55;
+    draw_body(c, Rect::new(0.0, 0.0, left, h), sc, sc.motors[k], t);
+    draw_sampling(c, Rect::new(left, 0.0, w, h), sc, t);
+}
+
 fn main() {
-    run(Anim::new("inertia", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("inertia", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -603,6 +606,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &scene(), 0.5);
     }
 }

@@ -1,8 +1,6 @@
 //! The disk's and the sky's light: blackbody colours at their visible luminance, the disk's
 //! clumpy texture carried along its orbits, and a catalogue of stars over a dusty band.
 
-use std::sync::OnceLock;
-
 use crate::disk::carried;
 use crate::kerr::{V, xy};
 use crate::scenes::{FLOW_TIME, Glint, camera_hole};
@@ -76,8 +74,7 @@ pub fn blackbody_colour(temperature: f64, luminance: f32) -> Light {
 /// The light of a blackbody at a temperature in K as the camera shows it: its colour, at its
 /// visible luminance, the exposure temperature at mid-grey.
 pub fn blackbody(temperature: f64) -> Light {
-    static REFERENCE: OnceLock<f64> = OnceLock::new();
-    let reference = *REFERENCE.get_or_init(|| visible_luminance(EXPOSURE_TEMPERATURE));
+    let reference = visible_luminance(EXPOSURE_TEMPERATURE);
     let luminance = (visible_luminance(temperature) / reference) as f32 * MID_GREY;
     blackbody_colour(temperature, luminance)
 }
@@ -89,19 +86,23 @@ struct ClumpMode {
     phase: f64,
 }
 
-/// The clump waves, drawn once.
-fn clump_modes() -> &'static [ClumpMode] {
-    static MODES: OnceLock<Vec<ClumpMode>> = OnceLock::new();
-    MODES.get_or_init(|| {
+/// The disk's clumpy texture: its random waves.
+pub struct Clumps(Vec<ClumpMode>);
+
+impl Clumps {
+    /// The clump waves, drawn from their seed.
+    pub fn new() -> Clumps {
         let mut draw = rng(CLUMP_SEED);
-        (0..CLUMP_MODES)
-            .map(|_| ClumpMode {
-                turns: draw.range(MIN_TURNS as f64, (MAX_TURNS + 1) as f64) as usize,
-                wavenumber: draw.range(0.8, 4.0),
-                phase: draw.range(0.0, core::f64::consts::TAU),
-            })
-            .collect()
-    })
+        Clumps(
+            (0..CLUMP_MODES)
+                .map(|_| ClumpMode {
+                    turns: draw.range(MIN_TURNS as f64, (MAX_TURNS + 1) as f64) as usize,
+                    wavenumber: draw.range(0.8, 4.0),
+                    phase: draw.range(0.0, core::f64::consts::TAU),
+                })
+                .collect(),
+        )
+    }
 }
 
 /// Random waves around and across the disk at a point, at oblate radius `radius`, summed to
@@ -109,7 +110,7 @@ fn clump_modes() -> &'static [ClumpMode] {
 /// rotor, raised to the wave's whole turns (which keep it continuous around), times its phase
 /// across.
 #[allow(clippy::disallowed_methods)] // a statistic: unit variance from waves of variance ½
-fn clump_waves(point: V, radius: f64) -> f64 {
+fn clump_waves(clumps: &Clumps, point: V, radius: f64) -> f64 {
     let east = vga2d::Vector::new(1.0, 0.0);
     let direction = vga2d::Vector::new(point.e1(), point.e2()).normalized();
     let around = east * direction;
@@ -117,7 +118,8 @@ fn clump_waves(point: V, radius: f64) -> f64 {
         std::iter::successors(Some(vga2d::Rotor::new(1.0, 0.0)), |p| Some(*p * around))
             .take(MAX_TURNS + 1)
             .collect();
-    let sum: f64 = clump_modes()
+    let sum: f64 = clumps
+        .0
         .iter()
         .map(|mode| {
             let across = vga2d::Pseudoscalar::new(mode.wavenumber * radius + mode.phase).exp();
@@ -137,11 +139,11 @@ pub fn emissivity(radius: f64, waves: f64) -> f64 {
 /// The clump waves at a glint, `progress` of the way through the animation's loop: read where
 /// its gas was now and one loop before, and turned from the first to the second over the loop,
 /// which closes it without a jump and without the loss of contrast an average would bring.
-pub fn flowing_waves(glint: &Glint, progress: f64) -> f64 {
+pub fn flowing_waves(clumps: &Clumps, glint: &Glint, progress: f64) -> f64 {
     let hole = camera_hole();
     let at = |elapsed: f64| {
         let gas = carried(glint.event, glint.radius, xy(), hole, elapsed);
-        clump_waves(gas, glint.radius)
+        clump_waves(clumps, gas, glint.radius)
     };
     let now = at(FLOW_TIME * progress);
     let before = at(FLOW_TIME * (progress - 1.0));

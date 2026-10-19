@@ -239,13 +239,85 @@ fn samples_dots(s: &mut Scene3, pts: &[Point]) {
     }
 }
 
+/// The truth's colour and the fit's.
+const TRUTH: Light = palette::SKY;
+const FIT: Light = palette::RED;
+
+/// The point nearest the cloud's samples seen at `phase`, against the pose's centre.
+fn draw_point_fit(c: &mut Canvas, cam: Camera, data: &Samples, phase: f32, centre: Point) {
+    let n = seen(data.cloud.len(), phase, 4);
+    let fitted = point_to_points(&data.cloud[..n]);
+    tile(c, cam, "POINT: MIN |P V X|", n, |s| {
+        samples_dots(s, &data.cloud[..n]);
+        s.dot(centre, Marker::Ring, 20.0, TRUTH);
+        s.dot(fitted, Marker::Dot, 9.0, FIT);
+    });
+}
+
+/// The line nearest the segment's samples seen at `phase`, against the pose's line.
+fn draw_line_fit(c: &mut Canvas, cam: Camera, data: &Samples, phase: f32, pose: M) {
+    let n = seen(data.segment.len(), phase, 3);
+    // Feed the segment in a scrambled order, so that the early fits see all of it.
+    let pts: Vec<Point> = (0..n).map(|i| data.segment[(i * 37) % 120]).collect();
+    let fitted = line_to_points(&pts);
+    let ends = end_planes(2.5).map(|e| pose >> e);
+    let true_line = pose >> (Point::origin() & Point::xyz(0.0, 1.0, 0.0));
+    tile(c, cam, "LINE: MIN |P V L|", n, |s| {
+        samples_dots(s, &pts);
+        s.seg(
+            true_line ^ ends[0],
+            true_line ^ ends[1],
+            2.5,
+            TRUTH.faded(0.8),
+        );
+        s.seg(fitted ^ ends[0], fitted ^ ends[1], 2.0, FIT);
+    });
+}
+
+/// The plane nearest the patch's samples seen at `phase`, against the pose's plane.
+fn draw_plane_fit(c: &mut Canvas, cam: Camera, data: &Samples, phase: f32, pose: M) {
+    let n = seen(data.patch.len(), phase, 4);
+    let fitted = plane_to_points(&data.patch[..n]);
+    let edges = patch_edges(2.0).map(|e| pose >> e);
+    let true_plane = pose >> Plane::new(0.0, 0.0, 1.0, 0.0);
+    tile(c, cam, "PLANE: MIN |P V PI|", n, |s| {
+        samples_dots(s, &data.patch[..n]);
+        let quad = |p: Plane| edges.map(|e| p ^ e);
+        let (tq, fq) = (quad(true_plane), quad(fitted));
+        let mut tl = tq.to_vec();
+        tl.push(tq[0]);
+        s.polyline(&tl, 2.5, TRUTH.faded(0.8));
+        s.quad(fq[0], fq[1], fq[2], fq[3], FIT, 0.18);
+        let mut fl = fq.to_vec();
+        fl.push(fq[0]);
+        s.polyline(&fl, 2.0, FIT);
+    });
+}
+
+/// The point nearest the bundle's lines seen at `phase`, against the pose's centre.
+fn draw_point_of_lines_fit(c: &mut Canvas, cam: Camera, data: &Samples, phase: f32, centre: Point) {
+    let n = seen(data.bundle.len(), phase, 3);
+    let fitted = point_to_lines(&data.bundle[..n]).unitized();
+    tile(c, cam, "POINT OF LINES: MIN |L V X|", n, |s| {
+        for l in &data.bundle[..n] {
+            // The stretch of each line about its point nearest the fit: the
+            // meet of the line with the plane through the fit orthogonal to it.
+            let d = direction(*l);
+            let foot = (*l ^ (*l | fitted)).unitized();
+            let (a, b) = (foot + d.gp(-2.0), foot + d.gp(2.0));
+            s.seg(a, b, 0.8, palette::GRID.faded(0.7));
+        }
+        s.dot(centre, Marker::Ring, 20.0, TRUTH);
+        s.dot(fitted, Marker::Dot, 9.0, FIT);
+    });
+}
+
 fn draw(c: &mut Canvas, t: f32) {
     let phase = t / SECONDS;
     let az = 0.5 + core::f32::consts::TAU * phase;
     let data = samples();
     let pose = pose();
     let centre = pose >> Point::origin();
-    let (truth, fit): (Light, Light) = (palette::SKY, palette::RED);
     let screen = c.rect();
     let header = 64.0;
     let (w, h) = (screen.width() / 2.0, (screen.height() - header) / 2.0);
@@ -257,79 +329,10 @@ fn draw(c: &mut Canvas, t: f32) {
         let mut sub = c.sub(Rect::new(0.0, 0.0, w, h));
         let view = sub.rect();
         match k {
-            0 => {
-                let n = seen(data.cloud.len(), phase, 4);
-                let fitted = point_to_points(&data.cloud[..n]);
-                tile(&mut sub, camera(view, 4.0), "POINT: MIN |P V X|", n, |s| {
-                    samples_dots(s, &data.cloud[..n]);
-                    s.dot(centre, Marker::Ring, 20.0, truth);
-                    s.dot(fitted, Marker::Dot, 9.0, fit);
-                });
-            }
-            1 => {
-                let n = seen(data.segment.len(), phase, 3);
-                // Feed the segment in a scrambled order, so that the early fits see all of it.
-                let pts: Vec<Point> = (0..n).map(|i| data.segment[(i * 37) % 120]).collect();
-                let fitted = line_to_points(&pts);
-                let ends = end_planes(2.5).map(|e| pose >> e);
-                let true_line = pose >> (Point::origin() & Point::xyz(0.0, 1.0, 0.0));
-                tile(&mut sub, camera(view, 9.0), "LINE: MIN |P V L|", n, |s| {
-                    samples_dots(s, &pts);
-                    s.seg(
-                        true_line ^ ends[0],
-                        true_line ^ ends[1],
-                        2.5,
-                        truth.faded(0.8),
-                    );
-                    s.seg(fitted ^ ends[0], fitted ^ ends[1], 2.0, fit);
-                });
-            }
-            2 => {
-                let n = seen(data.patch.len(), phase, 4);
-                let fitted = plane_to_points(&data.patch[..n]);
-                let edges = patch_edges(2.0).map(|e| pose >> e);
-                let true_plane = pose >> Plane::new(0.0, 0.0, 1.0, 0.0);
-                tile(
-                    &mut sub,
-                    camera(view, 10.0),
-                    "PLANE: MIN |P V PI|",
-                    n,
-                    |s| {
-                        samples_dots(s, &data.patch[..n]);
-                        let quad = |p: Plane| edges.map(|e| p ^ e);
-                        let (tq, fq) = (quad(true_plane), quad(fitted));
-                        let mut tl = tq.to_vec();
-                        tl.push(tq[0]);
-                        s.polyline(&tl, 2.5, truth.faded(0.8));
-                        s.quad(fq[0], fq[1], fq[2], fq[3], fit, 0.18);
-                        let mut fl = fq.to_vec();
-                        fl.push(fq[0]);
-                        s.polyline(&fl, 2.0, fit);
-                    },
-                );
-            }
-            _ => {
-                let n = seen(data.bundle.len(), phase, 3);
-                let fitted = point_to_lines(&data.bundle[..n]).unitized();
-                tile(
-                    &mut sub,
-                    camera(view, 7.0),
-                    "POINT OF LINES: MIN |L V X|",
-                    n,
-                    |s| {
-                        for l in &data.bundle[..n] {
-                            // The stretch of each line about its point nearest the fit: the
-                            // meet of the line with the plane through the fit orthogonal to it.
-                            let d = direction(*l);
-                            let foot = (*l ^ (*l | fitted)).unitized();
-                            let (a, b) = (foot + d.gp(-2.0), foot + d.gp(2.0));
-                            s.seg(a, b, 0.8, palette::GRID.faded(0.7));
-                        }
-                        s.dot(centre, Marker::Ring, 20.0, truth);
-                        s.dot(fitted, Marker::Dot, 9.0, fit);
-                    },
-                );
-            }
+            0 => draw_point_fit(&mut sub, camera(view, 4.0), &data, phase, centre),
+            1 => draw_line_fit(&mut sub, camera(view, 9.0), &data, phase, pose),
+            2 => draw_plane_fit(&mut sub, camera(view, 10.0), &data, phase, pose),
+            _ => draw_point_of_lines_fit(&mut sub, camera(view, 7.0), &data, phase, centre),
         }
         c.blit(&sub, at);
     }

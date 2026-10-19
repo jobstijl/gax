@@ -18,7 +18,7 @@ use gax::sta::{Bivector, Vector};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
-    backdrop, caption, palette, reach3, run,
+    backdrop, caption, palette, reach3, run_with,
     signal::{haversine, wave},
 };
 
@@ -221,20 +221,22 @@ fn cloud_speed(p: f64) -> f64 {
     0.02 + 0.94 * haversine(p)
 }
 
-/// The fixed cloud directions; the animation boosts the rest observer along them.
-fn directions() -> &'static [Vector] {
-    static DIRS: std::sync::OnceLock<Vec<Vector>> = std::sync::OnceLock::new();
-    DIRS.get_or_init(|| sphere_directions(2000, &mut gax_numga_examples::rng::rng(0x9e37)))
+/// The dust cloud, fixed before the first frame.
+struct Cloud {
+    /// The cloud's directions; the animation boosts the rest observer along them.
+    directions: Vec<Vector>,
+    /// The null cloud's pressure over its energy, from its spectrum (exactly a third).
+    null_ratio: f64,
 }
 
-/// The null cloud's pressure over its energy, from its spectrum (exactly a third).
-fn null_ratio() -> f64 {
-    static R: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
-    *R.get_or_init(|| {
-        let rays = rays(directions());
-        let (pressure, energy) = pressure_energy(cloud_tensor(&rays, 1.0 / rays.len() as f64));
-        pressure / energy
-    })
+fn cloud() -> Cloud {
+    let directions = sphere_directions(2000, &mut gax_numga_examples::rng::rng(0x9e37));
+    let rays = rays(&directions);
+    let (pressure, energy) = pressure_energy(cloud_tensor(&rays, 1.0 / rays.len() as f64));
+    Cloud {
+        directions,
+        null_ratio: pressure / energy,
+    }
 }
 
 /// Grey axes with their names at the ends.
@@ -379,9 +381,9 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     );
 }
 
-fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
+fn draw_cloud(c: &mut Canvas, rect: Rect, cloud: &Cloud, phase: f64, spin: f32) {
     let speed = cloud_speed(phase);
-    let dirs = directions();
+    let dirs = &cloud.directions;
     let us = moving(dirs, speed);
     let tm = cloud_tensor(&us, 1.0 / us.len() as f64);
     let s = spectrum(tm);
@@ -433,7 +435,7 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
         .map(|p| Point::xy(speed, -p / energy))
         .collect();
     ax.scatter(c, &marks, Marker::Ring, 9.0, palette::ORANGE);
-    let light = Point::xy(1.0, null_ratio());
+    let light = Point::xy(1.0, cloud.null_ratio);
     ax.scatter(c, &[light], Marker::Star, 12.0, palette::YELLOW);
     ax.legend(
         c,
@@ -445,7 +447,7 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, cloud: &Cloud, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
@@ -460,7 +462,7 @@ fn draw(c: &mut Canvas, t: f32) {
         0.0,
     );
     draw_field(c, below.column(0, 2), phase, spin);
-    draw_cloud(c, below.column(1, 2), phase, spin);
+    draw_cloud(c, below.column(1, 2), cloud, phase, spin);
     caption(
         c,
         "MAXWELL: STRESS-ENERGY MAPS IN SPACETIME",
@@ -469,7 +471,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("maxwell", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("maxwell", SECONDS).size(960, 540), cloud, draw);
 }
 
 #[cfg(test)]
@@ -717,6 +719,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::cloud(), 0.5);
     }
 }

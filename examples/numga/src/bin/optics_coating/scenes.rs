@@ -237,7 +237,7 @@ pub fn time_domain() -> [PulseRun; 3] {
     })
 }
 
-/// The spectra and the run at numga's sizes, computed once: the coatings' and the helix's
+/// The spectra and the run at numga's sizes: the coatings' and the helix's
 /// reflectances over the visible band, the axion interface's over its jumps, and the pulse.
 pub struct Results {
     pub wavelengths: Vec<f64>,
@@ -248,20 +248,17 @@ pub struct Results {
     pub pulses: [PulseRun; 3],
 }
 
-pub fn results() -> &'static Results {
-    static RESULTS: std::sync::OnceLock<Results> = std::sync::OnceLock::new();
-    RESULTS.get_or_init(|| {
-        let wavelengths = linspace(450.0, 850.0, 401);
-        let jumps = linspace(-3.0, 3.0, 241);
-        Results {
-            coatings: antireflection(&wavelengths),
-            helix: twisted(&wavelengths),
-            axion: axion(&jumps),
-            wavelengths,
-            jumps,
-            pulses: time_domain(),
-        }
-    })
+pub fn results() -> Results {
+    let wavelengths = linspace(450.0, 850.0, 401);
+    let jumps = linspace(-3.0, 3.0, 241);
+    Results {
+        coatings: antireflection(&wavelengths),
+        helix: twisted(&wavelengths),
+        axion: axion(&jumps),
+        wavelengths,
+        jumps,
+        pulses: time_domain(),
+    }
 }
 
 #[cfg(test)]
@@ -367,7 +364,7 @@ mod tests {
     /// band says.
     #[test]
     fn stepped_pulse_keeps_its_energy_and_returns_the_hand_turning_with_the_helix() {
-        let runs = &results().pulses;
+        let runs = &time_domain();
         for run in runs {
             assert!(((run.reflected + run.transmitted) / run.before - 1.0).abs() < 1e-3);
         }

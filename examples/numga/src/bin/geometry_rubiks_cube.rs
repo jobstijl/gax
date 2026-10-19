@@ -24,7 +24,7 @@ use gax::vga3d::Vector;
 use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, Scene3, backdrop, caption, light,
-    palette, run,
+    palette, run_with,
 };
 
 mod cube {
@@ -300,12 +300,6 @@ fn scrambled_and_solved() -> (Vec<Move>, Vec<Move>) {
     (scramble, solution)
 }
 
-/// The scene's scramble and solution, found once.
-fn scene() -> &'static (Vec<Move>, Vec<Move>) {
-    static SCENE: std::sync::OnceLock<(Vec<Move>, Vec<Move>)> = std::sync::OnceLock::new();
-    SCENE.get_or_init(scrambled_and_solved)
-}
-
 /// The face colours, by `side * 3 + axis`: +x red, +y blue, +z white, -x orange, -y green, -z
 /// yellow.
 fn sticker_colour(face: usize) -> Light {
@@ -432,10 +426,9 @@ fn draw_moves(c: &mut Canvas, at: Point2, label: &str, moves: &[Move], current: 
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, (scramble, solution): &(Vec<Move>, Vec<Move>), t: f32) {
     backdrop(c);
     let screen = c.rect();
-    let (scramble, solution) = scene();
     let moves = [scramble.as_slice(), solution].concat();
     let step = t / PER_MOVE;
     let index = (step as usize).min(moves.len());
@@ -462,10 +455,14 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    let (scramble, solution) = scene();
+    let scene = scrambled_and_solved();
     // Every move, and the time of two more on the solved cube.
-    let seconds = PER_MOVE * (scramble.len() + solution.len() + 2) as f32;
-    run(Anim::new("rubiks_cube", seconds).size(960, 540), draw);
+    let seconds = PER_MOVE * (scene.0.len() + scene.1.len() + 2) as f32;
+    run_with(
+        Anim::new("rubiks_cube", seconds).size(960, 540),
+        || scene,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -515,8 +512,9 @@ mod tests {
         let back = solution.iter().fold(scrambled, |c, m| apply(&c, *m));
         assert_eq!(back, solved);
         assert!(solution.len() <= scramble.len());
+        let scene = (scramble, solution);
         for t in [0.3, 5.75] {
-            gax_numga_examples::app::assert_draws(super::draw, t);
+            gax_numga_examples::app::assert_draws_with(super::draw, &scene, t);
         }
     }
 }

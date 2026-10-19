@@ -40,9 +40,8 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{frame, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop, caption,
-    colormap, palette, run,
+    colormap, palette, run_with,
 };
-use std::sync::OnceLock;
 
 gax::algebra! {
     algebra cl30 "Cl(3,0): 3 directions squaring to plus one, 0 to minus one.";
@@ -356,12 +355,6 @@ mod spin {
         ]
     }
 
-    /// The table, computed once.
-    pub fn table() -> &'static [Row] {
-        static TABLE: OnceLock<Vec<Row>> = OnceLock::new();
-        TABLE.get_or_init(|| zoo(0))
-    }
-
     /// Four Euclidean dimensions: rotors, the isoclinic split and the flows.
     pub mod four {
         use super::*;
@@ -496,12 +489,6 @@ mod spin {
             }
             flows
         }
-
-        /// The flows of the animation, computed once.
-        pub fn cached() -> &'static Flows {
-            static FLOWS: OnceLock<Flows> = OnceLock::new();
-            FLOWS.get_or_init(|| flows(12, &[0.25, 0.6, 1.0], 240))
-        }
     }
 }
 
@@ -531,45 +518,58 @@ struct Checks {
     links: [f64; 2],
 }
 
-fn checks() -> &'static Checks {
-    static CHECKS: OnceLock<Checks> = OnceLock::new();
-    CHECKS.get_or_init(|| {
-        use four::*;
-        let (rotor, left, right, _, _) = split(1);
-        // The spread of the turning angles of each factor's eigenvalues.
-        let angles = [left, right].map(|factor| {
-            let a: Vec<f64> = turn_map(factor)
-                .eigvals()
-                .iter()
-                .map(|z| z.arg().abs())
-                .collect();
-            let lo = a.iter().copied().fold(f64::INFINITY, f64::min);
-            let hi = a.iter().copied().fold(0.0, f64::max);
-            hi - lo
-        });
-        let f = cached();
-        let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
-        let last = f.left.len() - 12 + 4;
-        Checks {
-            split: (left * right).max_abs_diff(&rotor),
-            angles,
-            combined: combined.max_abs_diff(&(f.against.gp(5.0) - f.along)),
-            links: [
-                gax_numga_examples::measure::linking(&f.left[0], &f.left[last]),
-                gax_numga_examples::measure::linking(&f.right[0], &f.right[last]),
-            ],
-        }
-    })
+/// The checks, of the flows `f` of the animation.
+fn checks(f: &four::Flows) -> Checks {
+    use four::*;
+    let (rotor, left, right, _, _) = split(1);
+    // The spread of the turning angles of each factor's eigenvalues.
+    let angles = [left, right].map(|factor| {
+        let a: Vec<f64> = turn_map(factor)
+            .eigvals()
+            .iter()
+            .map(|z| z.arg().abs())
+            .collect();
+        let lo = a.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = a.iter().copied().fold(0.0, f64::max);
+        hi - lo
+    });
+    let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
+    let last = f.left.len() - 12 + 4;
+    Checks {
+        split: (left * right).max_abs_diff(&rotor),
+        angles,
+        combined: combined.max_abs_diff(&(f.against.gp(5.0) - f.along)),
+        links: [
+            gax_numga_examples::measure::linking(&f.left[0], &f.left[last]),
+            gax_numga_examples::measure::linking(&f.right[0], &f.right[last]),
+        ],
+    }
+}
+
+/// What the frames show: the table of algebras, the flows of four dimensions and their checks.
+struct Data {
+    table: Vec<Row>,
+    flows: four::Flows,
+    checks: Checks,
+}
+
+fn data() -> Data {
+    let flows = four::flows(12, &[0.25, 0.6, 1.0], 240);
+    Data {
+        table: zoo(0),
+        checks: checks(&flows),
+        flows,
+    }
 }
 
 /// The table of algebras' header: its width sets the table's.
 const HEADER: &str = "(P,Q) PLANES ROTATIONS BOOSTS FORM/INNER I*I SPINORS";
 
 /// The table of algebras, its header's baseline starting at `at`, one row under another.
-fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
+fn draw_table(c: &mut Canvas, table: &[Row], at: Point2, size: f32) {
     c.text(HEADER, at, size, palette::INK, Align::Left);
     let down = Point2::direction(0.0, size * 1.4);
-    for (k, row) in table().iter().enumerate() {
+    for (k, row) in table.iter().enumerate() {
         let (rotations, boosts) = row.counts();
         let line = format!(
             "({},{}) {:>6} {:>9} {:>6} {:>10.1} {:>+3.0} {}",
@@ -593,7 +593,7 @@ fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, data: &Data, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -603,9 +603,10 @@ fn draw(c: &mut Canvas, t: f32) {
     // The table at the right, under the caption: as wide as its header and the three letters
     // by which its last column's entries outrun the header's.
     let table_width = gax_numga_examples::font::width(HEADER, size) + 3.0 * size;
-    draw_table(c, Point2::xy(0.985 * w - table_width, 0.14 * h), size);
+    let table_at = Point2::xy(0.985 * w - table_width, 0.14 * h);
+    draw_table(c, &data.table, table_at, size);
 
-    let flows = four::cached();
+    let flows = &data.flows;
     let families = [&flows.left, &flows.right, &flows.knotted];
     let extent = families
         .iter()
@@ -652,13 +653,13 @@ fn draw(c: &mut Canvas, t: f32) {
         c.text(titles[k], title, 11.0, palette::INK, Align::Center);
         if k < 2 {
             let bottom_middle = rect.bottom_middle();
-            let text = format!("LINKING NUMBER {:+.2}", checks().links[k]);
+            let text = format!("LINKING NUMBER {:+.2}", data.checks.links[k]);
             let note = bottom_middle + up.gp(12.0);
             c.text(&text, note, 10.0, palette::GRID, Align::Center);
         }
     }
-    let exact = table().iter().all(|row| row.form_is_inner);
-    let ch = checks();
+    let exact = data.table.iter().all(|row| row.form_is_inner);
+    let ch = &data.checks;
     let lines = [
         if exact {
             "FORM = 2(N-2) INNER PRODUCT EXACTLY, EVERY ROW".to_string()
@@ -685,7 +686,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("spin groups", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("spin groups", SECONDS).size(960, 540), data, draw);
 }
 
 #[cfg(test)]
@@ -780,6 +781,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

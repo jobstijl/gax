@@ -24,9 +24,8 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{frame, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, palette, reach3, run,
+    backdrop, caption, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod neutrino {
     use gax::Unit;
@@ -291,19 +290,16 @@ struct Data {
     potentials: Vec<f64>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let vacuum = vacuum_oscillations(THETA_VACUUM, OMEGA, STEPS[VACUUM]);
-        let (decoherence, asymptote) =
-            wavepacket_decoherence(THETA_VACUUM, OMEGA, GAMMA, STEPS[DECOHERENCE]);
-        let (solar, potentials) = solar_adiabatic(THETA_SOLAR, OMEGA, STEPS[SOLAR]);
-        Data {
-            journeys: [vacuum, decoherence, solar],
-            asymptote,
-            potentials,
-        }
-    })
+fn data() -> Data {
+    let vacuum = vacuum_oscillations(THETA_VACUUM, OMEGA, STEPS[VACUUM]);
+    let (decoherence, asymptote) =
+        wavepacket_decoherence(THETA_VACUUM, OMEGA, GAMMA, STEPS[DECOHERENCE]);
+    let (solar, potentials) = solar_adiabatic(THETA_SOLAR, OMEGA, STEPS[SOLAR]);
+    Data {
+        journeys: [vacuum, decoherence, solar],
+        asymptote,
+        potentials,
+    }
 }
 
 /// The panels' titles and colours.
@@ -419,9 +415,8 @@ fn draw_references(c: &mut Canvas, ax: &Axes, k: usize, d: &Data) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let w = screen.width();
     let up = Point2::direction(0.0, -1.0);
@@ -467,7 +462,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("neutrino isospin", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("neutrino isospin", SECONDS).size(960, 540),
+        data,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -547,6 +546,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

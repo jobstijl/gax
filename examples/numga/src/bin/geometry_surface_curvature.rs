@@ -18,9 +18,8 @@ use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, ORIGIN3, Point2, Rect, backdrop, caption, colormap,
-    palette, run,
+    palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod curvature {
     use super::*;
@@ -216,39 +215,37 @@ struct Scene {
     ranges: [[[f64; 2]; 2]; 2],
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let (e, h) = (Surface::new(ellipsoid()), Surface::new(hyperboloid()));
-        let tau = core::f64::consts::TAU;
-        // Points of the unit sphere and of the unit hyperboloid `x² + y² - z² = 1`, turned
-        // about z by the longitude `v`, then stretched along the axes.
-        let turned =
-            |v: f64, p: Point| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), v * tau) >> p;
-        // The stretch by `k` along x, y and z, as a map on points (the weight kept).
-        let stretch = |[a, b, c]: [f64; 3]| {
-            Point::<(Point,)>::from_coeffs([
-                [a, 0.0, 0.0, 0.0],
-                [0.0, b, 0.0, 0.0],
-                [0.0, 0.0, c, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ])
-        };
-        let (to_ellipsoid, to_hyperboloid) = (stretch(SEMI_AXES), stretch([1.6, 1.0, 1.0]));
-        let on_ellipsoid = move |u: f64, v: f64| {
-            let latitude =
-                Motor::rotation_about(Point::direction(0.0, -1.0, 0.0), (u - 0.5) * tau / 2.0);
-            to_ellipsoid.of(turned(v, latitude >> Point::xyz(1.0, 0.0, 0.0)))
-        };
-        let on_hyperboloid = move |u: f64, v: f64| {
-            let s = (2.0 * u - 1.0) * 2f64.asinh();
-            to_hyperboloid.of(turned(v, Point::xyz(s.cosh(), 0.0, s.sinh())))
-        };
-        Scene {
-            ranges: [ranges(&e, on_ellipsoid), ranges(&h, on_hyperboloid)],
-            surfaces: [e, h],
-        }
-    })
+/// The two surfaces, and the ranges of their confocal parameters.
+fn scene() -> Scene {
+    let (e, h) = (Surface::new(ellipsoid()), Surface::new(hyperboloid()));
+    let tau = core::f64::consts::TAU;
+    // Points of the unit sphere and of the unit hyperboloid `x² + y² - z² = 1`, turned
+    // about z by the longitude `v`, then stretched along the axes.
+    let turned =
+        |v: f64, p: Point| Motor::rotation_about(Point::direction(0.0, 0.0, 1.0), v * tau) >> p;
+    // The stretch by `k` along x, y and z, as a map on points (the weight kept).
+    let stretch = |[a, b, c]: [f64; 3]| {
+        Point::<(Point,)>::from_coeffs([
+            [a, 0.0, 0.0, 0.0],
+            [0.0, b, 0.0, 0.0],
+            [0.0, 0.0, c, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
+    };
+    let (to_ellipsoid, to_hyperboloid) = (stretch(SEMI_AXES), stretch([1.6, 1.0, 1.0]));
+    let on_ellipsoid = move |u: f64, v: f64| {
+        let latitude =
+            Motor::rotation_about(Point::direction(0.0, -1.0, 0.0), (u - 0.5) * tau / 2.0);
+        to_ellipsoid.of(turned(v, latitude >> Point::xyz(1.0, 0.0, 0.0)))
+    };
+    let on_hyperboloid = move |u: f64, v: f64| {
+        let s = (2.0 * u - 1.0) * 2f64.asinh();
+        to_hyperboloid.of(turned(v, Point::xyz(s.cosh(), 0.0, s.sinh())))
+    };
+    Scene {
+        ranges: [ranges(&e, on_ellipsoid), ranges(&h, on_hyperboloid)],
+        surfaces: [e, h],
+    }
 }
 
 const LEVELS: f64 = 14.0;
@@ -295,9 +292,8 @@ fn shade(
 
 const SECONDS: f32 = 16.0;
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, scene: &Scene, t: f32) {
     backdrop(c);
-    let scene = scene();
     let screen = c.rect();
     let top = (screen.height() * 0.13).floor();
     let turn = core::f32::consts::TAU * t / SECONDS;
@@ -330,10 +326,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("surface curvature", SECONDS)
             .size(480, 270)
             .scale(2),
+        scene,
         draw,
     );
 }
@@ -461,11 +458,11 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
+        let scene = super::scene();
         let c = gax_numga_examples::app::frame(
             &gax_numga_examples::Anim::new("t", 1.0).size(160, 90),
             0.5,
-            &mut draw,
+            &mut |c, t| super::draw(c, &scene, t),
         );
         assert!(c.mean().luma() > 0.0);
     }

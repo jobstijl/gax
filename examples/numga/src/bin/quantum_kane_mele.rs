@@ -27,9 +27,8 @@
 use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    from_above, palette, reach3, run,
+    from_above, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod kane_mele {
     use gax::field::{Field, SparseMap};
@@ -410,20 +409,17 @@ struct Data {
     in_gap: (Vec<f64>, Vec<Spinors>),
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let flake = kane_mele::flake(SIZE, RIM);
-        let masses = masses(DRAWN_MASSES);
-        let spectra = sweep(&flake, &masses);
-        let in_gap = helical(&flake);
-        Data {
-            flake,
-            masses,
-            spectra,
-            in_gap,
-        }
-    })
+fn data() -> Data {
+    let flake = kane_mele::flake(SIZE, RIM);
+    let masses = masses(DRAWN_MASSES);
+    let spectra = sweep(&flake, &masses);
+    let in_gap = helical(&flake);
+    Data {
+        flake,
+        masses,
+        spectra,
+        in_gap,
+    }
 }
 
 /// An atom's place in the drawing's plane.
@@ -514,9 +510,8 @@ fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data, mass: f64) {
     ax.text(c, note, "GAP CLOSES", 9.0, palette::INK, Align::Left);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let progress = f64::from((t / SECONDS).fract());
     let time = LAP * progress;
@@ -561,7 +556,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("kane mele", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("kane mele", SECONDS).size(960, 540), data, draw);
 }
 
 #[cfg(test)]
@@ -705,6 +700,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

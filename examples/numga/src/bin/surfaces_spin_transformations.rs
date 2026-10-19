@@ -29,9 +29,9 @@ use gax_numga_examples::shared::surfaces_spin;
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
-    Anim, Camera, Canvas, Lens, Light, Rect, backdrop, caption, colormap, label_under, reach3, run,
+    Anim, Camera, Canvas, Lens, Light, Rect, backdrop, caption, colormap, label_under, reach3,
+    run_with,
 };
-use std::sync::OnceLock;
 use surfaces_spin::{Hit, checker_light, render};
 
 mod spin {
@@ -251,20 +251,17 @@ struct Scenes {
     galleries: Vec<Gallery>,
 }
 
-fn scenes() -> &'static Scenes {
-    static SCENES: OnceLock<Scenes> = OnceLock::new();
-    SCENES.get_or_init(|| {
-        std::thread::scope(|s| {
-            let dipole = s.spawn(dipole);
-            let rounding = s.spawn(rounding);
-            let (sphere, galleries) = dirac(DIRAC_LEVELS);
-            Scenes {
-                dipole: dipole.join().expect("the dipole"),
-                rounding: rounding.join().expect("the rounding"),
-                sphere,
-                galleries,
-            }
-        })
+fn scenes() -> Scenes {
+    std::thread::scope(|s| {
+        let dipole = s.spawn(dipole);
+        let rounding = s.spawn(rounding);
+        let (sphere, galleries) = dirac(DIRAC_LEVELS);
+        Scenes {
+            dipole: dipole.join().expect("the dipole"),
+            rounding: rounding.join().expect("the rounding"),
+            sphere,
+            galleries,
+        }
     })
 }
 
@@ -323,9 +320,8 @@ fn checkered(c: &mut Canvas, rect: Rect, mesh: &Mesh, reference: &Mesh, azimuth:
     label_under(c, rect, label, 16.0, 0.8);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scenes, t: f32) {
     backdrop(c);
-    let s = scenes();
     let screen = c.rect();
     let phase = (t / SECONDS).rem_euclid(1.0);
     let azimuth = AZIMUTH + core::f32::consts::TAU * phase;
@@ -368,8 +364,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("spin transformations", SECONDS).size(960, 540),
+        scenes,
         draw,
     );
 }
@@ -564,6 +561,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scenes(), 1.0);
     }
 }

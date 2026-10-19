@@ -12,7 +12,6 @@ use super::icosahedron::{R, mirrors, turns};
 use gax::vga3d::{Bivector, Rotor, Vector};
 use gax_numga_examples::{Axes, Canvas, Light, ORIGIN2, Point2};
 use std::collections::HashSet;
-use std::sync::OnceLock;
 
 /// The longest products of turns taken: enough to reach every element of the group.
 const LENGTH: usize = 8;
@@ -49,27 +48,33 @@ pub fn distinct(spinors: &[R]) -> Vec<R> {
         .collect()
 }
 
-/// The group's 120 spinors, found once.
-pub fn vertices() -> &'static [R] {
-    static VERTICES: OnceLock<Vec<R>> = OnceLock::new();
-    VERTICES.get_or_init(|| distinct(&products()))
+/// The 600-cell: the group's 120 spinors, and the pairs of them at the nearest distance, its
+/// edges.
+pub struct Polytope {
+    pub vertices: Vec<R>,
+    pub edges: Vec<(usize, usize)>,
 }
 
-/// The pairs of vertices at the nearest distance, the 600-cell's edges, found once.
-pub fn edges() -> &'static [(usize, usize)] {
-    static EDGES: OnceLock<Vec<(usize, usize)>> = OnceLock::new();
-    EDGES.get_or_init(|| {
-        let v = vertices();
-        let gap = |i: usize, j: usize| (v[i] - v[j]).norm();
-        let pairs = (0..v.len()).flat_map(|i| (i + 1..v.len()).map(move |j| (i, j)));
-        let nearest = pairs
-            .clone()
-            .map(|(i, j)| gap(i, j))
-            .fold(f64::INFINITY, f64::min);
-        pairs
-            .filter(|&(i, j)| (gap(i, j) - nearest).abs() < SAME)
-            .collect()
-    })
+impl Polytope {
+    /// The polytope, from the products of the turns.
+    pub fn new() -> Polytope {
+        let vertices = distinct(&products());
+        let edges = nearest_pairs(&vertices);
+        Polytope { vertices, edges }
+    }
+}
+
+/// The pairs of spinors at the nearest distance.
+fn nearest_pairs(v: &[R]) -> Vec<(usize, usize)> {
+    let gap = |i: usize, j: usize| (v[i] - v[j]).norm();
+    let pairs = (0..v.len()).flat_map(|i| (i + 1..v.len()).map(move |j| (i, j)));
+    let nearest = pairs
+        .clone()
+        .map(|(i, j)| gap(i, j))
+        .fold(f64::INFINITY, f64::min);
+    pairs
+        .filter(|&(i, j)| (gap(i, j) - nearest).abs() < SAME)
+        .collect()
 }
 
 /// A spinor as a point of the drawing: the three-sphere in perspective from beyond the scalar
@@ -84,11 +89,12 @@ fn project(spinor: R) -> (Point2, f64) {
 /// The polytope at time `t` of the act: every spinor turned on the left in the `xy` plane and
 /// on the right in the `yz` plane, the right turn at a fifth of the rate; edges nearer the
 /// viewer brighter, wider and cream, farther ones fainter and blue.
-pub fn draw(c: &mut Canvas, t: f32) {
+pub fn draw(c: &mut Canvas, polytope: &Polytope, t: f32) {
     let angle = core::f64::consts::TAU * f64::from(t / super::ACT);
     let left = Bivector::new(0.0, 0.0, angle / 2.0).exp().into_inner();
     let right = Bivector::new(angle / 10.0, 0.0, 0.0).exp().into_inner();
-    let points: Vec<(Point2, f64)> = vertices()
+    let points: Vec<(Point2, f64)> = polytope
+        .vertices
         .iter()
         .map(|v| project(left * *v * right))
         .collect();
@@ -98,13 +104,14 @@ pub fn draw(c: &mut Canvas, t: f32) {
     );
     let rect = c.rect().part(0.2, 0.12, 0.8, 1.0);
     let ax = Axes::equal(rect, ORIGIN2, 0.62);
-    let depths = edges()
+    let depths = polytope
+        .edges
         .iter()
         .map(|&(i, j)| 0.5 * (points[i].1 + points[j].1));
     let (low, high) = depths.fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), d| {
         (lo.min(d), hi.max(d))
     });
-    for &(i, j) in edges() {
+    for &(i, j) in &polytope.edges {
         let shade = ((0.5 * (points[i].1 + points[j].1) - low) / (high - low)) as f32;
         let colour = far.mix_light(near, shade).faded(0.35 + 0.65 * shade);
         ax.line(c, points[i].0, points[j].0, 0.6 + 1.2 * shade, colour);
@@ -121,7 +128,8 @@ mod tests {
     /// 600-cell, one over the golden ratio (the positive root of `x² + x - 1`).
     #[test]
     fn the_turns_close_into_the_six_hundred_cell() {
-        let v = vertices();
+        let polytope = Polytope::new();
+        let v = &polytope.vertices;
         assert_eq!(v.len(), 120);
         for r in v {
             assert!((r.norm() - 1.0).abs() < 1e-12);
@@ -145,6 +153,6 @@ mod tests {
             let neighbours = v.iter().filter(|b| ((*a - **b).norm() - edge).abs() < 1e-9);
             assert_eq!(neighbours.count(), 12);
         }
-        assert_eq!(edges().len(), 120 * 12 / 2);
+        assert_eq!(polytope.edges.len(), 120 * 12 / 2);
     }
 }

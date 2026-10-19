@@ -15,7 +15,7 @@
 
 use gax::pga2d::Point;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 
 mod cayley_klein {
@@ -232,6 +232,11 @@ fn line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Light) {
     ax.axline(c, foot, l.direction(), width, color);
 }
 
+/// Where the notes go under the panels, centred: this far below a panel's bottom middle.
+fn below() -> Point2 {
+    Point2::direction(0.0, 16.0)
+}
+
 /// The locus `P ∨ quadric(P) = 0`.
 fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Light) {
     ax.contour(
@@ -248,18 +253,10 @@ fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Li
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
-    let s = hyperbolic_plane(phase);
-    let screen = c.rect();
-    let rect = |i: usize| screen.column(i, 2).inset(20.0, 80.0, 20.0, 24.0);
-    // The notes go under the panels, centred.
-    let below = Point2::direction(0.0, 16.0);
-    let box_centre = Point::xy(0.35, 0.2);
-
-    // The triangle, its perpendicular and the reflection, on the left.
-    let ax = Axes::equal(rect(0), box_centre, 1.4);
+/// The triangle with its angles and side lengths, the perpendicular from P to BC through the
+/// pole of BC, and P's reflection in BC, about `centre`; the angle sums and the area below.
+fn draw_triangle(c: &mut Canvas, rect: Rect, s: &Scene, centre: Point) {
+    let ax = Axes::equal(rect, centre, 1.4);
     ax.clip(c);
     level_set(&ax, c, s.c, 2.0, palette::INK);
     for side in s.triangle.sides {
@@ -303,7 +300,6 @@ fn draw(c: &mut Canvas, t: f32) {
             ("POLE OF BC", palette::PURPLE),
         ],
     );
-    let r = rect(0);
     c.text(
         &format!(
             "ANGLE SUM {:.1} (ELLIPTIC {:.1}) AREA {:.3}",
@@ -315,14 +311,17 @@ fn draw(c: &mut Canvas, t: f32) {
                 .to_degrees(),
             s.triangle.area
         ),
-        r.bottom_middle() + below,
+        rect.bottom_middle() + below(),
         10.0,
         palette::INK,
         Align::Center,
     );
+}
 
-    // Circles as level sets of quadrics, on the right.
-    let ax = Axes::equal(rect(1), box_centre, 1.4);
+/// Two families of circles, level sets of quadrics, growing about their centres, around
+/// `centre`; their radii below.
+fn draw_circles(c: &mut Canvas, rect: Rect, s: &Scene, centre: Point) {
+    let ax = Axes::equal(rect, centre, 1.4);
     ax.clip(c);
     level_set(&ax, c, s.c, 2.0, palette::INK);
     for (centre, colour) in s.centres.iter().zip([palette::SKY, palette::ORANGE]) {
@@ -332,17 +331,29 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     ax.scatter(c, &s.centres, Marker::Dot, 7.0, palette::INK);
     c.unclip();
-    let r = rect(1);
     c.text(
         &format!(
             "RADII {:.2} TO {:.2}: P & CIRCLE(P) = 0",
             s.radii[0], s.radii[3]
         ),
-        r.bottom_middle() + below,
+        rect.bottom_middle() + below(),
         10.0,
         palette::INK,
         Align::Center,
     );
+}
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
+    let s = hyperbolic_plane(phase);
+    let screen = c.rect();
+    let rect = |i: usize| screen.column(i, 2).inset(20.0, 80.0, 20.0, 24.0);
+    let box_centre = Point::xy(0.35, 0.2);
+    // The triangle, its perpendicular and the reflection, on the left; circles as level sets
+    // of quadrics, on the right.
+    draw_triangle(c, rect(0), &s, box_centre);
+    draw_circles(c, rect(1), &s, box_centre);
     caption(
         c,
         "CAYLEY-KLEIN: THE HYPERBOLIC PLANE FROM ITS ABSOLUTE",

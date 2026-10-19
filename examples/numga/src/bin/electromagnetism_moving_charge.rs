@@ -28,9 +28,8 @@ use gax::sta::{Bivector, Vector};
 use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap, palette,
-    run,
+    run_with,
 };
-use std::sync::OnceLock;
 
 mod moving_charge {
     use core::ops::{Add, BitAnd};
@@ -438,17 +437,14 @@ struct Radiator {
 }
 
 /// The two circling charges, computed once.
-fn radiators() -> &'static [Radiator; 2] {
-    static RADIATORS: OnceLock<[Radiator; 2]> = OnceLock::new();
-    RADIATORS.get_or_init(|| {
-        ORBIT_SPEEDS.map(|(name, speed)| {
-            let orbit = orbit(speed);
-            Radiator {
-                name,
-                limit: wave_limit(&orbit),
-                orbit,
-            }
-        })
+fn radiators() -> [Radiator; 2] {
+    ORBIT_SPEEDS.map(|(name, speed)| {
+        let orbit = orbit(speed);
+        Radiator {
+            name,
+            limit: wave_limit(&orbit),
+            orbit,
+        }
     })
 }
 
@@ -469,7 +465,7 @@ fn wave_panel(c: &mut Canvas, rect: Rect, radiator: &Radiator, turned: f64) {
     ax.frame(c, &title, "", "");
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, radiators: &[Radiator; 2], t: f32) {
     backdrop(c);
     let share = f64::from(t / SECONDS).rem_euclid(1.0);
     let rapidity = TOP_RAPIDITY * haversine(core::f64::consts::TAU * share);
@@ -483,7 +479,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let lower = left.part(0.0, 0.5, 1.0, 1.0).inset(30.0, 20.0, 8.0, 22.0);
     magnetic_panel(c, lower, &moving);
     let right = Rect::new(w * 0.4, top, w, h);
-    for (i, radiator) in radiators().iter().enumerate() {
+    for (i, radiator) in radiators.iter().enumerate() {
         let panel = right.column(i, 2);
         let side = panel.width().min(panel.height()) - 44.0;
         let square = Rect::around(panel.centre(), Point2::direction(side / 2.0, side / 2.0));
@@ -497,7 +493,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("moving_charge", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("moving_charge", SECONDS).size(960, 540),
+        radiators,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -581,6 +581,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::radiators(), 1.0);
     }
 }

@@ -17,13 +17,13 @@
 //! (synchronized clocks stretch the rope; the bisector train does not).
 
 use crate::spacetime::Vector;
-use std::sync::OnceLock;
 
 use gax::pga2d::Point;
 use gax_numga_examples::font;
 use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, palette,
+    run_with,
 };
 
 gax::algebra! {
@@ -626,10 +626,11 @@ impl Diagram<'_> {
     }
 }
 
-/// The scenes' geometry, computed once.
-fn scenes() -> &'static (Impulse, Ladder, Spaceships) {
-    static SCENES: OnceLock<(Impulse, Ladder, Spaceships)> = OnceLock::new();
-    SCENES.get_or_init(|| (impulse(), ladder(), spaceships()))
+/// The three scenes' geometry.
+type Scenes = (Impulse, Ladder, Spaceships);
+
+fn scenes() -> Scenes {
+    (impulse(), ladder(), spaceships())
 }
 
 /// Smoothly from 0 to 1 over the first 85% of a scene, then held.
@@ -637,8 +638,7 @@ fn reveal(u: f32) -> f32 {
     smoothstep(u / 0.85)
 }
 
-fn draw_impulse(c: &mut Canvas, r: f32) {
-    let (s, _, _) = scenes();
+fn draw_impulse(c: &mut Canvas, s: &Impulse, r: f32) {
     let row = diagrams(c);
     let rect = |i: usize| row.column(i, 3).inset(40.0, 0.0, 8.0, 0.0);
     let titles = [
@@ -707,8 +707,7 @@ fn barn(d: &mut Diagram, doors: &[[Vector; 2]], closure: &[Vector; 2]) {
     d.events(closure, Marker::Square, 7.0, door());
 }
 
-fn draw_ladder(c: &mut Canvas, r: f32) {
-    let (_, s, _) = scenes();
+fn draw_ladder(c: &mut Canvas, s: &Ladder, r: f32) {
     let row = diagrams(c);
     let rect = |i: usize| row.column(i, 4).inset(34.0, 0.0, 6.0, 0.0);
 
@@ -779,12 +778,9 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     );
 }
 
-fn draw_spaceships(c: &mut Canvas, r: f32) {
-    let (_, _, s) = scenes();
-    let row = diagrams(c);
-    let w = row.width();
-    // A share of the row from `x0` to `x1` of the canvas's width.
-    let span = |x0: f32, x1: f32| row.inset(w * x0, 0.0, w * (1.0 - x1), 0.0);
+/// The two schedules' spacetime diagrams: the rope's ends, the impulses and the gaps at the
+/// start and the end.
+fn draw_schedules(c: &mut Canvas, rects: [Rect; 2], s: &Spaceships, r: f32) {
     let end = time_of(s.tracks[0][s.tracks[0].len() - 1][0]);
     let titles = ["STRAIN-PRESERVING TRAIN", "BELL: IDENTICAL CLOCK PROGRAMS"];
     let notes = [
@@ -792,8 +788,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         ["MATCHING CLOCK", "READINGS"],
     ];
     let colours = [kink(), elastic()];
-    for k in 0..2 {
-        let rect = span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0, 0.0, 8.0, 0.0);
+    for (k, rect) in rects.into_iter().enumerate() {
         let mut d = Diagram::new(c, rect, [-0.20, 3.05], [-0.40, end as f32 + 0.18], r);
         d.rod(&s.tracks[k], 2.4);
         for step in &s.schedules[k] {
@@ -812,15 +807,13 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         d.frame();
         d.title(titles[k]);
     }
+}
 
-    // The rope each schedule demands, in the final shared rest frame, fading in as the
-    // diagrams complete.
+/// The rope each schedule demands, in the final shared rest frame, fading in as the diagrams
+/// complete.
+fn draw_ropes(c: &mut Canvas, rect: Rect, s: &Spaceships, r: f32) {
     let shown = ((r - 0.6) / 0.4).clamp(0.0, 1.0);
-    let ax = fit(
-        span(0.73, 1.0).inset(0.0, 0.0, 10.0, 0.0),
-        [-0.22, 2.05],
-        [-0.35, 3.03],
-    );
+    let ax = fit(rect, [-0.22, 2.05], [-0.35, 3.03]);
     let size = 10.0;
     title(c, &ax, "IN THE FINAL REST FRAME", palette::INK);
     let gaps = s.final_events.map(|e| position_of(e[1]));
@@ -880,6 +873,17 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         elastic(),
         Align::Left,
     );
+}
+
+fn draw_spaceships(c: &mut Canvas, s: &Spaceships, r: f32) {
+    let row = diagrams(c);
+    let w = row.width();
+    // A share of the row from `x0` to `x1` of the canvas's width.
+    let span = |x0: f32, x1: f32| row.inset(w * x0, 0.0, w * (1.0 - x1), 0.0);
+    let schedules =
+        [0, 1].map(|k| span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0, 0.0, 8.0, 0.0));
+    draw_schedules(c, schedules, s, r);
+    draw_ropes(c, span(0.73, 1.0).inset(0.0, 0.0, 10.0, 0.0), s, r);
     caption(
         c,
         "BELL'S SPACESHIPS: TIMING ACROSS THE ROPE MATTERS",
@@ -887,15 +891,15 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, (impulse, ladder, spaceships): &Scenes, t: f32) {
     backdrop(c);
     let t = t.rem_euclid(3.0 * SCENE);
     let (scene, u) = ((t / SCENE) as usize, (t % SCENE) / SCENE);
     let r = reveal(u);
     match scene {
-        0 => draw_impulse(c, r),
-        1 => draw_ladder(c, r),
-        _ => draw_spaceships(c, r),
+        0 => draw_impulse(c, impulse, r),
+        1 => draw_ladder(c, ladder, r),
+        _ => draw_spaceships(c, spaceships, r),
     }
     // The legend, along the bottom edge.
     let screen = c.rect();
@@ -926,8 +930,9 @@ fn diagrams(c: &Canvas) -> Rect {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("relativistic impulse", 3.0 * SCENE).size(960, 540),
+        scenes,
         draw,
     );
 }
@@ -1095,8 +1100,9 @@ mod tests {
     /// A frame of each scene.
     #[test]
     fn a_frame_draws() {
+        let scenes = super::scenes();
         for t in [0.5, super::SCENE + 3.0, 2.0 * super::SCENE + 6.5] {
-            gax_numga_examples::app::assert_draws(super::draw, t);
+            gax_numga_examples::app::assert_draws_with(super::draw, &scenes, t);
         }
     }
 }

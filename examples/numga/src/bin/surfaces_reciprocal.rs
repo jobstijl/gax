@@ -22,9 +22,8 @@ use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Point3, Rect, Scene3,
-    backdrop, caption, label_under, palette, run,
+    backdrop, caption, label_under, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod reciprocal {
     use gax::field::{Field, SparseMap};
@@ -183,11 +182,6 @@ mod scenes {
 use reciprocal::*;
 use scenes::*;
 
-fn scene() -> &'static Breathing {
-    static SCENE: OnceLock<Breathing> = OnceLock::new();
-    SCENE.get_or_init(Breathing::new)
-}
-
 /// One breath: numga's 48 frames of 80 ms.
 const SECONDS: f32 = 3.84;
 /// The stresses at which the bars' light saturates, compression far weaker than tension, and the
@@ -296,9 +290,8 @@ fn truss(
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, scene: &Breathing, t: f32) {
     backdrop(c);
-    let scene = scene();
     let angle = core::f64::consts::TAU * f64::from(t / SECONDS);
     let heights = scene.heights(angle);
     let stresses = stresses(&scene.mesh, &heights);
@@ -326,7 +319,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("reciprocal", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("reciprocal", SECONDS).size(960, 540),
+        Breathing::new,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -409,6 +406,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::Breathing::new(), 1.0);
     }
 }

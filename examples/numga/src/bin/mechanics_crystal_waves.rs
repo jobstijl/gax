@@ -20,9 +20,8 @@ use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Pos2, Rect, backdrop, caption,
-    colormap, font, palette, run,
+    colormap, font, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod crystal {
     use super::*;
@@ -200,17 +199,17 @@ const BINS: usize = 110;
 /// Headings in the cube face for the wave surfaces.
 const FRONT: usize = 720;
 
+/// What the frames share: each crystal's and mode's focusing points, and its wave surfaces.
 struct Data {
     focus: [[Vec<Point2>; 3]; 3],
     fronts: [Vec<[Vector; 3]>; 3],
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| Data {
+fn data() -> Data {
+    Data {
         focus: focusing(HEADINGS, 7),
         fronts: wave_fronts(FRONT),
-    })
+    }
 }
 
 /// The square `[-1.5, 1.5]²` onto the histogram's grid of `BINS` x `BINS` unit cells.
@@ -246,17 +245,11 @@ fn mode_colour(w: usize) -> Light {
     [palette::RED, palette::SKY, palette::PURPLE][w]
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
+/// The focusing images, crystals in rows and modes in columns, from the first `share` of the
+/// headings, the current crystal's row outlined.
+fn draw_focusing(c: &mut Canvas, focus: &[[Vec<Point2>; 3]; 3], current: usize, share: f32) {
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let d = data();
-    let total = 3.0 * SWEEP;
-    let u = t.rem_euclid(total) / total;
-    let current = ((u * 3.0) as usize).min(2);
-    // The focusing images: a growing share of the headings, faster at first.
-    #[allow(clippy::disallowed_methods)] // the animation's pace, a timing curve
-    let share = u.sqrt().max(0.02);
     let top = h * 0.17;
     let left = w * 0.13;
     let size = ((h - top - h * 0.03) / 3.0).min((w * 0.56 - left) / 3.0);
@@ -274,7 +267,7 @@ fn draw(c: &mut Canvas, t: f32) {
         for (wv, mode) in MODES.iter().enumerate() {
             let rect = square(m, wv).inset(2.0, 2.0, 2.0, 2.0);
             let ax = Axes::new(rect, [-1.5, 1.5], [-1.5, 1.5]);
-            let pts = &d.focus[m][wv];
+            let pts = &focus[m][wv];
             let n = ((pts.len() as f32 * share) as usize).min(pts.len());
             let hist = histogram(&pts[..n]);
             let peak = (hist.iter().copied().max().unwrap_or(1).max(1) as f32).ln_1p();
@@ -316,15 +309,16 @@ fn draw(c: &mut Canvas, t: f32) {
     let at = screen.bottom_left() + Point2::direction(left, -h * 0.005);
     let text = format!("{count} HEADINGS");
     c.text(&text, at, 10.0, palette::GRID, Align::Left);
+}
 
-    // The wave surfaces of the current crystal in the cube face, and the sweeping heading.
-    let fronts = &d.fronts[current];
+/// The wave surfaces of the current crystal in the cube face, and the heading sweeping it at
+/// `u` through the loop: its phase velocities (rings) and group velocities (arrows).
+fn draw_wave_surfaces(c: &mut Canvas, rect: Rect, fronts: &[[Vector; 3]], current: usize, u: f32) {
     let reach = fronts
         .iter()
         .flatten()
         .map(|v| v.norm())
         .fold(0.0, f64::max) as f32;
-    let rect = Rect::new(w * 0.58, 0.0, w, h).inset(w * 0.05, h * 0.2, w * 0.03, h * 0.1);
     let origin = ORIGIN2;
     let ax = Axes::equal(rect, origin, reach * 1.12);
     ax.frame(c, NAMES[current], "KM/S ALONG (100)", "");
@@ -339,7 +333,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let heading = face_heading(angle);
     let crystals = crystals();
     let (values, _) = waves(&crystals[current], heading);
-    let group = d.fronts[current][frame(s, FRONT)];
+    let group = fronts[frame(s, FRONT)];
     let tip = face(heading.gp(f64::from(reach) * 1.1));
     ax.line(c, origin, tip, 1.0, palette::INK.faded(0.6));
     for wv in 0..3 {
@@ -351,6 +345,21 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     let legend: Vec<(&str, Light)> = MODES.iter().copied().zip((0..3).map(mode_colour)).collect();
     ax.legend(c, &legend);
+}
+
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let total = 3.0 * SWEEP;
+    let u = t.rem_euclid(total) / total;
+    let current = ((u * 3.0) as usize).min(2);
+    // The focusing images: a growing share of the headings, faster at first.
+    #[allow(clippy::disallowed_methods)] // the animation's pace, a timing curve
+    let share = u.sqrt().max(0.02);
+    draw_focusing(c, &d.focus, current, share);
+    let rect = Rect::new(w * 0.58, 0.0, w, h).inset(w * 0.05, h * 0.2, w * 0.03, h * 0.1);
+    draw_wave_surfaces(c, rect, &d.fronts[current], current, u);
     caption(
         c,
         "CRYSTAL WAVES: PHONON FOCUSING IN CUBIC CRYSTALS",
@@ -359,7 +368,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("crystal waves", 3.0 * SWEEP).size(960, 540), draw);
+    run_with(
+        Anim::new("crystal waves", 3.0 * SWEEP).size(960, 540),
+        data,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -437,6 +450,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

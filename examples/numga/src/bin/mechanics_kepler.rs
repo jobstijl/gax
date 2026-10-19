@@ -32,9 +32,8 @@ use gax::vga3d::{Rotor, Vector};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    from_above, palette, reach3, run,
+    from_above, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod kepler {
     use super::*;
@@ -364,15 +363,14 @@ struct Scene {
     errors: (Table, Table),
 }
 
-fn scene() -> &'static Scene {
-    static S: OnceLock<Scene> = OnceLock::new();
-    S.get_or_init(|| Scene {
+fn scene() -> Scene {
+    Scene {
         orbit: initial_orbit(ECCENTRICITIES[FEATURED_CASE]).1,
         curve: lift(CURVE_SAMPLES, 2),
         dots: lift(LIFT_SAMPLES, 1),
         passages: passage(),
         errors: convergence(),
-    })
+    }
 }
 
 /// A position in the orbital plane, as drawn.
@@ -534,9 +532,8 @@ fn draw_passage(c: &mut Canvas, rect: Rect, p: &Passage, eccentricity: f64, time
     passage_on(c, &detail, p, time);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     // Two revolutions, uniformly in the regularized clock: one is half a spinor cycle.
     let fraction = f64::from((t / SECONDS).rem_euclid(1.0));
     let parameter = fraction * core::f64::consts::TAU / s.orbit.frequency();
@@ -577,7 +574,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("kepler", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("kepler", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -721,6 +718,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

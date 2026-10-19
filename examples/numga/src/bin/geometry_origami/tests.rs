@@ -392,5 +392,5 @@ fn the_scene_agrees_with_numga() {
 
 #[test]
 fn a_frame_draws() {
-    gax_numga_examples::app::assert_draws(super::draw, 6.0);
+    gax_numga_examples::app::assert_draws_with(super::draw, &super::recipe(), 6.0);
 }

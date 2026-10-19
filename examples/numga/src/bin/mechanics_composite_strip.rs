@@ -40,10 +40,9 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::haversine;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Point3, Rect, Scene3, backdrop, caption,
-    contour, palette, run,
+    contour, palette, run_with,
 };
 use std::ops::{Add, BitOr, Mul};
-use std::sync::OnceLock;
 
 mod strip {
     use super::vga3d::{Bivector, Rotor, Scalar, State, Vector};
@@ -252,11 +251,6 @@ const FIBRE_SAMPLES: usize = 61;
 /// Mm of arrow per unit of pull.
 const PULL_ARROW: f64 = 16.0;
 
-fn solved() -> &'static [(St, f64); 2] {
-    static S: OnceLock<[(St, f64); 2]> = OnceLock::new();
-    S.get_or_init(strips)
-}
-
 /// The pull at time `t`, from nothing to full and back once a loop.
 fn load(t: f32) -> f64 {
     let angle = std::f64::consts::TAU * f64::from(t.rem_euclid(SECONDS) / SECONDS);
@@ -390,7 +384,7 @@ fn fibres(c: &mut Canvas, cam: &Camera, strip: Shown, top: Vector, eye: Vector) 
     c.stroke(&segments, 1.4, fibre_light());
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, solved: &[(St, f64); 2], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let rect = Rect::new(0.0, screen.height() * 0.1, screen.width(), screen.height());
@@ -406,7 +400,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let pull = load(t);
     let shown: [(Shown, Shown); 2] = core::array::from_fn(|k| {
-        let (state, width_strain) = solved()[k];
+        let (state, width_strain) = solved[k];
         let placement = Y * (SEPARATION * (k as f64 - 0.5));
         let scale = MAGNIFICATION * pull;
         let strip = Shown {
@@ -430,7 +424,7 @@ fn draw(c: &mut Canvas, t: f32) {
     for (k, (strip, _)) in shown.iter().enumerate() {
         let top = layup(&ANGLES[k], THICKNESS).last().expect("a ply").fibre;
         fibres(c, &cam, *strip, top, eye);
-        label(c, &cam, *strip, k);
+        label(c, &cam, *strip, solved[k].0, k);
     }
     caption(
         c,
@@ -439,12 +433,11 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 }
 
-/// A strip's layup and its response at full pull, under its held end.
-fn label(c: &mut Canvas, cam: &Camera, strip: Shown, k: usize) {
+/// A strip's layup and its response at full pull, `state`, under its held end.
+fn label(c: &mut Canvas, cam: &Camera, strip: Shown, state: St, k: usize) {
     let Some(grip) = cam.px(spot(strip.at(0.0, 0.0, 0.0))) else {
         return;
     };
-    let (state, _) = solved()[k];
     let stack: Vec<String> = ANGLES[k].iter().map(|a| format!("{a:+.0}")).collect();
     let twist_rate = twist().of(state).s() / THICKNESS;
     let twisting = if twist_rate.abs() < 1e-12 {
@@ -468,7 +461,11 @@ fn label(c: &mut Canvas, cam: &Camera, strip: Shown, k: usize) {
 }
 
 fn main() {
-    run(Anim::new("composite_strip", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("composite_strip", SECONDS).size(960, 540),
+        strips,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -593,6 +590,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &strips(), 1.0);
     }
 }

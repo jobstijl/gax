@@ -41,11 +41,10 @@ use gax::field::Field;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, label_above,
-    palette, run,
+    palette, run_with,
 };
 use girder::{P, Shape};
 use scenes::*;
-use std::sync::OnceLock;
 
 /// numga's swing: 200 frames of 30 ms.
 const SECONDS: f32 = 6.0;
@@ -61,40 +60,37 @@ struct Scene {
     compression: Vec<Frame>,
 }
 
-fn scene() -> &'static Scene {
-    static S: OnceLock<Scene> = OnceLock::new();
-    S.get_or_init(|| {
-        let chain = chain_girder();
-        let (bodies, hinges) = hinged_chain(&chain, LINKS, DAMPING);
-        let swing = swing(
-            &chain,
-            &bodies,
-            &hinges,
-            gravity(GRAVITY),
-            INTERVAL,
-            FRAMES,
-            xpbd::coupling,
-        );
-        let beam = beam_girder();
-        let (bodies, splices) = clamped_beam(&beam, BEAM_GIRDERS, BEAM_DAMPING);
-        let displacements = displacements(BEAM_FRAMES);
-        let compression = compress(
-            &beam,
-            &bodies,
-            &splices,
-            &displacements,
-            BEAM_INTERVAL,
-            BEAM_SUBSTEPS,
-            xpbd::coupling,
-        );
-        Scene {
-            chain,
-            swing,
-            beam,
-            displacements,
-            compression,
-        }
-    })
+fn scene() -> Scene {
+    let chain = chain_girder();
+    let (bodies, hinges) = hinged_chain(&chain, LINKS, DAMPING);
+    let swing = swing(
+        &chain,
+        &bodies,
+        &hinges,
+        gravity(GRAVITY),
+        INTERVAL,
+        FRAMES,
+        xpbd::coupling,
+    );
+    let beam = beam_girder();
+    let (bodies, splices) = clamped_beam(&beam, BEAM_GIRDERS, BEAM_DAMPING);
+    let displacements = displacements(BEAM_FRAMES);
+    let compression = compress(
+        &beam,
+        &bodies,
+        &splices,
+        &displacements,
+        BEAM_INTERVAL,
+        BEAM_SUBSTEPS,
+        xpbd::coupling,
+    );
+    Scene {
+        chain,
+        swing,
+        beam,
+        displacements,
+        compression,
+    }
 }
 
 /// A body's light: the moving girders by turns, the fixed ones grey.
@@ -203,9 +199,8 @@ fn draw_buckling(c: &mut Canvas, rect: Rect, s: &Scene, frame: usize) {
     ax.scatter(c, &curve[frame..], Marker::Dot, 8.0, palette::SKY);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     let fraction = (t / SECONDS).rem_euclid(1.0);
     let at = |frames: usize| frame(fraction, frames);
     let screen = c.rect();
@@ -230,7 +225,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("modal_xpbd", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("modal_xpbd", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -481,6 +476,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 3.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 3.0);
     }
 }

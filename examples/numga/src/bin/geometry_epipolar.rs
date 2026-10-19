@@ -19,9 +19,8 @@ use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::{smoothstep, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, colormap, palette, run,
+    backdrop, caption, colormap, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod epipolar {
     use super::*;
@@ -275,9 +274,9 @@ const HOLD: f32 = 3.5;
 const NOISE: f64 = 0.0015;
 const SEED: u64 = 4;
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| epipolar(NOISE, SEED))
+/// The scenario drawn, at its noise and seed.
+fn scene() -> Scene {
+    epipolar(NOISE, SEED)
 }
 
 /// A camera's wireframe: its centre, sensor rectangle and optical axis, moved by its pose.
@@ -326,41 +325,13 @@ fn sensor_panel(
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let s = scene();
-    // The motor shown: along the Gauss-Newton steps, eased between them.
-    let progress = (t / PER_STEP).min(SHOWN as f32);
-    let k = (progress as usize).min(SHOWN - 1);
-    let f = smoothstep(f64::from(progress - k as f32));
-    let motor = Motor::interpolate(s.motors[k], s.motors[k + 1], f);
-    let step = progress.round() as usize;
-    // The sensors, left.
-    let top = 70.0;
-    let panel = (h - top) / 2.0;
-    let sensor_rect =
-        |y0: f32, y1: f32| Rect::new(0.0, y0, w * 0.36, y1).inset(46.0, 18.0, 10.0, 30.0);
-    sensor_panel(
-        c,
-        sensor_rect(top, top + panel),
-        "CAMERA 1",
-        &s.image_1,
-        &s.noisy_1,
-        &[],
-    );
-    sensor_panel(
-        c,
-        sensor_rect(top + panel, h),
-        "CAMERA 2, EPIPOLAR LINES",
-        &s.image_2,
-        &s.noisy_2,
-        &epipolar_lines(&s.rays_1, motor),
-    );
-    // The scene, right, from a camera circling it.
-    let (x0, y0) = ((w * 0.37).floor(), 72.0);
-    let mut sub = c.sub(Rect::new(x0, y0, w, h));
+/// The scene from a camera circling it: the true landmarks, the points triangulated by the
+/// motor shown, both cameras' rays to some of them, the frustums of camera 1, the true camera 2
+/// and the estimate, and the step's errors; the key below.
+fn draw_scene(c: &mut Canvas, rect: Rect, s: &Scene, motor: M, step: usize, t: f32) {
+    let (x0, y0) = (rect.lo.e20(), rect.lo.e01());
+    let (w, h) = (rect.hi.e20(), rect.hi.e01());
+    let mut sub = c.sub(rect);
     sub.backdrop(
         palette::TOP.mix_light(palette::BOTTOM, y0 / h),
         palette::BOTTOM,
@@ -425,6 +396,42 @@ fn draw(c: &mut Canvas, t: f32) {
             ("CAMERA 2, ESTIMATE", palette::GREEN),
         ],
     );
+}
+
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    // The motor shown: along the Gauss-Newton steps, eased between them.
+    let progress = (t / PER_STEP).min(SHOWN as f32);
+    let k = (progress as usize).min(SHOWN - 1);
+    let f = smoothstep(f64::from(progress - k as f32));
+    let motor = Motor::interpolate(s.motors[k], s.motors[k + 1], f);
+    let step = progress.round() as usize;
+    // The sensors, left.
+    let top = 70.0;
+    let panel = (h - top) / 2.0;
+    let sensor_rect =
+        |y0: f32, y1: f32| Rect::new(0.0, y0, w * 0.36, y1).inset(46.0, 18.0, 10.0, 30.0);
+    sensor_panel(
+        c,
+        sensor_rect(top, top + panel),
+        "CAMERA 1",
+        &s.image_1,
+        &s.noisy_1,
+        &[],
+    );
+    sensor_panel(
+        c,
+        sensor_rect(top + panel, h),
+        "CAMERA 2, EPIPOLAR LINES",
+        &s.image_2,
+        &s.noisy_2,
+        &epipolar_lines(&s.rays_1, motor),
+    );
+    // The scene, right, from a camera circling it.
+    let (x0, y0) = ((w * 0.37).floor(), 72.0);
+    draw_scene(c, Rect::new(x0, y0, w, h), s, motor, step, t);
     caption(
         c,
         "EPIPOLAR: RELATIVE POSE FROM RAY COPLANARITY",
@@ -434,7 +441,7 @@ fn draw(c: &mut Canvas, t: f32) {
 
 fn main() {
     let seconds = PER_STEP * SHOWN as f32 + HOLD;
-    run(Anim::new("epipolar", seconds).size(960, 540), draw);
+    run_with(Anim::new("epipolar", seconds).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -484,7 +491,7 @@ mod tests {
     /// degrees of baseline direction, and 10 cm RMS of the house scaled to the true baseline.
     #[test]
     fn the_scenario_recovers_pose_and_house() {
-        let s = super::scene();
+        let s = &super::scene();
         let est = *s.motors.last().expect("a motor");
         assert!(rotation_error(est, s.true_motor) < 0.5f64.to_radians());
         assert!(baseline_error(est, s.true_motor) < 2f64.to_radians());
@@ -514,6 +521,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.3);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 1.3);
     }
 }

@@ -30,8 +30,8 @@ use gax::pga3d::{Line, Motor, Plane, Point, intrinsic};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, measure,
-    palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop,
+    caption, measure, palette, run,
 };
 
 mod klein {
@@ -266,15 +266,11 @@ fn chord(line: Line) -> Option<[Point; 2]> {
     Some([-half, half].map(|s| nearest + heading.gp(s)))
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
-    let phase = f64::from(t / SECONDS);
-    let s = scene(three(), steep(offset(phase)), 36);
-
-    // The lines in space, turning once around the hyperboloid over the loop.
-    let left = screen.part(0.0, 0.0, 0.62, 1.0);
+/// The lines in space, turning once around the hyperboloid over the loop: both rulings, the
+/// four lines, the transversals and where they cross when they are real, and the verdict under
+/// them. Returns the verdict's colour.
+fn draw_lines(c: &mut Canvas, left: Rect, s: &Scene, phase: f64) -> Light {
+    let up = Point2::direction(0.0, -1.0);
     let cam = Camera::orbit(
         left,
         ORIGIN3,
@@ -314,7 +310,6 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         ("TWO COMPLEX-CONJUGATE TRANSVERSALS", palette::YELLOW)
     };
-    let h = screen.height();
     let bottom_middle = left.bottom_middle();
     c.text(
         verdict,
@@ -323,8 +318,15 @@ fn draw(c: &mut Canvas, t: f32) {
         tone,
         Align::Center,
     );
+    tone
+}
 
-    // The discriminant along the pencil over the swing, as points of the graph.
+/// The discriminant along the pencil over the swing, the swing's phase now marked in the
+/// verdict's colour, and notes under it.
+fn draw_discriminant(c: &mut Canvas, right: Rect, s: &Scene, phase: f64, tone: Light) {
+    let h = c.rect().height();
+    let down = Point2::direction(0.0, 1.0);
+    // The graph's points.
     let graph = |phase: f64, value: f64| gax::pga2d::Point::xy(phase, value);
     let values: Vec<f64> = (0..=120)
         .map(|k| {
@@ -341,9 +343,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .iter()
         .fold((0.0f64, 0.0f64), |(lo, hi), &v| (lo.min(v), hi.max(v)));
     let ax = Axes::new(
-        screen
-            .part(0.62, 0.0, 1.0, 1.0)
-            .inset(50.0, h * 0.2, 20.0, h * 0.28),
+        right.inset(50.0, h * 0.2, 20.0, h * 0.28),
         [0.0, 1.0],
         [lo as f32 * 1.15, hi as f32 * 1.15],
     );
@@ -364,7 +364,15 @@ fn draw(c: &mut Canvas, t: f32) {
         let at = first + down.gp(k as f32 * h * 0.028);
         c.text(note, at, 10.0, palette::INK, Align::Left);
     }
+}
 
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let phase = f64::from(t / SECONDS);
+    let s = scene(three(), steep(offset(phase)), 36);
+    let tone = draw_lines(c, screen.part(0.0, 0.0, 0.62, 1.0), &s, phase);
+    draw_discriminant(c, screen.part(0.62, 0.0, 1.0, 1.0), &s, phase, tone);
     caption(
         c,
         "THE KLEIN QUADRIC: LINES MEETING FOUR LINES",

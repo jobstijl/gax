@@ -33,9 +33,8 @@
 mod algebras;
 
 use gax_numga_examples::{
-    Align, Anim, Canvas, Light, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Canvas, Light, Point2, Rect, backdrop, caption, palette, run_with,
 };
-use std::sync::OnceLock;
 
 /// The blades of `n` directions as masks, in gax's order for the full multivector: by grade,
 /// then by mask.
@@ -346,12 +345,6 @@ signatures! {
 
 const SECONDS_PER_ROW: f32 = 0.9;
 
-/// The rows, computed once.
-fn table() -> &'static [Row] {
-    static TABLE: OnceLock<Vec<Row>> = OnceLock::new();
-    TABLE.get_or_init(rows)
-}
-
 /// A filled square, `side` wide, its top left corner at `corner`.
 fn square(c: &mut Canvas, corner: Point2, side: f32, colour: Light) {
     let (across, down) = (Point2::direction(side, 0.0), Point2::direction(0.0, side));
@@ -375,11 +368,11 @@ fn size_colour(state: usize) -> Light {
 
 /// The table of signatures in `rect`: a row per dimension, from all plus on the left to all
 /// minus on the right, each cell its real state size; the current one lit.
-fn table_panel(c: &mut Canvas, rect: Rect, current: usize) {
+fn table_panel(c: &mut Canvas, rect: Rect, table: &[Row], current: usize) {
     // A row per dimension, from zero to the largest.
     let rows = (LARGEST + 1) as f32;
     let cell = (rect.height() / (rows + 1.0)).min(rect.width() / rows);
-    for (k, row) in table().iter().enumerate() {
+    for (k, row) in table.iter().enumerate() {
         let n = row.p + row.q;
         let left = rect.lo
             + Point2::direction(
@@ -466,12 +459,12 @@ fn generators_panel(c: &mut Canvas, rect: Rect, row: &Row) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, table: &[Row], t: f32) {
     backdrop(c);
     let screen = c.rect();
-    let current = ((t / SECONDS_PER_ROW) as usize).min(table().len() - 1);
-    table_panel(c, screen.part(0.03, 0.14, 0.45, 0.98), current);
-    generators_panel(c, screen.part(0.5, 0.19, 0.98, 0.98), &table()[current]);
+    let current = ((t / SECONDS_PER_ROW) as usize).min(table.len() - 1);
+    table_panel(c, screen.part(0.03, 0.14, 0.45, 0.98), table, current);
+    generators_panel(c, screen.part(0.5, 0.19, 0.98, 0.98), &table[current]);
     caption(
         c,
         "EXTENSOR REPRESENTATIONS OF CL(P,Q)",
@@ -480,12 +473,14 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    let table = rows();
+    run_with(
         Anim::new(
             "extensor_representations",
-            SECONDS_PER_ROW * table().len() as f32,
+            SECONDS_PER_ROW * table.len() as f32,
         )
         .size(960, 540),
+        || table,
         draw,
     );
 }
@@ -528,6 +523,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 15.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::rows(), 15.0);
     }
 }

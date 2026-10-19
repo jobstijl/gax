@@ -38,12 +38,11 @@ use gax::pga3d::Point;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, colormap,
-    label_under, palette, run, signal,
+    label_under, palette, run_with, signal,
 };
 use rod::{Frame, P};
 use scenes::*;
 use std::f64::consts::TAU;
-use std::sync::OnceLock;
 
 /// One loop: three runs of the cord's 70 frames at numga's 40 ms; the curls, the sweep of the
 /// end angle and the tilt of the uncoiling wire go out and back once.
@@ -107,63 +106,62 @@ struct Scene {
     cord_box: Bounds,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let helices: Vec<Vec<Frame>> = TILTS.iter().map(|tilt| coiled(*tilt, COILS)).collect();
-        // The widest extent of a helix's ribbon across or up, numga's `ptp`.
-        let widest = helices
+fn scene() -> Scene {
+    let helices: Vec<Vec<Frame>> = TILTS.iter().map(|tilt| coiled(*tilt, COILS)).collect();
+    // The widest extent of a helix's ribbon across or up, numga's `ptp`.
+    let widest = helices
+        .iter()
+        .flat_map(|frames| {
+            let [x, y, _] = bounds(edges(frames, RIBBON)).half;
+            [x, y]
+        })
+        .fold(0.0, f64::max);
+    let spacing = SPACING * 2.0 * widest;
+    let helix_box = bounds(
+        helices
             .iter()
-            .flat_map(|frames| {
-                let [x, y, _] = bounds(edges(frames, RIBBON)).half;
-                [x, y]
-            })
-            .fold(0.0, f64::max);
-        let spacing = SPACING * 2.0 * widest;
-        let helix_box =
-            bounds(helices.iter().enumerate().flat_map(|(k, frames)| {
-                edges(frames, RIBBON).map(move |p| p + across(spacing, k))
-            }));
-        let sweep: Vec<Vec<Frame>> = (0..UNCOIL_SAMPLES)
-            .map(|k| {
-                coiled(
-                    uncoiling_tilt(TAU * k as f64 / UNCOIL_SAMPLES as f64),
-                    UNCOIL_TURNS,
-                )
-            })
-            .collect();
-        let uncoil_box = bounds(sweep.iter().flat_map(|frames| edges(frames, UNCOIL_RIBBON)));
-        let cord: Vec<Vec<Frame>> = pulled()
+            .enumerate()
+            .flat_map(|(k, frames)| edges(frames, RIBBON).map(move |p| p + across(spacing, k))),
+    );
+    let sweep: Vec<Vec<Frame>> = (0..UNCOIL_SAMPLES)
+        .map(|k| {
+            coiled(
+                uncoiling_tilt(TAU * k as f64 / UNCOIL_SAMPLES as f64),
+                UNCOIL_TURNS,
+            )
+        })
+        .collect();
+    let uncoil_box = bounds(sweep.iter().flat_map(|frames| edges(frames, UNCOIL_RIBBON)));
+    let cord: Vec<Vec<Frame>> = pulled()
+        .iter()
+        .map(|frames| rod::between(frames, DRAWN_BETWEEN))
+        .collect();
+    let view = weight_down();
+    let cord_box = bounds(
+        cord.iter()
+            .flat_map(|frames| edges(frames, CORD_RIBBON).map(|p| view.of(p))),
+    );
+    let swept = SWEEP
+        .iter()
+        .flat_map(|angle| in_plane(&euler(*angle)))
+        .collect();
+    Scene {
+        curls: CURLS
             .iter()
-            .map(|frames| rod::between(frames, DRAWN_BETWEEN))
-            .collect();
-        let view = weight_down();
-        let cord_box = bounds(
-            cord.iter()
-                .flat_map(|frames| edges(frames, CORD_RIBBON).map(|p| view.of(p))),
-        );
-        let swept = SWEEP
+            .map(|turns| in_plane(&curling(*turns)))
+            .collect(),
+        plate: END_ANGLES
             .iter()
-            .flat_map(|angle| in_plane(&euler(*angle)))
-            .collect();
-        Scene {
-            curls: CURLS
-                .iter()
-                .map(|turns| in_plane(&curling(*turns)))
-                .collect(),
-            plate: END_ANGLES
-                .iter()
-                .map(|angle| in_plane(&euler(*angle)))
-                .collect(),
-            swept,
-            helices,
-            spacing,
-            helix_box,
-            uncoil_box,
-            cord,
-            cord_box,
-        }
-    })
+            .map(|angle| in_plane(&euler(*angle)))
+            .collect(),
+        swept,
+        helices,
+        spacing,
+        helix_box,
+        uncoil_box,
+        cord,
+        cord_box,
+    }
 }
 
 /// The shift of the `k`-th helix across, the four centred on the first's place.
@@ -238,8 +236,8 @@ fn camera(rect: Rect, b: Bounds, azimuth: f32, elevation: f32, up: f64, across: 
 
 /// The curled strip: numga's six curls faint, from straight, darkest, to a double ring, and
 /// the strip at `turns` bright, with its clamp.
-fn draw_curls(c: &mut Canvas, rect: Rect, turns: f64) {
-    let curls = &scene().curls;
+fn draw_curls(c: &mut Canvas, rect: Rect, sc: &Scene, turns: f64) {
+    let curls = &sc.curls;
     let ax = Axes::fitting(rect, curls.iter().flatten().copied(), MARGIN as f32);
     let [low, high] = [-0.06, 0.7].map(|y| P2::xy(0.0, y));
     ax.polyline(c, &[low, high], 3.0, palette::GRID.faded(1.5));
@@ -253,8 +251,7 @@ fn draw_curls(c: &mut Canvas, rect: Rect, turns: f64) {
 
 /// Euler's elastica: numga's plate faint, the rod leaving its pin at `degrees` bright between
 /// its pins on the line of thrust, the far pin a chord of the closed form away.
-fn draw_euler(c: &mut Canvas, rect: Rect, degrees: f64) {
-    let sc = scene();
+fn draw_euler(c: &mut Canvas, rect: Rect, sc: &Scene, degrees: f64) {
     let shapes = sc.plate.iter().flatten().chain(&sc.swept).copied();
     let ax = Axes::fitting(rect, shapes, MARGIN as f32);
     // The line of thrust across the panel.
@@ -290,8 +287,7 @@ fn draw_rod(s: &mut Scene3, frames: &[Frame], width: f64, place: impl Fn(P) -> P
 }
 
 /// Kirchhoff's helices side by side, each a little more than the widest apart.
-fn draw_helices(c: &mut Canvas, rect: Rect) {
-    let sc = scene();
+fn draw_helices(c: &mut Canvas, rect: Rect, sc: &Scene) {
     let [azimuth, elevation] = HELIX_VIEW.map(f32::to_radians);
     let [x, _, z] = sc.helix_box.half;
     let cam = camera(rect, sc.helix_box, azimuth, elevation, z, x);
@@ -306,11 +302,11 @@ fn draw_helices(c: &mut Canvas, rect: Rect) {
 /// The wire under its fixed couple at time `t` of the sweep of its tilt, the camera turning,
 /// all to one scale: a square footprint about the coil's axis, so that the turning camera sees
 /// the same extent.
-fn draw_uncoiling(c: &mut Canvas, rect: Rect, t: f32) {
+fn draw_uncoiling(c: &mut Canvas, rect: Rect, sc: &Scene, t: f32) {
     let tilt = uncoiling_tilt(phase(t));
     let [from, to] = UNCOIL_AZIMUTHS;
     let azimuth = (from + (to - from) * share(t)).to_radians();
-    let b = scene().uncoil_box;
+    let b = sc.uncoil_box;
     let [x, y, z] = b.half;
     let cam = camera(rect, b, azimuth, UNCOIL_ELEVATION.to_radians(), z, x.max(y));
     panel3(c, rect, cam, |s| {
@@ -325,8 +321,7 @@ fn draw_uncoiling(c: &mut Canvas, rect: Rect, t: f32) {
 
 /// The telephone cord at time `t`: numga's frame, as a ribbon with its base and its handset,
 /// from one view and to one scale.
-fn draw_cord(c: &mut Canvas, rect: Rect, t: f32) {
-    let sc = scene();
+fn draw_cord(c: &mut Canvas, rect: Rect, sc: &Scene, t: f32) {
     let index = (t.rem_euclid(SECONDS) / 0.04) as usize % CORD_FRAMES;
     let frames = &sc.cord[index];
     let view = weight_down();
@@ -352,7 +347,7 @@ fn draw_cord(c: &mut Canvas, rect: Rect, t: f32) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, sc: &Scene, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -361,12 +356,12 @@ fn draw(c: &mut Canvas, t: f32) {
         Rect::new(x0, y0, x1, y1).inset(6.0, 4.0, 6.0, 4.0 + LABEL)
     };
     let sweep = signal::haversine(phase(t));
-    draw_curls(c, cell(0.0, top, w * 0.32, middle), 2.0 * sweep);
+    draw_curls(c, cell(0.0, top, w * 0.32, middle), sc, 2.0 * sweep);
     let degrees = SWEEP[0] + (SWEEP[1] - SWEEP[0]) * sweep;
-    draw_euler(c, cell(w * 0.32, top, w * 0.64, middle), degrees);
-    draw_helices(c, cell(w * 0.64, top, w, middle));
-    draw_uncoiling(c, cell(0.0, middle, w * 0.32, h), t);
-    draw_cord(c, cell(w * 0.32, middle, w, h), t);
+    draw_euler(c, cell(w * 0.32, top, w * 0.64, middle), sc, degrees);
+    draw_helices(c, cell(w * 0.64, top, w, middle), sc);
+    draw_uncoiling(c, cell(0.0, middle, w * 0.32, h), sc, t);
+    draw_cord(c, cell(w * 0.32, middle, w, h), sc, t);
     caption(
         c,
         "THE ELASTICA: CURLS, EULER'S BUCKLED RODS, KIRCHHOFF'S HELICES AND A TELEPHONE CORD",
@@ -376,7 +371,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("elastica", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("elastica", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -608,6 +603,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 1.0);
     }
 }

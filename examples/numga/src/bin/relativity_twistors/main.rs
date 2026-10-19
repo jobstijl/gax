@@ -38,11 +38,9 @@
 mod scenes;
 mod twistors;
 
-use std::sync::OnceLock;
-
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, backdrop,
-    caption, colormap, palette, run, scene3::panel3,
+    caption, colormap, palette, run_with, scene3::panel3,
 };
 use scenes::{
     FIBRE_SAMPLES, Incidence, PER_CIRCLE, POLARS, electric_turn, fibres, incidence, turned,
@@ -66,28 +64,25 @@ struct Scene {
     incidence: Vec<Incidence>,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let flow = fibres(&POLARS, PER_CIRCLE, FIBRE_SAMPLES);
-        let electric = turned(&flow, electric_turn())
-            .iter()
-            .map(|curve| {
-                curve
-                    .iter()
-                    .map(|p| {
-                        let e = at(*p, 0.0);
-                        (e, robinson(e))
-                    })
-                    .collect()
-            })
-            .collect();
-        Scene {
-            flow,
-            electric,
-            incidence: incidence(),
-        }
-    })
+fn scene() -> Scene {
+    let flow = fibres(&POLARS, PER_CIRCLE, FIBRE_SAMPLES);
+    let electric = turned(&flow, electric_turn())
+        .iter()
+        .map(|curve| {
+            curve
+                .iter()
+                .map(|p| {
+                    let e = at(*p, 0.0);
+                    (e, robinson(e))
+                })
+                .collect()
+        })
+        .collect();
+    Scene {
+        flow,
+        electric,
+        incidence: incidence(),
+    }
 }
 
 /// A point of space to draw, or a break (a non-finite point) beyond the shown ball.
@@ -162,9 +157,8 @@ fn draw_incidence(c: &mut Canvas, rect: Rect, incidence: &Incidence) {
     });
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let share = f64::from(t / SECONDS);
@@ -224,13 +218,13 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("twistors", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("twistors", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

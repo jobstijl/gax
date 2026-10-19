@@ -27,12 +27,11 @@
 //! opposite over most of the sky, as they were built).
 
 use gax::vga3d::Vector;
-use std::sync::OnceLock;
 
 use gax_numga_examples::points::circle;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    palette, plot, run,
+    palette, plot, run_with,
 };
 
 mod ligo {
@@ -214,28 +213,25 @@ struct Sky {
     alike: Vec<f64>,
 }
 
-fn sky_maps() -> &'static Sky {
-    static SKY: OnceLock<Sky> = OnceLock::new();
-    SKY.get_or_init(|| {
-        let frames = sky();
-        let arms = DETECTORS.map(|d| d.arms());
-        let pairs: Vec<[Responses; 2]> = frames
+fn sky_maps() -> Sky {
+    let frames = sky();
+    let arms = DETECTORS.map(|d| d.arms());
+    let pairs: Vec<[Responses; 2]> = frames
+        .iter()
+        .map(|f| arms.map(|a| responses(a, *f)))
+        .collect();
+    Sky {
+        hanford: pairs.iter().map(|[h, _]| sensitivity(*h)).collect(),
+        network: pairs
             .iter()
-            .map(|f| arms.map(|a| responses(a, *f)))
-            .collect();
-        Sky {
-            hanford: pairs.iter().map(|[h, _]| sensitivity(*h)).collect(),
-            network: pairs
-                .iter()
-                .map(|[h, l]| Responses::new(sensitivity(*h), sensitivity(*l)).norm())
-                .collect(),
-            alike: pairs
-                .iter()
-                .map(|[h, l]| (h.normalized() | l.normalized()).s())
-                .collect(),
-            frames,
-        }
-    })
+            .map(|[h, l]| Responses::new(sensitivity(*h), sensitivity(*l)).norm())
+            .collect(),
+        alike: pairs
+            .iter()
+            .map(|[h, l]| (h.normalized() | l.normalized()).s())
+            .collect(),
+        frames,
+    }
 }
 
 /// A sky map's value at a longitude and latitude in degrees, interpolated between its samples.
@@ -323,9 +319,8 @@ fn draw_ring(c: &mut Canvas, rect: Rect, angle: f64) {
     c.text(&title, above, size, palette::INK, Align::Center);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Sky, t: f32) {
     backdrop(c);
-    let s = sky_maps();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let angle = f64::from(t / SECONDS) * core::f64::consts::PI;
@@ -377,7 +372,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("ligo", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("ligo", SECONDS).size(960, 540), sky_maps, draw);
 }
 
 #[cfg(test)]
@@ -445,6 +440,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::sky_maps(), 0.5);
     }
 }

@@ -22,9 +22,8 @@
 
 use gax_numga_examples::signal::{frame, linspace};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod kitaev {
     use gax::field::{Field, SparseMap};
@@ -300,30 +299,27 @@ struct Data {
     splitting: Vec<f64>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let (potentials, spectrum) = formation(SPECTRAL_SAMPLES, ENERGIES);
-        let (from, to, count) = SEPARATIONS;
-        let separations = linspace(from, to, count);
-        let splitting = overlap(&separations);
-        let moving = moving();
-        let peak = moving
-            .history
-            .iter()
-            .flatten()
-            .chain(&moving.target)
-            .flat_map(|f| f.iter().map(|v| v.norm_squared()))
-            .fold(0.0, f64::max);
-        Data {
-            potentials,
-            spectrum,
-            moving,
-            peak,
-            separations,
-            splitting,
-        }
-    })
+fn data() -> Data {
+    let (potentials, spectrum) = formation(SPECTRAL_SAMPLES, ENERGIES);
+    let (from, to, count) = SEPARATIONS;
+    let separations = linspace(from, to, count);
+    let splitting = overlap(&separations);
+    let moving = moving();
+    let peak = moving
+        .history
+        .iter()
+        .flatten()
+        .chain(&moving.target)
+        .flat_map(|f| f.iter().map(|v| v.norm_squared()))
+        .fold(0.0, f64::max);
+    Data {
+        potentials,
+        spectrum,
+        moving,
+        peak,
+        separations,
+        splitting,
+    }
 }
 
 /// The slow and the fast transport's colours and names.
@@ -446,9 +442,8 @@ fn draw_splitting(c: &mut Canvas, ax: &Axes, d: &Data) {
     ax.polyline(c, &curve, 1.8, palette::SKY);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let records = d.moving.progress.len();
     let now = frame((t / SECONDS).fract(), records);
@@ -496,7 +491,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("kitaev wire", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("kitaev wire", SECONDS).size(960, 540), data, draw);
 }
 
 #[cfg(test)]
@@ -696,7 +691,8 @@ mod tests {
     /// numga's `test_scenes_draw`: the frames draw, and two records apart they differ.
     #[test]
     fn the_frames_draw_and_move() {
-        let mut draw = super::draw;
+        let d = super::data();
+        let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &d, t);
         let anim = gax_numga_examples::Anim::new("t", 1.0).size(320, 180);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 6.0, &mut draw);

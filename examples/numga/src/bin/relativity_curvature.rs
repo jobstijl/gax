@@ -16,14 +16,13 @@
 //! tide seen by observers boosted along the wave.
 
 use gax::sta::Vector;
-use std::sync::OnceLock;
 
 use gax::pga2d::Point;
 use gax::{sta, vga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Dir3, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
-    backdrop, caption, palette, run, signal::wave,
+    backdrop, caption, palette, run_with, signal::wave,
 };
 
 mod curvature {
@@ -341,62 +340,59 @@ fn per_bead(values: &[Vec<Vec<Vector>>], f: impl Fn(Vector) -> Vector) -> Vec<Ve
         .collect()
 }
 
-fn rings() -> &'static Rings {
-    static RINGS: OnceLock<Rings> = OnceLock::new();
-    RINGS.get_or_init(|| {
-        let d = detector_scenario();
-        let positions = d
-            .displacement
-            .iter()
-            .map(|per_time| {
-                per_time
-                    .iter()
-                    .map(|row| {
-                        row.iter()
-                            .zip(&d.reference)
-                            .map(|(u, r)| (*r + *u * AMPLIFICATION) * (1.0 / RADIUS))
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect::<Vec<Vec<Vec<Vector>>>>();
-        // One arrow scale for the whole animation: the largest arrow is 0.31 radii long.
-        let largest = d
-            .acceleration
-            .iter()
-            .flatten()
-            .flatten()
-            .map(|a| a.norm())
-            .fold(0.0, f64::max)
-            .max(1e-300);
-        let arrows = per_bead(&d.acceleration, |a| a * (0.31 / largest));
-        let limit = positions
-            .iter()
-            .flatten()
-            .flatten()
-            .map(|p| p.e1().abs().max(p.e2().abs()))
-            .fold(1.35 - 0.31, f64::max)
-            + 0.31;
-        Rings {
-            reference: d.reference.clone(),
-            profile: d.strain.clone(),
-            positions,
-            arrows,
-            limit: limit as f32,
-            strain: d
-                .strain
+fn rings() -> Rings {
+    let d = detector_scenario();
+    let positions = d
+        .displacement
+        .iter()
+        .map(|per_time| {
+            per_time
                 .iter()
-                .map(|p| {
-                    // Plus is the phasor's scalar part, cross its pseudoscalar part turned back
-                    // by `I`: the scalar part of `p I`.
-                    let turned = *p * i();
-                    [p.s() * 1e4, turned.s() * 1e4]
+                .map(|row| {
+                    row.iter()
+                        .zip(&d.reference)
+                        .map(|(u, r)| (*r + *u * AMPLIFICATION) * (1.0 / RADIUS))
+                        .collect()
                 })
-                .collect(),
-            time: d.time.clone(),
-            doppler: doppler_scenario(),
-        }
-    })
+                .collect()
+        })
+        .collect::<Vec<Vec<Vec<Vector>>>>();
+    // One arrow scale for the whole animation: the largest arrow is 0.31 radii long.
+    let largest = d
+        .acceleration
+        .iter()
+        .flatten()
+        .flatten()
+        .map(|a| a.norm())
+        .fold(0.0, f64::max)
+        .max(1e-300);
+    let arrows = per_bead(&d.acceleration, |a| a * (0.31 / largest));
+    let limit = positions
+        .iter()
+        .flatten()
+        .flatten()
+        .map(|p| p.e1().abs().max(p.e2().abs()))
+        .fold(1.35 - 0.31, f64::max)
+        + 0.31;
+    Rings {
+        reference: d.reference.clone(),
+        profile: d.strain.clone(),
+        positions,
+        arrows,
+        limit: limit as f32,
+        strain: d
+            .strain
+            .iter()
+            .map(|p| {
+                // Plus is the phasor's scalar part, cross its pseudoscalar part turned back
+                // by `I`: the scalar part of `p I`.
+                let turned = *p * i();
+                [p.s() * 1e4, turned.s() * 1e4]
+            })
+            .collect(),
+        time: d.time.clone(),
+        doppler: doppler_scenario(),
+    }
 }
 
 /// One ring of beads at sample `k`, with the trails of four tracked beads and the tidal
@@ -495,21 +491,10 @@ fn curvature_map(c: &mut Canvas, rect: Rect, azimuth: f32) {
     });
 }
 
-fn draw(c: &mut Canvas, t_now: f32) {
-    backdrop(c);
-    let r = rings();
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let size = (h / 40.0).clamp(7.0, 13.0);
-    let phase = (t_now / SECONDS).rem_euclid(1.0);
-    let k = ((phase * (r.time.len() - 1) as f32).round() as usize).min(r.time.len() - 1);
-    let now = r.time[k];
-
-    // The three rings.
-    let (top, bottom) = (h * 0.13, h * 0.6);
-    let rings_row = Rect::new(0.0, top, w, bottom);
+/// The three rings of beads, plus, cross and circular, at sample `k`.
+fn draw_rings(c: &mut Canvas, row: Rect, r: &Rings, k: usize, size: f32) {
     for (p, title) in ["PLUS", "CROSS", "CIRCULAR"].into_iter().enumerate() {
-        let rect = rings_row.column(p, 3).inset(10.0, 18.0, 10.0, 0.0);
+        let rect = row.column(p, 3).inset(10.0, 18.0, 10.0, 0.0);
         let ax = Axes::equal(rect, ORIGIN2, r.limit);
         ring(c, &ax, r, p, k);
         c.text(
@@ -520,15 +505,11 @@ fn draw(c: &mut Canvas, t_now: f32) {
             Align::Center,
         );
     }
+}
 
-    // The packet: plus and cross strain, with the present.
-    let (row_top, row_bottom) = (bottom + h * 0.06, h - size * 3.0);
-    let row = |x0: f32, x1: f32| Rect::new(w * x0, row_top, w * x1, row_bottom);
-    let ax = Axes::new(
-        row(0.0, 0.42).inset(50.0, 18.0, 10.0, 0.0),
-        [0.0, 6.0],
-        [-1.15, 1.15],
-    );
+/// The packet: plus and cross strain, with the present.
+fn draw_strain(c: &mut Canvas, rect: Rect, r: &Rings, now: f64) {
+    let ax = Axes::new(rect, [0.0, 6.0], [-1.15, 1.15]);
     for (part, colour) in [palette::SKY, palette::ORANGE].into_iter().enumerate() {
         let curve: Vec<Point> = r
             .time
@@ -541,9 +522,10 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let cursor = palette::YELLOW.faded(0.9);
     ax.line(c, Point::xy(now, -1.15), Point::xy(now, 1.15), 1.2, cursor);
     ax.frame(c, "STRAIN / 1E-4: PLUS, CROSS", "TIME (C = 1)", "");
+}
 
-    // The curvature map at one event, the view turning; it reaches a little lower.
-    let rect = row(0.44, 0.72).inset(0.0, 0.0, 0.0, -size * 2.0);
+/// The curvature map at one event, the view turning, with the names of its parts.
+fn draw_curvature(c: &mut Canvas, rect: Rect, phase: f32, size: f32) {
     curvature_map(c, rect, -1.2 + 0.6 * wave(phase * core::f32::consts::TAU));
     let names = rect.top_middle() + Point2::direction(0.0, size);
     let left = Point2::direction(-size, 0.0);
@@ -569,9 +551,10 @@ fn draw(c: &mut Canvas, t_now: f32) {
         palette::RED,
         Align::Left,
     );
+}
 
-    // The Doppler check: tidal amplitude against `exp(-2 rapidity)`.
-    let rect = row(0.74, 1.0).inset(40.0, 18.0, 14.0, 0.0);
+/// The Doppler check: tidal amplitude against `exp(-2 rapidity)`.
+fn draw_doppler(c: &mut Canvas, rect: Rect, r: &Rings) {
     // Wide enough in rapidity for ticks every half, which fit the narrow panel.
     let ax = Axes::new(rect, [-0.9, 0.9], [0.2, 5.0]).log_y();
     let fine: Vec<Point2> = (0..=100)
@@ -590,7 +573,29 @@ fn draw(c: &mut Canvas, t_now: f32) {
         .collect();
     ax.scatter(c, &dots, Marker::Dot, 6.0, palette::SKY);
     ax.frame(c, "TIDE VS BOOST", "RAPIDITY", "");
+}
 
+fn draw(c: &mut Canvas, r: &Rings, t_now: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let size = (h / 40.0).clamp(7.0, 13.0);
+    let phase = (t_now / SECONDS).rem_euclid(1.0);
+    let k = ((phase * (r.time.len() - 1) as f32).round() as usize).min(r.time.len() - 1);
+    let (top, bottom) = (h * 0.13, h * 0.6);
+    draw_rings(c, Rect::new(0.0, top, w, bottom), r, k, size);
+    let (row_top, row_bottom) = (bottom + h * 0.06, h - size * 3.0);
+    let row = |x0: f32, x1: f32| Rect::new(w * x0, row_top, w * x1, row_bottom);
+    let strain = row(0.0, 0.42).inset(50.0, 18.0, 10.0, 0.0);
+    draw_strain(c, strain, r, r.time[k]);
+    // The curvature map reaches a little lower.
+    draw_curvature(
+        c,
+        row(0.44, 0.72).inset(0.0, 0.0, 0.0, -size * 2.0),
+        phase,
+        size,
+    );
+    draw_doppler(c, row(0.74, 1.0).inset(40.0, 18.0, 14.0, 0.0), r);
     caption(
         c,
         "CURVATURE OF A GRAVITATIONAL PLANE WAVE",
@@ -599,7 +604,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
 }
 
 fn main() {
-    run(Anim::new("curvature", SECONDS).size(960, 560), draw);
+    run_with(Anim::new("curvature", SECONDS).size(960, 560), rings, draw);
 }
 
 #[cfg(test)]
@@ -906,6 +911,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::rings(), 0.5);
     }
 }

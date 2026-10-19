@@ -30,9 +30,8 @@ use gax_numga_examples::points;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Light, Point2, Point3, Rect, backdrop, caption, colormap, palette,
-    reach2, reach3, run,
+    reach2, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga3d as space;
 
@@ -122,29 +121,21 @@ mod foucault {
 
     /// Where each pendulum's bob is on its floor through the day `[latitude][sample]`, swinging
     /// to and fro along its turning line.
-    pub fn rosettes() -> Vec<Vec<V>> {
+    pub fn rosettes() -> [Vec<V>; 4] {
         let tau = core::f64::consts::TAU;
-        latitudes()
-            .iter()
-            .map(|latitude| {
-                (0..SAMPLES)
-                    .map(|k| {
-                        let earth_turn = tau * k as f64 / (SAMPLES - 1) as f64;
-                        let reach = gax_numga_examples::signal::wave(SWINGS * earth_turn);
-                        swing(*latitude, earth_turn) * reach
-                    })
-                    .collect()
-            })
-            .collect()
+        latitudes().map(|latitude| {
+            (0..SAMPLES)
+                .map(|k| {
+                    let earth_turn = tau * k as f64 / (SAMPLES - 1) as f64;
+                    let reach = gax_numga_examples::signal::wave(SWINGS * earth_turn);
+                    swing(latitude, earth_turn) * reach
+                })
+                .collect()
+        })
     }
 }
 
 use foucault::*;
-
-fn tracks() -> &'static Vec<Vec<V>> {
-    static T: OnceLock<Vec<Vec<V>>> = OnceLock::new();
-    T.get_or_init(rosettes)
-}
 
 /// The length of the loop in seconds: one day.
 const LOOP: f32 = 16.0;
@@ -268,12 +259,19 @@ fn draw_globe(c: &mut Canvas, rect: Rect, earth_turn: f64) {
 
 /// The bob's track on one floor from the start of the day to `reached`, coloured by the time of
 /// day, the line it swings along now, and a tick to the north.
-fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth_turn: f64) {
+fn draw_floor(
+    c: &mut Canvas,
+    rect: Rect,
+    track: &[V],
+    latitude: usize,
+    reached: usize,
+    earth_turn: f64,
+) {
     let site = compass(latitudes()[latitude]);
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.08), 1.3);
     let ring = points::circle(gax::pga2d::Point::origin(), 1.0, CIRCLE);
     ax.polyline(c, &ring, 1.0, palette::GRID);
-    let track: Vec<Point2> = tracks()[latitude][..=reached]
+    let track: Vec<Point2> = track[..=reached]
         .iter()
         .map(|v| reach2(on_floor(*v, &site)))
         .collect();
@@ -317,7 +315,7 @@ fn draw_floor(c: &mut Canvas, rect: Rect, latitude: usize, reached: usize, earth
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, tracks: &[Vec<V>; 4], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -327,7 +325,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let top = h * 0.13;
     draw_globe(c, Rect::new(0.0, top, w * 0.42, h), earth_turn);
     let floors = Rect::new(w * 0.42, top, w, h);
-    for latitude in 0..LATITUDES.len() {
+    for (latitude, track) in tracks.iter().enumerate() {
         // Two rows of two.
         let (row, half) = ((latitude / 2) as f32, (h - top) / 2.0);
         let row = Rect::new(
@@ -339,6 +337,7 @@ fn draw(c: &mut Canvas, t: f32) {
         draw_floor(
             c,
             row.column(latitude % 2, 2).inset(6.0, 6.0, 6.0, 22.0),
+            track,
             latitude,
             reached,
             earth_turn,
@@ -355,7 +354,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("foucault", LOOP).size(960, 540), draw);
+    run_with(Anim::new("foucault", LOOP).size(960, 540), rosettes, draw);
 }
 
 #[cfg(test)]
@@ -388,6 +387,6 @@ mod tests {
 
     #[test]
     fn the_rosettes_and_a_frame_of_the_day_draw() {
-        gax_numga_examples::app::assert_draws(super::draw, 5.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &rosettes(), 5.0);
     }
 }

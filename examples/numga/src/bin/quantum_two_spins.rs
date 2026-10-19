@@ -20,9 +20,8 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, on_sphere, palette, reach3, run,
+    backdrop, caption, on_sphere, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 gax::algebra! {
     algebra pair "Two copies of Euclidean space, R(6,0): one spin's directions e1 e2 e3, the other's e4 e5 e6.";
@@ -204,10 +203,9 @@ mod spins {
 
 use spins::*;
 
-/// The exchange over its whole range, computed once.
-fn swapped() -> &'static Swap {
-    static S: OnceLock<Swap> = OnceLock::new();
-    S.get_or_init(|| swap(121))
+/// The exchange over its whole range.
+fn swapped() -> Swap {
+    swap(121)
 }
 
 /// The drawing's space.
@@ -270,25 +268,22 @@ fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Light) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let w = screen.width();
+/// The colours of the first spin, of the correlations and of the second spin.
+fn colours() -> [Light; 3] {
+    [palette::RED, palette::PURPLE, palette::SKY]
+}
+
+/// The three balls, the camera swaying with the animation's phase: each spin's Bloch vector
+/// with its tip's path over the whole exchange and its length under it, and between them the
+/// correlations, the image of the second spin's sphere.
+fn draw_spins(c: &mut Canvas, band: Rect, data: &Swap, state: Sp, phase: f64) {
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let tau = core::f64::consts::TAU;
-    let phase = f64::from(t) / 8.0;
-    // From up-down to swapped and back, easing in and out.
-    let angle = core::f64::consts::FRAC_PI_4 * haversine(tau * phase);
-    let state = exchange(up_down(), angle);
-    let data = swapped();
     let (first, second) = bloch(state);
     let corr = correlation(state);
-    let value = bell(corr);
     let azimuth = (-55.0f32).to_radians() + 0.35 * wave(tau * phase) as f32;
     let elevation = 18.0f32.to_radians();
-    // The band of the three balls, in thirds.
-    let band = Rect::new(0.0, 92.0, w, 392.0);
-    let colours: [Light; 3] = [palette::RED, palette::PURPLE, palette::SKY];
+    let colours = colours();
     let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
     // Each Bloch vector in space, with its tip's path over the whole exchange.
     let blochs: [(Space, Vec<Space>); 2] = [
@@ -336,13 +331,12 @@ fn draw(c: &mut Canvas, t: f32) {
         let text = format!("LENGTH {:.2}", now.norm());
         c.text(&text, note, 11.0, palette::INK, Align::Center);
     }
-    // The largest Bell combination along the exchange.
+}
+
+/// The largest Bell combination along the exchange, against the bound of answers each spin
+/// holds on its own (2) and the bound of quantum mechanics (2 sqrt 2), with the state now.
+fn draw_bell(c: &mut Canvas, plot: Rect, data: &Swap, angle: f64, value: f64) {
     let quarter = core::f32::consts::FRAC_PI_4;
-    let below = Rect {
-        lo: band.bottom_left(),
-        hi: screen.hi,
-    };
-    let plot = below.inset(w * 0.073, 34.0, w * 0.03, 42.0);
     let ax = Axes::new(plot, [0.0, quarter], [1.9, 2.95]);
     ax.frame(c, "", "EXCHANGE ANGLE (RAD)", "LARGEST BELL VALUE");
     let root8 = 2.0 * core::f32::consts::SQRT_2;
@@ -364,9 +358,31 @@ fn draw(c: &mut Canvas, t: f32) {
         .zip(&data.bells)
         .map(|(a, b)| Point2::xy(*a as f32, *b as f32))
         .collect();
-    ax.polyline(c, &curve, 1.6, colours[1]);
+    let colour = colours()[1];
+    ax.polyline(c, &curve, 1.6, colour);
     let now = Point2::xy(angle as f32, value as f32);
-    ax.scatter(c, &[now], Marker::Dot, 8.0, colours[1]);
+    ax.scatter(c, &[now], Marker::Dot, 8.0, colour);
+}
+
+fn draw(c: &mut Canvas, data: &Swap, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let w = screen.width();
+    let tau = core::f64::consts::TAU;
+    let phase = f64::from(t) / 8.0;
+    // From up-down to swapped and back, easing in and out.
+    let angle = core::f64::consts::FRAC_PI_4 * haversine(tau * phase);
+    let state = exchange(up_down(), angle);
+    let value = bell(correlation(state));
+    // The band of the three balls, in thirds, and the Bell values below it.
+    let band = Rect::new(0.0, 92.0, w, 392.0);
+    draw_spins(c, band, data, state, phase);
+    let below = Rect {
+        lo: band.bottom_left(),
+        hi: screen.hi,
+    };
+    let plot = below.inset(w * 0.073, 34.0, w * 0.03, 42.0);
+    draw_bell(c, plot, data, angle, value);
     // The singlet's Bell combination along the directions that reach the bound, and the
     // state's norm, which the exchange keeps.
     let (_, _, reached) = singlet();
@@ -379,7 +395,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("two spins", 8.0).size(960, 540), draw);
+    run_with(Anim::new("two spins", 8.0).size(960, 540), swapped, draw);
 }
 
 #[cfg(test)]
@@ -461,7 +477,8 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
+        let d = super::swapped();
+        let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &d, t);
         let anim = gax_numga_examples::Anim::new("t", 8.0).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 3.0, &mut draw);

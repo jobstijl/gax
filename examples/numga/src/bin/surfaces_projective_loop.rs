@@ -27,8 +27,7 @@ use gax_numga_examples::label_under;
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
-use gax_numga_examples::{Anim, Canvas, Light, Rect, backdrop, caption, palette, run};
-use std::sync::OnceLock;
+use gax_numga_examples::{Anim, Canvas, Light, Rect, backdrop, caption, palette, run_with};
 use surfaces_loop::{Point64, framing, net, separation, surface};
 
 mod projective {
@@ -174,17 +173,14 @@ struct Shown {
     perspective: Perspective,
 }
 
-fn shown() -> &'static Shown {
-    static SHOWN: OnceLock<Shown> = OnceLock::new();
-    SHOWN.get_or_init(|| {
-        let (subdivide, refined) = refinement();
-        Shown {
-            control: control(),
-            refined,
-            subdivide,
-            perspective: perspective(),
-        }
-    })
+fn shown() -> Shown {
+    let (subdivide, refined) = refinement();
+    Shown {
+        control: control(),
+        refined,
+        subdivide,
+        perspective: perspective(),
+    }
 }
 
 /// One sweep: numga's 48 frames of 60 ms.
@@ -205,11 +201,11 @@ fn apart() -> Light {
 fn shaded(
     c: &mut Canvas,
     rect: Rect,
+    s: &Shown,
     control: &Field<Point64>,
     surface_points: &Field<Point64>,
     light: impl Fn(usize) -> Light,
 ) {
-    let s = shown();
     let cam = framing(rect, control.sites(), AZIMUTH, ELEVATION);
     panel3(c, rect, cam, |scene| {
         surface(scene, surface_points, &s.refined.faces, light);
@@ -228,16 +224,15 @@ fn face_gaps(orders: &[Field<Point64>; 2], faces: &[[usize; 3]]) -> Vec<f64> {
         .collect()
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Shown, t: f32) {
     backdrop(c);
-    let s = shown();
     let [left, middle, right] = panel_row(c, 6.0);
 
     // The sweep: the top vertex's weight, out and back.
     let phase = core::f64::consts::TAU * f64::from(t / SECONDS);
     let control = swept(phase);
     let refined = &s.subdivide * &control;
-    shaded(c, left, &control, &refined, |_| agreed());
+    shaded(c, left, s, &control, &refined, |_| agreed());
     let label = format!("TOP VERTEX OF WEIGHT {:.2}", top_weight(phase));
     label_under(c, left, &label, 30.0, 0.9);
 
@@ -251,7 +246,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let largest = gaps.iter().flatten().copied().fold(0.0, f64::max);
     for (((orders, name), gaps), rect) in cases.into_iter().zip(&gaps).zip([middle, right]) {
         let light = |f: usize| agreed().blend(apart(), (gaps[f] / largest) as f32);
-        shaded(c, rect, &p.seen, &orders[0], light);
+        shaded(c, rect, s, &p.seen, &orders[0], light);
         let gap = separation(&orders[0], &orders[1]);
         label_under(c, rect, &format!("{name}: GAP {gap:.0E}"), 30.0, 0.9);
     }
@@ -263,7 +258,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("projective loop", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("projective loop", SECONDS).size(960, 540),
+        shown,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -301,7 +300,7 @@ mod tests {
         } = perspective();
         assert!(separation(&weighted[0], &weighted[1]) < 1e-12);
         assert!(separation(&positional[0], &positional[1]) > 1e-2);
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::shown(), 1.0);
     }
 
     #[test]
@@ -319,8 +318,9 @@ mod tests {
         let alike = &cases[0].1;
         assert!(separation(alike, &unit(alike)) < 1e-12);
         // The sweep draws at two of its frames.
+        let shown = super::shown();
         for t in [0.0, 0.06] {
-            gax_numga_examples::app::assert_draws(super::draw, t);
+            gax_numga_examples::app::assert_draws_with(super::draw, &shown, t);
         }
     }
 

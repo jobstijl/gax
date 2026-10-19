@@ -11,7 +11,7 @@
 //! side view of the train and numga's three stills (wide, tele, and tele with a tilted sensor).
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run_with,
 };
 
 mod lens {
@@ -418,16 +418,27 @@ fn raster_rect(corner: Point2, rows: usize, cols: usize) -> Rect {
     Rect::new(x, y, x + cols as f32, y + rows as f32)
 }
 
-/// The stills as `rows` x `cols` thumbnails: at the full size rasterised once, smaller ones
+/// The stills rasterised as `rows` x `cols` thumbnails.
+fn thumbnails_at(rows: usize, cols: usize) -> [Vec<Light>; 3] {
+    stills().map(|e| raster::rasterise(&e, 1.0, rows, cols))
+}
+
+/// The stills at the full thumbnail size, rasterised once.
+fn thumbnails() -> [Vec<Light>; 3] {
+    thumbnails_at(THUMB[0], THUMB[1])
+}
+
+/// The stills as `rows` x `cols` thumbnails: the full size ones rasterised once, smaller ones
 /// (for smaller canvases) each frame.
-fn stills_images(rows: usize, cols: usize) -> std::borrow::Cow<'static, [Vec<Light>; 3]> {
-    static STILLS: std::sync::OnceLock<[Vec<Light>; 3]> = std::sync::OnceLock::new();
-    let raster =
-        |rows: usize, cols: usize| stills().map(|e| raster::rasterise(&e, 1.0, rows, cols));
+fn stills_images(
+    full: &[Vec<Light>; 3],
+    rows: usize,
+    cols: usize,
+) -> std::borrow::Cow<'_, [Vec<Light>; 3]> {
     if [rows, cols] == THUMB {
-        std::borrow::Cow::Borrowed(STILLS.get_or_init(|| raster(THUMB[0], THUMB[1])))
+        std::borrow::Cow::Borrowed(full)
     } else {
-        std::borrow::Cow::Owned(raster(rows, cols))
+        std::borrow::Cow::Owned(thumbnails_at(rows, cols))
     }
 }
 
@@ -490,7 +501,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, thumbnails: &[Vec<Light>; 3], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -544,7 +555,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // The stills, below it, side by side.
     let thumb_size = THUMB.map(|n| (n as f32 * k / 1.5).max(4.0) as usize);
-    let stills = stills_images(thumb_size[0], thumb_size[1]);
+    let stills = stills_images(thumbnails, thumb_size[0], thumb_size[1]);
     let gap = ((width - 3.0 * thumb_size[1] as f32) / 2.0).max(2.0);
     let thumbs: Vec<Rect> = (0..3)
         .map(|i| {
@@ -582,8 +593,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("lens camera", SECONDS).size(640, 360).scale(2),
+        thumbnails,
         draw,
     );
 }
@@ -795,6 +807,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::thumbnails(), 0.5);
     }
 }

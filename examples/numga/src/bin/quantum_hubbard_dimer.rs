@@ -31,9 +31,8 @@ use gax_numga_examples::points::circle;
 use gax_numga_examples::signal::{frame, linspace, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
-    run,
+    run_with,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::quantum;
 
@@ -333,38 +332,35 @@ struct Data {
     transfer: Vec<Vec<f64>>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let phases = phases(CYCLE);
-        let strong = REPULSIONS[2];
-        let sweep = linspace(0.0, strong, SWEEP);
-        let asymmetries = linspace(0.0, 2.0 * strong, ASYMMETRIES);
-        Data {
-            cycles: REPULSIONS
-                .iter()
-                .map(|u| exchange_cycle(*u, &phases))
-                .collect(),
-            correlations: REPULSIONS.iter().map(|u| ground_state(*u).2).collect(),
-            levels: sweep.iter().map(|u| spectrum(*u).0).collect(),
-            fields: FIELD_RATIOS
-                .iter()
-                .map(|r| field_exchange(*r, &phases))
-                .collect(),
-            transfer: REPULSIONS
-                .iter()
-                .map(|u| {
-                    asymmetries
-                        .iter()
-                        .map(|a| charge_transfer(*u, *a))
-                        .collect()
-                })
-                .collect(),
-            phases,
-            sweep,
-            asymmetries,
-        }
-    })
+fn data() -> Data {
+    let phases = phases(CYCLE);
+    let strong = REPULSIONS[2];
+    let sweep = linspace(0.0, strong, SWEEP);
+    let asymmetries = linspace(0.0, 2.0 * strong, ASYMMETRIES);
+    Data {
+        cycles: REPULSIONS
+            .iter()
+            .map(|u| exchange_cycle(*u, &phases))
+            .collect(),
+        correlations: REPULSIONS.iter().map(|u| ground_state(*u).2).collect(),
+        levels: sweep.iter().map(|u| spectrum(*u).0).collect(),
+        fields: FIELD_RATIOS
+            .iter()
+            .map(|r| field_exchange(*r, &phases))
+            .collect(),
+        transfer: REPULSIONS
+            .iter()
+            .map(|u| {
+                asymmetries
+                    .iter()
+                    .map(|a| charge_transfer(*u, *a))
+                    .collect()
+            })
+            .collect(),
+        phases,
+        sweep,
+        asymmetries,
+    }
 }
 
 /// The cases' colours.
@@ -508,9 +504,8 @@ fn draw_transfer(c: &mut Canvas, ax: &Axes, d: &Data) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let now = frame((t / SECONDS).fract(), CYCLE);
     draw_dials(c, screen.part(0.15, 0.14, 0.53, 0.9), d, now);
@@ -540,7 +535,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("hubbard dimer", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("hubbard dimer", SECONDS).size(960, 540),
+        data,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -713,8 +712,9 @@ mod tests {
     /// at three times.
     #[test]
     fn the_dials_draw() {
+        let d = super::data();
         for t in [0.5, 3.0, 7.0] {
-            gax_numga_examples::app::assert_draws(super::draw, t);
+            gax_numga_examples::app::assert_draws_with(super::draw, &d, t);
         }
     }
 

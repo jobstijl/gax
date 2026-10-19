@@ -15,9 +15,8 @@ use gax::Unit;
 use gax::pga2d::{Forque, Motor, Point, Scalar, Twist};
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run_with,
 };
-use std::sync::OnceLock;
 
 mod riccati {
     use super::*;
@@ -252,29 +251,29 @@ mod riccati {
 
 use riccati::*;
 
-fn cases() -> &'static [Docking; 2] {
-    static D: OnceLock<[Docking; 2]> = OnceLock::new();
-    D.get_or_init(docking)
-}
-
 /// Seconds per step, and the pause at the dock before the loop restarts.
 const STEP: f32 = 0.08;
 const HOLD: f32 = 1.4;
 
-/// Every corner of the hull at every pose of both approaches (the last pose is the dock).
-fn corners() -> &'static [Point] {
-    static L: OnceLock<Vec<Point>> = OnceLock::new();
-    L.get_or_init(|| {
-        let hull = hull();
-        cases()
-            .iter()
-            .flat_map(|case| &case.errors)
-            .flat_map(|e| hull.iter().map(|p| pose(*e) >> *p))
-            .collect()
-    })
+/// Both approaches, and every corner of the hull at every pose of them (the last pose is the
+/// dock).
+struct Scene {
+    cases: [Docking; 2],
+    corners: Vec<Point>,
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn scene() -> Scene {
+    let cases = docking();
+    let hull = hull();
+    let corners = cases
+        .iter()
+        .flat_map(|case| &case.errors)
+        .flat_map(|e| hull.iter().map(|p| pose(*e) >> *p))
+        .collect();
+    Scene { cases, corners }
+}
+
+fn draw(c: &mut Canvas, sc: &Scene, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -288,10 +287,10 @@ fn draw(c: &mut Canvas, t: f32) {
     let horizon = x & y;
     let labels = ["LOWER EFFORT PENALTY", "HIGHER EFFORT PENALTY"];
     let (mounts, directions) = (mounts(), directions());
-    for (i, (case, label)) in cases().iter().zip(labels).enumerate() {
+    for (i, (case, label)) in sc.cases.iter().zip(labels).enumerate() {
         let rect = plot::panel(c, i, 2).inset(w * 0.02, h * 0.17, w * 0.02, h * 0.04);
         // Shared limits: a square around every pose of both approaches and the dock.
-        let ax = Axes::fitting(rect, corners().iter().copied(), 1.1);
+        let ax = Axes::fitting(rect, sc.corners.iter().copied(), 1.1);
         // The level set of the cost still to pay, over translations of the hull with heading
         // zero: everywhere from which the rest of the approach costs 0.15.
         let remaining = if s >= STEPS as f32 { 1 } else { STEPS - k };
@@ -358,8 +357,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("riccati", STEP * STEPS as f32 + HOLD).size(960, 540),
+        scene,
         draw,
     );
 }
@@ -526,6 +526,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

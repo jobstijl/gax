@@ -19,9 +19,8 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
-    backdrop, caption, colormap, palette, reach3, run,
+    backdrop, caption, colormap, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod tomography {
     use gax::vga3d::{Bivector, Multivector, Paravector, Vector};
@@ -279,19 +278,16 @@ struct Data {
     surface: Vec<Vec<St>>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let (prepared, measured, learned) = run_tomography();
-        let powers = learned.iter().map(|l| powers(*l, STEPS)).collect();
-        Data {
-            prepared,
-            measured,
-            learned,
-            powers,
-            surface: sphere(LATITUDES, LONGITUDES),
-        }
-    })
+fn data() -> Data {
+    let (prepared, measured, learned) = run_tomography();
+    let powers = learned.iter().map(|l| powers(*l, STEPS)).collect();
+    Data {
+        prepared,
+        measured,
+        learned,
+        powers,
+        surface: sphere(LATITUDES, LONGITUDES),
+    }
 }
 
 /// A table of values as coloured cells (a heat map), `[row][column]`, with the values written in
@@ -335,79 +331,86 @@ fn table(
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let d = data();
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
-    let phase = (t / SECONDS).clamp(0.0, 0.9999);
-    let uses = 1 + (phase * STEPS as f32) as usize;
-    let colours = [palette::SKY, palette::ORANGE, palette::PURPLE];
+/// The colours of the three learned channels.
+fn colours() -> [Light; 3] {
+    [palette::SKY, palette::ORANGE, palette::PURPLE]
+}
+
+/// Learned channel `k` applied `uses` times to the sphere of pure states and to the probes,
+/// hollow and filled markers pairing each preparation with its image.
+fn draw_channel(
+    c: &mut Canvas,
+    rect: Rect,
+    d: &Data,
+    k: usize,
+    uses: usize,
+    azimuth: f32,
+    small: f32,
+) {
+    let down = Point2::direction(0.0, 1.0);
+    let colours = colours();
     let probe_colours = [
         palette::SKY,
         palette::ORANGE,
         palette::GREEN,
         palette::PURPLE,
     ];
-    let small = (h / 50.0).min(11.0);
+    let map = d.powers[k][uses - 1];
+    let image: Vec<Vec<_>> = d
+        .surface
+        .iter()
+        .map(|row| row.iter().map(|s| reach3(bloch(map.of(*s)))).collect())
+        .collect();
+    let cam = Camera::orbit(
+        rect,
+        ORIGIN3,
+        4.6,
+        azimuth,
+        24.0f32.to_radians(),
+        Lens::Perspective(0.62),
+    );
+    panel3(c, rect, cam, |s| {
+        s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.45));
+        for a in axes() {
+            s.seg(reach3(-a), reach3(a), 1.0, palette::GRID.faded(0.8));
+        }
+        // The image: a translucent surface with its mesh lines.
+        for i in 0..LATITUDES {
+            for j in 0..LONGITUDES {
+                let (p, q, r, u) = (
+                    image[i][j],
+                    image[i + 1][j],
+                    image[i + 1][j + 1],
+                    image[i][j + 1],
+                );
+                let lit = s.lit(p, q, r, colours[k]);
+                s.quad(p, q, r, u, lit, 0.16);
+            }
+        }
+        let mesh = colours[k].faded(0.85);
+        for row in &image {
+            s.polyline(row, 1.0, mesh);
+        }
+        for j in (0..LONGITUDES).step_by(2) {
+            let meridian: Vec<_> = image.iter().map(|row| row[j]).collect();
+            s.polyline(&meridian, 1.0, mesh);
+        }
+        // Hollow and filled markers pair each preparation with its image.
+        for (p, pc) in d.prepared.iter().zip(probe_colours) {
+            s.dot(reach3(bloch(*p)), Marker::Ring, 8.0, pc);
+            s.dot(reach3(bloch(map.of(*p))), Marker::Dot, 6.0, pc);
+        }
+    });
+    // The title a line below the band's top, clear of the caption.
+    let title = rect.top_middle() + down.gp(small * 1.2);
+    c.text(LABELS[k], title, small * 1.15, colours[k], Align::Center);
+}
 
-    // Each learned channel, applied `uses` times to the sphere of pure states and to the probes,
-    // in thirds of a band across the screen.
-    let band = Rect::new(0.0, (h * 0.13).floor(), w, (h * 0.66).floor());
-    let azimuth = (-54.0f32).to_radians() + 0.5 * wave(core::f32::consts::TAU * phase);
-    for k in 0..3 {
-        let map = d.powers[k][uses - 1];
-        let image: Vec<Vec<_>> = d
-            .surface
-            .iter()
-            .map(|row| row.iter().map(|s| reach3(bloch(map.of(*s)))).collect())
-            .collect();
-        let rect = band.column(k, 3);
-        let cam = Camera::orbit(
-            rect,
-            ORIGIN3,
-            4.6,
-            azimuth,
-            24.0f32.to_radians(),
-            Lens::Perspective(0.62),
-        );
-        panel3(c, rect, cam, |s| {
-            s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.45));
-            for a in axes() {
-                s.seg(reach3(-a), reach3(a), 1.0, palette::GRID.faded(0.8));
-            }
-            // The image: a translucent surface with its mesh lines.
-            for i in 0..LATITUDES {
-                for j in 0..LONGITUDES {
-                    let (p, q, r, u) = (
-                        image[i][j],
-                        image[i + 1][j],
-                        image[i + 1][j + 1],
-                        image[i][j + 1],
-                    );
-                    let lit = s.lit(p, q, r, colours[k]);
-                    s.quad(p, q, r, u, lit, 0.16);
-                }
-            }
-            let mesh = colours[k].faded(0.85);
-            for row in &image {
-                s.polyline(row, 1.0, mesh);
-            }
-            for j in (0..LONGITUDES).step_by(2) {
-                let meridian: Vec<_> = image.iter().map(|row| row[j]).collect();
-                s.polyline(&meridian, 1.0, mesh);
-            }
-            // Hollow and filled markers pair each preparation with its image.
-            for (p, pc) in d.prepared.iter().zip(probe_colours) {
-                s.dot(reach3(bloch(*p)), Marker::Ring, 8.0, pc);
-                s.dot(reach3(bloch(map.of(*p))), Marker::Dot, 6.0, pc);
-            }
-        });
-        // The title a line below the band's top, clear of the caption.
-        let title = rect.top_middle() + down.gp(small * 1.2);
-        c.text(LABELS[k], title, small * 1.15, colours[k], Align::Center);
-    }
+/// The number of uses over the band of channels, and under its two bottom corners how many
+/// state directions each probe set determines.
+fn draw_completeness(c: &mut Canvas, band: Rect, uses: usize, small: f32) {
+    let w = band.width();
+    let up = Point2::direction(0.0, -1.0);
     let note = band.bottom_middle() + up.gp(small * 0.8);
     let text = format!("{uses} USES OF EACH LEARNED CHANNEL");
     c.text(&text, note, small * 1.1, palette::INK, Align::Center);
@@ -432,15 +435,14 @@ fn draw(c: &mut Canvas, t: f32) {
         let text = format!("{name}: {}", values.join(" "));
         c.text(&text, at, small * 0.85, palette::GRID, align);
     }
+}
 
-    // Predictions after as many uses for unseen states, against the exact probabilities.
-    let quarter = w / 4.0;
-    let (y0, y1) = (h * 0.76, h * 0.94);
-    let side = Point2::direction(y1 - y0, y1 - y0);
-    let lo = Point2::xy(quarter * 0.3, y0);
+/// Predictions after `uses` uses for unseen states, against the exact probabilities.
+fn draw_predictions(c: &mut Canvas, rect: Rect, d: &Data, uses: usize) {
+    let colours = colours();
     // The probabilities reach a half; the axes reach a little further on both sides, so that
     // their ticks are a fifth apart and their labels clear of one another.
-    let ax = Axes::equal(Rect { lo, hi: lo + side }, Point2::xy(0.27, 0.27), 0.38);
+    let ax = Axes::equal(rect, Point2::xy(0.27, 0.27), 0.38);
     ax.frame(c, "UNSEEN STATES", "EXACT", "");
     ax.line(c, ORIGIN2, Point2::xy(0.54, 0.54), 1.0, palette::GRID);
     for ((exact, predicted), colour) in validation(&d.learned, uses).iter().zip(colours) {
@@ -453,8 +455,13 @@ fn draw(c: &mut Canvas, t: f32) {
             .collect();
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour.faded(0.85));
     }
+}
 
-    // The measured probability tables: preparation by outcome, coloured on a log scale.
+/// The measured probability tables, one per channel in the last three quarters of the width
+/// between heights `y0` and `y1`: preparation by outcome, coloured on a log scale.
+fn draw_tables(c: &mut Canvas, d: &Data, quarter: f32, [y0, y1]: [f32; 2], small: f32) {
+    let up = Point2::direction(0.0, -1.0);
+    let colours = colours();
     let names = ["A", "B", "C", "D"];
     let lowest = d
         .measured
@@ -479,7 +486,29 @@ fn draw(c: &mut Canvas, t: f32) {
         let title = rect.top_middle() + up.gp(small * 0.6);
         c.text(LABELS[k], title, small, colours[k], Align::Center);
     }
+}
 
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let phase = (t / SECONDS).clamp(0.0, 0.9999);
+    let uses = 1 + (phase * STEPS as f32) as usize;
+    let small = (h / 50.0).min(11.0);
+    // Each learned channel in thirds of a band across the screen.
+    let band = Rect::new(0.0, (h * 0.13).floor(), w, (h * 0.66).floor());
+    let azimuth = (-54.0f32).to_radians() + 0.5 * wave(core::f32::consts::TAU * phase);
+    for k in 0..3 {
+        draw_channel(c, band.column(k, 3), d, k, uses, azimuth, small);
+    }
+    draw_completeness(c, band, uses, small);
+    // Below, a square plot in the first quarter and the tables in the others.
+    let quarter = w / 4.0;
+    let (y0, y1) = (h * 0.76, h * 0.94);
+    let side = Point2::direction(y1 - y0, y1 - y0);
+    let lo = Point2::xy(quarter * 0.3, y0);
+    draw_predictions(c, Rect { lo, hi: lo + side }, d, uses);
+    draw_tables(c, d, quarter, [y0, y1], small);
     caption(
         c,
         "PROCESS TOMOGRAPHY: A NOISY GATE FROM FOUR PROBES",
@@ -488,8 +517,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("process tomography", SECONDS).size(960, 540),
+        data,
         draw,
     );
 }
@@ -638,7 +668,8 @@ mod tests {
                 );
             }
         }
-        let mut draw = super::draw;
+        let d = super::data();
+        let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &d, t);
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.1, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 5.0, &mut draw);

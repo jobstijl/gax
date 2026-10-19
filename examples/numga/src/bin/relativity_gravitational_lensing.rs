@@ -14,12 +14,11 @@
 //! shows them: blue where the image keeps its orientation, red where it is mirrored.
 
 use gax::vga2d::Vector;
-use std::sync::OnceLock;
 
 use gax_colour::Srgb;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    contour, palette, reach2, run, signal::phasor, vector2,
+    contour, palette, reach2, run_with, signal::phasor, vector2,
 };
 
 mod lensing {
@@ -166,24 +165,21 @@ struct Scene {
     grid: (Vec<Vector>, Vec<Vector>),
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let ratio = |p: Point2| area(binary_local(vector2(p))) as f32;
-        let critical = contour::of_fn(ratio, [-1.9, 1.9], [-1.9, 1.9], 380, 0.0);
-        // The lens carries the critical curve to the caustic.
-        let caustic = critical
-            .iter()
-            .map(|seg| seg.map(|p| reach2(binary(vector2(p)))))
-            .collect();
-        let (directions, reached, _) = lens(400);
-        Scene {
-            critical,
-            caustic,
-            tissot: tissot(11, 0.025),
-            grid: (directions, reached),
-        }
-    })
+fn scene() -> Scene {
+    let ratio = |p: Point2| area(binary_local(vector2(p))) as f32;
+    let critical = contour::of_fn(ratio, [-1.9, 1.9], [-1.9, 1.9], 380, 0.0);
+    // The lens carries the critical curve to the caustic.
+    let caustic = critical
+        .iter()
+        .map(|seg| seg.map(|p| reach2(binary(vector2(p)))))
+        .collect();
+    let (directions, reached, _) = lens(400);
+    Scene {
+        critical,
+        caustic,
+        tissot: tissot(11, 0.025),
+        grid: (directions, reached),
+    }
 }
 
 /// The source's direction at time `t`: back and forth along a line just above the masses.
@@ -202,9 +198,8 @@ fn square(rect: Rect) -> Axes {
     Axes::equal(Rect { lo, hi }, ORIGIN2, HALF)
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let critical_colour = Light::from_srgb(0.333, 0.796, 0.827, 1.6);
@@ -273,8 +268,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("gravitational lensing", SECONDS).size(960, 420),
+        scene,
         draw,
     );
 }
@@ -422,6 +418,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

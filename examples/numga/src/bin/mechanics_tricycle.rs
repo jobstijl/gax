@@ -32,9 +32,8 @@ use gax::{pga2d, pga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Point3, Pos2, Pos3, Rect,
-    Scene3, backdrop, caption, palette, run,
+    Scene3, backdrop, caption, palette, run_with,
 };
-use std::sync::OnceLock;
 
 mod tricycle {
     use gax::motions::{Motions, Pga2d, Pga3d, Value};
@@ -244,12 +243,11 @@ struct Drives {
     space: Drive<Pga3d>,
 }
 
-fn drives() -> &'static Drives {
-    static S: OnceLock<Drives> = OnceLock::new();
-    S.get_or_init(|| Drives {
+fn drives() -> Drives {
+    Drives {
         plane: drive(),
         space: drive(),
-    })
+    }
 }
 
 /// The frame's light.
@@ -408,9 +406,8 @@ fn draw_space(c: &mut Canvas, rect: Rect, drive: &Drive<Pga3d>, k: usize) {
     c.text("SPACE (PGA3D)", title, 13.0, palette::INK, Align::Center);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Drives, t: f32) {
     backdrop(c);
-    let d = drives();
     let k = ((t / SECONDS).rem_euclid(1.0) * (STEPS - 1) as f32).round() as usize;
     let body = c
         .rect()
@@ -439,7 +436,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("tricycle", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("tricycle", SECONDS).size(960, 540), drives, draw);
 }
 
 #[cfg(test)]
@@ -498,7 +495,8 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.0);
-        gax_numga_examples::app::assert_draws(super::draw, 7.4);
+        let drives = super::drives();
+        gax_numga_examples::app::assert_draws_with(super::draw, &drives, 0.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &drives, 7.4);
     }
 }

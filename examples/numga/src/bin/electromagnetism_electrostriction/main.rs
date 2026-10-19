@@ -33,9 +33,8 @@ use gax::vga2d::Pseudoscalar;
 use gax_numga_examples::signal::linspace;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette, reach2,
-    run,
+    run_with,
 };
-use std::sync::OnceLock;
 
 mod lattice;
 use gax_numga_examples::shared::electromagnetism_dipoles as pairs;
@@ -65,28 +64,25 @@ struct Scene {
     across: Vec<f64>,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let lattice = lattice();
-        let strengths = linspace(0.0, FIELD, LOAD_SAMPLES);
-        let shapes: Vec<Field<V>> = strengths
+fn scene() -> Scene {
+    let lattice = lattice();
+    let strengths = linspace(0.0, FIELD, LOAD_SAMPLES);
+    let shapes: Vec<Field<V>> = strengths
+        .iter()
+        .map(|s| lattice.equilibrium(X * *s, NEWTON_STEPS))
+        .collect();
+    let strains = |direction: V| {
+        shapes
             .iter()
-            .map(|s| lattice.equilibrium(X * *s, NEWTON_STEPS))
-            .collect();
-        let strains = |direction: V| {
-            shapes
-                .iter()
-                .map(|x| strain(x, &lattice.rest, direction))
-                .collect()
-        };
-        Scene {
-            along: strains(X),
-            across: strains(Y),
-            strengths,
-            lattice,
-        }
-    })
+            .map(|x| strain(x, &lattice.rest, direction))
+            .collect()
+    };
+    Scene {
+        along: strains(X),
+        across: strains(Y),
+        strengths,
+        lattice,
+    }
 }
 
 /// The bonds between the positions.
@@ -146,8 +142,7 @@ fn centred_arrow(
 }
 
 /// The strain along and across the field over its strength, with the frame's strains marked.
-fn loading_panel(c: &mut Canvas, rect: Rect, positions: &Field<V>, applied: V) {
-    let s = scene();
+fn loading_panel(c: &mut Canvas, rect: Rect, s: &Scene, positions: &Field<V>, applied: V) {
     let ax = Axes::new(rect, [0.0, FIELD as f32], STRAIN_PERCENT);
     ax.frame(c, "CHANGE IN RMS EXTENT (%)", "APPLIED FIELD STRENGTH", "");
     ax.line(
@@ -191,11 +186,10 @@ fn loading_panel(c: &mut Canvas, rect: Rect, positions: &Field<V>, applied: V) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
     let share = f64::from(t / SECONDS).rem_euclid(1.0);
     let applied = turning(share);
-    let s = scene();
     let positions = s.lattice.equilibrium(applied, NEWTON_STEPS);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -210,6 +204,7 @@ fn draw(c: &mut Canvas, t: f32) {
     loading_panel(
         c,
         Rect::new(w * 0.5, top, w, h).inset(46.0, 30.0, 20.0, 44.0),
+        s,
         &positions,
         applied,
     );
@@ -221,5 +216,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("electrostriction", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("electrostriction", SECONDS).size(960, 540),
+        scene,
+        draw,
+    );
 }

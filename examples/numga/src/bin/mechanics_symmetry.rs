@@ -16,9 +16,8 @@ use gax::{pga2d, pga3d, vga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, from_above, on_sphere, palette, reach3, run,
+    caption, from_above, on_sphere, palette, reach3, run_with,
 };
-use std::sync::OnceLock;
 
 mod symmetry {
     use super::*;
@@ -282,20 +281,17 @@ struct Scenes {
     elasticity: Elasticity,
 }
 
-fn scenes() -> &'static Scenes {
-    static S: OnceLock<Scenes> = OnceLock::new();
-    S.get_or_init(|| {
-        let (arms, arm_inertia, inertia) = flywheel();
-        let (conductivity, elasticity) = crystal_lattice();
-        Scenes {
-            conduction: heat_conduction(),
-            arms,
-            arm_inertia,
-            inertia,
-            conductivity,
-            elasticity,
-        }
-    })
+fn scenes() -> Scenes {
+    let (arms, arm_inertia, inertia) = flywheel();
+    let (conductivity, elasticity) = crystal_lattice();
+    Scenes {
+        conduction: heat_conduction(),
+        arms,
+        arm_inertia,
+        inertia,
+        conductivity,
+        elasticity,
+    }
 }
 
 /// Seconds per scene.
@@ -340,8 +336,7 @@ fn degrees(a: Vector, b: Vector) -> f64 {
     a.angle_between(b).to_degrees()
 }
 
-fn conduction_scene(c: &mut Canvas, s: f32) {
-    let sc_data = scenes();
+fn conduction_scene(c: &mut Canvas, sc_data: &Scenes, s: f32) {
     let screen = c.rect();
     let h = screen.height();
     // The band of the panels, under the caption.
@@ -392,8 +387,7 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
     );
 }
 
-fn flywheel_scene(c: &mut Canvas, s: f32) {
-    let sd = scenes();
+fn flywheel_scene(c: &mut Canvas, sd: &Scenes, s: f32) {
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let angle = f64::from(s) * core::f64::consts::TAU;
@@ -489,8 +483,7 @@ fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
     }
 }
 
-fn lattice_scene(c: &mut Canvas, s: f32) {
-    let sd = scenes();
+fn lattice_scene(c: &mut Canvas, sd: &Scenes, s: f32) {
     let screen = c.rect();
     let h = screen.height();
     // The band of the panels, under the caption.
@@ -552,19 +545,23 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, scenes: &Scenes, t: f32) {
     backdrop(c);
     let u = (t / SCENE).rem_euclid(3.0);
     let s = u.fract();
     match u as usize {
-        0 => conduction_scene(c, s),
-        1 => flywheel_scene(c, s),
-        _ => lattice_scene(c, s),
+        0 => conduction_scene(c, scenes, s),
+        1 => flywheel_scene(c, scenes, s),
+        _ => lattice_scene(c, scenes, s),
     }
 }
 
 fn main() {
-    run(Anim::new("symmetry", 3.0 * SCENE).size(960, 540), draw);
+    run_with(
+        Anim::new("symmetry", 3.0 * SCENE).size(960, 540),
+        scenes,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -594,12 +591,12 @@ mod tests {
         assert_eq!(responses.len(), 4);
         let _ = flywheel();
         let _ = crystal_lattice();
-        let mut draw = super::draw;
+        let scenes = super::scenes();
         for t in [0.5, super::SCENE + 0.5, 2.0 * super::SCENE + 0.5] {
             let c = gax_numga_examples::app::frame(
                 &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
                 t,
-                &mut draw,
+                &mut |c, t| super::draw(c, &scenes, t),
             );
             assert!(c.mean().luma() > 0.0);
         }
@@ -607,7 +604,7 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scenes(), 0.5);
     }
 
     /// Averaging over a group keeps the trace (every term is a rotated copy) and makes the

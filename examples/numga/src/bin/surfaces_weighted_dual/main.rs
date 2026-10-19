@@ -36,8 +36,7 @@ use gax_numga_examples::mesh::{Mesh, Vector3};
 use gax_numga_examples::plot::panel_row;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{Anim, Canvas, Light, Marker, Point3, Rect, Scene3, backdrop, caption};
-use gax_numga_examples::{colormap, palette, run};
-use std::sync::OnceLock;
+use gax_numga_examples::{colormap, palette, run_with};
 use surfaces_hull::{beside, camera, drawn, facing, ghost, near_side};
 
 mod scenes {
@@ -155,12 +154,11 @@ struct Shown {
     rescue: Rescue,
 }
 
-fn shown() -> &'static Shown {
-    static SHOWN: OnceLock<Shown> = OnceLock::new();
-    SHOWN.get_or_init(|| Shown {
+fn shown() -> Shown {
+    Shown {
         breath: Breath::new(),
         rescue: Rescue::new(),
-    })
+    }
 }
 
 /// One breath, and the way to the rescue: numga's 48 frames of 80 ms.
@@ -261,9 +259,8 @@ fn crossed(points: &Field<Vector3>, mesh: &Mesh) -> (usize, usize) {
     (edges, outside.count())
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Shown, t: f32) {
     backdrop(c);
-    let s = shown();
     let share = f64::from((t / SECONDS).rem_euclid(1.0));
     let [breath_space, breath_sphere, rescue_space, rescue_sphere] = panel_row(c, 4.0);
 
@@ -288,7 +285,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("weighted dual", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("weighted dual", SECONDS).size(960, 540),
+        shown,
+        draw,
+    );
 }
 
 #[cfg(test)]

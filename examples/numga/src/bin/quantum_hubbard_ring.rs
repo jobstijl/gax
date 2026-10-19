@@ -30,9 +30,8 @@ use gax_numga_examples::points::circle;
 use gax_numga_examples::signal::{frame, linspace};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
-    run,
+    run_with,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::quantum;
 
@@ -264,19 +263,16 @@ struct Data {
     levels: Vec<Vec<f64>>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let ring = Ring::new();
-        let phases = linspace(0.0, core::f64::consts::TAU, FRAMES);
-        let (from, to, count) = SWEEP;
-        let sweep = linspace(from, to, count);
-        Data {
-            walks: REPULSIONS.iter().map(|u| ring.walk(*u, &phases)).collect(),
-            levels: sweep.iter().map(|u| ring.levels(*u)).collect(),
-            sweep,
-        }
-    })
+fn data() -> Data {
+    let ring = Ring::new();
+    let phases = linspace(0.0, core::f64::consts::TAU, FRAMES);
+    let (from, to, count) = SWEEP;
+    let sweep = linspace(from, to, count);
+    Data {
+        walks: REPULSIONS.iter().map(|u| ring.walk(*u, &phases)).collect(),
+        levels: sweep.iter().map(|u| ring.levels(*u)).collect(),
+        sweep,
+    }
 }
 
 /// The sites on a square, in the order the hops go round: bottom left, bottom right, top right,
@@ -331,9 +327,8 @@ fn draw_levels(c: &mut Canvas, ax: &Axes, d: &Data) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let progress = (t / SECONDS).fract();
     let now = frame(progress, FRAMES);
@@ -365,7 +360,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("hubbard ring", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("hubbard ring", SECONDS).size(960, 540),
+        data,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -445,6 +444,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

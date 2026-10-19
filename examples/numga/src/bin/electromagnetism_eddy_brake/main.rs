@@ -39,12 +39,11 @@ use gax_colour::Srgb;
 use gax_numga_examples::mesh::{Bivector3, Mesh, Scalar3, Vector3, direction};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    from_above, palette, reach3, run,
+    from_above, palette, reach3, run_with,
 };
 use inductive::{InductiveMotion, Rotation};
 use sample::{Located, locate};
 use scenes::*;
-use std::sync::OnceLock;
 
 /// One loop of both runs.
 const SECONDS: f32 = 12.0;
@@ -158,45 +157,42 @@ struct Scene {
     inductive: Run,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let (mesh, conductivity) = materials();
-        let (braked, spun) = std::thread::scope(|s| {
-            let disc = &mesh;
-            let braked = conductivity
-                .each_ref()
-                .map(|c| s.spawn(move || materials_braking(disc, c)));
-            let spun = conductivity
-                .each_ref()
-                .map(|c| s.spawn(move || inductive_material(disc, c)));
-            (
-                braked.map(|run| run.join().expect("a resistive run")),
-                spun.map(|run| run.join().expect("an inductive run")),
-            )
-        });
-        let areas = mesh.triangle_areas();
-        let resistive = Run::new(
-            ["RESISTIVE BRAKING", "FROM 2 RAD/S"],
-            STEP,
-            braked.map(|r| r.iter().map(Snapshot::from).collect()),
-            &areas,
-        );
-        let inductive = Run::new(
-            ["SPUN TO 600 RAD/S", "WITH INDUCTANCE"],
-            INDUCTIVE_STEP,
-            spun.map(|r| r.iter().map(Snapshot::from).collect()),
-            &areas,
-        );
-        let arrows = arrow_sites(&mesh);
-        Scene {
-            mesh,
-            areas,
-            arrows,
-            resistive,
-            inductive,
-        }
-    })
+fn scene() -> Scene {
+    let (mesh, conductivity) = materials();
+    let (braked, spun) = std::thread::scope(|s| {
+        let disc = &mesh;
+        let braked = conductivity
+            .each_ref()
+            .map(|c| s.spawn(move || materials_braking(disc, c)));
+        let spun = conductivity
+            .each_ref()
+            .map(|c| s.spawn(move || inductive_material(disc, c)));
+        (
+            braked.map(|run| run.join().expect("a resistive run")),
+            spun.map(|run| run.join().expect("an inductive run")),
+        )
+    });
+    let areas = mesh.triangle_areas();
+    let resistive = Run::new(
+        ["RESISTIVE BRAKING", "FROM 2 RAD/S"],
+        STEP,
+        braked.map(|r| r.iter().map(Snapshot::from).collect()),
+        &areas,
+    );
+    let inductive = Run::new(
+        ["SPUN TO 600 RAD/S", "WITH INDUCTANCE"],
+        INDUCTIVE_STEP,
+        spun.map(|r| r.iter().map(Snapshot::from).collect()),
+        &areas,
+    );
+    let arrows = arrow_sites(&mesh);
+    Scene {
+        mesh,
+        areas,
+        arrows,
+        resistive,
+        inductive,
+    }
 }
 
 /// The material points where current arrows sit: rings of evenly spaced points.
@@ -386,10 +382,9 @@ fn headers(c: &mut Canvas, rect: Rect) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, scene: &Scene, t: f32) {
     backdrop(c);
     let share = f64::from(t / SECONDS).rem_euclid(1.0);
-    let scene = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let top = (h / 30.0).clamp(10.0, 22.0) * 3.6;
@@ -417,5 +412,5 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("eddy_brake", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("eddy_brake", SECONDS).size(960, 540), scene, draw);
 }

@@ -27,9 +27,8 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, reach2,
-    run, signal::frame, vector2,
+    run_with, signal::frame, vector2,
 };
-use std::sync::OnceLock;
 
 use gax_numga_examples::shared::mechanics_vga2d as plane;
 
@@ -357,15 +356,14 @@ struct Scenes {
     walk: Vec<Vortices>,
 }
 
-fn scenes() -> &'static Scenes {
-    static S: OnceLock<Scenes> = OnceLock::new();
-    S.get_or_init(|| Scenes {
+fn scenes() -> Scenes {
+    Scenes {
         scenes: [leapfrog(), shear_layer(), gas()].map(|s| {
             let states = s.evolve();
             (s, states)
         }),
         walk: walk(),
-    })
+    }
 }
 
 /// The frame a fraction of the way through `frames`.
@@ -461,9 +459,8 @@ fn draw_walkabout(c: &mut Canvas, rect: Rect, states: &[Vortices], frame: usize)
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scenes, t: f32) {
     backdrop(c);
-    let s = scenes();
     let fraction = (t / SECONDS).rem_euclid(1.0);
     let screen = c.rect();
     let top = screen
@@ -490,7 +487,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("vortices", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("vortices", SECONDS).size(960, 540), scenes, draw);
 }
 
 #[cfg(test)]
@@ -628,6 +625,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scenes(), 0.5);
     }
 }

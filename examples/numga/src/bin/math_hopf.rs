@@ -188,15 +188,14 @@ fn colour(d: Vector) -> Light {
 /// The part of the loop spent on the sweep; the rest shows the tori.
 const SWEEP: f32 = 0.72;
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let phase = t / SECONDS;
-    let azimuth = -0.96 + 0.6 * wave(phase * core::f32::consts::TAU);
-    let elevation = 0.38;
-    // First a direction spirals over the sphere and its fibres pile up; then the fibres over
-    // three circles of latitude, which fill nested tori.
-    let fibres: Vec<(Vector, Vec<Vector>, bool)> = if phase < SWEEP {
+/// A fibre as drawn: the direction it lies over, its points in space, and whether it is the
+/// newest.
+type Fibre = (Vector, Vec<Vector>, bool);
+
+/// The fibres at `phase` of the loop: first a direction spirals over the sphere and its fibres
+/// pile up; then the fibres over three circles of latitude, which fill nested tori.
+fn fibres(phase: f32) -> Vec<Fibre> {
+    if phase < SWEEP {
         let count = ((phase / SWEEP * FRAMES as f32) as usize + 1).min(FRAMES);
         (0..count)
             .map(|k| {
@@ -210,21 +209,29 @@ fn draw(c: &mut Canvas, t: f32) {
             .flatten()
             .map(|(d, fibre)| (d, fibre, false))
             .collect()
-    };
+    }
+}
 
-    // Space: the fibres so far, the newest heavier.
-    let (w, h) = (screen.width(), screen.height());
-    let right = Rect::new(0.3 * w, 0.0, w, h);
+/// Space: the fibres so far, the newest heavier, and the linking number of the first and the
+/// last.
+fn draw_space(
+    c: &mut Canvas,
+    rect: Rect,
+    fibres: &[Fibre],
+    (azimuth, elevation): (f32, f32),
+    phase: f32,
+) {
+    let screen = c.rect();
     let cam = Camera::orbit(
-        right,
+        rect,
         Point3::xyz(0.0, 0.0, -0.3),
         11.0,
         azimuth,
         elevation,
         Lens::Perspective(0.42),
     );
-    panel3(c, right, cam, |scene| {
-        for (d, fibre, newest) in &fibres {
+    panel3(c, rect, cam, |scene| {
+        for (d, fibre, newest) in fibres {
             let pts: Vec<_> = fibre.iter().map(|v| clipped(*v)).collect();
             let (width, strength) = if *newest { (2.6, 1.0) } else { (0.9, 0.75) };
             scene.polyline(&pts, width, (colour(*d)).faded(strength));
@@ -242,41 +249,42 @@ fn draw(c: &mut Canvas, t: f32) {
         let corner = screen.top_right() + Point2::direction(-14.0, 30.0);
         c.text(text, corner, 11.0, palette::INK, Align::Right);
     }
+}
 
-    // The sphere of directions, on the left above the lift.
-    let split = h * 0.5 + 30.0;
-    let sphere_rect = Rect::new(0.0, 60.0, 0.3 * w, split);
+/// The sphere of directions, a dot for each fibre's.
+fn draw_directions(c: &mut Canvas, rect: Rect, fibres: &[Fibre], (azimuth, elevation): (f32, f32)) {
     let cam = Camera::orbit(
-        sphere_rect,
+        rect,
         ORIGIN3,
         6.0,
         azimuth,
         elevation,
         Lens::Perspective(0.45),
     );
-    panel3(c, sphere_rect, cam, |scene| {
+    panel3(c, rect, cam, |scene| {
         scene.sphere_wire(ORIGIN3, 1.0, 24, palette::GRID.faded(0.6));
-        for (d, _, newest) in &fibres {
+        for (d, _, newest) in fibres {
             let size = if *newest { 10.0 } else { 5.0 };
             scene.dot(reach3(*d), Marker::Dot, size, colour(*d));
         }
     });
     // The label clear of the caption, beside the sphere's top.
-    let label = sphere_rect.lo + Point2::direction(14.0, 30.0);
+    let label = rect.lo + Point2::direction(14.0, 30.0);
     c.text("DIRECTIONS", label, 11.0, palette::INK, Align::Left);
+}
 
-    // The lift: a spinor carried around a circle of directions, drawn up to now.
-    let lift_rect = Rect::new(0.0, split, 0.3 * w, h);
+/// The lift: a spinor carried around a circle of directions, drawn up to now.
+fn draw_lift(c: &mut Canvas, rect: Rect, (azimuth, elevation): (f32, f32), phase: f32) {
     let (_, start, carried) = lift(LIFT_POLAR, 200);
     let cam = Camera::orbit(
-        lift_rect,
+        rect,
         ORIGIN3,
         9.0,
         azimuth,
         elevation,
         Lens::Perspective(0.42),
     );
-    panel3(c, lift_rect, cam, |scene| {
+    panel3(c, rect, cam, |scene| {
         let circle: Vec<_> = fibre(start, &turn(200))
             .into_iter()
             .map(|r| clipped(stereographic(r)))
@@ -293,7 +301,7 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::RED);
     });
     let down = Point2::direction(0.0, 1.0);
-    let label = lift_rect.lo + Point2::direction(14.0, 8.0);
+    let label = rect.lo + Point2::direction(14.0, 8.0);
     let ink = palette::INK;
     c.text(
         "BERRY PHASE: BACK ON THE FIBRE,",
@@ -310,7 +318,21 @@ fn draw(c: &mut Canvas, t: f32) {
         ink,
         Align::Left,
     );
+}
 
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let phase = t / SECONDS;
+    let azimuth = -0.96 + 0.6 * wave(phase * core::f32::consts::TAU);
+    let view = (azimuth, 0.38);
+    let fibres = fibres(phase);
+    let (w, h) = (screen.width(), screen.height());
+    draw_space(c, Rect::new(0.3 * w, 0.0, w, h), &fibres, view, phase);
+    // The sphere of directions on the left, above the lift.
+    let split = h * 0.5 + 30.0;
+    draw_directions(c, Rect::new(0.0, 60.0, 0.3 * w, split), &fibres, view);
+    draw_lift(c, Rect::new(0.0, split, 0.3 * w, h), view, phase);
     caption(
         c,
         "THE HOPF FIBRATION",

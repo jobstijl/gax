@@ -38,9 +38,8 @@ use gax_numga_examples::shared::surfaces_spin;
 
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::{
-    Anim, Camera, Canvas, Lens, Point3, Rect, backdrop, caption, label_under, run,
+    Anim, Camera, Canvas, Lens, Point3, Rect, backdrop, caption, label_under, run_with,
 };
-use std::sync::OnceLock;
 use surfaces_spin::{checker_light, render};
 
 mod arap {
@@ -243,13 +242,10 @@ struct Scene {
     frames: Vec<Deformed>,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let bend = bend();
-        let frames = bending(&bend);
-        Scene { bend, frames }
-    })
+fn scene() -> Scene {
+    let bend = bend();
+    let frames = bending(&bend);
+    Scene { bend, frames }
 }
 
 /// The loop: numga's 24 frames of 80 ms bending the bar, and as many unbending it.
@@ -291,9 +287,8 @@ fn checker(bar: &Mesh) -> Vec<bool> {
         .collect()
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     backdrop(c);
-    let s = scene();
     // Bend over the first half of the loop and unbend over the second.
     let phase = (t / SECONDS).rem_euclid(1.0);
     let bend = 1.0 - (2.0 * phase - 1.0).abs();
@@ -320,7 +315,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("arap", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("arap", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -418,6 +413,6 @@ mod tests {
                 .zip(bar.vertices.iter())
                 .all(|(a, b)| (a - b).norm() < 1e-9)
         );
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 1.0);
     }
 }

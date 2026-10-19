@@ -39,11 +39,12 @@ mod scenes;
 use coating::{Polarization, in_plane, t};
 use gax::pga2d::Point;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Rect, backdrop, caption, colormap, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Rect, backdrop, caption, colormap, palette, run_with,
     signal::haversine,
 };
 use scenes::{
-    BAND_WAVELENGTH, CELLS, LINEAR, SLAB_END, SLAB_START, helix, in_slab, positions, results,
+    BAND_WAVELENGTH, CELLS, LINEAR, Results, SLAB_END, SLAB_START, helix, in_slab, positions,
+    results,
 };
 
 /// One loop: the pulse's run along the line, its frames shown in turn.
@@ -79,8 +80,7 @@ fn direction_light(v: Polarization) -> Light {
 /// The pulse in the oblique view: the slab a band with its optic axes as rods, the field's tip
 /// along the line over faint spokes from the line, coloured by its direction. A field that turns
 /// traces loops; one that does not stays in its plane.
-fn draw_pulse(c: &mut Canvas, rect: Rect, at: f64) {
-    let s = results();
+fn draw_pulse(c: &mut Canvas, rect: Rect, s: &Results, at: f64) {
     let linear = &s.pulses[LINEAR];
     let count = linear.frames.len();
     let frame = &linear.frames[((at * count as f64) as usize).min(count - 1)];
@@ -188,8 +188,7 @@ fn percent(powers: &[(f64, f64)]) -> Vec<f64> {
     powers.iter().map(|(r, _)| 100.0 * r).collect()
 }
 
-fn draw_coatings(c: &mut Canvas, rect: Rect, cursor: usize) {
-    let s = results();
+fn draw_coatings(c: &mut Canvas, rect: Rect, s: &Results, cursor: usize) {
     // Room above the curves for the legend.
     let ax = Axes::new(plot_area(rect), [450.0, 850.0], [0.0, 6.5]);
     ax.frame(c, "COATINGS ON GLASS", "WAVELENGTH (NM)", "R (%)");
@@ -203,8 +202,7 @@ fn draw_coatings(c: &mut Canvas, rect: Rect, cursor: usize) {
     draw_curves(c, &ax, &s.wavelengths, &curves, cursor);
 }
 
-fn draw_helix(c: &mut Canvas, rect: Rect, cursor: usize) {
-    let s = results();
+fn draw_helix(c: &mut Canvas, rect: Rect, s: &Results, cursor: usize) {
     // Room above the full reflection for the legend.
     let ceiling = 125.0;
     let ax = Axes::new(plot_area(rect), [450.0, 850.0], [0.0, ceiling as f32]);
@@ -226,8 +224,7 @@ fn draw_helix(c: &mut Canvas, rect: Rect, cursor: usize) {
     draw_curves(c, &ax, &s.wavelengths, &curves, cursor);
 }
 
-fn draw_axion(c: &mut Canvas, rect: Rect, cursor: usize) {
-    let s = results();
+fn draw_axion(c: &mut Canvas, rect: Rect, s: &Results, cursor: usize) {
     // Room above the curves for the legend.
     let ax = Axes::new(plot_area(rect), [-3.0, 3.0], [0.0, 65.0]);
     ax.frame(c, "AN AXION INTERFACE", "AXION JUMP", "R (%)");
@@ -240,7 +237,7 @@ fn draw_axion(c: &mut Canvas, rect: Rect, cursor: usize) {
     draw_curves(c, &ax, &s.jumps, &curves, cursor);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Results, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -249,15 +246,19 @@ fn draw(c: &mut Canvas, t: f32) {
     // the spectra below.
     let top = (h / 30.0).clamp(10.0, 22.0) * 3.0 + 4.0;
     let mid = top + (h - top) * 0.5;
-    draw_pulse(c, Rect::new(0.0, top, w, mid), at);
+    draw_pulse(c, Rect::new(0.0, top, w, mid), s, at);
     // The cursors sweep the spectra back and forth.
     let sweep = haversine(core::f64::consts::TAU * at);
     let sample = |n: usize| (sweep * (n - 1) as f64).round() as usize;
     let lower = |x0: f32, x1: f32| Rect::new(w * x0, mid, w * x1, h);
-    let s = results();
-    draw_coatings(c, lower(0.0, 1.0 / 3.0), sample(s.wavelengths.len()));
-    draw_helix(c, lower(1.0 / 3.0, 2.0 / 3.0), sample(s.wavelengths.len()));
-    draw_axion(c, lower(2.0 / 3.0, 1.0), sample(s.jumps.len()));
+    draw_coatings(c, lower(0.0, 1.0 / 3.0), s, sample(s.wavelengths.len()));
+    draw_helix(
+        c,
+        lower(1.0 / 3.0, 2.0 / 3.0),
+        s,
+        sample(s.wavelengths.len()),
+    );
+    draw_axion(c, lower(2.0 / 3.0, 1.0), s, sample(s.jumps.len()));
     caption(
         c,
         "OPTICAL LAYERS FROM CONSTITUTIVE MAPS",
@@ -266,13 +267,13 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("coating", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("coating", SECONDS).size(960, 540), results, draw);
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::results(), 0.5);
     }
 }

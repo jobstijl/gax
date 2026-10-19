@@ -13,10 +13,9 @@ use gax::motions::{Motions, Pga2d};
 use gax::pga2d::{Forque, Motor, Point, Scalar, Twist};
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, font, palette, run,
-    signal,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, font, palette,
+    run_with, signal,
 };
-use std::sync::OnceLock;
 
 mod modes {
     use super::*;
@@ -154,14 +153,9 @@ mod modes {
 
 use modes::*;
 
-fn cases() -> &'static [ModeCase; 2] {
-    static C: OnceLock<[ModeCase; 2]> = OnceLock::new();
-    C.get_or_init(suspensions)
-}
-
 /// The loop: twice the period of the slowest oscillating mode, as numga's animation.
-fn seconds() -> f32 {
-    let slowest = cases()
+fn seconds(cases: &[ModeCase; 2]) -> f32 {
+    let slowest = cases
         .iter()
         .flat_map(|c| c.frequencies)
         .filter(|f| *f > 1e-6)
@@ -282,13 +276,13 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, cases: &[ModeCase; 2], t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let top = h * 0.12;
     let row_h = (h - top) / 2.0;
-    for (r, (case, label)) in cases()
+    for (r, (case, label)) in cases
         .iter()
         .zip(["TWO SPRINGS", "THREE SPRINGS"])
         .enumerate()
@@ -312,7 +306,9 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("modes", seconds()).size(960, 540), draw);
+    let cases = suspensions();
+    let anim = Anim::new("modes", seconds(&cases)).size(960, 540);
+    run_with(anim, || cases, draw);
 }
 
 #[cfg(test)]
@@ -407,6 +403,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &suspensions(), 0.5);
     }
 }

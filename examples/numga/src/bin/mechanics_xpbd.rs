@@ -24,8 +24,8 @@
 use gax::pga3d::{Forque, Line, Motor, Point};
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
-    signal,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette,
+    run_with, signal,
 };
 
 use gax_numga_examples::shared::mechanics_lie as lie;
@@ -329,14 +329,12 @@ const SECONDS: f32 = 6.0;
 /// The motors and joint gaps per step.
 type History = (Vec<Vec<M>>, Vec<Vec<f64>>);
 
-fn scene() -> &'static History {
-    static SCENE: std::sync::OnceLock<History> = std::sync::OnceLock::new();
-    SCENE.get_or_init(|| swinging_chain(LINKS, (f64::from(SECONDS) / DT).round() as usize, 5, DT))
+fn scene() -> History {
+    swinging_chain(LINKS, (f64::from(SECONDS) / DT).round() as usize, 5, DT)
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, (motors, gaps): &History, t: f32) {
     backdrop(c);
-    let (motors, gaps) = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(motors.len() - 1);
@@ -426,7 +424,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("xpbd", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("xpbd", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -510,6 +508,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

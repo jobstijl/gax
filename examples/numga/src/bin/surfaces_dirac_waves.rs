@@ -30,11 +30,10 @@ use gax_numga_examples::shared::surfaces_spin;
 use gax::field::Field;
 use gax_numga_examples::mesh::Mesh;
 use gax_numga_examples::palette;
-use gax_numga_examples::run;
+use gax_numga_examples::run_with;
 use gax_numga_examples::{
     Anim, Camera, Canvas, Lens, Light, ORIGIN3, Rect, backdrop, caption, label_under, signal::frame,
 };
-use std::sync::OnceLock;
 use surfaces_spin::{Hit, render};
 
 mod waves {
@@ -284,37 +283,34 @@ fn mode_at(dirac: &Dirac, wave: &Field<Quaternion>, level: usize, phase: f64) ->
     Amplitudes::new(&vertices, &faces)
 }
 
-fn shown() -> &'static Shown {
-    static SHOWN: OnceLock<Shown> = OnceLock::new();
-    SHOWN.get_or_init(|| {
-        let pulse_sphere = surfaces_sphere::icosphere(SUBDIVISIONS);
-        let frames = pulse(&pulse_sphere).into_iter().step_by(EVERY);
-        let frames: Vec<Amplitudes> = frames.map(|(v, f)| Amplitudes::new(&v, &f)).collect();
-        let exposure = percentile(frames.iter().flat_map(Amplitudes::all), EXPOSURE);
-        let pulse = frames.into_iter().map(|a| a.exposed(exposure)).collect();
-        let mode_sphere = surfaces_sphere::icosphere(MODE_SUBDIVISIONS);
-        let dirac = dirac(&mode_sphere);
-        let (_, modes) = scenes::modes(&mode_sphere);
-        let phase = |k: usize| core::f64::consts::TAU * k as f64 / PHASES as f64;
-        let mode_exposures = modes
-            .iter()
-            .enumerate()
-            .map(|(level, wave)| {
-                let frames: Vec<Amplitudes> = (0..PHASES)
-                    .map(|k| mode_at(&dirac, wave, level, phase(k)))
-                    .collect();
-                percentile(frames.iter().flat_map(Amplitudes::all), EXPOSURE)
-            })
-            .collect();
-        Shown {
-            pulse_sphere,
-            pulse,
-            mode_sphere,
-            dirac,
-            modes,
-            mode_exposures,
-        }
-    })
+fn shown() -> Shown {
+    let pulse_sphere = surfaces_sphere::icosphere(SUBDIVISIONS);
+    let frames = pulse(&pulse_sphere).into_iter().step_by(EVERY);
+    let frames: Vec<Amplitudes> = frames.map(|(v, f)| Amplitudes::new(&v, &f)).collect();
+    let exposure = percentile(frames.iter().flat_map(Amplitudes::all), EXPOSURE);
+    let pulse = frames.into_iter().map(|a| a.exposed(exposure)).collect();
+    let mode_sphere = surfaces_sphere::icosphere(MODE_SUBDIVISIONS);
+    let dirac = dirac(&mode_sphere);
+    let (_, modes) = scenes::modes(&mode_sphere);
+    let phase = |k: usize| core::f64::consts::TAU * k as f64 / PHASES as f64;
+    let mode_exposures = modes
+        .iter()
+        .enumerate()
+        .map(|(level, wave)| {
+            let frames: Vec<Amplitudes> = (0..PHASES)
+                .map(|k| mode_at(&dirac, wave, level, phase(k)))
+                .collect();
+            percentile(frames.iter().flat_map(Amplitudes::all), EXPOSURE)
+        })
+        .collect();
+    Shown {
+        pulse_sphere,
+        pulse,
+        mode_sphere,
+        dirac,
+        modes,
+        mode_exposures,
+    }
 }
 
 /// The light at a hit, on the surface's faint blue: each axis's accent (`x` red, `y` green, `z`
@@ -353,9 +349,8 @@ fn sphere_panel(c: &mut Canvas, rect: Rect, sphere: &Mesh, amplitudes: &Amplitud
     label_under(c, rect, label, 16.0, 0.8);
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Shown, t: f32) {
     backdrop(c);
-    let s = shown();
     let screen = c.rect();
     let (top, split) = (screen.height() * 0.12, screen.height() * 0.56);
     let rows = [
@@ -384,7 +379,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("dirac waves", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("dirac waves", SECONDS).size(960, 540),
+        shown,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -468,6 +467,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::shown(), 1.0);
     }
 }

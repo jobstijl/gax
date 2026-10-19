@@ -18,7 +18,7 @@ use gax::sta::Bivector;
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Dir3, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect, Scene3,
-    backdrop, caption, palette, run, signal::wave,
+    backdrop, caption, palette, run_with, signal::wave,
 };
 
 mod shg {
@@ -269,14 +269,13 @@ struct Still {
     growth: (Vec<f64>, [Vec<[Bivector; 2]>; 3]),
 }
 
-fn still() -> &'static Still {
-    static S: std::sync::OnceLock<Still> = std::sync::OnceLock::new();
-    S.get_or_init(|| Still {
+fn still() -> Still {
+    Still {
         pumps: pumps(HEADINGS),
         waveform: waveform(401),
         mixing: mixing(HEADINGS),
         growth: phase_matching(256),
-    })
+    }
 }
 
 /// A panel's title, centred under its top edge.
@@ -389,8 +388,8 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[Bivector], harmonic: &[Bivect
     );
 }
 
-fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
-    let (phase, pump, harmonic) = &still().waveform;
+fn draw_waveform(c: &mut Canvas, rect: Rect, still: &Still, at: f32) {
+    let (phase, pump, harmonic) = &still.waveform;
     let inset = rect.inset(34.0, 30.0, 10.0, 34.0);
     let ax = Axes::new(inset, [0.0, 2.0], [-1.2, 1.2]);
     ax.frame(c, "WAVEFORM", "PUMP PERIODS", "");
@@ -416,8 +415,8 @@ fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::ORANGE);
 }
 
-fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
-    let (pumps, probes, generated) = &still().mixing;
+fn draw_mixing(c: &mut Canvas, rect: Rect, still: &Still, at: f32) {
+    let (pumps, probes, generated) = &still.mixing;
     let inset = rect.inset(30.0, 30.0, 10.0, 34.0);
     let ax = Axes::equal(inset, centre(), 0.5);
     ax.frame(c, "PUMP AT 45: MIXING", "HORIZONTAL", "");
@@ -448,8 +447,8 @@ fn case_colour(k: usize) -> Light {
     [palette::SKY, palette::ORANGE, palette::PURPLE][k]
 }
 
-fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
-    let (depths, amplitude) = &still().growth;
+fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, still: &Still, at: f32) {
+    let (depths, amplitude) = &still.growth;
     let n = ((at * depths.len() as f32) as usize).clamp(1, depths.len());
     let ax = Axes::equal(
         phasor.inset(30.0, 30.0, 10.0, 34.0),
@@ -490,12 +489,11 @@ fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, s: &Still, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let h = screen.height();
     let at = (t / SECONDS).rem_euclid(1.0);
-    let s = still();
     let angle = core::f64::consts::TAU * f64::from(at);
     let (bonds, harmonic) = turning(angle, &s.pumps);
     // Below the caption, a row of three panels over a row of four.
@@ -508,9 +506,9 @@ fn draw(c: &mut Canvas, t: f32) {
     draw_bonds(c, upper.column(0, 3), &bonds, spin);
     draw_polarization(c, upper.column(1, 3), &s.pumps, &harmonic);
     draw_power(c, upper.column(2, 3), &s.pumps, &harmonic);
-    draw_waveform(c, lower.column(0, 4), at);
-    draw_mixing(c, lower.column(1, 4), at);
-    draw_growth(c, lower.column(2, 4), lower.column(3, 4), at);
+    draw_waveform(c, lower.column(0, 4), s, at);
+    draw_mixing(c, lower.column(1, 4), s, at);
+    draw_growth(c, lower.column(2, 4), lower.column(3, 4), s, at);
     caption(
         c,
         "SECOND HARMONIC: A CRYSTAL DOUBLES THE FREQUENCY",
@@ -522,7 +520,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("second harmonic", SECONDS).size(960, 540), draw);
+    run_with(
+        Anim::new("second harmonic", SECONDS).size(960, 540),
+        still,
+        draw,
+    );
 }
 
 #[cfg(test)]
@@ -666,7 +668,8 @@ mod tests {
 
     #[test]
     fn a_frame_draws_and_the_crystal_turns() {
-        let mut draw = super::draw;
+        let still = super::still();
+        let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &still, t);
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(320, 180);
         let a = gax_numga_examples::app::frame(&anim, 0.0, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 1.0, &mut draw);

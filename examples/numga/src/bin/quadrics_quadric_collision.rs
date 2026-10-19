@@ -191,14 +191,11 @@ fn offset_at(t: f32) -> f64 {
     0.1 + 0.7 * phasor(phase).e20()
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let s = scene();
-    let offset = offset_at(t);
+/// The two ellipses and the blend at the peak (the hyperbola separating them, or the ellipse
+/// bridging their overlap), the tangent lines along the normal with their midline and the
+/// closest (or deepest) points, and near contact the blend's null line and the contact point.
+fn draw_ellipses(c: &mut Canvas, rect: Rect, s: &Scene, q2: Quadric) {
     let q1 = s.q1;
-    let q2 = s.second(offset);
     let (lambda, top) = peak(q1, q2);
     let state = if top > 1e-3 {
         "SEPARATED: MAX DET > 0"
@@ -207,18 +204,7 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         "TOUCHING: MAX DET = 0"
     };
-    caption(
-        c,
-        "QUADRIC COLLISION: THE DETERMINANT OF A BLEND",
-        "DUAL ELLIPSES IN PGA2D, Q(L) = Q1 (1-L) + Q2 L",
-    );
-
-    // The ellipses, on the left; the lowest tick a little above the corner.
-    let ax = Axes::equal(
-        Rect::new(0.0, 64.0, w * 0.58, h).inset(34.0, 30.0, 10.0, 24.0),
-        Point::xy(-0.4, 0.0),
-        3.3,
-    );
+    let ax = Axes::equal(rect, Point::xy(-0.4, 0.0), 3.3);
     ax.frame(c, state, "", "");
     if top > 0.0 {
         // The blend at the peak separates them: the hyperbola where its form vanishes.
@@ -262,18 +248,15 @@ fn draw(c: &mut Canvas, t: f32) {
         draw_line(&ax, c, line, 2.2, palette::RED);
         ax.scatter(c, &[point], Marker::Star, 13.0, palette::YELLOW);
     }
+}
 
-    // The cubic of the current pose, against the three reference poses.
-    // The right side, split into an upper and a lower half.
-    let right = Rect::new(w * 0.6, 60.0, w - 16.0, h - 10.0);
-    let half = Point2::direction(0.0, right.height() / 2.0);
-    let top_rect = Rect {
-        lo: right.lo,
-        hi: right.hi - half,
-    }
-    .inset(40.0, 20.0, 0.0, 30.0);
+/// The determinant of the blend of the current pose along the blend, against the three
+/// reference poses, its peak marked.
+fn draw_blend(c: &mut Canvas, rect: Rect, s: &Scene, q2: Quadric) {
+    let q1 = s.q1;
+    let (lambda, top) = peak(q1, q2);
     // The lowest tick a little above the corner, so its label clears the axis's.
-    let ax = Axes::new(top_rect, [0.0, 1.0], [-3.5, 3.0]);
+    let ax = Axes::new(rect, [0.0, 1.0], [-3.5, 3.0]);
     ax.frame(c, "DET Q(L) ALONG THE BLEND", "L", "");
     ax.line(c, ORIGIN2, Point2::xy(1.0, 0.0), 1.0, palette::GRID);
     let curve = |q2: Quadric| -> Vec<Point2> {
@@ -296,14 +279,14 @@ fn draw(c: &mut Canvas, t: f32) {
         8.0,
         palette::YELLOW,
     );
+}
 
-    // The peak against the offset: it crosses zero where they touch.
-    let bottom_rect = Rect {
-        lo: right.lo + half,
-        hi: right.hi,
-    }
-    .inset(40.0, 20.0, 0.0, 30.0);
-    let ax = Axes::new(bottom_rect, [-0.6, 0.8], [-1.5, 2.5]);
+/// The peak of the determinant against the offset, the current one marked: it crosses zero
+/// where the ellipses touch.
+fn draw_peaks(c: &mut Canvas, rect: Rect, s: &Scene, offset: f64) {
+    let q1 = s.q1;
+    let top = peak(q1, s.second(offset)).1;
+    let ax = Axes::new(rect, [-0.6, 0.8], [-1.5, 2.5]);
     ax.frame(c, "MAX DET AGAINST THE NORMAL OFFSET", "", "");
     ax.line(
         c,
@@ -339,6 +322,39 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::INK.mix_light(marker, 0.3),
         Align::Left,
     );
+}
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let s = scene();
+    let offset = offset_at(t);
+    let q2 = s.second(offset);
+    caption(
+        c,
+        "QUADRIC COLLISION: THE DETERMINANT OF A BLEND",
+        "DUAL ELLIPSES IN PGA2D, Q(L) = Q1 (1-L) + Q2 L",
+    );
+    // The ellipses, on the left; the lowest tick a little above the corner.
+    let left = Rect::new(0.0, 64.0, w * 0.58, h).inset(34.0, 30.0, 10.0, 24.0);
+    draw_ellipses(c, left, &s, q2);
+    // The right side, split into an upper and a lower half: the cubic of the current pose,
+    // and the peak against the offset.
+    let right = Rect::new(w * 0.6, 60.0, w - 16.0, h - 10.0);
+    let half = Point2::direction(0.0, right.height() / 2.0);
+    let top_rect = Rect {
+        lo: right.lo,
+        hi: right.hi - half,
+    }
+    .inset(40.0, 20.0, 0.0, 30.0);
+    draw_blend(c, top_rect, &s, q2);
+    let bottom_rect = Rect {
+        lo: right.lo + half,
+        hi: right.hi,
+    }
+    .inset(40.0, 20.0, 0.0, 30.0);
+    draw_peaks(c, bottom_rect, &s, offset);
 }
 
 fn main() {

@@ -12,11 +12,9 @@
 //! the energy, the trembling motion (Zitterbewegung). The animation traces the paths of three
 //! such electrons, with their spins, beside the two sheets of the mass shell.
 
-use std::sync::OnceLock;
-
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
-    backdrop, caption, palette, run, signal::wave,
+    backdrop, caption, palette, run_with, signal::wave,
 };
 
 mod dirac {
@@ -264,29 +262,26 @@ struct Scene {
     spins: Vec<Vec<Space>>,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let n = 21;
-        let shell = mass_shell(2.0, n);
-        // Each momentum (in the xy plane, from the origin) raised by its `k`-th energy along z.
-        let origin = Place::origin();
-        let sheet = |k: usize| -> Vec<Place> {
-            shell
-                .iter()
-                .map(|(p, e, _)| origin + along(spatial(*p) + Space::new(0.0, 0.0, e[k])))
-                .collect()
-        };
-        let (_, spinors, paths) = trembling(momentum(0.0, 0.0, 0.3), DURATION, SAMPLES);
-        Scene {
-            shell: (n, sheet(7), sheet(0)),
-            paths,
-            spins: spinors
-                .iter()
-                .map(|s| s.iter().map(|p| spatial(spin(*p))).collect())
-                .collect(),
-        }
-    })
+fn scene() -> Scene {
+    let n = 21;
+    let shell = mass_shell(2.0, n);
+    // Each momentum (in the xy plane, from the origin) raised by its `k`-th energy along z.
+    let origin = Place::origin();
+    let sheet = |k: usize| -> Vec<Place> {
+        shell
+            .iter()
+            .map(|(p, e, _)| origin + along(spatial(*p) + Space::new(0.0, 0.0, e[k])))
+            .collect()
+    };
+    let (_, spinors, paths) = trembling(momentum(0.0, 0.0, 0.3), DURATION, SAMPLES);
+    Scene {
+        shell: (n, sheet(7), sheet(0)),
+        paths,
+        spins: spinors
+            .iter()
+            .map(|s| s.iter().map(|p| spatial(spin(*p))).collect())
+            .collect(),
+    }
 }
 
 fn colours() -> [Light; 3] {
@@ -313,21 +308,12 @@ fn view_of(rect: Rect, drop: f32, height: f32) -> Rect {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let s = scene();
+/// The trembling paths, traced as time goes on, with each electron's spin where it is.
+fn draw_paths(c: &mut Canvas, left: Rect, s: &Scene, phase: f32, size: f32) {
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let size = (h / 36.0).clamp(7.0, 14.0);
-    let phase = t / SECONDS;
     let colours = colours();
     let down = Point2::direction(0.0, 1.0);
-    let (left, right) = (
-        Rect::new(0.0, 0.0, w * 0.6, h),
-        Rect::new(w * 0.6, 0.0, w, h),
-    );
-
-    // The trembling paths, traced as time goes on, with each electron's spin where it is.
     let upto = ((phase * SAMPLES as f32) as usize).clamp(2, SAMPLES);
     let azimuth = -1.05 + 0.5 * wave(phase * core::f32::consts::TAU);
     let view = view_of(left, h * 0.04, h * 1.08);
@@ -370,8 +356,13 @@ fn draw(c: &mut Canvas, t: f32) {
             Align::Left,
         );
     }
+}
 
-    // The mass shell: the two sheets of energies over the momentum plane, turning.
+/// The mass shell: the two sheets of energies over the momentum plane, turning.
+fn draw_shell(c: &mut Canvas, right: Rect, s: &Scene, phase: f32, size: f32) {
+    let h = c.rect().height();
+    let down = Point2::direction(0.0, 1.0);
+    let up = Point3::direction(0.0, 0.0, 1.0);
     let (n, top, bottom) = &s.shell;
     let azimuth = -0.9 + phase * core::f32::consts::TAU;
     let view = view_of(right, h * 0.06, h * 1.12);
@@ -428,6 +419,16 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::SKY,
         Align::Center,
     );
+}
+
+fn draw(c: &mut Canvas, s: &Scene, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let size = (h / 36.0).clamp(7.0, 14.0);
+    let phase = t / SECONDS;
+    draw_paths(c, Rect::new(0.0, 0.0, w * 0.6, h), s, phase, size);
+    draw_shell(c, Rect::new(w * 0.6, 0.0, w, h), s, phase, size);
     caption(
         c,
         "THE DIRAC ELECTRON: ZITTERBEWEGUNG",
@@ -436,7 +437,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("dirac", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("dirac", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -514,6 +515,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

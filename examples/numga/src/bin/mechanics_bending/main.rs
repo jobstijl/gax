@@ -41,10 +41,9 @@ use beam::{Beam, Body, LENGTH, P3, Strain};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, Point2, Rect, Scene3, backdrop,
-    caption, colormap, palette, run,
+    caption, colormap, palette, run_with,
 };
 use sections::{NAMES, P2};
-use std::sync::OnceLock;
 
 const SECONDS: f32 = 12.0;
 /// Load directions sampled for the stress colours' range.
@@ -73,28 +72,25 @@ struct Scene {
     largest: f64,
 }
 
-fn scene() -> &'static Scene {
-    static SCENE: OnceLock<Scene> = OnceLock::new();
-    SCENE.get_or_init(|| {
-        let bodies: Vec<Body> = sections::sections().into_iter().map(beam::body).collect();
-        let edges = bodies.iter().map(|b| edges(&b.section)).collect();
-        let kerns = bodies.iter().map(beam::kern).collect();
-        let largest = bodies
-            .iter()
-            .flat_map(|b| (0..LOAD_SAMPLES).map(move |k| (b, k)))
-            .map(|(b, k)| {
-                let angle = core::f64::consts::TAU * k as f64 / LOAD_SAMPLES as f64;
-                let clamp = beam::cantilever(b, beam::turned_load(angle)).strains[0];
-                corner_stresses(b, clamp).map(f64::abs).fold(0.0, f64::max)
-            })
-            .fold(0.0, f64::max);
-        Scene {
-            bodies,
-            edges,
-            kerns,
-            largest,
-        }
-    })
+fn scene() -> Scene {
+    let bodies: Vec<Body> = sections::sections().into_iter().map(beam::body).collect();
+    let edges = bodies.iter().map(|b| edges(&b.section)).collect();
+    let kerns = bodies.iter().map(beam::kern).collect();
+    let largest = bodies
+        .iter()
+        .flat_map(|b| (0..LOAD_SAMPLES).map(move |k| (b, k)))
+        .map(|(b, k)| {
+            let angle = core::f64::consts::TAU * k as f64 / LOAD_SAMPLES as f64;
+            let clamp = beam::cantilever(b, beam::turned_load(angle)).strains[0];
+            corner_stresses(b, clamp).map(f64::abs).fold(0.0, f64::max)
+        })
+        .fold(0.0, f64::max);
+    Scene {
+        bodies,
+        edges,
+        kerns,
+        largest,
+    }
 }
 
 /// A triangle's edge: the join of two of its corners, an intrinsic line.
@@ -141,8 +137,7 @@ fn through(line: Strain, centre: P2, reach: f64) -> [P2; 2] {
 
 /// One section at the clamp under a load: its stress, kern, principal and neutral axes, the
 /// load's direction and the way the tip moves.
-fn draw_section(c: &mut Canvas, rect: Rect, k: usize, load: P3, beam: &Beam) {
-    let sc = scene();
+fn draw_section(c: &mut Canvas, rect: Rect, sc: &Scene, k: usize, load: P3, beam: &Beam) {
     let body = &sc.bodies[k];
     let ax = Axes::equal(rect, ORIGIN2, SECTION_REACH);
     let strain = beam.strains[0];
@@ -212,7 +207,7 @@ fn view() -> gax::pga3d::Point<(gax::pga3d::Point,)> {
 /// The four cantilevers in space side by side under a load, each the straight beam faintly, the
 /// bent one by a few cross-sections and the edges along it, and the load at its tip; their names
 /// at their clamps.
-fn draw_beams(c: &mut Canvas, rect: Rect, load: P3, beams: &[Beam]) {
+fn draw_beams(c: &mut Canvas, rect: Rect, sc: &Scene, load: P3, beams: &[Beam]) {
     let view = view();
     // Each beam's place across the view, and its clamp's centre there.
     let offset = |k: usize| P3::direction(0.0, BEAM_SPACING * k as f64, 0.0);
@@ -221,7 +216,7 @@ fn draw_beams(c: &mut Canvas, rect: Rect, load: P3, beams: &[Beam]) {
     let lens = Lens::Parallel(BEAM_VIEW);
     let cam = Camera::orbit(rect, middle, 30.0, BEAM_AZIMUTH, BEAM_ELEVATION, lens);
     let cam = panel3(c, rect, cam, |s| {
-        for (k, (body, beam)) in scene().bodies.iter().zip(beams).enumerate() {
+        for (k, (body, beam)) in sc.bodies.iter().zip(beams).enumerate() {
             draw_beam(s, body, load, beam, |p| view.of(p) + offset(k));
         }
     });
@@ -268,9 +263,8 @@ fn draw_beam(s: &mut Scene3, body: &Body, load: P3, beam: &Beam, place: impl Fn(
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, sc: &Scene, t: f32) {
     backdrop(c);
-    let sc = scene();
     let angle = core::f64::consts::TAU * f64::from(t / SECONDS);
     let load = beam::turned_load(angle);
     let beams: Vec<Beam> = sc
@@ -287,9 +281,9 @@ fn draw(c: &mut Canvas, t: f32) {
             0.25 * (column + 1.0),
             0.5 * (row + 1.0),
         );
-        draw_section(c, cell.inset(6.0, 18.0, 6.0, 4.0), k, load, bent);
+        draw_section(c, cell.inset(6.0, 18.0, 6.0, 4.0), sc, k, load, bent);
     }
-    draw_beams(c, below.part(0.5, 0.0, 1.0, 1.0), load, &beams);
+    draw_beams(c, below.part(0.5, 0.0, 1.0, 1.0), sc, load, &beams);
     caption(
         c,
         "EULER-BERNOULLI BEAM BENDING: A TIP LOAD TURNING ONCE AROUND",
@@ -299,7 +293,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("bending", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("bending", SECONDS).size(960, 540), scene, draw);
 }
 
 #[cfg(test)]
@@ -529,6 +523,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::scene(), 0.5);
     }
 }

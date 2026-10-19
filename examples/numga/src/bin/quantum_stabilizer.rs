@@ -28,9 +28,8 @@ use gax_numga_examples::points::circle;
 use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, palette,
-    run,
+    run_with,
 };
-use std::sync::OnceLock;
 
 gax::algebra! {
     algebra cl44 "Cl(4,4): four directions that square to one (ea eb ec ed) and four that square to minus one (ee ef eg eh).";
@@ -316,20 +315,17 @@ struct Data {
     bare: Vec<f64>,
 }
 
-fn data() -> &'static Data {
-    static D: OnceLock<Data> = OnceLock::new();
-    D.get_or_init(|| {
-        let code = Code::new();
-        let rates = rates();
-        let (kept, encoded, bare) = noisy(&code, ANGLES, &rates);
-        Data {
-            code,
-            rates,
-            kept,
-            encoded,
-            bare,
-        }
-    })
+fn data() -> Data {
+    let code = Code::new();
+    let rates = rates();
+    let (kept, encoded, bare) = noisy(&code, ANGLES, &rates);
+    Data {
+        code,
+        rates,
+        kept,
+        encoded,
+        bare,
+    }
 }
 
 /// The colour of a check's outcome: passed, or noticed.
@@ -471,9 +467,8 @@ fn draw_noise(c: &mut Canvas, ax: &Axes, d: &Data, rate: f64) {
     );
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
-    let d = data();
     let screen = c.rect();
     let progress = (t / SECONDS).fract();
     let tau = core::f64::consts::TAU;
@@ -513,7 +508,7 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    run(Anim::new("stabilizer", SECONDS).size(960, 540), draw);
+    run_with(Anim::new("stabilizer", SECONDS).size(960, 540), data, draw);
 }
 
 #[cfg(test)]
@@ -599,6 +594,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 0.5);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 0.5);
     }
 }

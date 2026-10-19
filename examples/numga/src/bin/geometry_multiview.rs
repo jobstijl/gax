@@ -21,9 +21,8 @@ use gax::motions::Linear;
 
 use gax_numga_examples::signal::smoothstep;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run_with,
 };
-use std::sync::OnceLock;
 
 /// The multiview core over one algebra: `gax::$ga` with `$Plane` its vectors (numga's `Plane`,
 /// a line in the plane), and its `Direction`, the ideal points.
@@ -503,21 +502,19 @@ struct Data {
     cones: Vec<Vec<plane::Quadric>>,
 }
 
-fn data() -> &'static Data {
-    static DATA: OnceLock<Data> = OnceLock::new();
-    DATA.get_or_init(|| {
-        let (truth, cones) = plane::observe(&plane::three_camera_truth());
-        Data {
-            scenarios: vec![
-                plane::one_camera(ITERATIONS),
-                plane::two_cameras(ITERATIONS),
-                plane::three_cameras(ITERATIONS),
-                plane::schur(ITERATIONS),
-            ],
-            truth,
-            cones,
-        }
-    })
+/// The four scenarios, and the truth and the sight cones they are measured against.
+fn data() -> Data {
+    let (truth, cones) = plane::observe(&plane::three_camera_truth());
+    Data {
+        scenarios: vec![
+            plane::one_camera(ITERATIONS),
+            plane::two_cameras(ITERATIONS),
+            plane::three_cameras(ITERATIONS),
+            plane::schur(ITERATIONS),
+        ],
+        truth,
+        cones,
+    }
 }
 
 fn camera_colour(c: usize) -> Light {
@@ -695,40 +692,40 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
-    backdrop(c);
-    let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
-    let data = data();
-    let per = PER_STEP * ITERATIONS as f32 + HOLD;
-    let which = ((t / per) as usize).min(data.scenarios.len() - 1);
-    let s = &data.scenarios[which];
-    let local = (t - which as f32 * per).max(0.0);
-    let progress = (local / PER_STEP).min(ITERATIONS as f32);
-    let k = (progress as usize).min(ITERATIONS - 1);
-    let f = smoothstep(f64::from(progress - k as f32));
-    let motors: Vec<plane::M> = s.states[k]
-        .iter()
-        .zip(&s.states[k + 1])
-        .map(|(a, b)| gax::pga2d::Motor::interpolate(*a, *b, f))
-        .collect();
-    let top = 64.0;
-    let rect = Rect::new(0.0, top, w * 0.5, h).inset(8.0, 4.0, 8.0, 8.0);
+/// The scene at the poses now, on the left: the cones and splats, then each moving camera's
+/// spread, its information blended between the steps as its pose is.
+fn draw_poses(
+    c: &mut Canvas,
+    rect: Rect,
+    data: &Data,
+    s: &plane::Scenario,
+    at: (usize, f64),
+    motors: &[plane::M],
+) {
+    let (k, f) = at;
     let span = (Y_RANGE[1] - Y_RANGE[0]) * 0.5;
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])), span);
-    scene(c, &ax, &motors, &data.cones);
+    scene(c, &ax, motors, &data.cones);
     if let Some(info) = &s.information {
         let blended: Vec<plane::Information> = info[k]
             .iter()
             .zip(&info[k + 1])
             .map(|(a, b)| *a + (*b - *a).gp(f))
             .collect();
-        covariances(c, &ax, &motors, &blended);
+        covariances(c, &ax, motors, &blended);
     }
-    // Right: the point error along each scenario's steps, log scale, with a decade of room
-    // above the errors for the legend.
-    let chart = Rect::new(w * 0.5, top + 30.0, w, h * 0.8).inset(60.0, 20.0, 20.0, 40.0);
-    let down = Point2::direction(0.0, 1.0);
+}
+
+/// The point error along each scenario's steps, log scale, with a decade of room above the
+/// errors for the legend: the scenario shown bold, with a dot at its progress.
+fn draw_errors(
+    c: &mut Canvas,
+    chart: Rect,
+    data: &Data,
+    which: usize,
+    motors: &[plane::M],
+    progress: f32,
+) {
     let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 10.0]).log_y();
     errors.frame(c, "POINT RMSE ALONG THE STEPS", "GAUSS-NEWTON STEP", "RMSE");
     for (i, sc) in data.scenarios.iter().enumerate() {
@@ -746,7 +743,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let strength = if i == which { 1.0 } else { 0.45 };
         errors.polyline(c, &curve, shown, (palette::series(i)).faded(strength));
         if i == which {
-            let (now, _) = plane::triangulate(&motors, &data.cones);
+            let (now, _) = plane::triangulate(motors, &data.cones);
             let e = plane::rmse(&now, &data.truth).max(1e-5) as f32;
             let here = Point2::xy(progress, e);
             errors.scatter(c, &[here], Marker::Dot, 9.0, palette::series(i));
@@ -764,8 +761,12 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|(i, name)| (name.trim_end_matches(','), palette::series(i)))
         .collect();
     errors.legend(c, &names);
-    // Notes under the chart's frame (and its axis labels): which cameras move, the cost now,
-    // and what the scene shows.
+}
+
+/// Notes under the chart's frame (and its axis labels): which cameras move, the cost now, and
+/// what the scene shows.
+fn draw_notes(c: &mut Canvas, chart: Rect, data: &Data, s: &plane::Scenario, motors: &[plane::M]) {
+    let down = Point2::direction(0.0, 1.0);
     let pick = |free: bool| -> String {
         let cams: Vec<String> = (s.free.iter().enumerate())
             .filter(|(_, f)| (**f != 0.0) == free)
@@ -777,8 +778,8 @@ fn draw(c: &mut Canvas, t: f32) {
             cams.join(", ")
         }
     };
-    let (now, _) = plane::triangulate(&motors, &data.cones);
-    let cost = plane::cone_cost(&motors, &now, &data.cones);
+    let (now, _) = plane::triangulate(motors, &data.cones);
+    let cost = plane::cone_cost(motors, &now, &data.cones);
     for (k, (text, size, light)) in [
         (
             format!("CAMERAS ANCHORED: {}   FREE: {}", pick(false), pick(true)),
@@ -795,6 +796,30 @@ fn draw(c: &mut Canvas, t: f32) {
         let at = chart.bottom_left() + down.gp(64.0 + 17.0 * k as f32);
         c.text(text, at, *size, *light, Align::Left);
     }
+}
+
+fn draw(c: &mut Canvas, data: &Data, t: f32) {
+    backdrop(c);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let per = PER_STEP * ITERATIONS as f32 + HOLD;
+    let which = ((t / per) as usize).min(data.scenarios.len() - 1);
+    let s = &data.scenarios[which];
+    let local = (t - which as f32 * per).max(0.0);
+    let progress = (local / PER_STEP).min(ITERATIONS as f32);
+    let k = (progress as usize).min(ITERATIONS - 1);
+    let f = smoothstep(f64::from(progress - k as f32));
+    let motors: Vec<plane::M> = s.states[k]
+        .iter()
+        .zip(&s.states[k + 1])
+        .map(|(a, b)| gax::pga2d::Motor::interpolate(*a, *b, f))
+        .collect();
+    let top = 64.0;
+    let rect = Rect::new(0.0, top, w * 0.5, h).inset(8.0, 4.0, 8.0, 8.0);
+    draw_poses(c, rect, data, s, (k, f), &motors);
+    let chart = Rect::new(w * 0.5, top + 30.0, w, h * 0.8).inset(60.0, 20.0, 20.0, 40.0);
+    draw_errors(c, chart, data, which, &motors, progress);
+    draw_notes(c, chart, data, s, &motors);
     caption(
         c,
         "MULTIVIEW: BUNDLE ADJUSTMENT ON CONE QUADRICS",
@@ -804,7 +829,7 @@ fn draw(c: &mut Canvas, t: f32) {
 
 fn main() {
     let seconds = (PER_STEP * ITERATIONS as f32 + HOLD) * 4.0;
-    run(Anim::new("multiview", seconds).size(960, 540), draw);
+    run_with(Anim::new("multiview", seconds).size(960, 540), data, draw);
 }
 
 #[cfg(test)]
@@ -1077,6 +1102,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        gax_numga_examples::app::assert_draws(super::draw, 1.0);
+        gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 1.0);
     }
 }

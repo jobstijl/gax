@@ -25,33 +25,32 @@ mod mirrors;
 mod six_hundred_cell;
 mod tilings;
 
-use gax_numga_examples::{Anim, Axes, Canvas, Light, ORIGIN2, Rect, backdrop, caption, light, run};
+use gax_numga_examples::{
+    Anim, Axes, Canvas, Light, ORIGIN2, Rect, backdrop, caption, light, run_with,
+};
+use six_hundred_cell::Polytope;
 
 /// The seconds each scene shows.
 const ACT: f32 = 7.0;
-/// A scene: its title, its caption, and its drawing at its own time, from 0 to [`ACT`].
-type Scene = (&'static str, &'static str, fn(&mut Canvas, f32));
-/// The scenes, in turn.
+/// A scene: its title and its caption.
+type Scene = (&'static str, &'static str);
+/// The scenes, in turn (drawn by [`draw`]).
 const ACTS: [Scene; 4] = [
     (
         "REFLECTIONS: A KALEIDOSCOPE",
         "TWO MIRRORS AT A HALF TURN OVER N, THEIR ROTOR'S N-TH POWER A SCALAR (VGA2D)",
-        kaleidoscope::draw,
     ),
     (
         "REFLECTIONS: THREE MIRRORS ON THE SPHERE",
         "AT HALF TURNS OVER 2, 3 AND 5 THEY CUT IT INTO 120 TRIANGLES (VGA3D)",
-        icosahedron::draw,
     ),
     (
         "REFLECTIONS: THE 600-CELL",
         "THE PRODUCTS OF THE MIRRORS' ROTORS: 120 UNIT SPINORS ON THE THREE-SPHERE (VGA3D)",
-        six_hundred_cell::draw,
     ),
     (
         "REFLECTIONS: SPHERE, PLANE, HYPERBOLIC PLANE",
         "THE ANGLE SUM PICKS THE SIGNATURE: X+Y+Z+, X+Y+W0, X+Y+T-",
-        tilings::draw,
     ),
 ];
 
@@ -109,17 +108,25 @@ pub fn tile(flips: u32, nearness: f64) -> Light {
     )
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+/// The scene showing at `t`, at its own time, from 0 to [`ACT`].
+fn draw(c: &mut Canvas, polytope: &Polytope, t: f32) {
     backdrop(c);
     let act = ((t / ACT) as usize).min(ACTS.len() - 1);
-    let (title, sub, scene) = ACTS[act];
-    scene(c, t - act as f32 * ACT);
+    let at = t - act as f32 * ACT;
+    match act {
+        0 => kaleidoscope::draw(c, at),
+        1 => icosahedron::draw(c, at),
+        2 => six_hundred_cell::draw(c, polytope, at),
+        _ => tilings::draw(c, at),
+    }
+    let (title, sub) = ACTS[act];
     caption(c, title, sub);
 }
 
 fn main() {
-    run(
+    run_with(
         Anim::new("reflections", ACT * ACTS.len() as f32).size(960, 540),
+        Polytope::new,
         draw,
     );
 }
@@ -128,8 +135,10 @@ fn main() {
 mod tests {
     #[test]
     fn every_scene_draws() {
+        let polytope = super::Polytope::new();
         for act in 0..super::ACTS.len() {
-            gax_numga_examples::app::assert_draws(super::draw, (act as f32 + 0.4) * super::ACT);
+            let t = (act as f32 + 0.4) * super::ACT;
+            gax_numga_examples::app::assert_draws_with(super::draw, &polytope, t);
         }
     }
 }

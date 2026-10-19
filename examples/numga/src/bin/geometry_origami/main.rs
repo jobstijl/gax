@@ -21,11 +21,10 @@ mod picture;
 #[cfg(test)]
 mod tests;
 
-use gax_numga_examples::{Align, Anim, Canvas, Point2, Rect, backdrop, caption, palette, run};
+use gax_numga_examples::{Align, Anim, Canvas, Point2, Rect, backdrop, caption, palette, run_with};
 use kabuto::{Stage, stages};
 use paper::{P, Paper};
 use picture::{Picture, View};
-use std::sync::OnceLock;
 
 /// numga's view: its elevation and azimuth, in degrees.
 const ELEVATION: f64 = 35.0;
@@ -48,24 +47,20 @@ const NAMES: [&str; 11] = [
     "THE LAST FLAP BEHIND",
 ];
 
-/// The folds, found once, and one view that frames the paper through all of them.
-fn recipe() -> &'static (Vec<Stage>, View) {
-    static RECIPE: OnceLock<(Vec<Stage>, View)> = OnceLock::new();
-    RECIPE.get_or_init(|| {
-        let stages = stages();
-        let points: Vec<P> = stages
-            .iter()
-            .flat_map(|s| [s.at(s.peak), s.at(s.end)])
-            .flat_map(|paper: Paper| paper.points)
-            .collect();
-        let view = View::new(ELEVATION, AZIMUTH, &points);
-        (stages, view)
-    })
+/// The folds, and one view that frames the paper through all of them.
+fn recipe() -> (Vec<Stage>, View) {
+    let stages = stages();
+    let points: Vec<P> = stages
+        .iter()
+        .flat_map(|s| [s.at(s.peak), s.at(s.end)])
+        .flat_map(|paper: Paper| paper.points)
+        .collect();
+    let view = View::new(ELEVATION, AZIMUTH, &points);
+    (stages, view)
 }
 
 /// The fold under way at time `t`, and the paper then.
-fn paper_at(t: f32) -> (usize, Paper) {
-    let (stages, _) = recipe();
+fn paper_at(stages: &[Stage], t: f32) -> (usize, Paper) {
     let fold = ((t / PER_FOLD) as usize).min(stages.len() - 1);
     let fraction = f64::from((t / PER_FOLD - fold as f32).clamp(0.0, 1.0));
     let stage = &stages[fold];
@@ -73,8 +68,7 @@ fn paper_at(t: f32) -> (usize, Paper) {
 }
 
 /// The paper in a square of `rect`, pixel by pixel.
-fn draw_paper(c: &mut Canvas, rect: Rect, paper: &Paper) {
-    let (_, view) = recipe();
+fn draw_paper(c: &mut Canvas, rect: Rect, view: &View, paper: &Paper) {
     let size = rect.width().min(rect.height());
     let corner = rect.centre() - Point2::direction(0.5 * size, 0.5 * size);
     let picture = Picture::of(paper, view, f64::from(size));
@@ -105,11 +99,11 @@ fn draw_recipe(c: &mut Canvas, at: Point2, current: usize) {
     }
 }
 
-fn draw(c: &mut Canvas, t: f32) {
+fn draw(c: &mut Canvas, (stages, view): &(Vec<Stage>, View), t: f32) {
     backdrop(c);
     let screen = c.rect();
-    let (fold, paper) = paper_at(t);
-    draw_paper(c, screen.part(0.0, 0.1, 0.62, 1.0), &paper);
+    let (fold, paper) = paper_at(stages, t);
+    draw_paper(c, screen.part(0.0, 0.1, 0.62, 1.0), view, &paper);
     draw_recipe(c, screen.part(0.6, 0.22, 1.0, 1.0).lo, fold);
     caption(
         c,
@@ -119,9 +113,11 @@ fn draw(c: &mut Canvas, t: f32) {
 }
 
 fn main() {
-    let folds = recipe().0.len() as f32;
-    run(
+    let recipe = recipe();
+    let folds = recipe.0.len() as f32;
+    run_with(
         Anim::new("origami", folds * PER_FOLD + HOLD).size(960, 540),
+        || recipe,
         draw,
     );
 }

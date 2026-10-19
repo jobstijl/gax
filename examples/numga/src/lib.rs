@@ -1,6 +1,6 @@
 //! numga's examples, ported to gax: shared drawing code. Each example is a binary in
 //! `src/bin/` that computes with gax and draws its frames on a [`Canvas`]; [`run`] shows them in
-//! a window or writes a GIF or PNG.
+//! a window or writes a GIF or PNG ([`run_with`] for frames drawn from data computed once).
 //!
 //! The drawing code's geometry goes through gax too, as in `examples/warp`: distances are gax's
 //! (`distance`, and in the per-pixel loops the norms of joins), turns are rotation motors, the
@@ -48,7 +48,7 @@ pub mod signal;
 pub mod testing;
 pub mod view;
 
-pub use app::{Anim, run};
+pub use app::{Anim, run, run_with};
 pub use canvas::{Canvas, Rect};
 pub use font::Align;
 pub use gax_colour::{Light, light};
