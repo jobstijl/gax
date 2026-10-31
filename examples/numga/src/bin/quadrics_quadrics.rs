@@ -313,24 +313,29 @@ mod tests {
     }
 
     /// The scenario's checks: incidence is reciprocal, the inverse map recovers the tangent
-    /// from the contact point.
+    /// from the contact point, and it is the tangent plane again (their meet vanishes).
     #[test]
     fn polar_reciprocity() {
         let (tangent, contact, recovered) = reciprocity(body(), Plane::new(1.0, 2.0, 3.0, 0.0));
         assert!((tangent & contact).s().abs() < 1e-12);
         assert!((recovered & contact).s().abs() < 1e-12);
+        assert!((recovered ^ tangent).c.iter().all(|x| x.abs() < 1e-12));
         for k in 0..12 {
             let (_, contact, recovered) = reciprocity(body(), normal(0.5 * k as f64));
             assert!((recovered & contact).s().abs() < 1e-12);
         }
     }
 
-    /// The scenario's check: the world map's contact point is the moved body contact point
-    /// (the line joining them vanishes), along the whole screw.
+    /// The scenario's checks: the carried map takes the carried plane to a point on it, the
+    /// carried contact point (the line joining them vanishes, every coefficient, numga's 1e-11),
+    /// along the whole screw.
     #[test]
     fn motor_transport() {
-        let (_, _, world_contact, moved) = transport(motor(), Plane::new(1.0, 2.0, 3.0, 0.0));
+        let (_, world_tangent, world_contact, moved) =
+            transport(motor(), Plane::new(1.0, 2.0, 3.0, 0.0));
+        assert!((world_contact & world_tangent).s().abs() < 1e-12);
         let joined = world_contact & moved;
+        assert!(joined.c.iter().all(|x| x.abs() < 1e-11), "{joined:?}");
         assert!((joined | joined).s().abs() < 1e-20);
         for k in 0..=8 {
             let m = Motor::interpolate(
