@@ -38,7 +38,9 @@ use gax_numga_examples::{
 mod spacetime;
 
 mod terrell {
-    use super::spacetime::{Bivector, Direction, Even, in_space, space, time, x, y, z};
+    #[cfg(test)]
+    use super::spacetime::z;
+    use super::spacetime::{Bivector, Direction, Even, in_space, space, time, x, y};
 
     /// An event or a ray of light: an intrinsic trivector.
     pub type Event = Direction;
@@ -82,6 +84,7 @@ mod terrell {
 
     /// The ray from a point of a body at rest to the camera at rest beside it, in their frame:
     /// a straight line in space, taking as long as it is long.
+    #[cfg(test)]
     pub fn ray(camera: Event, point: Event) -> Event {
         let offset = camera - point;
         offset + time().gp(offset.norm())
@@ -89,6 +92,7 @@ mod terrell {
 
     /// The outline of a sphere as the camera sees it, at `angle` around it: where the rays from
     /// the camera graze the sphere, a circle on the sphere square to the camera's direction.
+    #[cfg(test)]
     pub fn outline(camera: Event, centre: Event, radius: f64, angle: f64) -> Event {
         let offset = camera - centre;
         let ratio = radius / offset.norm();

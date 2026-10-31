@@ -37,9 +37,12 @@ use gax_numga_examples::{
 mod spacetime;
 
 mod synchronization {
-    use super::spacetime::{Bivector, Direction, Even, Vector, space, t, time, x, y, z};
+    #[cfg(test)]
+    use super::spacetime::Vector;
+    use super::spacetime::{Bivector, Direction, Even, space, t, time, x, y, z};
 
     /// A circle on the sphere: a cut, a vector.
+    #[cfg(test)]
     pub type Cut = Vector;
     /// A point of the sphere, a null ray `direction + time`: an intrinsic trivector.
     pub type Point = Direction;
@@ -160,6 +163,7 @@ mod synchronization {
 
     /// The grid's cuts: great circles through the poles, the cut `y` turned about `z`, and the
     /// parallels, `z + t sin(latitude)`, whose points lie at height minus that sine.
+    #[cfg(test)]
     pub fn grid() -> Vec<Cut> {
         let xy = (x() ^ y()).cast::<Bivector>();
         let meridians = (0..MERIDIANS).map(|k| {

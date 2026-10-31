@@ -35,7 +35,10 @@ use gax_numga_examples::{
 mod spacetime;
 
 mod bottle {
-    use super::spacetime::{Bivector, Direction, Vector, in_space, space, t, time, x, y, z};
+    use super::spacetime::{Bivector, Direction, in_space, space, time, x, y, z};
+    #[cfg(test)]
+    use super::spacetime::{Vector, t};
+    #[cfg(test)]
     use gax::ApproxEq;
 
     /// An event, a velocity or a displacement: an intrinsic trivector.
@@ -129,6 +132,7 @@ mod bottle {
 
     /// The magnetic moment of the circling, per unit charge over mass: the Lorentz force squared
     /// over twice the field cubed, the momentum of the circling squared over twice the field.
+    #[cfg(test)]
     pub fn moment(velocity: Event, magnetic: Field) -> f64 {
         let force: Vector = velocity & magnetic;
         let strength = magnetic.norm();
@@ -138,17 +142,20 @@ mod bottle {
     }
 
     /// The Lorentz force less the Hodge dual (numga's dual) of the field's turn of the velocity.
+    #[cfg(test)]
     pub fn force_mismatch(velocity: Event, magnetic: Field) -> f64 {
         let turn = velocity.commutator(magnetic).hodge();
         turn.max_abs_diff(&(velocity & magnetic))
     }
 
     /// How far a velocity runs in the lab's time per unit of its own: its Lorentz factor.
+    #[cfg(test)]
     pub fn lorentz_factor(velocity: Event) -> f64 {
         (t() & velocity).s()
     }
 
     /// How high along the axis an event is.
+    #[cfg(test)]
     pub fn height(event: Event) -> f64 {
         (z() & event).s()
     }
@@ -169,6 +176,7 @@ mod bottle {
     pub const PROPER_STEP: f64 = 0.1;
     pub const STEPS: usize = 1000;
     /// The points on the axis between the coils the loss cone is read from.
+    #[cfg(test)]
     pub const AXIS_POINTS: usize = 401;
 
     pub fn pitch(k: usize) -> f64 {
@@ -211,6 +219,7 @@ mod bottle {
     }
 
     /// The field's strength on the axis between the coils.
+    #[cfg(test)]
     pub fn axis_strengths(wire: &Wire) -> Vec<f64> {
         let [lo, hi] = COIL_HEIGHTS;
         (0..AXIS_POINTS)

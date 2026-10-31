@@ -239,6 +239,7 @@ pub fn two_boosts(rapidity: f64, samples: usize) -> TwoBoosts {
 
 /// The turn a rocket's two equal boosts along its own `x` and `y` leave behind: their product
 /// after the straight boost from rest to the same velocity is undone.
+#[cfg(test)]
 pub fn wigner_turn(rapidity: f64) -> Rotor {
     let [ax, ay, _] = space();
     let rocket = boost(ax, rapidity) * boost(ay, rapidity);
@@ -246,6 +247,7 @@ pub fn wigner_turn(rapidity: f64) -> Rotor {
 }
 
 /// Twice the turn's angle in `xy`: twice its logarithm's scalar product with `xy`.
+#[cfg(test)]
 pub fn wigner_angle(rapidity: f64) -> f64 {
     2.0 * wigner_turn(rapidity).unit().log().scalar_product(xy()).s()
 }
@@ -321,6 +323,7 @@ pub fn bouncing(velocities: &[Velocity]) -> Vec<Spin> {
 /// The area the square of momenta of side `2 a` encloses on the hyperboloid: four times the
 /// integral of `1 / √(1 + x² + y²)` over a quarter of it.
 #[allow(clippy::disallowed_methods)] // the closed form of the area, the reference
+#[cfg(test)]
 pub fn square_area(a: f64) -> f64 {
     4.0 * (2.0 * a * (a / (1.0 + a * a).sqrt()).asinh()
         - (a * a / (1.0 + 2.0 * a * a).sqrt()).atan())
