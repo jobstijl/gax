@@ -241,6 +241,32 @@ simplex, and gives:
   positive definite on any mesh.
 * `whitney_1(&mesh, cochain, top, at)`, the Whitney map on edges: the vector field of a 1-cochain
   inside a top simplex. It inverts the de Rham map.
+* `form_inner(top, a, b)`, the pointwise inner product of two forms of one degree through the
+  metric; integrated against the Whitney forms it is `mass(k)`.
+
+The Whitney forms of every degree need no metric, so they are the topology's:
+`topology.whitney(k, cochain, top, at)` is the form `Σ c_σ W_σ` of a `k`-cochain at a
+barycentric point of a top simplex, and `topology.whitney_d(k, cochain, top)` its exterior
+derivative, the Whitney form of `d c`. A `dec::Form` holds its coefficients on the products
+`dλ_I` of the barycentric differentials, the basis dual to the top simplex's edges, so
+`form.on_face(&[a, b, …])` reads it on a face by its local vertices, and a face's integral of a
+Whitney form is that value at the face's centroid over `k!`. The cochain may take values in any
+kind (a cochain of vectors gives a vector-valued form):
+
+```rust
+use gax::field::Field;
+use gax::mesh::Topology;
+use gax::vga3d::Scalar;
+
+// A tetrahedron's six edges carry the differences of a vertex field: its 1-form is then a
+// gradient, so its derivative vanishes, and it integrates back to the values on each edge.
+let tet = Topology::new(4, &[[0, 1, 2, 3]]).unwrap();
+let f: Field<_> = [0.0, 1.0, 3.0, -2.0].into_iter().map(Scalar::<(), f64>::new).collect();
+let df = &tet.d::<Scalar<(), f64>>(0) * &f;
+assert!(tet.whitney_d(1, &df, 0).coefficients().iter().all(|c| c.s().abs() < 1e-15));
+let w = tet.whitney(1, &df, 0, &[0.0, 0.0, 0.5, 0.5]); // the midpoint of edge (2 3)
+assert!((w.on_face(&[2, 3]).s() - (-2.0 - 3.0)).abs() < 1e-15);
+```
 
 `dec::de_rham(&mesh, rule, f)` integrates a `k`-vector field over each `k`-simplex against its
 measure, `∫_σ F ∗ ~dX`: a cochain. It commutes with the derivative, `R(∇∧F) = d R(F)`, which is

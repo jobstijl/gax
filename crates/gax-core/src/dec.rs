@@ -11,7 +11,9 @@
 //!   stars: the diagonal one, `⋆ₖ = |σ*| / |σ|` (Hirani 2003), and the Galerkin one, the mass
 //!   matrix of the Whitney forms.
 //! * [`de_rham`] integrates a `k`-vector field over each `k`-simplex: a cochain. The Whitney
-//!   map [`Geometry::whitney_1`] takes a cochain on the edges back to a vector field.
+//!   map [`Geometry::whitney_1`] takes a cochain on the edges back to a vector field, and
+//!   [`Topology::whitney`] a cochain of any degree to its [`Form`] on a top simplex, with its
+//!   exterior derivative [`Topology::whitney_d`].
 //!
 //! ```
 //! use gax::dec::Geometry;
@@ -38,11 +40,11 @@
 
 extern crate std;
 
-use crate::coef::Real;
+use crate::coef::{Coef, Real};
 use crate::field::{Field, SparseMap};
 use crate::kind::{Extensor, Kind};
 use crate::mesh::{Mesh, Topology};
-use crate::ops::{Reverse, ScalarProduct};
+use crate::ops::{Gp, Reverse, ScalarProduct};
 use crate::simplex::{Measure, Position, Rule, Simplex};
 use std::vec::Vec;
 
@@ -315,28 +317,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             let pair = |a: usize, b: usize| -> T {
                 vol * T::from_ratio(if a == b { 2 } else { 1 }, ((n + 1) * (n + 2)) as i64)
             };
-            // The k-faces of the top simplex, as local vertices in the face's own order (sorted
-            // by global number below the top; the top simplex as given), and their indices.
-            let faces: Vec<(Vec<usize>, usize)> = if k == n {
-                std::vec![((0..N).collect(), t)]
-            } else {
-                subsets(N, k + 1)
-                    .into_iter()
-                    .map(|local| {
-                        let mut global: Vec<usize> = local.iter().map(|&l| top[l]).collect();
-                        // Sort the face's vertices by their global numbers, keeping them local.
-                        let mut order: Vec<usize> = (0..local.len()).collect();
-                        order.sort_by_key(|&i| global[i]);
-                        let local: Vec<usize> = order.iter().map(|&i| local[i]).collect();
-                        global.sort_unstable();
-                        let index = self
-                            .topology
-                            .index_of(k, &global)
-                            .expect("a face of the topology");
-                        (local, index)
-                    })
-                    .collect()
-            };
+            let faces = local_faces(&self.topology, k, t, top);
             let fact: i64 = (1..=k as i64).product();
             let scale = T::from_i64(fact * fact);
             for (s, si) in &faces {
@@ -443,6 +424,286 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             }
         }
         out.expect("a simplex has an edge")
+    }
+}
+
+/// A differential form of degree `k` on one top simplex of dimension `n`, at a point or constant:
+/// its coefficients on the basis `dλ_I = dλ_{i₁} ∧ … ∧ dλ_{i_k}` of the barycentric
+/// differentials, `I` the `k`-subsets of `1..=n` in lexicographic order (`dλ₀ = −Σ dλᵢ` is
+/// eliminated, so the coefficients are unique). The basis is dual to the edges from the
+/// simplex's first vertex, `dλᵢ(v_j − v₀) = δᵢⱼ`, so the form needs no metric: its value on a
+/// face is [`on_face`](Self::on_face), and the metric enters only in
+/// [`Geometry::form_inner`]. The coefficients take values in any kind `S`: a cochain of
+/// vectors gives a vector-valued form.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Form<S> {
+    degree: usize,
+    dim: usize,
+    coefficients: Vec<S>,
+}
+
+impl<S: Extensor<Slots = (), Coef: Real> + core::ops::Add<Output = S> + Gp<S::Coef, Output = S>>
+    Form<S>
+{
+    /// The degree `k`.
+    #[must_use]
+    pub fn degree(&self) -> usize {
+        self.degree
+    }
+
+    /// The coefficients on `dλ_I`, `I` the `k`-subsets of `1..=n` in lexicographic order.
+    #[must_use]
+    pub fn coefficients(&self) -> &[S] {
+        &self.coefficients
+    }
+
+    /// The form on the face of the top simplex with these local vertices, in this order:
+    /// `ω(v₁ − v₀, …, v_k − v₀)`, the face's edges from its first vertex. For a constant form
+    /// the integral over the face is this over `k!`; a form linear in the barycentric
+    /// coordinates (a Whitney form) integrates to its value at the face's centroid over `k!`.
+    ///
+    /// # Panics
+    /// If the face does not have `k + 1` vertices.
+    #[must_use]
+    pub fn on_face(&self, face: &[usize]) -> S {
+        let k = self.degree;
+        assert_eq!(
+            face.len(),
+            k + 1,
+            "a face of a {k}-form has {} vertices",
+            k + 1
+        );
+        let unit = |v: usize, i: usize| i64::from(v == i + 1);
+        let mut out = zero::<S>();
+        for (subset, c) in subsets(self.dim, k).iter().zip(&self.coefficients) {
+            // dλ_I(edges) = det[(u_{τ_b} − u_{τ_0})_{I_a}], u₀ = 0 and uᵢ the i-th unit vector.
+            let m: Vec<S::Coef> = subset
+                .iter()
+                .flat_map(|&i| {
+                    face[1..]
+                        .iter()
+                        .map(move |&b| S::Coef::from_i64(unit(b, i) - unit(face[0], i)))
+                })
+                .collect();
+            let det = if k == 0 {
+                S::Coef::one()
+            } else {
+                determinant(m, k)
+            };
+            out = out + c.gp(det);
+        }
+        out
+    }
+}
+
+/// The zero value of a kind.
+fn zero<S: Extensor<Slots = ()>>() -> S {
+    S::from_coeffs(<S::Kind as Kind>::arr_from_fn(|_| S::Coef::zero()))
+}
+
+/// `sign · dλ_{a₀} ∧ … ∧ dλ_{a_k}` on a simplex of dimension `n`, as coefficients by bitmask of
+/// `1..=n` (bit `i − 1` for `dλᵢ`).
+fn wedge_of_differentials<T: Real>(factors: &[usize], n: usize, sign: T) -> Vec<T> {
+    let mut form = std::vec![T::zero(); 1 << n];
+    form[0] = sign;
+    for &a in factors {
+        let mut next = std::vec![T::zero(); 1 << n];
+        let one_form: Vec<(usize, T)> = if a == 0 {
+            (0..n).map(|i| (i, -T::one())).collect()
+        } else {
+            std::vec![(a - 1, T::one())]
+        };
+        for (mask, &x) in form.iter().enumerate() {
+            if x == T::zero() {
+                continue;
+            }
+            for &(i, y) in &one_form {
+                if mask & (1 << i) != 0 {
+                    continue;
+                }
+                // Moving dλ_{i+1} past the factors of higher index.
+                let swaps = (mask >> (i + 1)).count_ones();
+                let term = x * y;
+                let term = if swaps % 2 == 1 { -term } else { term };
+                next[mask | (1 << i)] = next[mask | (1 << i)] + term;
+            }
+        }
+        form = next;
+    }
+    form
+}
+
+/// The degree-`k` part of a form by bitmask, as coefficients on the `k`-subsets of `1..=n`.
+fn by_subsets<T: Real>(form: &[T], n: usize, k: usize) -> Vec<T> {
+    subsets(n, k)
+        .iter()
+        .map(|subset| form[subset.iter().fold(0, |m, &i| m | (1 << i))])
+        .collect()
+}
+
+/// Whitney forms (ADR-050, amended): the interpolation of a `k`-cochain on a top simplex, of
+/// every degree, and its exterior derivative. Metric free; [`Geometry::form_inner`] adds the
+/// metric.
+impl<const N: usize> Topology<N> {
+    /// The Whitney form of the `k`-cochain `c` on the top simplex `top` at its barycentric
+    /// point `at`: `Σ_σ c_σ W_σ`, with `W_σ = k! Σᵢ (−1)ⁱ λ_{σᵢ} dλ_{σ₀} ∧ … dλ̂_{σᵢ} … ∧ dλ_{σ_k}`
+    /// over the `k`-faces `σ` of the top simplex in their own orientation (sorted vertices
+    /// below the top, the top as given). `k = 0` is linear interpolation, `k = 1` the field of
+    /// [`Geometry::whitney_1`] in the barycentric basis. It inverts the de Rham map: integrated
+    /// over each `k`-face (at its centroid, [`Form::on_face`] over `k!`) it gives back the
+    /// cochain, and its tangential part is continuous across faces. The cochain may take values
+    /// in any kind.
+    ///
+    /// ```
+    /// use gax::field::Field;
+    /// use gax::mesh::Topology;
+    /// use gax::vga3d::Scalar;
+    /// // A triangle's three edges, (0 1), (0 2), (1 2), with the values 1, 2, 3.
+    /// let triangle = Topology::new(3, &[[0, 1, 2]]).unwrap();
+    /// let c: Field<_> = [1.0, 2.0, 3.0].into_iter().map(Scalar::<(), f64>::new).collect();
+    /// // At the midpoint of edge (1 2), the form on that edge is its value (k! = 1).
+    /// let w = triangle.whitney(1, &c, 0, &[0.0, 0.5, 0.5]);
+    /// assert!((w.on_face(&[1, 2]).s() - 3.0).abs() < 1e-15);
+    /// ```
+    ///
+    /// # Panics
+    /// If `k` exceeds the dimension, `at` does not have `N` coordinates or `c` is not one value
+    /// per `k`-simplex.
+    #[must_use]
+    pub fn whitney<S>(&self, k: usize, c: &Field<S>, top: usize, at: &[S::Coef]) -> Form<S>
+    where
+        S: Extensor<Slots = (), Coef: Real> + core::ops::Add<Output = S> + Gp<S::Coef, Output = S>,
+    {
+        let n = N - 1;
+        assert!(k <= n, "a {n}-simplex has no {k}-forms");
+        assert_eq!(
+            at.len(),
+            N,
+            "a point of a top simplex has {N} barycentric coordinates"
+        );
+        assert_eq!(
+            c.len(),
+            self.len(k),
+            "a {k}-cochain has a value on each {k}-simplex"
+        );
+        let fact = S::Coef::from_i64((1..=k as i64).product());
+        let mut out = std::vec![zero::<S>(); subsets(n, k).len()];
+        for (face, index) in local_faces(self, k, top, self.simplex(n, top)) {
+            let mut form = std::vec![S::Coef::zero(); 1 << n];
+            for i in 0..=k {
+                let rest: Vec<usize> = (0..=k).filter(|&j| j != i).map(|j| face[j]).collect();
+                let sign = if i % 2 == 0 {
+                    at[face[i]]
+                } else {
+                    -at[face[i]]
+                };
+                for (f, x) in form
+                    .iter_mut()
+                    .zip(wedge_of_differentials(&rest, n, sign * fact))
+                {
+                    *f = *f + x;
+                }
+            }
+            let value = c.sites()[index];
+            for (o, x) in out.iter_mut().zip(by_subsets(&form, n, k)) {
+                if x != S::Coef::zero() {
+                    *o = *o + value.gp(x);
+                }
+            }
+        }
+        Form {
+            degree: k,
+            dim: n,
+            coefficients: out,
+        }
+    }
+
+    /// The exterior derivative of the Whitney form of the `k`-cochain `c` on the top simplex
+    /// `top`: the constant `(k+1)`-form `Σ_σ c_σ (k+1)! dλ_{σ₀} ∧ … ∧ dλ_{σ_k}`. It is the
+    /// Whitney form of the cochain's coboundary, `d W c = W d c` (so integrated over a
+    /// `(k+1)`-face it is `d c` there, the discrete Stokes theorem); for `k = n`, the zero form
+    /// of degree `n + 1`, which has no coefficients.
+    ///
+    /// # Panics
+    /// If `k` exceeds the dimension or `c` is not one value per `k`-simplex.
+    #[must_use]
+    pub fn whitney_d<S>(&self, k: usize, c: &Field<S>, top: usize) -> Form<S>
+    where
+        S: Extensor<Slots = (), Coef: Real> + core::ops::Add<Output = S> + Gp<S::Coef, Output = S>,
+    {
+        let n = N - 1;
+        assert!(k <= n, "a {n}-simplex has no {k}-forms");
+        assert_eq!(
+            c.len(),
+            self.len(k),
+            "a {k}-cochain has a value on each {k}-simplex"
+        );
+        let fact = S::Coef::from_i64((1..=k as i64 + 1).product());
+        let mut out = std::vec![zero::<S>(); subsets(n, k + 1).len()];
+        if k < n {
+            for (face, index) in local_faces(self, k, top, self.simplex(n, top)) {
+                let form = wedge_of_differentials(&face, n, fact);
+                let value = c.sites()[index];
+                for (o, x) in out.iter_mut().zip(by_subsets(&form, n, k + 1)) {
+                    if x != S::Coef::zero() {
+                        *o = *o + value.gp(x);
+                    }
+                }
+            }
+        }
+        Form {
+            degree: k + 1,
+            dim: n,
+            coefficients: out,
+        }
+    }
+}
+
+impl<T: Real, const N: usize> Geometry<T, N> {
+    /// The pointwise inner product of two scalar forms of one degree on the top simplex `top`,
+    /// through the metric: `Σ a_I b_J ⟨dλ_I, dλ_J⟩`, the Gram determinants of the barycentric
+    /// gradients. Integrated against the Whitney forms it is the Galerkin star
+    /// ([`mass`](Self::mass)).
+    ///
+    /// # Panics
+    /// If the degrees differ.
+    #[must_use]
+    pub fn form_inner<S: Extensor<Slots = (), Coef = T>>(
+        &self,
+        top: usize,
+        a: &Form<S>,
+        b: &Form<S>,
+    ) -> T {
+        const {
+            assert!(
+                <S::Kind as Kind>::N == 1,
+                "forms paired by the metric are scalar"
+            );
+        }
+        assert_eq!(a.degree, b.degree, "forms of different degrees");
+        let (n, k) = (N - 1, a.degree);
+        let h = gradients(&self.distances[top], n);
+        let sets = subsets(n, k);
+        let mut sum = T::zero();
+        for (i, x) in sets.iter().zip(&a.coefficients) {
+            for (j, y) in sets.iter().zip(&b.coefficients) {
+                let minor: Vec<T> = i
+                    .iter()
+                    .flat_map(|&r| {
+                        j.iter()
+                            .map(|&c| h[(r + 1) * (n + 1) + c + 1])
+                            .collect::<Vec<_>>()
+                    })
+                    .collect();
+                let g = if k == 0 {
+                    T::one()
+                } else {
+                    determinant(minor, k)
+                };
+                sum = sum + x.coeffs().as_ref()[0] * y.coeffs().as_ref()[0] * g;
+            }
+        }
+        sum
     }
 }
 
@@ -634,6 +895,34 @@ fn gradients<T: Real>(d: &[T], n: usize) -> Vec<T> {
         }
     }
     h
+}
+
+/// The `k`-faces of the top simplex `t` (vertices `top`), as local vertices in the face's own
+/// order (sorted by global number below the top; the top simplex as given), and their indices.
+fn local_faces<const N: usize>(
+    topology: &Topology<N>,
+    k: usize,
+    t: usize,
+    top: &[usize],
+) -> Vec<(Vec<usize>, usize)> {
+    if k + 1 == N {
+        return std::vec![((0..N).collect(), t)];
+    }
+    subsets(N, k + 1)
+        .into_iter()
+        .map(|local| {
+            let mut global: Vec<usize> = local.iter().map(|&l| top[l]).collect();
+            // Sort the face's vertices by their global numbers, keeping them local.
+            let mut order: Vec<usize> = (0..local.len()).collect();
+            order.sort_by_key(|&i| global[i]);
+            let local: Vec<usize> = order.iter().map(|&i| local[i]).collect();
+            global.sort_unstable();
+            let index = topology
+                .index_of(k, &global)
+                .expect("a face of the topology");
+            (local, index)
+        })
+        .collect()
 }
 
 /// The `size`-element subsets of `0..n`, in lexicographic order.

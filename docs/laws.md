@@ -380,6 +380,13 @@ On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
 * [sample] Stokes for the de Rham map, `R(∇∧F) = d R(F)`, exactly on `ℤ/p`, for cubic fields: the
   gradient theorem (scalars), Green's and Stokes's (vectors), Gauss's (bivectors in 3D).
 * [prop] The Whitney map inverts the de Rham map on edges, `R ∘ W = id`, and `W₁ d₀ = ∇ W₀`.
+* [prop] Whitney forms of every degree (`tests/whitney.rs`, on PyDEC's meshes, 2D and 3D):
+  `R ∘ W = id` on every face of every top simplex; `d W = W d` (`whitney_d` against `whitney`
+  of the coboundary); Stokes face by face, `∫_τ d W c = Σ (−1)ⁱ ∫_{∂ᵢτ} W c`, through the forms
+  alone; the integrals of `⟨W_σ, W_ρ⟩` by `form_inner` are PyDEC's `whitney_innerproduct`
+  (`tests/fixtures/pydec_whitney.txt`, `docs/research/experiments/pydec_whitney_fixtures.py`)
+  and gax's `mass(k)`, within `10⁻¹²`; the 1-forms are `whitney_1`'s fields on the edges; a
+  cochain of vectors gives the form of each component.
 * [prop] `δ` is the adjoint of `d` in the stars' inner products, `⟨d a, b⟩_⋆ = ⟨a, δ b⟩_⋆`, on a
   sphere (so the Hodge decomposition is orthogonal); `D² = Δ` degree by degree.
 * [prop] The harmonic cochains, the null space of `Δ_k` found by `eigh` on `(⋆Δ, ⋆)`, have the

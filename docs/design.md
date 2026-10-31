@@ -1901,8 +1901,19 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     so it runs on any `Coef`, and Stokes's theorem is exact on `Fp`.
   * The Whitney map on edges, `Geometry::whitney_1`: `Σ c_e (λₐ ∇λ_b − λ_b ∇λₐ)` in a top
     simplex, the gradients the reciprocal frame of its edges in the model
-    (`∇λᵢ = Σⱼ (G⁻¹)ᵢⱼ (vⱼ − v₀)`, vectors in VGA, directions in PGA). Higher degrees need wedges
-    of gradients typed by degree, and wait for a use.
+    (`∇λᵢ = Σⱼ (G⁻¹)ᵢⱼ (vⱼ − v₀)`, vectors in VGA, directions in PGA).
+  * *Amended (2026-10-31, Phase 13): Whitney forms of every degree.* `Topology::whitney(k, c,
+    top, at)` is `Σ c_σ W_σ` with `W_σ = k! Σ (−1)ⁱ λ_{σᵢ} dλ_{σ₀} ∧ … dλ̂_{σᵢ} … ∧ dλ_{σ_k}`, and
+    `whitney_d` its exterior derivative `(k+1)! Σ c_σ dλ_σ`, as a `dec::Form<S>`: coefficients on
+    the barycentric basis `dλ_I`, `I ⊂ 1..=n` (`dλ₀ = −Σ dλᵢ` eliminated, so they are unique).
+    That basis is dual to the top simplex's edges, so the forms need no metric and no kind per
+    degree: a model's `k`-vectors would need wedges typed by degree (`V`, `V ∧ V`, …, and joins
+    of directions in PGA), while a form's value on a face (`Form::on_face`) and its inner
+    product (`Geometry::form_inner`, the Gram determinants of the gradients) are all that the
+    de Rham map, Stokes and the Galerkin star need. The cochain takes values in any kind, so
+    vector-valued forms come for free. On a top simplex the forms are on the faces in their
+    own orientation (sorted vertices below the top), the same faces `mass` iterates, which now
+    share one helper.
 * **Operators** (M5).
   * With the diagonal star: `δ_k = ⋆_{k−1}⁻¹ d_{k−1}ᵀ ⋆_k`, `Δ_k = d δ + δ d` (positive
     semidefinite), and the Dirac operator `D = d + δ` on the cochains of every degree at once,
