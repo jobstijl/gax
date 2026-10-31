@@ -20,6 +20,9 @@ pub const OUTER_MAX_TERMS: usize = 1 << 14;
 /// `C(n, k)²` entries, each a minor of size `k` with `k!` terms.
 #[must_use]
 pub fn terms(n: u32, k: u32) -> usize {
+    if k > n {
+        return 0;
+    }
     let blades = (0..k).fold(1, |c, i| c * (n - i) as usize / (i + 1) as usize);
     let minor: usize = (1..=k as usize).product();
     blades * blades * minor
@@ -31,8 +34,12 @@ fn single_grade(k: &KindSpec) -> Option<u32> {
     g.iter().next().copied().filter(|_| g.len() == 1)
 }
 
-/// The number of `k`-subsets of `n` things.
+/// The number of `k`-subsets of `n` things (none when `k > n`: a part of fewer factors than a
+/// grade has no blades of that grade).
 fn choose(n: usize, k: usize) -> usize {
+    if k > n {
+        return 0;
+    }
     (0..k).fold(1, |c, i| c * (n - i) / (i + 1))
 }
 
@@ -188,5 +195,14 @@ mod tests {
             }
         }
         assert!((7350..18_816).contains(&OUTER_MAX_TERMS));
+    }
+
+    #[test]
+    fn a_part_of_fewer_factors_than_a_grade_has_no_extension_to_it() {
+        // A 5D part of two antivectors against the trivectors: no blades, no terms (this
+        // subtracted past zero, a panic in debug builds of the proc macro).
+        assert_eq!(super::choose(2, 3), 0);
+        assert_eq!(terms(2, 3), 0);
+        assert_eq!(super::choose(5, 2), 10);
     }
 }
