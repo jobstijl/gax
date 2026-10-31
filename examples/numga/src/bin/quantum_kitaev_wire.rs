@@ -17,8 +17,9 @@
 //! The animation moves the left gate boundary inward, slowly and fast: slowly, the mode rides
 //! along with the boundary (it stays the instantaneous boundary mode); fast, it is left behind
 //! in the bulk. Beside it, the spectrum as the gate's potential is lowered past the threshold
-//! (two energies drop to zero), and the splitting of the boundary modes as the segment
-//! shortens, exponentially small while they do not overlap.
+//! (two energies drop to zero), and the segment's ends closing in, sweeping forth and back: the
+//! splitting of their two modes, exponentially small while they do not overlap, and the modes
+//! themselves at the separation of the moment.
 
 use gax_numga_examples::signal::{frame, linspace};
 use gax_numga_examples::{
@@ -155,18 +156,18 @@ mod kitaev {
     }
 
     /// A state taken through the gate profiles, one Cayley step each over `duration`: the state,
-    /// then every `stride` steps.
+    /// then every `steps_per_frame` steps.
     pub fn transport(
         wire: &Wire,
         state: &Modes,
         potentials: &[Potential],
         duration: f64,
-        stride: usize,
+        steps_per_frame: usize,
     ) -> Vec<Modes> {
         let dt = duration / potentials.len() as f64;
         let mut current = state.clone();
         let mut out = vec![current.clone()];
-        for block in potentials.chunks(stride) {
+        for block in potentials.chunks(steps_per_frame) {
             for potential in block {
                 current = wire.step(&current, potential, dt);
             }
@@ -189,7 +190,7 @@ mod kitaev {
     /// The slow and the fast transport's durations, its steps and the steps per record.
     pub const DURATIONS: [f64; 2] = [180.0, 12.0];
     pub const STEPS: usize = 720;
-    pub const STRIDE: usize = 6;
+    pub const STEPS_PER_FRAME: usize = 3;
 
     fn wire() -> Wire {
         Wire::chain(SITES, HOPPING, PAIRING)
@@ -234,8 +235,8 @@ mod kitaev {
 
     pub fn moving() -> Moving {
         let wire = wire();
-        let progress: Vec<f64> = (0..=STEPS / STRIDE)
-            .map(|k| (k * STRIDE) as f64 / STEPS as f64)
+        let progress: Vec<f64> = (0..=STEPS / STEPS_PER_FRAME)
+            .map(|k| (k * STEPS_PER_FRAME) as f64 / STEPS as f64)
             .collect();
         let potentials: Vec<Potential> = progress.iter().map(|p| gate_at(*p)).collect();
         let pairs = par_map(&potentials, |p| wire.modes(&wire.generator(p), 2).1);
@@ -250,7 +251,7 @@ mod kitaev {
             .map(|k| gate_at((k as f64 + 0.5) / STEPS as f64))
             .collect();
         let history = par_map(&DURATIONS, |d| {
-            transport(&wire, &target[0], &midpoints, *d, STRIDE)
+            transport(&wire, &target[0], &midpoints, *d, STEPS_PER_FRAME)
         });
         let history: [Vec<Modes>; 2] = history.try_into().expect("two durations");
         let share = [0, 1].map(|case| {
@@ -269,56 +270,66 @@ mod kitaev {
         }
     }
 
-    /// The lowest excitation energy as the segment shortens to each separation, its right
-    /// boundary fixed: the mean of the boundary pair's two quadratures.
-    pub fn overlap(separations: &[f64]) -> Vec<f64> {
+    /// The segment's ends closing in, its right boundary fixed: at each separation the lowest
+    /// excitation energy (the mean of the boundary pair's two quadratures), the gate profile, and
+    /// the pair recombined into one mode at each end.
+    pub struct Overlap {
+        pub splitting: Vec<f64>,
+        pub potentials: Vec<Potential>,
+        pub modes: Vec<[Modes; 2]>,
+    }
+
+    pub fn overlap(separations: &[f64]) -> Overlap {
         let wire = wire();
-        par_map(separations, |s| {
-            let (energies, _) = wire.modes(&wire.generator(&gated(INSIDE, RIGHT - s)), 2);
-            (energies[0] + energies[1]) / 2.0
-        })
+        let potentials: Vec<Potential> = separations
+            .iter()
+            .map(|s| gated(INSIDE, RIGHT - s))
+            .collect();
+        let pairs = par_map(&potentials, |p| {
+            let (energies, modes) = wire.modes(&wire.generator(p), 2);
+            ((energies[0] + energies[1]) / 2.0, wire.localized(&modes))
+        });
+        let (splitting, modes) = pairs.into_iter().unzip();
+        Overlap {
+            splitting,
+            potentials,
+            modes,
+        }
     }
 }
 
 use kitaev::*;
 
 const SECONDS: f32 = 12.0;
-/// The spectrum's samples and energies, and the separations of the overlap scan.
-const SPECTRAL_SAMPLES: usize = 100;
+/// The spectrum's samples and energies, and the separations of the overlap scan, closing from
+/// far apart to nearly touching.
+const SPECTRAL_SAMPLES: usize = 200;
 const ENERGIES: usize = 8;
-const SEPARATIONS: (f64, f64, usize) = (4.0, 32.0, 100);
+const SEPARATIONS: (f64, f64, usize) = (32.0, 4.0, 200);
+/// The mode weight at the top of the transport panels, numga's: above the most any one site
+/// holds, as the fast move squeezes the mode against the moving end.
+const WEIGHT_LIMIT: f32 = 0.6;
 
 /// What the frames share, computed once.
 struct Data {
     potentials: Vec<f64>,
     spectrum: Vec<Vec<f64>>,
     moving: Moving,
-    /// The largest weight of a mode on a site, over the whole transport.
-    peak: f64,
     separations: Vec<f64>,
-    splitting: Vec<f64>,
+    overlap: Overlap,
 }
 
 fn data() -> Data {
     let (potentials, spectrum) = formation(SPECTRAL_SAMPLES, ENERGIES);
     let (from, to, count) = SEPARATIONS;
     let separations = linspace(from, to, count);
-    let splitting = overlap(&separations);
-    let moving = moving();
-    let peak = moving
-        .history
-        .iter()
-        .flatten()
-        .chain(&moving.target)
-        .flat_map(|f| f.iter().map(|v| v.norm_squared()))
-        .fold(0.0, f64::max);
+    let overlap = overlap(&separations);
     Data {
         potentials,
         spectrum,
-        moving,
-        peak,
+        moving: moving(),
         separations,
-        splitting,
+        overlap,
     }
 }
 
@@ -425,8 +436,9 @@ fn draw_spectrum(c: &mut Canvas, ax: &Axes, d: &Data) {
     }
 }
 
-/// The boundary modes' splitting as the segment shortens, on a logarithmic axis.
-fn draw_splitting(c: &mut Canvas, ax: &Axes, d: &Data) {
+/// The boundary modes' splitting as the segment shortens, on a logarithmic axis, marked at the
+/// separation `now`.
+fn draw_splitting(c: &mut Canvas, ax: &Axes, d: &Data, now: usize) {
     ax.frame(
         c,
         "THE ENDS' SPLITTING",
@@ -436,18 +448,36 @@ fn draw_splitting(c: &mut Canvas, ax: &Axes, d: &Data) {
     let curve: Vec<Point2> = d
         .separations
         .iter()
-        .zip(&d.splitting)
+        .zip(&d.overlap.splitting)
         .map(|(s, e)| Point2::xy(*s as f32, *e as f32))
         .collect();
     ax.polyline(c, &curve, 1.8, palette::SKY);
+    ax.scatter(c, &[curve[now]], Marker::Dot, 9.0, palette::INK);
+}
+
+/// The two end modes at the separation `now`, over its gate: the left one green, the right one
+/// orange.
+fn draw_ends(c: &mut Canvas, ax: &Axes, d: &Data, now: usize) {
+    draw_gate(c, ax, &d.overlap.potentials[now]);
+    ax.frame(c, "THE ENDS' MODES", "SITE", "MODE WEIGHT");
+    for (mode, (colour, _)) in d.overlap.modes[now].iter().zip(cases()) {
+        let curve = weights(mode);
+        let mut under = curve.clone();
+        under.push(Point2::xy(ax.x[1], 0.0));
+        under.push(Point2::xy(ax.x[0], 0.0));
+        ax.fill(c, &under, colour.faded(0.35), 0.35);
+        ax.polyline(c, &curve, 1.6, colour);
+    }
 }
 
 fn draw(c: &mut Canvas, d: &Data, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let records = d.moving.progress.len();
-    let now = frame((t / SECONDS).fract(), records);
-    let top = d.peak as f32 * 1.15;
+    let phase = (t / SECONDS).fract();
+    let now = frame(phase, records);
+    // The ends close in and part again over the loop, as numga's forward-then-back animation.
+    let closing = frame(1.0 - (2.0 * phase - 1.0).abs(), d.separations.len());
     let sites = [0.0, (SITES - 1) as f32];
     for case in 0..2 {
         let rect = screen.part(
@@ -456,7 +486,7 @@ fn draw(c: &mut Canvas, d: &Data, t: f32) {
             0.6,
             0.34 + 0.28 * case as f32,
         );
-        let ax = Axes::new(rect, sites, [0.0, top]);
+        let ax = Axes::new(rect, sites, [0.0, WEIGHT_LIMIT]);
         draw_transport(c, &ax, &d.moving, case, now);
     }
     let leakage = Axes::new(
@@ -466,19 +496,34 @@ fn draw(c: &mut Canvas, d: &Data, t: f32) {
     );
     draw_leakage(c, &leakage, &d.moving, now);
     let spectrum = Axes::new(
-        screen.part(0.7, 0.15, 0.97, 0.45),
+        screen.part(0.7, 0.13, 0.97, 0.33),
         [OUTSIDE as f32, INSIDE as f32],
         [0.0, 1.7],
     );
     draw_spectrum(c, &spectrum, d);
-    let (from, to, _) = SEPARATIONS;
+    let (far, near, _) = SEPARATIONS;
     let splitting = Axes::new(
-        screen.part(0.7, 0.6, 0.97, 0.88),
-        [from as f32, to as f32],
+        screen.part(0.7, 0.43, 0.97, 0.63),
+        [near as f32, far as f32],
         [1e-8, 1.0],
     )
     .log_y();
-    draw_splitting(c, &splitting, d);
+    draw_splitting(c, &splitting, d, closing);
+    // The right end of the wire, as far in as the widest separation and twenty sites more.
+    let top = d
+        .overlap
+        .modes
+        .iter()
+        .flatten()
+        .flat_map(|m| m.iter().map(|v| v.norm_squared()))
+        .fold(0.0, f64::max) as f32
+        * 1.1;
+    let ends = Axes::new(
+        screen.part(0.7, 0.73, 0.97, 0.91),
+        [(SITES - 1) as f32 - far as f32 - 20.0, (SITES - 1) as f32],
+        [0.0, top],
+    );
+    draw_ends(c, &ends, d, closing);
     let fraction = d.moving.progress[now];
     caption(
         c,
@@ -674,24 +719,23 @@ mod tests {
     }
 
     /// numga's `test_overlap_lifts_the_lowest_excitation`: the shorter the segment, the more its
-    /// two boundary modes overlap and split.
+    /// two boundary modes overlap and split; the scan closes from 32 sites to 4.
     #[test]
     fn overlap_lifts_the_lowest_excitation() {
-        let (from, to, count) = super::SEPARATIONS;
-        let energies = overlap(&linspace(from, to, count));
-        assert!(energies[0] > 0.1, "{}", energies[0]);
-        assert!(
-            *energies.last().unwrap() < 2e-7,
-            "{}",
-            energies.last().unwrap()
-        );
-        assert!(energies.windows(2).all(|w| w[1] < w[0]));
+        let (far, near, count) = super::SEPARATIONS;
+        let energies = overlap(&linspace(far, near, count)).splitting;
+        assert!(energies[0] < 2e-7, "{}", energies[0]);
+        let last = *energies.last().unwrap();
+        assert!(last > 0.1, "{last}");
+        assert!(energies.windows(2).all(|w| w[1] > w[0]));
     }
 
-    /// numga's `test_scenes_draw`: the frames draw, and two records apart they differ.
+    /// numga's `test_scenes_draw`: the frames draw, and two records apart they differ (the
+    /// transport and the closing ends both move between them).
     #[test]
     fn the_frames_draw_and_move() {
         let d = super::data();
+        assert_eq!(d.overlap.modes.len(), d.separations.len());
         let mut draw = |c: &mut gax_numga_examples::Canvas, t| super::draw(c, &d, t);
         let anim = gax_numga_examples::Anim::new("t", 1.0).size(320, 180);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
