@@ -360,15 +360,17 @@ impl Axes {
                 let len = a.distance(b);
                 // The point `t` pixels from `a` towards `b`.
                 let at = |t: f32| a + (b - a).gp(t / len.max(1e-12));
-                let mut s = 0.0;
-                while s < len {
-                    let phase = (along + s) % (2.0 * dash);
-                    let on = phase < dash;
-                    let e = (s + if on { dash - phase } else { 2.0 * dash - phase }).min(len);
-                    if on {
+                // Dash `k` covers `[2k, 2k + 1]` dash lengths along the run. Counting dashes, not
+                // stepping by the remaining phase, keeps the loop finite: in f32 `s + (dash -
+                // phase)` can round back to `s` and never reach the end.
+                let first = (along / (2.0 * dash)).floor() as i64;
+                let last = ((along + len) / (2.0 * dash)).ceil() as i64;
+                for k in first..last {
+                    let start = 2.0 * dash * k as f32 - along;
+                    let (s, e) = (start.max(0.0), (start + dash).min(len));
+                    if s < e {
                         dashes.push([at(s), at(e)]);
                     }
-                    s = e;
                 }
                 along += len;
             }
