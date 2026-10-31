@@ -139,12 +139,36 @@ pub const HOMS: &[Hom] = &[
         from: "vga3d",
         to: "sta",
         images: &[
-            ("e1", &[(1, "e10")]),
-            ("e2", &[(1, "e20")]),
-            ("e3", &[(1, "e30")]),
+            ("e1", &[(1, "e14")]),
+            ("e2", &[(1, "e24")]),
+            ("e3", &[(1, "e34")]),
         ],
-        doc: "the spacetime split for the observer `e0`: vectors as relative vectors \
-              `eₖ e0` (bivectors), and space's algebra as the even subalgebra",
+        doc: "the spacetime split for the observer `e4`: vectors as relative vectors \
+              `eₖ e4` (bivectors), and space's algebra as the even subalgebra",
+    },
+    Hom {
+        from: "sta",
+        to: "stap",
+        images: &[
+            ("e1", &[(1, "e1")]),
+            ("e2", &[(1, "e2")]),
+            ("e3", &[(1, "e3")]),
+            ("e4", &[(1, "e4")]),
+        ],
+        doc: "spacetime as the hyperplanes through the origin event: vectors as origin \
+              hyperplanes, Lorentz rotors as the motors that keep the origin",
+    },
+    Hom {
+        from: "sta",
+        to: "csta",
+        images: &[
+            ("e1", &[(1, "e1")]),
+            ("e2", &[(1, "e2")]),
+            ("e3", &[(1, "e3")]),
+            ("e4", &[(1, "e4")]),
+        ],
+        doc: "the Minkowski subalgebra: vectors as hyperplanes through the origin, Lorentz \
+              rotors as the motors that keep the origin",
     },
 ];
 

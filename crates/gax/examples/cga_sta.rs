@@ -44,24 +44,25 @@ fn cga() {
 
 fn sta() {
     use gax::sta::{Bivector, Even};
-    // F = E + I B: e10, e20, e30 hold the electric field, e23, e31, e12 the magnetic field.
-    let f = Bivector::<(), f64>::new(1.0, 0.5, 0.0, 0.2, 0.0, 0.8);
+    // F = E + I B with I = e1234: e14, e24, e34 (the relative vectors eₖ e4) hold the electric
+    // field, e23, e31, e12 the magnetic field. Bivector order: e23, e31, e12, e14, e24, e34.
+    let f = Bivector::<(), f64>::new(0.2, 0.0, 0.8, 1.0, 0.5, 0.0);
     let invariants = |f: Bivector<(), f64>| {
         let sq: Even<(), f64> = f * f;
-        (sq.s(), sq.e0123())
+        (sq.s(), sq.e1234())
     };
-    // A boost along x with rapidity 0.8: exp(½ φ e10).
-    let boost = Bivector::<(), f64>::new(0.4, 0.0, 0.0, 0.0, 0.0, 0.0).exp();
+    // A boost along x with rapidity 0.8: exp(½ φ e4 e1) = exp(−½ φ e14).
+    let boost = Bivector::<(), f64>::new(0.0, 0.0, 0.0, -0.4, 0.0, 0.0).exp();
     let g: Bivector<(), f64> = boost >> f;
     let (a, b) = (invariants(f), invariants(g));
     println!(
         "E before: ({:.3}, {:.3}, {:.3})  after: ({:.3}, {:.3}, {:.3})",
-        f.e10(),
-        f.e20(),
-        f.e30(),
-        g.e10(),
-        g.e20(),
-        g.e30()
+        f.e14(),
+        f.e24(),
+        f.e34(),
+        g.e14(),
+        g.e24(),
+        g.e34()
     );
     println!(
         "invariants before: ({:.6}, {:.6})  after: ({:.6}, {:.6})",
@@ -70,7 +71,7 @@ fn sta() {
     assert!((a.0 - b.0).abs() < 1e-12 && (a.1 - b.1).abs() < 1e-12);
     // And the boost itself is recovered by the logarithm.
     let log: Bivector<(), f64> = boost.log();
-    assert!((log.e10() - 0.4).abs() < 1e-12);
+    assert!((log.e14() + 0.4).abs() < 1e-12);
 }
 
 fn main() {

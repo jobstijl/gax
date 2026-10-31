@@ -41,9 +41,9 @@ fn a_rotation_has_unit_complex_eigenvalues() {
 fn a_boost_has_real_eigenvalues() {
     use gax::sta::{Bivector, Vector};
     let phi = 0.9;
-    // A boost along e1 (e10 squares to +1).
+    // A boost along e1 (e14 squares to +1).
     let mut b = Bivector::<(), f64>::zero();
-    b.c[0] = phi / 2.0;
+    b.c[3] = phi / 2.0;
     let m = b.exp() >> Vector::<(), f64>::slot();
     let values = m.eigvals();
     let mut re: Vec<f64> = values.iter().map(|z| z.re).collect();

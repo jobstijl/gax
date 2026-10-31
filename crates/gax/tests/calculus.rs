@@ -157,8 +157,8 @@ fn plane_wave_satisfies_maxwell() {
     use gax::calculus::nabla;
     use gax::sta::{Scalar, Vector};
     let mut rng = Rng(8);
-    let k = Vector::<(), Fp>::new(Fp::one(), Fp::one(), Fp::zero(), Fp::zero());
-    let a = Vector::<(), Fp>::new(Fp::zero(), Fp::zero(), Fp::one(), Fp::zero());
+    let k = Vector::<(), Fp>::new(Fp::one(), Fp::zero(), Fp::zero(), Fp::one());
+    let a = Vector::<(), Fp>::new(Fp::zero(), Fp::one(), Fp::zero(), Fp::zero());
     for _ in 0..4 {
         let c = rng.cubic();
         let x = rng.point::<Vector<(), Fp>>();

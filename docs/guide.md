@@ -324,9 +324,9 @@ use gax::{cga3d, sta};
 let (p, q) = (cga3d::Vector::<(), f64>::up(1.0, 0.0, 0.0), cga3d::Vector::up(1.0, 0.0, 2.0));
 let grow = cga3d::Even::dilation(p, 3.0);       // three times as far from p
 assert!((grow >> q).down().iter().zip([1.0, 0.0, 6.0]).all(|(a, b)| (a - b).abs() < 1e-12));
-let rest = sta::Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
-let u = sta::Even::boost(sta::Vector::new(0.0, 1.0, 0.0, 0.0), 0.5) >> rest;
-assert!((u.e1() / u.e0() - 0.5f64.tanh()).abs() < 1e-12); // the speed is tanh of the rapidity
+let rest = sta::Vector::<(), f64>::new(0.0, 0.0, 0.0, 1.0); // e4, the observer at rest
+let u = sta::Even::boost(sta::Vector::new(1.0, 0.0, 0.0, 0.0), 0.5) >> rest;
+assert!((u.e1() / u.e4() - 0.5f64.tanh()).abs() < 1e-12); // the speed is tanh of the rapidity
 # }
 ```
 
@@ -701,7 +701,7 @@ gax::algebra! {
   same split of its events and hyperplanes, `Direction` and `OriginHyperplane` (a clock's
   readout); VGA3D has `Horizontal` (`e1, e2`, for z up) and its complement `Tilt`
   (`e23, e31`), and `Paravector` (`1 + r`, the Pauli algebra's states). STA's `Phasor`
-  (`a + b e0123`, a complex number commuting with the even subalgebra) is a full kind instead:
+  (`a + b e1234`, a complex number commuting with the even subalgebra) is a full kind instead:
   phasors multiply, invert and sandwich to phasors, the pseudoscalar's `exp` lands in one, and
   so does the anticommutator of two bivectors (a field's invariants, `F∘F = E² − B² + 2 E·B I`).
 * **Build time.** The macro runs the generator at compile time. Add `[profile.dev.build-override]`
@@ -804,7 +804,8 @@ joins is solved in 3D, on the lifted values.
 | `pga2d`, `pga3d` | `cga2d`, `cga3d` | plane-based PGA in CGA (`e0` to `-ei`): planes to dual planes, motors to motors |
 | `pga3d` | `stap` | space in spacetime |
 | `cga2d`, `cga3d` | `cga3d`, `csta` | the plane in space; space in spacetime |
-| `vga3d` | `sta` | the spacetime split for the observer `e0`: vectors as relative vectors `eₖ e0` |
+| `vga3d` | `sta` | the spacetime split for the observer `e4`: vectors as relative vectors `eₖ e4` |
+| `sta` | `stap`, `csta` | spacetime as the hyperplanes through the origin event: Lorentz rotors as the motors that keep it |
 
 A conversion keeps the meaning that the homomorphism gives: a 2D point is the vertical line
 through it, because that is what the product structure says. A unit versor converts with
@@ -1165,6 +1166,13 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   `x y z w`, so `x∧y∧z∧w = −e0123`, and its PGA3D points, `&` and `dual` were the negatives of
   gax's. `examples/numga` ports numga's examples from before the change and notes those sign
   differences where they arise. PGA2D always agreed.
+  numga's STA is `x+y+z+t-` since f9ced1bf (October 2026), and so is gax's (ADR-055): `x y z t`
+  are `e1 e2 e3 e4`, and the kinds keep numga's blades in numga's order (`yz zx xy xt yt zt` are
+  `e23 e31 e12 e14 e24 e34`, `xyz yzt zxt xyt` are `e123 e234 e314 e124`, `xyzt` is `e1234`), so
+  coefficients read the same in both. Before, both were `t+x-y-z-`; the ports written then were
+  migrated, and their comments say where a sign or a reading changed (a timelike vector now
+  squares to `−1`; with `σₖ = eₖ e4` and `I = e1234`, Maxwell's `∇F = J` holds for
+  `F = E − I B`).
 * **numga's sub-kinds.** numga types any set of blades (`derive.nondegenerate`,
   `containing("w")`, `from_blades`). gax names the ones its ports use as parts (§9): numga's
   nondegenerate PGA3D vectors are `OriginPlane`, its bivectors `Spin`, its antibivectors

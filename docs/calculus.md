@@ -51,7 +51,7 @@ exact. A function that needs roots or transcendentals is written over `Real`.
 
 ## Spacetime: Maxwell's equations
 
-In the spacetime algebra STA (`t² = 1`, `x² = y² = z² = −1`), `∇` is the derivative with respect
+In the spacetime algebra STA (`x² = y² = z² = 1`, `t² = −1`), `∇` is the derivative with respect
 to an event, and the electromagnetic field is a bivector `F`. Maxwell's four equations are one,
 `∇F = J`. A plane wave of any profile `φ` travelling along a null direction `k`, polarized along
 `a ⟂ k`, is `F = (k ∧ a) φ(k · x)`, and it satisfies `∇F = 0` in vacuum:
@@ -60,14 +60,14 @@ to an event, and the electromagnetic field is a bivector `F`. Maxwell's four equ
 use gax::calculus::{laplacian, nabla};
 use gax::sta::{Scalar, Vector};
 
-let k = Vector::<(), f64>::new(1.0, 1.0, 0.0, 0.0); // along x at the speed of light
-let a = Vector::<(), f64>::new(0.0, 0.0, 1.0, 0.0); // polarized along y
+let k = Vector::<(), f64>::new(1.0, 0.0, 0.0, 1.0); // along x at the speed of light
+let a = Vector::<(), f64>::new(0.0, 1.0, 0.0, 0.0); // polarized along y
 let wave = |x: Vector<(), _>| {
     let (k, a) = (k.map_coefs(Into::into), a.map_coefs(Into::into));
     let phase: Scalar<(), _> = k.scalar_product(x);
     (k ^ a) * (phase * phase * phase) // the profile φ(s) = s³
 };
-let event = Vector::<(), f64>::new(0.5, 0.2, -0.1, 0.3);
+let event = Vector::<(), f64>::new(0.2, -0.1, 0.3, 0.5);
 let (f, maxwell) = nabla(wave, event);
 assert!(f.c.iter().any(|&c| c != 0.0));
 assert!(maxwell.c.iter().all(|&c| c == 0.0));

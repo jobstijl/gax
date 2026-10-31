@@ -7860,7 +7860,7 @@ fn cga3d_to_csta() {
     }
 }
 
-/// the spacetime split for the observer `e0`: vectors as relative vectors `eₖ e0` (bivectors), and space's algebra as the even subalgebra
+/// the spacetime split for the observer `e4`: vectors as relative vectors `eₖ e4` (bivectors), and space's algebra as the even subalgebra
 #[cfg(all(feature = "vga3d", feature = "sta"))]
 #[test]
 fn vga3d_to_sta() {
@@ -8567,6 +8567,1160 @@ fn vga3d_to_sta() {
         p97(&mut rng);
         p98(&mut rng);
         p99(&mut rng);
+    }
+}
+
+/// spacetime as the hyperplanes through the origin event: vectors as origin hyperplanes, Lorentz rotors as the motors that keep the origin
+#[cfg(all(feature = "sta", feature = "stap"))]
+#[test]
+fn sta_to_stap() {
+    use gax::{sta, stap};
+    #[inline(never)]
+    fn p0(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::from(a * b)), &rhs), "Scalar * Scalar");
+    }
+    #[inline(never)]
+    fn p1(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::from(a * b)), &rhs), "Scalar * Vector");
+    }
+    #[inline(never)]
+    fn p2(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::from(a * b)), &rhs), "Scalar * Bivector");
+    }
+    #[inline(never)]
+    fn p3(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::from(a * b)), &rhs), "Scalar * Trivector");
+    }
+    #[inline(never)]
+    fn p4(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a * b)), &rhs), "Scalar * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Scalar * Phasor");
+    }
+    #[inline(never)]
+    fn p6(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Scalar * Even");
+    }
+    #[inline(never)]
+    fn p7(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Scalar * Odd");
+    }
+    #[inline(never)]
+    fn p8(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
+    }
+    #[inline(never)]
+    fn p9(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::from(a * b)), &rhs), "Vector * Scalar");
+    }
+    #[inline(never)]
+    fn p10(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Vector * Vector");
+    }
+    #[inline(never)]
+    fn p11(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Vector * Bivector");
+    }
+    #[inline(never)]
+    fn p12(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Vector * Trivector");
+    }
+    #[inline(never)]
+    fn p13(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::from(a * b)), &rhs), "Vector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p14(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Vector * Phasor");
+    }
+    #[inline(never)]
+    fn p15(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Vector * Even");
+    }
+    #[inline(never)]
+    fn p16(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Vector * Odd");
+    }
+    #[inline(never)]
+    fn p17(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Vector * Multivector");
+    }
+    #[inline(never)]
+    fn p18(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::from(a * b)), &rhs), "Bivector * Scalar");
+    }
+    #[inline(never)]
+    fn p19(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Bivector * Vector");
+    }
+    #[inline(never)]
+    fn p20(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Bivector * Bivector");
+    }
+    #[inline(never)]
+    fn p21(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Bivector * Trivector");
+    }
+    #[inline(never)]
+    fn p22(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::from(a * b)), &rhs), "Bivector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p23(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::from(a * b)), &rhs), "Bivector * Phasor");
+    }
+    #[inline(never)]
+    fn p24(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Bivector * Even");
+    }
+    #[inline(never)]
+    fn p25(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Bivector * Odd");
+    }
+    #[inline(never)]
+    fn p26(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Bivector * Multivector");
+    }
+    #[inline(never)]
+    fn p27(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::from(a * b)), &rhs), "Trivector * Scalar");
+    }
+    #[inline(never)]
+    fn p28(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Trivector * Vector");
+    }
+    #[inline(never)]
+    fn p29(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Trivector * Bivector");
+    }
+    #[inline(never)]
+    fn p30(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Trivector * Trivector");
+    }
+    #[inline(never)]
+    fn p31(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::from(a * b)), &rhs), "Trivector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p32(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Trivector * Phasor");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Trivector * Even");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Trivector * Odd");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Trivector * Multivector");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a * b)), &rhs), "Pseudoscalar * Scalar");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::from(a * b)), &rhs), "Pseudoscalar * Vector");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::from(a * b)), &rhs), "Pseudoscalar * Bivector");
+    }
+    #[inline(never)]
+    fn p39(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::from(a * b)), &rhs), "Pseudoscalar * Trivector");
+    }
+    #[inline(never)]
+    fn p40(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::from(a * b)), &rhs), "Pseudoscalar * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p41(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Pseudoscalar * Phasor");
+    }
+    #[inline(never)]
+    fn p42(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Pseudoscalar * Even");
+    }
+    #[inline(never)]
+    fn p43(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Pseudoscalar * Odd");
+    }
+    #[inline(never)]
+    fn p44(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Phasor * Scalar");
+    }
+    #[inline(never)]
+    fn p46(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Phasor * Vector");
+    }
+    #[inline(never)]
+    fn p47(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::from(a * b)), &rhs), "Phasor * Bivector");
+    }
+    #[inline(never)]
+    fn p48(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Phasor * Trivector");
+    }
+    #[inline(never)]
+    fn p49(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Phasor * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p50(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Phasor * Phasor");
+    }
+    #[inline(never)]
+    fn p51(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Phasor * Even");
+    }
+    #[inline(never)]
+    fn p52(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Phasor * Odd");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Phasor * Multivector");
+    }
+    #[inline(never)]
+    fn p54(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Even * Scalar");
+    }
+    #[inline(never)]
+    fn p55(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Even * Vector");
+    }
+    #[inline(never)]
+    fn p56(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Even * Bivector");
+    }
+    #[inline(never)]
+    fn p57(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Even * Trivector");
+    }
+    #[inline(never)]
+    fn p58(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Even * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p59(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Even * Phasor");
+    }
+    #[inline(never)]
+    fn p60(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Even * Even");
+    }
+    #[inline(never)]
+    fn p61(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Even * Odd");
+    }
+    #[inline(never)]
+    fn p62(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Even * Multivector");
+    }
+    #[inline(never)]
+    fn p63(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Odd * Scalar");
+    }
+    #[inline(never)]
+    fn p64(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Odd * Vector");
+    }
+    #[inline(never)]
+    fn p65(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Odd * Bivector");
+    }
+    #[inline(never)]
+    fn p66(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Odd * Trivector");
+    }
+    #[inline(never)]
+    fn p67(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Odd * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p68(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Odd * Phasor");
+    }
+    #[inline(never)]
+    fn p69(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::from(a * b)), &rhs), "Odd * Even");
+    }
+    #[inline(never)]
+    fn p70(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::from(a * b)), &rhs), "Odd * Odd");
+    }
+    #[inline(never)]
+    fn p71(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Odd * Multivector");
+    }
+    #[inline(never)]
+    fn p72(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Scalar::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
+    }
+    #[inline(never)]
+    fn p73(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Vector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Vector");
+    }
+    #[inline(never)]
+    fn p74(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Bivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Bivector");
+    }
+    #[inline(never)]
+    fn p75(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Trivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Trivector");
+    }
+    #[inline(never)]
+    fn p76(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Quadvector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p77(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Phasor");
+    }
+    #[inline(never)]
+    fn p78(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Motor::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Even");
+    }
+    #[inline(never)]
+    fn p79(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Odd::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Odd");
+    }
+    #[inline(never)]
+    fn p80(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::from(a) * stap::oriented::Multivector::from(b));
+        assert!(close(&stap::oriented::Multivector::from(stap::oriented::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
+    }
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x6c132));
+    for _ in 0..4 {
+        p0(&mut rng);
+        p1(&mut rng);
+        p2(&mut rng);
+        p3(&mut rng);
+        p4(&mut rng);
+        p5(&mut rng);
+        p6(&mut rng);
+        p7(&mut rng);
+        p8(&mut rng);
+        p9(&mut rng);
+        p10(&mut rng);
+        p11(&mut rng);
+        p12(&mut rng);
+        p13(&mut rng);
+        p14(&mut rng);
+        p15(&mut rng);
+        p16(&mut rng);
+        p17(&mut rng);
+        p18(&mut rng);
+        p19(&mut rng);
+        p20(&mut rng);
+        p21(&mut rng);
+        p22(&mut rng);
+        p23(&mut rng);
+        p24(&mut rng);
+        p25(&mut rng);
+        p26(&mut rng);
+        p27(&mut rng);
+        p28(&mut rng);
+        p29(&mut rng);
+        p30(&mut rng);
+        p31(&mut rng);
+        p32(&mut rng);
+        p33(&mut rng);
+        p34(&mut rng);
+        p35(&mut rng);
+        p36(&mut rng);
+        p37(&mut rng);
+        p38(&mut rng);
+        p39(&mut rng);
+        p40(&mut rng);
+        p41(&mut rng);
+        p42(&mut rng);
+        p43(&mut rng);
+        p44(&mut rng);
+        p45(&mut rng);
+        p46(&mut rng);
+        p47(&mut rng);
+        p48(&mut rng);
+        p49(&mut rng);
+        p50(&mut rng);
+        p51(&mut rng);
+        p52(&mut rng);
+        p53(&mut rng);
+        p54(&mut rng);
+        p55(&mut rng);
+        p56(&mut rng);
+        p57(&mut rng);
+        p58(&mut rng);
+        p59(&mut rng);
+        p60(&mut rng);
+        p61(&mut rng);
+        p62(&mut rng);
+        p63(&mut rng);
+        p64(&mut rng);
+        p65(&mut rng);
+        p66(&mut rng);
+        p67(&mut rng);
+        p68(&mut rng);
+        p69(&mut rng);
+        p70(&mut rng);
+        p71(&mut rng);
+        p72(&mut rng);
+        p73(&mut rng);
+        p74(&mut rng);
+        p75(&mut rng);
+        p76(&mut rng);
+        p77(&mut rng);
+        p78(&mut rng);
+        p79(&mut rng);
+        p80(&mut rng);
+    }
+}
+
+/// the Minkowski subalgebra: vectors as hyperplanes through the origin, Lorentz rotors as the motors that keep the origin
+#[cfg(all(feature = "sta", feature = "csta"))]
+#[test]
+fn sta_to_csta() {
+    use gax::{sta, csta};
+    #[inline(never)]
+    fn p0(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::from(a * b)), &rhs), "Scalar * Scalar");
+    }
+    #[inline(never)]
+    fn p1(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::from(a * b)), &rhs), "Scalar * Vector");
+    }
+    #[inline(never)]
+    fn p2(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::from(a * b)), &rhs), "Scalar * Bivector");
+    }
+    #[inline(never)]
+    fn p3(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::from(a * b)), &rhs), "Scalar * Trivector");
+    }
+    #[inline(never)]
+    fn p4(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a * b)), &rhs), "Scalar * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Scalar * Phasor");
+    }
+    #[inline(never)]
+    fn p6(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Scalar * Even");
+    }
+    #[inline(never)]
+    fn p7(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Scalar * Odd");
+    }
+    #[inline(never)]
+    fn p8(rng: &mut Rng) {
+        let (a, b): (sta::Scalar<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
+    }
+    #[inline(never)]
+    fn p9(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::from(a * b)), &rhs), "Vector * Scalar");
+    }
+    #[inline(never)]
+    fn p10(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Vector * Vector");
+    }
+    #[inline(never)]
+    fn p11(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Vector * Bivector");
+    }
+    #[inline(never)]
+    fn p12(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Vector * Trivector");
+    }
+    #[inline(never)]
+    fn p13(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::from(a * b)), &rhs), "Vector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p14(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Vector * Phasor");
+    }
+    #[inline(never)]
+    fn p15(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Vector * Even");
+    }
+    #[inline(never)]
+    fn p16(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Vector * Odd");
+    }
+    #[inline(never)]
+    fn p17(rng: &mut Rng) {
+        let (a, b): (sta::Vector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Vector * Multivector");
+    }
+    #[inline(never)]
+    fn p18(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::from(a * b)), &rhs), "Bivector * Scalar");
+    }
+    #[inline(never)]
+    fn p19(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Bivector * Vector");
+    }
+    #[inline(never)]
+    fn p20(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Bivector * Bivector");
+    }
+    #[inline(never)]
+    fn p21(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Bivector * Trivector");
+    }
+    #[inline(never)]
+    fn p22(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::from(a * b)), &rhs), "Bivector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p23(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::from(a * b)), &rhs), "Bivector * Phasor");
+    }
+    #[inline(never)]
+    fn p24(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Bivector * Even");
+    }
+    #[inline(never)]
+    fn p25(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Bivector * Odd");
+    }
+    #[inline(never)]
+    fn p26(rng: &mut Rng) {
+        let (a, b): (sta::Bivector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Bivector * Multivector");
+    }
+    #[inline(never)]
+    fn p27(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::from(a * b)), &rhs), "Trivector * Scalar");
+    }
+    #[inline(never)]
+    fn p28(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Trivector * Vector");
+    }
+    #[inline(never)]
+    fn p29(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Trivector * Bivector");
+    }
+    #[inline(never)]
+    fn p30(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Trivector * Trivector");
+    }
+    #[inline(never)]
+    fn p31(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::from(a * b)), &rhs), "Trivector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p32(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Trivector * Phasor");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Trivector * Even");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Trivector * Odd");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (sta::Trivector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Trivector * Multivector");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a * b)), &rhs), "Pseudoscalar * Scalar");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::from(a * b)), &rhs), "Pseudoscalar * Vector");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::from(a * b)), &rhs), "Pseudoscalar * Bivector");
+    }
+    #[inline(never)]
+    fn p39(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::from(a * b)), &rhs), "Pseudoscalar * Trivector");
+    }
+    #[inline(never)]
+    fn p40(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::from(a * b)), &rhs), "Pseudoscalar * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p41(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Pseudoscalar * Phasor");
+    }
+    #[inline(never)]
+    fn p42(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Pseudoscalar * Even");
+    }
+    #[inline(never)]
+    fn p43(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Pseudoscalar * Odd");
+    }
+    #[inline(never)]
+    fn p44(rng: &mut Rng) {
+        let (a, b): (sta::Pseudoscalar<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Phasor * Scalar");
+    }
+    #[inline(never)]
+    fn p46(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Phasor * Vector");
+    }
+    #[inline(never)]
+    fn p47(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::from(a * b)), &rhs), "Phasor * Bivector");
+    }
+    #[inline(never)]
+    fn p48(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Phasor * Trivector");
+    }
+    #[inline(never)]
+    fn p49(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Phasor * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p50(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Phasor * Phasor");
+    }
+    #[inline(never)]
+    fn p51(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Phasor * Even");
+    }
+    #[inline(never)]
+    fn p52(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Phasor * Odd");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
+        let (a, b): (sta::Phasor<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Phasor * Multivector");
+    }
+    #[inline(never)]
+    fn p54(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Even * Scalar");
+    }
+    #[inline(never)]
+    fn p55(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Even * Vector");
+    }
+    #[inline(never)]
+    fn p56(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Even * Bivector");
+    }
+    #[inline(never)]
+    fn p57(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Even * Trivector");
+    }
+    #[inline(never)]
+    fn p58(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Even * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p59(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Even * Phasor");
+    }
+    #[inline(never)]
+    fn p60(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Even * Even");
+    }
+    #[inline(never)]
+    fn p61(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Even * Odd");
+    }
+    #[inline(never)]
+    fn p62(rng: &mut Rng) {
+        let (a, b): (sta::Even<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Even * Multivector");
+    }
+    #[inline(never)]
+    fn p63(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Odd * Scalar");
+    }
+    #[inline(never)]
+    fn p64(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Odd * Vector");
+    }
+    #[inline(never)]
+    fn p65(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Odd * Bivector");
+    }
+    #[inline(never)]
+    fn p66(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Odd * Trivector");
+    }
+    #[inline(never)]
+    fn p67(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Odd * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p68(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Odd * Phasor");
+    }
+    #[inline(never)]
+    fn p69(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::from(a * b)), &rhs), "Odd * Even");
+    }
+    #[inline(never)]
+    fn p70(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::from(a * b)), &rhs), "Odd * Odd");
+    }
+    #[inline(never)]
+    fn p71(rng: &mut Rng) {
+        let (a, b): (sta::Odd<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Odd * Multivector");
+    }
+    #[inline(never)]
+    fn p72(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Scalar::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
+    }
+    #[inline(never)]
+    fn p73(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Vector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Vector");
+    }
+    #[inline(never)]
+    fn p74(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Twist::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Bivector");
+    }
+    #[inline(never)]
+    fn p75(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Trivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Trivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Trivector");
+    }
+    #[inline(never)]
+    fn p76(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Quadvector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p77(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Phasor<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Phasor");
+    }
+    #[inline(never)]
+    fn p78(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Even<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Motor::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Even");
+    }
+    #[inline(never)]
+    fn p79(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Odd::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Odd");
+    }
+    #[inline(never)]
+    fn p80(rng: &mut Rng) {
+        let (a, b): (sta::Multivector<(), f64>, sta::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::from(a) * csta::oriented::Multivector::from(b));
+        assert!(close(&csta::oriented::Multivector::from(csta::oriented::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
+    }
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x6c132));
+    for _ in 0..4 {
+        p0(&mut rng);
+        p1(&mut rng);
+        p2(&mut rng);
+        p3(&mut rng);
+        p4(&mut rng);
+        p5(&mut rng);
+        p6(&mut rng);
+        p7(&mut rng);
+        p8(&mut rng);
+        p9(&mut rng);
+        p10(&mut rng);
+        p11(&mut rng);
+        p12(&mut rng);
+        p13(&mut rng);
+        p14(&mut rng);
+        p15(&mut rng);
+        p16(&mut rng);
+        p17(&mut rng);
+        p18(&mut rng);
+        p19(&mut rng);
+        p20(&mut rng);
+        p21(&mut rng);
+        p22(&mut rng);
+        p23(&mut rng);
+        p24(&mut rng);
+        p25(&mut rng);
+        p26(&mut rng);
+        p27(&mut rng);
+        p28(&mut rng);
+        p29(&mut rng);
+        p30(&mut rng);
+        p31(&mut rng);
+        p32(&mut rng);
+        p33(&mut rng);
+        p34(&mut rng);
+        p35(&mut rng);
+        p36(&mut rng);
+        p37(&mut rng);
+        p38(&mut rng);
+        p39(&mut rng);
+        p40(&mut rng);
+        p41(&mut rng);
+        p42(&mut rng);
+        p43(&mut rng);
+        p44(&mut rng);
+        p45(&mut rng);
+        p46(&mut rng);
+        p47(&mut rng);
+        p48(&mut rng);
+        p49(&mut rng);
+        p50(&mut rng);
+        p51(&mut rng);
+        p52(&mut rng);
+        p53(&mut rng);
+        p54(&mut rng);
+        p55(&mut rng);
+        p56(&mut rng);
+        p57(&mut rng);
+        p58(&mut rng);
+        p59(&mut rng);
+        p60(&mut rng);
+        p61(&mut rng);
+        p62(&mut rng);
+        p63(&mut rng);
+        p64(&mut rng);
+        p65(&mut rng);
+        p66(&mut rng);
+        p67(&mut rng);
+        p68(&mut rng);
+        p69(&mut rng);
+        p70(&mut rng);
+        p71(&mut rng);
+        p72(&mut rng);
+        p73(&mut rng);
+        p74(&mut rng);
+        p75(&mut rng);
+        p76(&mut rng);
+        p77(&mut rng);
+        p78(&mut rng);
+        p79(&mut rng);
+        p80(&mut rng);
     }
 }
 

@@ -6,19 +6,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     fn transform(self, x: Scalar<S, T, O>) -> Scalar<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
-        let t3 = v[3] * v[3];
-        let t4 = (-v[1]).mul_add(v[1], t0);
-        let t5 = v[2].mul_add(v[2], t3);
-        let t6 = t4 - t5;
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = (-v[3]).mul_add(v[3], t2);
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t7]), [false]) };
         }
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m6)).0], [false]) }
     }
@@ -37,11 +37,11 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<()
     #[inline]
     fn prepare(self) -> gx::Prepared<Vector, Scalar<(), f64, O>, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         gx::Prepared::from_entries([m6])
     }
 }
@@ -112,27 +112,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
-        let t3 = v[3] * v[3];
-        let t4 = (-v[1]).mul_add(v[1], t0);
-        let t5 = v[2].mul_add(v[2], t3);
-        let t6 = t4 - t5;
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = (-v[3]).mul_add(v[3], t2);
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t7]), [false]) };
         }
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Scalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m6)).0], [false]) }
     }
@@ -153,18 +153,18 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Scalar<()
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         gx::Prepared::from_entries([m6])
     }
 }
@@ -238,36 +238,36 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t1 = v[1] * v[1];
         let t2 = t0 - t1;
         let t3 = t0 + t1;
-        let t4 = v[0] * xv[0];
-        let t6 = (-v[1]).mul_add(xv[1], t4);
+        let t5 = v[1] * xv[1];
+        let t6 = v[0].mul_add(xv[0], t5);
         let t7 = v[2] * v[2];
         let t8 = v[3] * v[3];
         let t9 = t7 - t8;
         let t10 = t7 + t8;
-        let t12 = v[3] * xv[3];
-        let t13 = v[2].mul_add(xv[2], t12);
+        let t11 = v[2] * xv[2];
+        let t13 = (-v[3]).mul_add(xv[3], t11);
         let t14 = v[0] * v[1];
         let t15 = v[2] * v[3];
         let t17 = v[0] * t13;
-        let t19 = xv[0] * t10;
-        let t20 = xv[0] * t14;
-        let t23 = xv[1] * t10;
+        let t18 = xv[0] * t2;
+        let t21 = v[1] * t13;
+        let t23 = xv[1] * t9;
         let t25 = v[2] * t6;
-        let t27 = xv[2] * t9;
+        let t27 = xv[2] * t10;
         let t29 = v[3] * t6;
-        let t31 = xv[3] * t9;
-        let t32 = xv[0].mul_add(t3, t19);
+        let t31 = xv[3] * t10;
+        let t32 = (-xv[0]).mul_add(t9, t18);
         let t33 = xv[1].mul_add(t14, t17);
-        let t35 = (-t33).mul_add(T::from_i64(2), t32);
-        let t36 = (-xv[1]).mul_add(t3, t23);
-        let t37 = (-v[1]).mul_add(t13, t20);
-        let t39 = t37.mul_add(T::from_i64(2), t36);
-        let t40 = xv[2].mul_add(t2, t27);
+        let t35 = t33.mul_add(T::from_i64(2), t32);
+        let t36 = xv[1].mul_add(t2, t23);
+        let t37 = xv[0].mul_add(t14, t21);
+        let t39 = t37.mul_add(T::from_i64(2), -t36);
+        let t40 = (-xv[2]).mul_add(t3, t27);
         let t41 = (-xv[3]).mul_add(t15, t25);
-        let t43 = t41.mul_add(T::from_i64(2), -t40);
-        let t44 = (-xv[3]).mul_add(t2, t31);
-        let t45 = (-xv[2]).mul_add(t15, t29);
-        let t47 = t45.mul_add(T::from_i64(2), t44);
+        let t43 = t41.mul_add(T::from_i64(2), t40);
+        let t44 = xv[3].mul_add(t3, t31);
+        let t45 = xv[2].mul_add(t15, t29);
+        let t47 = t45.mul_add(T::from_i64(2), -t44);
             return Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t35, t39, t43, t47]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
@@ -284,25 +284,23 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m11 = m0 + m1;
         let m12 = m2 - m3;
         let m13 = m2 + m3;
-        let m14 = m11 + m13;
+        let m14 = m10 - m12;
         let m15 = m4 * T::from_i64(2);
-        let m16 = -m15;
-        let m17 = m5 * T::from_i64(2);
+        let m16 = m5 * T::from_i64(2);
+        let m17 = m6 * T::from_i64(2);
         let m18 = -m17;
-        let m19 = m6 * T::from_i64(2);
+        let m19 = m10 + m12;
         let m20 = -m19;
-        let m21 = m13 - m11;
-        let m22 = m7 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
         let m23 = -m22;
-        let m24 = m8 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = m10 + m12;
-        let m27 = -m26;
-        let m28 = m9 * T::from_i64(2);
-        let m29 = -m28;
-        let m30 = m12 - m10;
+        let m24 = m13 - m11;
+        let m25 = m9 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m11 + m13;
+        let m28 = -m27;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m20)).0, (x[0].scale(m15) + x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25)).0, (x[0].scale(m17) + x[1].scale(m23) + x[2].scale(m27) + x[3].scale(m29)).0, (x[0].scale(m19) + x[1].scale(m25) + x[2].scale(m29) + x[3].scale(m30)).0], [true, true, true, true]) }
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m18)).0, (x[0].scale(m15) + x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[0].scale(m16) + x[1].scale(m21) + x[2].scale(m24) + x[3].scale(m26)).0, (x[0].scale(m17) + x[1].scale(m22) + x[2].scale(m25) + x[3].scale(m28)).0], [true, true, true, true]) }
     }
 }
 
@@ -333,24 +331,22 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<()
         let m11 = m0 + m1;
         let m12 = m2 - m3;
         let m13 = m2 + m3;
-        let m14 = m11 + m13;
+        let m14 = m10 - m12;
         let m15 = m4 * T::from_i64(2);
-        let m16 = -m15;
-        let m17 = m5 * T::from_i64(2);
+        let m16 = m5 * T::from_i64(2);
+        let m17 = m6 * T::from_i64(2);
         let m18 = -m17;
-        let m19 = m6 * T::from_i64(2);
+        let m19 = m10 + m12;
         let m20 = -m19;
-        let m21 = m13 - m11;
-        let m22 = m7 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
         let m23 = -m22;
-        let m24 = m8 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = m10 + m12;
-        let m27 = -m26;
-        let m28 = m9 * T::from_i64(2);
-        let m29 = -m28;
-        let m30 = m12 - m10;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m15, m21, m23, m25, m17, m27, m29, m19, m30])
+        let m24 = m13 - m11;
+        let m25 = m9 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m11 + m13;
+        let m28 = -m27;
+        gx::Prepared::from_entries([m14, m15, m16, m18, m20, m21, m23, m24, m26, m17, m22, m25, m28])
     }
 }
 
@@ -360,7 +356,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     fn transform(self, x: Vector<S, T, O>) -> Vector<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0], [true, true, true, true]) }
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0], [true, true, true, true]) }
     }
 }
 
@@ -369,7 +365,7 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Vector<(), f64, 
     #[inline]
     fn from(p: gx::Prepared<Vector, Vector<(), f64, O>, T, 13>) -> Self {
         let m = p.m;
-        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Vector<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[6], m[9], m[10]], [m[11], m[7], m[10], m[12]]], [true, true, true, true]) }
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Vector<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [m[9], m[10], m[11], m[12]]], [true, true, true, true]) }
     }
 }
 
@@ -420,29 +416,29 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[0];
-        let t3 = v[3] * xv[3];
-        let t4 = (-v[1]).mul_add(xv[1], t0);
-        let t5 = v[2].mul_add(xv[2], t3);
-        let t6 = t4 - t5;
+        let t1 = v[1] * xv[1];
+        let t2 = v[2] * xv[2];
+        let t4 = v[0].mul_add(xv[0], t1);
+        let t5 = (-v[3]).mul_add(xv[3], t2);
+        let t6 = t4 + t5;
         let t7 = v[0] * t6;
         let t8 = v[1] * t6;
         let t9 = v[2] * t6;
         let t10 = v[3] * t6;
         let t11 = t7 * T::from_i64(2);
-        let t12 = v[0] * v[0];
-        let t15 = v[3] * v[3];
-        let t16 = (-v[1]).mul_add(v[1], t12);
-        let t17 = v[2].mul_add(v[2], t15);
-        let t18 = t16 - t17;
+        let t13 = v[1] * v[1];
+        let t14 = v[2] * v[2];
+        let t16 = v[0].mul_add(v[0], t13);
+        let t17 = (-v[3]).mul_add(v[3], t14);
+        let t18 = t16 + t17;
         let t20 = (-xv[0]).mul_add(t18, t11);
         let t21 = t8 * T::from_i64(2);
         let t23 = (-xv[1]).mul_add(t18, t21);
@@ -466,25 +462,23 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m11 = m0 + m1;
         let m12 = m2 - m3;
         let m13 = m2 + m3;
-        let m14 = m11 + m13;
+        let m14 = m10 - m12;
         let m15 = m4 * T::from_i64(2);
-        let m16 = -m15;
-        let m17 = m5 * T::from_i64(2);
+        let m16 = m5 * T::from_i64(2);
+        let m17 = m6 * T::from_i64(2);
         let m18 = -m17;
-        let m19 = m6 * T::from_i64(2);
+        let m19 = m10 + m12;
         let m20 = -m19;
-        let m21 = m13 - m11;
-        let m22 = m7 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
         let m23 = -m22;
-        let m24 = m8 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = m10 + m12;
-        let m27 = -m26;
-        let m28 = m9 * T::from_i64(2);
-        let m29 = -m28;
-        let m30 = m12 - m10;
+        let m24 = m13 - m11;
+        let m25 = m9 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m11 + m13;
+        let m28 = -m27;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m20)).0, (x[0].scale(m15) + x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25)).0, (x[0].scale(m17) + x[1].scale(m23) + x[2].scale(m27) + x[3].scale(m29)).0, (x[0].scale(m19) + x[1].scale(m25) + x[2].scale(m29) + x[3].scale(m30)).0], [true, true, true, true]) }
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m18)).0, (x[0].scale(m15) + x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[0].scale(m16) + x[1].scale(m21) + x[2].scale(m24) + x[3].scale(m26)).0, (x[0].scale(m17) + x[1].scale(m22) + x[2].scale(m25) + x[3].scale(m28)).0], [true, true, true, true]) }
     }
 }
 
@@ -503,9 +497,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<()
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
@@ -524,24 +518,22 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Vector<()
         let m11 = m0 + m1;
         let m12 = m2 - m3;
         let m13 = m2 + m3;
-        let m14 = m11 + m13;
+        let m14 = m10 - m12;
         let m15 = m4 * T::from_i64(2);
-        let m16 = -m15;
-        let m17 = m5 * T::from_i64(2);
+        let m16 = m5 * T::from_i64(2);
+        let m17 = m6 * T::from_i64(2);
         let m18 = -m17;
-        let m19 = m6 * T::from_i64(2);
+        let m19 = m10 + m12;
         let m20 = -m19;
-        let m21 = m13 - m11;
-        let m22 = m7 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
         let m23 = -m22;
-        let m24 = m8 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = m10 + m12;
-        let m27 = -m26;
-        let m28 = m9 * T::from_i64(2);
-        let m29 = -m28;
-        let m30 = m12 - m10;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m15, m21, m23, m25, m17, m27, m29, m19, m30])
+        let m24 = m13 - m11;
+        let m25 = m9 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m11 + m13;
+        let m28 = -m27;
+        gx::Prepared::from_entries([m14, m15, m16, m18, m20, m21, m23, m24, m26, m17, m22, m25, m28])
     }
 }
 
@@ -551,7 +543,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Vector<S, T, O
     fn transform(self, x: Vector<S, T, O>) -> Vector<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0], [true, true, true, true]) }
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0], [true, true, true, true]) }
     }
 }
 
@@ -560,7 +552,7 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Vector
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Vector>, Vector<(), f64, O>, T, 13>) -> Self {
         let m = p.m;
-        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Vector<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[6], m[9], m[10]], [m[11], m[7], m[10], m[12]]], [true, true, true, true]) }
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Vector<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [m[9], m[10], m[11], m[12]]], [true, true, true, true]) }
     }
 }
 
@@ -614,57 +606,57 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t1 = v[1] * v[1];
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
-        let t4 = v[1] * v[2];
-        let t5 = v[1] * v[3];
-        let t6 = v[0] * v[3];
-        let t7 = v[0] * v[2];
-        let t8 = v[2] * v[3];
-        let t9 = v[0] * v[1];
-        let t10 = t0 + t1;
-        let t11 = t2 - t3;
-        let t12 = t0 + t2;
-        let t13 = t3 - t1;
-        let t14 = t12 + t13;
-        let t15 = t10 - t11;
-        let t16 = t10 + t11;
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[2] * v[3];
+        let t7 = v[1] * v[3];
+        let t8 = v[1] * v[2];
+        let t9 = v[0] * v[3];
+        let t10 = t0 - t1;
+        let t11 = t2 + t3;
+        let t12 = t10 - t11;
+        let t13 = t10 + t11;
+        let t14 = t0 + t1;
+        let t15 = t3 - t2;
+        let t16 = t14 + t15;
         let t19 = xv[2] * t5;
-        let t21 = xv[5] * t7;
+        let t20 = xv[4] * t6;
         let t24 = xv[2] * t8;
-        let t25 = xv[3] * t6;
+        let t26 = xv[5] * t9;
         let t28 = xv[1] * t8;
-        let t31 = xv[4] * t9;
-        let t33 = xv[2] * t7;
+        let t30 = xv[3] * t7;
+        let t32 = xv[1] * t6;
         let t36 = xv[5] * t5;
-        let t37 = xv[0] * t6;
+        let t38 = xv[2] * t9;
         let t41 = xv[5] * t8;
-        let t43 = xv[1] * t9;
+        let t42 = xv[0] * t7;
         let t45 = xv[4] * t8;
         let t47 = xv[1].mul_add(t4, t19);
-        let t48 = (-xv[4]).mul_add(t6, t21);
+        let t48 = (-xv[5]).mul_add(t7, t20);
         let t49 = t47 + t48;
         let t50 = t49 * T::from_i64(2);
-        let t51 = (-xv[0]).mul_add(t14, t50);
+        let t51 = xv[0].mul_add(t12, t50);
         let t52 = xv[0].mul_add(t4, t24);
-        let t53 = (-xv[5]).mul_add(t9, t25);
+        let t53 = (-xv[3]).mul_add(t6, t26);
         let t54 = t52 + t53;
         let t55 = t54 * T::from_i64(2);
-        let t56 = (-xv[1]).mul_add(t15, t55);
+        let t56 = (-xv[1]).mul_add(t13, t55);
         let t57 = xv[0].mul_add(t5, t28);
-        let t58 = (-xv[3]).mul_add(t7, t31);
+        let t58 = (-xv[4]).mul_add(t9, t30);
         let t59 = t57 + t58;
         let t60 = t59 * T::from_i64(2);
         let t61 = (-xv[2]).mul_add(t16, t60);
-        let t62 = (-xv[1]).mul_add(t6, t33);
+        let t62 = (-xv[2]).mul_add(t7, t32);
         let t63 = xv[4].mul_add(t4, t36);
         let t64 = t62 - t63;
         let t65 = t64 * T::from_i64(2);
-        let t66 = xv[3].mul_add(t14, t65);
-        let t67 = (-xv[2]).mul_add(t9, t37);
+        let t66 = (-xv[3]).mul_add(t12, t65);
+        let t67 = (-xv[0]).mul_add(t6, t38);
         let t68 = xv[3].mul_add(t4, t41);
         let t69 = t67 - t68;
         let t70 = t69 * T::from_i64(2);
-        let t71 = xv[4].mul_add(t15, t70);
-        let t72 = (-xv[0]).mul_add(t7, t43);
+        let t71 = xv[4].mul_add(t13, t70);
+        let t72 = (-xv[1]).mul_add(t9, t42);
         let t73 = xv[3].mul_add(t5, t45);
         let t74 = t72 - t73;
         let t75 = t74 * T::from_i64(2);
@@ -681,30 +673,30 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m7 = v[1] * v[2];
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
-        let m10 = m0 + m1;
-        let m11 = m2 - m3;
-        let m12 = m0 - m1;
-        let m13 = m2 + m3;
+        let m10 = m0 - m1;
+        let m11 = m2 + m3;
+        let m12 = m0 + m1;
+        let m13 = m2 - m3;
         let m14 = m10 - m11;
         let m15 = m10 + m11;
-        let m16 = m12 + m13;
-        let m17 = -m16;
-        let m18 = m7 * T::from_i64(2);
-        let m19 = m8 * T::from_i64(2);
-        let m20 = m6 * T::from_i64(2);
+        let m16 = m12 - m13;
+        let m17 = m4 * T::from_i64(2);
+        let m18 = m5 * T::from_i64(2);
+        let m19 = m9 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m5 * T::from_i64(2);
-        let m23 = -m14;
-        let m24 = m9 * T::from_i64(2);
-        let m25 = m4 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = -m15;
-        let m28 = -m22;
-        let m29 = -m18;
-        let m30 = -m19;
-        let m31 = -m24;
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = -m19;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m16;
+        let m27 = -m25;
+        let m28 = -m14;
+        let m29 = -m17;
+        let m30 = -m18;
+        let m31 = -m23;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m17) + x[1].scale(m18) + x[2].scale(m19) + x[4].scale(m21) + x[5].scale(m22)).0, (x[0].scale(m18) + x[1].scale(m23) + x[2].scale(m24) + x[3].scale(m20) + x[5].scale(m26)).0, (x[0].scale(m19) + x[1].scale(m24) + x[2].scale(m27) + x[3].scale(m28) + x[4].scale(m25)).0, (x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m16) + x[4].scale(m29) + x[5].scale(m30)).0, (x[0].scale(m20) + x[2].scale(m26) + x[3].scale(m29) + x[4].scale(m14) + x[5].scale(m31)).0, (x[0].scale(m28) + x[1].scale(m25) + x[3].scale(m30) + x[4].scale(m31) + x[5].scale(m15)).0], [false, false, false, false, false, false]) }
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m14) + x[1].scale(m17) + x[2].scale(m18) + x[4].scale(m19) + x[5].scale(m21)).0, (x[0].scale(m17) + x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m24) + x[5].scale(m25)).0, (x[0].scale(m18) + x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m20) + x[4].scale(m27)).0, (x[1].scale(m19) + x[2].scale(m21) + x[3].scale(m28) + x[4].scale(m29) + x[5].scale(m30)).0, (x[0].scale(m24) + x[2].scale(m25) + x[3].scale(m29) + x[4].scale(m15) + x[5].scale(m31)).0, (x[0].scale(m20) + x[1].scale(m27) + x[3].scale(m30) + x[4].scale(m31) + x[5].scale(m16)).0], [false, false, false, false, false, false]) }
     }
 }
 
@@ -731,29 +723,29 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<
         let m7 = v[1] * v[2];
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
-        let m10 = m0 + m1;
-        let m11 = m2 - m3;
-        let m12 = m0 - m1;
-        let m13 = m2 + m3;
+        let m10 = m0 - m1;
+        let m11 = m2 + m3;
+        let m12 = m0 + m1;
+        let m13 = m2 - m3;
         let m14 = m10 - m11;
         let m15 = m10 + m11;
-        let m16 = m12 + m13;
-        let m17 = -m16;
-        let m18 = m7 * T::from_i64(2);
-        let m19 = m8 * T::from_i64(2);
-        let m20 = m6 * T::from_i64(2);
+        let m16 = m12 - m13;
+        let m17 = m4 * T::from_i64(2);
+        let m18 = m5 * T::from_i64(2);
+        let m19 = m9 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m5 * T::from_i64(2);
-        let m23 = -m14;
-        let m24 = m9 * T::from_i64(2);
-        let m25 = m4 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = -m15;
-        let m28 = -m22;
-        let m29 = -m18;
-        let m30 = -m19;
-        let m31 = -m24;
-        gx::Prepared::from_entries([m17, m18, m19, m21, m22, m23, m24, m20, m26, m27, m28, m25, m16, m29, m30, m14, m31, m15])
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = -m19;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m16;
+        let m27 = -m25;
+        let m28 = -m14;
+        let m29 = -m17;
+        let m30 = -m18;
+        let m31 = -m23;
+        gx::Prepared::from_entries([m14, m17, m18, m19, m21, m22, m23, m24, m25, m26, m20, m27, m28, m29, m30, m15, m31, m16])
     }
 }
 
@@ -823,62 +815,63 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
-        let t2 = v[3] * xv[4];
-        let t3 = v[0].mul_add(xv[0], t2);
-        let t4 = (-v[2]).mul_add(xv[5], t3);
-        let t6 = v[1] * xv[5];
-        let t8 = v[0].mul_add(xv[1], t6);
-        let t9 = (-v[3]).mul_add(xv[3], t8);
-        let t12 = v[2] * xv[3];
+        let t1 = v[1] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
+        let t5 = v[0] * xv[1];
+        let t8 = (-v[1]).mul_add(xv[0], t5);
+        let t9 = (-v[3]).mul_add(xv[5], t8);
+        let t12 = v[3] * xv[4];
         let t13 = v[0].mul_add(xv[2], t12);
-        let t14 = (-v[1]).mul_add(xv[4], t13);
-        let t16 = v[2] * xv[2];
+        let t14 = (-v[2]).mul_add(xv[0], t13);
+        let t16 = v[1] * xv[4];
         let t18 = v[0].mul_add(xv[3], t16);
-        let t19 = (-v[3]).mul_add(xv[1], t18);
-        let t22 = v[3] * xv[0];
+        let t19 = v[2].mul_add(xv[5], t18);
+        let t22 = v[3] * xv[2];
         let t23 = v[0].mul_add(xv[4], t22);
-        let t24 = (-v[1]).mul_add(xv[2], t23);
-        let t26 = v[1] * xv[1];
-        let t28 = v[0].mul_add(xv[5], t26);
-        let t29 = (-v[2]).mul_add(xv[0], t28);
-        let t30 = v[2] * t29;
-        let t33 = v[3] * t19;
-        let t34 = v[1] * t24;
-        let t36 = v[2] * t14;
-        let t39 = v[3] * t4;
-        let t40 = v[1] * t9;
-        let t42 = (-v[3]).mul_add(t24, t30);
-        let t43 = t42 * T::from_i64(2);
-        let t44 = v[0] * v[0];
-        let t47 = v[3] * v[3];
-        let t48 = (-v[1]).mul_add(v[1], t44);
-        let t49 = v[2].mul_add(v[2], t47);
-        let t50 = t48 - t49;
-        let t52 = (-xv[0]).mul_add(t50, t43);
-        let t53 = (-v[1]).mul_add(t29, t33);
+        let t24 = (-v[1]).mul_add(xv[3], t23);
+        let t25 = v[0] * xv[5];
+        let t28 = (-v[2]).mul_add(xv[3], t25);
+        let t29 = (-v[3]).mul_add(xv[1], t28);
+        let t31 = v[2] * t14;
+        let t33 = v[3] * t29;
+        let t34 = v[2] * t4;
+        let t37 = v[2] * t29;
+        let t39 = v[3] * t14;
+        let t41 = v[3] * t9;
+        let t42 = v[1].mul_add(t9, t31);
+        let t45 = v[1] * v[1];
+        let t46 = v[2] * v[2];
+        let t48 = v[0].mul_add(v[0], t45);
+        let t49 = (-v[3]).mul_add(v[3], t46);
+        let t50 = t48 + t49;
+        let t51 = xv[0] * t50;
+        let t52 = t42.mul_add(T::from_i64(2), t51);
+        let t53 = v[1].mul_add(t4, t33);
         let t54 = t53 * T::from_i64(2);
         let t56 = (-xv[1]).mul_add(t50, t54);
-        let t57 = (-v[2]).mul_add(t19, t34);
+        let t57 = (-v[3]).mul_add(t24, t34);
         let t58 = t57 * T::from_i64(2);
         let t60 = (-xv[2]).mul_add(t50, t58);
-        let t61 = (-v[3]).mul_add(t9, t36);
+        let t61 = v[1].mul_add(t24, t37);
         let t63 = xv[3] * t50;
         let t64 = t61.mul_add(T::from_i64(2), t63);
-        let t65 = (-v[1]).mul_add(t14, t39);
-        let t67 = xv[4] * t50;
-        let t68 = t65.mul_add(T::from_i64(2), t67);
-        let t69 = (-v[2]).mul_add(t4, t40);
-        let t71 = xv[5] * t50;
-        let t72 = t69.mul_add(T::from_i64(2), t71);
-            return Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t52, t56, t60, t64, t68, t72]), [false, false, false, false, false, false]) };
+        let t65 = -t64;
+        let t66 = (-v[1]).mul_add(t19, t39);
+        let t68 = xv[4] * t50;
+        let t69 = t66.mul_add(T::from_i64(2), t68);
+        let t70 = v[2].mul_add(t19, t41);
+        let t72 = xv[5] * t50;
+        let t73 = (-t70).mul_add(T::from_i64(2), t72);
+            return Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t52, t56, t60, t65, t69, t73]), [false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -890,30 +883,30 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m7 = v[1] * v[2];
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
-        let m10 = m0 + m1;
-        let m11 = m2 - m3;
-        let m12 = m0 - m1;
-        let m13 = m2 + m3;
+        let m10 = m0 - m1;
+        let m11 = m2 + m3;
+        let m12 = m0 + m1;
+        let m13 = m2 - m3;
         let m14 = m10 - m11;
         let m15 = m10 + m11;
-        let m16 = m12 + m13;
-        let m17 = -m16;
-        let m18 = m7 * T::from_i64(2);
-        let m19 = m8 * T::from_i64(2);
-        let m20 = m6 * T::from_i64(2);
+        let m16 = m12 - m13;
+        let m17 = m4 * T::from_i64(2);
+        let m18 = m5 * T::from_i64(2);
+        let m19 = m9 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m5 * T::from_i64(2);
-        let m23 = -m14;
-        let m24 = m9 * T::from_i64(2);
-        let m25 = m4 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = -m15;
-        let m28 = -m22;
-        let m29 = -m18;
-        let m30 = -m19;
-        let m31 = -m24;
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = -m19;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m16;
+        let m27 = -m25;
+        let m28 = -m14;
+        let m29 = -m17;
+        let m30 = -m18;
+        let m31 = -m23;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m17) + x[1].scale(m18) + x[2].scale(m19) + x[4].scale(m21) + x[5].scale(m22)).0, (x[0].scale(m18) + x[1].scale(m23) + x[2].scale(m24) + x[3].scale(m20) + x[5].scale(m26)).0, (x[0].scale(m19) + x[1].scale(m24) + x[2].scale(m27) + x[3].scale(m28) + x[4].scale(m25)).0, (x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m16) + x[4].scale(m29) + x[5].scale(m30)).0, (x[0].scale(m20) + x[2].scale(m26) + x[3].scale(m29) + x[4].scale(m14) + x[5].scale(m31)).0, (x[0].scale(m28) + x[1].scale(m25) + x[3].scale(m30) + x[4].scale(m31) + x[5].scale(m15)).0], [false, false, false, false, false, false]) }
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m14) + x[1].scale(m17) + x[2].scale(m18) + x[4].scale(m19) + x[5].scale(m21)).0, (x[0].scale(m17) + x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m24) + x[5].scale(m25)).0, (x[0].scale(m18) + x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m20) + x[4].scale(m27)).0, (x[1].scale(m19) + x[2].scale(m21) + x[3].scale(m28) + x[4].scale(m29) + x[5].scale(m30)).0, (x[0].scale(m24) + x[2].scale(m25) + x[3].scale(m29) + x[4].scale(m15) + x[5].scale(m31)).0, (x[0].scale(m20) + x[1].scale(m27) + x[3].scale(m30) + x[4].scale(m31) + x[5].scale(m16)).0], [false, false, false, false, false, false]) }
     }
 }
 
@@ -932,9 +925,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
@@ -949,29 +942,29 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Bivector<
         let m7 = v[1] * v[2];
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
-        let m10 = m0 + m1;
-        let m11 = m2 - m3;
-        let m12 = m0 - m1;
-        let m13 = m2 + m3;
+        let m10 = m0 - m1;
+        let m11 = m2 + m3;
+        let m12 = m0 + m1;
+        let m13 = m2 - m3;
         let m14 = m10 - m11;
         let m15 = m10 + m11;
-        let m16 = m12 + m13;
-        let m17 = -m16;
-        let m18 = m7 * T::from_i64(2);
-        let m19 = m8 * T::from_i64(2);
-        let m20 = m6 * T::from_i64(2);
+        let m16 = m12 - m13;
+        let m17 = m4 * T::from_i64(2);
+        let m18 = m5 * T::from_i64(2);
+        let m19 = m9 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m5 * T::from_i64(2);
-        let m23 = -m14;
-        let m24 = m9 * T::from_i64(2);
-        let m25 = m4 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = -m15;
-        let m28 = -m22;
-        let m29 = -m18;
-        let m30 = -m19;
-        let m31 = -m24;
-        gx::Prepared::from_entries([m17, m18, m19, m21, m22, m23, m24, m20, m26, m27, m28, m25, m16, m29, m30, m14, m31, m15])
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = -m19;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m16;
+        let m27 = -m25;
+        let m28 = -m14;
+        let m29 = -m17;
+        let m30 = -m18;
+        let m31 = -m23;
+        gx::Prepared::from_entries([m14, m17, m18, m19, m21, m22, m23, m24, m25, m26, m20, m27, m28, m29, m30, m15, m31, m16])
     }
 }
 
@@ -1044,38 +1037,37 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t1 = v[1] * v[1];
         let t2 = t0 - t1;
         let t3 = t0 + t1;
-        let t5 = v[1] * xv[1];
-        let t6 = v[0].mul_add(xv[0], t5);
+        let t5 = v[1] * xv[2];
+        let t6 = v[0].mul_add(xv[1], t5);
         let t7 = v[2] * v[2];
         let t8 = v[3] * v[3];
         let t9 = t7 - t8;
         let t10 = t7 + t8;
-        let t12 = v[3] * xv[3];
-        let t13 = v[2].mul_add(xv[2], t12);
+        let t11 = v[2] * xv[3];
+        let t13 = (-v[3]).mul_add(xv[0], t11);
         let t14 = v[0] * v[1];
         let t15 = v[2] * v[3];
-        let t17 = v[0] * t13;
+        let t17 = v[3] * t6;
         let t19 = xv[0] * t10;
-        let t21 = v[1] * t13;
-        let t22 = xv[1] * t3;
-        let t25 = v[2] * t6;
+        let t21 = v[0] * t13;
+        let t23 = xv[1] * t9;
+        let t25 = v[1] * t13;
         let t27 = xv[2] * t9;
-        let t29 = v[3] * t6;
-        let t30 = xv[3] * t2;
+        let t28 = xv[0] * t15;
+        let t30 = xv[3] * t3;
         let t32 = xv[0].mul_add(t3, t19);
-        let t33 = xv[1].mul_add(t14, t17);
-        let t35 = t33.mul_add(T::from_i64(2), t32);
-        let t36 = -t35;
-        let t37 = (-xv[1]).mul_add(t10, t22);
-        let t38 = xv[0].mul_add(t14, t21);
-        let t40 = t38.mul_add(T::from_i64(2), t37);
-        let t41 = xv[2].mul_add(t2, t27);
-        let t42 = xv[3].mul_add(t15, t25);
-        let t44 = t42.mul_add(T::from_i64(2), t41);
-        let t45 = (-xv[3]).mul_add(t9, t30);
-        let t46 = xv[2].mul_add(t15, t29);
-        let t48 = t46.mul_add(T::from_i64(2), t45);
-            return Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t36, t40, t44, t48]), [true, true, true, true]) };
+        let t33 = xv[3].mul_add(t15, t17);
+        let t35 = (-t33).mul_add(T::from_i64(2), t32);
+        let t36 = (-xv[1]).mul_add(t2, t23);
+        let t37 = xv[2].mul_add(t14, t21);
+        let t39 = (-t37).mul_add(T::from_i64(2), t36);
+        let t40 = xv[2].mul_add(t2, t27);
+        let t41 = xv[1].mul_add(t14, t25);
+        let t43 = (-t41).mul_add(T::from_i64(2), t40);
+        let t44 = (-xv[3]).mul_add(t10, t30);
+        let t45 = (-v[2]).mul_add(t6, t28);
+        let t47 = t45.mul_add(T::from_i64(2), t44);
+            return Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t35, t39, t43, t47]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1092,21 +1084,23 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m12 = m2 - m3;
         let m13 = m2 + m3;
         let m14 = m11 + m13;
-        let m15 = -m14;
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m16;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m6 * T::from_i64(2);
-        let m21 = -m20;
-        let m22 = m11 - m13;
-        let m23 = m7 * T::from_i64(2);
-        let m24 = m8 * T::from_i64(2);
-        let m25 = m10 + m12;
-        let m26 = m9 * T::from_i64(2);
-        let m27 = m10 - m12;
+        let m15 = m6 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m8 * T::from_i64(2);
+        let m18 = -m17;
+        let m19 = m9 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m12 - m10;
+        let m22 = m4 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m5 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m10 + m12;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m11 - m13;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m16) + x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m24)).0, (x[0].scale(m18) + x[1].scale(m23) + x[2].scale(m25) + x[3].scale(m26)).0, (x[0].scale(m20) + x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m27)).0], [true, true, true, true]) }
+        Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m20)).0, (x[0].scale(m15) + x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25)).0, (x[0].scale(m17) + x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m28)).0, (x[0].scale(m19) + x[1].scale(m25) + x[2].scale(m28) + x[3].scale(m29)).0], [true, true, true, true]) }
     }
 }
 
@@ -1138,20 +1132,22 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Trivector
         let m12 = m2 - m3;
         let m13 = m2 + m3;
         let m14 = m11 + m13;
-        let m15 = -m14;
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m16;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m6 * T::from_i64(2);
-        let m21 = -m20;
-        let m22 = m11 - m13;
-        let m23 = m7 * T::from_i64(2);
-        let m24 = m8 * T::from_i64(2);
-        let m25 = m10 + m12;
-        let m26 = m9 * T::from_i64(2);
-        let m27 = m10 - m12;
-        gx::Prepared::from_entries([m15, m17, m19, m21, m16, m22, m23, m24, m18, m25, m26, m20, m27])
+        let m15 = m6 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m8 * T::from_i64(2);
+        let m18 = -m17;
+        let m19 = m9 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m12 - m10;
+        let m22 = m4 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m5 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m10 + m12;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m11 - m13;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m15, m21, m23, m25, m17, m26, m28, m19, m29])
     }
 }
 
@@ -1221,36 +1217,36 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t1 = v[1] * xv[1];
-        let t3 = v[3] * xv[3];
-        let t4 = v[0].mul_add(xv[0], t1);
-        let t5 = v[2].mul_add(xv[2], t3);
+        let t1 = v[1] * xv[2];
+        let t2 = v[2] * xv[3];
+        let t4 = v[0].mul_add(xv[1], t1);
+        let t5 = (-v[3]).mul_add(xv[0], t2);
         let t6 = t4 + t5;
-        let t7 = v[0] * t6;
-        let t8 = v[1] * t6;
-        let t9 = v[2] * t6;
-        let t10 = v[3] * t6;
-        let t12 = v[0] * v[0];
-        let t15 = v[3] * v[3];
-        let t16 = (-v[1]).mul_add(v[1], t12);
-        let t17 = v[2].mul_add(v[2], t15);
-        let t18 = t16 - t17;
+        let t7 = v[3] * t6;
+        let t8 = v[0] * t6;
+        let t9 = v[1] * t6;
+        let t10 = v[2] * t6;
+        let t13 = v[1] * v[1];
+        let t14 = v[2] * v[2];
+        let t16 = v[0].mul_add(v[0], t13);
+        let t17 = (-v[3]).mul_add(v[3], t14);
+        let t18 = t16 + t17;
         let t19 = xv[0] * t18;
         let t20 = (-t7).mul_add(T::from_i64(2), t19);
         let t22 = xv[1] * t18;
-        let t23 = t8.mul_add(T::from_i64(2), t22);
+        let t23 = (-t8).mul_add(T::from_i64(2), t22);
         let t25 = xv[2] * t18;
-        let t26 = t9.mul_add(T::from_i64(2), t25);
+        let t26 = (-t9).mul_add(T::from_i64(2), t25);
         let t28 = xv[3] * t18;
-        let t29 = t10.mul_add(T::from_i64(2), t28);
+        let t29 = (-t10).mul_add(T::from_i64(2), t28);
             return Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t20, t23, t26, t29]), [true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
@@ -1268,21 +1264,23 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m12 = m2 - m3;
         let m13 = m2 + m3;
         let m14 = m11 + m13;
-        let m15 = -m14;
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m16;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m6 * T::from_i64(2);
-        let m21 = -m20;
-        let m22 = m11 - m13;
-        let m23 = m7 * T::from_i64(2);
-        let m24 = m8 * T::from_i64(2);
-        let m25 = m10 + m12;
-        let m26 = m9 * T::from_i64(2);
-        let m27 = m10 - m12;
+        let m15 = m6 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m8 * T::from_i64(2);
+        let m18 = -m17;
+        let m19 = m9 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m12 - m10;
+        let m22 = m4 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m5 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m10 + m12;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m11 - m13;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m16) + x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m24)).0, (x[0].scale(m18) + x[1].scale(m23) + x[2].scale(m25) + x[3].scale(m26)).0, (x[0].scale(m20) + x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m27)).0], [true, true, true, true]) }
+        Trivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m20)).0, (x[0].scale(m15) + x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25)).0, (x[0].scale(m17) + x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m28)).0, (x[0].scale(m19) + x[1].scale(m25) + x[2].scale(m28) + x[3].scale(m29)).0], [true, true, true, true]) }
     }
 }
 
@@ -1301,9 +1299,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Trivector
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
@@ -1323,20 +1321,22 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Trivector
         let m12 = m2 - m3;
         let m13 = m2 + m3;
         let m14 = m11 + m13;
-        let m15 = -m14;
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m16;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m6 * T::from_i64(2);
-        let m21 = -m20;
-        let m22 = m11 - m13;
-        let m23 = m7 * T::from_i64(2);
-        let m24 = m8 * T::from_i64(2);
-        let m25 = m10 + m12;
-        let m26 = m9 * T::from_i64(2);
-        let m27 = m10 - m12;
-        gx::Prepared::from_entries([m15, m17, m19, m21, m16, m22, m23, m24, m18, m25, m26, m20, m27])
+        let m15 = m6 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m8 * T::from_i64(2);
+        let m18 = -m17;
+        let m19 = m9 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m12 - m10;
+        let m22 = m4 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m5 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m10 + m12;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m11 - m13;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m15, m21, m23, m25, m17, m26, m28, m19, m29])
     }
 }
 
@@ -1405,20 +1405,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     fn transform(self, x: Pseudoscalar<S, T, O>) -> Pseudoscalar<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
-        let t3 = v[3] * v[3];
-        let t4 = (-v[1]).mul_add(v[1], t0);
-        let t5 = v[2].mul_add(v[2], t3);
-        let t6 = t4 - t5;
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = (-v[3]).mul_add(v[3], t2);
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
         let t8 = -t7;
             return Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t8]), [false]) };
         }
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = v[1].mul_add(v[1], m2);
-        let m5 = (-v[0]).mul_add(v[0], m3);
-        let m6 = m4 + m5;
+        let m4 = (-v[0]).mul_add(v[0], m3);
+        let m5 = v[1].mul_add(v[1], m2);
+        let m6 = m4 - m5;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m6)).0], [false]) }
     }
@@ -1439,9 +1439,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudosca
         let v = self.c;
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = v[1].mul_add(v[1], m2);
-        let m5 = (-v[0]).mul_add(v[0], m3);
-        let m6 = m4 + m5;
+        let m4 = (-v[0]).mul_add(v[0], m3);
+        let m5 = v[1].mul_add(v[1], m2);
+        let m6 = m4 - m5;
         gx::Prepared::from_entries([m6])
     }
 }
@@ -1512,28 +1512,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = -xv[0];
-        let t1 = v[0] * v[0];
-        let t4 = v[3] * v[3];
-        let t5 = (-v[1]).mul_add(v[1], t1);
-        let t6 = v[2].mul_add(v[2], t4);
-        let t7 = t5 - t6;
+        let t2 = v[1] * v[1];
+        let t3 = v[2] * v[2];
+        let t5 = v[0].mul_add(v[0], t2);
+        let t6 = (-v[3]).mul_add(v[3], t3);
+        let t7 = t5 + t6;
         let t8 = t0 * t7;
             return Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>(gx::slots::from_values::<S, T, 1>([t8]), [false]) };
         }
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = v[1].mul_add(v[1], m2);
-        let m5 = (-v[0]).mul_add(v[0], m3);
-        let m6 = m4 + m5;
+        let m4 = (-v[0]).mul_add(v[0], m3);
+        let m5 = v[1].mul_add(v[1], m2);
+        let m6 = m4 - m5;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Pseudoscalar { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 1>([(x[0].scale(m6)).0], [false]) }
     }
@@ -1554,18 +1554,18 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Pseudosca
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = v[1].mul_add(v[1], m2);
-        let m5 = (-v[0]).mul_add(v[0], m3);
-        let m6 = m4 + m5;
+        let m4 = (-v[0]).mul_add(v[0], m3);
+        let m5 = v[1].mul_add(v[1], m2);
+        let m6 = m4 - m5;
         gx::Prepared::from_entries([m6])
     }
 }
@@ -1635,21 +1635,21 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
     fn transform(self, x: Phasor<S, T, O>) -> Phasor<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
-        let t0 = v[0] * v[0];
-        let t3 = v[3] * v[3];
-        let t4 = (-v[1]).mul_add(v[1], t0);
-        let t5 = v[2].mul_add(v[2], t3);
-        let t6 = t4 - t5;
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = (-v[3]).mul_add(v[3], t2);
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
         let t8 = xv[1] * t6;
         let t9 = -t8;
             return Phasor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 2>(gx::slots::from_values::<S, T, 2>([t7, t9]), [false, false]) };
         }
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         let m7 = -m6;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Phasor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 2>([(x[0].scale(m6)).0, (x[1].scale(m7)).0], [false, false]) }
@@ -1669,11 +1669,11 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Phasor<()
     #[inline]
     fn prepare(self) -> gx::Prepared<Vector, Phasor<(), f64, O>, T, 2> {
         let v = self.c;
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         let m7 = -m6;
         gx::Prepared::from_entries([m6, m7])
     }
@@ -1745,29 +1745,29 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = -xv[1];
-        let t1 = v[0] * v[0];
-        let t4 = v[3] * v[3];
-        let t5 = (-v[1]).mul_add(v[1], t1);
-        let t6 = v[2].mul_add(v[2], t4);
-        let t7 = t5 - t6;
+        let t2 = v[1] * v[1];
+        let t3 = v[2] * v[2];
+        let t5 = v[0].mul_add(v[0], t2);
+        let t6 = (-v[3]).mul_add(v[3], t3);
+        let t7 = t5 + t6;
         let t8 = xv[0] * t7;
         let t9 = t0 * t7;
             return Phasor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 2>(gx::slots::from_values::<S, T, 2>([t8, t9]), [false, false]) };
         }
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         let m7 = -m6;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
         Phasor { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 2>([(x[0].scale(m6)).0, (x[1].scale(m7)).0], [false, false]) }
@@ -1789,18 +1789,18 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Phasor<()
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
-        let m0 = v[0] * v[0];
-        let m3 = v[3] * v[3];
-        let m4 = (-v[1]).mul_add(v[1], m0);
-        let m5 = v[2].mul_add(v[2], m3);
-        let m6 = m4 - m5;
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = (-v[3]).mul_add(v[3], m2);
+        let m6 = m4 + m5;
         let m7 = -m6;
         gx::Prepared::from_entries([m6, m7])
     }
@@ -1875,60 +1875,60 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t1 = v[1] * v[1];
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
-        let t4 = v[1] * v[2];
-        let t5 = v[1] * v[3];
-        let t6 = v[0] * v[3];
-        let t7 = v[0] * v[2];
-        let t8 = v[2] * v[3];
-        let t9 = v[0] * v[1];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[2] * v[3];
+        let t7 = v[1] * v[3];
+        let t8 = v[1] * v[2];
+        let t9 = v[0] * v[3];
         let t10 = t0 - t1;
         let t11 = t0 + t1;
         let t12 = t2 - t3;
         let t13 = t2 + t3;
-        let t14 = t10 - t13;
-        let t15 = t10 + t13;
-        let t16 = t11 - t12;
-        let t17 = t11 + t12;
+        let t14 = t11 + t12;
+        let t15 = t10 - t13;
+        let t16 = t10 + t13;
+        let t17 = t11 - t12;
         let t18 = xv[0] * t14;
         let t21 = xv[3] * t5;
-        let t23 = xv[6] * t7;
+        let t22 = xv[5] * t6;
         let t26 = xv[3] * t8;
-        let t27 = xv[4] * t6;
+        let t28 = xv[6] * t9;
         let t30 = xv[2] * t8;
-        let t33 = xv[5] * t9;
-        let t35 = xv[3] * t7;
+        let t32 = xv[4] * t7;
+        let t34 = xv[2] * t6;
         let t38 = xv[6] * t5;
-        let t39 = xv[1] * t6;
+        let t40 = xv[3] * t9;
         let t43 = xv[6] * t8;
-        let t45 = xv[2] * t9;
+        let t44 = xv[1] * t7;
         let t47 = xv[5] * t8;
         let t49 = xv[7] * t14;
         let t50 = xv[2].mul_add(t4, t21);
-        let t51 = (-xv[5]).mul_add(t6, t23);
+        let t51 = (-xv[6]).mul_add(t7, t22);
         let t52 = t50 + t51;
         let t53 = t52 * T::from_i64(2);
-        let t54 = (-xv[1]).mul_add(t15, t53);
+        let t54 = xv[1].mul_add(t15, t53);
         let t55 = xv[1].mul_add(t4, t26);
-        let t56 = (-xv[6]).mul_add(t9, t27);
+        let t56 = (-xv[4]).mul_add(t6, t28);
         let t57 = t55 + t56;
         let t58 = t57 * T::from_i64(2);
         let t59 = (-xv[2]).mul_add(t16, t58);
         let t60 = xv[1].mul_add(t5, t30);
-        let t61 = (-xv[4]).mul_add(t7, t33);
+        let t61 = (-xv[5]).mul_add(t9, t32);
         let t62 = t60 + t61;
         let t63 = t62 * T::from_i64(2);
         let t64 = (-xv[3]).mul_add(t17, t63);
-        let t65 = (-xv[2]).mul_add(t6, t35);
+        let t65 = (-xv[3]).mul_add(t7, t34);
         let t66 = xv[5].mul_add(t4, t38);
         let t67 = t65 - t66;
         let t68 = t67 * T::from_i64(2);
-        let t69 = xv[4].mul_add(t15, t68);
-        let t70 = (-xv[3]).mul_add(t9, t39);
+        let t69 = (-xv[4]).mul_add(t15, t68);
+        let t70 = (-xv[1]).mul_add(t6, t40);
         let t71 = xv[4].mul_add(t4, t43);
         let t72 = t70 - t71;
         let t73 = t72 * T::from_i64(2);
         let t74 = xv[5].mul_add(t16, t73);
-        let t75 = (-xv[1]).mul_add(t7, t45);
+        let t75 = (-xv[2]).mul_add(t9, t44);
         let t76 = xv[4].mul_add(t5, t47);
         let t77 = t75 - t76;
         let t78 = t77 * T::from_i64(2);
@@ -1954,24 +1954,24 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m15 = m10 + m13;
         let m16 = m11 - m12;
         let m17 = m11 + m12;
-        let m18 = -m15;
-        let m19 = m7 * T::from_i64(2);
-        let m20 = m8 * T::from_i64(2);
-        let m21 = m6 * T::from_i64(2);
+        let m18 = m4 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m9 * T::from_i64(2);
+        let m21 = m8 * T::from_i64(2);
         let m22 = -m21;
-        let m23 = m5 * T::from_i64(2);
-        let m24 = -m16;
-        let m25 = m9 * T::from_i64(2);
-        let m26 = m4 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m17;
-        let m29 = -m23;
-        let m30 = -m19;
-        let m31 = -m20;
-        let m32 = -m25;
-        let m33 = -m14;
+        let m23 = -m15;
+        let m24 = m7 * T::from_i64(2);
+        let m25 = -m20;
+        let m26 = m6 * T::from_i64(2);
+        let m27 = -m16;
+        let m28 = -m26;
+        let m29 = -m14;
+        let m30 = -m18;
+        let m31 = -m19;
+        let m32 = -m24;
+        let m33 = -m17;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Even { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m14)).0, (x[1].scale(m18) + x[2].scale(m19) + x[3].scale(m20) + x[5].scale(m22) + x[6].scale(m23)).0, (x[1].scale(m19) + x[2].scale(m24) + x[3].scale(m25) + x[4].scale(m21) + x[6].scale(m27)).0, (x[1].scale(m20) + x[2].scale(m25) + x[3].scale(m28) + x[4].scale(m29) + x[5].scale(m26)).0, (x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m15) + x[5].scale(m30) + x[6].scale(m31)).0, (x[1].scale(m21) + x[3].scale(m27) + x[4].scale(m30) + x[5].scale(m16) + x[6].scale(m32)).0, (x[1].scale(m29) + x[2].scale(m26) + x[4].scale(m31) + x[5].scale(m32) + x[6].scale(m17)).0, (x[7].scale(m33)).0], [false, false, false, false, false, false, false, false]) }
+        Even { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m18) + x[3].scale(m19) + x[5].scale(m20) + x[6].scale(m22)).0, (x[1].scale(m18) + x[2].scale(m23) + x[3].scale(m24) + x[4].scale(m25) + x[6].scale(m26)).0, (x[1].scale(m19) + x[2].scale(m24) + x[3].scale(m27) + x[4].scale(m21) + x[5].scale(m28)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m29) + x[5].scale(m30) + x[6].scale(m31)).0, (x[1].scale(m25) + x[3].scale(m26) + x[4].scale(m30) + x[5].scale(m15) + x[6].scale(m32)).0, (x[1].scale(m21) + x[2].scale(m28) + x[4].scale(m31) + x[5].scale(m32) + x[6].scale(m16)).0, (x[7].scale(m33)).0], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2006,23 +2006,23 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Even<(), 
         let m15 = m10 + m13;
         let m16 = m11 - m12;
         let m17 = m11 + m12;
-        let m18 = -m15;
-        let m19 = m7 * T::from_i64(2);
-        let m20 = m8 * T::from_i64(2);
-        let m21 = m6 * T::from_i64(2);
+        let m18 = m4 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m9 * T::from_i64(2);
+        let m21 = m8 * T::from_i64(2);
         let m22 = -m21;
-        let m23 = m5 * T::from_i64(2);
-        let m24 = -m16;
-        let m25 = m9 * T::from_i64(2);
-        let m26 = m4 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m17;
-        let m29 = -m23;
-        let m30 = -m19;
-        let m31 = -m20;
-        let m32 = -m25;
-        let m33 = -m14;
-        gx::Prepared::from_entries([m14, m18, m19, m20, m22, m23, m24, m25, m21, m27, m28, m29, m26, m15, m30, m31, m16, m32, m17, m33])
+        let m23 = -m15;
+        let m24 = m7 * T::from_i64(2);
+        let m25 = -m20;
+        let m26 = m6 * T::from_i64(2);
+        let m27 = -m16;
+        let m28 = -m26;
+        let m29 = -m14;
+        let m30 = -m18;
+        let m31 = -m19;
+        let m32 = -m24;
+        let m33 = -m17;
+        gx::Prepared::from_entries([m17, m14, m18, m19, m20, m22, m23, m24, m25, m26, m27, m21, m28, m29, m30, m31, m15, m32, m16, m33])
     }
 }
 
@@ -2092,65 +2092,66 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t2 = v[3] * xv[5];
-        let t3 = v[0].mul_add(xv[1], t2);
-        let t4 = (-v[2]).mul_add(xv[6], t3);
-        let t6 = v[1] * xv[6];
-        let t8 = v[0].mul_add(xv[2], t6);
-        let t9 = (-v[3]).mul_add(xv[4], t8);
-        let t12 = v[2] * xv[4];
+        let t1 = v[1] * xv[2];
+        let t3 = v[0].mul_add(xv[1], t1);
+        let t4 = v[2].mul_add(xv[3], t3);
+        let t5 = v[0] * xv[2];
+        let t8 = (-v[1]).mul_add(xv[1], t5);
+        let t9 = (-v[3]).mul_add(xv[6], t8);
+        let t12 = v[3] * xv[5];
         let t13 = v[0].mul_add(xv[3], t12);
-        let t14 = (-v[1]).mul_add(xv[5], t13);
-        let t16 = v[2] * xv[3];
+        let t14 = (-v[2]).mul_add(xv[1], t13);
+        let t16 = v[1] * xv[5];
         let t18 = v[0].mul_add(xv[4], t16);
-        let t19 = (-v[3]).mul_add(xv[2], t18);
-        let t22 = v[3] * xv[1];
+        let t19 = v[2].mul_add(xv[6], t18);
+        let t22 = v[3] * xv[3];
         let t23 = v[0].mul_add(xv[5], t22);
-        let t24 = (-v[1]).mul_add(xv[3], t23);
-        let t26 = v[1] * xv[2];
-        let t28 = v[0].mul_add(xv[6], t26);
-        let t29 = (-v[2]).mul_add(xv[1], t28);
-        let t30 = v[2] * t29;
-        let t33 = v[3] * t19;
-        let t34 = v[1] * t24;
-        let t36 = v[2] * t14;
-        let t39 = v[3] * t4;
-        let t40 = v[1] * t9;
-        let t42 = (-v[3]).mul_add(t24, t30);
-        let t43 = t42 * T::from_i64(2);
-        let t44 = v[0] * v[0];
-        let t47 = v[3] * v[3];
-        let t48 = (-v[1]).mul_add(v[1], t44);
-        let t49 = v[2].mul_add(v[2], t47);
-        let t50 = t48 - t49;
-        let t52 = (-xv[1]).mul_add(t50, t43);
-        let t53 = (-v[1]).mul_add(t29, t33);
+        let t24 = (-v[1]).mul_add(xv[4], t23);
+        let t25 = v[0] * xv[6];
+        let t28 = (-v[2]).mul_add(xv[4], t25);
+        let t29 = (-v[3]).mul_add(xv[2], t28);
+        let t31 = v[2] * t14;
+        let t33 = v[3] * t29;
+        let t34 = v[2] * t4;
+        let t37 = v[2] * t29;
+        let t39 = v[3] * t14;
+        let t41 = v[3] * t9;
+        let t42 = v[1].mul_add(t9, t31);
+        let t45 = v[1] * v[1];
+        let t46 = v[2] * v[2];
+        let t48 = v[0].mul_add(v[0], t45);
+        let t49 = (-v[3]).mul_add(v[3], t46);
+        let t50 = t48 + t49;
+        let t51 = xv[1] * t50;
+        let t52 = t42.mul_add(T::from_i64(2), t51);
+        let t53 = v[1].mul_add(t4, t33);
         let t54 = t53 * T::from_i64(2);
         let t56 = (-xv[2]).mul_add(t50, t54);
-        let t57 = (-v[2]).mul_add(t19, t34);
+        let t57 = (-v[3]).mul_add(t24, t34);
         let t58 = t57 * T::from_i64(2);
         let t60 = (-xv[3]).mul_add(t50, t58);
-        let t61 = (-v[3]).mul_add(t9, t36);
+        let t61 = v[1].mul_add(t24, t37);
         let t63 = xv[4] * t50;
         let t64 = t61.mul_add(T::from_i64(2), t63);
-        let t65 = (-v[1]).mul_add(t14, t39);
-        let t67 = xv[5] * t50;
-        let t68 = t65.mul_add(T::from_i64(2), t67);
-        let t69 = (-v[2]).mul_add(t4, t40);
-        let t71 = xv[6] * t50;
-        let t72 = t69.mul_add(T::from_i64(2), t71);
-        let t73 = -xv[7];
-        let t74 = xv[0] * t50;
-        let t75 = t50 * t73;
-            return Even { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t74, t52, t56, t60, t64, t68, t72, t75]), [false, false, false, false, false, false, false, false]) };
+        let t65 = -t64;
+        let t66 = (-v[1]).mul_add(t19, t39);
+        let t68 = xv[5] * t50;
+        let t69 = t66.mul_add(T::from_i64(2), t68);
+        let t70 = v[2].mul_add(t19, t41);
+        let t72 = xv[6] * t50;
+        let t73 = (-t70).mul_add(T::from_i64(2), t72);
+        let t74 = -xv[7];
+        let t75 = xv[0] * t50;
+        let t76 = t50 * t74;
+            return Even { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t75, t52, t56, t60, t65, t69, t73, t76]), [false, false, false, false, false, false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2170,24 +2171,24 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m15 = m10 + m13;
         let m16 = m11 - m12;
         let m17 = m11 + m12;
-        let m18 = -m15;
-        let m19 = m7 * T::from_i64(2);
-        let m20 = m8 * T::from_i64(2);
-        let m21 = m6 * T::from_i64(2);
+        let m18 = m4 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m9 * T::from_i64(2);
+        let m21 = m8 * T::from_i64(2);
         let m22 = -m21;
-        let m23 = m5 * T::from_i64(2);
-        let m24 = -m16;
-        let m25 = m9 * T::from_i64(2);
-        let m26 = m4 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m17;
-        let m29 = -m23;
-        let m30 = -m19;
-        let m31 = -m20;
-        let m32 = -m25;
-        let m33 = -m14;
+        let m23 = -m15;
+        let m24 = m7 * T::from_i64(2);
+        let m25 = -m20;
+        let m26 = m6 * T::from_i64(2);
+        let m27 = -m16;
+        let m28 = -m26;
+        let m29 = -m14;
+        let m30 = -m18;
+        let m31 = -m19;
+        let m32 = -m24;
+        let m33 = -m17;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Even { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m14)).0, (x[1].scale(m18) + x[2].scale(m19) + x[3].scale(m20) + x[5].scale(m22) + x[6].scale(m23)).0, (x[1].scale(m19) + x[2].scale(m24) + x[3].scale(m25) + x[4].scale(m21) + x[6].scale(m27)).0, (x[1].scale(m20) + x[2].scale(m25) + x[3].scale(m28) + x[4].scale(m29) + x[5].scale(m26)).0, (x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m15) + x[5].scale(m30) + x[6].scale(m31)).0, (x[1].scale(m21) + x[3].scale(m27) + x[4].scale(m30) + x[5].scale(m16) + x[6].scale(m32)).0, (x[1].scale(m29) + x[2].scale(m26) + x[4].scale(m31) + x[5].scale(m32) + x[6].scale(m17)).0, (x[7].scale(m33)).0], [false, false, false, false, false, false, false, false]) }
+        Even { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m18) + x[3].scale(m19) + x[5].scale(m20) + x[6].scale(m22)).0, (x[1].scale(m18) + x[2].scale(m23) + x[3].scale(m24) + x[4].scale(m25) + x[6].scale(m26)).0, (x[1].scale(m19) + x[2].scale(m24) + x[3].scale(m27) + x[4].scale(m21) + x[5].scale(m28)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m29) + x[5].scale(m30) + x[6].scale(m31)).0, (x[1].scale(m25) + x[3].scale(m26) + x[4].scale(m30) + x[5].scale(m15) + x[6].scale(m32)).0, (x[1].scale(m21) + x[2].scale(m28) + x[4].scale(m31) + x[5].scale(m32) + x[6].scale(m16)).0, (x[7].scale(m33)).0], [false, false, false, false, false, false, false, false]) }
     }
 }
 
@@ -2206,9 +2207,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Even<(), 
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
@@ -2231,23 +2232,23 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Even<(), 
         let m15 = m10 + m13;
         let m16 = m11 - m12;
         let m17 = m11 + m12;
-        let m18 = -m15;
-        let m19 = m7 * T::from_i64(2);
-        let m20 = m8 * T::from_i64(2);
-        let m21 = m6 * T::from_i64(2);
+        let m18 = m4 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m9 * T::from_i64(2);
+        let m21 = m8 * T::from_i64(2);
         let m22 = -m21;
-        let m23 = m5 * T::from_i64(2);
-        let m24 = -m16;
-        let m25 = m9 * T::from_i64(2);
-        let m26 = m4 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m17;
-        let m29 = -m23;
-        let m30 = -m19;
-        let m31 = -m20;
-        let m32 = -m25;
-        let m33 = -m14;
-        gx::Prepared::from_entries([m14, m18, m19, m20, m22, m23, m24, m25, m21, m27, m28, m29, m26, m15, m30, m31, m16, m32, m17, m33])
+        let m23 = -m15;
+        let m24 = m7 * T::from_i64(2);
+        let m25 = -m20;
+        let m26 = m6 * T::from_i64(2);
+        let m27 = -m16;
+        let m28 = -m26;
+        let m29 = -m14;
+        let m30 = -m18;
+        let m31 = -m19;
+        let m32 = -m24;
+        let m33 = -m17;
+        gx::Prepared::from_entries([m17, m14, m18, m19, m20, m22, m23, m24, m25, m26, m27, m21, m28, m29, m30, m31, m15, m32, m16, m33])
     }
 }
 
@@ -2324,14 +2325,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t5 = v[3] * v[3];
         let t6 = t4 - t5;
         let t7 = t4 + t5;
-        let t8 = v[0] * xv[0];
-        let t10 = (-v[1]).mul_add(xv[1], t8);
-        let t12 = v[1] * xv[5];
-        let t13 = v[0].mul_add(xv[4], t12);
-        let t15 = v[3] * xv[3];
-        let t16 = v[2].mul_add(xv[2], t15);
-        let t18 = v[3] * xv[7];
-        let t19 = v[2].mul_add(xv[6], t18);
+        let t9 = v[1] * xv[1];
+        let t10 = v[0].mul_add(xv[0], t9);
+        let t12 = v[1] * xv[6];
+        let t13 = v[0].mul_add(xv[5], t12);
+        let t14 = v[2] * xv[2];
+        let t16 = (-v[3]).mul_add(xv[3], t14);
+        let t17 = v[2] * xv[7];
+        let t19 = (-v[3]).mul_add(xv[4], t17);
         let t20 = t2 - t6;
         let t21 = t2 + t6;
         let t22 = t3 - t7;
@@ -2339,39 +2340,39 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t24 = v[0] * v[1];
         let t25 = v[2] * v[3];
         let t27 = v[0] * t16;
-        let t28 = xv[0] * t23;
-        let t29 = xv[0] * t24;
+        let t30 = v[1] * t16;
         let t33 = v[2] * t10;
         let t36 = v[3] * t10;
-        let t39 = v[0] * t19;
-        let t42 = v[1] * t19;
-        let t45 = v[2] * t13;
-        let t48 = v[3] * t13;
+        let t39 = v[3] * t13;
+        let t40 = xv[4] * t23;
+        let t42 = v[0] * t19;
+        let t45 = v[1] * t19;
+        let t46 = xv[6] * t21;
+        let t47 = xv[4] * t25;
         let t50 = xv[1].mul_add(t24, t27);
-        let t52 = (-t50).mul_add(T::from_i64(2), t28);
-        let t53 = (-v[1]).mul_add(t16, t29);
+        let t51 = t50 * T::from_i64(2);
+        let t52 = xv[0].mul_add(t20, t51);
+        let t53 = xv[0].mul_add(t24, t30);
         let t54 = t53 * T::from_i64(2);
-        let t55 = (-xv[1]).mul_add(t22, t54);
+        let t55 = (-xv[1]).mul_add(t21, t54);
         let t56 = (-xv[3]).mul_add(t25, t33);
         let t57 = t56 * T::from_i64(2);
-        let t58 = (-xv[2]).mul_add(t21, t57);
-        let t59 = (-xv[2]).mul_add(t25, t36);
+        let t58 = (-xv[2]).mul_add(t22, t57);
+        let t59 = xv[2].mul_add(t25, t36);
         let t60 = t59 * T::from_i64(2);
-        let t61 = (-xv[3]).mul_add(t20, t60);
-        let t62 = xv[5].mul_add(t24, t39);
-        let t63 = t62 * T::from_i64(2);
-        let t64 = xv[4].mul_add(t23, t63);
-        let t65 = -t64;
-        let t66 = xv[4].mul_add(t24, t42);
-        let t67 = t66 * T::from_i64(2);
-        let t68 = xv[5].mul_add(t22, t67);
-        let t69 = xv[7].mul_add(t25, t45);
-        let t70 = t69 * T::from_i64(2);
-        let t71 = xv[6].mul_add(t21, t70);
-        let t72 = xv[6].mul_add(t25, t48);
+        let t61 = (-xv[3]).mul_add(t23, t60);
+        let t62 = xv[7].mul_add(t25, t39);
+        let t64 = (-t62).mul_add(T::from_i64(2), t40);
+        let t65 = xv[6].mul_add(t24, t42);
+        let t66 = t65 * T::from_i64(2);
+        let t67 = xv[5].mul_add(t20, t66);
+        let t68 = -t67;
+        let t69 = xv[5].mul_add(t24, t45);
+        let t71 = (-t69).mul_add(T::from_i64(2), t46);
+        let t72 = (-v[2]).mul_add(t13, t47);
         let t73 = t72 * T::from_i64(2);
-        let t74 = xv[7].mul_add(t20, t73);
-            return Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t52, t55, t58, t61, t65, t68, t71, t74]), [true, true, true, true, true, true, true, true]) };
+        let t74 = xv[7].mul_add(t22, t73);
+            return Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t52, t55, t58, t61, t64, t68, t71, t74]), [true, true, true, true, true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2392,23 +2393,23 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m16 = m11 - m13;
         let m17 = m11 + m13;
         let m18 = m4 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m5 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m6 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = -m16;
-        let m25 = m7 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = m8 * T::from_i64(2);
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = m8 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = -m16;
+        let m27 = m9 * T::from_i64(2);
         let m28 = -m27;
-        let m29 = -m15;
-        let m30 = m9 * T::from_i64(2);
-        let m31 = -m30;
-        let m32 = -m14;
-        let m33 = -m17;
+        let m29 = -m17;
+        let m30 = -m14;
+        let m31 = -m18;
+        let m32 = -m19;
+        let m33 = -m23;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m21) + x[3].scale(m23)).0, (x[0].scale(m18) + x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m28)).0, (x[0].scale(m20) + x[1].scale(m26) + x[2].scale(m29) + x[3].scale(m31)).0, (x[0].scale(m22) + x[1].scale(m28) + x[2].scale(m31) + x[3].scale(m32)).0, (x[4].scale(m33) + x[5].scale(m19) + x[6].scale(m21) + x[7].scale(m23)).0, (x[4].scale(m18) + x[5].scale(m16) + x[6].scale(m25) + x[7].scale(m27)).0, (x[4].scale(m20) + x[5].scale(m25) + x[6].scale(m15) + x[7].scale(m30)).0, (x[4].scale(m22) + x[5].scale(m27) + x[6].scale(m30) + x[7].scale(m14)).0], [true, true, true, true, true, true, true, true]) }
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m14) + x[1].scale(m18) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m18) + x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m25)).0, (x[0].scale(m19) + x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m28)).0, (x[0].scale(m20) + x[1].scale(m24) + x[2].scale(m27) + x[3].scale(m29)).0, (x[4].scale(m17) + x[5].scale(m21) + x[6].scale(m25) + x[7].scale(m28)).0, (x[4].scale(m20) + x[5].scale(m30) + x[6].scale(m31) + x[7].scale(m32)).0, (x[4].scale(m24) + x[5].scale(m31) + x[6].scale(m15) + x[7].scale(m33)).0, (x[4].scale(m27) + x[5].scale(m32) + x[6].scale(m33) + x[7].scale(m16)).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2444,22 +2445,22 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Odd<(), f
         let m16 = m11 - m13;
         let m17 = m11 + m13;
         let m18 = m4 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m5 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m6 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = -m16;
-        let m25 = m7 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = m8 * T::from_i64(2);
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = m8 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = -m16;
+        let m27 = m9 * T::from_i64(2);
         let m28 = -m27;
-        let m29 = -m15;
-        let m30 = m9 * T::from_i64(2);
-        let m31 = -m30;
-        let m32 = -m14;
-        let m33 = -m17;
-        gx::Prepared::from_entries([m17, m19, m21, m23, m18, m24, m26, m28, m20, m29, m31, m22, m32, m33, m16, m25, m27, m15, m30, m14])
+        let m29 = -m17;
+        let m30 = -m14;
+        let m31 = -m18;
+        let m32 = -m19;
+        let m33 = -m23;
+        gx::Prepared::from_entries([m14, m18, m19, m21, m22, m23, m25, m26, m28, m20, m24, m27, m29, m17, m30, m31, m32, m15, m33, m16])
     }
 }
 
@@ -2469,7 +2470,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Odd<S, T, O>> 
     fn transform(self, x: Odd<S, T, O>) -> Odd<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[8]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[11]) + x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[3]) + x[6].scale(m[6]) + x[7].scale(m[8])).0, (x[4].scale(m[9]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[10]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[11]) + x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2478,7 +2479,7 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Odd<(), f64, O>,
     #[inline]
     fn from(p: gx::Prepared<Vector, Odd<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Odd<(), f64, O>,), T, 8>([[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[6], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero()], [m[11], m[7], m[10], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[1], m[2], m[3]], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[16], m[18], m[19]]], [true, true, true, true, true, true, true, true]) }
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Odd<(), f64, O>,), T, 8>([[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[5], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[3], m[6], m[8]], [T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[16], m[18], m[19]]], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2529,38 +2530,38 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t0 = v[0] * xv[0];
-        let t3 = v[3] * xv[3];
-        let t4 = (-v[1]).mul_add(xv[1], t0);
-        let t5 = v[2].mul_add(xv[2], t3);
-        let t6 = t4 - t5;
-        let t8 = v[1] * xv[5];
-        let t10 = v[3] * xv[7];
-        let t11 = v[0].mul_add(xv[4], t8);
-        let t12 = v[2].mul_add(xv[6], t10);
+        let t1 = v[1] * xv[1];
+        let t2 = v[2] * xv[2];
+        let t4 = v[0].mul_add(xv[0], t1);
+        let t5 = (-v[3]).mul_add(xv[3], t2);
+        let t6 = t4 + t5;
+        let t8 = v[1] * xv[6];
+        let t9 = v[2] * xv[7];
+        let t11 = v[0].mul_add(xv[5], t8);
+        let t12 = (-v[3]).mul_add(xv[4], t9);
         let t13 = t11 + t12;
         let t14 = v[0] * t6;
         let t15 = v[1] * t6;
         let t16 = v[2] * t6;
         let t17 = v[3] * t6;
-        let t18 = v[0] * t13;
-        let t19 = v[1] * t13;
-        let t20 = v[2] * t13;
-        let t21 = v[3] * t13;
+        let t18 = v[3] * t13;
+        let t19 = v[0] * t13;
+        let t20 = v[1] * t13;
+        let t21 = v[2] * t13;
         let t22 = t14 * T::from_i64(2);
-        let t23 = v[0] * v[0];
-        let t26 = v[3] * v[3];
-        let t27 = (-v[1]).mul_add(v[1], t23);
-        let t28 = v[2].mul_add(v[2], t26);
-        let t29 = t27 - t28;
+        let t24 = v[1] * v[1];
+        let t25 = v[2] * v[2];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = (-v[3]).mul_add(v[3], t25);
+        let t29 = t27 + t28;
         let t31 = (-xv[0]).mul_add(t29, t22);
         let t32 = t15 * T::from_i64(2);
         let t34 = (-xv[1]).mul_add(t29, t32);
@@ -2571,11 +2572,11 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t42 = xv[4] * t29;
         let t43 = (-t18).mul_add(T::from_i64(2), t42);
         let t45 = xv[5] * t29;
-        let t46 = t19.mul_add(T::from_i64(2), t45);
+        let t46 = (-t19).mul_add(T::from_i64(2), t45);
         let t48 = xv[6] * t29;
-        let t49 = t20.mul_add(T::from_i64(2), t48);
+        let t49 = (-t20).mul_add(T::from_i64(2), t48);
         let t51 = xv[7] * t29;
-        let t52 = t21.mul_add(T::from_i64(2), t51);
+        let t52 = (-t21).mul_add(T::from_i64(2), t51);
             return Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t31, t34, t37, t40, t43, t46, t49, t52]), [true, true, true, true, true, true, true, true]) };
         }
         let m0 = v[0] * v[0];
@@ -2597,23 +2598,23 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m16 = m11 - m13;
         let m17 = m11 + m13;
         let m18 = m4 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m5 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m6 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = -m16;
-        let m25 = m7 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = m8 * T::from_i64(2);
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = m8 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = -m16;
+        let m27 = m9 * T::from_i64(2);
         let m28 = -m27;
-        let m29 = -m15;
-        let m30 = m9 * T::from_i64(2);
-        let m31 = -m30;
-        let m32 = -m14;
-        let m33 = -m17;
+        let m29 = -m17;
+        let m30 = -m14;
+        let m31 = -m18;
+        let m32 = -m19;
+        let m33 = -m23;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m21) + x[3].scale(m23)).0, (x[0].scale(m18) + x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m28)).0, (x[0].scale(m20) + x[1].scale(m26) + x[2].scale(m29) + x[3].scale(m31)).0, (x[0].scale(m22) + x[1].scale(m28) + x[2].scale(m31) + x[3].scale(m32)).0, (x[4].scale(m33) + x[5].scale(m19) + x[6].scale(m21) + x[7].scale(m23)).0, (x[4].scale(m18) + x[5].scale(m16) + x[6].scale(m25) + x[7].scale(m27)).0, (x[4].scale(m20) + x[5].scale(m25) + x[6].scale(m15) + x[7].scale(m30)).0, (x[4].scale(m22) + x[5].scale(m27) + x[6].scale(m30) + x[7].scale(m14)).0], [true, true, true, true, true, true, true, true]) }
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m14) + x[1].scale(m18) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m18) + x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m25)).0, (x[0].scale(m19) + x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m28)).0, (x[0].scale(m20) + x[1].scale(m24) + x[2].scale(m27) + x[3].scale(m29)).0, (x[4].scale(m17) + x[5].scale(m21) + x[6].scale(m25) + x[7].scale(m28)).0, (x[4].scale(m20) + x[5].scale(m30) + x[6].scale(m31) + x[7].scale(m32)).0, (x[4].scale(m24) + x[5].scale(m31) + x[6].scale(m15) + x[7].scale(m33)).0, (x[4].scale(m27) + x[5].scale(m32) + x[6].scale(m33) + x[7].scale(m16)).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2632,9 +2633,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Odd<(), f
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
@@ -2658,22 +2659,22 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Odd<(), f
         let m16 = m11 - m13;
         let m17 = m11 + m13;
         let m18 = m4 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m5 * T::from_i64(2);
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
         let m21 = -m20;
-        let m22 = m6 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = -m16;
-        let m25 = m7 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = m8 * T::from_i64(2);
+        let m22 = -m15;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = m8 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = -m16;
+        let m27 = m9 * T::from_i64(2);
         let m28 = -m27;
-        let m29 = -m15;
-        let m30 = m9 * T::from_i64(2);
-        let m31 = -m30;
-        let m32 = -m14;
-        let m33 = -m17;
-        gx::Prepared::from_entries([m17, m19, m21, m23, m18, m24, m26, m28, m20, m29, m31, m22, m32, m33, m16, m25, m27, m15, m30, m14])
+        let m29 = -m17;
+        let m30 = -m14;
+        let m31 = -m18;
+        let m32 = -m19;
+        let m33 = -m23;
+        gx::Prepared::from_entries([m14, m18, m19, m21, m22, m23, m25, m26, m28, m20, m24, m27, m29, m17, m30, m31, m32, m15, m33, m16])
     }
 }
 
@@ -2683,7 +2684,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Odd<S, T, O>> 
     fn transform(self, x: Odd<S, T, O>) -> Odd<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[8]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[11]) + x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[3]) + x[6].scale(m[6]) + x[7].scale(m[8])).0, (x[4].scale(m[9]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[10]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[11]) + x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19])).0], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2692,7 +2693,7 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Odd<()
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Vector>, Odd<(), f64, O>, T, 20>) -> Self {
         let m = p.m;
-        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Odd<(), f64, O>,), T, 8>([[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[6], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero()], [m[11], m[7], m[10], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[1], m[2], m[3]], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[16], m[18], m[19]]], [true, true, true, true, true, true, true, true]) }
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Odd<(), f64, O>,), T, 8>([[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[5], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[3], m[6], m[8]], [T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[16], m[18], m[19]]], [true, true, true, true, true, true, true, true]) }
     }
 }
 
@@ -2750,14 +2751,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t5 = v[3] * v[3];
         let t6 = t4 - t5;
         let t7 = t4 + t5;
-        let t8 = v[0] * xv[1];
-        let t10 = (-v[1]).mul_add(xv[2], t8);
-        let t12 = v[1] * xv[12];
-        let t13 = v[0].mul_add(xv[11], t12);
-        let t15 = v[3] * xv[4];
-        let t16 = v[2].mul_add(xv[3], t15);
-        let t18 = v[3] * xv[14];
-        let t19 = v[2].mul_add(xv[13], t18);
+        let t9 = v[1] * xv[2];
+        let t10 = v[0].mul_add(xv[1], t9);
+        let t12 = v[1] * xv[13];
+        let t13 = v[0].mul_add(xv[12], t12);
+        let t14 = v[2] * xv[3];
+        let t16 = (-v[3]).mul_add(xv[4], t14);
+        let t17 = v[2] * xv[14];
+        let t19 = (-v[3]).mul_add(xv[11], t17);
         let t20 = t2 - t6;
         let t21 = t2 + t6;
         let t22 = t2 - t7;
@@ -2772,85 +2773,85 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t31 = v[0] * v[3];
         let t32 = v[1] * v[2];
         let t33 = v[1] * v[3];
-        let t34 = xv[0] * t22;
+        let t34 = xv[0] * t25;
         let t36 = v[0] * t16;
-        let t37 = xv[1] * t27;
-        let t38 = xv[1] * t28;
+        let t39 = v[1] * t16;
         let t42 = v[2] * t10;
         let t45 = v[3] * t10;
-        let t49 = xv[6] * t32;
-        let t50 = xv[7] * t33;
-        let t54 = xv[5] * t32;
-        let t55 = xv[7] * t29;
-        let t59 = xv[5] * t33;
-        let t60 = xv[6] * t29;
-        let t62 = xv[7] * t30;
-        let t65 = xv[10] * t33;
-        let t68 = xv[5] * t31;
-        let t70 = xv[10] * t29;
-        let t72 = xv[6] * t28;
-        let t75 = xv[9] * t29;
-        let t78 = v[0] * t19;
-        let t81 = v[1] * t19;
-        let t84 = v[2] * t13;
-        let t87 = v[3] * t13;
-        let t89 = xv[15] * t22;
+        let t48 = xv[7] * t30;
+        let t50 = xv[9] * t29;
+        let t53 = xv[10] * t31;
+        let t54 = xv[7] * t32;
+        let t59 = xv[6] * t32;
+        let t60 = xv[8] * t33;
+        let t64 = xv[7] * t33;
+        let t65 = xv[6] * t29;
+        let t68 = xv[7] * t31;
+        let t70 = xv[5] * t29;
+        let t74 = xv[9] * t32;
+        let t75 = xv[5] * t33;
+        let t78 = v[3] * t13;
+        let t79 = xv[11] * t27;
+        let t81 = v[0] * t19;
+        let t84 = v[1] * t19;
+        let t85 = xv[13] * t21;
+        let t86 = xv[11] * t29;
+        let t89 = xv[15] * t25;
         let t90 = xv[2].mul_add(t28, t36);
-        let t92 = (-t90).mul_add(T::from_i64(2), t37);
-        let t93 = (-v[1]).mul_add(t16, t38);
+        let t91 = t90 * T::from_i64(2);
+        let t92 = xv[1].mul_add(t20, t91);
+        let t93 = xv[1].mul_add(t28, t39);
         let t94 = t93 * T::from_i64(2);
-        let t95 = (-xv[2]).mul_add(t26, t94);
+        let t95 = (-xv[2]).mul_add(t21, t94);
         let t96 = (-xv[4]).mul_add(t29, t42);
         let t97 = t96 * T::from_i64(2);
-        let t98 = (-xv[3]).mul_add(t21, t97);
-        let t99 = (-xv[3]).mul_add(t29, t45);
+        let t98 = (-xv[3]).mul_add(t26, t97);
+        let t99 = xv[3].mul_add(t29, t45);
         let t100 = t99 * T::from_i64(2);
-        let t101 = (-xv[4]).mul_add(t20, t100);
-        let t102 = xv[10].mul_add(t30, t49);
-        let t103 = (-xv[9]).mul_add(t31, t50);
+        let t101 = (-xv[4]).mul_add(t27, t100);
+        let t102 = xv[6].mul_add(t28, t48);
+        let t103 = (-xv[10]).mul_add(t33, t50);
         let t104 = t102 + t103;
         let t105 = t104 * T::from_i64(2);
-        let t106 = (-xv[5]).mul_add(t23, t105);
-        let t107 = xv[8].mul_add(t31, t54);
-        let t108 = (-xv[10]).mul_add(t28, t55);
+        let t106 = xv[5].mul_add(t22, t105);
+        let t107 = xv[5].mul_add(t28, t53);
+        let t108 = (-xv[8]).mul_add(t29, t54);
         let t109 = t107 + t108;
         let t110 = t109 * T::from_i64(2);
-        let t111 = (-xv[6]).mul_add(t24, t110);
-        let t112 = xv[9].mul_add(t28, t59);
-        let t113 = (-xv[8]).mul_add(t30, t60);
+        let t111 = (-xv[6]).mul_add(t23, t110);
+        let t112 = xv[5].mul_add(t30, t59);
+        let t113 = (-xv[9]).mul_add(t31, t60);
         let t114 = t112 + t113;
         let t115 = t114 * T::from_i64(2);
-        let t116 = (-xv[7]).mul_add(t25, t115);
-        let t117 = (-xv[6]).mul_add(t31, t62);
-        let t118 = xv[9].mul_add(t32, t65);
+        let t116 = (-xv[7]).mul_add(t24, t115);
+        let t117 = (-xv[9]).mul_add(t28, t65);
+        let t118 = xv[10].mul_add(t30, t64);
         let t119 = t117 - t118;
         let t120 = t119 * T::from_i64(2);
-        let t121 = xv[8].mul_add(t23, t120);
-        let t122 = (-xv[7]).mul_add(t28, t68);
-        let t123 = xv[8].mul_add(t32, t70);
+        let t121 = (-xv[8]).mul_add(t22, t120);
+        let t122 = (-xv[8]).mul_add(t28, t68);
+        let t123 = xv[10].mul_add(t32, t70);
         let t124 = t122 - t123;
         let t125 = t124 * T::from_i64(2);
-        let t126 = xv[9].mul_add(t24, t125);
-        let t127 = (-xv[5]).mul_add(t30, t72);
-        let t128 = xv[8].mul_add(t33, t75);
+        let t126 = xv[9].mul_add(t23, t125);
+        let t127 = (-xv[8]).mul_add(t30, t75);
+        let t128 = xv[6].mul_add(t31, t74);
         let t129 = t127 - t128;
         let t130 = t129 * T::from_i64(2);
-        let t131 = xv[10].mul_add(t25, t130);
-        let t132 = xv[12].mul_add(t28, t78);
-        let t133 = t132 * T::from_i64(2);
-        let t134 = xv[11].mul_add(t27, t133);
-        let t135 = -t134;
-        let t136 = xv[11].mul_add(t28, t81);
-        let t137 = t136 * T::from_i64(2);
-        let t138 = xv[12].mul_add(t26, t137);
-        let t139 = xv[14].mul_add(t29, t84);
-        let t140 = t139 * T::from_i64(2);
-        let t141 = xv[13].mul_add(t21, t140);
-        let t142 = xv[13].mul_add(t29, t87);
+        let t131 = xv[10].mul_add(t24, t130);
+        let t132 = xv[14].mul_add(t29, t78);
+        let t134 = (-t132).mul_add(T::from_i64(2), t79);
+        let t135 = xv[13].mul_add(t28, t81);
+        let t136 = t135 * T::from_i64(2);
+        let t137 = xv[12].mul_add(t20, t136);
+        let t138 = -t137;
+        let t139 = xv[12].mul_add(t28, t84);
+        let t141 = (-t139).mul_add(T::from_i64(2), t85);
+        let t142 = (-v[2]).mul_add(t13, t86);
         let t143 = t142 * T::from_i64(2);
-        let t144 = xv[14].mul_add(t20, t143);
+        let t144 = xv[14].mul_add(t26, t143);
         let t145 = -t89;
-            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t34, t92, t95, t98, t101, t106, t111, t116, t121, t126, t131, t135, t138, t141, t144, t145]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
+            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t34, t92, t95, t98, t101, t106, t111, t116, t121, t126, t131, t134, t138, t141, t144, t145]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2875,27 +2876,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m20 = m11 - m13;
         let m21 = m11 + m13;
         let m22 = m4 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m5 * T::from_i64(2);
+        let m23 = m5 * T::from_i64(2);
+        let m24 = m6 * T::from_i64(2);
         let m25 = -m24;
-        let m26 = m6 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m20;
-        let m29 = m7 * T::from_i64(2);
-        let m30 = -m29;
-        let m31 = m8 * T::from_i64(2);
+        let m26 = -m15;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = m8 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = -m20;
+        let m31 = m9 * T::from_i64(2);
         let m32 = -m31;
-        let m33 = -m15;
-        let m34 = m9 * T::from_i64(2);
-        let m35 = -m34;
-        let m36 = -m14;
-        let m37 = -m17;
-        let m38 = -m18;
-        let m39 = -m19;
-        let m40 = -m21;
-        let m41 = -m16;
+        let m33 = -m21;
+        let m34 = -m17;
+        let m35 = -m18;
+        let m36 = -m16;
+        let m37 = -m22;
+        let m38 = -m23;
+        let m39 = -m27;
+        let m40 = -m14;
+        let m41 = -m19;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m16)).0, (x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25) + x[4].scale(m27)).0, (x[1].scale(m22) + x[2].scale(m28) + x[3].scale(m30) + x[4].scale(m32)).0, (x[1].scale(m24) + x[2].scale(m30) + x[3].scale(m33) + x[4].scale(m35)).0, (x[1].scale(m26) + x[2].scale(m32) + x[3].scale(m35) + x[4].scale(m36)).0, (x[5].scale(m37) + x[6].scale(m29) + x[7].scale(m31) + x[9].scale(m27) + x[10].scale(m24)).0, (x[5].scale(m29) + x[6].scale(m38) + x[7].scale(m34) + x[8].scale(m26) + x[10].scale(m23)).0, (x[5].scale(m31) + x[6].scale(m34) + x[7].scale(m39) + x[8].scale(m25) + x[9].scale(m22)).0, (x[6].scale(m27) + x[7].scale(m24) + x[8].scale(m17) + x[9].scale(m30) + x[10].scale(m32)).0, (x[5].scale(m26) + x[7].scale(m23) + x[8].scale(m30) + x[9].scale(m18) + x[10].scale(m35)).0, (x[5].scale(m25) + x[6].scale(m22) + x[8].scale(m32) + x[9].scale(m35) + x[10].scale(m19)).0, (x[11].scale(m40) + x[12].scale(m23) + x[13].scale(m25) + x[14].scale(m27)).0, (x[11].scale(m22) + x[12].scale(m20) + x[13].scale(m29) + x[14].scale(m31)).0, (x[11].scale(m24) + x[12].scale(m29) + x[13].scale(m15) + x[14].scale(m34)).0, (x[11].scale(m26) + x[12].scale(m31) + x[13].scale(m34) + x[14].scale(m14)).0, (x[15].scale(m41)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m19)).0, (x[1].scale(m14) + x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m25)).0, (x[1].scale(m22) + x[2].scale(m26) + x[3].scale(m27) + x[4].scale(m29)).0, (x[1].scale(m23) + x[2].scale(m27) + x[3].scale(m30) + x[4].scale(m32)).0, (x[1].scale(m24) + x[2].scale(m28) + x[3].scale(m31) + x[4].scale(m33)).0, (x[5].scale(m16) + x[6].scale(m22) + x[7].scale(m23) + x[9].scale(m31) + x[10].scale(m29)).0, (x[5].scale(m22) + x[6].scale(m34) + x[7].scale(m27) + x[8].scale(m32) + x[10].scale(m24)).0, (x[5].scale(m23) + x[6].scale(m27) + x[7].scale(m35) + x[8].scale(m28) + x[9].scale(m25)).0, (x[6].scale(m31) + x[7].scale(m29) + x[8].scale(m36) + x[9].scale(m37) + x[10].scale(m38)).0, (x[5].scale(m32) + x[7].scale(m24) + x[8].scale(m37) + x[9].scale(m17) + x[10].scale(m39)).0, (x[5].scale(m28) + x[6].scale(m25) + x[8].scale(m38) + x[9].scale(m39) + x[10].scale(m18)).0, (x[11].scale(m21) + x[12].scale(m25) + x[13].scale(m29) + x[14].scale(m32)).0, (x[11].scale(m24) + x[12].scale(m40) + x[13].scale(m37) + x[14].scale(m38)).0, (x[11].scale(m28) + x[12].scale(m37) + x[13].scale(m15) + x[14].scale(m39)).0, (x[11].scale(m31) + x[12].scale(m38) + x[13].scale(m39) + x[14].scale(m20)).0, (x[15].scale(m41)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -2935,26 +2936,26 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivect
         let m20 = m11 - m13;
         let m21 = m11 + m13;
         let m22 = m4 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m5 * T::from_i64(2);
+        let m23 = m5 * T::from_i64(2);
+        let m24 = m6 * T::from_i64(2);
         let m25 = -m24;
-        let m26 = m6 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m20;
-        let m29 = m7 * T::from_i64(2);
-        let m30 = -m29;
-        let m31 = m8 * T::from_i64(2);
+        let m26 = -m15;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = m8 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = -m20;
+        let m31 = m9 * T::from_i64(2);
         let m32 = -m31;
-        let m33 = -m15;
-        let m34 = m9 * T::from_i64(2);
-        let m35 = -m34;
-        let m36 = -m14;
-        let m37 = -m17;
-        let m38 = -m18;
-        let m39 = -m19;
-        let m40 = -m21;
-        let m41 = -m16;
-        gx::Prepared::from_entries([m16, m21, m23, m25, m27, m22, m28, m30, m32, m24, m33, m35, m26, m36, m37, m29, m31, m38, m34, m39, m17, m18, m19, m40, m20, m15, m14, m41])
+        let m33 = -m21;
+        let m34 = -m17;
+        let m35 = -m18;
+        let m36 = -m16;
+        let m37 = -m22;
+        let m38 = -m23;
+        let m39 = -m27;
+        let m40 = -m14;
+        let m41 = -m19;
+        gx::Prepared::from_entries([m19, m14, m22, m23, m25, m26, m27, m29, m30, m32, m24, m28, m31, m33, m16, m34, m35, m36, m37, m38, m17, m39, m18, m21, m40, m15, m20, m41])
     }
 }
 
@@ -2964,7 +2965,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[7]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[8]) + x[3].scale(m[11]) + x[4].scale(m[13])).0, (x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[9].scale(m[4]) + x[10].scale(m[9])).0, (x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18]) + x[8].scale(m[12]) + x[10].scale(m[2])).0, (x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19]) + x[8].scale(m[3]) + x[9].scale(m[5])).0, (x[6].scale(m[4]) + x[7].scale(m[9]) + x[8].scale(m[20]) + x[9].scale(m[7]) + x[10].scale(m[8])).0, (x[5].scale(m[12]) + x[7].scale(m[2]) + x[8].scale(m[7]) + x[9].scale(m[21]) + x[10].scale(m[11])).0, (x[5].scale(m[3]) + x[6].scale(m[5]) + x[8].scale(m[8]) + x[9].scale(m[11]) + x[10].scale(m[22])).0, (x[11].scale(m[23]) + x[12].scale(m[2]) + x[13].scale(m[3]) + x[14].scale(m[4])).0, (x[11].scale(m[5]) + x[12].scale(m[24]) + x[13].scale(m[15]) + x[14].scale(m[16])).0, (x[11].scale(m[9]) + x[12].scale(m[15]) + x[13].scale(m[25]) + x[14].scale(m[18])).0, (x[11].scale(m[12]) + x[12].scale(m[16]) + x[13].scale(m[18]) + x[14].scale(m[26])).0, (x[15].scale(m[27])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[1].scale(m[3]) + x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[13])).0, (x[5].scale(m[14]) + x[6].scale(m[2]) + x[7].scale(m[3]) + x[9].scale(m[12]) + x[10].scale(m[7])).0, (x[5].scale(m[2]) + x[6].scale(m[15]) + x[7].scale(m[6]) + x[8].scale(m[9]) + x[10].scale(m[10])).0, (x[5].scale(m[3]) + x[6].scale(m[6]) + x[7].scale(m[16]) + x[8].scale(m[11]) + x[9].scale(m[4])).0, (x[6].scale(m[12]) + x[7].scale(m[7]) + x[8].scale(m[17]) + x[9].scale(m[18]) + x[10].scale(m[19])).0, (x[5].scale(m[9]) + x[7].scale(m[10]) + x[8].scale(m[18]) + x[9].scale(m[20]) + x[10].scale(m[21])).0, (x[5].scale(m[11]) + x[6].scale(m[4]) + x[8].scale(m[19]) + x[9].scale(m[21]) + x[10].scale(m[22])).0, (x[11].scale(m[23]) + x[12].scale(m[4]) + x[13].scale(m[7]) + x[14].scale(m[9])).0, (x[11].scale(m[10]) + x[12].scale(m[24]) + x[13].scale(m[18]) + x[14].scale(m[19])).0, (x[11].scale(m[11]) + x[12].scale(m[18]) + x[13].scale(m[25]) + x[14].scale(m[21])).0, (x[11].scale(m[12]) + x[12].scale(m[19]) + x[13].scale(m[21]) + x[14].scale(m[26])).0, (x[15].scale(m[27])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -2973,7 +2974,7 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Multivector<(), 
     #[inline]
     fn from(p: gx::Prepared<Vector, Multivector<(), f64, O>, T, 28>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[5], m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[9], m[7], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[12], m[8], m[11], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[15], m[16], T::zero(), m[4], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[15], m[17], m[18], m[12], T::zero(), m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[18], m[19], m[3], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[9], m[20], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], T::zero(), m[2], m[7], m[21], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[5], T::zero(), m[8], m[11], m[22], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[23], m[2], m[3], m[4], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[24], m[15], m[16], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[15], m[25], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[16], m[18], m[26], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[10], m[11], m[12], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[2], m[3], T::zero(), m[12], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[15], m[6], m[9], T::zero(), m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[6], m[16], m[11], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[7], m[17], m[18], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], T::zero(), m[10], m[18], m[20], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[4], T::zero(), m[19], m[21], m[22], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[23], m[4], m[7], m[9], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[24], m[18], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[18], m[25], m[21], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[19], m[21], m[26], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3024,62 +3025,62 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
         }
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
-        let t0 = v[0] * xv[1];
-        let t3 = v[3] * xv[4];
-        let t4 = (-v[1]).mul_add(xv[2], t0);
-        let t5 = v[2].mul_add(xv[3], t3);
-        let t6 = t4 - t5;
-        let t8 = v[1] * xv[12];
-        let t10 = v[3] * xv[14];
-        let t11 = v[0].mul_add(xv[11], t8);
-        let t12 = v[2].mul_add(xv[13], t10);
+        let t1 = v[1] * xv[2];
+        let t2 = v[2] * xv[3];
+        let t4 = v[0].mul_add(xv[1], t1);
+        let t5 = (-v[3]).mul_add(xv[4], t2);
+        let t6 = t4 + t5;
+        let t8 = v[1] * xv[13];
+        let t9 = v[2] * xv[14];
+        let t11 = v[0].mul_add(xv[12], t8);
+        let t12 = (-v[3]).mul_add(xv[11], t9);
         let t13 = t11 + t12;
-        let t16 = v[3] * xv[9];
-        let t17 = v[0].mul_add(xv[5], t16);
-        let t18 = (-v[2]).mul_add(xv[10], t17);
-        let t20 = v[1] * xv[10];
-        let t22 = v[0].mul_add(xv[6], t20);
-        let t23 = (-v[3]).mul_add(xv[8], t22);
-        let t26 = v[2] * xv[8];
+        let t15 = v[1] * xv[6];
+        let t17 = v[0].mul_add(xv[5], t15);
+        let t18 = v[2].mul_add(xv[7], t17);
+        let t19 = v[0] * xv[6];
+        let t22 = (-v[1]).mul_add(xv[5], t19);
+        let t23 = (-v[3]).mul_add(xv[10], t22);
+        let t26 = v[3] * xv[9];
         let t27 = v[0].mul_add(xv[7], t26);
-        let t28 = (-v[1]).mul_add(xv[9], t27);
-        let t30 = v[2] * xv[7];
+        let t28 = (-v[2]).mul_add(xv[5], t27);
+        let t30 = v[1] * xv[9];
         let t32 = v[0].mul_add(xv[8], t30);
-        let t33 = (-v[3]).mul_add(xv[6], t32);
-        let t36 = v[3] * xv[5];
+        let t33 = v[2].mul_add(xv[10], t32);
+        let t36 = v[3] * xv[7];
         let t37 = v[0].mul_add(xv[9], t36);
-        let t38 = (-v[1]).mul_add(xv[7], t37);
-        let t40 = v[1] * xv[6];
-        let t42 = v[0].mul_add(xv[10], t40);
-        let t43 = (-v[2]).mul_add(xv[5], t42);
+        let t38 = (-v[1]).mul_add(xv[8], t37);
+        let t39 = v[0] * xv[10];
+        let t42 = (-v[2]).mul_add(xv[8], t39);
+        let t43 = (-v[3]).mul_add(xv[6], t42);
         let t44 = v[0] * t6;
         let t45 = v[1] * t6;
         let t46 = v[2] * t6;
         let t47 = v[3] * t6;
-        let t48 = v[2] * t43;
-        let t51 = v[3] * t33;
-        let t52 = v[1] * t38;
-        let t54 = v[2] * t28;
-        let t57 = v[3] * t18;
-        let t58 = v[1] * t23;
-        let t60 = v[0] * t13;
-        let t61 = v[1] * t13;
-        let t62 = v[2] * t13;
-        let t63 = v[3] * t13;
+        let t49 = v[2] * t28;
+        let t51 = v[3] * t43;
+        let t52 = v[2] * t18;
+        let t55 = v[2] * t43;
+        let t57 = v[3] * t28;
+        let t59 = v[3] * t23;
+        let t60 = v[3] * t13;
+        let t61 = v[0] * t13;
+        let t62 = v[1] * t13;
+        let t63 = v[2] * t13;
         let t64 = t44 * T::from_i64(2);
-        let t65 = v[0] * v[0];
-        let t68 = v[3] * v[3];
-        let t69 = (-v[1]).mul_add(v[1], t65);
-        let t70 = v[2].mul_add(v[2], t68);
-        let t71 = t69 - t70;
+        let t66 = v[1] * v[1];
+        let t67 = v[2] * v[2];
+        let t69 = v[0].mul_add(v[0], t66);
+        let t70 = (-v[3]).mul_add(v[3], t67);
+        let t71 = t69 + t70;
         let t73 = (-xv[1]).mul_add(t71, t64);
         let t74 = t45 * T::from_i64(2);
         let t76 = (-xv[2]).mul_add(t71, t74);
@@ -3087,36 +3088,37 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t79 = (-xv[3]).mul_add(t71, t77);
         let t80 = t47 * T::from_i64(2);
         let t82 = (-xv[4]).mul_add(t71, t80);
-        let t83 = (-v[3]).mul_add(t38, t48);
-        let t84 = t83 * T::from_i64(2);
-        let t86 = (-xv[5]).mul_add(t71, t84);
-        let t87 = (-v[1]).mul_add(t43, t51);
+        let t83 = v[1].mul_add(t23, t49);
+        let t85 = xv[5] * t71;
+        let t86 = t83.mul_add(T::from_i64(2), t85);
+        let t87 = v[1].mul_add(t18, t51);
         let t88 = t87 * T::from_i64(2);
         let t90 = (-xv[6]).mul_add(t71, t88);
-        let t91 = (-v[2]).mul_add(t33, t52);
+        let t91 = (-v[3]).mul_add(t38, t52);
         let t92 = t91 * T::from_i64(2);
         let t94 = (-xv[7]).mul_add(t71, t92);
-        let t95 = (-v[3]).mul_add(t23, t54);
+        let t95 = v[1].mul_add(t38, t55);
         let t97 = xv[8] * t71;
         let t98 = t95.mul_add(T::from_i64(2), t97);
-        let t99 = (-v[1]).mul_add(t28, t57);
-        let t101 = xv[9] * t71;
-        let t102 = t99.mul_add(T::from_i64(2), t101);
-        let t103 = (-v[2]).mul_add(t18, t58);
-        let t105 = xv[10] * t71;
-        let t106 = t103.mul_add(T::from_i64(2), t105);
-        let t108 = xv[11] * t71;
-        let t109 = (-t60).mul_add(T::from_i64(2), t108);
-        let t111 = xv[12] * t71;
-        let t112 = t61.mul_add(T::from_i64(2), t111);
-        let t114 = xv[13] * t71;
-        let t115 = t62.mul_add(T::from_i64(2), t114);
-        let t117 = xv[14] * t71;
-        let t118 = t63.mul_add(T::from_i64(2), t117);
-        let t119 = -xv[15];
-        let t120 = xv[0] * t71;
-        let t121 = t71 * t119;
-            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t120, t73, t76, t79, t82, t86, t90, t94, t98, t102, t106, t109, t112, t115, t118, t121]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
+        let t99 = -t98;
+        let t100 = (-v[1]).mul_add(t33, t57);
+        let t102 = xv[9] * t71;
+        let t103 = t100.mul_add(T::from_i64(2), t102);
+        let t104 = v[2].mul_add(t33, t59);
+        let t106 = xv[10] * t71;
+        let t107 = (-t104).mul_add(T::from_i64(2), t106);
+        let t109 = xv[11] * t71;
+        let t110 = (-t60).mul_add(T::from_i64(2), t109);
+        let t112 = xv[12] * t71;
+        let t113 = (-t61).mul_add(T::from_i64(2), t112);
+        let t115 = xv[13] * t71;
+        let t116 = (-t62).mul_add(T::from_i64(2), t115);
+        let t118 = xv[14] * t71;
+        let t119 = (-t63).mul_add(T::from_i64(2), t118);
+        let t120 = -xv[15];
+        let t121 = xv[0] * t71;
+        let t122 = t71 * t120;
+            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t121, t73, t76, t79, t82, t86, t90, t94, t99, t103, t107, t110, t113, t116, t119, t122]), [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -3141,27 +3143,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m20 = m11 - m13;
         let m21 = m11 + m13;
         let m22 = m4 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m5 * T::from_i64(2);
+        let m23 = m5 * T::from_i64(2);
+        let m24 = m6 * T::from_i64(2);
         let m25 = -m24;
-        let m26 = m6 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m20;
-        let m29 = m7 * T::from_i64(2);
-        let m30 = -m29;
-        let m31 = m8 * T::from_i64(2);
+        let m26 = -m15;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = m8 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = -m20;
+        let m31 = m9 * T::from_i64(2);
         let m32 = -m31;
-        let m33 = -m15;
-        let m34 = m9 * T::from_i64(2);
-        let m35 = -m34;
-        let m36 = -m14;
-        let m37 = -m17;
-        let m38 = -m18;
-        let m39 = -m19;
-        let m40 = -m21;
-        let m41 = -m16;
+        let m33 = -m21;
+        let m34 = -m17;
+        let m35 = -m18;
+        let m36 = -m16;
+        let m37 = -m22;
+        let m38 = -m23;
+        let m39 = -m27;
+        let m40 = -m14;
+        let m41 = -m19;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m16)).0, (x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25) + x[4].scale(m27)).0, (x[1].scale(m22) + x[2].scale(m28) + x[3].scale(m30) + x[4].scale(m32)).0, (x[1].scale(m24) + x[2].scale(m30) + x[3].scale(m33) + x[4].scale(m35)).0, (x[1].scale(m26) + x[2].scale(m32) + x[3].scale(m35) + x[4].scale(m36)).0, (x[5].scale(m37) + x[6].scale(m29) + x[7].scale(m31) + x[9].scale(m27) + x[10].scale(m24)).0, (x[5].scale(m29) + x[6].scale(m38) + x[7].scale(m34) + x[8].scale(m26) + x[10].scale(m23)).0, (x[5].scale(m31) + x[6].scale(m34) + x[7].scale(m39) + x[8].scale(m25) + x[9].scale(m22)).0, (x[6].scale(m27) + x[7].scale(m24) + x[8].scale(m17) + x[9].scale(m30) + x[10].scale(m32)).0, (x[5].scale(m26) + x[7].scale(m23) + x[8].scale(m30) + x[9].scale(m18) + x[10].scale(m35)).0, (x[5].scale(m25) + x[6].scale(m22) + x[8].scale(m32) + x[9].scale(m35) + x[10].scale(m19)).0, (x[11].scale(m40) + x[12].scale(m23) + x[13].scale(m25) + x[14].scale(m27)).0, (x[11].scale(m22) + x[12].scale(m20) + x[13].scale(m29) + x[14].scale(m31)).0, (x[11].scale(m24) + x[12].scale(m29) + x[13].scale(m15) + x[14].scale(m34)).0, (x[11].scale(m26) + x[12].scale(m31) + x[13].scale(m34) + x[14].scale(m14)).0, (x[15].scale(m41)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m19)).0, (x[1].scale(m14) + x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m25)).0, (x[1].scale(m22) + x[2].scale(m26) + x[3].scale(m27) + x[4].scale(m29)).0, (x[1].scale(m23) + x[2].scale(m27) + x[3].scale(m30) + x[4].scale(m32)).0, (x[1].scale(m24) + x[2].scale(m28) + x[3].scale(m31) + x[4].scale(m33)).0, (x[5].scale(m16) + x[6].scale(m22) + x[7].scale(m23) + x[9].scale(m31) + x[10].scale(m29)).0, (x[5].scale(m22) + x[6].scale(m34) + x[7].scale(m27) + x[8].scale(m32) + x[10].scale(m24)).0, (x[5].scale(m23) + x[6].scale(m27) + x[7].scale(m35) + x[8].scale(m28) + x[9].scale(m25)).0, (x[6].scale(m31) + x[7].scale(m29) + x[8].scale(m36) + x[9].scale(m37) + x[10].scale(m38)).0, (x[5].scale(m32) + x[7].scale(m24) + x[8].scale(m37) + x[9].scale(m17) + x[10].scale(m39)).0, (x[5].scale(m28) + x[6].scale(m25) + x[8].scale(m38) + x[9].scale(m39) + x[10].scale(m18)).0, (x[11].scale(m21) + x[12].scale(m25) + x[13].scale(m29) + x[14].scale(m32)).0, (x[11].scale(m24) + x[12].scale(m40) + x[13].scale(m37) + x[14].scale(m38)).0, (x[11].scale(m28) + x[12].scale(m37) + x[13].scale(m15) + x[14].scale(m39)).0, (x[11].scale(m31) + x[12].scale(m38) + x[13].scale(m39) + x[14].scale(m20)).0, (x[15].scale(m41)).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3180,9 +3182,9 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivect
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
-        let u0 = v[0] * v[0];
-        let u4 = (-v[1]).mul_add(v[1], u0);
-        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
         let u6 = v[3].mul_add(v[3], T::from_i64(1));
         let u7 = u5 - u6;
             T::check_unit(&[u7]);
@@ -3210,26 +3212,26 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Multivect
         let m20 = m11 - m13;
         let m21 = m11 + m13;
         let m22 = m4 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m5 * T::from_i64(2);
+        let m23 = m5 * T::from_i64(2);
+        let m24 = m6 * T::from_i64(2);
         let m25 = -m24;
-        let m26 = m6 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m20;
-        let m29 = m7 * T::from_i64(2);
-        let m30 = -m29;
-        let m31 = m8 * T::from_i64(2);
+        let m26 = -m15;
+        let m27 = m7 * T::from_i64(2);
+        let m28 = m8 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = -m20;
+        let m31 = m9 * T::from_i64(2);
         let m32 = -m31;
-        let m33 = -m15;
-        let m34 = m9 * T::from_i64(2);
-        let m35 = -m34;
-        let m36 = -m14;
-        let m37 = -m17;
-        let m38 = -m18;
-        let m39 = -m19;
-        let m40 = -m21;
-        let m41 = -m16;
-        gx::Prepared::from_entries([m16, m21, m23, m25, m27, m22, m28, m30, m32, m24, m33, m35, m26, m36, m37, m29, m31, m38, m34, m39, m17, m18, m19, m40, m20, m15, m14, m41])
+        let m33 = -m21;
+        let m34 = -m17;
+        let m35 = -m18;
+        let m36 = -m16;
+        let m37 = -m22;
+        let m38 = -m23;
+        let m39 = -m27;
+        let m40 = -m14;
+        let m41 = -m19;
+        gx::Prepared::from_entries([m19, m14, m22, m23, m25, m26, m27, m29, m30, m32, m24, m28, m31, m33, m16, m34, m35, m36, m37, m38, m17, m39, m18, m21, m40, m15, m20, m41])
     }
 }
 
@@ -3239,7 +3241,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Multivector<S,
     fn transform(self, x: Multivector<S, T, O>) -> Multivector<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[7]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[8]) + x[3].scale(m[11]) + x[4].scale(m[13])).0, (x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[9].scale(m[4]) + x[10].scale(m[9])).0, (x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18]) + x[8].scale(m[12]) + x[10].scale(m[2])).0, (x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19]) + x[8].scale(m[3]) + x[9].scale(m[5])).0, (x[6].scale(m[4]) + x[7].scale(m[9]) + x[8].scale(m[20]) + x[9].scale(m[7]) + x[10].scale(m[8])).0, (x[5].scale(m[12]) + x[7].scale(m[2]) + x[8].scale(m[7]) + x[9].scale(m[21]) + x[10].scale(m[11])).0, (x[5].scale(m[3]) + x[6].scale(m[5]) + x[8].scale(m[8]) + x[9].scale(m[11]) + x[10].scale(m[22])).0, (x[11].scale(m[23]) + x[12].scale(m[2]) + x[13].scale(m[3]) + x[14].scale(m[4])).0, (x[11].scale(m[5]) + x[12].scale(m[24]) + x[13].scale(m[15]) + x[14].scale(m[16])).0, (x[11].scale(m[9]) + x[12].scale(m[15]) + x[13].scale(m[25]) + x[14].scale(m[18])).0, (x[11].scale(m[12]) + x[12].scale(m[16]) + x[13].scale(m[18]) + x[14].scale(m[26])).0, (x[15].scale(m[27])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[1].scale(m[3]) + x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[13])).0, (x[5].scale(m[14]) + x[6].scale(m[2]) + x[7].scale(m[3]) + x[9].scale(m[12]) + x[10].scale(m[7])).0, (x[5].scale(m[2]) + x[6].scale(m[15]) + x[7].scale(m[6]) + x[8].scale(m[9]) + x[10].scale(m[10])).0, (x[5].scale(m[3]) + x[6].scale(m[6]) + x[7].scale(m[16]) + x[8].scale(m[11]) + x[9].scale(m[4])).0, (x[6].scale(m[12]) + x[7].scale(m[7]) + x[8].scale(m[17]) + x[9].scale(m[18]) + x[10].scale(m[19])).0, (x[5].scale(m[9]) + x[7].scale(m[10]) + x[8].scale(m[18]) + x[9].scale(m[20]) + x[10].scale(m[21])).0, (x[5].scale(m[11]) + x[6].scale(m[4]) + x[8].scale(m[19]) + x[9].scale(m[21]) + x[10].scale(m[22])).0, (x[11].scale(m[23]) + x[12].scale(m[4]) + x[13].scale(m[7]) + x[14].scale(m[9])).0, (x[11].scale(m[10]) + x[12].scale(m[24]) + x[13].scale(m[18]) + x[14].scale(m[19])).0, (x[11].scale(m[11]) + x[12].scale(m[18]) + x[13].scale(m[25]) + x[14].scale(m[21])).0, (x[11].scale(m[12]) + x[12].scale(m[19]) + x[13].scale(m[21]) + x[14].scale(m[26])).0, (x[15].scale(m[27])).0], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 
@@ -3248,7 +3250,7 @@ impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Multiv
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Vector>, Multivector<(), f64, O>, T, 28>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[5], m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[9], m[7], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[12], m[8], m[11], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[15], m[16], T::zero(), m[4], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[15], m[17], m[18], m[12], T::zero(), m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[18], m[19], m[3], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[9], m[20], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], T::zero(), m[2], m[7], m[21], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[5], T::zero(), m[8], m[11], m[22], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[23], m[2], m[3], m[4], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[24], m[15], m[16], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[15], m[25], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[16], m[18], m[26], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
+        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Multivector<(), f64, O>,), T, 16>([[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[10], m[11], m[12], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[2], m[3], T::zero(), m[12], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[15], m[6], m[9], T::zero(), m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[6], m[16], m[11], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[7], m[17], m[18], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], T::zero(), m[10], m[18], m[20], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[4], T::zero(), m[19], m[21], m[22], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[23], m[4], m[7], m[9], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[24], m[18], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[18], m[25], m[21], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[19], m[21], m[26], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]], [false, true, true, true, true, false, false, false, false, false, false, true, true, true, true, false]) }
     }
 }
 

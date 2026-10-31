@@ -1856,7 +1856,7 @@ mod cga2d_extras {
     }
 }
 
-// Boosts (ADR-052): Lorentz rotors from gax values, in the observer `e0`'s split.
+// Boosts (ADR-052): Lorentz rotors from gax values, in the observer `e4`'s split.
 #[cfg(feature = "sta")]
 mod sta_extras {
     use crate::sta::{Even, Vector, oriented};
@@ -1864,16 +1864,17 @@ mod sta_extras {
 
     impl<T: Real> Even<(), T> {
         /// The boost by `rapidity` along the spatial direction `d` (its `e1, e2, e3` part, of
-        /// either orientation, any length; the observer is `e0`): `exp(½ rapidity d̂ e0)`. It
-        /// takes the observer at rest to the four-velocity `cosh ζ e0 + sinh ζ d̂`, moving at
-        /// speed `tanh ζ` along `d̂` (for a speed `β`, the rapidity is `β.atanh()`). Rapidities
-        /// along one direction add.
+        /// either orientation, any length; the observer is `e4`): `exp(½ rapidity e4 d̂)`, or
+        /// `exp(−½ rapidity σ)` in the relative vector `σ = d̂ e4` (ADR-055). It takes the
+        /// observer at rest to the four-velocity `cosh ζ e4 + sinh ζ d̂`, moving at speed
+        /// `tanh ζ` along `d̂` (for a speed `β`, the rapidity is `β.atanh()`). Rapidities along
+        /// one direction add.
         ///
         /// ```
         /// use gax::sta::{Even, Vector};
-        /// let x = Vector::<(), f64>::new(0.0, 1.0, 0.0, 0.0);
-        /// let u = Even::boost(x, 0.8) >> Vector::new(1.0, 0.0, 0.0, 0.0);
-        /// assert!((u.e0() - 0.8f64.cosh()).abs() < 1e-12 && (u.e1() - 0.8f64.sinh()).abs() < 1e-12);
+        /// let x = Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
+        /// let u = Even::boost(x, 0.8) >> Vector::new(0.0, 0.0, 0.0, 1.0);
+        /// assert!((u.e4() - 0.8f64.cosh()).abs() < 1e-12 && (u.e1() - 0.8f64.sinh()).abs() < 1e-12);
         /// let twice = Even::boost(x, 0.3) * Even::boost(x, 0.5);
         /// assert!(twice.c.iter().zip(Even::boost(x, 0.8).c).all(|(a, b)| (a - b).abs() < 1e-12));
         /// ```
@@ -1884,22 +1885,22 @@ mod sta_extras {
         ) -> Unit<Self> {
             let (x, y, z, o) = (d.e1(), d.e2(), d.e3(), T::zero());
             let h = rapidity * T::from_f64(0.5);
-            let s = h.sinh() / (x * x + y * y + z * z).sqrt();
-            Unit::new_unchecked(Even::new(h.cosh(), x * s, y * s, z * s, o, o, o, o))
+            let s = -h.sinh() / (x * x + y * y + z * z).sqrt();
+            Unit::new_unchecked(Even::new(h.cosh(), o, o, o, x * s, y * s, z * s, o))
         }
 
         /// The pure boost (no rotation) that takes the timelike direction `from` to `to` (both
         /// future-pointing, or both past-pointing, of either orientation, any length):
-        /// `(1 + to from)` for unit four-velocities, normalized. A four-velocity's boost from
-        /// the observer at rest is `boost_between(e0, u)`.
+        /// `(1 − to from)` for unit four-velocities (of square `−1`), normalized. A
+        /// four-velocity's boost from the observer at rest is `boost_between(e4, u)`.
         ///
         /// ```
         /// use gax::sta::{Even, Vector};
-        /// let rest = Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);
-        /// let u = Vector::new(1.25, 0.0, 0.75, 0.0); // speed 0.6 along y, (1.25² − 0.75² = 1)
+        /// let rest = Vector::<(), f64>::new(0.0, 0.0, 0.0, 1.0);
+        /// let u = Vector::new(0.0, 0.75, 0.0, 1.25); // speed 0.6 along y, (1.25² − 0.75² = 1)
         /// let b = Even::boost_between(rest, u);
         /// assert!((b >> rest).c.iter().zip(u.c).all(|(a, b)| (a - b).abs() < 1e-12));
-        /// let y = Vector::new(0.0, 0.0, 1.0, 0.0);
+        /// let y = Vector::new(0.0, 1.0, 0.0, 0.0);
         /// let direct = Even::boost(y, 0.6f64.atanh());
         /// assert!(b.c.iter().zip(direct.c).all(|(a, b)| (a - b).abs() < 1e-12));
         /// ```
@@ -1908,11 +1909,12 @@ mod sta_extras {
             from: oriented::Vector<(), T, O>,
             to: oriented::Vector<(), T, P>,
         ) -> Unit<Self> {
-            let unit = |v: Vector<(), T>| v.gp(v.dot(v).s().sqrt().recip());
+            // Timelike vectors square to minus one: the unit is `v / √(−v·v)`.
+            let unit = |v: Vector<(), T>| v.gp((-v.dot(v).s()).sqrt().recip());
             let u = unit(from.with_orientation());
             let w = unit(to.with_orientation());
-            let r = (w * u).cast::<Even>() + Unit::<Self>::identity().into_inner();
-            let n = (T::from_f64(2.0) * (T::one() + (w | u).s())).sqrt();
+            let r = Unit::<Self>::identity().into_inner() - (w * u).cast::<Even>();
+            let n = (T::from_f64(2.0) * (T::one() - (w | u).s())).sqrt();
             Unit::new_unchecked(r.gp(n.recip()))
         }
     }

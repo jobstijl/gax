@@ -366,7 +366,7 @@ motions! {
 motions! {
     /// The Lorentz group, in STA: rotors, bivectors (boosts and rotations) and their dual,
     /// bivectors again, and events as trivectors (the dual of a vector), at coordinates
-    /// `(t, x, y, z)`. The metric is indefinite: an inertia's pairing is not positive.
+    /// `(x, y, z, t)`. The metric is indefinite: an inertia's pairing is not positive.
     pub struct Sta in crate::sta {
         Motor = Even, Twist = Bivector, Forque = Bivector, Point = Trivector,
         Coords = [T; 4],

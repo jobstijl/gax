@@ -91,7 +91,8 @@ algebras! {
         pub use crate::extras::Between;
     }
 
-    /// Spacetime algebra, `R(1,3,0)`.
+    /// Spacetime algebra `R(3,1,0)`: space `e1, e2, e3`, time `e4` (square `-1`), numga's
+    /// `x+y+z+t-`.
     #[cfg(feature = "sta")]
     sta {}
 

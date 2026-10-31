@@ -262,7 +262,7 @@ fn algebras() -> Vec<(&'static str, Algebra)> {
         ("pga2d", Algebra::diagonal("012", &[0, 1, 1]).unwrap()),
         ("pga3d", Algebra::diagonal("0123", &[0, 1, 1, 1]).unwrap()),
         ("vga3d", Algebra::diagonal("123", &[1, 1, 1]).unwrap()),
-        ("sta", Algebra::diagonal("0123", &[1, -1, -1, -1]).unwrap()),
+        ("sta", Algebra::diagonal("1234", &[1, 1, 1, -1]).unwrap()),
         (
             "stap",
             Algebra::diagonal("p0123", &[0, 1, -1, -1, -1]).unwrap(),

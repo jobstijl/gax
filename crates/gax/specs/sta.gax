@@ -1,16 +1,18 @@
-// Spacetime algebra, R(1,3,0): signature (+ - - -) with e0 the time direction.
-algebra sta "Spacetime algebra `R(1,3,0)`, signature `(+,-,-,-)`, with `e0` the time direction.";
-basis e0 = 1, e1 = -1, e2 = -1, e3 = -1;
+// Spacetime algebra, R(3,1,0): signature (+ + + -), space e1, e2, e3 and time e4, as numga's
+// `x+y+z+t-` and as STAP and CSTA (ADR-055). The kinds keep numga's blade order and names
+// (`xt` is `e14`), so a numga port reads its coefficients as numga prints them.
+algebra sta "Spacetime algebra `R(3,1,0)`: space `e1, e2, e3` (square `+1`) and time `e4` (square `-1`), numga's `x+y+z+t-`.";
+basis e1 = 1, e2 = 1, e3 = 1, e4 = -1;
 
 kind Scalar = [1] "A scalar.";
-versor Vector = [e0, e1, e2, e3] "A spacetime vector (an event or a four-momentum).";
-kind Bivector = [e10, e20, e30, e23, e31, e12] "A bivector: an electromagnetic field, or the generator of a Lorentz transformation. `e10, e20, e30` are the boosts (electric part), `e23, e31, e12` the rotations (magnetic part).";
-kind Trivector = [e123, e032, e013, e021] "A trivector (a pseudovector).";
-kind Pseudoscalar = [e0123] "The unit four-volume `e0123`.";
-kind Phasor = [1, e0123] "A scalar plus a pseudoscalar: a complex number with `i = e0123`, which commutes with the even subalgebra (`exp` of a pseudoscalar, the duality rotation `exp(I β)` of a spinor).";
-versor Even = [1, e10, e20, e30, e23, e31, e12, e0123] "The even subalgebra: spinors and Lorentz rotors.";
-versor Odd = [e0, e1, e2, e3, e123, e032, e013, e021] "The odd subalgebra.";
-kind Multivector = [1, e0, e1, e2, e3, e10, e20, e30, e23, e31, e12, e123, e032, e013, e021, e0123] "A general multivector.";
+versor Vector = [e1, e2, e3, e4] "A spacetime vector `x e1 + y e2 + z e3 + t e4` (an event or a four-momentum, of square `x² + y² + z² − t²`). As a versor it is a reflection.";
+kind Bivector = [e23, e31, e12, e14, e24, e34] "A bivector: an electromagnetic field, or the generator of a Lorentz transformation. `e23, e31, e12` are the rotations (magnetic part), `e14, e24, e34` the relative vectors `eₖ e4` of the observer `e4`, the boosts (electric part).";
+kind Trivector = [e123, e234, e314, e124] "A trivector (a pseudovector): `e123` is the observer's space, `e234, e314, e124` the duals `eₖ I`.";
+kind Pseudoscalar = [e1234] "The unit four-volume `I = e1234`, the product `σ₁σ₂σ₃` of the relative vectors `σₖ = eₖ e4`.";
+kind Phasor = [1, e1234] "A scalar plus a pseudoscalar: a complex number with `i = e1234`, which commutes with the even subalgebra (`exp` of a pseudoscalar, the duality rotation `exp(I β)` of a spinor).";
+versor Even = [1, e23, e31, e12, e14, e24, e34, e1234] "The even subalgebra: spinors and Lorentz rotors.";
+versor Odd = [e1, e2, e3, e4, e123, e234, e314, e124] "The odd subalgebra.";
+kind Multivector = [1, e1, e2, e3, e4, e23, e31, e12, e14, e24, e34, e123, e234, e314, e124, e1234] "A general multivector.";
 
 alias Field = Bivector;
 alias Rotor = Even;

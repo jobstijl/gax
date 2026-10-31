@@ -89,7 +89,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) - p(3, 3)))).0,
             ],
         }
     }
@@ -108,7 +108,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) - p(3, 3)))).0,
             ],
         }
     }
@@ -127,7 +127,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) - p(3, 4)))).0,
             ],
         }
     }
@@ -146,7 +146,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
+                ((((p(3, 3) + p(4, 4)) + p(5, 5)) - ((p(0, 0) + p(1, 1)) + p(2, 2)))).0,
             ],
         }
     }
@@ -165,7 +165,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
+                ((((p(3, 4) + p(4, 5)) + p(5, 6)) - ((p(0, 1) + p(1, 2)) + p(2, 3)))).0,
             ],
         }
     }
@@ -184,7 +184,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
+                ((((p(3, 8) + p(4, 9)) + p(5, 10)) - ((p(0, 5) + p(1, 6)) + p(2, 7)))).0,
             ],
         }
     }
@@ -203,7 +203,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(1, 1) + p(2, 2)) + (p(3, 3) - p(0, 0)))).0,
             ],
         }
     }
@@ -222,7 +222,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                (((p(1, 5) + p(2, 6)) + (p(3, 7) - p(0, 4)))).0,
             ],
         }
     }
@@ -241,7 +241,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
+                (((p(1, 12) + p(2, 13)) + (p(3, 14) - p(0, 11)))).0,
             ],
         }
     }
@@ -450,7 +450,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
+                ((((p(4, 3) + p(5, 4)) + p(6, 5)) - ((p(1, 0) + p(2, 1)) + p(3, 2)))).0,
             ],
         }
     }
@@ -507,7 +507,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((((p(0, 0) + p(4, 4)) + (p(5, 5) + p(6, 6))) - ((p(1, 1) + p(2, 2)) + (p(3, 3) + p(7, 7))))).0,
             ],
         }
     }
@@ -526,7 +526,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
+                ((((p(0, 0) + p(4, 8)) + (p(5, 9) + p(6, 10))) - ((p(1, 5) + p(2, 6)) + (p(3, 7) + p(7, 15))))).0,
             ],
         }
     }
@@ -545,7 +545,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) - p(3, 3)))).0,
             ],
         }
     }
@@ -564,7 +564,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
+                (((p(5, 1) + p(6, 2)) + (p(7, 3) - p(4, 0)))).0,
             ],
         }
     }
@@ -583,7 +583,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(5, 5))) + ((p(6, 6) + p(7, 7)) - (p(3, 3) + p(4, 4))))).0,
             ],
         }
     }
@@ -602,7 +602,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
+                ((((p(0, 1) + p(1, 2)) + (p(2, 3) + p(5, 12))) + ((p(6, 13) + p(7, 14)) - (p(3, 4) + p(4, 11))))).0,
             ],
         }
     }
@@ -640,7 +640,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) - p(4, 3)))).0,
             ],
         }
     }
@@ -659,7 +659,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
+                ((((p(8, 3) + p(9, 4)) + p(10, 5)) - ((p(5, 0) + p(6, 1)) + p(7, 2)))).0,
             ],
         }
     }
@@ -678,7 +678,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
+                (((p(12, 1) + p(13, 2)) + (p(14, 3) - p(11, 0)))).0,
             ],
         }
     }
@@ -735,7 +735,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
+                ((((p(0, 0) + p(8, 4)) + (p(9, 5) + p(10, 6))) - ((p(5, 1) + p(6, 2)) + (p(7, 3) + p(15, 7))))).0,
             ],
         }
     }
@@ -754,7 +754,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
+                ((((p(1, 0) + p(2, 1)) + (p(3, 2) + p(12, 5))) + ((p(13, 6) + p(14, 7)) - (p(4, 3) + p(11, 4))))).0,
             ],
         }
     }
@@ -773,7 +773,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
         Scalar {
             o: core::marker::PhantomData,
             c: [
-                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
+                (((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) + ((p(8, 8) + p(9, 9)) + (p(10, 10) + p(12, 12)))) + (((p(13, 13) + p(14, 14)) - (p(4, 4) + p(5, 5))) - ((p(6, 6) + p(7, 7)) + (p(11, 11) + p(15, 15)))))).0,
             ],
         }
     }

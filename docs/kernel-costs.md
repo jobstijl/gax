@@ -615,8 +615,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Even>` `>>` `Even` | 85 mul, 69 add | 50 mul, 39 add |
 | `Even` `>>` `Odd` | 72 mul, 60 add | 44 mul, 36 add |
 | `Unit<Even>` `>>` `Odd` | 72 mul, 60 add | 44 mul, 36 add |
-| `Even` `>>` `Multivector` | 124 mul, 144 add | 64 mul, 88 add |
-| `Unit<Even>` `>>` `Multivector` | 125 mul, 137 add | 62 mul, 83 add |
+| `Even` `>>` `Multivector` | 124 mul, 136 add | 64 mul, 80 add |
+| `Unit<Even>` `>>` `Multivector` | 125 mul, 129 add | 63 mul, 79 add |
 | `Odd` `>>` `Scalar` | 15 mul, 10 add | 13 mul, 10 add |
 | `Unit<Odd>` `>>` `Scalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Odd` `>>` `Vector` | 52 mul, 48 add | 44 mul, 36 add |
@@ -633,8 +633,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Odd>` `>>` `Even` | 85 mul, 69 add | 50 mul, 39 add |
 | `Odd` `>>` `Odd` | 72 mul, 60 add | 44 mul, 36 add |
 | `Unit<Odd>` `>>` `Odd` | 72 mul, 60 add | 44 mul, 36 add |
-| `Odd` `>>` `Multivector` | 124 mul, 136 add | 64 mul, 80 add |
-| `Unit<Odd>` `>>` `Multivector` | 125 mul, 129 add | 63 mul, 79 add |
+| `Odd` `>>` `Multivector` | 124 mul, 144 add | 64 mul, 88 add |
+| `Unit<Odd>` `>>` `Multivector` | 125 mul, 137 add | 63 mul, 87 add |
 
 ## stap
 

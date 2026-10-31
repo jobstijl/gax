@@ -122,7 +122,6 @@ fn the_spacetime_and_conformal_algebras() {
     // Every inertia pairs a twist to the same multiple of `⟨v, v⟩` as PGA3D's.
     let reference = energy_ratios::<Pga3d>(1, &[1.0; 3])[0];
     let space = [1.0; 3];
-    let time_first = [1.0, -1.0, -1.0, -1.0];
     let time_last = [1.0, 1.0, 1.0, -1.0];
     for (name, ratios) in [
         ("pga2d", energy_ratios::<Pga2d>(2, &space)),
@@ -131,7 +130,7 @@ fn the_spacetime_and_conformal_algebras() {
         ("vga3d", energy_ratios::<Vga3d>(5, &space)),
         ("cga2d", energy_ratios::<Cga2d>(6, &space)),
         ("cga3d", energy_ratios::<Cga3d>(7, &space)),
-        ("sta", energy_ratios::<Sta>(8, &time_first)),
+        ("sta", energy_ratios::<Sta>(8, &time_last)),
         ("stap", energy_ratios::<Stap>(9, &time_last)),
         ("csta", energy_ratios::<Csta>(10, &time_last)),
     ] {

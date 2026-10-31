@@ -1349,7 +1349,7 @@ mod cga3d_to_csta {
 
 }
 
-/// The homomorphism from `vga3d` to `sta`: the spacetime split for the observer `e0`: vectors as relative vectors `eₖ e0` (bivectors), and space's algebra as the even subalgebra.
+/// The homomorphism from `vga3d` to `sta`: the spacetime split for the observer `e4`: vectors as relative vectors `eₖ e4` (bivectors), and space's algebra as the even subalgebra.
 #[cfg(all(feature = "vga3d", feature = "sta"))]
 mod vga3d_to_sta {
     use crate::{Coef, Slots, __private::SlotArr};
@@ -1372,7 +1372,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Vector<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Bivector::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+            crate::sta::oriented::Bivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0])
         }
     }
 
@@ -1382,7 +1382,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Bivector<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Bivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (-a[0]).0, (-a[1]).0, (-a[2]).0])
+            crate::sta::oriented::Bivector::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 
@@ -1404,7 +1404,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Paravector<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Even::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+            crate::sta::oriented::Even::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 
@@ -1414,7 +1414,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Rotor<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Even::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (-a[1]).0, (-a[2]).0, (-a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+            crate::sta::oriented::Even::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 
@@ -1426,7 +1426,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Odd<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Even::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[3]).0])
+            crate::sta::oriented::Even::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0])
         }
     }
 
@@ -1436,7 +1436,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Multivector<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Even::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, (-a[4]).0, (-a[5]).0, (-a[6]).0, (a[7]).0])
+            crate::sta::oriented::Even::from_coeffs([(a[0]).0, (a[4]).0, (a[5]).0, (a[6]).0, (a[1]).0, (a[2]).0, (a[3]).0, (a[7]).0])
         }
     }
 
@@ -1446,7 +1446,7 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Horizontal<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Bivector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+            crate::sta::oriented::Bivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 
@@ -1456,11 +1456,241 @@ mod vga3d_to_sta {
         #[inline(always)]
         fn from(x: crate::vga3d::oriented::Tilt<S, T, O>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
-            crate::sta::oriented::Bivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (-a[0]).0, (-a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+            crate::sta::oriented::Bivector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 
     impl<T: Coef, O: crate::Orientation> crate::Widen<crate::sta::oriented::Bivector<(), T, O>> for crate::vga3d::oriented::Tilt<(), T, O> {}
+
+}
+
+/// The homomorphism from `sta` to `stap`: spacetime as the hyperplanes through the origin event: vectors as origin hyperplanes, Lorentz rotors as the motors that keep the origin.
+#[cfg(all(feature = "sta", feature = "stap"))]
+mod sta_to_stap {
+    use crate::{Coef, Slots, __private::SlotArr};
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Scalar<S, T, O>> for crate::stap::oriented::Scalar<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Scalar<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Scalar::from_coeffs([(a[0]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Scalar<(), T, O>> for crate::sta::oriented::Scalar<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Vector<S, T, O>> for crate::stap::oriented::Vector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Vector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Vector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Vector<(), T, O>> for crate::sta::oriented::Vector<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Bivector<S, T, O>> for crate::stap::oriented::Bivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Bivector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Bivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, (-a[3]).0, (-a[4]).0, (-a[5]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Bivector<(), T, O>> for crate::sta::oriented::Bivector<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Trivector<S, T, O>> for crate::stap::oriented::Trivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Trivector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Trivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Trivector<(), T, O>> for crate::sta::oriented::Trivector<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Pseudoscalar<S, T, O>> for crate::stap::oriented::Quadvector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Pseudoscalar<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Quadvector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Quadvector<(), T, O>> for crate::sta::oriented::Pseudoscalar<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Phasor<S, T, O>> for crate::stap::oriented::Motor<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Phasor<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Motor::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Motor<(), T, O>> for crate::sta::oriented::Phasor<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Even<S, T, O>> for crate::stap::oriented::Motor<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Even<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Motor::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0, (a[2]).0, (a[3]).0, (-a[4]).0, (-a[5]).0, (-a[6]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[7]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Motor<(), T, O>> for crate::sta::oriented::Even<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Odd<S, T, O>> for crate::stap::oriented::Odd<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Odd<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Odd::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[4]).0, (a[5]).0, (a[6]).0, (a[7]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Odd<(), T, O>> for crate::sta::oriented::Odd<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Multivector<S, T, O>> for crate::stap::oriented::Multivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Multivector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Multivector::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0, (a[2]).0, (a[3]).0, (a[4]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[5]).0, (a[6]).0, (a[7]).0, (-a[8]).0, (-a[9]).0, (-a[10]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[11]).0, (a[12]).0, (a[13]).0, (a[14]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[15]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Multivector<(), T, O>> for crate::sta::oriented::Multivector<(), T, O> {}
+
+}
+
+/// The homomorphism from `sta` to `csta`: the Minkowski subalgebra: vectors as hyperplanes through the origin, Lorentz rotors as the motors that keep the origin.
+#[cfg(all(feature = "sta", feature = "csta"))]
+mod sta_to_csta {
+    use crate::{Coef, Slots, __private::SlotArr};
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Scalar<S, T, O>> for crate::csta::oriented::Scalar<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Scalar<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Scalar::from_coeffs([(a[0]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Scalar<(), T, O>> for crate::sta::oriented::Scalar<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Vector<S, T, O>> for crate::csta::oriented::Vector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Vector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Vector::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Vector<(), T, O>> for crate::sta::oriented::Vector<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Bivector<S, T, O>> for crate::csta::oriented::Twist<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Bivector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Twist::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (-a[3]).0, (-a[4]).0, (-a[5]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Twist<(), T, O>> for crate::sta::oriented::Bivector<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Trivector<S, T, O>> for crate::csta::oriented::Trivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Trivector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Trivector::from_coeffs([(a[1]).0, (a[2]).0, (a[3]).0, (a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Trivector<(), T, O>> for crate::sta::oriented::Trivector<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Pseudoscalar<S, T, O>> for crate::csta::oriented::Quadvector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Pseudoscalar<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Quadvector::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Quadvector<(), T, O>> for crate::sta::oriented::Pseudoscalar<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Phasor<S, T, O>> for crate::csta::oriented::Motor<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Phasor<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Motor::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Motor<(), T, O>> for crate::sta::oriented::Phasor<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Even<S, T, O>> for crate::csta::oriented::Motor<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Even<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Motor::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, (-a[4]).0, (-a[5]).0, (-a[6]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[7]).0])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Motor<(), T, O>> for crate::sta::oriented::Even<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Odd<S, T, O>> for crate::csta::oriented::Odd<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Odd<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Odd::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[5]).0, (a[6]).0, (a[7]).0, (a[4]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Odd<(), T, O>> for crate::sta::oriented::Odd<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Multivector<S, T, O>> for crate::csta::oriented::Multivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Multivector<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Multivector::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, (a[4]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[5]).0, (a[6]).0, (a[7]).0, (-a[8]).0, (-a[9]).0, (-a[10]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[12]).0, (a[13]).0, (a[14]).0, (a[11]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[15]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Multivector<(), T, O>> for crate::sta::oriented::Multivector<(), T, O> {}
 
 }
 

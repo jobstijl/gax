@@ -43,11 +43,11 @@ use core::ops::Add;
 /// ```
 /// use gax::calculus::reciprocal;
 /// use gax::sta::Vector;
-/// // In spacetime, x² = −1: the reciprocal of e1 is −e1, and e^1 ∗ e1 = 1.
-/// let e1 = Vector::<(), f64>::new(0.0, 1.0, 0.0, 0.0);
-/// let e1_up: Vector<(), f64> = reciprocal(1);
-/// assert_eq!(e1_up, -e1);
-/// assert_eq!(e1_up.scalar_product(e1).s(), 1.0);
+/// // In spacetime, t² = −1: the reciprocal of e4 is −e4, and e^4 ∗ e4 = 1.
+/// let e4 = Vector::<(), f64>::new(0.0, 0.0, 0.0, 1.0);
+/// let e4_up: Vector<(), f64> = reciprocal(3);
+/// assert_eq!(e4_up, -e4);
+/// assert_eq!(e4_up.scalar_product(e4).s(), 1.0);
 /// ```
 #[diagnostic::on_unimplemented(
     message = "`{Self}` has no reciprocal frame",
@@ -219,12 +219,12 @@ where
 /// use gax::calculus::laplacian;
 /// use gax::sta::{Scalar, Vector};
 /// use gax::Real;
-/// // The wave operator of spacetime: a plane wave f(t − x) satisfies □f = 0 (t² = 1, x² = −1).
+/// // The wave operator of spacetime: a plane wave f(t − x) satisfies □f = 0 (x² = 1, t² = −1).
 /// let wave = |p: Vector<(), _>| {
-///     let phase = p.c[0] - p.c[1];
+///     let phase = p.c[3] - p.c[0];
 ///     Scalar::new(phase * phase * phase)
 /// };
-/// let (_, box_f) = laplacian(wave, Vector::<(), f64>::new(0.4, 0.1, 0.0, 0.0));
+/// let (_, box_f) = laplacian(wave, Vector::<(), f64>::new(0.1, 0.0, 0.0, 0.4));
 /// assert_eq!(box_f.s(), 0.0);
 /// ```
 #[inline]

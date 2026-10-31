@@ -23,13 +23,14 @@ use std::f64::consts::PI;
 
 type S = gax::vga2d::Scalar<(), f64>;
 
-/// The field of the `(m, n)` mode at an event `t e₀ + x e₁ + y e₂ + z e₃`: `E + I B`, with
-/// `σᵢ = eᵢ e₀` the relative vectors.
+/// The field of the `(m, n)` mode at an event `x e₁ + y e₂ + z e₃ + t e₄`: `E + I B`, with
+/// `σᵢ = eᵢ e₄` the relative vectors and `I = e₄ e₁ e₂ e₃ = −e₁₂₃₄` the time-first volume of the
+/// classic `F = E + I B` (with `I = e₁₂₃₄` Maxwell's `∇F = 0` would hold for `E − I B`).
 fn mode<T: Real>(m: f64, n: f64, event: gax::sta::Vector<(), T>) -> gax::sta::Bivector<(), T> {
     use gax::sta::{Bivector, Pseudoscalar};
     let (kx, ky) = (T::from_f64(m * PI), T::from_f64(n * PI));
     let w = T::from_f64(PI * (m * m + n * n).sqrt());
-    let (t, x, y) = (event.c[0], event.c[1], event.c[2]);
+    let (x, y, t) = (event.c[0], event.c[1], event.c[3]);
     let (cx, sx, cy, sy) = (
         (kx * x).cos(),
         (kx * x).sin(),
@@ -41,10 +42,10 @@ fn mode<T: Real>(m: f64, n: f64, event: gax::sta::Vector<(), T>) -> gax::sta::Bi
     let e_x = -(ky / w) * cx * sy * st;
     let e_y = (kx / w) * sx * cy * st;
     let zero = T::zero();
-    // Bivector blades: [e10, e20, e30, e23, e31, e12]; σ₁ = e10, σ₂ = e20, σ₃ = e30.
-    let e = Bivector::new(e_x, e_y, zero, zero, zero, zero);
-    let b = Bivector::new(zero, zero, b_z, zero, zero, zero);
-    e + (Pseudoscalar::new(T::one()) * b)
+    // Bivector blades: [e23, e31, e12, e14, e24, e34]; σ₁ = e14, σ₂ = e24, σ₃ = e34.
+    let e = Bivector::new(zero, zero, zero, e_x, e_y, zero);
+    let b = Bivector::new(zero, zero, zero, zero, zero, b_z);
+    e + (Pseudoscalar::new(-T::one()) * b)
 }
 
 /// The unit square cut into `n × n` squares, each into two right triangles.
@@ -71,7 +72,7 @@ fn main() {
     // Maxwell's equations hold for the analytic modes.
     for (m, n) in [(1.0, 0.0), (1.0, 1.0), (2.0, 1.0)] {
         for event in [[0.3, 0.2, 0.7], [1.1, 0.5, 0.25], [0.05, 0.9, 0.4]] {
-            let x = gax::sta::Vector::<(), f64>::new(event[0], event[1], event[2], 0.0);
+            let x = gax::sta::Vector::<(), f64>::new(event[1], event[2], 0.0, event[0]);
             let (_, maxwell) = nabla(|x| mode(m, n, x), x);
             let largest = maxwell.c.iter().fold(0.0f64, |a, c| a.max(c.abs()));
             assert!(
