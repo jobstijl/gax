@@ -219,5 +219,42 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Friction from the numga sync: a plain (non-`Unit`) versor's `>>` is the sandwich of any element of its kind, so a CGA3D `Even >> Quadvector` is an `Even` (correct: `⟨x ~v v⟩₀`; guide §5 says to sandwich with units); CGA points need `hodge()`, not `dual()` (guide §17); `cast::<K>()` takes only the kind from `K` (its doc and §17; a return type cannot infer it); a PGA2D problem stated with 3D joins is solved in 3D (homomorphisms keep products, not joins or duals: guide §12, which claimed joins); `Point::ideal_dot` in both PGAs (directions' inner product is 0 under the metric)
 - [x] numga's spin transformations on Spot, 88 s of tests to 32 s: `matching` by conjugate gradients to `10⁻¹²` (the Laplacian is symmetric, the divergence in its range; 1.1 s to 55 ms a step, LSQR squares the condition; `solve`'s `16 ε` is out of reach of a singular map, which made CG break down on one step), and sparse `eigh` moves its shift neither on a first estimate it cannot trust nor while the space is settling (2.2 s to about 0.6 s a step; ADR-046's shift moves)
 
+## Phase 13: numga `35797de` (324 commits after `7dff347`)
+Surveyed 2026-10-31: 57 new examples (two new areas, fluids and thermodynamics), about 30 ported
+examples with new scenarios or checks, and library changes. Oracle venv `target/numga-venv-35797de`.
+
+gax features, by how many new ports need them:
+- [ ] `adjugate()` on maps and `SparseMap` (revisits ADR-014): the transpose through `&`, kinds swapped to their complements (`Plane<(Point,)>` ↔ `Point<(Plane,)>`), defined for singular maps; numga moves strains, stresses, tides, cones and every mesh operator by it (about 20 new ports)
+- [ ] Parts on the standard algebras, and `outermorphism::<B>()` onto them: PGA3D moments `[e01, e02, e03]`, spins `[e23, e31, e12]`, origin planes `[e1, e2, e3]`; PGA2D origin lines `[e1, e2]`; STAP readouts `[e1..e4]`; or user-declared parts on a standard algebra (rattleback, floating, kirchhoff, stokes swimmer, gps, specular caustics)
+- [ ] STA as `x+y+z+t-` (numga's, and gax's own STAP and CSTA): opens STA → STAP and STA → CSTA homomorphisms; an STA2D `x+y+t-`; the STA ports migrate (proposed: switch, before crates.io)
+- [ ] Inclusion between algebras by generator names (numga's `from_subalgebra`): extrinsic values keep their blades, intrinsic ones their complements, so joins and pairings carry over (a PGA2D point is the PGA3D point at z = 0), unlike the homomorphisms (guide §12)
+- [ ] Meshes and DEC: Whitney forms of every degree with their derivatives, valued in any kind (`whitney_1` is scalar 1-cochains only); `Geometry` from squared edge lengths (Regge); corner angles and angle defects; a Whitney mass with a material map per simplex; coherent re-orientation (numga's `Mesh.closed`); a cycle basis of H₁ with circulation; corner batches (numga's `incidence`, `oriented`, `corners`) and selection maps
+- [ ] Block sparse systems (`SparseMap::block`) for saddle points over two fields (dec_stokes, piezoelectric)
+- [ ] A dense `eigh` of run-time size with the full spectrum, against a semidefinite metric (beltrami_fields)
+- [ ] A name for numga's `dot`, `⟨a ~b⟩₀` (gax's `.dot()` is `|`, negative on Euclidean bivectors), and a guide §17 line; laws for `a ^ b == (a & b) I` and `a & b.hodge() == ⟨a ~b⟩₀`
+- [ ] A trace over two inputs through a pairing (numga's `trace(i, j)`; ADR-014 declined it): freeform, piezoelectric
+- [ ] `exp` of a single-grade kind whose square is a scalar (vectors; triality)
+- [ ] Outermorphisms of correlations, `C(p & q) = C(p) ^ C(q)`; `eigh` of a correlation through `&`
+- [ ] Gauss–Legendre rules (kirchhoff)
+- [ ] Refresh: numga fixtures at HEAD (PGA3D σ = +1), ADR-009's last bullet and the README's sign note (both from before 93c2ae3); guide §17 on numga's `dual` on null blades (`w & w.dual() == 1`), "axes" for slots, its diagonal CGA3D
+- [ ] Later: reverse-mode derivatives (koebe, freeform), oriented WGSL sandwiches, merging repeated sparse couplings with pairwise sums, an L-BFGS minimizer, the Cl⁰(p,q) ≅ Cl(p,q−1) route above 9D in the guide (particle_charges, R(10,0))
+
+The 57 new ports (example-crate work: `bunny.obj`, numga's per-level icosphere, a thermodynamics chart module, CPU versions of numga's WGSL tracers):
+- [ ] electromagnetism: beltrami_fields, lie_advection, magnetic_bottle, piezoelectric
+- [ ] fluids: dec_stokes, eigen_fluids, floating, kirchhoff, projective_sphere_flow, smoke_rings, sphere_vortices, stokes_swimmer
+- [ ] math: doubled_algebra, e8, e_series, eight_conics, g2_rolling, isospectral_drums, penrose, spherical_synchronization, triality
+- [ ] mechanics: freeform, odd_elasticity, rattleback, seismic_waves, shells, tippe_top
+- [ ] optics: black_sandwich, rainbow, specular_caustics
+- [ ] orientation: optical_rotation, wu_experiment
+- [ ] quadrics: csg_raytracer, glass_cyclide
+- [ ] quantum: affine_toda, particle_charges
+- [ ] relativity: gps, moving_mirror, radar, terrell, thomas_precession
+- [ ] surfaces: connections, developability, dirac_kahler, frame_fields, k_surfaces, minimal_surfaces, regge_calculus, whitney_forms
+- [ ] thermodynamics: contact_geometry, entropy_production, generic, heat_cycles, phase_change, property_charts, ruppeiner, state_space
+
+Ported examples with new scenarios or checks upstream:
+- [ ] constitutive, fresnel, moving_charge; epipolar, multiview; fitting, origami, registration, rubiks_cube; spinning_top (contacts rewritten; tippe_top builds on it), xpbd, modal_xpbd, symmetry, vortices, tricycle; elliptic_physics, conformal_elliptical, quadric_collision, quadrics; hopf; coating, photoelasticity; kane_mele, kitaev_wire, process_tomography, superconductivity; kerr (gauge-theory gravity now the main formulation), twistors; qem, spin_transformations, weighted_dual (upstream dropped a round-off test)
+- [ ] README: jeffery, vortices and wing moved to fluids upstream (names kept, as before); maxwell removed upstream (6e38d341, kept at 7dff347)
+
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.
