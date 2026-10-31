@@ -551,7 +551,8 @@ Values have closed-form methods where their type allows them:
 * `norm`;
 * `exp` for bivectors, returning `Unit` versors;
 * `log` on `Unit` versors;
-* `sqrt`.
+* `sqrt`: on versors the principal root `normalize(1 + R)`, returning a `Unit`; on a scalar
+  kind the number's square root (NaN below zero).
 
 A method is generated only for the kinds with the structure it needs. `inverse` has a general
 form for the other kinds (CSTA's `Even`, every `Multivector`): Shirokov's method, the

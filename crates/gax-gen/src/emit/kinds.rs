@@ -1175,6 +1175,12 @@ pub(super) fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, 
             "impl<T: gx::Real, O: gx::Orientation> gx::Normalize for {name}<(), T, O> {{\n    #[inline(always)]\n    fn unit(self) -> gx::Unit<Self> {{\n        Self::unit(self)\n    }}\n}}\n"
         );
     }
+    if meta.sqrt_scalar {
+        let _ = writeln!(
+            out,
+            "impl<T: gx::Real> gx::Sqrt for {name}<(), T, gx::Extrinsic> {{\n    type Output = Self;\n    #[inline(always)]\n    fn sqrt(self) -> Self::Output {{\n        Self::sqrt(self)\n    }}\n}}\n"
+        );
+    }
     if meta.sqrt {
         let _ = writeln!(
             out,

@@ -878,12 +878,10 @@ impl<T: gx::Real, O: gx::Orientation> Scalar<(), T, O> {
 }
 
 impl<T: gx::Real> Scalar<(), T, gx::Extrinsic> {
-    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    /// The square root of the number (NaN below zero, as `f64::sqrt`).
     #[inline(always)]
-    pub fn sqrt(self) -> gx::Unit<Self> {
-        let mut c = self.c;
-        c[0] = c[0] + T::one();
-        Scalar::from_coeffs(c).unit()
+    pub fn sqrt(self) -> Self {
+        Scalar::from_coeffs([self.c[0].sqrt()])
     }
 
 }
@@ -937,7 +935,7 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Scalar<(), T, O> {
 }
 
 impl<T: gx::Real> gx::Sqrt for Scalar<(), T, gx::Extrinsic> {
-    type Output = gx::Unit<Self>;
+    type Output = Self;
     #[inline(always)]
     fn sqrt(self) -> Self::Output {
         Self::sqrt(self)

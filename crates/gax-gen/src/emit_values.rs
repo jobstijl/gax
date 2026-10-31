@@ -140,8 +140,10 @@ pub struct ValueMethods {
     pub exp: Option<String>,
     /// `Unit::log`, with its output kind.
     pub log: Option<String>,
-    /// `sqrt`.
+    /// `sqrt`, a unit versor's.
     pub sqrt: bool,
+    /// `sqrt` of a scalar kind, the number's (`Sqrt` with `Output = Self`).
+    pub sqrt_scalar: bool,
     /// The methods that have a WGSL form, in language-neutral form (see [`crate::kernel`]).
     pub kernels: Vec<Kernel>,
 }
@@ -486,9 +488,16 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         );
     }
 
-    // sqrt of a unit versor: normalize(1 + R).
+    // sqrt of a unit versor: normalize(1 + R). A scalar's is its number's: as a versor every
+    // positive scalar normalizes to 1, so `normalize(1 + s)` would be 1 for all of them.
     let scalar_idx = k.layout.position(0);
-    if let (Some((si, ss)), true) = (scalar_idx, meta.normalized) {
+    if scalar_idx.is_some() && k.layout.len() == 1 {
+        meta.sqrt_scalar = true;
+        let _ = write!(
+            body_ext,
+            "    /// The square root of the number (NaN below zero, as `f64::sqrt`).\n    #[inline(always)]\n    pub fn sqrt(self) -> Self {{\n        {name}::from_coeffs([self.c[0].sqrt()])\n    }}\n\n"
+        );
+    } else if let (Some((si, ss)), true) = (scalar_idx, meta.normalized) {
         meta.sqrt = true;
         let _ = write!(
             body_ext,
