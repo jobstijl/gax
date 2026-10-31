@@ -365,7 +365,7 @@ fn main() {
 mod tests {
     use super::collision::*;
     use gax::ApproxEq;
-    use gax::pga2d::{Line, Point, intrinsic};
+    use gax::pga2d::{Line, Point};
 
     fn placed() -> Quadric {
         moved(motor(1.5, -0.8, 35f64.to_radians()), ellipse(2.0, 1.2))
@@ -428,16 +428,17 @@ mod tests {
         assert!((maximum - best).abs() < 1e-8);
     }
 
-    /// The scenario's checks: the three poses are apart, touching and overlapping; the contact
-    /// line is a common tangent, and both ellipses map it to one contact point. The peaks and
-    /// their parameters agree with numga's.
+    /// The scenario's checks, at numga's tolerances: the three poses are apart, touching (the
+    /// peak zero to 1e-12) and overlapping; the contact line is a common tangent, and both
+    /// ellipses map it to one contact point (1e-12). The peaks and their parameters agree with
+    /// numga's.
     #[test]
     fn the_three_poses_classify() {
         let s = scene();
         let q2: Vec<Quadric> = [0.8, 0.0, -0.6].iter().map(|o| s.second(*o)).collect();
         let peaks: Vec<(f64, f64)> = q2.iter().map(|q| peak(s.q1, *q)).collect();
         assert!(peaks[0].1 > 0.0);
-        assert!(peaks[1].1.abs() < 1e-8);
+        assert!(peaks[1].1.abs() < 1e-12, "{}", peaks[1].1);
         assert!(peaks[2].1 < 0.0);
         // numga's values (its exponential of the translation is good to 1e-11).
         let numga = [
@@ -449,11 +450,11 @@ mod tests {
             assert!((l - nl).abs() < 1e-9 && (m - nm).abs() < 1e-9, "{l} {m}");
         }
         let (_, line, point) = contact(s.q1, q2[1]);
-        assert!((line & s.q1.of(line)).s().abs() < 1e-6);
+        assert!((line & s.q1.of(line)).s().abs() < 1e-12);
         let other = q2[1].of(line).normalized();
         // The two contact points are one: their join vanishes.
         let join = other & point;
-        assert!(join.max_abs_diff(&intrinsic::Line::zero()) < 1e-5);
+        assert!(join.norm() < 1e-12, "{}", join.norm());
         // numga's contact point, at no distance from ours.
         let numga = Point::xy(0.623064025936332, 0.821205844662909);
         assert!((point & numga).norm() < 1e-6);
