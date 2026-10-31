@@ -507,6 +507,34 @@ mod tests {
         }
     }
 
+    /// numga's scenario checks: the samples limit each fit, the centre comes back within 10 cm
+    /// (about the cloud's spread over the root of its count), and the fitted line's and plane's
+    /// drawn ends lie within 5 cm of the truth, and so does the point the bundle triangulates.
+    /// A unit point joined with a unit point or line, or met with a unit plane, has their
+    /// distance as its norm.
+    #[test]
+    fn the_noisy_fits_recover_the_truth() {
+        let data = samples();
+        let pose = pose();
+        let centre = (pose >> Point::origin()).unitized();
+        let distance = (point_to_points(&data.cloud).unitized() & centre).norm();
+        assert!(distance < 0.1, "{distance}");
+        let true_line = (pose >> (Point::origin() & Point::xyz(0.0, 1.0, 0.0))).normalized();
+        let fitted = line_to_points(&data.segment);
+        for end in end_planes(2.5) {
+            let d = ((fitted ^ (pose >> end)).unitized() & true_line).norm();
+            assert!(d < 0.05, "{d}");
+        }
+        let true_plane = (pose >> Plane::new(0.0, 0.0, 1.0, 0.0)).normalized();
+        let fitted = plane_to_points(&data.patch);
+        for edge in patch_edges(2.0) {
+            let d = ((fitted ^ (pose >> edge)).unitized() & true_plane).norm();
+            assert!(d < 0.05, "{d}");
+        }
+        let distance = (point_to_lines(&data.bundle).unitized() & centre).norm();
+        assert!(distance < 0.05, "{distance}");
+    }
+
     #[test]
     fn a_frame_draws() {
         let mut draw = super::draw;
