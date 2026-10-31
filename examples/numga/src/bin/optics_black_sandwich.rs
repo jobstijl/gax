@@ -29,8 +29,7 @@ use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Point2, Rect, backdrop, caption, palette, run_with,
 };
 
-#[path = "../shared/spacetime.rs"]
-mod spacetime;
+use gax_numga_examples::shared::spacetime;
 
 mod sandwich {
     use super::spacetime::{Bivector, Direction, Vector, space, time};

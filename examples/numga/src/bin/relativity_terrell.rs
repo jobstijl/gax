@@ -34,8 +34,7 @@ use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Point2, Rect, backdrop, caption, label_under, palette, run_with,
 };
 
-#[path = "../shared/spacetime.rs"]
-mod spacetime;
+use gax_numga_examples::shared::spacetime;
 
 mod terrell {
     #[cfg(test)]

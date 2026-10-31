@@ -39,6 +39,7 @@ pub mod shared {
     pub mod mechanics_vga3d;
     pub mod quadrics_s3;
     pub mod quantum;
+    pub mod spacetime;
     pub mod surfaces_hull;
     pub mod surfaces_loop;
     pub mod surfaces_sphere;

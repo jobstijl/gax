@@ -34,8 +34,7 @@
 //!
 //! `precession.rs` holds numga's mathematics and scenes, and their tests.
 
-#[path = "../../shared/spacetime.rs"]
-mod spacetime;
+use gax_numga_examples::shared::spacetime;
 
 mod precession;
 

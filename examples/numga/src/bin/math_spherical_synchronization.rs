@@ -33,8 +33,7 @@ use gax_numga_examples::{
     run_with,
 };
 
-#[path = "../shared/spacetime.rs"]
-mod spacetime;
+use gax_numga_examples::shared::spacetime;
 
 mod synchronization {
     #[cfg(test)]

@@ -35,8 +35,7 @@ use gax_numga_examples::{
     reach3, run_with,
 };
 
-#[path = "../shared/spacetime.rs"]
-mod spacetime;
+use gax_numga_examples::shared::spacetime;
 
 mod rotation {
     use super::spacetime::{Bivector, Direction, Vector, intrinsic, space, t, time, x, y};

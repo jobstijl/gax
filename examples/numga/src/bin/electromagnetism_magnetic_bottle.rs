@@ -31,8 +31,7 @@ use gax_numga_examples::{
     palette, reach3, run_with,
 };
 
-#[path = "../shared/spacetime.rs"]
-mod spacetime;
+use gax_numga_examples::shared::spacetime;
 
 mod bottle {
     use super::spacetime::{Bivector, Direction, in_space, space, time, x, y, z};

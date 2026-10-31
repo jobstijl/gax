@@ -1,43 +1,29 @@
-//! numga's spacetime algebra, `STA = Algebra("x+y+z+t-")`: space `x`, `y`, `z` square to one,
-//! time `t` to minus one, declared with `gax::algebra!` in numga's basis and blade order (gax's
-//! own `sta` is `R(1,3)`, time positive). Shared by the spacetime ports (optical rotation,
-//! black sandwiches, spherical synchronization, the magnetic bottle, Thomas precession, Terrell
-//! rotation); each includes it with `#[path]` and uses part of it.
+//! numga's spacetime algebra, `STA = Algebra("x+y+z+t-")`, which is gax's own [`gax::sta`]
+//! (ADR-055): space `x`, `y`, `z` (`e1, e2, e3`) square to one, time `t` (`e4`) to minus one,
+//! and the kinds hold numga's blades in numga's order (`xt` is `e14`, `xyzt` is `e1234`). Shared
+//! by the spacetime ports (optical rotation, black sandwiches, spherical synchronization, the
+//! magnetic bottle, Thomas precession, Terrell rotation); each uses part of it.
 //!
 //! numga models events, velocities, rays and directions in spacetime as antivectors, intrinsic:
 //! here the intrinsic trivectors, [`Direction`] (ADR-051). A vector is a slice of spacetime (a
 //! cut, a hyperplane through the origin), which a direction crosses by their pairing `v & d`:
 //! `t & d` is how far the direction runs in the lab's time, `x & d` how far along `x`. Fields
 //! and the generators of boosts and turns are extrinsic bivectors; the even kind holds the
-//! rotors, whose `exp`, `log` and `sqrt` gax generates in closed form, as for its own `sta`.
+//! rotors, whose `exp`, `log` and `sqrt` gax generates in closed form.
 //!
 //! numga's `dual` is the metric (Hodge) dual, `~a I` with `I = xyzt`: gax's `hodge()`, which
 //! squares to minus one on even grades and to one on odd ones (so numga's `dual_inverse` is
 //! `-b.hodge()` on bivectors, `d.hodge()` on vectors and trivectors). gax's metric-free `dual()`
 //! differs from it in the sign of the blades with `t`, and is not used here.
 
-// Each port uses part of the shared module.
-#![allow(dead_code)]
+pub use gax::sta::*;
 
-gax::algebra! {
-    algebra sta "numga's spacetime algebra `R(3,1)`: space `x`, `y`, `z` square to one, time `t` to minus one.";
-    basis ex = 1, ey = 1, ez = 1, et = -1;
-    kind Scalar = [1];
-    versor Vector = [ex, ey, ez, et] "A slice of spacetime, or, as a versor, the reflection in it.";
-    kind Bivector = [eyz, ezx, exy, ext, eyt, ezt] "A field, or the generator of a turn (`yz zx xy`) or a boost (`xt yt zt`).";
-    kind Trivector = [exyz, eyzt, ezxt, exyt] "A trivector; intrinsic, an event or a direction in spacetime (numga's antivector).";
-    kind Pseudoscalar = [exyzt];
-    kind Phasor = [1, exyzt] "A scalar plus a pseudoscalar, which commutes with the even kind.";
-    versor Even = [1, eyz, ezx, exy, ext, eyt, ezt, exyzt] "The even subalgebra: spinors and Lorentz rotors.";
-    versor Odd = [ex, ey, ez, et, exyz, eyzt, ezxt, exyt];
-    alias Rotor = Even;
-    alias Direction = Trivector intrinsic;
-}
+/// An event, a velocity, a ray or a direction in spacetime: an intrinsic trivector, numga's
+/// antivector.
+pub type Direction = intrinsic::Trivector;
 
-pub use sta::*;
-
+use crate::{Dir3, Point3};
 use gax::Orientation;
-use gax_numga_examples::{Dir3, Point3};
 
 /// The slice `x = 0`, read as a coordinate: `x() & d` is how far `d` runs along `x`.
 pub fn x() -> Vector {
