@@ -171,7 +171,7 @@ impl Diagram {
         crossing: [f64; 2],
         names: [&'static str; 2],
     ) -> Diagram {
-        let height = rect.height().min(rect.width() * 0.97);
+        let height = (rect.height() * 0.86).min(rect.width() * 0.97);
         let middle = rect.centre();
         let picture = Rect::around(middle, Point2::direction(rect.width() * 0.5, height * 0.5));
         let unit = height / 300.0;
@@ -260,7 +260,10 @@ impl Diagram {
     pub fn note(&self, c: &mut Canvas, text: &str) {
         let r = self.ax.rect;
         let at = r.bottom_middle() + Point2::direction(0.0, 36.0 * self.unit);
-        c.text(text, at, TEXT * self.unit, INK.faded(0.6), Align::Center);
+        // As large as the names, or smaller to fit the picture's width.
+        let room = r.width();
+        let size = (TEXT * self.unit).min(room / font::width(text, 1.0).max(1e-6));
+        c.text(text, at, size, INK.faded(0.6), Align::Center);
     }
 
     /// The area inside an outline through chart points, closed from its last corner back to its
@@ -593,17 +596,24 @@ pub fn level_lines(across: &[f64], up: &[f64], values: &[f64], level: f64) -> Ve
         .collect()
 }
 
-/// Segments chained into polylines where their ends meet (to a ten-thousandth of a cell).
+/// Segments chained into polylines where their ends meet: within a thousandth of a cell (two
+/// cells compute the crossing on the edge they share from opposite ends, which rounds
+/// differently), found among the ends hashed into the neighbouring thousandths.
 fn chain(segs: &[[Point2; 2]]) -> Vec<Vec<Point2>> {
+    const TOLERANCE: f32 = 1e-3;
     let key = |p: Point2| {
         let [x, y] = p.to_euclidean();
-        ((x * 1e4).round() as i64, (y * 1e4).round() as i64)
+        (
+            (x / TOLERANCE).round() as i64,
+            (y / TOLERANCE).round() as i64,
+        )
     };
     let mut ends: HashMap<(i64, i64), Vec<usize>> = HashMap::new();
     for (i, [a, b]) in segs.iter().enumerate() {
         ends.entry(key(*a)).or_default().push(i);
         ends.entry(key(*b)).or_default().push(i);
     }
+    let near = |p: Point2, q: Point2| (p & q).norm() <= TOLERANCE;
     let mut used = vec![false; segs.len()];
     let mut lines = Vec::new();
     for start in 0..segs.len() {
@@ -620,13 +630,17 @@ fn chain(segs: &[[Point2; 2]]) -> Vec<Vec<Point2>> {
                 } else {
                     line[0]
                 };
-                let next = ends
-                    .get(&key(end))
-                    .and_then(|list| list.iter().copied().find(|&j| !used[j]));
+                let (kx, ky) = key(end);
+                let next = (-1..=1)
+                    .flat_map(|dx| (-1..=1).map(move |dy| (kx + dx, ky + dy)))
+                    .filter_map(|k| ends.get(&k))
+                    .flatten()
+                    .copied()
+                    .find(|&j| !used[j] && (near(segs[j][0], end) || near(segs[j][1], end)));
                 let Some(j) = next else { break };
                 used[j] = true;
                 let [a, b] = segs[j];
-                let other = if key(a) == key(end) { b } else { a };
+                let other = if near(a, end) { b } else { a };
                 if forward {
                     line.push(other);
                 } else {
