@@ -117,36 +117,7 @@ mod csg {
 
     // --- the trace
 
-    /// Distances beyond the scene, the step a ray takes off a surface before it looks again,
-    /// and how far a point may lie outside a quadric and still count as inside, for points on
-    /// two surfaces.
-    pub const FAR: f64 = 1e6;
-    pub const CLEARANCE: f64 = 1e-3;
-    pub const TOLERANCE: f64 = 1e-4;
-
-    /// A quadric along a ray, from `start` along `direction`: its pairing with the ray's point,
-    /// a quadratic in the distance `t` along it, `a t² + 2 b t + c`.
-    pub fn along_ray(quadric: Quadric, start: Point, direction: Point) -> [f64; 3] {
-        let (ahead, here) = (quadric.of(direction), quadric.of(start));
-        [
-            (ahead & direction).s(),
-            ((ahead & start).s() + (here & direction).s()) / 2.0,
-            (here & start).s(),
-        ]
-    }
-
-    /// Where a ray crosses a quadric's surface, the roots of the quadratic along it, where it
-    /// has them: both without cancellation; a half-space, with no square term, has only the
-    /// second, the first at `FAR`.
-    pub fn crossings([a, b, c]: [f64; 3]) -> Option<[f64; 2]> {
-        let discriminant = b * b - a * c;
-        if discriminant < 0.0 {
-            return None;
-        }
-        #[allow(clippy::disallowed_methods)] // the quadratic's roots
-        let q = -(b + b.signum() * discriminant.sqrt());
-        Some([if a == 0.0 { FAR } else { q / a }, c / q])
-    }
+    pub use crate::tracing::{CLEARANCE, FAR, region_hit};
 
     /// A solid: the intersection of its quadrics, each negative inside it; its colour (sRGB),
     /// the share of light it reflects as a mirror, and two planes whose unit steps lay a
@@ -159,36 +130,6 @@ mod csg {
         pub along: Plane,
     }
 
-    /// The first point between two distances where a ray meets a solid's surface: on one of its
-    /// quadrics, inside all the others. Its distance and tangent plane.
-    pub fn region_hit(
-        quadrics: &[Quadric],
-        start: Point,
-        direction: Point,
-        nearest: f64,
-        farthest: f64,
-    ) -> Option<(f64, Plane)> {
-        let mut hit = None;
-        let mut bound = farthest;
-        for (own, quadric) in quadrics.iter().enumerate() {
-            let Some(roots) = crossings(along_ray(*quadric, start, direction)) else {
-                continue;
-            };
-            for distance in roots {
-                let point = start + direction * distance;
-                let inside = quadrics
-                    .iter()
-                    .enumerate()
-                    .all(|(k, q)| k == own || (q.of(point) & point).s() <= TOLERANCE);
-                if distance > nearest && distance < bound && inside {
-                    bound = distance;
-                    hit = Some((distance, quadric.of(point)));
-                }
-            }
-        }
-        hit
-    }
-
     /// The surface a ray meets first: how far along it, its tangent plane there, and its solid.
     pub fn first_hit(
         solids: &[Solid],
@@ -198,7 +139,7 @@ mod csg {
         let mut hit = None;
         let mut bound = FAR;
         for (index, solid) in solids.iter().enumerate() {
-            if let Some((distance, tangent)) =
+            if let Some((distance, tangent, _)) =
                 region_hit(&solid.quadrics, start, direction, CLEARANCE, bound)
             {
                 bound = distance;

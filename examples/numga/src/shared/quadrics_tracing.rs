@@ -1,11 +1,81 @@
 //! The look of numga's ray-traced quadric scenes (`quadrics_csg_raytracer`,
 //! `quadrics_glass_cyclide`), on the CPU: the place on the picture a pixel's ray goes through,
 //! the checker laid over a solid by two planes' unit steps, the light of a lit surface, and the
-//! sky a reflection sees, all as lights on the shared navy look. The geometry of the rays stays
-//! with each example, in its own algebra.
+//! sky a reflection sees, all as lights on the shared navy look; and, for the solids bounded by
+//! PGA3D quadrics (`quadrics_csg_raytracer`, `mechanics_rattleback`), numga's `quadric_regions`:
+//! where a ray crosses a quadric, and the first point where it meets an intersection of them.
 
+// Each example that includes this module uses a part of it.
+#![allow(dead_code)]
+
+use gax::pga3d::{Plane, Point};
 use gax_colour::Light;
 use gax_numga_examples::{Point2, Rect, palette};
+
+/// A solid quadric of PGA3D: from points to their polar planes, its form `quadric(p) & p`
+/// negative inside.
+pub type Quadric = Plane<(Point,)>;
+
+/// Distances beyond the scene, the step a ray takes off a surface before it looks again, and how
+/// far a point may lie outside a quadric and still count as inside, for points on two surfaces.
+pub const FAR: f64 = 1e6;
+pub const CLEARANCE: f64 = 1e-3;
+pub const TOLERANCE: f64 = 1e-4;
+
+/// A quadric along a ray, from `start` along `direction`: its pairing with the ray's point, a
+/// quadratic in the distance `t` along it, `a t² + 2 b t + c`.
+pub fn along_ray(quadric: Quadric, start: Point, direction: Point) -> [f64; 3] {
+    let (ahead, here) = (quadric.of(direction), quadric.of(start));
+    [
+        (ahead & direction).s(),
+        ((ahead & start).s() + (here & direction).s()) / 2.0,
+        (here & start).s(),
+    ]
+}
+
+/// Where a ray crosses a quadric's surface, the roots of the quadratic along it, where it has
+/// them: both without cancellation; a half-space, with no square term, has only the second, the
+/// first at `FAR`.
+pub fn crossings([a, b, c]: [f64; 3]) -> Option<[f64; 2]> {
+    let discriminant = b * b - a * c;
+    if discriminant < 0.0 {
+        return None;
+    }
+    #[allow(clippy::disallowed_methods)] // the quadratic's roots
+    let q = -(b + b.signum() * discriminant.sqrt());
+    Some([if a == 0.0 { FAR } else { q / a }, c / q])
+}
+
+/// The first point between two distances where a ray meets the surface of an intersection of
+/// quadrics: on one of them, inside all the others. Its distance, the tangent plane there and
+/// the quadric's index.
+pub fn region_hit(
+    quadrics: &[Quadric],
+    start: Point,
+    direction: Point,
+    nearest: f64,
+    farthest: f64,
+) -> Option<(f64, Plane, usize)> {
+    let mut hit = None;
+    let mut bound = farthest;
+    for (own, quadric) in quadrics.iter().enumerate() {
+        let Some(roots) = crossings(along_ray(*quadric, start, direction)) else {
+            continue;
+        };
+        for distance in roots {
+            let point = start + direction * distance;
+            let inside = quadrics
+                .iter()
+                .enumerate()
+                .all(|(k, q)| k == own || (q.of(point) & point).s() <= TOLERANCE);
+            if distance > nearest && distance < bound && inside {
+                bound = distance;
+                hit = Some((distance, quadric.of(point), own));
+            }
+        }
+    }
+    hit
+}
 
 /// numga's `screen`: a place on the picture as a direction across the view, right and up, in
 /// half heights of the picture from its centre.
