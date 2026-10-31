@@ -177,16 +177,22 @@ mod spin {
     /// after the last. Each step asks for `ρ = -rate (H - H̄)`, a change in mean curvature that
     /// shaves off each face's departure from the area-weighted mean, so the surface relaxes
     /// towards constant mean curvature while every step keeps the angles.
+    #[cfg_attr(not(test), allow(dead_code))] // the animation steps the flow as it is shown
     pub fn conformal_smooth(mesh: &Mesh, iterations: usize, rate: f64) -> Vec<Mesh> {
         let mut frames = vec![recenter(mesh)];
         for _ in 0..iterations {
-            let mesh = frames.last().expect("the mesh so far");
-            let (h, areas) = (mean_curvature(mesh), mesh.triangle_areas());
-            let mean = h.zip_with(&areas, |h, a| h * a).sum().s() / areas.sum().s();
-            let rho = h.map(|h| (h - Scalar3::new(mean)) * -rate);
-            frames.push(recenter(&spin_transform_deform(mesh, &rho)));
+            let next = conformal_step(frames.last().expect("the mesh so far"), rate);
+            frames.push(next);
         }
         frames
+    }
+
+    /// One step of the flow.
+    pub fn conformal_step(mesh: &Mesh, rate: f64) -> Mesh {
+        let (h, areas) = (mean_curvature(mesh), mesh.triangle_areas());
+        let mean = h.zip_with(&areas, |h, a| h * a).sum().s() / areas.sum().s();
+        let rho = h.map(|h| (h - Scalar3::new(mean)) * -rate);
+        recenter(&spin_transform_deform(mesh, &rho))
     }
 }
 
@@ -201,9 +207,9 @@ mod scenes {
     pub const LEVELS: usize = 3;
     pub const DIPOLE: f64 = 0.5;
     /// The share of each face's curvature departure each step of Spot's flow removes, and the
-    /// number of steps.
-    pub const RATE: f64 = 0.1;
-    pub const STEPS: usize = 30;
+    /// number of steps (numga's 0.05 in 60 steps).
+    pub const RATE: f64 = 0.05;
+    pub const STEPS: usize = 60;
     /// The finer sphere the Dirac spheres are spun from (one split coarser than numga's, to
     /// start in seconds; the checks use numga's), the eigenvalues shown, and the states shown of
     /// each.
@@ -237,8 +243,35 @@ mod scenes {
     }
 
     /// Spot the cow under conformal curvature flow: the mesh at every step.
+    #[cfg_attr(not(test), allow(dead_code))] // the animation steps the flow as it is shown
     pub fn rounding() -> Vec<Mesh> {
         conformal_smooth(&spot(), STEPS, RATE)
+    }
+
+    /// Spot's flow, stepped as far as it is asked for, each step once: a frame of the flow
+    /// costs a sparse eigensolve, a second's work, so the animation steps it as it shows it.
+    pub struct Flow {
+        pub steps: usize,
+        frames: std::sync::Mutex<Vec<Mesh>>,
+    }
+
+    impl Flow {
+        pub fn new(steps: usize) -> Flow {
+            Flow {
+                steps,
+                frames: std::sync::Mutex::new(vec![recenter(&spot())]),
+            }
+        }
+
+        /// Spot after `step` steps of the flow.
+        pub fn at(&self, step: usize) -> Mesh {
+            let mut frames = self.frames.lock().expect("the flow's frames");
+            while frames.len() <= step {
+                let next = conformal_step(frames.last().expect("the start"), RATE);
+                frames.push(next);
+            }
+            frames[step].clone()
+        }
     }
 
     /// The Dirac spheres of one eigenvalue, with the energies of their fields.
@@ -269,7 +302,7 @@ use scenes::*;
 /// Every scene, computed once, the three side by side.
 struct Scenes {
     dipole: Dipole,
-    rounding: Vec<Mesh>,
+    rounding: Flow,
     sphere: Mesh,
     galleries: Vec<Gallery>,
 }
@@ -277,7 +310,7 @@ struct Scenes {
 fn scenes() -> Scenes {
     std::thread::scope(|s| {
         let dipole = s.spawn(dipole);
-        let rounding = s.spawn(rounding);
+        let rounding = s.spawn(|| Flow::new(STEPS));
         let (sphere, galleries) = dirac(DIRAC_LEVELS);
         Scenes {
             dipole: dipole.join().expect("the dipole"),
@@ -365,13 +398,14 @@ fn draw(c: &mut Canvas, s: &Scenes, t: f32) {
     checkered(c, rect, &dipole.deformed, &dipole.sphere, azimuth, label);
 
     // The flow, played over most of the loop and held at its end.
-    let steps = s.rounding.len() - 1;
+    let steps = s.rounding.steps;
     let step = ((phase / FLOW_SHARE).min(1.0) * steps as f32).round() as usize;
     let (rect, label) = (
         upper.column(2, 3),
         format!("SPOT, CONFORMAL FLOW STEP {step}"),
     );
-    checkered(c, rect, &s.rounding[step], &s.rounding[0], azimuth, &label);
+    let (now, start) = (s.rounding.at(step), s.rounding.at(0));
+    checkered(c, rect, &now, &start, azimuth, &label);
 
     // A Dirac sphere of each eigenvalue, the states in turn.
     let state = frame(phase, STATES);
@@ -527,7 +561,7 @@ mod tests {
         assert!((spot.vertices.site(0) - first).norm() < 1e-8);
     }
 
-    /// numga's `rounding` checks, and its numbers (numga 7dff347): the surface rounds, the
+    /// numga's `rounding` checks, and its numbers (numga 35797de): the surface rounds, the
     /// spread of the vertices' distances from its centre falling tenfold, and the angles hold
     /// up to the mesh's resolution, in the median.
     #[test]
@@ -538,10 +572,11 @@ mod tests {
         assert!(roundness(last) < 0.1 * roundness(first));
         assert!(median(&cosine_changes(first, last)) < 0.05);
         let numga = [
-            (0, 0.3095647685450167, 0.0),
-            (1, 0.2864012228918342, 0.002155483252500416),
-            (10, 0.11019845029444196, 0.013093452113141314),
-            (30, 0.022443147020477575, 0.017884460501218002),
+            (0, 0.30956476854501674, 0.0),
+            (1, 0.2980536140694614, 0.001056595659591833),
+            (10, 0.19200845591081525, 0.00839261127573504),
+            (30, 0.07348461268037977, 0.014827321460021275),
+            (60, 0.023706778328953397, 0.017275984522736654),
         ];
         for (step, round, change) in numga {
             let found = roundness(&frames[step]);
@@ -621,6 +656,7 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
+        // The frame steps the flow only as far as it shows; the flow's checks run it whole.
         gax_numga_examples::app::assert_draws_with(super::draw, &super::scenes(), 1.0);
     }
 }
