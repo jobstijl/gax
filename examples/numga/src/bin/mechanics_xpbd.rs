@@ -12,20 +12,22 @@
 //! 4. the XPBD multiplier is the distance over the total compliance, and each body moves by the
 //!    exponential of its share, `m (step λ (-1/2)).exp()`.
 //!
-//! A fixed body has infinite mass: its inverse inertia is zero, so nothing moves it. The links
-//! are stepped by the shared Lie integrators (RK4 on the rate), relaxed in red-black
-//! partitions of independent joints, their rates recovered from the relaxed motors, and their
-//! relative anchor velocities cancelled.
+//! The chain hangs from a pin, a body of infinite mass: its inverse inertia is zero, so nothing
+//! moves it. Each link is six unit masses with the inertia of a solid ellipsoid. The links are
+//! stepped by the shared Lie integrators (RK4 on the rate), relaxed in red-black partitions of
+//! independent joints, their rates recovered from the relaxed motors, and their relative anchor
+//! velocities cancelled.
 //!
-//! The animation shows a chain of six links released horizontally in weak gravity: it swings
-//! down and back while its joints stay closed to a fraction of a millimetre, well within
-//! numga's bound of 1% of the spacing (the plot on the right).
+//! The animation shows numga's ten links released from a horizontal arc in weak gravity: the
+//! chain uncurls, swings down and over while its joints stay closed to a few millimetres,
+//! within numga's bound of a tenth of the spacing (the plot on the right).
 
-use gax::pga3d::{Forque, Line, Motor, Point};
+use gax::pga3d::{Forque, Line, Point};
 
+use gax_numga_examples::points::on_sphere;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette,
-    run_with, signal,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Rect, Scene3, backdrop, caption,
+    palette, run_with, signal,
 };
 
 use gax_numga_examples::shared::mechanics_lie as lie;
@@ -208,13 +210,25 @@ mod xpbd {
     }
 
     /// A link's anchors, halfway to its neighbours: on +x, then on -x.
-    pub fn anchors(distance: f64) -> [P; 2] {
+    pub fn anchors(spacing: f64) -> [P; 2] {
         let (origin, x) = (Point::origin(), axes()[0]);
-        [origin + x * (0.5 * distance), origin - x * (0.5 * distance)]
+        [origin + x * (0.5 * spacing), origin - x * (0.5 * spacing)]
     }
 
-    /// The links' spacing in numga's scene.
+    /// numga's chain: its links, the spacing of their joints, the semi-axes of each link's
+    /// solid ellipsoid, the turn between neighbours along its starting arc, the joints'
+    /// compliance, the damping and gravity.
+    pub const N_LINKS: usize = 10;
     pub const LINK_SPACING: f64 = 9e-2;
+    pub const SEMI_AXES: [f64; 3] = [
+        0.62 * LINK_SPACING,
+        0.38 * LINK_SPACING,
+        0.22 * LINK_SPACING,
+    ];
+    pub const CURL: f64 = 0.3;
+    pub const COMPLIANCE: f64 = 1e-9;
+    pub const DAMPING: f64 = 1e-3;
+    pub const GRAVITY: f64 = 0.5;
 
     /// The link's axes, x, y and z.
     pub fn axes() -> [P; 3] {
@@ -225,45 +239,59 @@ mod xpbd {
         ]
     }
 
-    /// The mass points of one link: six unit masses on its axes, at `size / 3`, `2 size / 3`
-    /// and `size` along x, y and z on either side, so its three moments of inertia differ.
-    /// The first three are on the positive side.
-    pub fn cloud(size: f64) -> Vec<P> {
+    /// The mass points of one body: six unit masses on its axes, at `semi_axes * sqrt(3 / 5)`
+    /// on either side, which gives it the inertia of a solid ellipsoid with those semi-axes,
+    /// three different moments. The first three are on the positive side.
+    pub fn cloud(semi_axes: [f64; 3]) -> Vec<P> {
+        // A solid ellipsoid's radius of gyration along an axis, over its semi-axis.
+        #[allow(clippy::disallowed_methods)]
+        let gyration = (3.0f64 / 5.0).sqrt();
         let origin = Point::origin();
         [1.0, -1.0]
             .into_iter()
             .flat_map(|sign| {
-                (1..=3)
-                    .zip(axes())
-                    .map(move |(k, axis)| origin + axis * (sign * f64::from(k) * size / 3.0))
+                (semi_axes.into_iter().zip(axes()))
+                    .map(move |(a, axis)| origin + axis * (sign * a * gyration))
             })
             .collect()
     }
 
-    /// A chain of links along x, the first fixed at the origin, hanging in gravity along -z.
-    /// Adjacent links are joined halfway between their centres. The joints are split red and
-    /// black: the even joints connect 0-1, 2-3, ... and the odd ones 1-2, 3-4, ..., so the
-    /// bodies within one partition are independent.
+    /// A chain of `n_links` solid ellipsoidal links hanging from a pin at the origin, in
+    /// gravity along -z. The pin is body 0, with zero inverse inertia, an infinite mass, so
+    /// nothing moves it; the links follow. Neighbours are joined at their ends, half the
+    /// spacing along x from their centres, and the chain starts on a horizontal arc: each body
+    /// is its neighbour carried half the spacing along x, turned by `curl` about z (numga's
+    /// `exp(xy curl / 2)`), and carried on; the bodies are the powers of that motor. The joints
+    /// are split red and black: the even joints connect 0-1, 2-3, ... and the odd ones 1-2,
+    /// 3-4, ..., so the bodies within one partition are independent.
+    #[allow(clippy::too_many_arguments)]
     pub fn chain(
-        bodies: usize,
-        distance: f64,
-        size: f64,
+        n_links: usize,
+        spacing: f64,
+        semi_axes: [f64; 3],
+        curl: f64,
         compliance: f64,
         damping: f64,
         gravity: f64,
     ) -> (Chain, Vec<Joints>) {
-        let points = cloud(size);
+        let n_bodies = n_links + 1;
+        let points = cloud(semi_axes);
         let (inertia, inertia_inv) = G::inertia_from_points(&points);
         let first_moment = points.iter().copied().sum();
+        // From one body to the next along the arc: numga's `exp(xw spacing / 4)`, half the
+        // spacing along x (`xw = -e01`), around the turn `exp(xy curl / 2)` (`xy = e12`).
+        let half_shift = Line::new(0.0, 0.0, 0.0, -0.25 * spacing, 0.0, 0.0).exp();
+        let turn = Line::new(0.0, 0.0, 0.5 * curl, 0.0, 0.0, 0.0).exp();
+        let neighbour = (half_shift * turn * half_shift).log();
         let state = Chain {
-            motor: (0..bodies)
-                .map(|i| Motor::translation(Point::direction(i as f64 * distance, 0.0, 0.0)))
+            motor: (0..n_bodies)
+                .map(|k| neighbour.gp(k as f64).exp())
                 .collect(),
-            rate: vec![Line::zero(); bodies],
+            rate: vec![Line::zero(); n_bodies],
             first_moment,
             inertia,
-            // The fixed link has infinite mass: zero inverse inertia.
-            inertia_inv: (0..bodies)
+            // The pin has infinite mass: zero inverse inertia.
+            inertia_inv: (0..n_bodies)
                 .map(|i| {
                     if i == 0 {
                         InertiaInv::zero()
@@ -275,14 +303,11 @@ mod xpbd {
             damping,
             gravity: Point::direction(0.0, 0.0, -gravity),
         };
-        // Joint j connects the +x anchor of link j to the -x anchor of link j + 1.
-        let anchors = anchors(distance);
+        // Joint j connects the +x anchor of body j to the -x anchor of body j + 1.
+        let anchors = anchors(spacing);
         let partitions = [0, 1]
             .map(|parity| Joints {
-                bodies: (parity..bodies - 1)
-                    .step_by(2)
-                    .map(|j| [j, j + 1])
-                    .collect(),
+                bodies: (parity..n_links).step_by(2).map(|j| [j, j + 1]).collect(),
                 anchors,
                 compliance,
             })
@@ -290,16 +315,23 @@ mod xpbd {
         (state, partitions)
     }
 
-    /// The motors over time and the gap at every joint, from numga's scene: links 5 cm big and
-    /// 9 cm apart, stiff joints, light damping, gravity 0.5. Checks, as numga's scenario does,
-    /// that the joints stay closed to within 1% of the spacing and the fixed link never moves.
+    /// The motors over time and the gap at every joint, numga's chain stepped `steps` times
+    /// by `dt` in `substeps`.
     pub fn swinging_chain(
-        links: usize,
+        n_links: usize,
         steps: usize,
         substeps: usize,
         dt: f64,
     ) -> (Vec<Vec<M>>, Vec<Vec<f64>>) {
-        let (mut state, partitions) = chain(links, LINK_SPACING, 5e-2, 1e-9, 1e-3, 0.5);
+        let (mut state, partitions) = chain(
+            n_links,
+            LINK_SPACING,
+            SEMI_AXES,
+            CURL,
+            COMPLIANCE,
+            DAMPING,
+            GRAVITY,
+        );
         let mut motors = vec![state.motor.clone()];
         let mut gaps = vec![joint_gaps(&state.motor, &partitions)];
         for _ in 0..steps {
@@ -307,30 +339,58 @@ mod xpbd {
             gaps.push(joint_gaps(&state.motor, &partitions));
             motors.push(state.motor.clone());
         }
-        // --- checks
-        let origin = Point::origin();
-        let worst = gaps.iter().flatten().fold(0.0, |a: f64, &b| a.max(b));
-        assert!(worst < 1e-2 * LINK_SPACING, "{worst}");
-        for m in &motors {
-            assert!(((m[0] >> origin) & origin).norm() < 1e-6);
-        }
         (motors, gaps)
+    }
+
+    /// The largest joint gap over a run.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn largest_gap(gaps: &[Vec<f64>]) -> f64 {
+        gaps.iter().flatten().fold(0.0, |a: f64, &b| a.max(b))
+    }
+
+    /// How far the pin strays from the origin over a run: the norm of the join of the two.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn pin_drift(motors: &[Vec<M>]) -> f64 {
+        let origin = Point::origin();
+        (motors.iter())
+            .map(|m| ((m[0] >> origin) & origin).norm())
+            .fold(0.0, f64::max)
     }
 }
 
 use xpbd::*;
 
-/// numga's scene (six links, 0.02 per step in five substeps) stepped for 6 s instead of 1.2,
-/// so that the chain swings down and back.
-const LINKS: usize = 6;
-const DT: f64 = 0.02;
-const SECONDS: f32 = 6.0;
+/// numga's run: 4 s in 150 steps of 4 substeps.
+const SECONDS: f32 = 4.0;
+const STEPS: usize = 150;
+const SUBSTEPS: usize = 4;
+const DT: f64 = 4.0 / STEPS as f64;
 
 /// The motors and joint gaps per step.
 type History = (Vec<Vec<M>>, Vec<Vec<f64>>);
 
 fn scene() -> History {
-    swinging_chain(LINKS, (f64::from(SECONDS) / DT).round() as usize, 5, DT)
+    swinging_chain(N_LINKS, STEPS, SUBSTEPS, DT)
+}
+
+/// A solid ellipsoid with the link's semi-axes, placed by its motor, lit.
+fn ellipsoid(s: &mut Scene3, m: M, colour: Light) {
+    let origin = Point::origin();
+    let [a, b, c] = SEMI_AXES;
+    s.surface(
+        |u, v| {
+            let d = on_sphere(
+                core::f64::consts::TAU * f64::from(u),
+                core::f64::consts::PI * (f64::from(v) - 0.5),
+            );
+            m >> (origin + Point::direction(a * d.e1(), b * d.e2(), c * d.e3()))
+        },
+        16,
+        8,
+        |_, _| colour,
+        0.92,
+        None,
+    );
 }
 
 fn draw(c: &mut Canvas, (motors, gaps): &History, t: f32) {
@@ -340,57 +400,50 @@ fn draw(c: &mut Canvas, (motors, gaps): &History, t: f32) {
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(motors.len() - 1);
     caption(
         c,
-        "XPBD: A CHAIN OF RIGID LINKS",
+        "XPBD: A CHAIN OF SOLID LINKS",
         "CONSTRAINTS AS LINES, PROJECTED BY MOTORS (PGA3D)",
     );
     // The chain, in 3D, from a camera turning slowly about it: its azimuth swings with a wave,
     // once per run.
     let left = w * 0.6;
-    let azimuth = -1.25 + 0.25 * signal::wave(core::f32::consts::TAU * t / SECONDS);
+    let azimuth = -1.0 + 0.25 * signal::wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
-        Rect::new(0.0, 0.0, left, h),
-        Point::xyz(0.0, 0.0, -0.2),
-        3.0,
+        Rect::new(0.0, 60.0, left, h),
+        Point::xyz(0.05, -0.05, -0.36),
+        3.3,
         azimuth,
         0.3,
         Lens::Perspective(0.42),
     );
     let mut s = Scene3::new(cam);
-    // The ground grid under the pivot.
-    let floor = |x: f64, y: f64| Point::xyz(x, y, -0.62);
-    for i in -4..=6 {
+    // The floor a spacing below the lowest the chain can hang.
+    let depth = -(N_LINKS as f64 + 1.0) * LINK_SPACING;
+    let floor = |x: f64, y: f64| Point::xyz(x, y, depth);
+    for i in -6..=8 {
         let x = f64::from(i) * 0.1;
-        s.seg(floor(x, -0.3), floor(x, 0.3), 1.0, palette::GRID.faded(0.6));
+        s.seg(floor(x, -0.7), floor(x, 0.5), 1.0, palette::GRID.faded(0.5));
     }
-    for j in -3..=3 {
+    for j in -7..=5 {
         let y = f64::from(j) * 0.1;
-        s.seg(floor(-0.4, y), floor(0.6, y), 1.0, palette::GRID.faded(0.6));
+        s.seg(floor(-0.6, y), floor(0.8, y), 1.0, palette::GRID.faded(0.5));
     }
     // The free end's path so far.
-    let [end, start] = anchors(LINK_SPACING);
-    let trail: Vec<P> = motors[..=k].iter().map(|m| m[LINKS - 1] >> end).collect();
+    let [end, _] = anchors(LINK_SPACING);
+    let trail: Vec<P> = motors[..=k].iter().map(|m| m[N_LINKS] >> end).collect();
     s.polyline(&trail, 1.5, palette::YELLOW.faded(0.6));
-    let cloud = cloud(5e-2);
-    let colours = [palette::ORANGE, palette::SKY, palette::GREEN];
-    let origin = Point::origin();
-    for (i, &m) in motors[k].iter().enumerate() {
-        // Each link's mass points, on its three axes, as three bars.
-        for axis in 0..3 {
-            s.seg(m >> cloud[axis], m >> cloud[axis + 3], 3.0, colours[axis]);
-        }
-        // The link's anchors and the rod between them.
-        s.seg(m >> start, m >> end, 1.5, palette::INK.faded(0.8));
-        let col = if i == 0 { palette::RED } else { palette::INK };
-        s.dot(m >> origin, Marker::Dot, 5.0, col);
+    // The links in two alternating colours, the pin dark.
+    let colours = [palette::ORANGE, palette::SKY];
+    for (i, &m) in motors[k].iter().enumerate().skip(1) {
+        ellipsoid(&mut s, m, colours[i % 2]);
     }
-    s.dot(origin, Marker::Square, 9.0, palette::RED);
+    s.dot(Point::<()>::origin(), Marker::Square, 9.0, palette::RED);
     s.draw(c);
     // The joint gaps over time, as numga's figure: the largest and the mean.
     let right = Rect::new(left, 0.0, w, h);
     let ax = Axes::new(
         right.inset(54.0, 80.0, 20.0, 60.0),
         [0.0, SECONDS],
-        [1e-7, 1e-2],
+        [1e-8, 3e-2],
     )
     .log_y();
     ax.frame(c, "JOINT GAPS (METRES)", "TIME (S)", "");
@@ -407,15 +460,16 @@ fn draw(c: &mut Canvas, (motors, gaps): &History, t: f32) {
     let mean = series(&|g| g.iter().sum::<f64>() / g.len() as f64);
     ax.polyline(c, &largest, 1.6, palette::RED);
     ax.dashed(c, &mean, 1.6, 5.0, palette::SKY);
-    // numga's bound: the joints stay closed to within 1% of the spacing.
-    let bound = 1e-2 * LINK_SPACING;
+    // numga's bound: the joints stay closed to within a tenth of the spacing, hidden in the
+    // links' overlapping ends.
+    let bound = 0.1 * LINK_SPACING;
     let level = [at(0.0, bound), at(f64::from(SECONDS), bound)];
     ax.dashed(c, &level, 1.0, 3.0, palette::GRID);
     let label = at(0.1, bound * 1.4);
     ax.text(
         c,
         label,
-        "1% OF THE SPACING",
+        "10% OF THE SPACING",
         9.0,
         palette::GRID,
         Align::Left,
@@ -436,7 +490,7 @@ mod tests {
     /// Repeated projection closes the gap between two displaced anchors.
     #[test]
     fn distance_projection_closes_a_joint() {
-        let (chain, partitions) = chain(2, 0.1, 5e-2, 0.0, 1e-3, 0.5);
+        let (chain, partitions) = chain(1, 0.1, SEMI_AXES, 0.0, 0.0, 1e-3, 0.5);
         let joints = &partitions[0];
         assert!(joint_gaps(&chain.motor, &partitions)[0] < 1e-12);
         // Displace link 1 by (2, -1, 3) mm.
@@ -451,13 +505,13 @@ mod tests {
             pair = project_distance_constraint(pair, joints.anchors, inv, joints.compliance, 0.01);
         }
         assert!(((pair[0] >> joints.anchors[0]) & (pair[1] >> joints.anchors[1])).norm() < 1e-4);
-        // The fixed link has infinite mass: only link 1 moved.
+        // The pin has infinite mass: only link 1 moved.
         assert_eq!(pair[0].c, motor[0].c);
     }
 
     #[test]
     fn velocity_projection_cancels_relative_anchor_velocity() {
-        let (chain, partitions) = chain(2, 0.1, 5e-2, 1e-9, 1e-3, 0.5);
+        let (chain, partitions) = chain(1, 0.1, SEMI_AXES, 0.0, 1e-9, 1e-3, 0.5);
         let joints = &partitions[0];
         let motors = [chain.motor[0], chain.motor[1]];
         // numga adds `xw * 0.5 + yz * 0.3` to link 1: a shift along x and a turn about x.
@@ -475,20 +529,88 @@ mod tests {
         assert!(relative(resolved) < 1e-6, "{}", relative(resolved));
     }
 
-    /// The scenario checks closed joints and a fixed first link.
+    /// The joints stay closed (numga's 1% of the spacing for this short run) and the pin
+    /// fixed; and the chain falls: the free end has dropped.
     #[test]
-    fn chain_swings_with_closed_joints() {
+    fn numpy_chain_keeps_its_joints_closed() {
         let (motors, gaps) = swinging_chain(4, 20, 2, 0.02);
-        assert_eq!((motors.len(), gaps[0].len()), (21, 3));
-        // And it falls: the free end has dropped.
-        let end = (motors[20][3] >> Point::origin()).to_euclidean();
+        assert_eq!((motors.len(), gaps[0].len()), (21, 4));
+        assert!(
+            largest_gap(&gaps) < 1e-2 * LINK_SPACING,
+            "{}",
+            largest_gap(&gaps)
+        );
+        assert!(pin_drift(&motors) < 1e-6);
+        let end = (motors[20][4] >> Point::origin()).to_euclidean();
         assert!(end[2] < -1e-3, "{end:?}");
+    }
+
+    /// numga's scenario checks: through the whole swing the joints stay closed to within a
+    /// tenth of the spacing, hidden in the links' overlapping ends, and the pin never leaves
+    /// the origin.
+    #[test]
+    fn the_scene_keeps_its_joints_closed_and_its_pin_fixed() {
+        let (motors, gaps) = super::scene();
+        assert!(
+            largest_gap(&gaps) < 0.1 * LINK_SPACING,
+            "{}",
+            largest_gap(&gaps)
+        );
+        assert!(pin_drift(&motors) < 1e-6);
+        // The swing reproduces numga's: the centres of links 1, 5 and 10 halfway through and at
+        // the end, and the largest gap (2.363e-3), to numga's printed digits.
+        let numga = [
+            (
+                75,
+                [
+                    [0.04002, -0.01042, -0.04424],
+                    [0.02227, -0.10324, -0.39476],
+                    [-0.01957, 0.00946, -0.79664],
+                ],
+            ),
+            (
+                150,
+                [
+                    [0.02283, 0.02153, -0.03294],
+                    [-0.16257, 0.27232, -0.19116],
+                    [-0.04154, 0.62859, -0.09752],
+                ],
+            ),
+        ];
+        for (k, centres) in numga {
+            for (b, expected) in [1, 5, 10].into_iter().zip(centres) {
+                let c = (motors[k][b] >> Point::origin()).to_euclidean();
+                assert!(
+                    (0..3).all(|i| (c[i] - expected[i]).abs() < 1e-5),
+                    "{k} {b} {c:?}"
+                );
+            }
+        }
+        assert!((largest_gap(&gaps) - 2.363007e-3).abs() < 1e-9);
+    }
+
+    /// The chain starts on numga's arc: each body its neighbour moved half the spacing along
+    /// x, turned by the curl about z, and moved on, so neighbours' joints coincide.
+    #[test]
+    fn the_chain_starts_closed_on_an_arc() {
+        let (state, partitions) = chain(N_LINKS, LINK_SPACING, SEMI_AXES, CURL, 0.0, 0.0, 0.5);
+        assert!(
+            joint_gaps(&state.motor, &partitions)
+                .iter()
+                .all(|g| *g < 1e-15)
+        );
+        // Every body is as far from the next: the chord of the arc.
+        let centre = |k: usize| state.motor[k] >> Point::origin();
+        let chord = (centre(0) & centre(1)).norm();
+        for k in 1..N_LINKS {
+            assert!(((centre(k) & centre(k + 1)).norm() - chord).abs() < 1e-14);
+        }
     }
 
     /// Damping dissipates: without gravity a spinning chain loses kinetic energy every step.
     #[test]
     fn damping_dissipates() {
-        let (mut state, partitions) = chain(3, 0.09, 5e-2, 1e-9, 1e-2, 0.0);
+        let (mut state, partitions) = chain(2, 0.09, SEMI_AXES, 0.0, 1e-9, 1e-2, 0.0);
         state.rate[2] = Line::new(0.0, 0.0, 2.0, 0.0, 0.0, 0.0);
         let energy = |s: &Chain| {
             s.rate
