@@ -238,6 +238,7 @@ gax features, by how many new ports need them:
 - [ ] Gauss–Legendre rules (kirchhoff)
 - [ ] `Scalar::sqrt()` in a custom `algebra!` is the versor root `normalize(1 + x)`, so `Scalar::new(2.0).sqrt()` is 1 (a Thomas precession test caught it): a scalar's square root, or a refusal, and a guide line
 - [ ] `hodge_inverse()` (numga's `dual_inverse`): the ports write `-x.hodge()` per grade
+- [ ] Findings of the math ports: `hodge()` in a custom `algebra!` only when a one-blade pseudoscalar kind is declared (generate it, or say so); `angle_between` for custom algebras (ports read angles through PGA2D points); `SiteField`'s coefficient defaults to `f32` while kinds default to `f64`; a rank helper (`svdvals` counted); large dense maps live on the stack (Cl(4,4)'s 256×256 form and its LU overflow a 2 MB test thread)
 - [ ] Refresh: numga fixtures at HEAD (PGA3D σ = +1), ADR-009's last bullet and the README's sign note (both from before 93c2ae3); guide §17 on numga's `dual` on null blades (`w & w.dual() == 1`), "axes" for slots, its diagonal CGA3D
 - [ ] Later: reverse-mode derivatives (koebe, freeform), oriented WGSL sandwiches, merging repeated sparse couplings with pairwise sums, an L-BFGS minimizer, the Cl⁰(p,q) ≅ Cl(p,q−1) route above 9D in the guide (particle_charges, R(10,0))
 
