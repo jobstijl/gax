@@ -246,25 +246,26 @@ gax features, by how many new ports need them:
 - [ ] Findings of the surfaces ports: sparse `eigh` is slow on connection Laplacians (18 s with the default blocks of 8, 2.6 s with 2, on 800 vertices where the LU takes 54 ms; connections uses a local shift-invert subspace iteration, 50 ms); sparse solves of correlations (`Amount- <- Scalar+` cells read through `undual()`, negative definite so CG fails); a `Form` as multivectors beyond degree 1 (`Σ c_I ∧∇λ` written locally); `mass_with(material)`; `dec::Distance` for intrinsic positions; a small dense eigensolver of run-time size; `mechanics_lie::rk4` needs `Copy` states (fields are not)
 - [ ] Findings of the mechanics ports: `SparseMap` has no `Neg` or scalar `Mul` (`map_cells`); a scalar `SparseMap` on a `Field<Direction>` gives points; a join of a line and a point is an intrinsic plane where numga's face planes are extrinsic (`with_orientation`); VGA2D `Pseudoscalar` has no `.s()`; `line | line` trips `clippy::eq_op`; an L-BFGS and a low-discrepancy sampler (freeform, local); sparse `eigh` on seismic waves' 22.7k unknowns: 17.7 s for 43 modes, scipy 47 s
 - [ ] Findings of the second re-syncs: `lstsq` against a metric (epipolar, local through `eigh`); jets over site fields (multiview's autodiff test not ported); a starting vector for sparse `eigh` (spin transformations' 60 steps of about 1 s each took its tests from 30 s to 70 s: warm starts would cut that)
+- [ ] Findings of kerr and particle charges: STA parts for a screen (numga's `Screen`, `ScreenSlice`); `Scalar - Even` needs a cast; `algebra!` always adds a `Multivector` (no opt-out, the 9D cost); a kind alias's `State::zero()`/`::slot()` cannot infer (`<State>::slot()` works)
 - [ ] Refresh: numga fixtures at HEAD (PGA3D σ = +1), ADR-009's last bullet and the README's sign note (both from before 93c2ae3); guide §17 on numga's `dual` on null blades (`w & w.dual() == 1`), "axes" for slots, its diagonal CGA3D
 - [ ] Later: reverse-mode derivatives (koebe, freeform), oriented WGSL sandwiches, merging repeated sparse couplings with pairwise sums, an L-BFGS minimizer, the Cl⁰(p,q) ≅ Cl(p,q−1) route above 9D in the guide (particle_charges, R(10,0))
 
-The 57 new ports (example-crate work: `bunny.obj`, numga's per-level icosphere, a thermodynamics chart module, CPU versions of numga's WGSL tracers):
-- [ ] electromagnetism: beltrami_fields, lie_advection, magnetic_bottle, piezoelectric
-- [ ] fluids: dec_stokes, eigen_fluids, floating, kirchhoff, projective_sphere_flow, smoke_rings, sphere_vortices, stokes_swimmer
-- [ ] math: doubled_algebra, e8, e_series, eight_conics, g2_rolling, isospectral_drums, penrose, spherical_synchronization, triality
-- [ ] mechanics: freeform, odd_elasticity, rattleback, seismic_waves, shells, tippe_top
-- [ ] optics: black_sandwich, rainbow, specular_caustics
-- [ ] orientation: optical_rotation, wu_experiment
-- [ ] quadrics: csg_raytracer, glass_cyclide
-- [ ] quantum: affine_toda, particle_charges
-- [ ] relativity: gps, moving_mirror, radar, terrell, thomas_precession
-- [ ] surfaces: connections, developability, dirac_kahler, frame_fields, k_surfaces, minimal_surfaces, regge_calculus, whitney_forms
-- [ ] thermodynamics: contact_geometry, entropy_production, generic, heat_cycles, phase_change, property_charts, ruppeiner, state_space
+All 57 new ports done 2026-10-31, 166 binaries (example-crate work: `bunny.obj`, numga's per-level icosphere, a thermodynamics chart module, CPU versions of numga's WGSL tracers):
+- [x] electromagnetism: beltrami_fields, lie_advection, magnetic_bottle, piezoelectric
+- [x] fluids: dec_stokes, eigen_fluids, floating, kirchhoff, projective_sphere_flow, smoke_rings, sphere_vortices, stokes_swimmer
+- [x] math: doubled_algebra, e8, e_series, eight_conics, g2_rolling, isospectral_drums, penrose, spherical_synchronization, triality
+- [x] mechanics: freeform, odd_elasticity, rattleback, seismic_waves, shells, tippe_top
+- [x] optics: black_sandwich, rainbow, specular_caustics
+- [x] orientation: optical_rotation, wu_experiment
+- [x] quadrics: csg_raytracer, glass_cyclide
+- [x] quantum: affine_toda, particle_charges
+- [x] relativity: gps, moving_mirror, radar, terrell, thomas_precession
+- [x] surfaces: connections, developability, dirac_kahler, frame_fields, k_surfaces, minimal_surfaces, regge_calculus, whitney_forms
+- [x] thermodynamics: contact_geometry, entropy_production, generic, heat_cycles, phase_change, property_charts, ruppeiner, state_space
 
-Ported examples with new scenarios or checks upstream:
-- [ ] constitutive, fresnel, moving_charge; epipolar, multiview; fitting, origami, registration, rubiks_cube; spinning_top (contacts rewritten; tippe_top builds on it), xpbd, modal_xpbd, symmetry, vortices, tricycle; elliptic_physics, conformal_elliptical, quadric_collision, quadrics; hopf; coating, photoelasticity; kane_mele, kitaev_wire, process_tomography, superconductivity; kerr (gauge-theory gravity now the main formulation), twistors; qem, spin_transformations, weighted_dual (upstream dropped a round-off test)
-- [ ] README: jeffery, vortices and wing moved to fluids upstream (names kept, as before); maxwell removed upstream (6e38d341, kept at 7dff347)
+Ported examples with new scenarios or checks upstream (origami, rubiks_cube and conformal_elliptical already matched):
+- [x] constitutive, fresnel, moving_charge; epipolar, multiview; fitting, origami, registration, rubiks_cube; spinning_top (contacts rewritten; tippe_top builds on it), xpbd, modal_xpbd, symmetry, vortices, tricycle; elliptic_physics, conformal_elliptical, quadric_collision, quadrics; hopf; coating, photoelasticity; kane_mele, kitaev_wire, process_tomography, superconductivity; kerr (gauge-theory gravity now the main formulation), twistors; qem, spin_transformations, weighted_dual (upstream dropped a round-off test)
+- [x] README: jeffery, vortices and wing moved to fluids upstream (names kept, as before); maxwell removed upstream (6e38d341, kept at 7dff347)
 
 ## Decisions for the project owner
 - Publishing to crates.io (later). Ready as of 2026-10-06: the names `gax`, `gax-core`, `gax-gen` and `gax-macros` are free; the four crates package and build from their packages (`cargo package -p gax-core -p gax-gen -p gax-macros -p gax`; gax is 3.7 MiB compressed, under the 10 MB limit); each has a README, keywords and categories; docs.rs's feature set documents in 44 s with rustdoc at 2.6 GB. Publishing is `cargo publish -p gax-core -p gax-gen -p gax-macros -p gax` (in dependency order, one command), after `cargo login`.
