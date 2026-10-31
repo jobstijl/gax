@@ -1,13 +1,17 @@
 //! numga's `quantum/process_tomography`: learning a qubit's noisy gate from prepared states and
-//! measured probabilities, in the Pauli algebra of space (VGA3D). A state is a scalar plus a
-//! vector, `(1 + r) / 2` (VGA3D's `Paravector`); its scalar part keeps the normalization, so rotations and relaxation toward a
-//! preferred state are linear maps on states. Unobserved alternatives act by sandwiches whose
-//! results add: a noisy gate is a sum of sandwiches (Kraus operators), a map `Paravector <- Paravector`.
+//! measured probabilities, with the states of a qubit as the points of the Bloch ball in
+//! projective space (PGA3D). Every outcome probability is an affine function of the state, and
+//! an affine function on space is a plane: a state is a point of weight one (the plane at
+//! infinity reads its weight, `e0 & state`), an effect is a plane, and an outcome's probability
+//! is the pairing `effect & state`. A channel is a map from points to points, `Point <- Point`:
+//! a coherent turn is a rotor about the centre, and noise mixes a state with its images,
+//! linearly in the point.
 //!
-//! Four preparations spanning the states determine such a map. A measurement reads a state by
-//! its scalar product with an effect, and a dual frame undoes the overlap between these readouts:
-//! the outputs are reconstructed from their probabilities, then paired with the dual
-//! preparations, which gives the channel as a sum of dyads with the input left open.
+//! Four preparations in general position determine such a map. Each outcome's dual is the point
+//! where the other three outcomes' planes meet, each preparation's dual the plane through the
+//! other three preparations: the reciprocal frames are meets and joins, and no scalar product
+//! enters. The recovered outputs times the readings of their preparations' dual planes are
+//! dyads, and their sum is the whole channel.
 //!
 //! The animation applies each learned channel (a rotation; with phase noise; with relaxation
 //! toward the north pole) over and over to the sphere of pure states: the rotation keeps the
@@ -19,147 +23,135 @@ use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
-    backdrop, caption, colormap, palette, reach3, run_with,
+    backdrop, caption, colormap, palette, run_with,
 };
 
 mod tomography {
-    use gax::vga3d::{Bivector, Multivector, Paravector, Vector};
+    use gax::pga3d::{Plane, Point, Rotor, Spin, intrinsic};
 
-    /// A state `(1 + r) / 2`, and a channel: a map on states.
-    pub type St = Paravector;
-    pub type Channel = Paravector<(Paravector,)>;
-    /// A Bloch vector.
-    pub type Space = Vector;
+    /// An effect is a plane, which reads states; a channel is a map on states, the points of
+    /// the Bloch ball.
+    pub type Effect = Plane;
+    pub type Channel = Point<(Point,)>;
+    /// The join of two states, the line through them.
+    pub type Join = intrinsic::Line;
 
-    pub fn one() -> St {
-        Paravector::new(1.0, 0.0, 0.0, 0.0)
+    /// The centre of the ball, the completely mixed state, and the north pole, towards which
+    /// relaxation pulls.
+    pub fn centre() -> Point {
+        Point::origin()
     }
-    pub fn x() -> Space {
-        Vector::new(1.0, 0.0, 0.0)
+    pub fn north() -> Point {
+        Point::xyz(0.0, 0.0, 1.0)
     }
-    pub fn z() -> Space {
-        Vector::new(0.0, 0.0, 1.0)
+    /// The plane at infinity, `e0`: it reads a point's weight.
+    pub fn infinity() -> Effect {
+        Plane::new(0.0, 0.0, 0.0, 1.0)
     }
-    pub fn xy() -> Bivector {
-        Bivector::new(0.0, 0.0, 1.0)
+    /// The planes of the field (`xy`) and of the tilt from north (`zx`), through the centre.
+    pub fn xy() -> Spin {
+        Spin::new(0.0, 0.0, 1.0)
+    }
+    pub fn zx() -> Spin {
+        Spin::new(0.0, 1.0, 0.0)
     }
 
     /// The open state.
     fn open() -> Channel {
-        Paravector::slot()
+        Point::slot()
     }
 
-    /// The state with Bloch vector `r`.
-    pub fn state(r: Space) -> St {
-        (one() + r.cast::<Paravector>()) * 0.5
+    /// The state with Bloch vector `(x, y, z)`: the centre displaced by it.
+    pub fn state(x: f64, y: f64, z: f64) -> Point {
+        centre() + Point::direction(x, y, z)
     }
 
-    /// The Bloch vector of a state: twice its vector part.
-    pub fn bloch(rho: St) -> Space {
-        rho.cast::<Vector>() * 2.0
-    }
-
-    /// The sandwich by one path of a channel, `k rho ~k`. A path may be any multivector whose
-    /// sandwich keeps a state (its own reverse) a state, such as a scalar plus a vector plus a
-    /// bivector, or a rotor; the other grades of the product are zero and dropped.
-    fn sandwich(k: Multivector) -> Channel {
-        (k * open() * k.reverse()).cast::<Paravector>()
-    }
+    /// Each of four preparations or outcomes, with the other three.
+    const OTHERS: [[usize; 3]; 4] = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]];
 
     /// A coherent turn in `plane` after independent phase noise and relaxation toward the north
-    /// pole: each a sum of sandwiches, composed. The noise's alternatives are not observed:
-    /// their output states add, not their amplitudes.
-    #[allow(clippy::disallowed_methods)] // amplitudes are square roots of probabilities, not geometry
-    pub fn noisy_gate(angle: f64, phase_flip: f64, loss: f64, plane: Bivector) -> Channel {
-        // Kept, or flipped in the xy plane; the square roots are amplitudes.
-        let keep = one().cast::<Multivector>() * (1.0 - phase_flip).sqrt();
-        let flip = xy().cast::<Multivector>() * phase_flip.sqrt();
-        let dephasing = sandwich(keep) + sandwich(flip);
-        let (north, south) = (state(z()), state(-z()));
-        // The first path keeps north and attenuates south; the second carries south to north.
-        let stay = (north + south * (1.0 - loss).sqrt()).cast::<Multivector>();
-        let fall = x() * south * loss.sqrt();
-        let damping = sandwich(stay) + sandwich(fall);
+    /// pole, each a mixture of a state with its images, composed.
+    #[allow(clippy::disallowed_methods)] // the coherence kept is an amplitude, a square root of a probability
+    pub fn noisy_gate(angle: f64, phase_flip: f64, loss: f64, plane: Spin) -> Channel {
+        // The half turn about the field.
+        let flipped = xy().cast::<Rotor>() >> open();
+        // With probability `phase_flip`, the state is replaced by its half turn about the field.
+        let dephasing = open() + (flipped - open()) * phase_flip;
+        // A decayed state is at north: the plane at infinity reads the state's weight, and
+        // north receives it.
+        let decay = north() * (infinity() & open());
+        // The part of a state across the field: the part a half turn about the field reverses.
+        let transverse = (open() - flipped) * 0.5;
+        // A fraction `loss` of the way to north; an unobserved decay keeps the amplitude
+        // sqrt(1 - loss) of the coherence across the field, more than the 1 - loss a mixture of
+        // decayed and untouched states would keep.
+        let kept = (1.0 - loss).sqrt() - (1.0 - loss);
+        let damping = open() + (decay - open()) * loss + transverse * kept;
         let rotation = (plane * (-angle / 2.0)).exp();
         // A map applied to another map composes them; the rotor then turns every output.
-        sandwich(rotation.cast::<Multivector>()).of(damping.of(dephasing))
-    }
-
-    /// The dyad that reads a state by its scalar product with `along` and sends the reading
-    /// out along `out`. (The product of a scalar plus a vector with a scalar is a state again;
-    /// gax types it as a multivector, so the empty grades are dropped.)
-    pub fn dyad(out: St, along: St) -> Channel {
-        (out * along.scalar_product(open())).cast::<Paravector>()
-    }
-
-    /// The overlap of a set of states: the sum of their dyads, each measuring the overlap with
-    /// its state and sending it back along it.
-    pub fn overlap(states: &[St]) -> Channel {
-        states.iter().map(|s| dyad(*s, *s)).sum()
-    }
-
-    /// Weights that recover any state from its scalar products with a spanning set of states:
-    /// the dual frame undoes the overlap.
-    pub fn dual_frame(states: &[St]) -> Vec<St> {
-        let overlap = overlap(states);
-        states.iter().map(|s| overlap.solve(*s)).collect()
+        rotation >> damping.of(dephasing)
     }
 
     /// Each outcome's probability for each preparation passed through the channel,
-    /// `[preparation][outcome]`.
-    pub fn probabilities(device: Channel, prepared: &[St], effects: &[St]) -> Vec<Vec<f64>> {
+    /// `[preparation][outcome]`: the effect's plane read at the output's point.
+    pub fn probabilities(device: Channel, prepared: &[Point], effects: &[Effect]) -> Vec<Vec<f64>> {
         prepared
             .iter()
             .map(|p| {
                 let out = device.of(*p);
-                effects
-                    .iter()
-                    .map(|e| 2.0 * e.scalar_product(out).s())
-                    .collect()
+                effects.iter().map(|e| (*e & out).s()).collect()
             })
             .collect()
     }
 
-    /// The outputs recovered from their probabilities, then the channel from its outputs. The
-    /// readout's scalar product includes the Born rule's factor of two.
-    pub fn reconstruct(prepared: &[St], effects: &[St], measured: &[Vec<f64>]) -> Channel {
-        let twice: Vec<St> = effects.iter().map(|e| *e * 2.0).collect();
-        let measurement_dual = dual_frame(&twice);
-        let preparation_dual = dual_frame(prepared);
+    /// The channel that gives the measured probabilities on four preparations in general
+    /// position, extended to every state by linearity.
+    pub fn reconstruct(prepared: &[Point], effects: &[Effect], measured: &[Vec<f64>]) -> Channel {
+        // The point where the other three effects' planes meet, scaled so that its own effect
+        // reads one there.
+        let measurement_dual = OTHERS.iter().zip(effects).map(|([a, b, c], e)| {
+            let meet = effects[*a] ^ effects[*b] ^ effects[*c];
+            meet / (*e & meet)
+        });
+        let measurement_dual: Vec<Point> = measurement_dual.collect();
+        // The plane through the other three preparations, scaled to read one on its own.
+        let preparation_dual = OTHERS.iter().zip(prepared).map(|([a, b, c], p)| {
+            let join = prepared[*a] & prepared[*b] & prepared[*c];
+            join / (join & *p)
+        });
         measured
             .iter()
-            .zip(&preparation_dual)
+            .zip(preparation_dual)
             .map(|(row, dual)| {
-                let output: St = row
+                let output: Point = row
                     .iter()
                     .zip(&measurement_dual)
                     .map(|(p, m)| *m * *p)
                     .sum();
-                // Leaving the input open extends the measured action to every state.
-                dyad(output, *dual)
+                output * (dual & open())
             })
             .sum()
     }
 
     /// One use of the channel, then two, three, and so on, as composed maps.
-    pub fn powers(device: Channel, steps: usize) -> Vec<Channel> {
+    pub fn powers(device: Channel, uses: usize) -> Vec<Channel> {
         std::iter::successors(Some(device), |last| Some(device.of(*last)))
-            .take(steps.max(1))
+            .take(uses.max(1))
             .collect()
     }
 
     /// Pure states on a closed latitude-longitude mesh of the Bloch sphere, `[latitude][longitude]`:
-    /// z tilted toward x, then turned about z.
-    pub fn sphere(latitudes: usize, longitudes: usize) -> Vec<Vec<St>> {
+    /// north, tilted down and turned about the field.
+    pub fn sphere(latitudes: usize, longitudes: usize) -> Vec<Vec<Point>> {
         (0..=latitudes)
             .map(|i| {
                 let inclination = core::f64::consts::PI * i as f64 / latitudes as f64;
-                let tilt = ((z() ^ x()) * (-inclination / 2.0)).exp();
+                let tilt = (zx() * (-inclination / 2.0)).exp();
                 (0..=longitudes)
                     .map(|j| {
                         let azimuth = core::f64::consts::TAU * j as f64 / longitudes as f64;
                         let turn = (xy() * (-azimuth / 2.0)).exp();
-                        state((turn * tilt) >> z())
+                        turn >> (tilt >> north())
                     })
                     .collect()
             })
@@ -172,29 +164,38 @@ mod tomography {
     pub const TURNS: [f64; 3] = [0.075, 0.075, 0.075];
     pub const PHASE_FLIP: [f64; 3] = [0.0, 0.06, 0.0];
     pub const LOSS: [f64; 3] = [0.0, 0.0, 0.10];
-    pub const STEPS: usize = 48;
+    pub const USES: usize = 48;
 
-    pub fn rotation_plane() -> Bivector {
-        Bivector::new(1.0, 1.0, 1.0).normalized()
+    pub fn rotation_plane() -> Spin {
+        Spin::new(1.0, 1.0, 1.0).normalized()
     }
 
-    /// The tetrahedral preparations, and the detector's effects: half of them.
-    pub fn prepared() -> Vec<St> {
-        tetrahedron().into_iter().map(state).collect()
-    }
-
-    /// The unit directions to a regular tetrahedron's corners.
-    pub fn tetrahedron() -> [Space; 4] {
+    /// The unit directions to a regular tetrahedron's corners, `[x, y, z]`.
+    pub fn tetrahedron() -> [[f64; 3]; 4] {
         [
-            Vector::new(1.0, 1.0, 1.0),
-            Vector::new(1.0, -1.0, -1.0),
-            Vector::new(-1.0, 1.0, -1.0),
-            Vector::new(-1.0, -1.0, 1.0),
+            [1.0, 1.0, 1.0],
+            [1.0, -1.0, -1.0],
+            [-1.0, 1.0, -1.0],
+            [-1.0, -1.0, 1.0],
         ]
-        .map(|d| d.normalized())
+        .map(|d| gax::vga3d::Vector::from_coeffs(d).normalized().c)
     }
-    pub fn effects() -> Vec<St> {
-        prepared().iter().map(|p| *p * 0.5).collect()
+
+    /// The four calibration states, at the tetrahedron's corners.
+    pub fn prepared() -> Vec<Point> {
+        tetrahedron()
+            .iter()
+            .map(|[x, y, z]| state(*x, *y, *z))
+            .collect()
+    }
+
+    /// The detector's planes through the centre facing the tetrahedron's corners, with the
+    /// plane at infinity: four effects that add up to it, the weight.
+    pub fn effects() -> Vec<Effect> {
+        tetrahedron()
+            .iter()
+            .map(|[x, y, z]| (infinity() + Plane::new(*x, *y, *z, 0.0)) * 0.25)
+            .collect()
     }
 
     /// The three gates as they are.
@@ -204,10 +205,10 @@ mod tomography {
             .collect()
     }
 
-    /// The prepared states, their ideal measurement probabilities `[channel][prep][outcome]`, and
+    /// The ideal measurement probabilities of the prepared states, `[channel][prep][outcome]`, and
     /// the reconstructed maps.
     #[allow(clippy::type_complexity)]
-    pub fn run_tomography() -> (Vec<St>, Vec<Vec<Vec<f64>>>, Vec<Channel>) {
+    pub fn run_tomography() -> (Vec<Vec<Vec<f64>>>, Vec<Channel>) {
         let (prepared, effects) = (prepared(), effects());
         let measured: Vec<Vec<Vec<f64>>> = devices()
             .iter()
@@ -217,17 +218,18 @@ mod tomography {
             .iter()
             .map(|m| reconstruct(&prepared, &effects, m))
             .collect();
-        (prepared, measured, learned)
+        (measured, learned)
     }
 
-    /// Pure and mixed states absent from the reconstruction.
-    pub fn heldout() -> Vec<St> {
-        let axes = [x(), Vector::new(0.0, 1.0, 0.0), z()];
+    /// Pure and mixed states absent from the reconstruction: along `±x, ±y, ±z`, at Bloch
+    /// lengths 1, 0.7, 0.3, 1, 0.7 and 0.
+    pub fn heldout() -> Vec<Point> {
+        let axes = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
         let lengths = [1.0, 0.7, 0.3, -1.0, -0.7, 0.0];
         axes.iter()
             .cycle()
             .zip(lengths)
-            .map(|(d, l)| state(*d * l))
+            .map(|([x, y, z], l)| state(x * l, y * l, z * l))
             .collect()
     }
 
@@ -250,11 +252,13 @@ mod tomography {
             .collect()
     }
 
-    /// The singular values of the tetrahedron's overlap, and of two opposite probes': how many
-    /// state directions each determines.
-    pub fn completeness() -> [[f64; 4]; 2] {
-        let opposite = [state(z()), state(-z())];
-        [overlap(&prepared()).svdvals(), overlap(&opposite).svdvals()]
+    /// What the tetrahedron and a single diameter of probes join to: a volume (six times the
+    /// tetrahedron's), which every state lies in, and the line of the field, which only the
+    /// states on it lie in.
+    pub fn completeness() -> (intrinsic::Scalar, Join) {
+        let p = prepared();
+        let south = Point::xyz(0.0, 0.0, -1.0);
+        (p[0] & p[1] & p[2] & p[3], north() & south)
     }
 }
 
@@ -264,25 +268,29 @@ const SECONDS: f32 = 9.6;
 const LATITUDES: usize = 12;
 const LONGITUDES: usize = 24;
 
-/// The unit directions of space.
-fn axes() -> [Space; 3] {
-    [x(), Space::new(0.0, 1.0, 0.0), z()]
+/// The ends of the ball's three axes.
+fn axes() -> [gax::pga3d::Point; 3] {
+    [state(1.0, 0.0, 0.0), state(0.0, 1.0, 0.0), north()]
 }
 
 /// What the frames share, computed once: the experiment, the learned maps and their powers.
 struct Data {
-    prepared: Vec<St>,
+    prepared: Vec<gax::pga3d::Point>,
     measured: Vec<Vec<Vec<f64>>>,
     learned: Vec<Channel>,
     powers: Vec<Vec<Channel>>,
-    surface: Vec<Vec<St>>,
+    surface: Vec<Vec<gax::pga3d::Point>>,
+    /// The tetrahedron's join, and the two opposite probes'.
+    completeness: (f64, Join),
 }
 
 fn data() -> Data {
-    let (prepared, measured, learned) = run_tomography();
-    let powers = learned.iter().map(|l| powers(*l, STEPS)).collect();
+    let (measured, learned) = run_tomography();
+    let powers = learned.iter().map(|l| powers(*l, USES)).collect();
+    let (volume, line) = completeness();
     Data {
-        prepared,
+        prepared: prepared(),
+        completeness: (volume.s(), line),
         measured,
         learned,
         powers,
@@ -359,7 +367,7 @@ fn draw_channel(
     let image: Vec<Vec<_>> = d
         .surface
         .iter()
-        .map(|row| row.iter().map(|s| reach3(bloch(map.of(*s)))).collect())
+        .map(|row| row.iter().map(|s| map.of(*s)).collect())
         .collect();
     let cam = Camera::orbit(
         rect,
@@ -370,9 +378,11 @@ fn draw_channel(
         Lens::Perspective(0.62),
     );
     panel3(c, rect, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 16, palette::GRID.faded(0.45));
+        s.sphere_wire(centre(), 1.0, 16, palette::GRID.faded(0.45));
+        // Each axis from its end through the centre to the opposite end, the centre's mirror
+        // image of it.
         for a in axes() {
-            s.seg(reach3(-a), reach3(a), 1.0, palette::GRID.faded(0.8));
+            s.seg(centre() + (centre() - a), a, 1.0, palette::GRID.faded(0.8));
         }
         // The image: a translucent surface with its mesh lines.
         for i in 0..LATITUDES {
@@ -397,8 +407,8 @@ fn draw_channel(
         }
         // Hollow and filled markers pair each preparation with its image.
         for (p, pc) in d.prepared.iter().zip(probe_colours) {
-            s.dot(reach3(bloch(*p)), Marker::Ring, 8.0, pc);
-            s.dot(reach3(bloch(map.of(*p))), Marker::Dot, 6.0, pc);
+            s.dot(*p, Marker::Ring, 8.0, pc);
+            s.dot(map.of(*p), Marker::Dot, 6.0, pc);
         }
     });
     // The title a line below the band's top, clear of the caption.
@@ -406,16 +416,16 @@ fn draw_channel(
     c.text(LABELS[k], title, small * 1.15, colours[k], Align::Center);
 }
 
-/// The number of uses over the band of channels, and under its two bottom corners how many
-/// state directions each probe set determines.
-fn draw_completeness(c: &mut Canvas, band: Rect, uses: usize, small: f32) {
+/// The number of uses over the band of channels, and under its two bottom corners what each
+/// probe set joins to.
+fn draw_completeness(c: &mut Canvas, band: Rect, d: &Data, uses: usize, small: f32) {
     let w = band.width();
     let up = Point2::direction(0.0, -1.0);
     let note = band.bottom_middle() + up.gp(small * 0.8);
     let text = format!("{uses} USES OF EACH LEARNED CHANNEL");
     c.text(&text, note, small * 1.1, palette::INK, Align::Center);
-    // How many state directions each probe set determines: the singular values of its dyads,
-    // under the band's two bottom corners, a line below the note.
+    // What each probe set joins to, under the band's two bottom corners, a line below the note:
+    // the tetrahedron a volume, every state; two opposite probes only the line through them.
     let corners = [
         (
             band.bottom_left() + Point2::direction(0.02 * w, small * 1.3),
@@ -426,14 +436,19 @@ fn draw_completeness(c: &mut Canvas, band: Rect, uses: usize, small: f32) {
             Align::Right,
         ),
     ];
-    for ((name, spectrum), (at, align)) in ["TETRAHEDRON", "TWO PROBES"]
-        .iter()
-        .zip(completeness())
-        .zip(corners)
-    {
-        let values: Vec<String> = spectrum.iter().map(|v| format!("{v:.2}")).collect();
-        let text = format!("{name}: {}", values.join(" "));
-        c.text(&text, at, small * 0.85, palette::GRID, align);
+    let (volume, line) = d.completeness;
+    let texts = [
+        format!(
+            "FOUR TETRAHEDRAL PROBES JOIN TO A VOLUME {:.2}",
+            volume.abs()
+        ),
+        format!(
+            "TWO OPPOSITE PROBES JOIN TO A LINE, {:.0} LONG",
+            line.norm()
+        ),
+    ];
+    for (text, (at, align)) in texts.iter().zip(corners) {
+        c.text(text, at, small * 0.85, palette::GRID, align);
     }
 }
 
@@ -493,7 +508,7 @@ fn draw(c: &mut Canvas, d: &Data, t: f32) {
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let phase = (t / SECONDS).clamp(0.0, 0.9999);
-    let uses = 1 + (phase * STEPS as f32) as usize;
+    let uses = 1 + (phase * USES as f32) as usize;
     let small = (h / 50.0).min(11.0);
     // Each learned channel in thirds of a band across the screen.
     let band = Rect::new(0.0, (h * 0.13).floor(), w, (h * 0.66).floor());
@@ -501,7 +516,7 @@ fn draw(c: &mut Canvas, d: &Data, t: f32) {
     for k in 0..3 {
         draw_channel(c, band.column(k, 3), d, k, uses, azimuth, small);
     }
-    draw_completeness(c, band, uses, small);
+    draw_completeness(c, band, d, uses, small);
     // Below, a square plot in the first quarter and the tables in the others.
     let quarter = w / 4.0;
     let (y0, y1) = (h * 0.76, h * 0.94);
@@ -512,7 +527,7 @@ fn draw(c: &mut Canvas, d: &Data, t: f32) {
     caption(
         c,
         "PROCESS TOMOGRAPHY: A NOISY GATE FROM FOUR PROBES",
-        "CHANNELS AS SUMS OF SANDWICHES, LEARNED BY DUAL FRAMES",
+        "PGA3D: STATES ARE POINTS, EFFECTS PLANES; DUAL FRAMES BY MEETS AND JOINS",
     );
 }
 
@@ -527,24 +542,30 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::tomography::*;
-    use gax::ApproxEq;
-    use gax::vga3d::{Bivector, Multivector, Pseudoscalar, Vector};
+    use gax::pga3d::{Plane, Point, Spin};
+    use gax::vga3d::{Pseudoscalar, Vector};
     use gax_numga_examples::rng::{Draw, rng};
     use gax_numga_examples::testing::near;
 
     /// Bloch vectors in random directions with lengths spread evenly over `[0, 1]`.
-    fn blochs(seed: u64, n: usize) -> Vec<Space> {
+    fn blochs(seed: u64, n: usize) -> Vec<Vector> {
         let mut r = rng(seed);
         (0..n)
             .map(|k| r.direction::<Vector>() * (k as f64 / (n - 1) as f64))
             .collect()
     }
 
+    /// The state with Bloch vector `r`.
+    fn at(r: Vector) -> Point {
+        state(r.e1(), r.e2(), r.e3())
+    }
+
     /// Dephasing and amplitude damping followed by Rodrigues' rotation about the unit `axis`,
-    /// written out with the cross product (the vector at right angles to the plane `axis ^ v`)
-    /// rather than a rotor.
+    /// in plain vectors of space, written out with the cross product (the vector at right
+    /// angles to the plane `axis ^ v`) rather than a rotor: independent of the channel's points
+    /// and planes.
     #[allow(clippy::disallowed_methods)] // the reference it is checked against
-    fn analytical_bloch(r: Space, angle: f64, phase_flip: f64, loss: f64, axis: Space) -> Space {
+    fn analytical_bloch(r: Vector, angle: f64, phase_flip: f64, loss: f64, axis: Vector) -> Vector {
         let transverse = (1.0 - 2.0 * phase_flip) * (1.0 - loss).sqrt();
         let v = Vector::new(
             transverse * r.e1(),
@@ -562,22 +583,32 @@ mod tests {
         let phase_flip = [0.0, 0.22, 0.08, 0.5];
         let loss = [0.0, 0.45, 1.0, 0.3];
         let axis = Vector::new(2.0, -1.0, 3.0).normalized();
-        let plane = Bivector::new(2.0, -1.0, 3.0).normalized();
+        let plane = Spin::new(2.0, -1.0, 3.0).normalized();
         let blochs = blochs(180, 29);
         let detector = tetrahedron();
-        let effects: Vec<St> = detector.iter().map(|d| state(*d) * 0.5).collect();
+        let effects: Vec<Effect> = detector
+            .iter()
+            .map(|[x, y, z]| (infinity() + Plane::new(*x, *y, *z, 0.0)) * 0.25)
+            .collect();
+        // The planes through the centre across each axis read a point's coordinates.
+        let readers = [
+            Plane::new(1.0, 0.0, 0.0, 0.0),
+            Plane::new(0.0, 1.0, 0.0, 0.0),
+            Plane::new(0.0, 0.0, 1.0, 0.0),
+        ];
         for c in 0..4 {
             let device = noisy_gate(angles[c], phase_flip[c], loss[c], plane);
-            let prepared: Vec<St> = blochs.iter().map(|r| state(*r)).collect();
+            let prepared: Vec<Point> = blochs.iter().map(|r| at(*r)).collect();
             let probs = probabilities(device, &prepared, &effects);
             for (r, (p, row)) in blochs.iter().zip(prepared.iter().zip(&probs)) {
                 let out = device.of(*p);
                 let want = analytical_bloch(*r, angles[c], phase_flip[c], loss[c], axis);
-                assert!(near(out, state(want), 1e-8), "{out:?} vs {want:?}");
-                assert!((2.0 * out.s() - 1.0).abs() < 1e-8);
-                assert!(bloch(out).norm() <= 1.0 + 1e-8);
-                for (prob, dir) in row.iter().zip(&detector) {
-                    let expected = (1.0 + (want | *dir).s()) / 4.0;
+                assert!(near(out, at(want), 1e-8), "{out:?} vs {want:?}");
+                assert!(((infinity() & out).s() - 1.0).abs() < 1e-8);
+                let read = Vector::from_coeffs(readers.map(|e| (e & out).s()));
+                assert!(read.norm() <= 1.0 + 1e-8);
+                for (prob, [x, y, z]) in row.iter().zip(&detector) {
+                    let expected = (1.0 + (want | Vector::new(*x, *y, *z)).s()) / 4.0;
                     assert!((prob - expected).abs() < 1e-8);
                     assert!(*prob >= -1e-8);
                 }
@@ -591,17 +622,22 @@ mod tests {
         let angles = [0.31, -0.76];
         let phase_flip = [0.12, 0.07];
         let loss = [0.26, 0.54];
-        let plane = Bivector::new(1.0, 0.0, 1.0).normalized();
-        // Six preparations are redundant, while the four detector directions are rotated
-        // independently: the reconstruction cannot rely on matching the two frames.
-        let axes = [x(), Vector::new(0.0, 1.0, 0.0), z()];
-        let prepared: Vec<St> = axes.iter().flat_map(|a| [state(*a), state(-*a)]).collect();
-        let rotation = (xy() * -0.23).exp() * (Bivector::new(1.0, 0.0, 0.0) * 0.17).exp();
-        let effects: Vec<St> = super::tomography::effects()
+        let plane = Spin::new(1.0, 0.0, 1.0).normalized();
+        // Four mixed preparations in general position, while the four detector directions are
+        // rotated independently: the reconstruction cannot rely on matching the two frames.
+        let prepared = [
+            state(0.9, 0.1, 0.0),
+            state(-0.2, 0.8, 0.1),
+            state(0.1, -0.3, -0.7),
+            state(-0.5, -0.4, 0.6),
+        ];
+        let yz = Spin::new(1.0, 0.0, 0.0);
+        let rotation = (xy() * -0.23).exp() * (yz * 0.17).exp();
+        let effects: Vec<Effect> = super::tomography::effects()
             .iter()
-            .map(|e| (rotation >> *e).cast::<gax::vga3d::Paravector>())
+            .map(|e| rotation >> *e)
             .collect();
-        let unseen: Vec<St> = blochs(972, 37).into_iter().map(state).collect();
+        let unseen: Vec<Point> = blochs(972, 37).into_iter().map(at).collect();
         for c in 0..2 {
             let device = noisy_gate(angles[c], phase_flip[c], loss[c], plane);
             let measured = probabilities(device, &prepared, &effects);
@@ -614,14 +650,14 @@ mod tests {
 
     #[test]
     fn learned_channels_predict_unseen_measurements_and_repeated_applications() {
-        let (prepared, measured, learned) = run_tomography();
+        let (measured, learned) = run_tomography();
         for (exact, predicted) in validation(&learned, 1) {
             for (a, b) in exact.iter().flatten().zip(predicted.iter().flatten()) {
                 assert!((a - b).abs() < 1e-12);
             }
         }
         for (l, m) in learned.iter().zip(&measured) {
-            let again = probabilities(*l, &prepared, &effects());
+            let again = probabilities(*l, &prepared(), &effects());
             for (a, b) in again.iter().flatten().zip(m.iter().flatten()) {
                 assert!((a - b).abs() < 1e-12);
             }
@@ -638,34 +674,37 @@ mod tests {
                 expected =
                     expected.map(|r| analytical_bloch(r, TURNS[c], PHASE_FLIP[c], LOSS[c], axis));
                 for (r, want) in blochs.iter().zip(&expected) {
-                    assert!(near(accumulated.of(state(*r)), state(*want), 1e-8));
+                    assert!(near(accumulated.of(at(*r)), at(*want), 1e-8));
                 }
             }
         }
     }
 
+    /// Four probes join to six times the volume of their tetrahedron; two opposite ones only to
+    /// the line through them, which the completely mixed state lies on and the tetrahedron's
+    /// states do not.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the volume's closed form
     fn completeness_distinguishes_a_spanning_tetrahedron_from_two_axial_probes() {
-        let expected = [[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0], [0.0, 0.0, 0.5, 0.5]];
-        for (mut spectrum, want) in completeness().into_iter().zip(expected) {
-            spectrum.sort_by(f64::total_cmp);
-            for (a, b) in spectrum.iter().zip(want) {
-                assert!((a - b).abs() < 1e-12, "{spectrum:?}");
-            }
-        }
+        let (volume, line) = completeness();
+        let want = 16.0 / (3.0 * 3f64.sqrt());
+        assert!((volume.s().abs() - want).abs() < 1e-12, "{volume:?}");
+        assert!((line & centre()).c.iter().all(|x| x.abs() < 1e-12));
+        let off = prepared()
+            .iter()
+            .flat_map(|p| (line & *p).c)
+            .fold(0.0, |m: f64, x| m.max(x.abs()));
+        assert!(off > 0.1, "{off}");
     }
 
-    /// The display surface consists of normalized pure states (idempotents) before any channel
-    /// acts, and the composed channels animate: two frames differ.
+    /// The display surface consists of pure states, of weight one on the unit sphere, before
+    /// any channel acts, and the composed channels animate: two frames differ.
     #[test]
     fn the_surface_is_pure_and_the_animation_draws() {
         for row in sphere(8, 16) {
             for s in row {
-                let square = s * s;
-                assert!(
-                    square.max_abs_diff(&s.cast::<Multivector>()) < 1e-8,
-                    "{square:?}"
-                );
+                assert!(((infinity() & s).s() - 1.0).abs() < 1e-8);
+                assert!(((centre() & s).norm() - 1.0).abs() < 1e-8, "{s:?}");
             }
         }
         let d = super::data();
