@@ -1,6 +1,12 @@
 //! numga's `kerr/core.py`, the geometry and the rays: the Kerr–Schild field of a rotating hole,
 //! the rays' Hamiltonian motion through it, the parallel transport of a camera's screen along
 //! them, and the camera's rays.
+//!
+//! numga's kerr was written in `t+x-y-z-`; gax's STA is `x+y+z+t-` (ADR-055). The rays are the
+//! same, and every vector keeps its coordinates, but each contraction of two vectors reads
+//! with the opposite sign: the Kerr–Schild metric is `η + 2H l l` and its inverse `η − 2H l l`
+//! (numga's `η − 2H l l` and `η + 2H l l`), gradients raised by the metric flip, and the
+//! comments say where else a formula changed.
 
 use core::ops::{Add, Mul};
 use gax::sta::{Bivector, Even, Scalar, Vector};
@@ -16,9 +22,9 @@ pub type ScreenFrame = Map;
 /// A unit rotor of spacetime: the camera's orientation.
 pub type Rotor = gax::Unit<Even>;
 
-/// The event with time `t` and position `x, y, z`.
+/// The event with time `t` and position `x, y, z` (the vector `x e1 + y e2 + z e3 + t e4`).
 pub fn event(t: f64, x: f64, y: f64, z: f64) -> V {
-    Vector::new(t, x, y, z)
+    Vector::new(x, y, z, t)
 }
 
 pub fn t() -> V {
@@ -39,21 +45,21 @@ pub fn xy() -> B {
     x() ^ y()
 }
 
-/// The part of a vector across the time axis, `t ⌋ (t ∧ v)`.
+/// The part of a vector across the time axis, `t⁻¹ ⌋ (t ∧ v)`, with `t⁻¹ = −t`.
 pub fn spatial(v: V) -> V {
-    t() | (t() ^ v)
+    -(t() | (t() ^ v))
 }
 
 /// The same as a map: the identity on space, zero on time.
 fn spatial_identity() -> Map {
-    t() | (t() ^ Vector::slot())
+    -(t() | (t() ^ Vector::slot()))
 }
 
 /// The identity on the screen plane `x y`, zero across it (numga's `Screen` as a map): each
-/// axis times the pairing with its reciprocal, `-x` for `x`, since spatial axes square to
-/// minus one.
+/// axis times the pairing with its reciprocal, the axis itself, since spatial axes square to
+/// one (numga's `-x`, in `t+x-y-z-`).
 pub fn screen_identity() -> Map {
-    -(x() * (x() | Vector::slot())) - y() * (y() | Vector::slot())
+    x() * (x() | Vector::slot()) + y() * (y() | Vector::slot())
 }
 
 /// The metric's pairing of two vectors, both left open.
@@ -129,31 +135,35 @@ pub fn field(position: V, hole: Hole) -> Field {
     // the spin squared; the spin enters twice, so its sense of turning drops out.
     let volume = spatial ^ spin;
     let height = volume | spin;
-    let volume_squared = volume.dot(volume).s();
+    // A spatial trivector's norm squared is its size squared (numga's `volume · volume`).
+    let volume_squared = volume.norm_squared();
     let spin_squared = spin.norm_squared();
-    // A vector's norm squared is its square, minus its length squared for a spatial one.
+    // A spatial vector's norm squared is its length squared (numga's `t+x-y-z-` negated it).
     let (radius, discriminant) =
-        oblate_radius(-spatial.norm_squared(), spin_squared, volume_squared);
+        oblate_radius(spatial.norm_squared(), spin_squared, volume_squared);
     let radius_squared = radius * radius;
     let scale = (radius_squared + spin_squared).recip();
-    // Its inner product with a small step is how far the step changes the oblate radius.
-    let radius_gradient = (spatial * radius_squared - height) * (-1.0 / (radius * discriminant));
-    let direction = (spatial * radius + (spatial | spin) - height * radius.recip()) * scale;
+    // Its inner product with a small step is how far the step changes the oblate radius: the
+    // gradient raised by the metric, minus numga's, as space squares to plus one.
+    let radius_gradient = (spatial * radius_squared - height) * (radius * discriminant).recip();
+    // The contractions of one vector with the spin read with the opposite sign of numga's.
+    let direction = (spatial * radius - (spatial | spin) - height * radius.recip()) * scale;
     let lever = spatial - direction * (2.0 * radius) + height * radius_squared.recip();
     let step = Vector::slot();
-    let direction_gradient: Map = (lever * (radius_gradient | step)
-        + spatial_identity() * radius
-        + (spatial_identity() | spin)
+    let direction_gradient: Map = (lever * (radius_gradient | step) + spatial_identity() * radius
+        - (spatial_identity() | spin)
         - ((spatial_identity() ^ spin) | spin) * radius.recip())
         * scale;
     let denominator = radius_squared * radius_squared + volume_squared;
     let profile = mass * radius.powi(3) / denominator;
+    // (The volume's gradient is `−2 height` raised by this metric, numga's `2 height`.)
     let profile_gradient = (radius_gradient * (3.0 / radius)
-        - (radius_gradient * (4.0 * radius.powi(3)) + height * 2.0) * denominator.recip())
+        - (radius_gradient * (4.0 * radius.powi(3)) - height * 2.0) * denominator.recip())
         * profile;
     // The derivative's curl, `Σ eⁱ ∧ D(eᵢ)`, piece by piece: the rank-one piece gives its
-    // two vectors wedged, the turn by the spin twice the spin, the rest none.
-    let null_curl = ((radius_gradient ^ lever) + spin * 2.0) * -scale;
+    // two vectors wedged, the turn by the spin minus twice the spin, the rest none (the
+    // reciprocal frame `eⁱ` is minus numga's).
+    let null_curl = ((radius_gradient ^ lever) - spin * 2.0) * -scale;
     Field {
         radius,
         profile,
@@ -169,27 +179,27 @@ pub fn dyad(geometry: &Field) -> Map {
     geometry.null * (geometry.null | Vector::slot()) * geometry.profile
 }
 
-/// The identity minus twice the dyad: a vector to its covector.
+/// The identity plus twice the dyad: a vector to its covector (the metric `η + 2H l l`).
 #[cfg_attr(not(test), allow(dead_code))] // numga's core, which the tests check
 pub fn metric(geometry: &Field) -> Map {
-    Vector::slot() - dyad(geometry) * 2.0
-}
-
-/// The identity plus twice the dyad: covector momentum to the ray's tangent.
-pub fn inverse_metric(geometry: &Field) -> Map {
     Vector::slot() + dyad(geometry) * 2.0
 }
 
-/// The identity plus the dyad: covector momentum to its direction in the local frame.
-pub fn frame(geometry: &Field) -> Map {
-    Vector::slot() + dyad(geometry)
+/// The identity minus twice the dyad: covector momentum to the ray's tangent.
+pub fn inverse_metric(geometry: &Field) -> Map {
+    Vector::slot() - dyad(geometry) * 2.0
 }
 
-/// The identity minus the dyad: a vector to its image in the local frame, the inverse of
+/// The identity minus the dyad: covector momentum to its direction in the local frame.
+pub fn frame(geometry: &Field) -> Map {
+    Vector::slot() - dyad(geometry)
+}
+
+/// The identity plus the dyad: a vector to its image in the local frame, the inverse of
 /// [`frame`]. The metric is its square, so a vector's length under the metric is the
 /// Minkowski length of its image.
 pub fn vector_frame(geometry: &Field) -> Map {
-    Vector::slot() - dyad(geometry)
+    Vector::slot() + dyad(geometry)
 }
 
 /// `v` scaled to unit length under the metric.
@@ -277,16 +287,17 @@ impl RayState for PolarizedRay {
 
 /// The two Hamiltonian derivatives at a field, as a ray's rate: the tangent and minus the
 /// position gradient. Half the momentum paired with its image under the inverse metric is
-/// the Hamiltonian; its momentum derivative is that image.
+/// the Hamiltonian, `½ p·p − H (l·p)²`; its momentum derivative is that image.
 pub fn motion(geometry: &Field, momentum: V) -> Ray {
     let overlap = (geometry.null | momentum).s();
-    let tangent = momentum + geometry.null * (2.0 * geometry.profile * overlap);
-    // The gradient of `H (l · p)²`, by the product rule.
+    let tangent = momentum - geometry.null * (2.0 * geometry.profile * overlap);
+    // The gradient of `H (l · p)²`, by the product rule: minus the Hamiltonian's (numga's
+    // `t+x-y-z-` Hamiltonian had `+H (l·p)²`, and the rate minus this gradient).
     let gradient = geometry.profile_gradient * (overlap * overlap)
         + overlap_gradient(geometry, momentum) * (2.0 * geometry.profile * overlap);
     Ray {
         event: tangent,
-        momentum: -gradient,
+        momentum: gradient,
     }
 }
 
@@ -295,9 +306,10 @@ pub fn rates(ray: Ray, hole: Hole) -> Ray {
     motion(&field(ray.event, hole), ray.momentum)
 }
 
-/// How fast coordinate time runs back along a past-directed tangent.
+/// How fast coordinate time runs back along a past-directed tangent: `t · v` is minus its
+/// time, as `t` squares to minus one.
 fn clock(tangent: V) -> f64 {
-    -(t() | tangent).s()
+    (t() | tangent).s()
 }
 
 /// Past-directed motion per unit of decreasing coordinate time.
@@ -308,13 +320,14 @@ pub fn camera_rates(ray: Ray, hole: Hole) -> Ray {
 }
 
 /// The plane the local Kerr–Schild frame turns or boosts in, per unit step along a
-/// direction.
+/// direction. (Minus numga's expression: a Lorentz generator in `x+y+z+t-` is minus its
+/// `t+x-y-z-` form with the same coefficients, ADR-055.)
 pub fn connection(geometry: &Field, direction: V) -> B {
     let along = (geometry.null | direction).s();
     // The gradient of `H (l · d)`.
     let turning = geometry.profile_gradient * along
         + overlap_gradient(geometry, direction) * geometry.profile;
-    (turning ^ geometry.null) + geometry.null_curl * (geometry.profile * along)
+    (geometry.null ^ turning) - geometry.null_curl * (geometry.profile * along)
 }
 
 /// Ray motion and the parallel transport of its camera screen, per unit of decreasing
@@ -347,8 +360,9 @@ pub fn initial_momentum(position: V, direction: V, hole: Hole) -> V {
     let geometry = field(position, hole);
     let local_null = t() + direction;
     // The dyad squares to zero, so the inverse frame just changes its sign.
-    let momentum = local_null - dyad(&geometry).of(local_null);
-    momentum * (momentum | t()).s().recip()
+    let momentum = local_null + dyad(&geometry).of(local_null);
+    // Its time part one: `p · t` is minus it.
+    momentum * -(momentum | t()).s().recip()
 }
 
 /// A ray's states at fourth-order steps of its affine parameter, the first its start. The
@@ -400,13 +414,14 @@ pub fn camera_rays(
 /// inputs.
 pub fn camera_screen(ray: Ray, orientation: Rotor, hole: Hole) -> ScreenFrame {
     let local_momentum = frame(&field(ray.event, hole)).of(ray.momentum);
-    let direction = spatial(local_momentum) * -(t() | local_momentum).s().recip();
+    let direction = spatial(local_momentum) * (t() | local_momentum).s().recip();
     let right = orientation >> y();
-    let right = (right + direction * (direction | right).s()).normalized();
+    // Less its part along the unit spatial direction, of square one.
+    let right = (right - direction * (direction | right).s()).normalized();
     // Up is the camera's own, local `-x`, less its parts in the plane of the ray and right.
     let beside = direction ^ right;
     let up = (((orientation >> -x()) ^ beside) | beside.inverse()).normalized();
-    -(right * (x() | Vector::slot())) - up * (y() | Vector::slot())
+    right * (x() | Vector::slot()) + up * (y() | Vector::slot())
 }
 
 /// One integration step of a ray: its state at the start and at the end, and its oblate
@@ -511,7 +526,7 @@ pub mod tests {
             assert!(composed.max_abs_diff(&Vector::slot()) < ROUND_OFF);
             let tangent = inverse_metric(&geometry).of(momentum);
             assert!((momentum | tangent).s().abs() < ROUND_OFF);
-            assert!(((momentum | t()).s() - 1.0).abs() < ROUND_OFF);
+            assert!(((momentum | t()).s() + 1.0).abs() < ROUND_OFF);
 
             // With zero spin the profile is the mass divided by ordinary spatial distance.
             let schwarzschild = field(position, Hole::about_z(0.0, hole.mass));
@@ -537,7 +552,7 @@ pub mod tests {
         );
         let difference = |ahead: f64, behind: f64| (ahead - behind) / (2.0 * increment);
         let hamiltonian =
-            |g: &Field, p: V| (p | p).s() / 2.0 + g.profile * (g.null | p).s().powi(2);
+            |g: &Field, p: V| (p | p).s() / 2.0 - g.profile * (g.null | p).s().powi(2);
         // These tolerances measure centred-difference accuracy, not round-off alone.
         for direction in basis() {
             let ahead = field(position + direction * increment, hole);
@@ -562,7 +577,7 @@ pub mod tests {
     #[test]
     fn rays_conserve_their_invariants_and_spin_reversal_mirrors_the_paths() {
         let mass = 1.0;
-        let mirror = |v: V| v + y() * (2.0 * (y() | v).s());
+        let mirror = |v: V| v - y() * (2.0 * (y() | v).s());
         let (step_size, steps, stop_fraction) = (0.04, 250, 0.8);
         let trace_from = |start: V, spin: f64| {
             let hole = Hole::about_z(spin, mass);
@@ -585,7 +600,7 @@ pub mod tests {
                 for ray in path {
                     let g = field(ray.event, hole);
                     let h = (ray.momentum | ray.momentum).s() / 2.0
-                        + g.profile * (g.null | ray.momentum).s().powi(2);
+                        - g.profile * (g.null | ray.momentum).s().powi(2);
                     assert!(h.abs() < 2e-6, "{h}");
                     assert!((angular(ray) - angular_momentum).abs() < 1e-7);
                     assert!(((t() | ray.momentum).s() - energy).abs() < ROUND_OFF);
@@ -612,9 +627,10 @@ pub mod tests {
     #[allow(clippy::disallowed_methods)] // the analytic reference it is checked against
     fn camera_and_disk_geometry_rotate_with_the_black_hole() {
         let hole = Hole::about_z(0.7, 1.0);
-        let orientation = ((x() ^ z()) * 0.31).exp();
+        // numga's turns, whose generators are the negatives in `x+y+z+t-`.
+        let orientation = ((z() ^ x()) * 0.31).exp();
         let eye = (orientation >> z()) * 25.0;
-        let rotation = ((y() ^ z()) * 0.23).exp();
+        let rotation = ((z() ^ y()) * 0.23).exp();
         let (size, half_view) = ([5, 3], 0.4);
         let rays = camera_rays(eye, orientation, size, half_view, hole);
         let rotated_hole = Hole {
@@ -632,7 +648,7 @@ pub mod tests {
             // Camera rays point into the past and remain null in the curved metric.
             let tangent = rates(*ray, hole).event;
             assert!((ray.momentum | tangent).s().abs() < ROUND_OFF);
-            assert!((t() | tangent).s() < 0.0);
+            assert!((t() | tangent).s() > 0.0);
             assert!(turned.event.max_abs_diff(&(rotation >> ray.event)) < ROUND_OFF);
             assert!(turned.momentum.max_abs_diff(&(rotation >> ray.momentum)) < ROUND_OFF);
         }
@@ -722,10 +738,10 @@ pub mod tests {
                 .map(|(e, d)| *d * component(v, *e))
                 .sum()
         };
-        // The metric's change along a basis vector is minus twice the dyad's.
-        let metric_partials = partials.map(|d| (Vector::slot() | d) * -2.0);
+        // The metric's change along a basis vector is twice the dyad's.
+        let metric_partials = partials.map(|d| (Vector::slot() | d) * 2.0);
         let open_component = |e: V| reciprocal(e) | Vector::slot();
-        let metric_along_v = (Vector::slot() | along(velocity)) * -2.0;
+        let metric_along_v = (Vector::slot() | along(velocity)) * 2.0;
         let by_y: Scalar<(Vector, Vector)> = basis()
             .iter()
             .zip(&metric_partials)
@@ -739,7 +755,8 @@ pub mod tests {
         let koszul = (metric_along_v + by_y - by_z) * 0.5;
         let christoffel: Map = (Vector::slot() | metric(&geometry)).solve(koszul);
         let local_frame = frame(&geometry);
-        let expected = -local_frame.solve(along(velocity) + christoffel.of(local_frame));
+        // The frame's change is minus the dyad's (the frame is `1 − dyad`).
+        let expected = -local_frame.solve(christoffel.of(local_frame) - along(velocity));
 
         let local_velocity = vector_frame(&geometry).of(velocity);
         let transported = -connection(&geometry, local_velocity).commutator(Vector::slot());
@@ -753,7 +770,7 @@ pub mod tests {
     #[test]
     fn parallel_transport_preserves_the_transverse_screen_along_kerr_rays() {
         let hole = tilted_hole();
-        let orientation = ((x() ^ z()) * 0.31).exp();
+        let orientation = ((z() ^ x()) * 0.31).exp();
         let eye = (orientation >> z()) * 18.0;
         let (inner_radius, outer_radius) = (2.02, 40.0);
         let gram = screen_identity() | screen_identity();
@@ -766,7 +783,7 @@ pub mod tests {
             for step in camera_trace(start, hole, 0.1, 250, polarized_rates) {
                 let end = step.end;
                 let local = frame(&field(end.ray.event, hole)).of(end.ray.momentum);
-                let local = local * -(t() | local).s().recip();
+                let local = local * (t() | local).s().recip();
                 transverse_error = transverse_error.max(largest(end.screen | local));
                 gram_error = gram_error.max((end.screen | end.screen).max_abs_diff(&gram));
                 if !(inner_radius < step.radius && step.radius < outer_radius) {

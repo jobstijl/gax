@@ -6,11 +6,15 @@
 //! bivectors.
 //!
 //! For a plane wave the Dirac equation is a linear map on even multivectors, the Hamiltonian
-//! `H(ψ) = p t ψ + m t ψ t`. Paired with the Hermitian product `⟨(t ψ̃ t) φ⟩` it is a symmetric
-//! form, and the generalized eigenproblem gives its energies `±√(p² + m²)`, each fourfold: the
-//! mass shell. A mixture of positive and negative energy makes the current circulate at twice
-//! the energy, the trembling motion (Zitterbewegung). The animation traces the paths of three
-//! such electrons, with their spins, beside the two sheets of the mass shell.
+//! `H(ψ) = t p ψ + m t ψ t⁻¹`. Paired with the Hermitian product `⟨(t ψ̃ t⁻¹) φ⟩` it is a symmetric form,
+//! and the generalized eigenproblem gives its energies `±√(p² + m²)`, each fourfold: the mass
+//! shell. A mixture of positive and negative energy makes the current circulate at twice the
+//! energy, the trembling motion (Zitterbewegung). The animation traces the paths of three such
+//! electrons, with their spins, beside the two sheets of the mass shell.
+//!
+//! numga wrote this in its old STA, `t+x-y-z-` (`H(ψ) = p t ψ + m t ψ t`); gax's STA is
+//! `x+y+z+t-`, where time squares to minus one (`t⁻¹ = −t`) and a product of two vectors
+//! changes sign, so the formulas carry those signs; the spinors and their numbers are the same.
 
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
@@ -35,22 +39,23 @@ mod dirac {
 
     /// The observer's time axis.
     pub fn time() -> Vector {
-        Vector::new(1.0, 0.0, 0.0, 0.0)
+        Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
     /// The `x` axis.
     pub fn x_axis() -> Vector {
-        Vector::new(0.0, 1.0, 0.0, 0.0)
+        Vector::new(1.0, 0.0, 0.0, 0.0)
     }
 
     /// The `z` axis.
     pub fn z_axis() -> Vector {
-        Vector::new(0.0, 0.0, 0.0, 1.0)
+        Vector::new(0.0, 0.0, 1.0, 0.0)
     }
 
-    /// The spin plane `y ^ x`: right multiplication by it squares to minus one.
+    /// The spin plane `x ^ y` (numga's `y ^ x` in its old signature, where a product of two
+    /// vectors had the other sign): right multiplication by it squares to minus one.
     pub fn spin_plane() -> Bivector {
-        Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, -1.0)
+        Bivector::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
     }
 
     /// A scalar as a spinor.
@@ -58,7 +63,8 @@ mod dirac {
         Scalar::new(s).into()
     }
 
-    /// `exp(I angle)`, with `I = e0123` squaring to minus one: `cos + I sin`, a phasor.
+    /// `exp(I angle)`, with `I = e1234` squaring to minus one: `cos + I sin`, a phasor. (Old
+    /// numga's `I = txyz` is `−e1234`: the angle `β` here is the negative of numga's.)
     pub fn phase(angle: f64) -> Phasor {
         Pseudoscalar::new(angle).exp()
     }
@@ -111,16 +117,17 @@ mod dirac {
     }
 
     /// The velocity a current carries, as the observer sees it: its relative vector (the part
-    /// across the time axis) over its density (the part along it).
+    /// across the time axis) over its density (the part along it, `−flow·t`: time squares to
+    /// minus one).
     pub fn velocity(flow: Vector) -> Bivector {
-        (flow ^ time()) * (1.0 / (flow | time()).s())
+        (flow ^ time()) * (-1.0 / (flow | time()).s())
     }
 
-    /// A relative vector (a bivector `eₖ e0` across the observer's time axis) as a vector of
+    /// A relative vector (a bivector `eₖ e4` across the observer's time axis) as a vector of
     /// the observer's space: the inverse of gax's spacetime split, `sta::Bivector::from` a
     /// `vga3d::Vector`, on its image.
     pub fn relative(b: Bivector) -> Space {
-        Space::new(b.e10(), b.e20(), b.e30())
+        Space::new(b.e14(), b.e24(), b.e34())
     }
 
     /// The part of a spacetime vector across the observer's time axis, in the observer's space.
@@ -129,24 +136,25 @@ mod dirac {
     }
 
     /// The Dirac equation for a plane wave of the given spatial momentum, as a map on spinors:
-    /// the momentum as a relative vector on the left, and the mass through the reflection in
-    /// the time axis.
+    /// the momentum as a relative vector on the left, `t p`, and the mass through the
+    /// reflection in the time axis, `t ψ t⁻¹` with `t⁻¹ = −t`. (numga's `p t` and `t ψ t` in
+    /// its old signature, where products of two vectors had the other sign.)
     pub fn hamiltonian(momentum: Vector, mass: f64) -> Hamiltonian {
         let t = time();
-        (momentum * t) * Even::slot() + (t * Even::slot() * t) * mass
+        (t * momentum) * Even::slot() - (t * Even::slot() * t) * mass
     }
 
-    /// The Hermitian product of spinors, `⟨(t ψ̃ t) φ⟩`: positive definite, the identity in
+    /// The Hermitian product of spinors, `⟨(t ψ̃ t⁻¹) φ⟩`: positive definite, the identity in
     /// the blade basis. The Hamiltonian is symmetric under it.
     pub fn hermitian() -> gax::sta::Scalar<(Even, Even)> {
         form(Even::slot())
     }
 
-    /// The energy of the plane wave, `√(m² + p²)`: a spatial vector squares to minus its
-    /// length squared in this signature.
+    /// The energy of the plane wave, `√(m² + p²)`: a spatial vector squares to its length
+    /// squared in this signature.
     #[allow(clippy::disallowed_methods)] // the energy-momentum relation: a physical law
     pub fn energy(momentum: Vector, mass: f64) -> f64 {
-        (mass * mass - momentum.norm_squared()).sqrt()
+        (mass * mass + momentum.norm_squared()).sqrt()
     }
 
     /// The plane wave's spinor at the given times. The projector onto positive energy,
@@ -189,7 +197,7 @@ mod dirac {
 
     /// A spatial momentum.
     pub fn momentum(x: f64, y: f64, z: f64) -> Vector {
-        Vector::new(0.0, x, y, z)
+        Vector::new(x, y, z, 0.0)
     }
 
     /// The Hamiltonian's energies, ascending, and its eigenstates, over a grid of momenta in
@@ -205,10 +213,10 @@ mod dirac {
             .collect()
     }
 
-    /// The form `⟨(t ψ̃ t) H(φ)⟩` of a map on spinors: symmetric when the map is Hermitian.
+    /// The form `⟨(t ψ̃ t⁻¹) H(φ)⟩` of a map on spinors: symmetric when the map is Hermitian.
     pub fn form(h: Hamiltonian) -> gax::sta::Scalar<(Even, Even)> {
         let t = time();
-        (t * Even::slot().reverse() * t).scalar_product(h)
+        (t * Even::slot().reverse() * -t).scalar_product(h)
     }
 
     /// Electrons of the given momentum with a share of negative energy mixed in, followed in
@@ -223,9 +231,9 @@ mod dirac {
         let h = hamiltonian(momentum, MASS);
         let e = energy(momentum, MASS);
         // A positive-energy state with spin along z, and a negative-energy state that turns the
-        // other way (from the plane `t ∧ x`): the projections onto positive and negative
-        // energy, `(1 ± H / E) / 2`.
-        let tx: Spinor = (time() ^ x_axis()).into();
+        // other way (from the plane `x ∧ t`, numga's `t ∧ x` in its old signature): the
+        // projections onto positive and negative energy, `(1 ± H / E) / 2`.
+        let tx: Spinor = (x_axis() ^ time()).into();
         let electron = unit_density((scalar(1.0) + h.of(scalar(1.0)) * (1.0 / e)) * 0.5);
         let positron = unit_density((tx - h.of(tx) * (1.0 / e)) * 0.5);
         let times = linspace(0.0, seconds, count);
@@ -453,15 +461,17 @@ mod tests {
     /// extension times `exp(I β) / ρ`.
     #[test]
     fn a_spinor_is_rho_times_a_lorentz_map_and_beta_acts_only_on_bivectors() {
-        // numga's `(tx * 0.4 + xy * 0.9 + yz * -0.3) * 0.5`, with `tx = -e10`.
-        let rotor = Bivector::new(-0.2, 0.0, 0.0, -0.15, 0.0, 0.45)
+        // numga's `(tx * 0.4 + xy * 0.9 + yz * -0.3) * 0.5` in its old signature, carried over
+        // by the isomorphism of the even subalgebras, which negates every bivector (`tx` is
+        // `e14` here, `xy` and `yz` are `-e12` and `-e23`).
+        let rotor = Bivector::new(0.15, 0.0, -0.45, 0.2, 0.0, 0.0)
             .exp()
             .into_inner();
         let psi = spinor(2.0, 0.7, rotor);
-        let v = Vector::new(0.3, -1.2, 0.5, 2.0);
+        let v = Vector::new(-1.2, 0.5, 2.0, 0.3);
         assert!(frame(psi).of(v).max_abs_diff(&((rotor >> v) * 2.0)) < 1e-12);
         // A phasor times a bivector is a bivector: the duality rotation stays in the kind.
-        let b = Bivector::new(0.2, -0.4, 1.1, 0.3, -0.7, 0.5);
+        let b = Bivector::new(-0.3, 0.7, -0.5, -0.2, 0.4, -1.1);
         let expected: Bivector = phase(0.7) * b * 0.5;
         assert!(duality(psi).of(b).max_abs_diff(&expected) < 1e-9);
     }
@@ -472,7 +482,7 @@ mod tests {
         let s = vga3d::Vector::new(0.3, -1.2, 0.5);
         assert_eq!(relative(Bivector::from(s)), s);
         // A spatial vector's part across the time axis is itself.
-        let v = Vector::new(0.7, 0.3, -1.2, 0.5);
+        let v = Vector::new(0.3, -1.2, 0.5, 0.7);
         assert!(spatial(v).max_abs_diff(&s) < 1e-15);
     }
 
@@ -499,9 +509,10 @@ mod tests {
         let p = momentum(0.0, 0.0, 0.3);
         let (_, spinors, paths) = trembling(p, 3.0, 60);
         for psi in &spinors {
-            let first = (current(psi[0]) | time()).s();
+            // The density, `−J·t`.
+            let first = -(current(psi[0]) | time()).s();
             for s in psi {
-                let density = (current(*s) | time()).s();
+                let density = -(current(*s) | time()).s();
                 assert!((density - first).abs() <= 1e-10 * first.abs());
             }
         }

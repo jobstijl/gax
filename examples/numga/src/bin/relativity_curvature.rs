@@ -4,7 +4,7 @@
 //! In a vacuum plane wave the curvature is a nonzero bivector-to-bivector map whose
 //! composition with itself vanishes: its image is null bivectors containing the wave's
 //! direction, and that image lies in its kernel. All six eigenvalues vanish, yet the map does
-//! not. Bind an observer twice, `R(u ∧ s)·u` with the separation `s` left open, and the result
+//! not. Bind an observer twice, `u·R(u ∧ s)` with the separation `s` left open, and the result
 //! is the tidal map from separation to relative acceleration: a composition of different
 //! maps, not a similarity, so its eigenvalues are `±a` and zero. The cross polarization is the
 //! dual of plus, `-I R`, the pattern turned an eighth of a turn: a spin-two field.
@@ -14,6 +14,10 @@
 //! acceleration arrows; below, the packet's strain, the curvature map at one event (a
 //! spacetime ribbon, its null image and the tidal readout), and the Doppler scaling of the
 //! tide seen by observers boosted along the wave.
+//!
+//! numga wrote this in its old STA, `t+x-y-z-` (`R(u ∧ s)·u`); gax's STA is `x+y+z+t-`, where
+//! a product of two vectors changes sign, so contractions and rotors' generators carry that sign
+//! (each noted where it is); the tides and their numbers are the same.
 
 use gax::sta::Vector;
 
@@ -40,24 +44,25 @@ mod curvature {
     pub type Strain = Vector<(Vector,)>;
 
     pub fn t() -> Vector {
-        Vector::new(1.0, 0.0, 0.0, 0.0)
-    }
-    pub fn x() -> Vector {
-        Vector::new(0.0, 1.0, 0.0, 0.0)
-    }
-    pub fn y() -> Vector {
-        Vector::new(0.0, 0.0, 1.0, 0.0)
-    }
-    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
-    /// The pseudoscalar `e0123`: it squares to minus one and commutes with every bivector.
+    pub fn x() -> Vector {
+        Vector::new(1.0, 0.0, 0.0, 0.0)
+    }
+    pub fn y() -> Vector {
+        Vector::new(0.0, 1.0, 0.0, 0.0)
+    }
+    pub fn z() -> Vector {
+        Vector::new(0.0, 0.0, 1.0, 0.0)
+    }
+    /// The time-first unit volume `t ∧ x ∧ y ∧ z = −e1234` (numga's `I` in its old signature):
+    /// it squares to minus one and commutes with every bivector.
     pub fn i() -> Pseudoscalar {
-        Pseudoscalar::new(1.0)
+        Pseudoscalar::new(-1.0)
     }
     /// The bivector `e12 = x ∧ y`.
     pub fn xy() -> Bivector {
-        Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+        Bivector::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
     }
 
     /// Vacuum plane-wave curvature along the null direction `k`, polarized on the transverse
@@ -78,10 +83,11 @@ mod curvature {
     }
 
     /// Bind the observer twice and leave the separation open: `u ∧ s` sweeps a separation
-    /// into a spacetime ribbon, the curvature maps it to a bivector, and the commutator with
-    /// the observer reads it out as a vector.
+    /// into a spacetime ribbon, the curvature maps it to a bivector, and the observer's
+    /// commutator with it reads it out as a vector (numga's `R(u ∧ s)·u` in its old signature,
+    /// where the contraction of a vector had the other sign).
     pub fn tidal_map(curvature: Curvature, observer: Vector) -> Tidal {
-        curvature.of(observer ^ Vector::slot()).commutator(observer)
+        observer.commutator(curvature.of(observer ^ Vector::slot()))
     }
 
     /// Four-velocities of observers boosted along a spatial direction, one per rapidity.
@@ -95,9 +101,11 @@ mod curvature {
     /// Unit plus and cross strain maps for a wave along `+z`: plus stretches along `x` and
     /// squeezes along `y`; cross is the same turned by an eighth, by the transverse plane `xy`
     /// acting on each output (it makes the turn that the duality `-I` makes on the curvature).
+    /// Space squares to one here: `x (x·s)` is the part of `s` along `x` (numga's old signature
+    /// wrote `y (y·s) − x (x·s)` and `xy·v`, both with the other sign).
     pub fn strain_patterns() -> (Strain, Strain) {
-        let plus = y() * (y() | Vector::slot()) - x() * (x() | Vector::slot());
-        (plus, xy() | plus)
+        let plus = x() * (x() | Vector::slot()) - y() * (y() | Vector::slot());
+        (plus, plus | xy())
     }
 
     /// Weak-wave strain in the plus, cross and circular polarizations: half the profile times
@@ -107,7 +115,7 @@ mod curvature {
         let analytic = plus.cast::<Odd>() + (i() * cross).cast::<Odd>();
         [
             analytic * profile.s(),
-            Pseudoscalar::new(profile.e0123()) * analytic,
+            profile.cast::<Pseudoscalar>() * analytic,
             profile * analytic,
         ]
         .map(|w| w.cast::<Vector>() * 0.5)
@@ -116,9 +124,11 @@ mod curvature {
     // Used by the tests (part of numga's core).
     #[cfg_attr(not(test), allow(dead_code))]
     /// Curvature as a map on pairs of vectors (the plane's edges, in order), from the strain's
-    /// second derivative along the wave: `k ∧ s''(a) (k·b) - (k·a) k ∧ s''(b)`.
+    /// second derivative along the wave: `(k·a) k ∧ s''(b) − k ∧ s''(a) (k·b)` (numga's
+    /// `k ∧ s''(a) (k·b) − (k·a) k ∧ s''(b)` in its old signature, where `k·a` had the other
+    /// sign).
     pub fn curvature_of_strain(k: Vector, second: Strain) -> Bivector<(Vector, Vector)> {
-        (k ^ second) * (k | Vector::slot()) - (k | Vector::slot()) * (k ^ second)
+        (k | Vector::slot()) * (k ^ second) - (k ^ second) * (k | Vector::slot())
     }
 
     /// The strain profile and its second derivative as phasors at the given times: a Gaussian
@@ -137,8 +147,8 @@ mod curvature {
             .map(|t| {
                 let s = t - duration / 2.0;
                 let envelope = amplitude * (-s * s / (2.0 * sigma * sigma)).exp();
-                let profile = Pseudoscalar::new(-b * s).exp() * envelope;
-                let rate = Phasor::new(-s / (sigma * sigma), -b);
+                let profile = i().gp(-b * s).exp() * envelope;
+                let rate = Phasor::new(-s / (sigma * sigma), 0.0) + i().gp(-b).cast::<Phasor>();
                 let curving = rate * rate - Phasor::new(1.0 / (sigma * sigma), 0.0);
                 (profile, curving * profile)
             })
@@ -151,18 +161,20 @@ mod curvature {
     pub fn polarized_waves(plus: Curvature, second: Phasor) -> [Curvature; 3] {
         [
             plus * second.s(),
-            Pseudoscalar::new(second.e0123()) * plus,
+            second.cast::<Pseudoscalar>() * plus,
             second * plus,
         ]
         .map(|w| w * -0.5)
     }
 
-    /// Unit reference separations in the plane transverse to the wave.
+    /// Unit reference separations in the plane transverse to the wave, from `x` towards `y`:
+    /// the turn `exp(−½ angle x ∧ y)`, as in Euclidean space (numga's old signature turned
+    /// that way with the other sign).
     pub fn detector_ring(count: usize) -> Vec<Vector> {
         (0..count)
             .map(|k| {
                 let angle = core::f64::consts::TAU * k as f64 / count as f64;
-                (xy() * (angle / 2.0)).exp() >> x()
+                (xy() * (-angle / 2.0)).exp() >> x()
             })
             .collect()
     }
@@ -198,7 +210,7 @@ mod curvature {
 
     /// Four corners of a simple area element, drawn from a unit spacelike edge in its plane.
     pub fn plane_patch(area: Bivector, edge: Vector) -> [Vector; 4] {
-        let other = edge.commutator(area) * 0.5;
+        let other = area.commutator(edge) * 0.5;
         let edge = edge * 0.6;
         [-edge - other, -edge + other, edge + other, edge - other]
     }
@@ -453,10 +465,10 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
 /// space the camera sees (`y`, the other transverse direction, drops out).
 fn view() -> vga3d::Vector<(sta::Vector,)> {
     vga3d::Vector::from_images([
-        vga3d::Vector::new(0.0, 0.0, 1.0),
         vga3d::Vector::new(1.0, 0.0, 0.0),
         vga3d::Vector::new(0.0, 0.0, 0.0),
         vga3d::Vector::new(0.0, 1.0, 0.0),
+        vga3d::Vector::new(0.0, 0.0, 1.0),
     ])
 }
 
@@ -467,7 +479,7 @@ fn curvature_map(c: &mut Canvas, rect: Rect, azimuth: f32) {
     let (observer, wave, edge) = (t(), t() + z(), x());
     let incoming = observer ^ edge;
     let outgoing = plus.of(incoming);
-    let readout = outgoing.commutator(observer);
+    let readout = observer.commutator(outgoing);
     let cam = Camera::orbit(rect, ORIGIN3, 20.0, azimuth, 0.3, Lens::Parallel(1.25));
     let view = view();
     // The point of the drawing a spacetime vector reaches from the event.
@@ -632,9 +644,10 @@ mod tests {
         x.max_abs_diff(&X::zero())
     }
 
-    /// The reciprocal Lorentz basis: `basis[i] · reciprocal[j] = δij`.
+    /// The reciprocal Lorentz basis: `basis[i] · reciprocal[j] = δij` (time squares to minus
+    /// one).
     fn frames() -> ([Vector; 4], [Vector; 4]) {
-        ([t(), x(), y(), z()], [t(), -x(), -y(), -z()])
+        ([t(), x(), y(), z()], [-t(), x(), y(), z()])
     }
 
     #[test]
@@ -730,13 +743,15 @@ mod tests {
     #[test]
     fn curvature_and_observer_binding_are_lorentz_covariant() {
         let (plus, cross) = polarizations();
-        // The duality turn -I is the eighth turn about the wave axis.
-        let eighth = (xy() * (core::f64::consts::PI / 8.0)).exp();
+        // The duality turn -I is the eighth turn about the wave axis, from `x` towards `y`.
+        let eighth = (xy() * (-core::f64::consts::PI / 8.0)).exp();
         let turned = eighth >> plus.of(eighth << Bivector::slot());
         assert!(near(cross, turned, 1e-9));
-        // numga's `exp(tx * .31) exp(yz * -.23)`, with `tx = -e10`.
-        let rotor = Bivector::new(-0.31, 0.0, 0.0, 0.0, 0.0, 0.0).exp()
-            * Bivector::new(0.0, 0.0, 0.0, -0.23, 0.0, 0.0).exp();
+        // numga's `exp(tx * .31) exp(yz * -.23)` in its old signature, carried over by the
+        // isomorphism of the even subalgebras, which negates every bivector (`tx` is `e14`
+        // here, `yz` is `-e23`).
+        let rotor = Bivector::new(0.0, 0.0, 0.0, 0.31, 0.0, 0.0).exp()
+            * Bivector::new(0.23, 0.0, 0.0, 0.0, 0.0, 0.0).exp();
         let transformed = plane_wave_curvature(rotor >> (t() + z()), rotor >> x(), rotor >> y());
         let conjugated = rotor >> plus.of(rotor << Bivector::slot());
         assert!(near(transformed, conjugated, 1e-13));
@@ -785,7 +800,7 @@ mod tests {
                             .map(|r| {
                                 let (rx, ry) = (r.e1(), r.e2());
                                 let (dx, dy) = (hp * rx + hc * ry, hc * rx - hp * ry);
-                                Vector::new(0.0, 0.5 * dx, 0.5 * dy, 0.0)
+                                Vector::new(0.5 * dx, 0.5 * dy, 0.0, 0.0)
                             })
                             .collect()
                     })

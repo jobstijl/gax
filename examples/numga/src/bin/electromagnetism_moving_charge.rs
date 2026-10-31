@@ -1,13 +1,14 @@
 //! numga's `electromagnetism/moving_charge`: the field of a charge moving at any speed, from the
-//! derivatives of its potential, in spacetime algebra (STA, `t² = 1`, `x² = y² = z² = -1`).
+//! derivatives of its potential, in spacetime algebra (STA, `x² = y² = z² = 1`, `t² = -1`).
 //!
 //! The charge is a Plummer-softened point charge: beyond its core a point charge, its density
-//! smooth and finite at the centre. At rest its potential points along its time direction and
-//! falls off as one over the distance, and the gradients of the potential and of the field at an
-//! event are maps on displacements, `Vector <- Vector` and `Bivector <- Vector`, written in closed
-//! form. A moving charge is the charge at rest seen through a boost: its gradients are the rest
-//! ones with the boost sandwiched around them, the displacement pulled into the rest frame and
-//! the change pushed back out.
+//! smooth and finite at the centre. At rest its potential points along its time direction (the
+//! past: `A = −V t`, so that `∇ ∧ A` is `F = E − I B` with `E` on the relative vectors `eₖ t`, the
+//! field for which `∇F = J` in `x+y+z+t-`) and falls off as one over the distance, and the
+//! gradients of the potential and of the field at an event are maps on displacements,
+//! `Vector <- Vector` and `Bivector <- Vector`, written in closed form. A moving charge is the
+//! charge at rest seen through a boost: its gradients are the rest ones with the boost sandwiched
+//! around them, the displacement pulled into the rest frame and the change pushed back out.
 //!
 //! Contracting a gradient against an open vector through the metric, `Σᵢ eⁱ g(eᵢ)` (numga's
 //! `(Vector * g(Vector)).contract(1, 2)`, written out over the reciprocal frame), gives the
@@ -41,13 +42,16 @@ mod moving_charge {
     /// The change in the field for a small displacement, `Bivector <- Vector`.
     pub type FieldGradient = Bivector<(Vector,)>;
 
-    pub const T: Vector = Vector::new(1.0, 0.0, 0.0, 0.0);
-    pub const X: Vector = Vector::new(0.0, 1.0, 0.0, 0.0);
-    pub const Y: Vector = Vector::new(0.0, 0.0, 1.0, 0.0);
-    pub const Z: Vector = Vector::new(0.0, 0.0, 0.0, 1.0);
-    /// numga's planes `xt` and `xy`, gax's `e10` and `e12`.
-    pub const XT: Bivector = Bivector::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    pub const XY: Bivector = Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    pub const T: Vector = Vector::new(0.0, 0.0, 0.0, 1.0);
+    pub const X: Vector = Vector::new(1.0, 0.0, 0.0, 0.0);
+    pub const Y: Vector = Vector::new(0.0, 1.0, 0.0, 0.0);
+    pub const Z: Vector = Vector::new(0.0, 0.0, 1.0, 0.0);
+    /// The generators of the boost along `x` and of the turn from `x` towards `y`: numga's
+    /// planes `xt` and `xy` of `t+x-y-z-`, which the isomorphism of the even subalgebras makes
+    /// `t ∧ x = -e14` and `y ∧ x = -e12` in `x+y+z+t-` (their exponentials move and turn the
+    /// same way).
+    pub const XT: Bivector = Bivector::new(0.0, 0.0, 0.0, -1.0, 0.0, 0.0);
+    pub const XY: Bivector = Bivector::new(0.0, 0.0, -1.0, 0.0, 0.0, 0.0);
     /// The retarded time: steps that always close in, by at least the orbit's speed each, then
     /// Newton's.
     const SETTLE_STEPS: usize = 6;
@@ -76,9 +80,9 @@ mod moving_charge {
         Vector::slot()
     }
 
-    /// A vector's part across the lab's time: its spatial part.
+    /// A vector's part across the lab's time: its spatial part (`T² = -1`).
     pub fn spatial(v: Vector) -> Vector {
-        v - T * (v | T).s()
+        v + T * (v | T).s()
     }
 
     /// The spatial separation of an event from the charge in its rest frame, the field per unit
@@ -91,7 +95,8 @@ mod moving_charge {
 
     fn profile(charge: &Charge, event: Vector) -> Profile {
         let separation = spatial(charge.boost << (event - charge.position));
-        let softened = charge.core_radius * charge.core_radius - separation.norm_squared();
+        // A spatial vector squares to its length squared.
+        let softened = charge.core_radius * charge.core_radius + separation.norm_squared();
         #[allow(clippy::disallowed_methods)] // Plummer's softened distance √(a² + r²): a law
         let distance = softened.sqrt();
         let weight = charge.charge / (4.0 * core::f64::consts::PI) / (softened * distance);
@@ -103,7 +108,8 @@ mod moving_charge {
     }
 
     /// The change in the potential for a small displacement from the event: at rest it points
-    /// along the rest time and changes with the spatial distance.
+    /// along the rest time and changes with the spatial distance (`A = −V t`, whose change
+    /// `w t (r · d)` this is).
     pub fn potential_gradient(charge: &Charge, event: Vector) -> PotentialGradient {
         let p = profile(charge, event);
         let at_rest = (T * (p.separation | open())) * p.weight;
@@ -114,7 +120,7 @@ mod moving_charge {
     /// with the distance and turns with the displacement.
     pub fn field_gradient(charge: &Charge, event: Vector) -> FieldGradient {
         let p = profile(charge, event);
-        let radial = ((p.separation ^ T) * (p.separation | open())) * p.weight_change;
+        let radial = ((T ^ p.separation) * (p.separation | open())) * p.weight_change;
         let turning = (open() ^ T) * p.weight;
         charge.boost >> (radial + turning).of(charge.boost << open())
     }
@@ -207,14 +213,14 @@ mod moving_charge {
     /// The lab time at which the charge sent the light that reaches the event: a few steps that
     /// move the time back by the distance light covers, which always close in, then Newton's.
     pub fn retarded(orbit: &Orbit, event: Vector) -> f64 {
-        let now = (event | T).s();
+        let now = -(event | T).s();
         // How far light from the charge at `time` falls short of the event, its rate of change,
         // and the distance it covers.
         let light = |time: f64| {
             let (position, tangent, _) = worldline(orbit, time);
             let across = spatial(event - position);
             let distance = across.norm();
-            let rate = 1.0 + (across | tangent).s() / distance;
+            let rate = 1.0 - (across | tangent).s() / distance;
             (now - time - distance, rate, distance)
         };
         let mut time = now;
@@ -233,14 +239,16 @@ mod moving_charge {
     /// at the retarded time and the light ray from it.
     pub fn orbit_potential_gradient(orbit: &Orbit, event: Vector) -> PotentialGradient {
         let (position, tangent, bend) = worldline(orbit, retarded(orbit, event));
-        // The tangent squares to `1 - v²`: one over its norm is the time dilation.
+        // The tangent squares to `v² - 1`: one over its norm is the time dilation.
         let dilation = 1.0 / tangent.norm();
         let (velocity, acceleration) = (tangent * dilation, bend * (dilation * dilation));
         let ray = event - position;
         let reach = (ray | velocity).s();
         // A displacement moves the emission along the ray, which changes the velocity and reach.
         let emission: Scalar<(Vector,)> = (ray | open()) * (1.0 / reach);
-        let reach_change = (velocity | open()) + emission * ((ray | acceleration).s() - 1.0);
+        // `u² = -1` here: the change of the reach along the ray carries `+1` where `t+x-y-z-`
+        // had `-1` (with `A = −q u / 4π (ray · u)`, as the soft charge's `−V t`).
+        let reach_change = (velocity | open()) + emission * ((ray | acceleration).s() + 1.0);
         let weight = orbit.charge / (4.0 * core::f64::consts::PI) / reach;
         (acceleration * emission - velocity * reach_change * (1.0 / reach)) * weight
     }
@@ -304,9 +312,9 @@ mod moving_charge {
         (field.hodge() | T).e3()
     }
 
-    /// The charge density: the current's part along the lab's time.
+    /// The charge density: the current's part along the lab's time (`−J · t`, as `t² = -1`).
     pub fn density(current: Vector) -> f64 {
-        (current | T).s()
+        -(current | T).s()
     }
 }
 
@@ -529,7 +537,7 @@ mod tests {
             assert!(near(magnetic, intrinsic::Vector::zero(), 1e-12));
             // The current is the Plummer density carried along the charge's time direction.
             let separation = spatial(moving.boost << event);
-            let softened = CORE_RADIUS * CORE_RADIUS - separation.norm_squared();
+            let softened = CORE_RADIUS * CORE_RADIUS + separation.norm_squared();
             #[allow(clippy::disallowed_methods)] // the Plummer density it is checked against
             let density = 3.0 * CHARGE * CORE_RADIUS * CORE_RADIUS
                 / (4.0 * core::f64::consts::PI)
@@ -555,23 +563,25 @@ mod tests {
     }
 
     /// numga's values at a few events: the soft charge's field at rapidity one, its current
-    /// near the centre, and the fast orbit's retarded time and field.
+    /// near the centre, and the fast orbit's retarded time and field. numga's `t+x-y-z-`
+    /// coefficients keep their signs: the electric ones on `e14, e24` (`eₖ t`), the magnetic
+    /// one on `e12`, the current's time one on `e4`.
     #[test]
     fn fields_match_numga() {
         let moving = charge(1.0);
-        let at = Vector::new(0.0, 0.3, 0.2, 0.0);
-        let expected = Bivector::new(0.276_752_43, 0.184_501_62, 0.0, 0.0, 0.0, -0.140_515_36);
+        let at = Vector::new(0.3, 0.2, 0.0, 0.0);
+        let expected = Bivector::new(0.0, 0.0, -0.140_515_36, 0.276_752_43, 0.184_501_62, 0.0);
         assert!(near(field(potential_gradient(&moving, at)), expected, 1e-8));
-        let (current, _) = sources(field_gradient(&moving, Vector::new(0.0, 0.02, 0.01, 0.0)));
+        let (current, _) = sources(field_gradient(&moving, Vector::new(0.02, 0.01, 0.0, 0.0)));
         assert!(near(
             current,
-            Vector::new(491.738_136, 374.504_891, 0.0, 0.0),
+            Vector::new(374.504_891, 0.0, 0.0, 491.738_136),
             1e-5
         ));
         let fast = orbit(0.9);
-        let event = Vector::new(3.0, 2.0, -1.5, 0.0);
+        let event = Vector::new(2.0, -1.5, 0.0, 3.0);
         assert!((retarded(&fast, event) - 1.293_433_67).abs() < 1e-8);
-        let expected = Bivector::new(-0.002_597_46, -0.012_722_41, 0.0, 0.0, 0.0, 0.012_846_04);
+        let expected = Bivector::new(0.0, 0.0, 0.012_846_04, -0.002_597_46, -0.012_722_41, 0.0);
         assert!(near(
             field(orbit_potential_gradient(&fast, event)),
             expected,

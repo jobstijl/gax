@@ -144,7 +144,8 @@ fn scene() -> Scene {
 fn camera_lights(s: &Scene, t: f32) -> (Vec<Light>, Vec<Light>) {
     let progress = f64::from(t / SECONDS);
     let turn = core::f64::consts::PI * progress;
-    let analyzer = (kerr::xy() * (turn / 2.0)).exp() >> kerr::x();
+    // From `x` towards `y`: `exp(−½ turn xy)` in `x+y+z+t-`.
+    let analyzer = (kerr::xy() * (-turn / 2.0)).exp() >> kerr::x();
     let lit = par_map(&s.shines, |shine| {
         let waves = flowing_waves(&s.clumps, &shine.glint, progress);
         let light = shine.glow * emissivity(shine.glint.radius, waves) as f32;

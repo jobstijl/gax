@@ -44,6 +44,10 @@ to `estimation`, `cyclides` to `quadrics`, and `qem`, `skinning` and `surface_cu
   points and joins come out with the opposite sign, which flips a few signs (joint torques, the
   orientation of a joined axis); the ports note each. Where numga uses the metric (Hodge) dual,
   in STA and R(4,1), the ports write it out.
+* **STA's signature.** numga's STA was `t+x-y-z-` when most spacetime ports were written, and
+  is `x+y+z+t-` since f9ced1bf; gax's `sta` followed (ADR-055), with numga's blades in numga's
+  order. The older ports compute numga's physics of then in the new signature: a timelike
+  vector squares to `−1`, and the comments say where a sign or a reading changed.
 * **Random streams.** numpy's streams cannot be reproduced; the ports draw from `rand`'s seeded
   generator (`src/rng.rs`), and where a check depends on the draw (epipolar, three S³ scenes of
   elliptic physics, the tides' stars) the seed is chosen and the reason given in a comment.

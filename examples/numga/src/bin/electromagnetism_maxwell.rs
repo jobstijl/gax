@@ -1,8 +1,8 @@
-//! numga's `electromagnetism/maxwell`: stress-energy maps in spacetime algebra (STA, `t² = 1`,
-//! `x² = y² = z² = -1`). A stress-energy map sends an observer `v` to the momentum flux it sees,
-//! a `Vector <- Vector` extensor. The electromagnetic one is the field's sandwich,
+//! numga's `electromagnetism/maxwell`: stress-energy maps in spacetime algebra (STA,
+//! `x² = y² = z² = 1`, `t² = -1`). A stress-energy map sends an observer `v` to the momentum flux
+//! it sees, a `Vector <- Vector` extensor. The electromagnetic one is the field's sandwich,
 //! `T(v) = ½ F v ~F`: traceless, and for a travelling wave a single null dyad. Dust is the rank-1
-//! map `ρ u (u · v)`, and a cloud of particles sums such dyads into an ideal fluid whose spectrum
+//! map `ρ u (−u · v)`, and a cloud of particles sums such dyads into an ideal fluid whose spectrum
 //! is the energy density and minus the pressure; a cloud of light rays is exactly traceless,
 //! radiation with a third of its energy as pressure.
 //!
@@ -42,16 +42,16 @@ mod maxwell {
 
     /// The rest observer and the spatial axes.
     pub fn t() -> Vector {
-        Vector::new(1.0, 0.0, 0.0, 0.0)
+        Vector::new(0.0, 0.0, 0.0, 1.0)
     }
     pub fn x() -> Vector {
-        Vector::new(0.0, 1.0, 0.0, 0.0)
+        Vector::new(1.0, 0.0, 0.0, 0.0)
     }
     pub fn y() -> Vector {
-        Vector::new(0.0, 0.0, 1.0, 0.0)
+        Vector::new(0.0, 1.0, 0.0, 0.0)
     }
     pub fn z() -> Vector {
-        Vector::new(0.0, 0.0, 0.0, 1.0)
+        Vector::new(0.0, 0.0, 1.0, 0.0)
     }
 
     /// The spatial part of a vector as the rest observer `t` reads it, a vector of space (for
@@ -60,10 +60,12 @@ mod maxwell {
         Space::new(v.e1(), v.e2(), v.e3())
     }
 
-    /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy`. gax orders the
-    /// boost planes as `e10, e20, e30`, so numga's `tx = t ^ x` is `-e10`.
+    /// A field from the blade coefficients `tx, ty, tz, yz, zx, xy` of numga's STA when this
+    /// port was written, `t+x-y-z-`. Carried into `x+y+z+t-` by the isomorphism of the even
+    /// subalgebras (a plane `a ∧ b` of the old signature is `b ∧ a` here), its `tx` is `e14`
+    /// and its `yz` is `-e23`: the rest observer reads the same electric and magnetic vectors.
     pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> Bivector {
-        Bivector::new(-tx, -ty, -tz, yz, zx, xy)
+        Bivector::new(-yz, -zx, -xy, tx, ty, tz)
     }
 
     /// The electromagnetic stress-energy map `T(v) = ½ F v ~F`. gax sandwiches with versor
@@ -84,19 +86,21 @@ mod maxwell {
         (f * f).grade::<0>().s()
     }
 
-    /// The dyad `u (u · v)`: dust moving with four-velocity `u`, per unit density.
+    /// The dyad `u (−u · v)`: dust moving with four-velocity `u`, per unit density. A unit
+    /// timelike `u` squares to `-1` in `x+y+z+t-`, so `−u · v` is the Lorentz factor between
+    /// the observers (numga's `t+x-y-z-` read it without the minus).
     pub fn dyad(u: Vector) -> StressEnergy {
-        u * (u | open())
+        u * -(u | open())
     }
 
-    /// Normal traction on a face with unit spatial normal `n` (`n² = -1`): `n⁻¹ · T(n)`.
+    /// Normal traction on a face with unit spatial normal `n` (`n² = 1`): `n⁻¹ · T(n)`.
     pub fn normal_stress(t_map: StressEnergy, n: Vector) -> f64 {
         (n.inverse() | t_map.of(n)).s()
     }
 
-    /// The energy density a unit observer `u` sees, `u · T(u)`.
+    /// The energy density a unit observer `u` sees, `−u · T(u)` (the minus of `u² = -1`).
     pub fn energy(t_map: StressEnergy, u: Vector) -> f64 {
-        (u | t_map.of(u)).s()
+        -(u | t_map.of(u)).s()
     }
 
     /// The Poynting vector: the spatial part of the flux the rest observer sees.
@@ -108,18 +112,19 @@ mod maxwell {
     /// (gax's `eigvals`); the symmetric pencil keeps the values exactly real. `T` is
     /// self-adjoint for the Minkowski metric `g`, so `T v = λ v` is the symmetric pencil
     /// `S(v, ·) = λ g(v, ·)` with `S(a, b) = a · T(b)`. The metric is indefinite, but a
-    /// cloud's `S(v, v) = Σ m (u · v)²` is positive definite, so the pencil is solved the
-    /// other way round, `g(v, ·) = λ⁻¹ S(v, ·)`.
+    /// cloud's `−S(v, v) = Σ m (u · v)²` is positive definite, so the pencil is solved the
+    /// other way round, `−g(v, ·) = λ⁻¹ (−S(v, ·))` (both negated: in `x+y+z+t-` the dyads
+    /// carry the minus of `u² = -1`).
     pub fn spectrum(t_map: StressEnergy) -> [f64; 4] {
-        let s: Scalar<(Vector, Vector)> = open() | t_map;
-        let g: Scalar<(Vector, Vector)> = open() | open();
+        let s: Scalar<(Vector, Vector)> = -(open() | t_map);
+        let g: Scalar<(Vector, Vector)> = -(open() | open());
         let (inverse, _) = g.eigh(s);
         let mut values = inverse.map(|m| 1.0 / m);
         values.sort_by(f64::total_cmp);
         values
     }
 
-    /// The boost by rapidity `zeta` along `axis` (a unit spatial vector), `exp(axis t ζ / 2)`.
+    /// The boost by rapidity `zeta` along `axis` (a unit spatial vector), `exp(t axis ζ / 2)`.
     pub fn boost(zeta: f64, axis: Vector) -> Boost {
         Even::boost(axis, zeta)
     }
@@ -141,7 +146,7 @@ mod maxwell {
         }
     }
 
-    /// The ideal fluid at rest: `(ρ + p) t (t · v) - p v`.
+    /// The ideal fluid at rest: `(ρ + p) t (−t · v) - p v`.
     pub fn fluid(energy: f64, pressure: f64) -> StressEnergy {
         dyad(t()).gp(energy + pressure) - pressure * open()
     }
@@ -152,7 +157,7 @@ mod maxwell {
             .map(|_| {
                 // A unit vector of space, as a spatial vector of spacetime.
                 let d: gax::vga3d::Vector = rng.direction();
-                Vector::new(0.0, d.e1(), d.e2(), d.e3())
+                Vector::new(d.e1(), d.e2(), d.e3(), 0.0)
             })
             .collect()
     }
@@ -192,9 +197,11 @@ mod maxwell {
     }
 
     /// The electric and magnetic vectors a rest observer reads off a field: `t · F` and
-    /// `t · F*` (the complement turns magnetic planes into electric ones).
+    /// `-t · F*` (the complement turns magnetic planes into electric ones; in `x+y+z+t-` it
+    /// takes `e23` to `e14`, and the magnetic planes enter the field as `F = E − I B`, so the
+    /// reading carries a minus that `t+x-y-z-` did not).
     pub fn electric_magnetic(f: Bivector) -> (Space, Space) {
-        (spatial(t() | f), spatial(t() | f.dual()))
+        (spatial(t() | f), -spatial(t() | f.dual()))
     }
 }
 

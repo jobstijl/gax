@@ -126,7 +126,8 @@ fn draw_pulse(c: &mut Canvas, rect: Rect, s: &Results, at: f64) {
         .iter()
         .zip(frame.iter())
         .map(|(p, f)| {
-            let e = read.of(f | t());
+            // `F · t⁻¹`, with `t⁻¹ = −t` (numga's `F · t` in `t+x-y-z-`).
+            let e = read.of(-(f | t()));
             (oblique(*p, e), direction_light(e))
         })
         .collect();

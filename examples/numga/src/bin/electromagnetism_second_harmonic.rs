@@ -34,15 +34,18 @@ mod shg {
     pub type Linear = Bivector<(Bivector,)>;
     pub type Rotor = gax::Unit<Even>;
 
-    /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy` (numga's `tx = t ^ x`
-    /// is gax's `-e10`).
+    /// A field from the blade coefficients `tx, ty, tz, yz, zx, xy` of numga's STA when this
+    /// port was written, `t+x-y-z-`. Carried into `x+y+z+t-` by the isomorphism of the even
+    /// subalgebras (a plane `a ∧ b` of the old signature is `b ∧ a` here, so the products,
+    /// pairings and turns of fields keep their values), its `tx` is `e14` and its `yz` is
+    /// `-e23`.
     pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> Bivector {
-        Bivector::new(-tx, -ty, -tz, yz, zx, xy)
+        Bivector::new(-yz, -zx, -xy, tx, ty, tz)
     }
 
     /// The observer's time direction.
     pub fn t() -> Vector {
-        Vector::new(1.0, 0.0, 0.0, 0.0)
+        Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
     /// The open field.
@@ -64,10 +67,11 @@ mod shg {
         field(h, h, 0.0, 0.0, 0.0, 0.0)
     }
 
-    /// The projector on electric planes, `(F - t F t) / 2` (the time reflection keeps the
-    /// magnetic planes and negates the electric ones).
+    /// The projector on electric planes, `(F - t F t⁻¹) / 2` (the time reflection keeps the
+    /// magnetic planes and negates the electric ones). `t² = -1`, so gax's sandwich
+    /// `t >> F = t F ~t` is `−t F t⁻¹`, and the projector adds it.
     pub fn electric() -> Linear {
-        (open() - (t() >> open())).gp(0.5)
+        (open() + (t() >> open())).gp(0.5)
     }
 
     /// The projector on electric planes across the beam.
@@ -581,8 +585,9 @@ mod tests {
     fn the_response_turns_with_the_crystal_and_reverses_with_its_bonds() {
         let crystal = response(&bonds());
         let mut rng = rng(177);
-        let rotation = Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.37).exp()
-            * Bivector::new(0.0, 0.0, 0.0, 0.23, 0.0, 0.0).exp();
+        // numga's turns `0.37 xy` and `0.23 yz` of `t+x-y-z-`, as the fields carry them over.
+        let rotation =
+            field(0.0, 0.0, 0.0, 0.0, 0.0, 0.37).exp() * field(0.0, 0.0, 0.0, 0.23, 0.0, 0.0).exp();
         let turned = turned(crystal, rotation);
         let rebuilt = response(&bonds().map(|b| rotation >> b));
         let reversed = response(&bonds().map(|b| -b));

@@ -78,9 +78,10 @@ pub fn sweep(spin: f64) -> Vec<Vec<V>> {
         .collect()
 }
 
-/// The camera's orientation: tilted from the spin axis in the plane `z ∧ x`.
+/// The camera's orientation: tilted from the spin axis in the plane `z ∧ x`, from `z`
+/// towards `x` (`exp(½ θ x ∧ z)` in `x+y+z+t-`, numga's `exp(½ θ z ∧ x)`).
 fn orientation() -> Rotor {
-    ((z() ^ x()) * (INCLINATION.to_radians() / 2.0)).exp()
+    ((x() ^ z()) * (INCLINATION.to_radians() / 2.0)).exp()
 }
 
 /// Where the camera is: on its own `z` axis.

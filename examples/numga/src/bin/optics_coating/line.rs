@@ -6,10 +6,11 @@ use gax::Orientation;
 use gax::field::{Field, SparseMap};
 use gax::sta::{Bivector, Scalar, intrinsic, oriented};
 
-/// `t · (z ∧ X)`: a plane swept along the line, as the observer `t` sees it, a field's or an
-/// excitation's. With a difference along `z` it is the curl in both Maxwell equations.
+/// `t⁻¹ · (z ∧ X)`: a plane swept along the line, as the observer `t` sees it, a field's or an
+/// excitation's. With a difference along `z` it is the curl in both Maxwell equations. (`t⁻¹`
+/// is `−t`, as time squares to minus one; numga's `t · (z ∧ X)` in `t+x-y-z-`.)
 pub fn swept<O: Orientation>(x: oriented::Bivector<(), f64, O>) -> oriented::Bivector<(), f64, O> {
-    t() | (z() ^ x)
+    -(t() | (z() ^ x))
 }
 
 /// numga's regressive product of complementary grades (with numga's metric dual): minus

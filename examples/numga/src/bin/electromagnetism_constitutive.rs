@@ -72,16 +72,16 @@ mod constitutive {
         Vector::slot()
     }
 
-    pub fn t() -> Vector {
+    pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn x() -> Vector {
+    pub fn y() -> Vector {
         Vector::new(0.0, 1.0, 0.0, 0.0)
     }
-    pub fn y() -> Vector {
+    pub fn z() -> Vector {
         Vector::new(0.0, 0.0, 1.0, 0.0)
     }
-    pub fn z() -> Vector {
+    pub fn t() -> Vector {
         Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
@@ -92,21 +92,25 @@ mod constitutive {
     }
 
     /// The electric and magnetic vectors a rest observer reads off a field: `F · t` and
-    /// `F* · t`, as numga draws them.
+    /// `-F* · t`. numga drew `F* · t` in `t+x-y-z-`, whose dual took the orientation `txyz`;
+    /// `hodge` takes `xyzt`, the opposite (ADR-055).
     pub fn arrows(f: Bivector) -> (Space, Space) {
-        (spatial(f | t()), spatial(f.hodge() | t()))
+        (spatial(f | t()), spatial(-f.hodge() | t()))
     }
 
-    /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy` (numga's `tx = t ^ x`
-    /// is gax's `-e10`).
+    /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy` in `t+x-y-z-` (where
+    /// `tx = t ^ x` was gax's `-e10`). In `x+y+z+t-` the same field is `tx e14 - yz e23 - …`:
+    /// the even subalgebras' isomorphism `γμγν ↦ −eμeν` negates every bivector blade
+    /// (ADR-055).
     pub fn field(tx: f64, ty: f64, tz: f64, yz: f64, zx: f64, xy: f64) -> Bivector {
-        Bivector::new(-tx, -ty, -tz, yz, zx, xy)
+        Bivector::new(-yz, -zx, -xy, tx, ty, tz)
     }
 
-    /// The electric and magnetic projectors of a unit timelike observer: `(F - u F u) / 2`
-    /// and the rest.
+    /// The electric and magnetic projectors of a unit timelike observer: `(F + u F ~u) / 2`
+    /// and the rest. The sandwich carries `u ~u = -1` (one in `t+x-y-z-`, where numga wrote
+    /// `(F - u F u) / 2`): it turns the magnetic planes around and keeps the electric ones.
     pub fn observer_projectors(observer: Vector) -> (Projector, Projector) {
-        let electric = (open() - (observer >> open())).gp(0.5);
+        let electric = (open() + (observer >> open())).gp(0.5);
         (electric, open() - electric)
     }
 
@@ -148,7 +152,8 @@ mod constitutive {
         (electric.gp(eps) - magnetic).hodge()
     }
 
-    /// An axion coupling of strength `alpha`: the number, declared a pseudoscalar.
+    /// An axion coupling of strength `alpha`: the number, declared a pseudoscalar (on the
+    /// orientation `xyzt`, the opposite of numga's `txyz` when this was ported).
     pub fn axion_coupling(alpha: f64) -> AxionCoupling {
         AxionCoupling::new(alpha)
     }
@@ -169,11 +174,13 @@ mod constitutive {
         r >> base.of(r << open())
     }
 
-    /// The electromagnetic stress-energy current `v ↦ (v · F) ∧ G + ½ (F ∨ G) v*`. An
-    /// observer's energy density is `u ∨ current(u)`.
+    /// The electromagnetic stress-energy current `v ↦ -(v · F) ∧ G - ½ (F ∨ G) v*`. An
+    /// observer's energy density is `u ∨ current(u)`. numga's expression in `t+x-y-z-` had no
+    /// minus: with time squaring to minus one, the contraction with the observer and its dual
+    /// turn sign, and the minus keeps the energy density positive (ADR-055).
     pub fn stress_energy(field: Bivector, excitation: Excitation) -> Current {
         let lagrangian = pair(field, excitation).s() / 2.0;
-        ((open_vector() | field) ^ excitation) + open_vector().hodge().gp(lagrangian)
+        -(((open_vector() | field) ^ excitation) + open_vector().hodge().gp(lagrangian))
     }
 
     /// Both exterior Maxwell residuals, packed into separate grades: `k ∧ F` is a trivector
@@ -300,7 +307,9 @@ mod constitutive {
         let speeds = [1.0 / 2.25f64.sqrt(), 1.0 / 1.5f64.sqrt()];
         (
             speeds,
-            speeds.map(|s| field_eigenmode(t().gp(s) + z(), crystal())),
+            // Negated, as each of the next: the SVD's sign of a nullspace vector is arbitrary,
+            // and in `x+y+z+t-` it comes out opposite to numga's drawing (ADR-055).
+            speeds.map(|s| -field_eigenmode(t().gp(s) + z(), crystal())),
         )
     }
 
@@ -310,13 +319,14 @@ mod constitutive {
         let glass = isotropic_medium(EPS_GLASS, MU_GLASS, t());
         let speed = 1.0 / (EPS_GLASS * MU_GLASS).sqrt();
         let (_, v) = svd(wave_map(t().gp(speed) + z(), glass));
-        ([speed; 2], [v[4], v[5]])
+        ([speed; 2], [-v[4], -v[5]])
     }
 
     /// The direction in the xz-plane at `angle` from z towards x.
     pub fn direction(angle: f64) -> Vector {
-        // x and z square to minus one, which turns the sense of the rotor.
-        Bivector::new(0.0, 0.0, 0.0, 0.0, angle / 2.0, 0.0).exp() >> z()
+        // The turn from z towards x is exp(-½θ e31), as x and z square to one (in `t+x-y-z-`,
+        // where they squared to minus one, it was exp(½θ e31)).
+        Bivector::new(0.0, -angle / 2.0, 0.0, 0.0, 0.0, 0.0).exp() >> z()
     }
 
     /// The Fresnel scans of glass, the crystal and moving glass: per medium, per angle, the
@@ -720,7 +730,8 @@ mod tests {
         let mut rng = rng(318);
         let (electric, magnetic) = observer_projectors(t());
         let bilinear_form = pair(open(), medium);
-        let energy_form = pair(-(t() >> open()), medium);
+        // The sandwich by `t` carries `t ~t = -1`: numga's `-(t F t)` in `t+x-y-z-`.
+        let energy_form = pair(t() >> open(), medium);
         for _ in 0..17 {
             let f = bivector(&mut rng);
             let (e, m) = (electric.of(f), magnetic.of(f));
@@ -734,9 +745,10 @@ mod tests {
             assert!((stress_form.of(t()).of(t()).s() - energy).abs() < 1e-12);
             let vacuum = isotropic_medium(1.0, 1.0, t());
             let current = stress_energy(f, vacuum.of(f));
+            // `½ (F v F~)*`: `-½` in `t+x-y-z-`, where the dual took the other orientation.
             let expected = (f.cast::<gax::sta::Even>() >> open_vector())
                 .hodge()
-                .gp(-0.5);
+                .gp(0.5);
             assert!(near(current, expected, 1e-12));
         }
         let flux_field = field(1.0, 0.0, 0.0, 0.0, 1.0, 0.0);

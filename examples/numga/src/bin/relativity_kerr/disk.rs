@@ -23,21 +23,23 @@ pub fn disk_coherency(
 ) -> Coherency {
     let ray = state.ray;
     let local_momentum = frame(&field(ray.event, hole)).of(ray.momentum);
-    let direction = spatial(local_momentum) * (t() | local_momentum).s().recip();
+    let direction = spatial(local_momentum) * -(t() | local_momentum).s().recip();
     // The magnetic direction circles the normal, square to the plane through the normal and
     // the emitter. Emission is polarized perpendicular to it across the ray: in that plane,
     // square to the ray.
     let meridian = normal ^ spatial(ray.event);
-    let electric = (meridian | direction) * meridian.norm().recip();
+    // (Contractions with spatial vectors read with the opposite sign of numga's
+    // `t+x-y-z-`, where space squared to minus one.)
+    let electric = -(meridian | direction) * meridian.norm().recip();
     let polarization = adjoint(state.screen).of(electric);
-    let polarized_fraction = -polarization_degree * polarization.norm_squared();
+    let polarized_fraction = polarization_degree * polarization.norm_squared();
     screen_identity() * ((1.0 - polarized_fraction) / 2.0)
-        - polarization * (polarization | Vector::slot()) * polarization_degree
+        + polarization * (polarization | Vector::slot()) * polarization_degree
 }
 
 /// The power a unit analyzer passes: its quadratic readout of the coherency.
 pub fn transmitted(coherency: Coherency, analyzer: V) -> f64 {
-    -(analyzer | coherency.of(analyzer)).s()
+    (analyzer | coherency.of(analyzer)).s()
 }
 
 /// The frequency a camera at rest at `camera` sees, over the one emitted by gas on a
@@ -54,7 +56,9 @@ pub fn frequency_ratio(event: V, momentum: V, camera: V, orbit: B, hole: Hole) -
 pub fn orbiting_gas(event: V, orbit: B, hole: Hole) -> V {
     let geometry = field(event, hole);
     let angular_speed = orbital_speed(geometry.radius, orbit, hole);
-    let flow = t() + orbit.commutator(spatial(event)) * angular_speed;
+    // The orbit's turn of the position, `x ↦ y` for `x ∧ y` (minus the commutator here,
+    // numga's commutator in `t+x-y-z-`).
+    let flow = t() - orbit.commutator(spatial(event)) * angular_speed;
     proper_unit(&geometry, flow)
 }
 
@@ -70,9 +74,11 @@ pub fn orbital_speed(radius: f64, orbit: B, hole: Hole) -> f64 {
 /// time zero once a coordinate time `elapsed` has passed. The event's own time counts too,
 /// earlier for light that travelled further, and inner rings lap outer ones.
 pub fn carried(event: V, radius: f64, orbit: B, hole: Hole, elapsed: f64) -> V {
-    let emitted = elapsed + (event | t()).s();
+    // The event's time is `−t · event`.
+    let emitted = elapsed - (event | t()).s();
     let angle = orbital_speed(radius, orbit, hole) * emitted;
-    (orbit * (-angle / 2.0)).exp() >> event
+    // Back along the orbit: `exp(½ angle orbit)` (numga's `exp(−½ angle orbit)`).
+    (orbit * (angle / 2.0)).exp() >> event
 }
 
 /// The radius of the innermost stable circular equatorial orbit in the unit plane `orbit`:
@@ -260,7 +266,8 @@ pub mod tests {
     /// numga's small camera: 9 x 7 pixels over a dense disk.
     fn small_camera() -> Vec<Resolution<Ray>> {
         let hole = Hole::about_z(0.7, 1.0);
-        let orientation = ((z() ^ x()) * 0.6).exp();
+        // numga's turn, whose generator is the negative in `x+y+z+t-`.
+        let orientation = ((x() ^ z()) * 0.6).exp();
         let eye = (orientation >> z()) * 25.0;
         let disk = Disk {
             normal: z(),
@@ -292,7 +299,7 @@ pub mod tests {
             ray,
             screen: camera_screen(ray, orientation, hole),
         };
-        let analyzer = |a: f64| (xy() * (a / 2.0)).exp() >> x();
+        let analyzer = |a: f64| (xy() * (-a / 2.0)).exp() >> x();
         for degree in [0.0, 0.6, 1.0] {
             let coherency = disk_coherency(state, z(), hole, degree);
             // An azimuthal magnetic field and a normal ray give maximal linear polarization.

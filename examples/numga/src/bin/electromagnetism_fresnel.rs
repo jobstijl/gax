@@ -1,10 +1,11 @@
 //! numga's `electromagnetism/fresnel`: light's wave surface in a crystal, from extensors in
-//! spacetime algebra (STA, `t² = 1`, `x² = y² = z² = -1`).
+//! spacetime algebra (STA, `x² = y² = z² = 1`, `t² = -1`; numga's `t+x-y-z-` when this was
+//! ported, its physics carried over to `x+y+z+t-`, ADR-055).
 //!
 //! A material is a map from the field, a bivector, to its excitation, built with the field left
 //! open: `dielectric` weights each of the observer's electric planes `axis ∧ t` by its
-//! permittivity, and the magnetic planes, which the observer's sandwich `t F t` keeps, by one
-//! reluctivity, then takes the Hodge dual (numga's `dual`; gax's `dual` is the metric-free
+//! permittivity, and the magnetic planes, which the observer's sandwich `t F ~t` turns around,
+//! by one reluctivity, then takes the Hodge dual (numga's `dual`; gax's `dual` is the metric-free
 //! complement, written `hodge` here as in the other STA ports). A potential `A` gives the field
 //! `k ∧ A`, and the potential map `A ↦ (k ∧ χ(k ∧ A))*` is what is left of Maxwell's other
 //! equation, a map `Vector <- Vector`. It always loses the potential along `k`; a wave is a second
@@ -41,13 +42,15 @@ mod fresnel {
     /// A potential's field, `Bivector <- Vector`.
     pub type FieldMap = Bivector<(Vector,)>;
 
-    pub const T: Vector = Vector::new(1.0, 0.0, 0.0, 0.0);
-    pub const X: Vector = Vector::new(0.0, 1.0, 0.0, 0.0);
-    pub const Y: Vector = Vector::new(0.0, 0.0, 1.0, 0.0);
-    pub const Z: Vector = Vector::new(0.0, 0.0, 0.0, 1.0);
-    /// numga's planes `zx` and `xy`, gax's `e31` and `e12`.
-    pub const ZX: Bivector = Bivector::new(0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-    pub const XY: Bivector = Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    pub const X: Vector = Vector::new(1.0, 0.0, 0.0, 0.0);
+    pub const Y: Vector = Vector::new(0.0, 1.0, 0.0, 0.0);
+    pub const Z: Vector = Vector::new(0.0, 0.0, 1.0, 0.0);
+    pub const T: Vector = Vector::new(0.0, 0.0, 0.0, 1.0);
+    /// The planes `xz` and `yx`, gax's `-e31` and `-e12`: the turns numga made in `zx` and `xy`
+    /// when space squared to minus one, the same turns now that it squares to one (the even
+    /// subalgebras' isomorphism `γμγν ↦ −eμeν` negates them, ADR-055).
+    pub const XZ: Bivector = Bivector::new(0.0, -1.0, 0.0, 0.0, 0.0, 0.0);
+    pub const YX: Bivector = Bivector::new(0.0, 0.0, -1.0, 0.0, 0.0, 0.0);
 
     /// The open field.
     pub fn open_field() -> Response {
@@ -72,9 +75,10 @@ mod fresnel {
                 (plane * (plane | open_field())) * weight
             })
             .sum();
-        // The sandwich by t keeps the magnetic planes and turns the electric ones around: half
-        // the sum with the identity keeps the magnetic planes alone.
-        let magnetic = (open_field() + (T >> open_field())) * 0.5;
+        // The sandwich by t, which carries `t ~t = -1`, keeps the electric planes and turns the
+        // magnetic ones around: half the difference with the identity keeps the magnetic planes
+        // alone (in `t+x-y-z-`, with `t ~t = 1`, it was half the sum).
+        let magnetic = (open_field() - (T >> open_field())) * 0.5;
         electric + magnetic * reluctivity
     }
 
@@ -136,20 +140,20 @@ mod fresnel {
         quadratic_roots(quadratic, linear, constant).map(|squared| direction * root(squared))
     }
 
-    /// The direction at `angle` from `z` towards `x`, by a turn in numga's `zx` plane.
+    /// The direction at `angle` from `z` towards `x`, by a turn in the `xz` plane.
     pub fn meridian(angle: f64) -> Vector {
-        (ZX * (angle / 2.0)).exp() >> Z
+        (XZ * (angle / 2.0)).exp() >> Z
     }
 
     /// A sphere of directions, `latitudes` by `longitudes`: each meridian turned about `z` in
-    /// numga's `xy` plane.
+    /// the `yx` plane.
     pub fn sphere(latitudes: usize, longitudes: usize) -> Vec<Vec<Vector>> {
         let share = |i: usize, n: usize| i as f64 / (n - 1) as f64;
         (0..latitudes)
             .map(|i| {
                 let polar = meridian(core::f64::consts::PI * share(i, latitudes));
                 (0..longitudes)
-                    .map(|j| (XY * (core::f64::consts::PI * share(j, longitudes))).exp() >> polar)
+                    .map(|j| (YX * (core::f64::consts::PI * share(j, longitudes))).exp() >> polar)
                     .collect()
             })
             .collect()
@@ -329,9 +333,10 @@ mod tests {
     /// numga's comparison grid: twice as many longitudes as latitudes, round the sphere.
     const LONGITUDES: usize = 2 * (LATITUDES - 1) + 1;
 
-    /// A rotor from numga's coefficients on `tx` (gax's `-e10`) and `yz`.
+    /// A rotor from numga's coefficients on `tx` and `yz` in `t+x-y-z-` (gax's `-e10` and
+    /// `e23` then): the same boost and turn in `x+y+z+t-` are `tx e14 - yz e23` (ADR-055).
     fn rotor(tx: f64, yz: f64) -> gax::Unit<gax::sta::Even> {
-        Bivector::new(-tx, 0.0, 0.0, yz, 0.0, 0.0).exp()
+        Bivector::new(-yz, 0.0, 0.0, tx, 0.0, 0.0).exp()
     }
 
     /// The adjoint of a map on vectors under the metric: `M*(a) · b = a · M(b)` for all `a`,
@@ -357,9 +362,9 @@ mod tests {
     fn vacuum_quartic_and_observer_independence() {
         let medium = dielectric([1.0; 3], 1.0);
         let wavevectors = [
-            Vector::new(2.0, 0.3, 0.4, -0.2),
-            Vector::new(1.0, 0.0, 0.0, 1.0),
-            Vector::new(0.8, 1.1, -0.2, 0.3),
+            Vector::new(0.3, 0.4, -0.2, 2.0),
+            Vector::new(0.0, 0.0, 1.0, 1.0),
+            Vector::new(1.1, -0.2, 0.3, 0.8),
         ];
         let observer = rotor(0.23, 0.0) >> T;
         for k in wavevectors {
@@ -372,7 +377,7 @@ mod tests {
         }
         // numga's quartic of one wavevector in the biaxial crystal.
         let biaxial = dielectric(CASES[2].1, RELUCTIVITY);
-        let probe = polynomial(biaxial, T, Vector::new(1.0, 0.9, 0.6, 0.4));
+        let probe = polynomial(biaxial, T, Vector::new(0.9, 0.6, 0.4, 1.0));
         assert!((probe - 1.708_452).abs() < 1e-6, "{probe}");
     }
 
@@ -384,7 +389,8 @@ mod tests {
         for (axis, weights) in [X, Y, Z].into_iter().zip(expected) {
             let sheets = radial_sheets(medium, axis, frequency);
             for (k, weight) in sheets.into_iter().zip(weights) {
-                let radius_squared = -k.norm_squared();
+                // A spatial vector squares to its length squared (to minus it in `t+x-y-z-`).
+                let radius_squared = k.norm_squared();
                 let wanted = frequency * frequency * weight / reluctivity;
                 assert!(
                     (radius_squared - wanted).abs() < 1e-10,

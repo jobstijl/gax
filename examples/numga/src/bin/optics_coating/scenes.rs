@@ -339,7 +339,8 @@ mod tests {
                 .map(|field| {
                     let electric = complex(t()) | *field;
                     let (re, im) = (electric.map_coefs(|c| c.re), electric.map_coefs(|c| c.im));
-                    -(re.scalar_product(re).s() + im.scalar_product(im).s())
+                    // Space squares to plus one (numga's `t+x-y-z-` needed a minus sign).
+                    re.scalar_product(re).s() + im.scalar_product(im).s()
                 })
                 .sum::<f64>()
                 / count as f64

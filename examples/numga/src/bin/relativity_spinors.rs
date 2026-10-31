@@ -3,14 +3,16 @@
 //! to its own: the image of the time axis, `ψ t ψ̃`, is its current, that of the `z` axis its
 //! spin, and the current's time part the density the observer measures.
 //!
-//! The spinor operations are maps on the same space, each right multiplication by a bivector
-//! with the spinor left open (`Even::slot() * b`): the phase by `y x`, the chirality by `z t`,
-//! charge conjugation by `y t`. A Lorentz rotor acts on the left, so every right action commutes
-//! with it. The chirality squares to one, and its projectors `(1 ± Γ) / 2` split a spinor into
-//! its right- and left-handed (Weyl) parts, whose currents are null; their sum is the Dirac
-//! current, their difference the spin. Charge conjugation also squares to one and anticommutes
-//! with the phase: it reverses the phase instead of commuting with it, and its fixed spinors,
-//! `(1 + C) / 2` of any spinor, are the Majorana states.
+//! The spinor operations are maps on the same space, each right multiplication by a bivector with
+//! the spinor left open (`Even::slot() * b`): the phase by `x y`, the chirality by `t z`, charge
+//! conjugation by `t y`. A Lorentz rotor acts on the left, so every right action commutes with it.
+//! (numga wrote `y x`, `z t` and `y t` in its old signature `t+x-y-z-`; gax's STA is `x+y+z+t-`,
+//! where a product of two vectors changes sign, so the same bivectors are written in the other
+//! order here, and every rotor's generator too.) The chirality squares to one, and its projectors
+//! `(1 ± Γ) / 2` split a spinor into its right- and left-handed (Weyl) parts, whose currents are
+//! null; their sum is the Dirac current, their difference the spin. Charge conjugation also squares
+//! to one and anticommutes with the phase: it reverses the phase instead of commuting with it, and
+//! its fixed spinors, `(1 + C) / 2` of any spinor, are the Majorana states.
 //!
 //! The animation: a spinor turned through two full turns (left), its spin arrow going round
 //! twice while the two outputs of an interferometer against the unturned spinor trade their
@@ -37,20 +39,20 @@ mod spinors {
 
     /// The observer's time axis.
     pub fn t() -> Vector {
-        Vector::new(1.0, 0.0, 0.0, 0.0)
+        Vector::new(0.0, 0.0, 0.0, 1.0)
     }
 
     pub fn x() -> Vector {
-        Vector::new(0.0, 1.0, 0.0, 0.0)
+        Vector::new(1.0, 0.0, 0.0, 0.0)
     }
 
     pub fn y() -> Vector {
-        Vector::new(0.0, 0.0, 1.0, 0.0)
+        Vector::new(0.0, 1.0, 0.0, 0.0)
     }
 
     /// The spin axis.
     pub fn z() -> Vector {
-        Vector::new(0.0, 0.0, 0.0, 1.0)
+        Vector::new(0.0, 0.0, 1.0, 0.0)
     }
 
     /// The unit spinor, the identity frame.
@@ -63,19 +65,19 @@ mod spinors {
         Even::slot() * b
     }
 
-    /// The phase: right multiplication by `y x`, which squares to minus one.
+    /// The phase: right multiplication by `x y`, which squares to minus one.
     pub fn phase() -> SpinorMap {
-        times(y() ^ x())
+        times(x() ^ y())
     }
 
-    /// The chirality: right multiplication by `z t`, which squares to one.
+    /// The chirality: right multiplication by `t z`, which squares to one.
     pub fn chirality() -> SpinorMap {
-        times(z() ^ t())
+        times(t() ^ z())
     }
 
-    /// Charge conjugation: right multiplication by `y t`, which squares to one.
+    /// Charge conjugation: right multiplication by `t y`, which squares to one.
     pub fn charge_conjugation() -> SpinorMap {
-        times(y() ^ t())
+        times(t() ^ y())
     }
 
     /// The projector onto right-handed spinors, `(1 + Γ) / 2`.
@@ -103,9 +105,10 @@ mod spinors {
         psi >> z()
     }
 
-    /// The probability density the observer measures: the current's part along the time axis.
+    /// The probability density the observer measures: the current's part along the time axis,
+    /// `−J·t` (time squares to minus one).
     pub fn density(psi: Spinor) -> f64 {
-        (current(psi) | t()).s()
+        -(current(psi) | t()).s()
     }
 
     /// The intensity at one output of an interferometer recombining two equal paths, one with
@@ -123,7 +126,7 @@ mod spinors {
     /// and difference outputs of an interferometer against the unturned spinor. The spin comes
     /// back after one turn; the outputs only after two.
     pub fn rotation(angle: f64) -> (Vector, [f64; 2]) {
-        let psi = ((x() ^ z()) * (angle / 2.0)).exp().into_inner();
+        let psi = ((z() ^ x()) * (angle / 2.0)).exp().into_inner();
         let ports = [interference(psi, one()), interference(psi, -one())];
         (spin(psi), ports)
     }
@@ -131,7 +134,7 @@ mod spinors {
     /// The currents of the left- and right-handed parts of a spinor boosted along `z` by the
     /// rapidity, and the Dirac current of the whole: `[left, right, Dirac]`.
     pub fn chiral_currents(rapidity: f64) -> [Vector; 3] {
-        let psi = ((t() ^ z()) * (-rapidity / 2.0)).exp().into_inner();
+        let psi = ((z() ^ t()) * (-rapidity / 2.0)).exp().into_inner();
         [
             current(left_handed().of(psi)),
             current(right_handed().of(psi)),
@@ -248,7 +251,7 @@ fn draw_chirality(c: &mut Canvas, rect: Rect, rapidity: f64, size: f32) {
     ax.polyline(c, &cone, 1.2, palette::GRID.faded(2.0));
     let names = ["LEFT", "RIGHT", "DIRAC"];
     for ((current, colour), name) in chiral_currents(rapidity).iter().zip(hands()).zip(names) {
-        let tip = in_plane(*current, Vector::e3, Vector::e0);
+        let tip = in_plane(*current, Vector::e3, Vector::e4);
         ax.arrow(c, ORIGIN2, tip, 2.2, 10.0, colour);
         let label = ax.px(tip) + Point2::direction(size * 0.6, -size * 0.4);
         c.text(name, label, size * 0.8, colour, Align::Left);
@@ -339,10 +342,10 @@ mod tests {
     fn spinor_observables_transform_with_lorentz_rotors_and_ignore_phase() {
         let mut rng = rng(931);
         for psi in spinors(&mut rng) {
-            let rotor = turn(t() ^ x(), rng.range(-0.4, 0.4))
-                * turn(y() ^ z(), rng.range(-0.6, 0.6))
-                * turn(x() ^ y(), rng.range(-0.6, 0.6));
-            let phase = turn(y() ^ x(), rng.range(-1.0, 1.0));
+            let rotor = turn(x() ^ t(), rng.range(-0.4, 0.4))
+                * turn(z() ^ y(), rng.range(-0.6, 0.6))
+                * turn(y() ^ x(), rng.range(-0.6, 0.6));
+            let phase = turn(x() ^ y(), rng.range(-1.0, 1.0));
             let (moved, phased) = (rotor * psi, psi * phase);
             // The spinor transforms on one side; its vector observables follow the spacetime
             // rotation and boost. A right phase leaves them unchanged.
@@ -357,7 +360,7 @@ mod tests {
     #[test]
     fn weyl_projections_split_the_current_into_two_covariant_null_currents() {
         let mut rng = rng(932);
-        let rotor = turn(t() ^ x(), 0.27) * turn(y() ^ z(), -0.38);
+        let rotor = turn(x() ^ t(), 0.27) * turn(z() ^ y(), -0.38);
         let (right, left) = (right_handed(), left_handed());
         for psi in spinors(&mut rng) {
             let (r, l) = (right.of(psi), left.of(psi));
@@ -378,8 +381,9 @@ mod tests {
             assert!(sum.max_abs_diff(&current(psi)) < TOLERANCE);
             let difference = right_current - left_current;
             assert!(difference.max_abs_diff(&spin(psi)) < TOLERANCE);
-            assert!((right_current | t()).s() > 0.0 && (left_current | t()).s() > 0.0);
-            assert!(current(psi).norm_squared() > 0.0);
+            // Future-pointing, and the Dirac current timelike: of negative square here.
+            assert!(density(r) > 0.0 && density(l) > 0.0);
+            assert!(current(psi).norm_squared() < 0.0);
         }
     }
 
@@ -387,8 +391,8 @@ mod tests {
     fn charge_conjugation_exchanges_chirality_and_reverses_the_phase() {
         let mut rng = rng(933);
         let conjugate = charge_conjugation();
-        let phase = turn(y() ^ x(), 0.43);
-        let rotor = turn(t() ^ y(), -0.32) * turn(x() ^ z(), 0.24);
+        let phase = turn(x() ^ y(), 0.43);
+        let rotor = turn(y() ^ t(), -0.32) * turn(z() ^ x(), 0.24);
         let (mut generic, mut phased_majorana) = (0.0f64, 0.0f64);
         for psi in spinors(&mut rng) {
             let fixed = majorana().of(psi);
