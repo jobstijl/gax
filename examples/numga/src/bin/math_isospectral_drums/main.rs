@@ -49,6 +49,12 @@ struct Shown {
     pieces: Vec<Vec<f64>>,
 }
 
+/// A standing wave's frequency, the root of its eigenvalue.
+#[allow(clippy::disallowed_methods)] // a frequency from its square: a scalar law, not geometry
+fn frequency(eigenvalue: f64) -> f64 {
+    eigenvalue.sqrt()
+}
+
 /// A drum's mesh as drawn.
 fn flat(drum: &Drum) -> Flat {
     let points: Vec<[f64; 2]> = drum.vertices.iter().map(coordinates).collect();
@@ -66,7 +72,7 @@ fn tile_corners(tiles: &[[usize; 3]]) -> Vec<[Point2; 3]> {
 fn shown() -> Shown {
     let pair = Pair::new(SUBDIVISIONS, MODES);
     let flats = [flat(&pair.source), flat(&pair.target)];
-    let frequencies = MIXED_MODES.map(|k| Scalar::new(pair.eigenvalues[k]).sqrt().s());
+    let frequencies = MIXED_MODES.map(|k| frequency(pair.eigenvalues[k]));
     // The last mixed wave's pieces on its tiles, three signed ones making the destination tile.
     let samples = tile_samples(SUBDIVISIONS);
     let last = MIXED_MODES.len() - 1;
