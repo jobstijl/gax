@@ -9,7 +9,7 @@ use gax_numga_examples::mesh::{Mesh, Scalar3, Vector3};
 use gax_numga_examples::rng::{Draw, rng};
 
 /// numga's frames of one breath, and of the way to the rescue.
-const FRAMES: usize = 48;
+const FRAMES: usize = 96;
 
 /// Each point's direction from the centre.
 fn images(points: &Field<Vector3>) -> Field<Vector3> {
@@ -113,11 +113,12 @@ fn flip(mesh: &Mesh, edge: usize) -> Mesh {
     Mesh::new(mesh.vertices.clone(), faces)
 }
 
-/// numga asserts a negative margin for its own draw of eight flips, which lands one flipped edge on
-/// an edge already there (a mesh with four faces at one edge, which `Mesh` cannot hold), and
-/// scipy's `linprog` finds -0.5. The flips drawn here leave a closed mesh of 90 distinct edges
-/// that no weights within their bounds make convex: -0.0032, which `linprog` finds for this mesh
-/// too (to 2e-11). On numga's rescue mesh the barrier and `linprog` agree on the widest margin to
+/// numga asserted a negative margin for its own draw of eight flips, which lands one flipped edge
+/// on an edge already there (a mesh with four faces at one edge, which `Mesh` cannot hold), and
+/// has since dropped the test as round-off dependent (numga 59483a85). The flips drawn here leave
+/// a closed mesh of 90 distinct edges that no weights within their bounds make convex: -0.0032,
+/// which scipy's `linprog` finds for this mesh too (to 2e-11), and every one of its conditions
+/// is far from zero, so the margin does not hang on round-off. On numga's rescue mesh the barrier and `linprog` agree on the widest margin to
 /// 1e-10, and the rescue and SLSQP's to 1e-9.
 #[test]
 fn a_mesh_that_is_no_hull_at_any_distances_has_no_rescue() {
@@ -132,4 +133,19 @@ fn a_mesh_that_is_no_hull_at_any_distances_has_no_rescue() {
     }
     let (_, margin) = widest(&unit_rows(&fold_map(&points, &mesh)));
     assert!(margin < 0.0, "{margin}");
+    // numga dropped its version of this test: its draw left two edges no weight folds, zero
+    // conditions that the unit rows scaled into directions of round-off, which decided its
+    // margin. Here every condition is a real one, far above round-off (the smallest row's
+    // length is 0.06), so the unit rows scale no round-off up and the margin is the mesh's.
+    let map = fold_map(&points, &mesh);
+    let (rows, columns) = map.shape();
+    let mut dense = vec![vec![0.0; columns]; rows];
+    for (r, c, cell) in map.couplings() {
+        dense[r][c] += cell.s();
+    }
+    let smallest = (dense.iter())
+        .map(|row| row.iter().map(|x| x * x).sum::<f64>())
+        .fold(f64::INFINITY, f64::min);
+    assert!(smallest > 1e-3, "{smallest}");
+    assert!(margin < -1e-3, "{margin}");
 }
