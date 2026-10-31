@@ -13,8 +13,7 @@
 //! travelled along the ray's great circle; the largest depth selects the body per pixel, and only
 //! that hit is reconstructed and shaded with its polar plane.
 //!
-//! Included by each binary that needs it with `#[path = "../shared/quadrics_s3.rs"] mod s3;`, so
-//! not every binary uses every item.
+//! The ray tracer and elliptic physics use it as `shared::quadrics_s3 as s3`.
 
 gax::algebra! {
     algebra cl4 "The algebra of the 3-sphere, R(4,0,0), in numga's blade orientations for S³.";
