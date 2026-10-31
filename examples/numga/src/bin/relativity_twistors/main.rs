@@ -4,30 +4,35 @@
 //! The algebra has spacetime's directions `x y z t` (here `t` squares to minus one) and the
 //! conformal pair `u`, `v` (`u` to plus one, `v` to minus one); gax does not ship it in this
 //! basis, so it is declared below with `gax::algebra!` (gax's `csta` is the same algebra with a
-//! null pair for `u` and `v`). An event `e` is the null conformal vector
-//! `o + e + e² ∞ / 2`, with the origin `o = (v - u) / 2` and infinity `∞ = v + u`.
+//! null pair for `u` and `v`). Points, events and rays are intrinsic, numga's antivectors and
+//! antibivectors (ADR-051): an event `e` is the null conformal point `o + e + e² ∞ / 2`, with the
+//! origin `o = (v* - u*) / 2` and infinity `∞ = v* + u*` (`*` the Hodge dual), and one unit along
+//! time is `-t*`.
 //!
 //! Twistors are this algebra's spinors: three commuting idempotent factors,
 //! `P = (1 + x)(1 + y t)(1 + z v) / 8`, cut its 64 dimensions to a left ideal of eight real
 //! components, the multiples `ψ P` of the subalgebra of `y`, `z` and `u`. Every multivector acts
 //! on twistors by multiplication from the left, `ψ ↦ 8 ⟨a ψ P⟩_twistor`: a map on twistors,
-//! `Twistor<(Twistor,)>`, built from the images of the basis twistors. The conformal volume
-//! acts as a complex structure (it squares to minus one and commutes with every even element),
-//! and a pairing of two twistors, `8 ⟨y z (ψ P)~ I (φ P)⟩`, is kept by every conformal rotor.
+//! built from the images of the basis twistors. An intrinsic multivector, such as an event,
+//! turns a twistor's orientation: a ray's twistor is intrinsic, the twistor an event selects it
+//! from extrinsic. The conformal volume acts as a complex structure (it squares to minus one and
+//! commutes with every even element), and a pairing between twistors of the two orientations,
+//! `8 ⟨y z (ψ P)~ I (φ P)⟩` across the intrinsic unit volume, is kept by every conformal rotor.
 //!
 //! An event's action on twistors has a kernel: the twistors of the light rays through it. Two
-//! null-separated events share one ray, the image of the action of their product (by
-//! `svd`). From a twistor, the ray's null plane is a bilinear map of twistors,
-//! `Bivector<(Twistor, Twistor)>`: the plane whose scalar product with every bivector `B` is the
-//! pairing of the twistor with the volume times `B`'s action on it. Its meet with infinity is
-//! the ray's direction, and with a slice of constant time, where the ray crosses it.
+//! null-separated events share one ray, the image of the action of their product (by `svd`).
+//! From a twistor, the ray is a bilinear map of twistors, `Ray<(Twistor, Twistor)>`: the twistor
+//! paired with each ray's action on it, contracted into the ray itself, the join of its events.
+//! Its join with the plane at infinity is the ray's direction, and with a hyperplane of constant
+//! time, where the ray crosses it.
 //!
 //! A fixed twistor that is not null picks one light ray at every event, the one in the kernel
 //! of the event's action on it: the Robinson congruence, straight rays twisting around each
 //! other. At time zero its flow lines are the linked circles of the Hopf fibration on nested
-//! tori (computed here in VGA3D, by the stereographic projection of rotors). A null
-//! electromagnetic field, the Hopfion, is carried by the congruence: its field lines, moved
-//! along the straight rays, stay field lines.
+//! tori, by the stereographic projection of rotors: a rotor's plane of turning, made a patch of
+//! space by a handedness (an intrinsic scalar), joined across time and the conformal pair. A
+//! null electromagnetic field, the Hopfion, is carried by the congruence: its field lines,
+//! moved along the straight rays, stay field lines.
 //!
 //! The animation: the Hopfion's electric field lines carried along the Robinson rays through
 //! time (left), the congruence's flow lines at time zero (top right), and a light ray recovered
@@ -45,7 +50,7 @@ use gax_numga_examples::{
 use scenes::{
     FIBRE_SAMPLES, Incidence, PER_CIRCLE, POLARS, electric_turn, fibres, incidence, turned,
 };
-use twistors::{Event, Spatial, at, robinson, spatial};
+use twistors::{Event, Spatial, at, coordinates, robinson, spatial, time_of};
 
 /// One loop: the field lines carried from time `-1.25` to `1.25`.
 const SECONDS: f32 = 8.0;
@@ -87,10 +92,11 @@ fn scene() -> Scene {
 
 /// A point of space to draw, or a break (a non-finite point) beyond the shown ball.
 fn shown(p: Spatial) -> Point3 {
-    if p.norm() > LIMIT {
+    let v = coordinates(p);
+    if v.norm() > LIMIT {
         Point3::xyz(f32::NAN, f32::NAN, f32::NAN)
     } else {
-        Point3::xyz(p.e1() as f32, p.e2() as f32, p.e3() as f32)
+        Point3::xyz(v.e1() as f32, v.e2() as f32, v.e3() as f32)
     }
 }
 
@@ -130,7 +136,10 @@ fn label(c: &mut Canvas, panel: Rect, text: &str, size: f32, colour: Light) {
 
 /// A light ray and its two events in `x`, `z` and `t`, drawn as space's three axes.
 fn draw_incidence(c: &mut Canvas, rect: Rect, incidence: &Incidence) {
-    let drawn = |e: Event| Point3::xyz(e.ex() as f32, e.ez() as f32, e.et() as f32);
+    let drawn = |e: Event| {
+        let v = coordinates(spatial(e));
+        Point3::xyz(v.e1() as f32, v.e3() as f32, time_of(e) as f32)
+    };
     let (azimuth, elevation) = ((-68f32).to_radians(), 15f32.to_radians());
     let cam = Camera::orbit(rect, ORIGIN3, 20.0, azimuth, elevation, Lens::Parallel(2.3));
     let reach = 1.6;
