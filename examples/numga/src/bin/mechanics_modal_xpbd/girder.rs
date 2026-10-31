@@ -66,8 +66,7 @@ pub struct Shape {
     pub rest: Field<P>,
     /// Each mode's displacement of every vertex, of unit mass.
     pub modes: Vec<Field<D>>,
-    /// Each mode's angular frequency, and its compliance, the inverse squared frequency.
-    pub frequencies: Vec<f64>,
+    /// Each mode's compliance, its inverse squared angular frequency.
     pub compliance: Vec<f64>,
     pub masses: Field<S>,
     pub edges: Vec<[usize; 2]>,
@@ -114,7 +113,6 @@ const RIGID: usize = 3;
 
 /// A cross-braced girder, reduced to its lowest vibration modes: the stiffness's eigenfields
 /// against the masses, after the rigid motions.
-#[allow(clippy::disallowed_methods)] // a mode's frequency, the root of its eigenvalue
 pub fn girder(
     cells: usize,
     length: f64,
@@ -138,7 +136,6 @@ pub fn girder(
     Shape {
         rest,
         modes: fields[RIGID..].to_vec(),
-        frequencies: values[RIGID..].iter().map(|v| v.sqrt()).collect(),
         compliance: values[RIGID..].iter().map(|v| 1.0 / v).collect(),
         masses,
         edges: truss.edges,

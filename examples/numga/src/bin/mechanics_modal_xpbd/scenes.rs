@@ -20,12 +20,17 @@ pub const MODES: usize = 8;
 pub const LINKS: usize = 4;
 pub const DAMPING: f64 = 0.02;
 pub const GRAVITY: f64 = 4.0;
+/// Each moving girder's compliance in units of the girder's: exactly rigid at the pin, then
+/// four times softer per link toward the tip, where the whip flexes it most. The chain spans
+/// the range of stiffness the method handles in one code path.
+pub const FLEXIBILITY: [f64; LINKS] = [0.0, 1.0, 4.0, 16.0];
 /// A constraint's compliance, rigid to round-off; it keeps the two constraints of a rigid
 /// splice solvable.
 pub const SPLICE: f64 = 1e-14;
-/// The swing's time step, one per frame, and its frames.
-pub const INTERVAL: f64 = 0.03;
-pub const FRAMES: usize = 200;
+/// The swing's time step, the steps per frame, and its frames.
+pub const INTERVAL: f64 = 0.02;
+pub const STEPS_PER_FRAME: usize = 2;
+pub const FRAMES: usize = 150;
 /// The beam: its moving girders, their cells of unit length, their height, the bars'
 /// stiffness, the modes' damping ratio, the final end displacement, its frames and the steps
 /// between them.
@@ -35,8 +40,8 @@ pub const BEAM_HEIGHT: f64 = 1.0;
 pub const BEAM_STIFFNESS: f64 = 1e11;
 pub const BEAM_DAMPING: f64 = 3.0;
 pub const END_DISPLACEMENT: f64 = 0.15;
-pub const BEAM_FRAMES: usize = 120;
-pub const BEAM_SUBSTEPS: usize = 2;
+pub const BEAM_FRAMES: usize = 90;
+pub const BEAM_SUBSTEPS: usize = 4;
 pub const BEAM_INTERVAL: f64 = 0.02;
 
 /// Gravity, an ideal point.
@@ -62,9 +67,10 @@ pub fn beam_girder() -> Shape {
     )
 }
 
-/// Girders end to end along x, some fixed: girder `i` centred `i - 1/2` girder lengths along,
-/// at rest, a fixed one with no compliance in its modes and no inverse inertia.
-pub fn girders(shape: &Shape, fixed: &[bool], damping: f64) -> Bodies {
+/// Girders end to end along x, some fixed, each of its own flexibility: its modes' compliance
+/// in units of the shape's, zero for a rigid girder. Girder `i` is centred `i - 1/2` girder
+/// lengths along, at rest; a fixed one has no compliance in its modes and no inverse inertia.
+pub fn girders(shape: &Shape, fixed: &[bool], damping: f64, flexibility: &[f64]) -> Bodies {
     let rest = shape.rest.sites();
     let length = (rest[rest.len() - 1] - rest[1]).e20();
     let count = fixed.len();
@@ -81,9 +87,8 @@ pub fn girders(shape: &Shape, fixed: &[bool], damping: f64) -> Bodies {
         compliance: shape
             .compliance
             .iter()
-            .map(|c| Field::from_fn(count, |b| S::new(c * moving(b))))
+            .map(|c| Field::from_fn(count, |b| S::new(c * flexibility[b] * moving(b))))
             .collect(),
-        frequencies: shape.frequencies.clone(),
         damping,
         mass: shape.mass(),
         inertia: shape.inertia,
@@ -140,32 +145,54 @@ fn first_fixed(count: usize) -> Vec<bool> {
     (0..count).map(|b| b == 0).collect()
 }
 
-/// A fixed girder followed by `count` spliced moving girders.
+/// The fixed girder in front, rigid, then the moving girders' flexibilities.
+fn behind_a_fixed_one(flexibility: &[f64]) -> Vec<f64> {
+    core::iter::once(0.0)
+        .chain(flexibility.iter().copied())
+        .collect()
+}
+
+/// A fixed girder followed by spliced moving girders, of the given flexibilities.
 #[cfg_attr(not(test), allow(dead_code))] // numga's scenario for its test
-pub fn cantilever(shape: &Shape, count: usize, damping: f64) -> (Bodies, Constraints) {
+pub fn cantilever(shape: &Shape, damping: f64, flexibility: &[f64]) -> (Bodies, Constraints) {
+    let count = flexibility.len();
     let fixed = first_fixed(count + 1);
-    (girders(shape, &fixed, damping), splices(shape, count + 1))
+    let flexibility = behind_a_fixed_one(flexibility);
+    (
+        girders(shape, &fixed, damping, &flexibility),
+        splices(shape, count + 1),
+    )
 }
 
-/// A fixed girder followed by `count` hinged moving girders.
-pub fn hinged_chain(shape: &Shape, count: usize, damping: f64) -> (Bodies, Constraints) {
+/// A fixed girder followed by hinged moving girders, of the given flexibilities.
+pub fn hinged_chain(shape: &Shape, damping: f64, flexibility: &[f64]) -> (Bodies, Constraints) {
+    let count = flexibility.len();
     let fixed = first_fixed(count + 1);
-    (girders(shape, &fixed, damping), hinges(shape, count + 1))
+    let flexibility = behind_a_fixed_one(flexibility);
+    (
+        girders(shape, &fixed, damping, &flexibility),
+        hinges(shape, count + 1),
+    )
 }
 
-/// `count` spliced moving girders between two fixed ones.
+/// `count` spliced moving girders between two fixed ones, all of the shape's flexibility.
 pub fn clamped_beam(shape: &Shape, count: usize, damping: f64) -> (Bodies, Constraints) {
     let fixed: Vec<bool> = (0..count + 2).map(|b| b == 0 || b == count + 1).collect();
-    (girders(shape, &fixed, damping), splices(shape, count + 2))
+    (
+        girders(shape, &fixed, damping, &vec![1.0; count + 2]),
+        splices(shape, count + 2),
+    )
 }
 
-/// The bodies' points at every frame, under gravity, one step per frame.
+/// The bodies' points at every frame, under gravity, `substeps` steps per frame.
+#[allow(clippy::too_many_arguments)]
 pub fn swing(
     shape: &Shape,
     bodies: &Bodies,
     constraints: &Constraints,
     gravity: P,
     dt: f64,
+    substeps: usize,
     frames: usize,
     couple: Couple,
 ) -> Vec<Vec<Field<P>>> {
@@ -173,7 +200,9 @@ pub fn swing(
     let mut points = Vec::with_capacity(frames);
     for _ in 0..frames {
         points.push(bodies.points(shape));
-        bodies = step(&bodies, constraints, dt, gravity, couple);
+        for _ in 0..substeps {
+            bodies = step(&bodies, constraints, dt, gravity, couple);
+        }
     }
     points
 }

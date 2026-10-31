@@ -26,7 +26,8 @@
 //! `S = J_b M_b⁻¹ J_bᵀ + J_q W J_qᵀ + α̃_p`, with `W = α̃_m / (1 + α̃_m)`.
 //!
 //! Top left, a chain of four girders hinged at their corners swings down under gravity from a
-//! fixed one, flexing as it goes; below, a beam of eight spliced girders between two fixed ones
+//! fixed one: the first exactly rigid, of zero compliance, each after it four times softer, so
+//! the whip flexes the tip most, all in one code path; below, a beam of eight spliced girders between two fixed ones
 //! is compressed from its end, and past Euler's critical load it buckles (the deflection of its
 //! midspan, top right, against the end's displacement).
 
@@ -46,7 +47,7 @@ use gax_numga_examples::{
 use girder::{P, Shape};
 use scenes::*;
 
-/// numga's swing: 200 frames of 30 ms.
+/// numga's swing: 150 frames of 40 ms.
 const SECONDS: f32 = 6.0;
 /// The margin around the drawn motion, as a share of its extent.
 const MARGIN: f32 = 0.06;
@@ -62,13 +63,14 @@ struct Scene {
 
 fn scene() -> Scene {
     let chain = chain_girder();
-    let (bodies, hinges) = hinged_chain(&chain, LINKS, DAMPING);
+    let (bodies, hinges) = hinged_chain(&chain, DAMPING, &FLEXIBILITY);
     let swing = swing(
         &chain,
         &bodies,
         &hinges,
         gravity(GRAVITY),
         INTERVAL,
+        STEPS_PER_FRAME,
         FRAMES,
         xpbd::coupling,
     );
@@ -297,7 +299,7 @@ mod tests {
             1.0,
             2 * (2 * (cells + 1)) - 4,
         );
-        let (bodies, constraints) = cantilever(&shape, 1, 2.0);
+        let (bodies, constraints) = cantilever(&shape, 2.0, &[1.0]);
         let initial = bodies.points(&shape);
         // Implicit compliance keeps large steps stable; the over-damped girder settles within
         // them.
@@ -327,9 +329,11 @@ mod tests {
     }
 
     /// The chain's energy: the bodies' kinetic energy, rigid and modal, the modes' elastic
-    /// energy, and the potential of the centres of mass in gravity (an ideal point).
+    /// energy, and the potential of the centres of mass in gravity (an ideal point). A mode
+    /// stores its amplitude squared over twice its compliance; a rigid girder's modes stay at
+    /// rest and store nothing.
     fn energy(bodies: &Bodies, gravity: P) -> f64 {
-        let modes = 0..bodies.frequencies.len();
+        let modes = 0..bodies.compliance.len();
         let rigid: f64 = bodies
             .rate
             .iter()
@@ -340,9 +344,11 @@ mod tests {
             .map(|m| bodies.rates[m].dot(&bodies.rates[m]) / 2.0)
             .sum();
         let elastic: f64 = modes
-            .map(|m| {
-                bodies.amplitudes[m].dot(&bodies.amplitudes[m]) * bodies.frequencies[m].powi(2)
-                    / 2.0
+            .flat_map(|m| {
+                (bodies.amplitudes[m].iter().zip(bodies.compliance[m].iter()))
+                    .filter(|(_, c)| c.s() > 0.0)
+                    .map(|(a, c)| a.s() * a.s() / (2.0 * c.s()))
+                    .collect::<Vec<_>>()
             })
             .sum();
         let pull = gravity.cast::<Direction>();
@@ -360,13 +366,16 @@ mod tests {
         rigid + modal + elastic + potential
     }
 
+    /// Exactly rigid at the pin, then four times softer per link: the energy is kept, the
+    /// hinges closed, and the fixed girder and the rigid link do not flex at all, the flexible
+    /// links more the softer they are, the softest by a small fraction of its length.
     #[test]
     fn hinged_chain_sustains_large_rotations_with_small_flex() {
         let shape = girder(4, 1.0, 0.2, 300.0, 1.0, 8);
-        let (mut bodies, hinges) = hinged_chain(&shape, 4, 0.02);
+        let (mut bodies, hinges) = hinged_chain(&shape, 0.02, &[0.0, 1.0, 4.0, 16.0]);
         let initial = bodies.points(&shape);
         let g = gravity(4.0);
-        let (mut peak_gap, mut peak_flex) = (0.0f64, 0.0f64);
+        let (mut peak_gap, mut peak_flex) = (0.0f64, [0.0f64; 5]);
         for _ in 0..200 {
             bodies = step(&bodies, &hinges, 0.008, g, coupling);
             let gaps = hinges.gaps(&bodies);
@@ -374,20 +383,34 @@ mod tests {
                 .iter()
                 .flat_map(|d| d.c)
                 .fold(peak_gap, |m, x| m.max(x.abs()));
-            for b in 0..bodies.motor.len() {
+            for (b, peak) in peak_flex.iter_mut().enumerate() {
                 let flexed = shape.deformed(|m| bodies.amplitudes[m].site(b).s());
                 let offsets = flexed
                     .iter()
                     .zip(shape.rest.iter())
                     .map(|(p, q)| (p - q).ideal_norm());
-                peak_flex = offsets.fold(peak_flex, f64::max);
+                *peak = offsets.fold(*peak, f64::max);
             }
         }
         let points = bodies.points(&shape);
         assert!(points.iter().flat_map(|f| f.iter()).all(|p| p.is_finite()));
         assert!(energy(&bodies, g) < 1e-8, "{}", energy(&bodies, g));
         assert!(peak_gap < 0.001, "{peak_gap}");
-        assert!(0.01 < peak_flex && peak_flex < 0.05, "{peak_flex}");
+        assert!(peak_flex[..2].iter().all(|f| *f == 0.0), "{peak_flex:?}");
+        assert!(
+            peak_flex[1..].windows(2).all(|w| w[1] > w[0]),
+            "{peak_flex:?}"
+        );
+        assert!(0.05 < peak_flex[4] && peak_flex[4] < 0.2, "{peak_flex:?}");
+        // numga's peak flexes: 0.0143, 0.0520, 0.1264.
+        let numga = [
+            0.014_268_038_457_95,
+            0.052_028_178_909_065,
+            0.126_369_682_692_592,
+        ];
+        for (ours, theirs) in peak_flex[2..].iter().zip(numga) {
+            assert!((ours / theirs - 1.0).abs() < 1e-6, "{ours} {theirs}");
+        }
         assert!(farthest(&points, &initial) > 2.0);
         assert!(farthest(&points[..1], &initial[..1]) <= 1e-11);
     }
@@ -430,7 +453,7 @@ mod tests {
     #[test]
     fn the_derived_step_follows_the_sparse_step() {
         let shape = girder(4, 1.0, 0.2, 300.0, 1.0, 8);
-        let (bodies, hinges) = hinged_chain(&shape, 4, 0.02);
+        let (bodies, hinges) = hinged_chain(&shape, 0.02, &[0.0, 1.0, 4.0, 16.0]);
         let g = gravity(4.0);
         let by_hand = run(&bodies, &hinges, 0.002, 100, g, xpbd::coupling);
         let derived = run(&bodies, &hinges, 0.002, 100, g, derived::coupling);
@@ -438,8 +461,9 @@ mod tests {
         assert!(difference <= 1e-10, "{difference}");
     }
 
-    /// Regression against numga (e2765b5): the girders' frequencies, and where the chain's last
-    /// vertex has swung to after numga's test's 200 steps.
+    /// Regression against numga: the girders' frequencies (e2765b5), and where the chain's last
+    /// vertex has swung to after numga's test's 200 steps (35797de, its links rigid, then 1, 4
+    /// and 16 times the girder's compliance).
     #[test]
     fn frequencies_and_the_swing_match_numga() {
         let chain = [
@@ -454,7 +478,12 @@ mod tests {
             24_128.174_385_385_1,
             94_815.484_224_559_8,
         ];
-        let found = [chain_girder().frequencies, beam_girder().frequencies];
+        // A mode's angular frequency, the inverse root of its compliance.
+        #[allow(clippy::disallowed_methods)]
+        let frequencies = |shape: Shape| -> Vec<f64> {
+            shape.compliance.iter().map(|c| 1.0 / c.sqrt()).collect()
+        };
+        let found = [frequencies(chain_girder()), frequencies(beam_girder())];
         for (frequencies, expected) in found.iter().zip([chain, beam]) {
             let (first, last) = (&frequencies[..3], frequencies[MODES - 1]);
             for (ours, theirs) in first.iter().chain([&last]).zip(expected) {
@@ -462,12 +491,12 @@ mod tests {
             }
         }
         let shape = chain_girder();
-        let (bodies, hinges) = hinged_chain(&shape, LINKS, DAMPING);
+        let (bodies, hinges) = hinged_chain(&shape, DAMPING, &FLEXIBILITY);
         let swung = run(&bodies, &hinges, 0.008, 200, gravity(GRAVITY), coupling);
         let end = swung.points(&shape)[LINKS]
             .site(shape.rest.len() - 1)
             .to_euclidean();
-        let expected = [-0.615_507_530_497, -3.864_089_406_524];
+        let expected = [-0.662_238_922_196_594, -4.037_556_648_879_066];
         assert!(
             end.iter().zip(expected).all(|(a, b)| (a - b).abs() < 1e-8),
             "{end:?}"

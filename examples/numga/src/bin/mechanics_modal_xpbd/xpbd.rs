@@ -27,7 +27,6 @@ pub struct Bodies {
     pub amplitudes: Vec<Field<S>>,
     pub rates: Vec<Field<S>>,
     pub compliance: Vec<Field<S>>,
-    pub frequencies: Vec<f64>,
     /// The modes' damping ratio.
     pub damping: f64,
     /// Each body's mass and inertia, and its inverse inertia, zero for a fixed body.
@@ -171,18 +170,14 @@ struct ModalTerm {
     response: f64,
 }
 
-/// A mode's term over a step, from its spring's compliance, its frequency, its damping ratio,
-/// and its amplitude now and before the step. The dashpot is twice the damping ratio times the
-/// frequency times the spring's compliance, over the step.
-fn modal_term(
-    compliance: f64,
-    frequency: f64,
-    damping: f64,
-    amplitude: [f64; 2],
-    dt: f64,
-) -> ModalTerm {
+/// A mode's term over a step, from its spring's compliance, its damping ratio, and its
+/// amplitude now and before the step. The dashpot is twice the damping ratio times the
+/// spring's compliance times its frequency, the root of the compliance over the step; a rigid
+/// mode, of no compliance, has none and never moves.
+fn modal_term(compliance: f64, damping: f64, amplitude: [f64; 2], dt: f64) -> ModalTerm {
     let [now, previous] = amplitude;
-    let dashpot = 2.0 * damping * frequency * compliance / dt;
+    #[allow(clippy::disallowed_methods)] // a mode's period over 2 pi, the root of its compliance
+    let dashpot = 2.0 * damping * compliance.sqrt() / dt;
     let softened = compliance / (dt * dt) / (1.0 + dashpot);
     ModalTerm {
         compliance: softened,
@@ -203,17 +198,11 @@ pub fn modal_terms(bodies: &Bodies, previous: &[Field<S>], dt: f64) -> ModalTerm
     let term = |m: usize, b: usize| {
         let amplitude = [bodies.amplitudes[m].site(b).s(), previous[m].site(b).s()];
         let compliance = bodies.compliance[m].site(b).s();
-        modal_term(
-            compliance,
-            bodies.frequencies[m],
-            bodies.damping,
-            amplitude,
-            dt,
-        )
+        modal_term(compliance, bodies.damping, amplitude, dt)
     };
     let count = bodies.motor.len();
     let part = |of: fn(ModalTerm) -> f64| -> Vec<Field<S>> {
-        (0..bodies.frequencies.len())
+        (0..bodies.compliance.len())
             .map(|m| Field::from_fn(count, |b| S::new(of(term(m, b)))))
             .collect()
     };
