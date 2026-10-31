@@ -171,8 +171,8 @@ mod tricycle {
     pub const WHEELBASE: f64 = 1.2;
     pub const TRACK: f64 = 0.8;
     /// The distance the front wheel rolls per step, over the wheelbase, and the steps.
-    pub const STEP: f64 = 0.04;
-    pub const STEPS: usize = 600;
+    pub const STEP: f64 = 0.016;
+    pub const STEPS: usize = 1500;
     /// The steering angle held, how far it swings about that, and how many times it swings over
     /// the drive.
     pub const BIAS: f64 = 0.35;
@@ -219,8 +219,8 @@ mod tricycle {
 
 use tricycle::*;
 
-/// numga's 150 frames of 50 ms over the drive.
-const SECONDS: f32 = 7.5;
+/// numga's 188 frames of 40 ms over the drive.
+const SECONDS: f32 = 7.52;
 /// The wheels' radius.
 const WHEEL_RADIUS: f64 = 0.25;
 /// Half the width of the view, which follows the middle of the rear axle.
@@ -408,7 +408,8 @@ fn draw_space(c: &mut Canvas, rect: Rect, drive: &Drive<Pga3d>, k: usize) {
 
 fn draw(c: &mut Canvas, d: &Drives, t: f32) {
     backdrop(c);
-    let k = ((t / SECONDS).rem_euclid(1.0) * (STEPS - 1) as f32).round() as usize;
+    // From the first step on, so that every trail is a line.
+    let k = 1 + ((t / SECONDS).rem_euclid(1.0) * (STEPS - 2) as f32).round() as usize;
     let body = c
         .rect()
         .part(0.0, 0.16, 1.0, 1.0)
