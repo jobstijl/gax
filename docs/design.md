@@ -317,7 +317,9 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   This is a blade-matching contraction with no metric (numga's `trace(slot)`). A contraction between two
   *inputs* needs a pairing and is written with `&` or `|`. That is why the brief's
   `.trace::<I, J>()` is not provided.
-* **Adjoints: no `m.adjoint()` method.** An adjoint is written as numga writes it, as a pairing solve.
+* **Adjoints: amended by ADR-053.** `m.adjugate()` (through `&`) and `m.adjoint()` (through the
+  scalar product) are methods now; the pairing solve below still works and agrees with them.
+  The original decision, for the record: no `m.adjoint()` method; an adjoint is written as numga writes it, as a pairing solve.
   For example, `(Plane::slot() & Point::slot()).solve(Plane::slot() & t)` is the map on planes induced by
   a point map `t`, and it satisfies `induced(l) & p == l & t(p)`. It exists even when `t` is singular.
   * `Pairing::solve` accepts a right-hand side with leading slots, which become slots of the solution.
@@ -2202,6 +2204,94 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   by name, the arithmetic, `f64`, `Slot`, `Log`, `normalized`/`unit`); (2) names and linear
   algebra; (3) geometry helpers and uniform roles. Internal cleanups of the generator (output
   byte-identical) and of gax-core go first.
+
+## ADR-053: Transposes through a pairing: `adjugate` and `adjoint`
+*Status: implemented (2026-10-31). Amends ADR-014. Phase 13.*
+
+* **Why revisit.** ADR-014 declined an adjoint method: the pairing has to be named, and a
+  pairing solve names it. numga `35797de` added `adjugate()` and `adjoint()` on maps and sparse
+  maps, and about twenty of its new ports move strains, stresses, tides, cones and every mesh
+  operator by them (`rigid.adjugate()(forces)`, `covariant.adjoint()(w * covariant)`). Written
+  as solves, each is two slot constructions and an LU factorization of a matrix that is a
+  constant signed permutation, and in a sparse map one per cell. The name still says which
+  pairing: there are exactly two, and each method is one.
+* **`adjugate()`: through the regressive product, no metric.** For `t: B <- A` it is the map
+  `C(A) <- C(B)` between the complement kinds with `(t.adjugate().of(c) & a)₀ == (c & t.of(a))₀`,
+  the complement on the left (numga's definition and order). In gax the complement kind carries
+  the opposite orientation (ADR-051), so `Plane<(Point,)>` and `Point<(Plane,)>` transpose into
+  each other. Each blade pairs with its complement alone, to `±1`, so the transpose is
+  `P_A tᵀ P_Bᵀ` with constant signed permutations: a generated table per kind,
+  `gx::Complement { type Out; const PAIRS }`, emitted where a declared kind holds exactly the
+  complements (else there is no method, and the trait's message says to declare a part,
+  ADR-054). It is a rearrangement of coefficients with signs, exact on every coefficient type
+  (`Sym`, jets, SIMD lanes), and defined for singular maps: a transpose, not an inverse. On an
+  outermorphism it is the classical adjugate, `adj(t_k) ∘ t_(n−k) = det t · id`. Twice it is
+  `t` up to the sign of swapping each pairing, `(−1)^(k(n−k))` per blade: the grade involution
+  on both sides in even dimensions (numga's "the adjugate of the adjugate of a `Point <- Twist`
+  is its negative"), nothing in odd ones.
+* **`adjoint()`: through the scalar product, the metric.** `A <- B` with
+  `t.adjoint().of(b).scalar_product(a) == b.scalar_product(t.of(a))` (numga's, Hestenes and
+  Sobczyk's), `G_A⁻¹ tᵀ G_B` with the Gram matrices of the scalar product. These exist where
+  the kind has a reciprocal frame (ADR-047), so `Reciprocal` gained the Gram matrix itself
+  (`GRAM`) beside its inverse, and the adjoint is bounded by it: on a PGA kind holding `e0`
+  there is none, a compile error where numga raises `LinAlgError` at run time. Not restricted
+  to signed permutations: CGA's null pairs and STA's signs are rows of the tables.
+* **Why not one generic transpose through any pairing.** A pairing with a non-constant matrix
+  is a form, whose transpose is its solve, which exists (`Pairing::solve`); the two named ones
+  are the constant ones, and constant tables are what make them exact and free.
+* **Field maps.** `SparseMap::adjugate` and `adjoint` run the couplings back and transpose each
+  cell (`transpose_with`), numga's sparse versions. Maps over `Sites<K, N>` have none yet: a
+  table for `Sites` would need a const of size `N · K::N` (generic const expressions).
+* **Laws** (law G of laws.md, generated per algebra): for every kind with a complement, maps
+  into itself and into its complement, and for every kind with a reciprocal frame, maps into
+  itself: the defining identity through the generated products, reversal of composition, the
+  identity, twice (with the swap sign for the adjugate), all exact on symbolic coefficients;
+  and agreement with the pairing solve in f64. `tests/adjugate.rs` adds the classical adjugate
+  of outermorphisms in PGA3D and VGA3D, numga's docstring statements, the parts' maps and
+  sparse maps; compile-fail tests pin the missing complement and the degenerate metric.
+
+## ADR-054: Parts of the standard algebras for numga's sub-kinds
+*Status: implemented (2026-10-31). Extends ADR-036. Phase 13.*
+
+* **The problem.** numga types any set of blades (`derive.nondegenerate`, `containing("w")`,
+  `within("x y")`, `from_blades`), and its new ports use sub-kinds of the standard kinds as
+  slots, as adjugates' kinds and as outermorphisms' targets: PGA3D's spins `e23, e31, e12`
+  (rolling), moments `e01, e02, e03` (couples, angular momenta: rattleback, kirchhoff), planes
+  through the origin `e1, e2, e3` (the complements of directions: rattleback's shapes); PGA2D's
+  lines through the origin; STAP's readouts `e1..e4` and their complements (gps); VGA3D's
+  horizontal vectors and their complements (specular caustics).
+* **Options.**
+  1. *User-declared parts of a standard algebra* (a `gax::parts!` beside the generated module).
+     The generator would need an extension mode that emits only what touches the new kinds,
+     with paths into gax's modules, products in both directions with every standard kind (the
+     orphan rules allow `impl Mul<Local> for pga3d::Line`) and the kind tables both ways; a
+     second build path for every emitted item. `algebra!` already gives a bespoke algebra.
+  2. **Chosen: named parts in the specs**, as `Direction` and `Paravector` were (ADR-036). A
+     part is never a result type, so no existing result changes; it gets casts, sub-kind
+     binding, its own maps with `solve`, `inverse`, `det` (generic, ADR-014), products and
+     sandwiches as an operand, GPU layouts and WGSL structs. Each part added is the complement
+     of another kind, so that the adjugates of their maps are square (ADR-053).
+* **The parts.** PGA3D: `Spin = [e23, e31, e12]` (extrinsic: an angular velocity, a line
+  through the origin) and its complement `Moment = [e01, e02, e03]` (intrinsic: a couple, an
+  angular momentum; extrinsic: a translation rate), `OriginPlane = [e1, e2, e3]`, the complement
+  of `Direction`. PGA2D: `OriginLine = [e1, e2]`, the complement of `Direction`. STAP:
+  `Direction = [e0324, e0134, e0214, e0123]` (intrinsic, as PGA3D's) and its complement
+  `OriginHyperplane = [e1, e2, e3, e4]`. VGA3D: `Horizontal = [e1, e2]` and its complement
+  `Tilt = [e23, e31]`, for z up, numga's examples' convention.
+  Each orientation default is what its numga use makes it.
+* **Outermorphisms onto parts.** A base kind may now hold some of the (anti)vectors, not all
+  (a part of grade 1 or `n − 1`), and extends to the kinds holding every product of `k` of its
+  factors: `Direction` to `Moment` by `∨` (numga's `confocal.outermorphism(Couple)`),
+  `OriginPlane` to `Spin` by `∧`. The derivation was already per blade; the base's and target's
+  "holds the whole grade" became "holds every product of its factors", which for a full base is
+  the same condition, so no existing outermorphism changed. A new law checks every extension
+  onto two factors against the product that defines it.
+* **Cost.** Parts multiply out through products and sandwiches as operands: the generated
+  lines grow by 37 % in PGA3D (66 k to 91 k), 36 % in VGA3D, 20 % in STAP, 15 % in PGA2D;
+  a dev build of `gax` with only `pga3d` goes from 9.6 s to about 12.7 s. Products of parts
+  are used (a spin wedged with a plane, a moment joined with a point), as `Direction`'s are.
+  If the growth matters later, a part could opt out of being an operand, its products then
+  going through `cast::<Line>()`.
 
 ## Hypotheses
 

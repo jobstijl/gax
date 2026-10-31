@@ -471,24 +471,43 @@ let potential: Scalar<(Point, Point), f64> = Point::slot() & stiffness;
 let (values, modes) = potential.eigh(kinetic);                           // modes: [Point; 3], twists
 ```
 
-**There is no transpose.** A transpose identifies a space with its dual by coefficient index, which is
-right only for a Euclidean orthonormal basis. As in numga, pairings are explicit:
+**Transposes name their pairing.** A plain transpose identifies a space with its dual by
+coefficient index, which is right only for a Euclidean orthonormal basis. As in numga, a map
+has two transposes, one per pairing:
 
-* `&` pairs a plane with a point without using the metric;
-* `|` uses the metric.
+* `m.adjugate()` goes through the regressive product `&`, without the metric: for
+  `m: B <- A` it is the map between the complement kinds, `C(A) <- C(B)`, with
+  `(m.adjugate().of(c) & a)₀ == (c & m.of(a))₀`. Points and planes are complements, so a map
+  on points has an adjugate on planes, and a map from points to planes (a correlation) has one
+  of its own type. It exists in PGA and for singular maps: it is a transpose, not an inverse.
+  Applied to an outermorphism it is the classical adjugate (the determinant times the inverse
+  on the complementary grade); applied twice, `m` up to the sign of swapping each pairing
+  (`(−1)^(k(n−k))` per blade of grade `k`: in PGA3D a `Point <- Line`'s comes back negated).
+* `m.adjoint()` goes through the scalar product: `B -> A`, with
+  `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`. It needs the metric to be
+  non-degenerate on both kinds, so a PGA kind holding `e0` has none (no method): use the
+  adjugate there. A unit versor's sandwich has its inverse sandwich as its adjoint.
 
-An induced map is a pairing solve. It exists even when the map has no inverse, such as a central
-projection:
+Both exist where the kinds have the tables: the adjugate where the complement of each kind is
+declared (the standard algebras declare the common ones as parts, §9), the adjoint where the
+kind has a reciprocal frame. Field maps transpose cell by cell, `SparseMap::adjugate` and
+`adjoint` (numga's connection Laplacian is `covariant.adjoint()` composed with the weighted
+`covariant`). A central projection has no inverse, but an adjugate:
 
 ```rust
+use gax::ApproxEq;
 use gax::pga3d::{Plane, Point, Scalar};
 
 let eye = Point::<(), f64>::xyz(0.0, 0.0, 5.0);
 let screen = Plane::<(), f64>::with_normal(Point::direction(0.0, 0.0, 1.0), 0.0);
 let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
+let on_planes: Plane<(Plane,), f64> = projection.adjugate();
+let (l, p) = (Plane::new(1.0, 2.0, 0.5, -1.0), Point::xyz(0.3, -0.7, 2.0));
+assert!((on_planes.of(l) & p).approx_eq(&(l & projection.of(p)), 1e-12));
+// The same map as a pairing solve, for a pairing that is not one of the two:
 let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
-let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & projection);
-// on_planes.of(l) & p == l & projection.of(p) for every plane l and point p
+let solved: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & projection);
+assert!(solved.approx_eq(&on_planes, 1e-12));
 ```
 
 **When a solve fails.** The plain methods do not check. A singular dense map's `inverse` and
@@ -673,7 +692,15 @@ gax::algebra! {
   `Multivector` are added if you leave them out.
 * **Parts in the standard algebras.** PGA2D and PGA3D have `Direction`, the ideal points
   (`point.cast::<Direction>()` drops the weight, `Direction::slot()` is a map that takes only
-  directions); VGA3D has `Paravector` (`1 + r`, the Pauli algebra's states). STA's `Phasor`
+  directions), and their complements, PGA3D's `OriginPlane` (`e1, e2, e3`) and PGA2D's
+  `OriginLine` (`e1, e2`), so that a stretch of directions has its adjugate on planes through
+  the origin. PGA3D splits its lines into `Spin` (`e23, e31, e12`: rotations about the origin)
+  and `Moment` (`e01, e02, e03`: couples and angular momenta, intrinsic), complements of each
+  other; a map on directions extends to moments by `∨`
+  (`stretch.outermorphism::<Moment>()`), one on origin planes to spins by `∧`. STAP has the
+  same split of its events and hyperplanes, `Direction` and `OriginHyperplane` (a clock's
+  readout); VGA3D has `Horizontal` (`e1, e2`, for z up) and its complement `Tilt`
+  (`e23, e31`), and `Paravector` (`1 + r`, the Pauli algebra's states). STA's `Phasor`
   (`a + b e0123`, a complex number commuting with the even subalgebra) is a full kind instead:
   phasors multiply, invert and sandwich to phasors, the pseudoscalar's `exp` lands in one, and
   so does the anticommutator of two bivectors (a field's invariants, `F∘F = E² − B² + 2 E·B I`).
@@ -1138,6 +1165,12 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   `x y z w`, so `x∧y∧z∧w = −e0123`, and its PGA3D points, `&` and `dual` were the negatives of
   gax's. `examples/numga` ports numga's examples from before the change and notes those sign
   differences where they arise. PGA2D always agreed.
+* **numga's sub-kinds.** numga types any set of blades (`derive.nondegenerate`,
+  `containing("w")`, `from_blades`). gax names the ones its ports use as parts (§9): numga's
+  nondegenerate PGA3D vectors are `OriginPlane`, its bivectors `Spin`, its antibivectors
+  containing `w` (couples, angular momenta) `Moment`; other subsets are a `cast` to the
+  smallest kind holding them, or an `algebra!` of your own. numga's `adjugate` and `adjoint` are
+  gax's, with the same pairings and the complement on the left (§6).
 * **Clippy and the operators.** `clippy::eq_op` reads `a | a` and `b ^ b` as bitwise operations
   on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.

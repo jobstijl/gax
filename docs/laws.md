@@ -59,7 +59,8 @@ on `Sym`.
   * every product and unary operation among kinds with at most 8 coefficients;
   * every sandwich that keeps its kind, for versors with at most 8 coefficients;
   * every outermorphism of maps on kinds with at most 5 coefficients;
-  * every scalar pairing whose matrix is a constant signed permutation.
+  * every scalar pairing whose matrix is a constant signed permutation;
+  * the adjugate and adjoint of maps on every kind that has them.
 
   Larger instances make the free polynomials explode (see ADR-025). The suites cover the eight
   standard algebras and PGA4D, declared through `algebra!`.
@@ -137,6 +138,11 @@ method (ADR-013).
 
 * [sym] It is a functor: `f.of(g).outermorphism::<B>() == f.outermorphism::<B>().of(g.outermorphism::<B>())`,
   and the identity extends to the identity.
+* [sym] On two factors it is the product that defines it: for every extension onto the
+  products of two of the base's factors, `f.outermorphism::<B>().of((a ∘ b).cast::<B>()) ==
+  (f.of(a) ∘ f.of(b)).cast::<B>()`, with `∘` the wedge for vectors and the join for
+  antivectors, bases that hold some of the (anti)vectors included (PGA3D's `Direction` onto
+  `Moment`, `OriginPlane` onto `Spin`; ADR-054).
 * [sym] The determinant, read from the top grade, is multiplicative.
 * [sym/ideal] The determinant of a unit versor's map on vectors (or on antivectors, such as PGA
   points) is `±1`, modulo `u ~u = 1`. The generator computes the sign for each versor kind:
@@ -150,12 +156,26 @@ method (ADR-013).
 * [sym] `trace_at::<I>` agrees with binding the other slots and taking the trace:
   `m.trace_at::<1>().of(y) == m.of(y).trace()`.
 
-### G. Adjoint through a pairing (`adjoint_laws`)
+### G. Transposes through a pairing (`adjugates`, `adjoints`, `adjoint_laws`)
 
-There is no `adj` method, on purpose (ADR-014): the adjoint is a pairing solve,
-`pairing.solve(A::slot() & t)`. Solves branch and divide, so they can't be proved on `Sym`.
-Instead, for pairings whose matrix `P` is a constant signed permutation, the suite uses the
-closed form `adj(t) = P tᵀ Pᵀ`, and proves:
+The adjugate `t.adjugate()` (through `&`, between complement kinds) and the adjoint
+`t.adjoint()` (through the scalar product) of ADR-053, for every kind with a declared
+complement (maps into itself and into its complement) and every kind with a reciprocal frame
+(maps into itself), with at most 8 coefficients:
+
+* [sym] the defining identities, through the generated products, not the tables:
+  `(t.adjugate().of(c) & a)₀ == (c & t.of(a))₀` and
+  `t.adjoint().of(b).scalar_product(a) == b.scalar_product(t.of(a))`;
+* [sym] both reverse composition, `(t ∘ s)ᵃ == sᵃ ∘ tᵃ`, and fix the identity;
+* [sym] the adjoint is an involution; the adjugate applied twice is `t` times
+  `(−1)^(k(n−k))` for the grade `k` of each output and input blade (the sign of swapping a
+  blade's pairing with its complement);
+* [prop] the pairing's `solve` agrees in f64: `(C(A) & A)₀` solved against `(C(B) & t)₀`, and
+  `A·A` against `B·t`.
+
+`adjoint_laws` keeps the closed form `P tᵀ Pᵀ` of a pairing solve for every scalar pairing
+whose matrix `P` is a constant signed permutation (the vee, dot, wedge and scalar pairings the
+generator finds), and proves:
 
 * [sym] the defining identity, `pair(adj(t).of(l), x) == pair(l, t.of(x))`;
 * [sym] it reverses composition, `adj(t ∘ s) == adj(s) ∘ adj(t)`;
@@ -163,10 +183,14 @@ closed form `adj(t) = P tᵀ Pᵀ`, and proves:
 * [sym] with the flipped pairing, applying it twice gives back `t`;
 * [prop] `Pairing::solve` agrees with the closed form in f64.
 
+`tests/adjugate.rs` adds [prop] the classical adjugate of outermorphisms,
+`adj(t_k) ∘ t_(n−k) = det t · id` in PGA3D and VGA3D, numga's docstring statements (a
+`Point <- Line`'s adjugate twice is its negative, a correlation's adjugate has its own type, a
+rotation's adjoint is its inverse) and the transposes of field maps.
+
 **Which pairing.** In PGA the metric is degenerate (`e0 · e0 = 0`), so the inner product `|` is
-singular. The join `&` pairs planes with points non-degenerately (the pairing matrix is a signed
-permutation), and it is the pairing there. The suites include every such pairing that the
-generator finds.
+singular, and so is the scalar product on any kind holding `e0`: no adjoint there. The join `&`
+pairs planes with points non-degenerately, and the adjugate is the transpose there.
 
 ### H. `fill` is the diagonal (`fill`)
 
