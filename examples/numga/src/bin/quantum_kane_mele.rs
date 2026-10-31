@@ -2,9 +2,13 @@
 //! the geometric algebra of space (VGA3D). An electron hops between neighbouring carbon atoms,
 //! and its state on each atom is a spinor, an even multivector; the flake's state is a field of
 //! spinors. The Hamiltonian is a sparse field map whose cells multiply from the left: minus one
-//! for each hop to a neighbour, the spin-orbit strength times `xy` (signed by the sense in which
-//! the path turns through the atom between) for each hop to a second neighbour, and a mass
-//! signed by sublattice on each atom.
+//! for each hop to a neighbour, the spin-orbit strength times the plane the hop's path turns in
+//! for each hop to a second neighbour, and a mass signed by sublattice on each atom. The plane is
+//! the commutator of the path's two steps through the site between, a unit bivector `±xy`: the
+//! sense of the turn is the sense of the plane, so the coupling's handedness is the geometry's,
+//! with no sign assigned to a hop. The atoms' positions, and the steps between them, are points
+//! and directions of space, intrinsic bivectors (numga's antivectors, ADR-051), and a spin read
+//! out in its own space is intrinsic too, an intrinsic vector, like every angular momentum.
 //!
 //! Every cell is a scalar or a multiple of `xy`: an even multivector of the plane, VGA2D's
 //! rotor. Multiplying from the left by these keeps the spin along z, so the spin-up spinors (the
@@ -16,15 +20,14 @@
 //! Where the mass is below `3 √3` times the spin-orbit coupling, the bulk gap holds states on
 //! the flake's rim, and the two spins run around it in opposite senses; a larger mass opens a
 //! plain gap. Time turns a state of energy `E` by `exp(-xy E t)` on its right, and an
-//! electron's spin density on each atom is `psi z ~psi`.
+//! electron's spin density on each atom is `psi >> xy*`, read as up by the plane `xy`.
 //!
 //! The animation shows an electron started at the middle of the edge facing x with its spin
-//! along x (half up, half down): its spin-up half (red) runs clockwise around the rim, its
-//! spin-down half (blue) counterclockwise. Beside it, the spin-up levels nearest zero against
+//! along x (half up, half down): its spin-up half (red) runs counterclockwise around the rim,
+//! its spin-down half (blue) clockwise. Beside it, the spin-up levels nearest zero against
 //! the mass, shaded by their share on the rim, and the state nearest zero below and above the
 //! transition.
 
-use gax::vga3d::Vector;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
     from_above, palette, reach3, run_with,
@@ -33,7 +36,7 @@ use gax_numga_examples::{
 mod kane_mele {
     use gax::field::{Field, SparseMap};
     use gax::vga2d::Rotor as Up;
-    use gax::vga3d::{Bivector, Rotor, Vector};
+    use gax::vga3d::{Bivector, Rotor, Vector, intrinsic};
     use gax::{Extensor, Kind};
     use gax_numga_examples::par_map;
     use gax_numga_examples::signal::linspace;
@@ -45,26 +48,41 @@ mod kane_mele {
     pub type Spinor = Rotor;
     pub type Spinors = Field<Spinor>;
 
+    /// A position of an atom, or a step between two: a point of space, numga's antivector.
+    pub type Point = intrinsic::Bivector;
+    /// A spin read out in its own space: intrinsic, like every angular momentum.
+    pub type Spin = intrinsic::Vector;
+
     pub fn x() -> Vector {
         Vector::new(1.0, 0.0, 0.0)
     }
-    pub fn z() -> Vector {
-        Vector::new(0.0, 0.0, 1.0)
+    pub fn y() -> Vector {
+        Vector::new(0.0, 1.0, 0.0)
     }
     pub fn xy() -> Bivector {
         Bivector::new(0.0, 0.0, 1.0)
     }
+    /// The spin of the spinor one, spin up: the patch of the plane `xy`.
+    pub fn up_spin() -> Spin {
+        xy().dual()
+    }
+
+    /// The coordinates of a point, read by the planes `x` and `y` (numga's `coordinates`), as a
+    /// vector in the plane `z = 0`, for drawing and for lengths.
+    pub fn coordinates(p: Point) -> Vector {
+        Vector::new((x() & p).s(), (y() & p).s(), 0.0)
+    }
 
     /// A hexagonal graphene flake with armchair edges: the atoms' positions, their sublattices
     /// (plus and minus one), the pairs of neighbours and of second neighbours (each both ways
-    /// round) with the sense each second neighbour's path turns, which atoms are on the rim, and
-    /// the atom in the middle of the edge facing x.
+    /// round), each pair of second neighbours with the lattice site between its two atoms, which
+    /// atoms are on the rim, and the atom in the middle of the edge facing x.
     pub struct Flake {
-        pub positions: Field<Vector>,
+        pub positions: Field<Point>,
         pub sublattice: Vec<f64>,
         pub first: Vec<[usize; 2]>,
         pub second: Vec<[usize; 2]>,
-        pub senses: Vec<f64>,
+        pub between: Vec<Point>,
         pub rim: Vec<bool>,
         pub start: usize,
     }
@@ -107,26 +125,24 @@ mod kane_mele {
                 s: 1 - self.s,
             })
         }
-        /// Its six second neighbours' places, one cell away on its own sublattice, and the
-        /// sense the path through the atom between turns: one way for three, the other way for
-        /// the rest, opposite on the two sublattices.
-        fn second_neighbours(self) -> [(Atom, f64); 6] {
-            const STEPS: [(i64, i64, f64); 6] = [
-                (1, 0, -1.0),
-                (-1, 1, -1.0),
-                (0, -1, -1.0),
-                (-1, 0, 1.0),
-                (1, -1, 1.0),
-                (0, 1, 1.0),
-            ];
-            let k = self.sign() as f64;
-            STEPS.map(|(di, dj, turn)| {
+        /// Its six second neighbours' places, one cell away on its own sublattice, each with
+        /// the one site of the other sublattice that neighbours both (at the flake's edge that
+        /// site may hold no atom).
+        fn second_neighbours(self) -> [(Atom, Atom); 6] {
+            const STEPS: [(i64, i64); 6] = [(1, 0), (-1, 1), (0, -1), (-1, 0), (1, -1), (0, 1)];
+            STEPS.map(|(di, dj)| {
                 let at = Atom {
                     i: self.i + di,
                     j: self.j + dj,
                     s: self.s,
                 };
-                (at, k * turn)
+                let theirs = at.neighbours();
+                let between = self
+                    .neighbours()
+                    .into_iter()
+                    .find(|n| theirs.iter().any(|m| (m.i, m.j) == (n.i, n.j)))
+                    .expect("second neighbours share a neighbour");
+                (at, between)
             })
         }
     }
@@ -184,9 +200,16 @@ mod kane_mele {
             .collect();
         let lookup = Lookup::new(&atoms, size);
 
+        // The lattice's two directions, the second 60 degrees from the first.
+        let lattice_u: Point = x().dual();
+        let lattice_v = (xy() * (-core::f64::consts::PI / 6.0)).exp() >> lattice_u;
+        let place = |a: Atom| {
+            let (u, v) = a.uv();
+            lattice_u * u + lattice_v * v
+        };
         let mut first = Vec::new();
         let mut second = Vec::new();
-        let mut senses = Vec::new();
+        let mut between = Vec::new();
         for (k, a) in atoms.iter().enumerate() {
             first.extend(
                 a.neighbours()
@@ -194,22 +217,14 @@ mod kane_mele {
                     .filter_map(|n| lookup.get(*n))
                     .map(|m| [k, m]),
             );
-            for (n, sense) in a.second_neighbours() {
+            for (n, middle) in a.second_neighbours() {
                 if let Some(m) = lookup.get(n) {
                     second.push([k, m]);
-                    senses.push(sense);
+                    between.push(place(middle));
                 }
             }
         }
-        // The second lattice direction: x turned by 60 degrees.
-        let b = (xy() * (-core::f64::consts::PI / 6.0)).exp() >> x();
-        let positions = atoms
-            .iter()
-            .map(|a| {
-                let (u, v) = a.uv();
-                x() * u + b * v
-            })
-            .collect();
+        let positions = atoms.iter().map(|a| place(*a)).collect();
         let facing = |a: &Atom| {
             let (u, v) = a.uv();
             2.0 * u + v
@@ -224,7 +239,7 @@ mod kane_mele {
             sublattice: atoms.iter().map(|a| a.sign() as f64).collect(),
             first,
             second,
-            senses,
+            between,
             rim: atoms
                 .iter()
                 .map(|a| a.reach() > (1.0 - rim) * size as f64)
@@ -240,9 +255,25 @@ mod kane_mele {
         SparseMap::new(cells, rows, cols, (atoms, atoms))
     }
 
+    /// The plane each hop to a second neighbour turns in: the hop runs from the second atom,
+    /// through the site between, to the first, and the commutator of its two steps is the plane,
+    /// its sense which way the path turns. A unit bivector, `±xy`.
+    pub fn turns(flake: &Flake) -> Vec<Bivector> {
+        flake
+            .second
+            .iter()
+            .zip(&flake.between)
+            .map(|([near, far], between)| {
+                let (near, far) = (flake.positions.site(*near), flake.positions.site(*far));
+                (near - *between).commutator(*between - far).normalized()
+            })
+            .collect()
+    }
+
     /// The flake's Hamiltonian: minus one for each hop between neighbours, the spin-orbit
-    /// coupling times `xy` (signed by the sense the path turns) for each hop to a second
-    /// neighbour, and the mass signed by sublattice on each atom.
+    /// coupling times the plane its path turns in for each hop to a second neighbour (a coupling
+    /// of the plane `xy`, VGA2D's rotor, from its `xy` part), and the mass signed by sublattice
+    /// on each atom.
     pub fn hamiltonian(flake: &Flake, spin_orbit: f64, mass: f64) -> SparseMap<Coupling> {
         let atoms = flake.sublattice.len();
         let hop = couplings(
@@ -250,10 +281,9 @@ mod kane_mele {
             vec![Coupling::new(-1.0, 0.0); flake.first.len()],
             atoms,
         );
-        let turns = flake
-            .senses
-            .iter()
-            .map(|s| Coupling::new(0.0, s * spin_orbit))
+        let turns = turns(flake)
+            .into_iter()
+            .map(|plane| Coupling::new(0.0, plane.e12() * spin_orbit))
             .collect();
         let turn = couplings(&flake.second, turns, atoms);
         let stagger = flake
@@ -310,14 +340,15 @@ mod kane_mele {
 
     /// An electron started on atom `start` with `spinor`, keeping only its part in the given
     /// states, after `time`: each state turns on its right at the rate of its energy, and the
-    /// spin density on each atom is `psi z ~psi`, as long as the electron's density there.
+    /// spin density on each atom is `psi >> up_spin`, as long as the electron's density there
+    /// and pointing along its spin.
     pub fn spread(
         states: &[Spinors],
         energies: &[f64],
         start: usize,
         spinor: Spinor,
         time: f64,
-    ) -> Field<Vector> {
+    ) -> Field<Spin> {
         let turned: Vec<Spinor> = states
             .iter()
             .zip(energies)
@@ -333,7 +364,7 @@ mod kane_mele {
                 .zip(&turned)
                 .map(|(s, t)| s.site(a) * *t)
                 .sum();
-            psi >> z()
+            psi >> up_spin()
         })
     }
 
@@ -423,13 +454,17 @@ fn data() -> Data {
 }
 
 /// An atom's place in the drawing's plane.
-fn place(p: Vector) -> Point2 {
-    from_above(reach3(p))
+fn place(p: Point) -> Point2 {
+    from_above(reach3(coordinates(p)))
 }
 
 /// Axes that fit the flake in a rectangle.
 fn flake_axes(rect: Rect, f: &Flake) -> Axes {
-    let reach = f.positions.iter().map(|p| p.norm()).fold(0.0, f64::max) as f32;
+    let reach = f
+        .positions
+        .iter()
+        .map(|p| coordinates(p).norm())
+        .fold(0.0, f64::max) as f32;
     Axes::equal(rect, ORIGIN2, reach * 1.08)
 }
 
@@ -453,7 +488,8 @@ fn draw_spin(c: &mut Canvas, ax: &Axes, d: &Data, time: f64) {
     for (p, s) in d.flake.positions.iter().zip(spins.iter()) {
         let share = (s.norm() / largest) as f32;
         if share > 0.02 {
-            let tone = colormap::coolwarm(0.5 + 0.5 * (s.e3() / largest) as f32);
+            let up = (xy() & s).s();
+            let tone = colormap::coolwarm(0.5 + 0.5 * (up / largest) as f32);
             ax.scatter(c, &[place(p)], Marker::Dot, 3.0 + 13.0 * share, tone);
         }
     }
@@ -533,7 +569,7 @@ fn draw(c: &mut Canvas, d: &Data, t: f32) {
     let text = format!("AN ELECTRON FROM THE EDGE  T = {time:.1}");
     c.text(&text, title, 11.0, palette::INK, Align::Center);
     let note = main.bottom_middle() + below.gp(12.0);
-    let text = "SPIN UP (RED) CLOCKWISE, SPIN DOWN (BLUE) COUNTERCLOCKWISE";
+    let text = "SPIN UP (RED) COUNTERCLOCKWISE, SPIN DOWN (BLUE) CLOCKWISE";
     c.text(text, note, 9.0, palette::INK, Align::Center);
 
     // The state nearest zero at the sweep's ends, below the transition and above.
@@ -564,16 +600,17 @@ mod tests {
     use super::kane_mele::*;
     use gax::field::{Field, SparseMap};
     use gax::vga2d::Scalar;
-    use gax::vga3d::Vector;
 
     /// The masses of numga's sweep.
     const MASSES: usize = 41;
 
     /// numga's `test_spin_up_levels_are_those_of_the_complex_hamiltonian`: with the spin-orbit
-    /// hop `i` times the turn's sense, the complex Hamiltonian of the spin-up amplitudes has the
-    /// levels of the spin-up spinors. numga solves the complex matrix with NumPy; here it is
-    /// written out from the flake's pairs as the real symmetric matrix of its real and imaginary
-    /// parts, on twice the atoms, which holds each level twice.
+    /// hop `i` times the sense of the turn on each pair of second neighbours, the sign of the
+    /// patch its path's two steps span read by the plane `xy`, the complex Hamiltonian of the
+    /// spin-up amplitudes has the levels of the spin-up spinors. numga solves the complex matrix
+    /// with NumPy; here it is written out from the flake's pairs as the real symmetric matrix of
+    /// its real and imaginary parts, on twice the atoms, which holds each level twice. The port
+    /// checks too that those senses are the commutator's planes, `±xy`.
     #[test]
     fn spin_up_levels_are_those_of_the_complex_hamiltonian() {
         let f = flake(8, RIM);
@@ -589,8 +626,20 @@ mod tests {
                 triples.push((part + a, part + b, s(-1.0)));
             }
         }
+        let senses: Vec<f64> = f
+            .second
+            .iter()
+            .zip(&f.between)
+            .map(|([near, far], between)| {
+                let (near, far) = (f.positions.site(*near), f.positions.site(*far));
+                (xy() & ((*between - far) & (near - *between))).s().signum()
+            })
+            .collect();
+        for (plane, sense) in turns(&f).iter().zip(&senses) {
+            assert!((plane.e12() - sense).abs() < 1e-12 && plane.e23() == 0.0);
+        }
         // `i λ ν` couples the imaginary parts into the real ones and back.
-        for ([a, b], sense) in f.second.iter().zip(&f.senses) {
+        for ([a, b], sense) in f.second.iter().zip(&senses) {
             triples.push((*a, n + b, s(-spin_orbit * sense)));
             triples.push((n + a, *b, s(spin_orbit * sense)));
         }
@@ -646,10 +695,14 @@ mod tests {
         assert!(shares[0] > 0.9 && shares[1] < 0.6, "{shares:?}");
     }
 
-    /// numga's checks of the helical scene: the states are inside the bulk gap, on the rim, and
-    /// four to an energy; the electron keeps its density, stays on the rim, and a quarter lap on
-    /// its spin-up half has turned clockwise around the flake and its spin-down half
-    /// counterclockwise.
+    /// numga's checks of the helical scene and its test: the states are inside the bulk gap, on
+    /// the rim, and four to an energy; the electron keeps its density, stays on the rim, and a
+    /// quarter lap on its spin-up half has turned counterclockwise around the flake and its
+    /// spin-down half clockwise, the sine of each half's turn from the start read by `xy` from
+    /// the join of the start and its centre. (numga 7dff347, and the port synced to it, had the
+    /// opposite: their table of senses gave each turn the sign opposite to its geometry, Kane and
+    /// Mele's `νᵢⱼ`, the sign of `(d₁ × d₂)_z`; with the sense from the commutator the spin-up
+    /// half runs counterclockwise, as numga now asserts.)
     #[test]
     fn the_two_spins_run_around_the_rim_in_opposite_senses() {
         let f = flake(SIZE, RIM);
@@ -660,7 +713,8 @@ mod tests {
         assert!(fourfold, "{energies:?}");
         assert!(states.iter().all(|s| rim_share(&f, &density(s)) > 0.9));
 
-        const FRAMES: usize = 50;
+        // numga's frames over one lap.
+        const FRAMES: usize = 150;
         let at = |frame: usize| {
             spread(
                 &states,
@@ -670,7 +724,7 @@ mod tests {
                 LAP * frame as f64 / FRAMES as f64,
             )
         };
-        let total = |spins: &Field<Vector>| spins.iter().map(|s| s.norm()).sum::<f64>();
+        let total = |spins: &Field<Spin>| spins.iter().map(|s| s.norm()).sum::<f64>();
         let first = total(&at(0));
         for frame in 0..=FRAMES {
             let spins = at(frame);
@@ -683,19 +737,22 @@ mod tests {
         let sine = |sign: f64| {
             let half: Vec<f64> = spins
                 .iter()
-                .map(|s| (s.norm() + sign * s.e3()) / 2.0)
+                .map(|s| (s.norm() + sign * (xy() & s).s()) / 2.0)
                 .collect();
-            let centre: Vector = f
+            let centre: Point = f
                 .positions
                 .iter()
                 .zip(&half)
                 .map(|(p, h)| p * *h)
-                .sum::<Vector>()
+                .sum::<Point>()
                 / half.iter().sum::<f64>();
-            (xy() | (centre.normalized() ^ start)).s()
+            (xy() & (start & centre.normalized())).s()
         };
         let (up, down) = (sine(1.0), sine(-1.0));
-        assert!(up < -0.5 && down > 0.5, "{up} {down}");
+        assert!(up > 0.5 && down < -0.5, "{up} {down}");
+        // numga's sines at 35797de.
+        assert!((up - 0.9979213669447121).abs() < 1e-6, "{up}");
+        assert!((down + 0.9999736226949875).abs() < 1e-6, "{down}");
     }
 
     #[test]
