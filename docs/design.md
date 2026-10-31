@@ -598,8 +598,8 @@ highlight. `gax-regen --check` also reports part files no longer generated.
 *Status: accepted.*
 
 * **Signatures.** Both follow the signatures as stated, `R(3,1,1)` and `R(4,2)`: space `e1, e2, e3`
-  squares to `+1` and time `e4` to `−1`. The STA module keeps its own `(+,−,−,−)` convention with
-  `e0` as time.
+  squares to `+1` and time `e4` to `−1`. The STA module first kept its own `(+,−,−,−)`
+  convention with `e0` as time; since ADR-055 it has the same basis, `e1, e2, e3, e4`.
   * STAP adds the degenerate `e0`: vectors are hyperplanes and quadvectors are events, as in PGA.
     `Motor` is the even subalgebra (Poincaré motions).
   * CSTA uses the null basis `eo`, `ei` with `eo · ei = −1`, as `cga3d` does. `Motor` is the
@@ -883,7 +883,8 @@ highlight. `gax-regen --check` also reports part files no longer generated.
     the image.
 
   A generated test (`tests/homs.rs`) checks the emitted code on random values.
-* **Which.** Twelve natural, injective ones (the table in the guide, section 12).
+* **Which.** Fourteen natural, injective ones (the table in the guide, section 12; `sta` to
+  `stap` and `csta` since ADR-055).
   * `pga3d` to `cga3d` sends `e0` to `-ei`, so that a plane `ax + by + cz + d = 0` becomes the
     dual plane with `X · π` its signed distance. `e0` to `+ei` is a homomorphism too, but it
     would flip the side.
@@ -2167,8 +2168,9 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   rotor kind is `Even`: `Even::boost(direction, rapidity)` (`exp(½ζ d̂ e0)`, taking `e0` to
   `cosh ζ e0 + sinh ζ d̂`; rapidities add, and a speed enters as `β.atanh()`) and
   `Even::boost_between(from, to)`, the pure boost `(1 + w u)/√(2(1 + w·u))` between unit
-  four-velocities. Rotations about a circle (conformal, the exponential of its dual) stay
-  `exp` of the user's bivector.
+  four-velocities (in `x+y+z+t-` since ADR-055: `exp(½ζ e4 d̂)` and `(1 − w u)/√(2(1 − w·u))`).
+  Rotations about a circle (conformal, the exponential of its dual) stay `exp` of the user's
+  bivector.
 * **What the example cleanups asked for** (2026-10-19). Five helpers the examples had written
   for themselves, and two refusals:
   * *Constants.* The named values stay functions generic over `T: Real` (`Point::origin()`,
@@ -2303,6 +2305,47 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   are used (a spin wedged with a plane, a moment joined with a point), as `Direction`'s are.
   If the growth matters later, a part could opt out of being an operand, its products then
   going through `cast::<Line>()`.
+
+## ADR-055: STA as `x+y+z+t-`
+*Status: implemented (2026-10-31). Amends ADR-024. Phase 13.*
+
+* **The problem.** gax's STA was `R(1,3)`, `(+,−,−,−)` with `e0` the time, the convention of
+  Doran and Lasenby and of numga until f9ced1bf (October 2026). numga then moved its STA to
+  `x+y+z+t-`, space positive and time negative, which gax's STAP and CSTA already had (ADR-024),
+  and its new ports (optical rotation, black sandwiches, the magnetic bottle, Thomas precession,
+  Terrell rotation, spherical synchronization) declared a local `x+y+z+t-` algebra beside
+  `gax::sta`. Two spacetime conventions in one library, and no homomorphism from STA into its
+  projective and conformal extensions: `Cl(1,3)` and `Cl(3,1)` are not isomorphic.
+* **Options.**
+  1. *Keep `(+,−,−,−)`* and leave numga's new ports on their local algebra: every port re-synced
+     from numga would translate signs, and STAP and CSTA would stay apart from STA.
+  2. **Chosen: `x+y+z+t-`**, numga's convention and STAP's and CSTA's. The basis is `e1, e2, e3`
+     (space, square `+1`) and `e4` (time, square `−1`), named and ordered as STAP and CSTA name
+     theirs; the kinds hold numga's blades in numga's order, `Bivector = [e23, e31, e12, e14,
+     e24, e34]` (numga's `yz zx xy xt yt zt`), `Trivector = [e123, e234, e314, e124]` (`xyz yzt
+     zxt xyt`), `Pseudoscalar = [e1234]` (`xyzt`), so a port reads coefficients as numga
+     prints them. The kinds keep their roles: `Vector`, `Bivector` (rotations the magnetic part,
+     the relative vectors `σₖ = eₖ e4` the electric part), `Trivector`, `Phasor`, `Even` and
+     `Odd` (the versors).
+* **Homomorphisms.** STA is now the subalgebra of STAP and of CSTA that the vectors `e1..e4`
+  generate: `sta → stap` and `sta → csta` map each basis vector to the vector of the same name,
+  and so Lorentz rotors to the motors that keep the origin event. `vga3d → sta` maps `eₖ` to the
+  relative vector `eₖ e4` (square `+1`), the spacetime split for the observer `e4`, and takes
+  VGA3D's `e23, e31, e12` to STA's and `e123` to `e1234`. The generator proves all three, as
+  every homomorphism (ADR-032; `tests/homs.rs` checks the products on random values).
+* **Signs.** The even subalgebras of `Cl(1,3)` and `Cl(3,1)` are isomorphic (`γ_μ γ_ν ↦
+  −e_μ e_ν`, with `γ0 ↦ e4`), so a rotor keeps its meaning: in the new names an old even
+  element keeps its scalar and negates every other coefficient, and a vector keeps its
+  coordinates. What the metric reads changes sign: a timelike vector squares to `−1`, a
+  spatial one to `+1`, and `u·v` of two vectors flips; so does a sandwich by a vector,
+  `v >> X = v X ~v`, whose scale is `v ~v` (an observer's `t >> F` now keeps the electric
+  planes and turns the magnetic ones around). `Even::boost(d, ζ)` still takes the
+  observer `e4` to `cosh ζ e4 + sinh ζ d̂`: it is `exp(½ζ e4 d̂)`, and `boost_between` is
+  `(1 − w u)` normalized. With `σₖ = eₖ e4` and `I = e1234 = σ₁σ₂σ₃`, Maxwell's `∇F = J` holds
+  for `F = E − I B` (the cavity example checks it), the classic `E + I B` with the time-first
+  `I = e4 e1 e2 e3`. The migrated ports note each sign or reading that changed.
+* **Cost.** None: the same 16 blades, 43 k generated lines as before; the closed forms of
+  `exp`, `log` and `sqrt` of the even kind are generated in this signature as in the other.
 
 ## Hypotheses
 
