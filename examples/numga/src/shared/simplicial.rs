@@ -739,9 +739,13 @@ mod simplicial_tests {
         assert!(torus.is_oriented());
         let loops = generators(&torus);
         assert_eq!(loops.len(), 2);
-        // Each loop is closed and goes round: no boundary, and not a boundary.
+        // Each loop is closed: a gradient's circulation around it, as around every face, is
+        // nothing.
         let circulation = circulation::<Scalar, 3>(&torus, &loops);
         assert_eq!(circulation.shape(), (torus.len(2) + 2, torus.len(1)));
+        let potential = Field::from_fn(torus.len(0), |v| Scalar::new((v * v % 7) as f64 - 2.5));
+        let steps = &torus.d::<Scalar>(0) * &potential;
+        assert!((&circulation * &steps).iter().all(|c| c.s().abs() < 1e-12));
         let (sphere, vertices) = icosphere(2);
         assert!(generators(&sphere).is_empty());
         assert!(vertices.iter().all(|v| (v.norm() - 1.0).abs() < 1e-15));
