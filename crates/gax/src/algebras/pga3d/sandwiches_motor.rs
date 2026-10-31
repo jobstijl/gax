@@ -5709,3 +5709,1499 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
         gx::Transform::transform(v, x)
     }
 }
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Spin<S, T, O>> for Motor<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[7];
+        let t2 = v[1] * v[1];
+        let t3 = v[1] * v[4];
+        let t4 = v[2] * v[2];
+        let t5 = v[2] * v[5];
+        let t6 = v[3] * v[3];
+        let t7 = v[3] * v[6];
+        let t8 = v[0] * v[1];
+        let t9 = v[0] * v[2];
+        let t10 = v[0] * v[3];
+        let t11 = v[0] * v[4];
+        let t12 = v[0] * v[5];
+        let t13 = v[0] * v[6];
+        let t14 = v[1] * v[2];
+        let t15 = v[1] * v[3];
+        let t19 = v[2] * v[3];
+        let t20 = v[2] * v[4];
+        let t23 = v[3] * v[4];
+        let t24 = v[3] * v[5];
+        let t26 = t0 - t2;
+        let t27 = t1 + t3;
+        let t28 = t4 - t6;
+        let t29 = t5 - t7;
+        let t30 = (-v[1]).mul_add(v[7], t11);
+        let t31 = (-v[2]).mul_add(v[7], t12);
+        let t32 = (-v[3]).mul_add(v[7], t13);
+        let t33 = v[1].mul_add(v[5], t20);
+        let t34 = v[1].mul_add(v[6], t23);
+        let t35 = v[2].mul_add(v[6], t24);
+        let t36 = t0 + t2;
+        let t37 = t4 + t6;
+        let t38 = t36 - t37;
+        let t39 = t10 + t14;
+        let t40 = t9 - t15;
+        let t41 = t10 - t14;
+        let t42 = t26 + t28;
+        let t43 = t8 + t19;
+        let t44 = t9 + t15;
+        let t45 = t8 - t19;
+        let t46 = t26 - t28;
+        let t47 = t1 + t5;
+        let t48 = t7 - t3;
+        let t49 = t47 + t48;
+        let t50 = t32 + t33;
+        let t51 = t31 - t34;
+        let t52 = t32 - t33;
+        let t53 = t27 - t29;
+        let t54 = t30 + t35;
+        let t55 = t31 + t34;
+        let t56 = t30 - t35;
+        let t57 = t27 + t29;
+        let t59 = xv[1] * t39;
+        let t63 = xv[2] * t43;
+        let t64 = xv[0] * t44;
+        let t68 = xv[1] * t50;
+        let t72 = xv[2] * t54;
+        let t73 = xv[0] * t55;
+        let t76 = (-xv[2]).mul_add(t40, t59);
+        let t77 = t76 * T::from_i64(2);
+        let t78 = xv[0].mul_add(t38, t77);
+        let t79 = (-xv[0]).mul_add(t41, t63);
+        let t80 = t79 * T::from_i64(2);
+        let t81 = xv[1].mul_add(t42, t80);
+        let t82 = (-xv[1]).mul_add(t45, t64);
+        let t83 = t82 * T::from_i64(2);
+        let t84 = xv[2].mul_add(t46, t83);
+        let t85 = (-xv[0]).mul_add(t49, t68);
+        let t86 = (-xv[2]).mul_add(t51, t85);
+        let t87 = t86 * T::from_i64(2);
+        let t88 = (-xv[0]).mul_add(t52, t72);
+        let t89 = (-xv[1]).mul_add(t53, t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = (-xv[1]).mul_add(t56, t73);
+        let t92 = (-xv[2]).mul_add(t57, t91);
+        let t93 = t92 * T::from_i64(2);
+            return Line { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 6>([t78, t81, t84, t87, t90, t93]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[7];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[4];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[5];
+        let m6 = v[3] * v[3];
+        let m7 = v[3] * v[6];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m26 = m0 - m2;
+        let m27 = m1 + m3;
+        let m28 = m4 - m6;
+        let m29 = m5 - m7;
+        let m30 = (-v[1]).mul_add(v[7], m11);
+        let m31 = (-v[2]).mul_add(v[7], m12);
+        let m32 = (-v[3]).mul_add(v[7], m13);
+        let m33 = v[1].mul_add(v[5], m20);
+        let m34 = v[1].mul_add(v[6], m23);
+        let m35 = v[2].mul_add(v[6], m24);
+        let m36 = m0 + m2;
+        let m37 = m4 + m6;
+        let m38 = m36 - m37;
+        let m39 = m10 + m14;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m15 - m9;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m14 - m10;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = m26 + m28;
+        let m46 = m8 + m19;
+        let m47 = m46 * T::from_i64(2);
+        let m48 = m9 + m15;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = m19 - m8;
+        let m51 = m50 * T::from_i64(2);
+        let m52 = m26 - m28;
+        let m53 = m3 - m1;
+        let m54 = m5 + m7;
+        let m55 = m53 - m54;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m32 + m33;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m34 - m31;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m33 - m32;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m29 - m27;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m30 + m35;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m31 + m34;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m35 - m30;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m27 + m29;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = -m72;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m38) + x[1].scale(m40) + x[2].scale(m42)).0, (x[0].scale(m44) + x[1].scale(m45) + x[2].scale(m47)).0, (x[0].scale(m49) + x[1].scale(m51) + x[2].scale(m52)).0, (x[0].scale(m56) + x[1].scale(m58) + x[2].scale(m60)).0, (x[0].scale(m62) + x[1].scale(m64) + x[2].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m73)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Spin<S, T, O>> for Motor<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Spin<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, Spin<(), f64, O>, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Motor, Spin<(), f64, O>, T, 18> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[7];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[4];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[5];
+        let m6 = v[3] * v[3];
+        let m7 = v[3] * v[6];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m26 = m0 - m2;
+        let m27 = m1 + m3;
+        let m28 = m4 - m6;
+        let m29 = m5 - m7;
+        let m30 = (-v[1]).mul_add(v[7], m11);
+        let m31 = (-v[2]).mul_add(v[7], m12);
+        let m32 = (-v[3]).mul_add(v[7], m13);
+        let m33 = v[1].mul_add(v[5], m20);
+        let m34 = v[1].mul_add(v[6], m23);
+        let m35 = v[2].mul_add(v[6], m24);
+        let m36 = m0 + m2;
+        let m37 = m4 + m6;
+        let m38 = m36 - m37;
+        let m39 = m10 + m14;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m15 - m9;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m14 - m10;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = m26 + m28;
+        let m46 = m8 + m19;
+        let m47 = m46 * T::from_i64(2);
+        let m48 = m9 + m15;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = m19 - m8;
+        let m51 = m50 * T::from_i64(2);
+        let m52 = m26 - m28;
+        let m53 = m3 - m1;
+        let m54 = m5 + m7;
+        let m55 = m53 - m54;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m32 + m33;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m34 - m31;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m33 - m32;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m29 - m27;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m30 + m35;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m31 + m34;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m35 - m30;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m27 + m29;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = -m72;
+        gx::Prepared::from_entries([m38, m40, m42, m44, m45, m47, m49, m51, m52, m56, m58, m60, m62, m64, m66, m68, m70, m73])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Spin<S, T, O>> for gx::Prepared<Motor, Spin<(), f64, O>, T, 18> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Spin<(), f64, O>, T, 18>> for Line<(Spin<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Motor, Spin<(), f64, O>, T, 18>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]], [m[12], m[13], m[14]], [m[15], m[16], m[17]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Motor, 18> for Spin<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Motor, Spin<(), f64, O>, T, 18>) -> Line<(Spin<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Spin<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = Motor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Spin<(), f64, O>, T, 18>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Spin<(), f64, O>, T, 18> {
+        gx::Prepare::<Spin<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Spin<(), f64, O>, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Spin<(), f64, O>, W, 18> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Spin<(), f64, O>, T, 18>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Motor<(), T>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Spin<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[0] * v[4];
+        let t8 = v[0] * v[5];
+        let t9 = v[0] * v[6];
+        let t10 = v[1] * v[2];
+        let t11 = v[1] * v[3];
+        let t12 = v[1] * v[4];
+        let t16 = v[2] * v[3];
+        let t17 = v[2] * v[4];
+        let t18 = v[2] * v[5];
+        let t21 = v[3] * v[4];
+        let t22 = v[3] * v[5];
+        let t23 = v[3] * v[6];
+        let t25 = t0 - t1;
+        let t26 = t2 - t3;
+        let t27 = (-v[1]).mul_add(v[7], t7);
+        let t28 = (-v[2]).mul_add(v[7], t8);
+        let t29 = (-v[3]).mul_add(v[7], t9);
+        let t30 = v[1].mul_add(v[5], t17);
+        let t31 = v[1].mul_add(v[6], t21);
+        let t32 = v[2].mul_add(v[6], t22);
+        let t33 = t0 + t1;
+        let t34 = t2 + t3;
+        let t35 = t33 - t34;
+        let t36 = t6 + t10;
+        let t37 = t5 - t11;
+        let t38 = t6 - t10;
+        let t39 = t25 + t26;
+        let t40 = t4 + t16;
+        let t41 = t5 + t11;
+        let t42 = t4 - t16;
+        let t43 = t25 - t26;
+        let t44 = t18 + t23;
+        let t45 = t29 + t30;
+        let t46 = t28 - t31;
+        let t47 = t29 - t30;
+        let t48 = t12 + t23;
+        let t49 = t27 + t32;
+        let t50 = t28 + t31;
+        let t51 = t27 - t32;
+        let t52 = t12 + t18;
+        let t54 = xv[1] * t36;
+        let t58 = xv[2] * t40;
+        let t59 = xv[0] * t41;
+        let t62 = xv[0] * t44;
+        let t63 = xv[1] * t45;
+        let t66 = xv[1] * t48;
+        let t67 = xv[2] * t49;
+        let t68 = xv[0] * t50;
+        let t70 = xv[2] * t52;
+        let t71 = (-xv[2]).mul_add(t37, t54);
+        let t72 = t71 * T::from_i64(2);
+        let t73 = xv[0].mul_add(t35, t72);
+        let t74 = (-xv[0]).mul_add(t38, t58);
+        let t75 = t74 * T::from_i64(2);
+        let t76 = xv[1].mul_add(t39, t75);
+        let t77 = (-xv[1]).mul_add(t42, t59);
+        let t78 = t77 * T::from_i64(2);
+        let t79 = xv[2].mul_add(t43, t78);
+        let t80 = (-xv[2]).mul_add(t46, t63);
+        let t81 = t80 * T::from_i64(2);
+        let t83 = (-t62).mul_add(T::from_i64(4), t81);
+        let t84 = (-xv[0]).mul_add(t47, t67);
+        let t85 = t84 * T::from_i64(2);
+        let t87 = (-t66).mul_add(T::from_i64(4), t85);
+        let t88 = (-xv[1]).mul_add(t51, t68);
+        let t89 = t88 * T::from_i64(2);
+        let t91 = (-t70).mul_add(T::from_i64(4), t89);
+            return Line { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 6>([t73, t76, t79, t83, t87, t91]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[0] * v[4];
+        let m8 = v[0] * v[5];
+        let m9 = v[0] * v[6];
+        let m10 = v[1] * v[2];
+        let m11 = v[1] * v[3];
+        let m12 = v[1] * v[4];
+        let m16 = v[2] * v[3];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = (-v[1]).mul_add(v[7], m7);
+        let m28 = (-v[2]).mul_add(v[7], m8);
+        let m29 = (-v[3]).mul_add(v[7], m9);
+        let m30 = v[1].mul_add(v[5], m17);
+        let m31 = v[1].mul_add(v[6], m21);
+        let m32 = v[2].mul_add(v[6], m22);
+        let m33 = m0 + m1;
+        let m34 = m2 + m3;
+        let m35 = m33 - m34;
+        let m36 = m6 + m10;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m11 - m5;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m10 - m6;
+        let m41 = m40 * T::from_i64(2);
+        let m42 = m25 + m26;
+        let m43 = m4 + m16;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = m5 + m11;
+        let m46 = m45 * T::from_i64(2);
+        let m47 = m16 - m4;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = m25 - m26;
+        let m50 = m18 + m23;
+        let m51 = m50 * T::from_i64(4);
+        let m52 = -m51;
+        let m53 = m29 + m30;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m31 - m28;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m30 - m29;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m12 + m23;
+        let m60 = m59 * T::from_i64(4);
+        let m61 = -m60;
+        let m62 = m27 + m32;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m28 + m31;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m32 - m27;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m12 + m18;
+        let m69 = m68 * T::from_i64(4);
+        let m70 = -m69;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m35) + x[1].scale(m37) + x[2].scale(m39)).0, (x[0].scale(m41) + x[1].scale(m42) + x[2].scale(m44)).0, (x[0].scale(m46) + x[1].scale(m48) + x[2].scale(m49)).0, (x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56)).0, (x[0].scale(m58) + x[1].scale(m61) + x[2].scale(m63)).0, (x[0].scale(m65) + x[1].scale(m67) + x[2].scale(m70)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Spin<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Spin<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[0] * v[4];
+        let m8 = v[0] * v[5];
+        let m9 = v[0] * v[6];
+        let m10 = v[1] * v[2];
+        let m11 = v[1] * v[3];
+        let m12 = v[1] * v[4];
+        let m16 = v[2] * v[3];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = (-v[1]).mul_add(v[7], m7);
+        let m28 = (-v[2]).mul_add(v[7], m8);
+        let m29 = (-v[3]).mul_add(v[7], m9);
+        let m30 = v[1].mul_add(v[5], m17);
+        let m31 = v[1].mul_add(v[6], m21);
+        let m32 = v[2].mul_add(v[6], m22);
+        let m33 = m0 + m1;
+        let m34 = m2 + m3;
+        let m35 = m33 - m34;
+        let m36 = m6 + m10;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m11 - m5;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m10 - m6;
+        let m41 = m40 * T::from_i64(2);
+        let m42 = m25 + m26;
+        let m43 = m4 + m16;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = m5 + m11;
+        let m46 = m45 * T::from_i64(2);
+        let m47 = m16 - m4;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = m25 - m26;
+        let m50 = m18 + m23;
+        let m51 = m50 * T::from_i64(4);
+        let m52 = -m51;
+        let m53 = m29 + m30;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m31 - m28;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m30 - m29;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m12 + m23;
+        let m60 = m59 * T::from_i64(4);
+        let m61 = -m60;
+        let m62 = m27 + m32;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m28 + m31;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m32 - m27;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m12 + m18;
+        let m69 = m68 * T::from_i64(4);
+        let m70 = -m69;
+        gx::Prepared::from_entries([m35, m37, m39, m41, m42, m44, m46, m48, m49, m52, m54, m56, m58, m61, m63, m65, m67, m70])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Spin<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>> for Line<(Spin<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]], [m[12], m[13], m[14]], [m[15], m[16], m[17]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Motor>, 18> for Spin<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>) -> Line<(Spin<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Spin<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> Motor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18> {
+        gx::Prepare::<Spin<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, W, 18> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Spin<(), f64, O>, T, 18>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Motor<(), T>>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Moment<S, T, O>> for Motor<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[3];
+        let t9 = v[2] * v[3];
+        let t10 = t0 - t1;
+        let t11 = t2 - t3;
+        let t12 = t0 + t1;
+        let t13 = t2 + t3;
+        let t14 = t12 - t13;
+        let t15 = t6 + t7;
+        let t16 = t5 - t8;
+        let t17 = t6 - t7;
+        let t18 = t10 + t11;
+        let t19 = t4 + t9;
+        let t20 = t5 + t8;
+        let t21 = t4 - t9;
+        let t22 = t10 - t11;
+        let t24 = xv[1] * t15;
+        let t28 = xv[2] * t19;
+        let t29 = xv[0] * t20;
+        let t32 = (-xv[2]).mul_add(t16, t24);
+        let t33 = t32 * T::from_i64(2);
+        let t34 = xv[0].mul_add(t14, t33);
+        let t35 = (-xv[0]).mul_add(t17, t28);
+        let t36 = t35 * T::from_i64(2);
+        let t37 = xv[1].mul_add(t18, t36);
+        let t38 = (-xv[1]).mul_add(t21, t29);
+        let t39 = t38 * T::from_i64(2);
+        let t40 = xv[2].mul_add(t22, t39);
+            return Line { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 6>([T::from_i64(0), T::from_i64(0), T::from_i64(0), t34, t37, t40]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Moment<S, T, O>> for Motor<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Moment<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, Moment<(), f64, O>, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Motor, Moment<(), f64, O>, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Prepared<Motor, Moment<(), f64, O>, T, 9> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Moment<(), f64, O>, T, 9>> for Line<(Moment<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Motor, Moment<(), f64, O>, T, 9>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: [[T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Motor, 9> for Moment<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Motor, Moment<(), f64, O>, T, 9>) -> Line<(Moment<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = Motor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, Moment<(), f64, O>, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, Moment<(), f64, O>, T, 9> {
+        gx::Prepare::<Moment<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, Moment<(), f64, O>, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, Moment<(), f64, O>, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Motor<(), T>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t2 = v[3] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t2);
+        let t4 = (-v[2]).mul_add(xv[2], t3);
+        let t6 = v[1] * xv[2];
+        let t8 = v[0].mul_add(xv[1], t6);
+        let t9 = (-v[3]).mul_add(xv[0], t8);
+        let t12 = v[2] * xv[0];
+        let t13 = v[0].mul_add(xv[2], t12);
+        let t14 = (-v[1]).mul_add(xv[1], t13);
+        let t16 = v[3] * t9;
+        let t17 = v[1] * t14;
+        let t20 = v[2] * t4;
+        let t21 = (-v[2]).mul_add(t14, t16);
+        let t24 = v[1] * v[1];
+        let t26 = v[3] * v[3];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[0] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = (-v[3]).mul_add(t4, t17);
+        let t34 = xv[1] * t29;
+        let t35 = t32.mul_add(T::from_i64(2), t34);
+        let t36 = (-v[1]).mul_add(t9, t20);
+        let t38 = xv[2] * t29;
+        let t39 = t36.mul_add(T::from_i64(2), t38);
+            return Line { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 6>([T::from_i64(0), T::from_i64(0), T::from_i64(0), t31, t35, t39]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Moment<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Moment<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>> for Line<(Moment<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: [[T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Motor>, 9> for Moment<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>) -> Line<(Moment<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> Motor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9> {
+        gx::Prepare::<Moment<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Motor<(), T>>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for Motor<(), T, OV> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[3];
+        let t9 = v[2] * v[3];
+        let t11 = v[1] * v[7];
+        let t12 = v[2] * v[6];
+        let t16 = v[2] * v[7];
+        let t17 = v[3] * v[4];
+        let t19 = v[1] * v[5];
+        let t21 = v[3] * v[7];
+        let t22 = t0 - t1;
+        let t23 = t2 - t3;
+        let t24 = t0 + t1;
+        let t25 = t2 + t3;
+        let t26 = t24 - t25;
+        let t27 = t6 + t7;
+        let t28 = t5 - t8;
+        let t29 = t6 - t7;
+        let t30 = t22 + t23;
+        let t31 = t4 + t9;
+        let t32 = t5 + t8;
+        let t33 = t4 - t9;
+        let t34 = t22 - t23;
+        let t35 = v[0].mul_add(v[4], t11);
+        let t36 = (-v[3]).mul_add(v[5], t12);
+        let t37 = t35 + t36;
+        let t38 = v[0].mul_add(v[5], t16);
+        let t39 = (-v[1]).mul_add(v[6], t17);
+        let t40 = t38 + t39;
+        let t41 = v[0].mul_add(v[6], t19);
+        let t42 = (-v[2]).mul_add(v[4], t21);
+        let t43 = t41 + t42;
+        let t45 = xv[1] * t27;
+        let t49 = xv[2] * t31;
+        let t50 = xv[0] * t32;
+        let t54 = xv[1] * t40;
+        let t56 = (-xv[2]).mul_add(t28, t45);
+        let t57 = t56 * T::from_i64(2);
+        let t58 = xv[0].mul_add(t26, t57);
+        let t59 = (-xv[0]).mul_add(t29, t49);
+        let t60 = t59 * T::from_i64(2);
+        let t61 = xv[1].mul_add(t30, t60);
+        let t62 = (-xv[1]).mul_add(t33, t50);
+        let t63 = t62 * T::from_i64(2);
+        let t64 = xv[2].mul_add(t34, t63);
+        let t65 = xv[0].mul_add(t37, t54);
+        let t66 = xv[2].mul_add(t43, t65);
+        let t67 = t66 * T::from_i64(2);
+            return Plane { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 4>([t58, t61, t64, t67]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m11 = v[1] * v[7];
+        let m12 = v[2] * v[6];
+        let m16 = v[2] * v[7];
+        let m17 = v[3] * v[4];
+        let m19 = v[1] * v[5];
+        let m21 = v[3] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m0 + m1;
+        let m25 = m2 + m3;
+        let m26 = m24 - m25;
+        let m27 = m6 + m7;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m8 - m5;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m7 - m6;
+        let m32 = m31 * T::from_i64(2);
+        let m33 = m22 + m23;
+        let m34 = m4 + m9;
+        let m35 = m34 * T::from_i64(2);
+        let m36 = m5 + m8;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m9 - m4;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m22 - m23;
+        let m41 = v[0].mul_add(v[4], m11);
+        let m42 = (-v[3]).mul_add(v[5], m12);
+        let m43 = m41 + m42;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = v[0].mul_add(v[5], m16);
+        let m46 = (-v[1]).mul_add(v[6], m17);
+        let m47 = m45 + m46;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = v[0].mul_add(v[6], m19);
+        let m50 = (-v[2]).mul_add(v[4], m21);
+        let m51 = m49 + m50;
+        let m52 = m51 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30)).0, (x[0].scale(m32) + x[1].scale(m33) + x[2].scale(m35)).0, (x[0].scale(m37) + x[1].scale(m39) + x[2].scale(m40)).0, (x[0].scale(m44) + x[1].scale(m48) + x[2].scale(m52)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginPlane<S, T, O>> for Motor<(), T, OV> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginPlane<(), f64, O>> for Motor<(), T, OV> {
+    type Output = gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m11 = v[1] * v[7];
+        let m12 = v[2] * v[6];
+        let m16 = v[2] * v[7];
+        let m17 = v[3] * v[4];
+        let m19 = v[1] * v[5];
+        let m21 = v[3] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m0 + m1;
+        let m25 = m2 + m3;
+        let m26 = m24 - m25;
+        let m27 = m6 + m7;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m8 - m5;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m7 - m6;
+        let m32 = m31 * T::from_i64(2);
+        let m33 = m22 + m23;
+        let m34 = m4 + m9;
+        let m35 = m34 * T::from_i64(2);
+        let m36 = m5 + m8;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m9 - m4;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m22 - m23;
+        let m41 = v[0].mul_add(v[4], m11);
+        let m42 = (-v[3]).mul_add(v[5], m12);
+        let m43 = m41 + m42;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = v[0].mul_add(v[5], m16);
+        let m46 = (-v[1]).mul_add(v[6], m17);
+        let m47 = m45 + m46;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = v[0].mul_add(v[6], m19);
+        let m50 = (-v[2]).mul_add(v[4], m21);
+        let m51 = m49 + m50;
+        let m52 = m51 * T::from_i64(2);
+        gx::Prepared::from_entries([m26, m28, m30, m32, m33, m35, m37, m39, m40, m44, m48, m52])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>> for Plane<(OriginPlane<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>) -> Self {
+        let m = p.m;
+        Plane { o: core::marker::PhantomData, c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Motor, 12> for OriginPlane<(), f64, O> {
+    type Output = Plane<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>) -> Plane<(OriginPlane<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginPlane<(), f64, O>, gx::batch::Plain> for Motor {
+    type Y = Plane<(), f64, O>;
+    type Versor<T: gx::Coef> = Motor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Motor<(), T>) -> Motor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Motor<(), T>) -> gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12> {
+        gx::Prepare::<OriginPlane<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Motor, OriginPlane<(), f64, O>, W, 12> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, OriginPlane<(), f64, O>, T, 12>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Motor<(), T>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t2 = v[3] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t2);
+        let t4 = (-v[2]).mul_add(xv[2], t3);
+        let t6 = v[1] * xv[2];
+        let t8 = v[0].mul_add(xv[1], t6);
+        let t9 = (-v[3]).mul_add(xv[0], t8);
+        let t12 = v[2] * xv[0];
+        let t13 = v[0].mul_add(xv[2], t12);
+        let t14 = (-v[1]).mul_add(xv[1], t13);
+        let t16 = v[3] * t9;
+        let t17 = v[1] * t14;
+        let t20 = v[2] * t4;
+        let t21 = v[1] * v[7];
+        let t23 = v[2] * v[7];
+        let t24 = xv[1] * t23;
+        let t25 = v[3] * v[7];
+        let t28 = v[5] * t9;
+        let t30 = (-v[2]).mul_add(t14, t16);
+        let t33 = v[1] * v[1];
+        let t35 = v[3] * v[3];
+        let t36 = v[0].mul_add(v[0], t33);
+        let t37 = v[2].mul_add(v[2], t35);
+        let t38 = t36 + t37;
+        let t39 = xv[0] * t38;
+        let t40 = t30.mul_add(T::from_i64(2), t39);
+        let t41 = (-v[3]).mul_add(t4, t17);
+        let t43 = xv[1] * t38;
+        let t44 = t41.mul_add(T::from_i64(2), t43);
+        let t45 = (-v[1]).mul_add(t9, t20);
+        let t47 = xv[2] * t38;
+        let t48 = t45.mul_add(T::from_i64(2), t47);
+        let t49 = xv[0].mul_add(t21, t24);
+        let t50 = xv[2].mul_add(t25, t49);
+        let t51 = v[4].mul_add(t4, t28);
+        let t52 = v[6].mul_add(t14, t51);
+        let t53 = t50 + t52;
+        let t54 = t53 * T::from_i64(2);
+            return Plane { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 4>([t40, t44, t48, t54]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m11 = v[1] * v[7];
+        let m12 = v[2] * v[6];
+        let m16 = v[2] * v[7];
+        let m17 = v[3] * v[4];
+        let m19 = v[1] * v[5];
+        let m21 = v[3] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m0 + m1;
+        let m25 = m2 + m3;
+        let m26 = m24 - m25;
+        let m27 = m6 + m7;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m8 - m5;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m7 - m6;
+        let m32 = m31 * T::from_i64(2);
+        let m33 = m22 + m23;
+        let m34 = m4 + m9;
+        let m35 = m34 * T::from_i64(2);
+        let m36 = m5 + m8;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m9 - m4;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m22 - m23;
+        let m41 = v[0].mul_add(v[4], m11);
+        let m42 = (-v[3]).mul_add(v[5], m12);
+        let m43 = m41 + m42;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = v[0].mul_add(v[5], m16);
+        let m46 = (-v[1]).mul_add(v[6], m17);
+        let m47 = m45 + m46;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = v[0].mul_add(v[6], m19);
+        let m50 = (-v[2]).mul_add(v[4], m21);
+        let m51 = m49 + m50;
+        let m52 = m51 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30)).0, (x[0].scale(m32) + x[1].scale(m33) + x[2].scale(m35)).0, (x[0].scale(m37) + x[1].scale(m39) + x[2].scale(m40)).0, (x[0].scale(m44) + x[1].scale(m48) + x[2].scale(m52)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginPlane<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginPlane<(), f64, O>> for gx::Unit<Motor<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m11 = v[1] * v[7];
+        let m12 = v[2] * v[6];
+        let m16 = v[2] * v[7];
+        let m17 = v[3] * v[4];
+        let m19 = v[1] * v[5];
+        let m21 = v[3] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m0 + m1;
+        let m25 = m2 + m3;
+        let m26 = m24 - m25;
+        let m27 = m6 + m7;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m8 - m5;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m7 - m6;
+        let m32 = m31 * T::from_i64(2);
+        let m33 = m22 + m23;
+        let m34 = m4 + m9;
+        let m35 = m34 * T::from_i64(2);
+        let m36 = m5 + m8;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m9 - m4;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m22 - m23;
+        let m41 = v[0].mul_add(v[4], m11);
+        let m42 = (-v[3]).mul_add(v[5], m12);
+        let m43 = m41 + m42;
+        let m44 = m43 * T::from_i64(2);
+        let m45 = v[0].mul_add(v[5], m16);
+        let m46 = (-v[1]).mul_add(v[6], m17);
+        let m47 = m45 + m46;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = v[0].mul_add(v[6], m19);
+        let m50 = (-v[2]).mul_add(v[4], m21);
+        let m51 = m49 + m50;
+        let m52 = m51 * T::from_i64(2);
+        gx::Prepared::from_entries([m26, m28, m30, m32, m33, m35, m37, m39, m40, m44, m48, m52])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>> for Plane<(OriginPlane<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>) -> Self {
+        let m = p.m;
+        Plane { o: core::marker::PhantomData, c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Motor>, 12> for OriginPlane<(), f64, O> {
+    type Output = Plane<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>) -> Plane<(OriginPlane<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginPlane<(), f64, O>, gx::batch::Certified> for Motor {
+    type Y = Plane<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> Motor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12> {
+        gx::Prepare::<OriginPlane<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, W, 12> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, OriginPlane<(), f64, O>, T, 12>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Motor<(), T>>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}

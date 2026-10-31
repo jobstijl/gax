@@ -13,6 +13,10 @@ kind Pseudoscalar = [e01234] "The pseudoscalar `e01234`.";
 versor Motor = [1, e01, e02, e03, e04, e23, e31, e12, e41, e42, e43, e0324, e0134, e0214, e0123, e1234] "A Poincaré motion: a Lorentz transformation and a translation (the even subalgebra).";
 versor Odd = [e0, e1, e2, e3, e4, e023, e031, e012, e014, e024, e034, e123, e234, e314, e124, e01234] "The odd subalgebra: reflections composed with motions.";
 kind Multivector = [1, e0, e1, e2, e3, e4, e01, e02, e03, e04, e23, e31, e12, e41, e42, e43, e023, e031, e012, e014, e024, e034, e123, e234, e314, e124, e0324, e0134, e0214, e0123, e1234, e01234] "A general multivector.";
+// The ideal events and the hyperplanes through the origin, complements of each other
+// (ADR-054), as PGA3D's `Direction` and `OriginPlane`.
+part Direction = [e0324, e0134, e0214, e0123] intrinsic "A direction in spacetime: an ideal event (an event at infinity), the weightless part of an `Event`, such as the direction of a worldline. Its slots take steps and velocities. It pairs with `OriginHyperplane`s, its complement.";
+part OriginHyperplane = [e1, e2, e3, e4] "A hyperplane through the origin event, `a x + b y + c z + d t = 0`: the non-degenerate part of a hyperplane, which reads a step: a clock's or a ruler's readout. It pairs with `Direction`s, its complement.";
 
 alias Hyperplane = Vector;
 alias Line = Trivector;

@@ -6,6 +6,7 @@ use super::{Field, zero};
 use crate::bind::Of;
 use crate::kind::{Extensor, Kind};
 use crate::ops::Reverse;
+use crate::transpose::{Adjoint, Adjugate};
 use core::ops::{Add, Mul};
 use std::vec::Vec;
 
@@ -209,6 +210,45 @@ impl<C: Copy> SparseMap<C> {
         C: Reverse<Output = C>,
     {
         self.transpose_with(Reverse::reverse)
+    }
+
+    /// The adjugate: the couplings run back and each map cell's adjugate taken, so that
+    /// `(m.adjugate().of(c) & x)₀` summed over the sites equals `(c & m.of(x))₀` summed
+    /// (numga's `adjugate` on a sparse extensor; see [`Adjugate`]). It moves a field map on
+    /// one kind to the complement kinds without a metric: the boundary of a mesh's points to
+    /// its planes, a strain to its stress.
+    ///
+    /// ```
+    /// use gax::field::{Field, SparseMap};
+    /// use gax::pga3d::{Plane, Point, Scalar};
+    /// let s = Scalar::<(), f64>::new;
+    /// // Differences of neighbouring points along a chain, and the planes that pair with them.
+    /// let ends = &SparseMap::from_triples([(0, 0, s(-1.0)), (0, 1, s(1.0)), (1, 1, s(-1.0)), (1, 2, s(1.0))], (2, 3)) * Point::slot();
+    /// let back = ends.adjugate();
+    /// let x = Field::from_fn(3, |i| Point::xyz(i as f64, 1.0, -2.0));
+    /// let c = Field::from_fn(2, |i| Plane::new(1.0, i as f64, 0.5, -1.0));
+    /// let pair = |a: &Field<Plane<(), f64>>, b: &Field<Point<(), f64>>| a.iter().zip(b.iter()).map(|(p, q)| (p & q).s()).sum::<f64>();
+    /// assert!((pair(&back.of(&c), &x) - pair(&c, &ends.of(&x))).abs() < 1e-12);
+    /// ```
+    #[must_use]
+    pub fn adjugate(&self) -> SparseMap<<C as Adjugate>::Output>
+    where
+        C: Adjugate,
+    {
+        self.transpose_with(Adjugate::adjugate)
+    }
+
+    /// The adjoint through the scalar product: the couplings run back and each map cell's
+    /// adjoint taken, so that `m.adjoint().of(b)` paired with `x` by `scalar_product`, summed
+    /// over the sites, equals `b` paired with `m.of(x)` (numga's `adjoint` on a sparse
+    /// extensor; see [`Adjoint`]). `m.adjoint() * w * m` is the Laplacian of a connection
+    /// `m` with edge weights `w`.
+    #[must_use]
+    pub fn adjoint(&self) -> SparseMap<<C as Adjoint>::Output>
+    where
+        C: Adjoint,
+    {
+        self.transpose_with(Adjoint::adjoint)
     }
 
     /// The map cells applied to a field: each cell to the value at its column, summed at the

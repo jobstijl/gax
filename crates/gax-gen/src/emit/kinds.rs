@@ -450,6 +450,50 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
 "
         );
 
+        // The transposes through the regressive product (a kind with a declared complement)
+        // and through the scalar product (a kind with a reciprocal frame).
+        let complement = complement_pairs(self.spec, k).is_some();
+        let reciprocal = reciprocal_frame(self.spec, k).is_some();
+        if complement || reciprocal {
+            let _ = writeln!(
+                self.out,
+                "impl<A: Kind, T: Coef, O: gx::Orientation> {name}<(A,), T, O> {{"
+            );
+            if complement {
+                let _ = write!(
+                    self.out,
+                    r"    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)₀ == (c & m.of(a))₀`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {{
+        gx::Adjugate::adjugate(self)
+    }}
+"
+                );
+            }
+            if reciprocal {
+                let _ = write!(
+                    self.out,
+                    r"    /// The adjoint, the transpose through the scalar product: the map `A <- {name}`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {{
+        gx::Adjoint::adjoint(self)
+    }}
+"
+                );
+            }
+            self.w("}\n\n");
+        }
+
         // The extensions of a map on vectors (or antivectors) to the other grades.
         if self.outer_bases.contains(name) {
             let _ = write!(
@@ -895,14 +939,7 @@ fn render_shared(shared: &[(usize, usize, bool)]) -> String {
 pub fn reciprocal_frame(spec: &AlgebraSpec, kind: &KindSpec) -> Option<Vec<Vec<Rational>>> {
     let blades = &kind.layout.blades;
     let n = blades.len();
-    let scalar = |a: u32, b: u32| -> i64 {
-        spec.algebra
-            .blade_product(a, b)
-            .iter()
-            .filter(|(m, _)| *m == 0)
-            .map(|(_, v)| *v)
-            .sum()
-    };
+    let scalar = |a: u32, b: u32| scalar_product_of_blades(spec, a, b);
     // [G | I], reduced to [I | G⁻¹] by Gauss–Jordan elimination in exact rationals.
     let mut rows: Vec<Vec<Rational>> = blades
         .iter()
@@ -960,12 +997,72 @@ fn reciprocal_impl(spec: &AlgebraSpec, kind: &KindSpec, out: &mut String) {
             format!("&[{}]", terms.join(", "))
         })
         .collect();
+    let gram: Vec<String> = kind
+        .layout
+        .blades
+        .iter()
+        .map(|&(mi, si)| {
+            let terms: Vec<String> = kind
+                .layout
+                .blades
+                .iter()
+                .enumerate()
+                .map(|(k, &(mk, sk))| (k, si * sk * scalar_product_of_blades(spec, mi, mk)))
+                .filter(|&(_, g)| g != 0)
+                .map(|(k, g)| format!("({k}, {g})"))
+                .collect();
+            format!("&[{}]", terms.join(", "))
+        })
+        .collect();
     let _ = writeln!(
         out,
-        "#[diagnostic::do_not_recommend]\n{IMPL_O} gx::Reciprocal for {}<(), f64, O> {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n}}\n",
+        "#[diagnostic::do_not_recommend]\n{IMPL_O} gx::Reciprocal for {}<(), f64, O> {{\n    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[{}];\n    const GRAM: &'static [&'static [(usize, i64)]] = &[{}];\n}}\n",
         kind.name,
-        rows.join(", ")
+        rows.join(", "),
+        gram.join(", ")
     );
+}
+
+/// `⟨e_a e_b⟩₀` of two canonical basis blades.
+fn scalar_product_of_blades(spec: &AlgebraSpec, a: u32, b: u32) -> i64 {
+    spec.algebra
+        .blade_product(a, b)
+        .iter()
+        .filter(|(m, _)| *m == 0)
+        .map(|(_, v)| *v)
+        .sum()
+}
+
+/// The declared kind holding exactly the complements of `kind`'s blades, and per blade of
+/// `kind` the position of its complement there and whether their pairing
+/// `⟨complement ∨ blade⟩₀` (complement on the left, layout orientations included) is `−1`.
+pub fn complement_pairs<'a>(
+    spec: &'a AlgebraSpec,
+    kind: &KindSpec,
+) -> Option<(&'a KindSpec, Vec<(usize, bool)>)> {
+    let alg = &spec.algebra;
+    let full = alg.pseudoscalar();
+    let support: BTreeSet<u32> = kind.layout.blades.iter().map(|(m, _)| full ^ m).collect();
+    let c = spec.kinds.iter().find(|c| c.layout.support() == support)?;
+    let pairs = kind
+        .layout
+        .blades
+        .iter()
+        .map(|&(m, s)| {
+            let (j, t) = c.layout.position(full ^ m).expect("the complement's blade");
+            let v = crate::table::blade_binop(alg, BinOp::Vee, full ^ m, m)
+                .get(&0)
+                .copied()
+                .unwrap_or(0);
+            let sign = s * t * v;
+            assert!(
+                sign == 1 || sign == -1,
+                "a blade pairs with its complement to ±1"
+            );
+            (j, sign < 0)
+        })
+        .collect();
+    Some((c, pairs))
 }
 
 /// `KindEq` for every pair of kinds: whether they are the same type.
@@ -988,11 +1085,22 @@ pub(super) fn kind_eqs(spec: &AlgebraSpec, out: &mut String) {
 }
 
 /// `Cast` for every pair of kinds sharing a blade, `SubKind` where one's blades all lie in
-/// the other's, and `GradePart` for every grade of every kind (`gax_core::cast`); and
-/// `Reciprocal` for every kind with a reciprocal frame.
+/// the other's, `GradePart` for every grade of every kind, and `Complement` for every kind
+/// whose complement is declared (`gax_core::cast`); and `Reciprocal` for every kind with a
+/// reciprocal frame.
 pub(super) fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
     for a in &spec.kinds {
         reciprocal_impl(spec, a, out);
+        if let Some((c, pairs)) = complement_pairs(spec, a) {
+            let pairs: Vec<String> = pairs.iter().map(|(j, f)| format!("({j}, {f})")).collect();
+            let _ = writeln!(
+                out,
+                "{IMPL_O} gx::Complement for {}<(), f64, O> {{\n    type Out = {}<(), f64, gx::orientation::Flip<O>>;\n    const PAIRS: &'static [(usize, bool)] = &[{}];\n}}\n",
+                a.name,
+                c.name,
+                pairs.join(", ")
+            );
+        }
         for b in &spec.kinds {
             let shared = shared_blades(a, b, |_| true);
             if shared.is_empty() {

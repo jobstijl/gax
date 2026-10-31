@@ -114,6 +114,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<OriginHyperplane<S2, T, OB>> for Vector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: OriginHyperplane<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) - p(4, 3)))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Bivector<S2, T, OB>> for Bivector<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -456,6 +475,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<OriginHyperplane<S2, T, OB>> for Odd<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: OriginHyperplane<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) - p(4, 3)))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Scalar<S2, T, OB>> for Multivector<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -603,6 +641,101 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
             o: core::marker::PhantomData,
             c: [
                 (((((p(0, 0) + p(2, 2)) + (p(3, 3) + p(4, 4))) + ((p(13, 13) + p(14, 14)) + (p(15, 15) + p(23, 23)))) + (((p(24, 24) + p(25, 25)) - (p(5, 5) + p(10, 10))) - ((p(11, 11) + p(12, 12)) + (p(22, 22) + p(30, 30)))))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<OriginHyperplane<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: OriginHyperplane<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 0) + p(3, 1)) + (p(4, 2) - p(5, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Vector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Vector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) - p(3, 4)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Odd<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Odd<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) - p(3, 4)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Multivector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Multivector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 2) + p(1, 3)) + (p(2, 4) - p(3, 5)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<OriginHyperplane<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: OriginHyperplane<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) - p(3, 3)))).0,
             ],
         }
     }

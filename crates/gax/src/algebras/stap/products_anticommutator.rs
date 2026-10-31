@@ -258,6 +258,52 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Scalar<S1, T, OA> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Quadvector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Scalar<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for Vector<S1, T, OA> {
     type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -511,6 +557,44 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (-p(4, 31)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((((p(0, 30) + p(1, 26)) + p(2, 27)) + (p(3, 28) + p(4, 29)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Vector<S1, T, OA> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) + p(4, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Vector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) - p(4, 3)))).0,
             ],
         }
     }
@@ -814,6 +898,62 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Bivector<S1, T, OA> {
+    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(8, 2) - p(4, 3)) - p(9, 1))).0,
+                (((p(9, 0) - p(5, 3)) - p(7, 2))).0,
+                (((p(7, 1) - p(6, 3)) - p(8, 0))).0,
+                (((p(4, 0) + p(5, 1)) + p(6, 2))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Bivector<S1, T, OA> {
+    type Output = Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Trivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                ((p(0, 3) - p(3, 0))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                (((p(4, 0) + p(5, 1)) + p(6, 2))).0,
+                (((p(4, 3) + p(8, 2)) - p(9, 1))).0,
+                (((p(5, 3) + p(9, 0)) - p(7, 2))).0,
+                (((p(6, 3) + p(7, 1)) - p(8, 0))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for Trivector<S1, T, OA> {
     type Output = Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1112,6 +1252,62 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Trivector<S1, T, OA> {
+    type Output = Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Trivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(8, 2) - p(9, 1))).0,
+                ((p(9, 0) - p(7, 2))).0,
+                ((p(7, 1) - p(8, 0))).0,
+                (-(p(6, 0) + p(7, 3))).0,
+                (-(p(6, 1) + p(8, 3))).0,
+                (-(p(6, 2) + p(9, 3))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Trivector<S1, T, OA> {
+    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 1) - p(1, 2)) - p(3, 3))).0,
+                (((p(0, 2) - p(2, 0)) - p(4, 3))).0,
+                (((p(1, 0) - p(0, 1)) - p(5, 3))).0,
+                (-((p(3, 0) + p(4, 1)) + p(5, 2))).0,
+                ((p(6, 0) - p(7, 3))).0,
+                ((p(6, 1) - p(8, 3))).0,
+                ((p(6, 2) - p(9, 3))).0,
+                ((p(9, 1) - p(8, 2))).0,
+                ((p(7, 2) - p(9, 0))).0,
+                ((p(8, 0) - p(7, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for Quadvector<S1, T, OA> {
     type Output = Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1370,6 +1566,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Quadvector<S1, T, OA> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1604,6 +1819,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (-p(0, 5)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Quadvector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (-p(0, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1931,6 +2169,74 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Motor<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(9, 2) - p(5, 3)) - p(10, 1))).0,
+                (((p(10, 0) - p(6, 3)) - p(8, 2))).0,
+                (((p(8, 1) - p(7, 3)) - p(9, 0))).0,
+                (((p(5, 0) + p(6, 1)) + p(7, 2))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Motor<S1, T, OA> {
+    type Output = Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                ((p(2, 2) - p(3, 1))).0,
+                ((p(3, 0) - p(1, 2))).0,
+                ((p(1, 1) - p(2, 0))).0,
+                ((p(1, 3) - p(4, 0))).0,
+                ((p(2, 3) - p(4, 1))).0,
+                ((p(3, 3) - p(4, 2))).0,
+                (((p(5, 0) + p(6, 1)) + p(7, 2))).0,
+                (((p(5, 3) + p(9, 2)) - p(10, 1))).0,
+                (((p(6, 3) + p(10, 0)) - p(8, 2))).0,
+                (((p(7, 3) + p(8, 1)) - p(9, 0))).0,
+                (((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for Odd<S1, T, OA> {
     type Output = Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -2248,6 +2554,74 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (-(((p(4, 31) + p(8, 23)) + (p(9, 24) + p(10, 25))) + ((p(12, 19) + p(13, 20)) + (p(14, 21) + p(15, 5))))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (((((p(0, 30) + p(1, 26)) + (p(2, 27) + p(3, 28))) + ((p(4, 29) + p(8, 10)) + (p(9, 11) + p(10, 12)))) + (((p(12, 6) + p(13, 7)) + (p(14, 8) + p(15, 0))) - ((p(5, 13) + p(6, 14)) + (p(7, 15) + p(11, 9)))))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Odd<S1, T, OA> {
+    type Output = Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(13, 2) - p(14, 1))).0,
+                ((p(14, 0) - p(12, 2))).0,
+                ((p(12, 1) - p(13, 0))).0,
+                (-(p(11, 0) + p(12, 3))).0,
+                (-(p(11, 1) + p(13, 3))).0,
+                (-(p(11, 2) + p(14, 3))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) + p(4, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Odd<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) - p(4, 3)))).0,
+                (((p(7, 1) - p(6, 2)) - p(8, 3))).0,
+                (((p(5, 2) - p(7, 0)) - p(9, 3))).0,
+                (((p(6, 0) - p(5, 1)) - p(10, 3))).0,
+                (-((p(8, 0) + p(9, 1)) + p(10, 2))).0,
+                ((p(11, 0) - p(12, 3))).0,
+                ((p(11, 1) - p(13, 3))).0,
+                ((p(11, 2) - p(14, 3))).0,
+                ((p(14, 1) - p(13, 2))).0,
+                ((p(12, 2) - p(14, 0))).0,
+                ((p(13, 0) - p(12, 1))).0,
+                (p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (-p(15, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -2698,6 +3072,637 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (((((p(0, 29) + p(6, 10)) + (p(7, 11) + p(8, 12))) + ((p(10, 6) + p(11, 7)) + (p(12, 8) + p(29, 0)))) - (((p(5, 31) + p(19, 23)) + (p(20, 24) + p(21, 25))) + ((p(23, 19) + p(24, 20)) + (p(25, 21) + p(31, 5)))))).0,
                 ((((p(0, 30) + p(30, 0)) - (p(10, 13) + p(11, 14))) - ((p(12, 15) + p(13, 10)) + (p(14, 11) + p(15, 12))))).0,
                 ((((((p(0, 31) + p(1, 30)) + (p(2, 26) + p(3, 27))) + ((p(4, 28) + p(5, 29)) + (p(6, 23) + p(7, 24)))) + (((p(8, 25) + p(10, 19)) + (p(11, 20) + p(12, 21))) + ((p(19, 10) + p(20, 11)) + (p(21, 12) + p(23, 6))))) + ((((p(24, 7) + p(25, 8)) + (p(26, 2) + p(27, 3))) + ((p(28, 4) + p(29, 5)) + (p(30, 1) + p(31, 0)))) - (((p(9, 22) + p(13, 16)) + (p(14, 17) + p(15, 18))) + ((p(16, 13) + p(17, 14)) + (p(18, 15) + p(22, 9))))))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(14, 2) - p(10, 3)) - p(15, 1))).0,
+                (((p(15, 0) - p(11, 3)) - p(13, 2))).0,
+                (((p(13, 1) - p(12, 3)) - p(14, 0))).0,
+                (((p(10, 0) + p(11, 1)) + p(12, 2))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(24, 2) - p(25, 1))).0,
+                ((p(25, 0) - p(23, 2))).0,
+                ((p(23, 1) - p(24, 0))).0,
+                (-(p(22, 0) + p(23, 3))).0,
+                (-(p(22, 1) + p(24, 3))).0,
+                (-(p(22, 2) + p(25, 3))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(2, 0) + p(3, 1)) + (p(4, 2) + p(5, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 0) + p(3, 1)) + (p(4, 2) - p(5, 3)))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (((p(18, 1) - p(17, 2)) - p(19, 3))).0,
+                (((p(16, 2) - p(18, 0)) - p(20, 3))).0,
+                (((p(17, 0) - p(16, 1)) - p(21, 3))).0,
+                (-((p(19, 0) + p(20, 1)) + p(21, 2))).0,
+                ((p(22, 0) - p(23, 3))).0,
+                ((p(22, 1) - p(24, 3))).0,
+                ((p(22, 2) - p(25, 3))).0,
+                ((p(25, 1) - p(24, 2))).0,
+                ((p(23, 2) - p(25, 0))).0,
+                ((p(24, 0) - p(23, 1))).0,
+                ((p(7, 2) - p(8, 1))).0,
+                ((p(8, 0) - p(6, 2))).0,
+                ((p(6, 1) - p(7, 0))).0,
+                ((p(6, 3) - p(9, 0))).0,
+                ((p(7, 3) - p(9, 1))).0,
+                ((p(8, 3) - p(9, 2))).0,
+                (((p(10, 0) + p(11, 1)) + p(12, 2))).0,
+                (((p(10, 3) + p(14, 2)) - p(15, 1))).0,
+                (((p(11, 3) + p(15, 0)) - p(13, 2))).0,
+                (((p(12, 3) + p(13, 1)) - p(14, 0))).0,
+                (p(31, 0)).0,
+                (p(31, 1)).0,
+                (p(31, 2)).0,
+                (-p(31, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(26, 0) + p(27, 1)) + (p(28, 2) + p(29, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Scalar<S2, T, OB>) -> Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Quadvector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Vector<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Vector<S2, T, OB>) -> Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Bivector<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Bivector<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 8) - p(1, 9)) - p(3, 4))).0,
+                (((p(0, 9) - p(2, 7)) - p(3, 5))).0,
+                (((p(1, 7) - p(0, 8)) - p(3, 6))).0,
+                (((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Trivector<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Trivector<S2, T, OB>) -> Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Trivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 8) - p(1, 9))).0,
+                ((p(0, 9) - p(2, 7))).0,
+                ((p(1, 7) - p(0, 8))).0,
+                (-(p(0, 6) + p(3, 7))).0,
+                (-(p(1, 6) + p(3, 8))).0,
+                (-(p(2, 6) + p(3, 9))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Motor<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Motor<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(2, 9) - p(1, 10)) - p(3, 5))).0,
+                (((p(0, 10) - p(2, 8)) - p(3, 6))).0,
+                (((p(1, 8) - p(0, 9)) - p(3, 7))).0,
+                (((p(0, 5) + p(1, 6)) + p(2, 7))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Odd<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Odd<S2, T, OB>) -> Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 13) - p(1, 14))).0,
+                ((p(0, 14) - p(2, 12))).0,
+                ((p(1, 12) - p(0, 13))).0,
+                (-(p(0, 11) + p(3, 12))).0,
+                (-(p(1, 11) + p(3, 13))).0,
+                (-(p(2, 11) + p(3, 14))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Multivector<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(2, 14) - p(1, 15)) - p(3, 10))).0,
+                (((p(0, 15) - p(2, 13)) - p(3, 11))).0,
+                (((p(1, 13) - p(0, 14)) - p(3, 12))).0,
+                (((p(0, 10) + p(1, 11)) + p(2, 12))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 24) - p(1, 25))).0,
+                ((p(0, 25) - p(2, 23))).0,
+                ((p(1, 23) - p(0, 24))).0,
+                (-(p(0, 22) + p(3, 23))).0,
+                (-(p(1, 22) + p(3, 24))).0,
+                (-(p(2, 22) + p(3, 25))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 2) + p(1, 3)) + (p(2, 4) + p(3, 5)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Scalar<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Scalar<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Vector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Vector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) - p(3, 4)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Bivector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Bivector<S2, T, OB>) -> Trivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Trivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(3, 2) - p(2, 3))).0,
+                (((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+                (((p(2, 8) + p(3, 4)) - p(1, 9))).0,
+                (((p(0, 9) + p(3, 5)) - p(2, 7))).0,
+                (((p(1, 7) + p(3, 6)) - p(0, 8))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Trivector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Trivector<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(1, 2) - p(2, 1)) - p(3, 3))).0,
+                (((p(2, 0) - p(0, 2)) - p(3, 4))).0,
+                (((p(0, 1) - p(1, 0)) - p(3, 5))).0,
+                (-((p(0, 3) + p(1, 4)) + p(2, 5))).0,
+                ((p(0, 6) - p(3, 7))).0,
+                ((p(1, 6) - p(3, 8))).0,
+                ((p(2, 6) - p(3, 9))).0,
+                ((p(1, 9) - p(2, 8))).0,
+                ((p(2, 7) - p(0, 9))).0,
+                ((p(0, 8) - p(1, 7))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Quadvector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Quadvector<S2, T, OB>) -> Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Pseudoscalar<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Pseudoscalar<S2, T, OB>) -> Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Quadvector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (-p(3, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Motor<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Motor<S2, T, OB>) -> Odd<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                ((p(2, 2) - p(1, 3))).0,
+                ((p(0, 3) - p(2, 1))).0,
+                ((p(1, 1) - p(0, 2))).0,
+                ((p(3, 1) - p(0, 4))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(3, 3) - p(2, 4))).0,
+                (((p(0, 5) + p(1, 6)) + p(2, 7))).0,
+                (((p(2, 9) + p(3, 5)) - p(1, 10))).0,
+                (((p(0, 10) + p(3, 6)) - p(2, 8))).0,
+                (((p(1, 8) + p(3, 7)) - p(0, 9))).0,
+                (((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Odd<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Odd<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 1) + p(1, 2)) + (p(2, 3) - p(3, 4)))).0,
+                (((p(1, 7) - p(2, 6)) - p(3, 8))).0,
+                (((p(2, 5) - p(0, 7)) - p(3, 9))).0,
+                (((p(0, 6) - p(1, 5)) - p(3, 10))).0,
+                (-((p(0, 8) + p(1, 9)) + p(2, 10))).0,
+                ((p(0, 11) - p(3, 12))).0,
+                ((p(1, 11) - p(3, 13))).0,
+                ((p(2, 11) - p(3, 14))).0,
+                ((p(1, 14) - p(2, 13))).0,
+                ((p(2, 12) - p(0, 14))).0,
+                ((p(0, 13) - p(1, 12))).0,
+                (p(0, 15)).0,
+                (p(1, 15)).0,
+                (p(2, 15)).0,
+                (-p(3, 15)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Multivector<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 2) + p(1, 3)) + (p(2, 4) - p(3, 5)))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (((p(1, 18) - p(2, 17)) - p(3, 19))).0,
+                (((p(2, 16) - p(0, 18)) - p(3, 20))).0,
+                (((p(0, 17) - p(1, 16)) - p(3, 21))).0,
+                (-((p(0, 19) + p(1, 20)) + p(2, 21))).0,
+                ((p(0, 22) - p(3, 23))).0,
+                ((p(1, 22) - p(3, 24))).0,
+                ((p(2, 22) - p(3, 25))).0,
+                ((p(1, 25) - p(2, 24))).0,
+                ((p(2, 23) - p(0, 25))).0,
+                ((p(0, 24) - p(1, 23))).0,
+                ((p(2, 7) - p(1, 8))).0,
+                ((p(0, 8) - p(2, 6))).0,
+                ((p(1, 6) - p(0, 7))).0,
+                ((p(3, 6) - p(0, 9))).0,
+                ((p(3, 7) - p(1, 9))).0,
+                ((p(3, 8) - p(2, 9))).0,
+                (((p(0, 10) + p(1, 11)) + p(2, 12))).0,
+                (((p(2, 14) + p(3, 10)) - p(1, 15))).0,
+                (((p(0, 15) + p(3, 11)) - p(2, 13))).0,
+                (((p(1, 13) + p(3, 12)) - p(0, 14))).0,
+                (p(0, 31)).0,
+                (p(1, 31)).0,
+                (p(2, 31)).0,
+                (-p(3, 31)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 26) + p(1, 27)) + (p(2, 28) + p(3, 29)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<Direction<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Direction<S2, T, OB>) -> Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Anticommutator<OriginHyperplane<S2, T, OB>> for OriginHyperplane<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: OriginHyperplane<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) - p(3, 3)))).0,
             ],
         }
     }

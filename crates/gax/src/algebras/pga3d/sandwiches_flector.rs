@@ -5893,3 +5893,1523 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
         gx::Transform::transform(v, x)
     }
 }
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Spin<S, T, O>> for Flector<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[4];
+        let t2 = v[1] * v[1];
+        let t3 = v[1] * v[5];
+        let t4 = v[2] * v[2];
+        let t5 = v[2] * v[6];
+        let t6 = v[3] * v[7];
+        let t7 = v[7] * v[7];
+        let t8 = v[0] * v[1];
+        let t9 = v[0] * v[2];
+        let t13 = v[0] * v[7];
+        let t14 = v[1] * v[2];
+        let t16 = v[1] * v[4];
+        let t18 = v[1] * v[7];
+        let t20 = v[2] * v[4];
+        let t21 = v[2] * v[5];
+        let t22 = v[2] * v[7];
+        let t23 = v[4] * v[7];
+        let t24 = v[5] * v[7];
+        let t25 = v[6] * v[7];
+        let t26 = t0 - t2;
+        let t27 = t1 - t3;
+        let t28 = t4 - t7;
+        let t29 = t5 - t6;
+        let t30 = v[0].mul_add(v[3], t23);
+        let t31 = v[0].mul_add(v[5], t16);
+        let t32 = v[0].mul_add(v[6], t20);
+        let t33 = v[1].mul_add(v[3], t24);
+        let t34 = v[1].mul_add(v[6], t21);
+        let t35 = v[2].mul_add(v[3], t25);
+        let t36 = t26 - t28;
+        let t37 = t8 - t22;
+        let t38 = t9 + t18;
+        let t39 = t8 + t22;
+        let t40 = t26 + t28;
+        let t41 = t13 - t14;
+        let t42 = t9 - t18;
+        let t43 = t13 + t14;
+        let t44 = t0 + t2;
+        let t45 = t4 + t7;
+        let t46 = t44 - t45;
+        let t47 = t27 - t29;
+        let t48 = t31 - t35;
+        let t49 = t32 + t33;
+        let t50 = t31 + t35;
+        let t51 = t27 + t29;
+        let t52 = t30 - t34;
+        let t53 = t32 - t33;
+        let t54 = t30 + t34;
+        let t55 = t1 + t3;
+        let t56 = t5 + t6;
+        let t57 = t55 - t56;
+        let t60 = xv[2] * t38;
+        let t61 = xv[0] * t39;
+        let t65 = xv[1] * t43;
+        let t68 = xv[1] * t48;
+        let t70 = xv[0] * t50;
+        let t74 = xv[1] * t54;
+        let t76 = xv[1].mul_add(t37, t60);
+        let t77 = t76 * T::from_i64(2);
+        let t78 = xv[0].mul_add(t36, t77);
+        let t79 = (-xv[2]).mul_add(t41, t61);
+        let t80 = t79 * T::from_i64(2);
+        let t81 = (-xv[1]).mul_add(t40, t80);
+        let t82 = xv[0].mul_add(t42, t65);
+        let t83 = t82 * T::from_i64(2);
+        let t84 = (-xv[2]).mul_add(t46, t83);
+        let t85 = xv[0].mul_add(t47, t68);
+        let t86 = xv[2].mul_add(t49, t85);
+        let t87 = t86 * T::from_i64(2);
+        let t88 = (-xv[1]).mul_add(t51, t70);
+        let t89 = (-xv[2]).mul_add(t52, t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = xv[0].mul_add(t53, t74);
+        let t92 = (-xv[2]).mul_add(t57, t91);
+        let t93 = t92 * T::from_i64(2);
+            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t78, t81, t84, t87, t90, t93]), [false, false, false, false, false, false]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[4];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[5];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[6];
+        let m6 = v[3] * v[7];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m16 = v[1] * v[4];
+        let m18 = v[1] * v[7];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[4] * v[7];
+        let m24 = v[5] * v[7];
+        let m25 = v[6] * v[7];
+        let m26 = m0 - m2;
+        let m27 = m1 - m3;
+        let m28 = m4 - m7;
+        let m29 = m5 - m6;
+        let m30 = v[0].mul_add(v[3], m23);
+        let m31 = v[0].mul_add(v[5], m16);
+        let m32 = v[0].mul_add(v[6], m20);
+        let m33 = v[1].mul_add(v[3], m24);
+        let m34 = v[1].mul_add(v[6], m21);
+        let m35 = v[2].mul_add(v[3], m25);
+        let m36 = m26 - m28;
+        let m37 = m8 - m22;
+        let m38 = m37 * T::from_i64(2);
+        let m39 = m9 + m18;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m8 + m22;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m26 + m28;
+        let m44 = -m43;
+        let m45 = m14 - m13;
+        let m46 = m45 * T::from_i64(2);
+        let m47 = m9 - m18;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = m13 + m14;
+        let m50 = m49 * T::from_i64(2);
+        let m51 = m4 + m7;
+        let m52 = m0 + m2;
+        let m53 = m51 - m52;
+        let m54 = m27 - m29;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m31 - m35;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m32 + m33;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m31 + m35;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m27 + m29;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = -m63;
+        let m65 = m34 - m30;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m32 - m33;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m30 + m34;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m5 + m6;
+        let m72 = m1 + m3;
+        let m73 = m71 - m72;
+        let m74 = m73 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m36) + x[1].scale(m38) + x[2].scale(m40)).0, (x[0].scale(m42) + x[1].scale(m44) + x[2].scale(m46)).0, (x[0].scale(m48) + x[1].scale(m50) + x[2].scale(m53)).0, (x[0].scale(m55) + x[1].scale(m57) + x[2].scale(m59)).0, (x[0].scale(m61) + x[1].scale(m64) + x[2].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m74)).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Spin<S, T, O>> for Flector<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Spin<(), f64, O>> for Flector<(), T, OV> {
+    type Output = gx::Prepared<Flector, Spin<(), f64, O>, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Flector, Spin<(), f64, O>, T, 18> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[4];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[5];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[6];
+        let m6 = v[3] * v[7];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m16 = v[1] * v[4];
+        let m18 = v[1] * v[7];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[4] * v[7];
+        let m24 = v[5] * v[7];
+        let m25 = v[6] * v[7];
+        let m26 = m0 - m2;
+        let m27 = m1 - m3;
+        let m28 = m4 - m7;
+        let m29 = m5 - m6;
+        let m30 = v[0].mul_add(v[3], m23);
+        let m31 = v[0].mul_add(v[5], m16);
+        let m32 = v[0].mul_add(v[6], m20);
+        let m33 = v[1].mul_add(v[3], m24);
+        let m34 = v[1].mul_add(v[6], m21);
+        let m35 = v[2].mul_add(v[3], m25);
+        let m36 = m26 - m28;
+        let m37 = m8 - m22;
+        let m38 = m37 * T::from_i64(2);
+        let m39 = m9 + m18;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m8 + m22;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m26 + m28;
+        let m44 = -m43;
+        let m45 = m14 - m13;
+        let m46 = m45 * T::from_i64(2);
+        let m47 = m9 - m18;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = m13 + m14;
+        let m50 = m49 * T::from_i64(2);
+        let m51 = m4 + m7;
+        let m52 = m0 + m2;
+        let m53 = m51 - m52;
+        let m54 = m27 - m29;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m31 - m35;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m32 + m33;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m31 + m35;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m27 + m29;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = -m63;
+        let m65 = m34 - m30;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m32 - m33;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m30 + m34;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m5 + m6;
+        let m72 = m1 + m3;
+        let m73 = m71 - m72;
+        let m74 = m73 * T::from_i64(2);
+        gx::Prepared::from_entries([m36, m38, m40, m42, m44, m46, m48, m50, m53, m55, m57, m59, m61, m64, m66, m68, m70, m74])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Spin<S, T, O>> for gx::Prepared<Flector, Spin<(), f64, O>, T, 18> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17])).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, Spin<(), f64, O>, T, 18>> for Line<(Spin<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Flector, Spin<(), f64, O>, T, 18>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Spin<(), f64, O>,), T, 6>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]], [m[12], m[13], m[14]], [m[15], m[16], m[17]]], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Flector, 18> for Spin<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, Spin<(), f64, O>, T, 18>) -> Line<(Spin<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Spin<(), f64, O>, gx::batch::Plain> for Flector {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = Flector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Flector, Spin<(), f64, O>, T, 18>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Flector<(), T>) -> gx::Prepared<Flector, Spin<(), f64, O>, T, 18> {
+        gx::Prepare::<Spin<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Flector, Spin<(), f64, O>, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Flector, Spin<(), f64, O>, W, 18> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Spin<(), f64, O>, T, 18>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Spin<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t9 = v[0] * v[7];
+        let t10 = v[1] * v[2];
+        let t12 = v[1] * v[4];
+        let t13 = v[1] * v[5];
+        let t15 = v[1] * v[7];
+        let t17 = v[2] * v[4];
+        let t18 = v[2] * v[5];
+        let t19 = v[2] * v[6];
+        let t20 = v[2] * v[7];
+        let t21 = v[3] * v[7];
+        let t22 = v[4] * v[7];
+        let t23 = v[5] * v[7];
+        let t24 = v[6] * v[7];
+        let t25 = t0 - t1;
+        let t26 = t2 - t3;
+        let t27 = v[0].mul_add(v[3], t22);
+        let t28 = v[0].mul_add(v[5], t12);
+        let t29 = v[0].mul_add(v[6], t17);
+        let t30 = v[1].mul_add(v[3], t23);
+        let t31 = v[1].mul_add(v[6], t18);
+        let t32 = v[2].mul_add(v[3], t24);
+        let t33 = t25 - t26;
+        let t34 = t4 - t20;
+        let t35 = t5 + t15;
+        let t36 = t4 + t20;
+        let t37 = t25 + t26;
+        let t38 = t9 - t10;
+        let t39 = t5 - t15;
+        let t40 = t9 + t10;
+        let t41 = t0 + t1;
+        let t42 = t2 + t3;
+        let t43 = t41 - t42;
+        let t44 = t13 + t19;
+        let t45 = t28 - t32;
+        let t46 = t29 + t30;
+        let t47 = t28 + t32;
+        let t48 = t13 + t21;
+        let t49 = t27 - t31;
+        let t50 = t29 - t30;
+        let t51 = t27 + t31;
+        let t52 = t19 + t21;
+        let t55 = xv[2] * t35;
+        let t56 = xv[0] * t36;
+        let t60 = xv[1] * t40;
+        let t62 = xv[0] * t44;
+        let t64 = xv[2] * t46;
+        let t65 = xv[0] * t47;
+        let t66 = xv[1] * t48;
+        let t69 = xv[1] * t51;
+        let t70 = xv[2] * t52;
+        let t71 = xv[1].mul_add(t34, t55);
+        let t72 = t71 * T::from_i64(2);
+        let t73 = xv[0].mul_add(t33, t72);
+        let t74 = (-xv[2]).mul_add(t38, t56);
+        let t75 = t74 * T::from_i64(2);
+        let t76 = (-xv[1]).mul_add(t37, t75);
+        let t77 = xv[0].mul_add(t39, t60);
+        let t78 = t77 * T::from_i64(2);
+        let t79 = (-xv[2]).mul_add(t43, t78);
+        let t80 = xv[1].mul_add(t45, t64);
+        let t81 = t80 * T::from_i64(2);
+        let t83 = (-t62).mul_add(T::from_i64(4), t81);
+        let t84 = (-xv[2]).mul_add(t49, t65);
+        let t86 = t66 * T::from_i64(4);
+        let t87 = t84.mul_add(T::from_i64(2), t86);
+        let t88 = xv[0].mul_add(t50, t69);
+        let t90 = t70 * T::from_i64(4);
+        let t91 = t88.mul_add(T::from_i64(2), t90);
+            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([t73, t76, t79, t83, t87, t91]), [false, false, false, false, false, false]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m9 = v[0] * v[7];
+        let m10 = v[1] * v[2];
+        let m12 = v[1] * v[4];
+        let m13 = v[1] * v[5];
+        let m15 = v[1] * v[7];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m19 = v[2] * v[6];
+        let m20 = v[2] * v[7];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = v[0].mul_add(v[3], m22);
+        let m28 = v[0].mul_add(v[5], m12);
+        let m29 = v[0].mul_add(v[6], m17);
+        let m30 = v[1].mul_add(v[3], m23);
+        let m31 = v[1].mul_add(v[6], m18);
+        let m32 = v[2].mul_add(v[3], m24);
+        let m33 = m25 - m26;
+        let m34 = m4 - m20;
+        let m35 = m34 * T::from_i64(2);
+        let m36 = m5 + m15;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m4 + m20;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m25 + m26;
+        let m41 = -m40;
+        let m42 = m10 - m9;
+        let m43 = m42 * T::from_i64(2);
+        let m44 = m5 - m15;
+        let m45 = m44 * T::from_i64(2);
+        let m46 = m9 + m10;
+        let m47 = m46 * T::from_i64(2);
+        let m48 = m2 + m3;
+        let m49 = m0 + m1;
+        let m50 = m48 - m49;
+        let m51 = m13 + m19;
+        let m52 = m51 * T::from_i64(4);
+        let m53 = -m52;
+        let m54 = m28 - m32;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m29 + m30;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m28 + m32;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m13 + m21;
+        let m61 = m60 * T::from_i64(4);
+        let m62 = m31 - m27;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m29 - m30;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m27 + m31;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m19 + m21;
+        let m69 = m68 * T::from_i64(4);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m33) + x[1].scale(m35) + x[2].scale(m37)).0, (x[0].scale(m39) + x[1].scale(m41) + x[2].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m47) + x[2].scale(m50)).0, (x[0].scale(m53) + x[1].scale(m55) + x[2].scale(m57)).0, (x[0].scale(m59) + x[1].scale(m61) + x[2].scale(m63)).0, (x[0].scale(m65) + x[1].scale(m67) + x[2].scale(m69)).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Spin<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Spin<(), f64, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m9 = v[0] * v[7];
+        let m10 = v[1] * v[2];
+        let m12 = v[1] * v[4];
+        let m13 = v[1] * v[5];
+        let m15 = v[1] * v[7];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m19 = v[2] * v[6];
+        let m20 = v[2] * v[7];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = v[0].mul_add(v[3], m22);
+        let m28 = v[0].mul_add(v[5], m12);
+        let m29 = v[0].mul_add(v[6], m17);
+        let m30 = v[1].mul_add(v[3], m23);
+        let m31 = v[1].mul_add(v[6], m18);
+        let m32 = v[2].mul_add(v[3], m24);
+        let m33 = m25 - m26;
+        let m34 = m4 - m20;
+        let m35 = m34 * T::from_i64(2);
+        let m36 = m5 + m15;
+        let m37 = m36 * T::from_i64(2);
+        let m38 = m4 + m20;
+        let m39 = m38 * T::from_i64(2);
+        let m40 = m25 + m26;
+        let m41 = -m40;
+        let m42 = m10 - m9;
+        let m43 = m42 * T::from_i64(2);
+        let m44 = m5 - m15;
+        let m45 = m44 * T::from_i64(2);
+        let m46 = m9 + m10;
+        let m47 = m46 * T::from_i64(2);
+        let m48 = m2 + m3;
+        let m49 = m0 + m1;
+        let m50 = m48 - m49;
+        let m51 = m13 + m19;
+        let m52 = m51 * T::from_i64(4);
+        let m53 = -m52;
+        let m54 = m28 - m32;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m29 + m30;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m28 + m32;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m13 + m21;
+        let m61 = m60 * T::from_i64(4);
+        let m62 = m31 - m27;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m29 - m30;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m27 + m31;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m19 + m21;
+        let m69 = m68 * T::from_i64(4);
+        gx::Prepared::from_entries([m33, m35, m37, m39, m41, m43, m45, m47, m50, m53, m55, m57, m59, m61, m63, m65, m67, m69])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Spin<S, T, O>> for gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Spin<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17])).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>> for Line<(Spin<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Spin<(), f64, O>,), T, 6>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]], [m[12], m[13], m[14]], [m[15], m[16], m[17]]], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Flector>, 18> for Spin<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>) -> Line<(Spin<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Spin<(), f64, O>, gx::batch::Certified> for Flector {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> Flector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18> {
+        gx::Prepare::<Spin<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, W, 18> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Spin<(), f64, O>, T, 18>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Spin<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Moment<S, T, O>> for Flector<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[7];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[7];
+        let t9 = v[2] * v[7];
+        let t10 = t0 - t1;
+        let t11 = t2 - t3;
+        let t12 = t10 - t11;
+        let t13 = t4 - t9;
+        let t14 = t5 + t8;
+        let t15 = t4 + t9;
+        let t16 = t10 + t11;
+        let t17 = t6 - t7;
+        let t18 = t5 - t8;
+        let t19 = t6 + t7;
+        let t20 = t0 + t1;
+        let t21 = t2 + t3;
+        let t22 = t20 - t21;
+        let t25 = xv[2] * t14;
+        let t28 = xv[2] * t17;
+        let t30 = xv[1] * t19;
+        let t31 = xv[2] * t22;
+        let t32 = xv[1].mul_add(t13, t25);
+        let t33 = t32 * T::from_i64(2);
+        let t34 = xv[0].mul_add(t12, t33);
+        let t35 = -t34;
+        let t36 = (-xv[0]).mul_add(t15, t28);
+        let t37 = t36 * T::from_i64(2);
+        let t38 = xv[1].mul_add(t16, t37);
+        let t39 = xv[0].mul_add(t18, t30);
+        let t41 = (-t39).mul_add(T::from_i64(2), t31);
+            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([T::from_i64(0), T::from_i64(0), T::from_i64(0), t35, t38, t41]), [false, false, false, false, false, false]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Moment<S, T, O>> for Flector<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Moment<(), f64, O>> for Flector<(), T, OV> {
+    type Output = gx::Prepared<Flector, Moment<(), f64, O>, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Flector, Moment<(), f64, O>, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        gx::Prepared::from_entries([m12, m14, m17, m20, m21, m23, m25, m28, m31])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Prepared<Flector, Moment<(), f64, O>, T, 9> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, Moment<(), f64, O>, T, 9>> for Line<(Moment<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Moment<(), f64, O>,), T, 6>([[T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Flector, 9> for Moment<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>) -> Line<(Moment<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch::Plain> for Flector {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = Flector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Flector, Moment<(), f64, O>, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Flector<(), T>) -> gx::Prepared<Flector, Moment<(), f64, O>, T, 9> {
+        gx::Prepare::<Moment<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Flector, Moment<(), f64, O>, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t1 = v[1] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
+        let t7 = v[7] * xv[2];
+        let t8 = v[0].mul_add(xv[1], t7);
+        let t9 = (-v[1]).mul_add(xv[0], t8);
+        let t10 = v[0] * xv[2];
+        let t13 = (-v[2]).mul_add(xv[0], t10);
+        let t14 = (-v[7]).mul_add(xv[1], t13);
+        let t16 = v[2] * t14;
+        let t18 = v[7] * t14;
+        let t20 = v[7] * t9;
+        let t21 = v[1].mul_add(t9, t16);
+        let t24 = v[1] * v[1];
+        let t26 = v[7] * v[7];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[0] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = -t31;
+        let t33 = (-v[1]).mul_add(t4, t18);
+        let t35 = xv[1] * t29;
+        let t36 = t33.mul_add(T::from_i64(2), t35);
+        let t37 = v[2].mul_add(t4, t20);
+        let t39 = xv[2] * t29;
+        let t40 = (-t37).mul_add(T::from_i64(2), t39);
+            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([T::from_i64(0), T::from_i64(0), T::from_i64(0), t32, t36, t40]), [false, false, false, false, false, false]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Moment<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Moment<(), f64, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        gx::Prepared::from_entries([m12, m14, m17, m20, m21, m23, m25, m28, m31])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>> for Line<(Moment<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Moment<(), f64, O>,), T, 6>([[T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [false, false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Flector>, 9> for Moment<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>) -> Line<(Moment<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch::Certified> for Flector {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> Flector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9> {
+        gx::Prepare::<Moment<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Moment<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for Flector<(), T, OV> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[7];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[7];
+        let t9 = v[2] * v[7];
+        let t11 = v[1] * v[6];
+        let t13 = v[4] * v[7];
+        let t16 = v[2] * v[4];
+        let t17 = v[5] * v[7];
+        let t20 = v[2] * v[3];
+        let t21 = v[6] * v[7];
+        let t22 = t0 - t1;
+        let t23 = t2 - t3;
+        let t24 = t22 - t23;
+        let t25 = t4 - t9;
+        let t26 = t5 + t8;
+        let t27 = t4 + t9;
+        let t28 = t22 + t23;
+        let t29 = t6 - t7;
+        let t30 = t5 - t8;
+        let t31 = t6 + t7;
+        let t32 = t0 + t1;
+        let t33 = t2 + t3;
+        let t34 = t32 - t33;
+        let t35 = v[0].mul_add(v[3], t11);
+        let t36 = v[2].mul_add(v[5], t13);
+        let t37 = t35 - t36;
+        let t38 = v[0].mul_add(v[6], t17);
+        let t39 = v[1].mul_add(v[3], t16);
+        let t40 = t38 - t39;
+        let t41 = v[0].mul_add(v[5], t20);
+        let t42 = v[1].mul_add(v[4], t21);
+        let t43 = t41 - t42;
+        let t46 = xv[2] * t26;
+        let t47 = xv[0] * t27;
+        let t51 = xv[1] * t31;
+        let t55 = xv[2] * t43;
+        let t56 = xv[1].mul_add(t25, t46);
+        let t57 = t56 * T::from_i64(2);
+        let t58 = xv[0].mul_add(t24, t57);
+        let t59 = (-xv[2]).mul_add(t29, t47);
+        let t60 = t59 * T::from_i64(2);
+        let t61 = (-xv[1]).mul_add(t28, t60);
+        let t62 = xv[0].mul_add(t30, t51);
+        let t63 = t62 * T::from_i64(2);
+        let t64 = (-xv[2]).mul_add(t34, t63);
+        let t65 = xv[0].mul_add(t37, t55);
+        let t66 = (-xv[1]).mul_add(t40, t65);
+        let t67 = t66 * T::from_i64(2);
+            return Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t58, t61, t64, t67]), [true, true, true, true]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m11 = v[1] * v[6];
+        let m13 = v[4] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[5] * v[7];
+        let m20 = v[2] * v[3];
+        let m21 = v[6] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m22 - m23;
+        let m25 = m4 - m9;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m5 + m8;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m4 + m9;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m22 + m23;
+        let m32 = -m31;
+        let m33 = m7 - m6;
+        let m34 = m33 * T::from_i64(2);
+        let m35 = m5 - m8;
+        let m36 = m35 * T::from_i64(2);
+        let m37 = m6 + m7;
+        let m38 = m37 * T::from_i64(2);
+        let m39 = m2 + m3;
+        let m40 = m0 + m1;
+        let m41 = m39 - m40;
+        let m42 = v[0].mul_add(v[3], m11);
+        let m43 = v[2].mul_add(v[5], m13);
+        let m44 = m42 - m43;
+        let m45 = m44 * T::from_i64(2);
+        let m46 = v[1].mul_add(v[3], m16);
+        let m47 = v[0].mul_add(v[6], m17);
+        let m48 = m46 - m47;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = v[0].mul_add(v[5], m20);
+        let m51 = v[1].mul_add(v[4], m21);
+        let m52 = m50 - m51;
+        let m53 = m52 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m28)).0, (x[0].scale(m30) + x[1].scale(m32) + x[2].scale(m34)).0, (x[0].scale(m36) + x[1].scale(m38) + x[2].scale(m41)).0, (x[0].scale(m45) + x[1].scale(m49) + x[2].scale(m53)).0], [true, true, true, true]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginPlane<S, T, O>> for Flector<(), T, OV> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginPlane<(), f64, O>> for Flector<(), T, OV> {
+    type Output = gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m11 = v[1] * v[6];
+        let m13 = v[4] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[5] * v[7];
+        let m20 = v[2] * v[3];
+        let m21 = v[6] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m22 - m23;
+        let m25 = m4 - m9;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m5 + m8;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m4 + m9;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m22 + m23;
+        let m32 = -m31;
+        let m33 = m7 - m6;
+        let m34 = m33 * T::from_i64(2);
+        let m35 = m5 - m8;
+        let m36 = m35 * T::from_i64(2);
+        let m37 = m6 + m7;
+        let m38 = m37 * T::from_i64(2);
+        let m39 = m2 + m3;
+        let m40 = m0 + m1;
+        let m41 = m39 - m40;
+        let m42 = v[0].mul_add(v[3], m11);
+        let m43 = v[2].mul_add(v[5], m13);
+        let m44 = m42 - m43;
+        let m45 = m44 * T::from_i64(2);
+        let m46 = v[1].mul_add(v[3], m16);
+        let m47 = v[0].mul_add(v[6], m17);
+        let m48 = m46 - m47;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = v[0].mul_add(v[5], m20);
+        let m51 = v[1].mul_add(v[4], m21);
+        let m52 = m50 - m51;
+        let m53 = m52 * T::from_i64(2);
+        gx::Prepared::from_entries([m24, m26, m28, m30, m32, m34, m36, m38, m41, m45, m49, m53])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0], [true, true, true, true]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>> for Plane<(OriginPlane<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>) -> Self {
+        let m = p.m;
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (OriginPlane<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Flector, 12> for OriginPlane<(), f64, O> {
+    type Output = Plane<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>) -> Plane<(OriginPlane<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginPlane<(), f64, O>, gx::batch::Plain> for Flector {
+    type Y = Plane<(), f64, O>;
+    type Versor<T: gx::Coef> = Flector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Flector<(), T>) -> gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12> {
+        gx::Prepare::<OriginPlane<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Flector, OriginPlane<(), f64, O>, W, 12> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, OriginPlane<(), f64, O>, T, 12>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Flector<(), T>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t1 = v[1] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
+        let t7 = v[7] * xv[2];
+        let t8 = v[0].mul_add(xv[1], t7);
+        let t9 = (-v[1]).mul_add(xv[0], t8);
+        let t10 = v[0] * xv[2];
+        let t13 = (-v[2]).mul_add(xv[0], t10);
+        let t14 = (-v[7]).mul_add(xv[1], t13);
+        let t16 = v[2] * t14;
+        let t17 = v[1] * t4;
+        let t20 = v[7] * t9;
+        let t21 = v[1] * v[4];
+        let t23 = v[2] * v[4];
+        let t25 = v[3] * t4;
+        let t26 = v[4] * v[7];
+        let t27 = xv[0] * t26;
+        let t30 = v[1].mul_add(t9, t16);
+        let t33 = v[1] * v[1];
+        let t35 = v[7] * v[7];
+        let t36 = v[0].mul_add(v[0], t33);
+        let t37 = v[2].mul_add(v[2], t35);
+        let t38 = t36 + t37;
+        let t39 = xv[0] * t38;
+        let t40 = t30.mul_add(T::from_i64(2), t39);
+        let t41 = (-v[7]).mul_add(t14, t17);
+        let t42 = t41 * T::from_i64(2);
+        let t44 = (-xv[1]).mul_add(t38, t42);
+        let t45 = v[2].mul_add(t4, t20);
+        let t46 = t45 * T::from_i64(2);
+        let t48 = (-xv[2]).mul_add(t38, t46);
+        let t49 = xv[1].mul_add(t23, t25);
+        let t50 = v[5].mul_add(t14, t49);
+        let t51 = xv[2].mul_add(t21, t27);
+        let t52 = v[6].mul_add(t9, t51);
+        let t53 = t50 - t52;
+        let t54 = t53 * T::from_i64(2);
+            return Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t40, t44, t48, t54]), [true, true, true, true]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m11 = v[1] * v[6];
+        let m13 = v[4] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[5] * v[7];
+        let m20 = v[2] * v[3];
+        let m21 = v[6] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m22 - m23;
+        let m25 = m4 - m9;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m5 + m8;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m4 + m9;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m22 + m23;
+        let m32 = -m31;
+        let m33 = m7 - m6;
+        let m34 = m33 * T::from_i64(2);
+        let m35 = m5 - m8;
+        let m36 = m35 * T::from_i64(2);
+        let m37 = m6 + m7;
+        let m38 = m37 * T::from_i64(2);
+        let m39 = m2 + m3;
+        let m40 = m0 + m1;
+        let m41 = m39 - m40;
+        let m42 = v[0].mul_add(v[3], m11);
+        let m43 = v[2].mul_add(v[5], m13);
+        let m44 = m42 - m43;
+        let m45 = m44 * T::from_i64(2);
+        let m46 = v[1].mul_add(v[3], m16);
+        let m47 = v[0].mul_add(v[6], m17);
+        let m48 = m46 - m47;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = v[0].mul_add(v[5], m20);
+        let m51 = v[1].mul_add(v[4], m21);
+        let m52 = m50 - m51;
+        let m53 = m52 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m28)).0, (x[0].scale(m30) + x[1].scale(m32) + x[2].scale(m34)).0, (x[0].scale(m36) + x[1].scale(m38) + x[2].scale(m41)).0, (x[0].scale(m45) + x[1].scale(m49) + x[2].scale(m53)).0], [true, true, true, true]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginPlane<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginPlane<(), f64, O>> for gx::Unit<Flector<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m11 = v[1] * v[6];
+        let m13 = v[4] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[5] * v[7];
+        let m20 = v[2] * v[3];
+        let m21 = v[6] * v[7];
+        let m22 = m0 - m1;
+        let m23 = m2 - m3;
+        let m24 = m22 - m23;
+        let m25 = m4 - m9;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m5 + m8;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m4 + m9;
+        let m30 = m29 * T::from_i64(2);
+        let m31 = m22 + m23;
+        let m32 = -m31;
+        let m33 = m7 - m6;
+        let m34 = m33 * T::from_i64(2);
+        let m35 = m5 - m8;
+        let m36 = m35 * T::from_i64(2);
+        let m37 = m6 + m7;
+        let m38 = m37 * T::from_i64(2);
+        let m39 = m2 + m3;
+        let m40 = m0 + m1;
+        let m41 = m39 - m40;
+        let m42 = v[0].mul_add(v[3], m11);
+        let m43 = v[2].mul_add(v[5], m13);
+        let m44 = m42 - m43;
+        let m45 = m44 * T::from_i64(2);
+        let m46 = v[1].mul_add(v[3], m16);
+        let m47 = v[0].mul_add(v[6], m17);
+        let m48 = m46 - m47;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = v[0].mul_add(v[5], m20);
+        let m51 = v[1].mul_add(v[4], m21);
+        let m52 = m50 - m51;
+        let m53 = m52 * T::from_i64(2);
+        gx::Prepared::from_entries([m24, m26, m28, m30, m32, m34, m36, m38, m41, m45, m49, m53])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginPlane<S, T, O>> for gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12> {
+    type Output = Plane<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginPlane<S, T, O>) -> Plane<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11])).0], [true, true, true, true]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>> for Plane<(OriginPlane<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>) -> Self {
+        let m = p.m;
+        Plane { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (OriginPlane<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [m[9], m[10], m[11]]], [true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Flector>, 12> for OriginPlane<(), f64, O> {
+    type Output = Plane<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>) -> Plane<(OriginPlane<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginPlane<(), f64, O>, gx::batch::Certified> for Flector {
+    type Y = Plane<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> Flector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12> {
+        gx::Prepare::<OriginPlane<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, W, 12> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, OriginPlane<(), f64, O>, T, 12>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: OriginPlane<(), T, O>) -> Plane<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}

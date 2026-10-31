@@ -152,6 +152,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Horizontal<S2, T, OB>> for Vector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Bivector<S2, T, OB>> for Bivector<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -204,6 +223,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
             o: core::marker::PhantomData,
             c: [
                 (-((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Tilt<S2, T, OB>> for Bivector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(0, 0) + p(1, 1))).0,
             ],
         }
     }
@@ -380,6 +418,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Horizontal<S2, T, OB>> for Paravector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(1, 0) + p(2, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Scalar<S2, T, OB>> for Rotor<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -475,6 +532,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Tilt<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(1, 0) + p(2, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Vector<S2, T, OB>> for Odd<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -565,6 +641,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
             o: core::marker::PhantomData,
             c: [
                 (((p(0, 1) + p(1, 2)) + (p(2, 3) - p(3, 7)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Horizontal<S2, T, OB>> for Odd<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
             ],
         }
     }
@@ -717,6 +812,215 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
             o: core::marker::PhantomData,
             c: [
                 ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Horizontal<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(1, 0) + p(2, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Tilt<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(4, 0) + p(5, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Vector<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Vector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Paravector<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Paravector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 1) + p(1, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Odd<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Odd<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Multivector<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Multivector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 1) + p(1, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Horizontal<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Bivector<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Bivector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Rotor<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Rotor<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(0, 1) + p(1, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Multivector<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Multivector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(0, 4) + p(1, 5))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::ScalarProduct<Tilt<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                (-(p(0, 0) + p(1, 1))).0,
             ],
         }
     }

@@ -12,6 +12,7 @@ law_suite::law_suite! {
     scalar: Scalar,
     slot: Vector,
     other: Quintvector,
+    dimension: 6,
     products: [
         (Gp, gp, Scalar, Scalar),
         (Gp, gp, Scalar, Vector),
@@ -303,6 +304,8 @@ law_suite::law_suite! {
     ],
     outer: [
     ],
+    outer_two: [
+    ],
     top: [
     ],
     unit_det: [
@@ -314,6 +317,22 @@ law_suite::law_suite! {
         (Dot, dot, Quintvector, Quintvector),
         (ScalarProduct, scalar_product, Vector, Vector),
         (ScalarProduct, scalar_product, Quintvector, Quintvector),
+    ],
+    adjugates: [
+        (Scalar, Scalar),
+        (Scalar, Pseudoscalar),
+        (Vector, Vector),
+        (Vector, Quintvector),
+        (Quintvector, Quintvector),
+        (Quintvector, Vector),
+        (Pseudoscalar, Pseudoscalar),
+        (Pseudoscalar, Scalar),
+    ],
+    adjoints: [
+        (Scalar, Scalar),
+        (Vector, Vector),
+        (Quintvector, Quintvector),
+        (Pseudoscalar, Pseudoscalar),
     ],
     divisions: [
         (Scalar, Vector, Even),

@@ -57,6 +57,18 @@ pub type FlectorSoa<E = f32> = gx::batch::Soa<Flector, E>;
 pub type MultivectorSoa<E = f32> = gx::batch::Soa<Multivector, E>;
 
 #[cfg(feature = "batch")]
+/// [`Spin`] values in struct-of-arrays form, for the batch kernels.
+pub type SpinSoa<E = f32> = gx::batch::Soa<Spin, E>;
+
+#[cfg(feature = "batch")]
+/// [`Moment`] values in struct-of-arrays form, for the batch kernels.
+pub type MomentSoa<E = f32> = gx::batch::Soa<Moment, E>;
+
+#[cfg(feature = "batch")]
+/// [`OriginPlane`] values in struct-of-arrays form, for the batch kernels.
+pub type OriginPlaneSoa<E = f32> = gx::batch::Soa<OriginPlane, E>;
+
+#[cfg(feature = "batch")]
 /// [`Line`] values in struct-of-arrays form, for the batch kernels.
 pub type TwistSoa<E = f32> = gx::batch::Soa<Line, E>;
 
@@ -1184,6 +1196,309 @@ impl<O: gx::Orientation> From<MultivectorGpu16> for Multivector<(), f32, O> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// [`Spin`] in the GPU layout of the `gax::wgsl` modules: its 3 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Spin`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct SpinGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Spin { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<SpinGpu>() == 16);
+    assert!(core::mem::align_of::<SpinGpu>() == 16);
+    assert!(core::mem::offset_of!(SpinGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for SpinGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for SpinGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Spin<(), f32, O>> for SpinGpu {
+    #[inline]
+    fn from(x: Spin<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        SpinGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Spin<(), f32, O>>> for SpinGpu {
+    #[inline]
+    fn from(x: gx::Unit<Spin<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<SpinGpu> for Spin<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: SpinGpu) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Spin`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::pga3d_f16`): its 3
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SpinGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Spin { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<SpinGpu16>() == 8);
+    assert!(core::mem::align_of::<SpinGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for SpinGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for SpinGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Spin<(), f32, O>> for SpinGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Spin<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        SpinGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<SpinGpu16> for Spin<(), f32, O> {
+    #[inline]
+    fn from(g: SpinGpu16) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`Moment`] in the GPU layout of the `gax::wgsl` modules: its 3 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Moment`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct MomentGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Moment { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<MomentGpu>() == 16);
+    assert!(core::mem::align_of::<MomentGpu>() == 16);
+    assert!(core::mem::offset_of!(MomentGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for MomentGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for MomentGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Moment<(), f32, O>> for MomentGpu {
+    #[inline]
+    fn from(x: Moment<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        MomentGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Moment<(), f32, O>>> for MomentGpu {
+    #[inline]
+    fn from(x: gx::Unit<Moment<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<MomentGpu> for Moment<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: MomentGpu) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Moment`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::pga3d_f16`): its 3
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MomentGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Moment { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<MomentGpu16>() == 8);
+    assert!(core::mem::align_of::<MomentGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for MomentGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for MomentGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Moment<(), f32, O>> for MomentGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Moment<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        MomentGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<MomentGpu16> for Moment<(), f32, O> {
+    #[inline]
+    fn from(g: MomentGpu16) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`OriginPlane`] in the GPU layout of the `gax::wgsl` modules: its 3 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `OriginPlane`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct OriginPlaneGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct OriginPlane { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<OriginPlaneGpu>() == 16);
+    assert!(core::mem::align_of::<OriginPlaneGpu>() == 16);
+    assert!(core::mem::offset_of!(OriginPlaneGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for OriginPlaneGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for OriginPlaneGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginPlane<(), f32, O>> for OriginPlaneGpu {
+    #[inline]
+    fn from(x: OriginPlane<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        OriginPlaneGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<OriginPlane<(), f32, O>>> for OriginPlaneGpu {
+    #[inline]
+    fn from(x: gx::Unit<OriginPlane<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginPlaneGpu> for OriginPlane<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: OriginPlaneGpu) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`OriginPlane`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::pga3d_f16`): its 3
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct OriginPlaneGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct OriginPlane { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<OriginPlaneGpu16>() == 8);
+    assert!(core::mem::align_of::<OriginPlaneGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for OriginPlaneGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for OriginPlaneGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginPlane<(), f32, O>> for OriginPlaneGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: OriginPlane<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        OriginPlaneGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginPlaneGpu16> for OriginPlane<(), f32, O> {
+    #[inline]
+    fn from(g: OriginPlaneGpu16) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// Alias of [`LineGpu`].
 pub type TwistGpu = LineGpu;
 
@@ -1230,6 +1545,9 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Motor", core::mem::size_of::<MotorGpu>(), core::mem::align_of::<MotorGpu>(), core::mem::offset_of!(MotorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Flector", core::mem::size_of::<FlectorGpu>(), core::mem::align_of::<FlectorGpu>(), core::mem::offset_of!(FlectorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu>(), core::mem::align_of::<MultivectorGpu>(), core::mem::offset_of!(MultivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Spin", core::mem::size_of::<SpinGpu>(), core::mem::align_of::<SpinGpu>(), core::mem::offset_of!(SpinGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Moment", core::mem::size_of::<MomentGpu>(), core::mem::align_of::<MomentGpu>(), core::mem::offset_of!(MomentGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("OriginPlane", core::mem::size_of::<OriginPlaneGpu>(), core::mem::align_of::<OriginPlaneGpu>(), core::mem::offset_of!(OriginPlaneGpu, c), core::mem::size_of::<[f32; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]
@@ -1246,6 +1564,9 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Motor", core::mem::size_of::<MotorGpu16>(), core::mem::align_of::<MotorGpu16>(), core::mem::offset_of!(MotorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Flector", core::mem::size_of::<FlectorGpu16>(), core::mem::align_of::<FlectorGpu16>(), core::mem::offset_of!(FlectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu16>(), core::mem::align_of::<MultivectorGpu16>(), core::mem::offset_of!(MultivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Spin", core::mem::size_of::<SpinGpu16>(), core::mem::align_of::<SpinGpu16>(), core::mem::offset_of!(SpinGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Moment", core::mem::size_of::<MomentGpu16>(), core::mem::align_of::<MomentGpu16>(), core::mem::offset_of!(MomentGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("OriginPlane", core::mem::size_of::<OriginPlaneGpu16>(), core::mem::align_of::<OriginPlaneGpu16>(), core::mem::offset_of!(OriginPlaneGpu16, c), core::mem::size_of::<[u16; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]
@@ -1369,6 +1690,81 @@ impl From<gx::GpuMat<4>> for Plane<(Translator,), f32> {
     fn from(g: gx::GpuMat<4>) -> Self {
         Plane::from_coeffs(core::array::from_fn(|o| {
             <(Translator,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Plane<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Plane<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Plane<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Plane::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Plane<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Plane<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Plane<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Plane::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Plane<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Plane<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Plane<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Plane::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
         }))
     }
 }
@@ -1499,6 +1895,81 @@ impl From<gx::GpuMat<4>> for Point<(Translator,), f32> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Point<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Point<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Point<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Point::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Point<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Point<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Point<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Point::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Point<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Point<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Point<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Point::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
 impl<O: gx::Orientation> From<Direction<(Plane,), f32, O>> for gx::GpuMat<4> {
     #[inline]
@@ -1619,6 +2090,81 @@ impl From<gx::GpuMat<4>> for Direction<(Translator,), f32> {
     fn from(g: gx::GpuMat<4>) -> Self {
         Direction::from_coeffs(core::array::from_fn(|o| {
             <(Translator,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Direction<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Direction<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Direction<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Direction<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Direction<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Direction<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Direction<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Direction<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Direction<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
         }))
     }
 }
@@ -1749,6 +2295,81 @@ impl From<gx::GpuMat<4>> for Rotor<(Translator,), f32> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Rotor<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Rotor<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Rotor<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Rotor::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Rotor<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Rotor<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Rotor<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Rotor::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Rotor<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Rotor<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Rotor<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Rotor::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
 impl<O: gx::Orientation> From<Translator<(Plane,), f32, O>> for gx::GpuMat<4> {
     #[inline]
@@ -1869,6 +2490,681 @@ impl From<gx::GpuMat<4>> for Translator<(Translator,), f32> {
     fn from(g: gx::GpuMat<4>) -> Self {
         Translator::from_coeffs(core::array::from_fn(|o| {
             <(Translator,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Translator<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Translator<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Translator<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Translator::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Translator<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Translator<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Translator<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Translator::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Translator<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Translator<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Translator<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Translator::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Plane,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Spin<(Plane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Plane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Spin<(Plane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Plane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Point,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Spin<(Point,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Point,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Spin<(Point,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Point,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Direction,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Spin<(Direction,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Direction,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Spin<(Direction,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Direction,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Rotor,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Spin<(Rotor,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Rotor,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Spin<(Rotor,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Rotor,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Translator,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Spin<(Translator,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Translator,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Spin<(Translator,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Translator,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Spin<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Spin<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Spin<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Spin<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Spin<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Spin<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Spin<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Spin::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Plane,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Moment<(Plane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Plane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Moment<(Plane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Plane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Point,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Moment<(Point,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Point,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Moment<(Point,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Point,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Direction,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Moment<(Direction,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Direction,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Moment<(Direction,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Direction,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Rotor,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Moment<(Rotor,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Rotor,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Moment<(Rotor,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Rotor,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Translator,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Moment<(Translator,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Translator,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Moment<(Translator,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Translator,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Moment<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Moment<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Moment<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Moment<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Moment<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: Moment<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for Moment<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        Moment::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Plane,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: OriginPlane<(Plane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Plane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for OriginPlane<(Plane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Plane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Point,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: OriginPlane<(Point,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Point,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for OriginPlane<(Point,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Point,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Direction,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: OriginPlane<(Direction,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Direction,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for OriginPlane<(Direction,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Direction,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Rotor,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: OriginPlane<(Rotor,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Rotor,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for OriginPlane<(Rotor,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Rotor,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Translator,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: OriginPlane<(Translator,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Translator,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for OriginPlane<(Translator,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Translator,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Spin,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: OriginPlane<(Spin,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Spin,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for OriginPlane<(Spin,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Spin,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(Moment,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: OriginPlane<(Moment,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Moment,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for OriginPlane<(Moment,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(Moment,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat3x3<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginPlane<(OriginPlane,), f32, O>> for gx::GpuMat<3> {
+    #[inline]
+    fn from(m: OriginPlane<(OriginPlane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 3];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginPlane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<3>> for OriginPlane<(OriginPlane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<3>) -> Self {
+        OriginPlane::from_coeffs(core::array::from_fn(|o| {
+            <(OriginPlane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
         }))
     }
 }

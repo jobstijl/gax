@@ -15,7 +15,9 @@
 //! * [`SquareMap`], [`Endomorphism`], [`Form`], [`FormAsMap`], [`Pairing`], [`OfBoth`],
 //!   [`TraceFirst`], [`SingularValues`], [`PseudoInverse`], [`LeastSquares`],
 //!   [`LeastSquaresDyad`] and [`OfDyad`]: solving, eigenproblems (real, and [`Complex`] for
-//!   general maps), singular values, pairings and least squares on maps and forms.
+//!   general maps), singular values, pairings and least squares on maps and forms;
+//!   [`Adjugate`] and [`Adjoint`], their transposes through the regressive and the scalar
+//!   product.
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
 //!
 //! ```
@@ -66,11 +68,12 @@ pub mod slots;
 pub mod strict;
 mod study;
 pub mod trace;
+pub mod transpose;
 pub mod unit;
 
 pub use bind::Of;
 pub use calculus::Reciprocal;
-pub use cast::{Cast, GradePart, SubKind};
+pub use cast::{Cast, Complement, GradePart, SubKind};
 pub use coef::{Coef, ConstCoef, Elem, Real};
 pub use complex::Complex;
 pub use extensor::{
@@ -88,6 +91,7 @@ pub use ops::{
 pub use orientation::{Extrinsic, Intrinsic, Orientation, Oriented};
 pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, Slots, SplitFirst};
+pub use transpose::{Adjoint, Adjugate};
 pub use unit::{Unit, Widen};
 
 /// Items that only generated code names: type-level machinery, the dense kernels and the

@@ -12,6 +12,7 @@ law_suite::law_suite! {
     scalar: Scalar,
     slot: Vector,
     other: Twist,
+    dimension: 4,
     products: [
         (Gp, gp, Scalar, Scalar),
         (Gp, gp, Scalar, Vector),
@@ -1597,6 +1598,10 @@ law_suite::law_suite! {
         (Trivector, Vector),
         (Trivector, Bivector),
     ],
+    outer_two: [
+        (Vector, Bivector, Wedge, wedge),
+        (Trivector, Bivector, Vee, vee),
+    ],
     top: [
         (Vector, Pseudoscalar),
         (Trivector, Scalar),
@@ -1621,6 +1626,28 @@ law_suite::law_suite! {
         (ScalarProduct, scalar_product, Vector, Vector),
         (ScalarProduct, scalar_product, Bivector, Bivector),
         (ScalarProduct, scalar_product, Trivector, Trivector),
+    ],
+    adjugates: [
+        (Scalar, Scalar),
+        (Scalar, Pseudoscalar),
+        (Vector, Vector),
+        (Vector, Trivector),
+        (Bivector, Bivector),
+        (Trivector, Trivector),
+        (Trivector, Vector),
+        (Pseudoscalar, Pseudoscalar),
+        (Pseudoscalar, Scalar),
+        (Even, Even),
+        (Odd, Odd),
+    ],
+    adjoints: [
+        (Scalar, Scalar),
+        (Vector, Vector),
+        (Bivector, Bivector),
+        (Trivector, Trivector),
+        (Pseudoscalar, Pseudoscalar),
+        (Even, Even),
+        (Odd, Odd),
     ],
     divisions: [
         (Scalar, Vector, Even),

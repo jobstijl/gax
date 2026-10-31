@@ -68,6 +68,12 @@ pub type Flector<S = (), T = f64> = oriented::Flector<S, T, gx::Extrinsic>;
 /// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
 pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
 
+#[doc = "A line through the origin, `a x + b y = 0`: the Euclidean part of a line, its normal as a line. It pairs with `Direction`s, its complement."]
+///
+/// In its default orientation, extrinsic: [`oriented::OriginLine`] is the kind for any orientation,
+/// [`intrinsic::OriginLine`] and [`extrinsic::OriginLine`] name either one.
+pub type OriginLine<S = (), T = f64> = oriented::OriginLine<S, T, gx::Extrinsic>;
+
 /// Every kind of the algebra, intrinsic (ADR-051).
 pub mod intrinsic {
     use super::{gx, oriented};
@@ -92,6 +98,8 @@ pub mod intrinsic {
     pub type Flector<S = (), T = f64> = oriented::Flector<S, T, gx::Intrinsic>;
     /// [`oriented::Multivector`], intrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+    /// [`oriented::OriginLine`], intrinsic.
+    pub type OriginLine<S = (), T = f64> = oriented::OriginLine<S, T, gx::Intrinsic>;
 }
 
 /// Every kind of the algebra, extrinsic (ADR-051).
@@ -118,6 +126,8 @@ pub mod extrinsic {
     pub type Flector<S = (), T = f64> = oriented::Flector<S, T, gx::Extrinsic>;
     /// [`oriented::Multivector`], extrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+    /// [`oriented::OriginLine`], extrinsic.
+    pub type OriginLine<S = (), T = f64> = oriented::OriginLine<S, T, gx::Extrinsic>;
 }
 
 /// The kinds as structs generic over their orientation `O` (ADR-051), with every

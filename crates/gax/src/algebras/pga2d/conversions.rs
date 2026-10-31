@@ -80,6 +80,14 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
     }
 }
 
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Scalar<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Scalar<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Line<(), T, OB>> for Scalar<S, T, OA> {
     type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
     #[inline(always)]
@@ -242,6 +250,23 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Line<(), T, OB>>> for Multivector<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Line<(), T, OB>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Line<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Line<(), T, OB>>> for OriginLine<S, T, OA> {
     type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
     /// `self ~rhs`: a unit versor's inverse is its reverse.
     #[inline(always)]
@@ -420,6 +445,23 @@ impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Di
     }
 }
 
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Point<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Point<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Point<(), T, OB>>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Point<(), T, OB>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Point<(), T, OB>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Rotor<(), T, OB>> for Scalar<S, T, OA> {
     type Output = <Self as gx::Gp<Rotor<(), T, OB>>>::Output;
     #[inline(always)]
@@ -582,6 +624,23 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Rotor<(), T, OB>>> for Multivector<S, T, OA> {
+    type Output = <Self as gx::Gp<Rotor<(), T, OB>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Rotor<(), T, OB>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Rotor<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Rotor<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Rotor<(), T, OB>>> for OriginLine<S, T, OA> {
     type Output = <Self as gx::Gp<Rotor<(), T, OB>>>::Output;
     /// `self ~rhs`: a unit versor's inverse is its reverse.
     #[inline(always)]
@@ -760,6 +819,23 @@ impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Di
     }
 }
 
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Translator<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Translator<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Translator<(), T, OB>>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Translator<(), T, OB>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Translator<(), T, OB>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Motor<(), T, OB>> for Scalar<S, T, OA> {
     type Output = <Self as gx::Gp<Motor<(), T, OB>>>::Output;
     #[inline(always)]
@@ -922,6 +998,23 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Motor<(), T, OB>>> for Multivector<S, T, OA> {
+    type Output = <Self as gx::Gp<Motor<(), T, OB>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Motor<(), T, OB>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Motor<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Motor<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Motor<(), T, OB>>> for OriginLine<S, T, OA> {
     type Output = <Self as gx::Gp<Motor<(), T, OB>>>::Output;
     /// `self ~rhs`: a unit versor's inverse is its reverse.
     #[inline(always)]
@@ -1100,6 +1193,23 @@ impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Di
     }
 }
 
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Flector<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Flector<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<gx::Unit<Flector<(), T, OB>>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Flector<(), T, OB>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Flector<(), T, OB>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Multivector<(), T, OB>> for Scalar<S, T, OA> {
     type Output = <Self as gx::Gp<Multivector<(), T, OB>>>::Output;
     #[inline(always)]
@@ -1176,6 +1286,102 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
     type Output = <Self as gx::Gp<Multivector<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Multivector<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<Multivector<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Multivector<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Scalar<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Line<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Point<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Direction<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Pseudoscalar<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Rotor<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Translator<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Motor<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Flector<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for Multivector<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginLine<(), T, OB>> for OriginLine<S, T, OA> {
+    type Output = <Self as gx::Gp<Line<(), T, OB>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: OriginLine<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
     }
 }
@@ -1379,6 +1585,36 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Flector<S, T, O>> for M
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Flector<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginLine<S, T, O>> for Line<S, T, O> {
+    /// The same multivector as a [`Line`], of the same orientation.
+    #[inline(always)]
+    fn from(x: OriginLine<S, T, O>) -> Self {
+        Line { o: core::marker::PhantomData, c: [x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Line<(), T, O>> for OriginLine<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginLine<S, T, O>> for Flector<S, T, O> {
+    /// The same multivector as a [`Flector`], of the same orientation.
+    #[inline(always)]
+    fn from(x: OriginLine<S, T, O>) -> Self {
+        Flector { o: core::marker::PhantomData, c: [x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Flector<(), T, O>> for OriginLine<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginLine<S, T, O>> for Multivector<S, T, O> {
+    /// The same multivector as a [`Multivector`], of the same orientation.
+    #[inline(always)]
+    fn from(x: OriginLine<S, T, O>) -> Self {
+        Multivector { o: core::marker::PhantomData, c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for OriginLine<(), T, O> {}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Scalar<S, T, O> {
     type Output = Scalar<S, T, O>;
@@ -1827,5 +2063,50 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for Multivector<S
     fn undual(self) -> Multivector<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
         Multivector { o: core::marker::PhantomData, c: [a[7], a[6], a[5], a[4], a[3], a[2], a[1], a[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for OriginLine<S, T, O> {
+    type Output = Line<S, T, O>;
+    #[inline]
+    fn reverse(self) -> Line<S, T, O> {
+        let a = self.c;
+        Line { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for OriginLine<S, T, O> {
+    type Output = Line<S, T, O>;
+    #[inline]
+    fn involute(self) -> Line<S, T, O> {
+        let a = self.c;
+        Line { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for OriginLine<S, T, O> {
+    type Output = Line<S, T, O>;
+    #[inline]
+    fn conjugate(self) -> Line<S, T, O> {
+        let a = self.c;
+        Line { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Dual for OriginLine<S, T, O> {
+    type Output = Point<S, T, gx::orientation::Flip<O>>;
+    #[inline]
+    fn dual(self) -> Point<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Point { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for OriginLine<S, T, O> {
+    type Output = Point<S, T, gx::orientation::Flip<O>>;
+    #[inline]
+    fn undual(self) -> Point<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Point { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }

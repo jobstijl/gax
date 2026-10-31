@@ -163,6 +163,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Vector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Vector<S2, T, OB>> for Bivector<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
     #[inline(always)]
@@ -307,6 +326,46 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (p(1, 7)).0,
                 (p(2, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Horizontal<S2, T, OB>> for Bivector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Bivector<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(2, 1)).0,
+                (p(2, 0)).0,
+                ((p(0, 1) - p(1, 0))).0,
             ],
         }
     }
@@ -488,6 +547,48 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Horizontal<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Horizontal<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
+    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Bivector<S2, T, OB>> for Paravector<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
     #[inline(always)]
@@ -599,6 +700,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Paravector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(1, 0) + p(2, 1))).0,
             ],
         }
     }
@@ -749,6 +869,46 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (p(2, 7)).0,
                 (p(3, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Horizontal<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(1, 0) + p(2, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(3, 1)).0,
+                (p(3, 0)).0,
+                ((p(1, 1) - p(2, 0))).0,
             ],
         }
     }
@@ -929,6 +1089,49 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (p(3, 5)).0,
                 (p(3, 6)).0,
                 (p(3, 7)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Horizontal<S2, T, OB>> for Odd<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Horizontal<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(3, 0)).0,
+                (p(3, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Odd<S1, T, OA> {
+    type Output = Rotor<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Rotor<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Rotor {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+                (p(3, 0)).0,
+                (p(3, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1130,6 +1333,372 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 ((p(5, 7) + p(7, 5))).0,
                 ((p(6, 7) + p(7, 6))).0,
                 (p(7, 7)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Horizontal<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Horizontal<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(4, 0) + p(5, 1))).0,
+                (p(7, 0)).0,
+                (p(7, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(1, 0) + p(2, 1))).0,
+                (-p(6, 1)).0,
+                (p(6, 0)).0,
+                ((p(4, 1) - p(5, 0))).0,
+                (p(7, 0)).0,
+                (p(7, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Bivector<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Bivector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Pseudoscalar<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Pseudoscalar<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Rotor<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Rotor<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 1) + p(1, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Odd<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Odd<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 3)).0,
+                (p(1, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Multivector<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 4) + p(1, 5))).0,
+                (p(0, 7)).0,
+                (p(1, 7)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Horizontal<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Vector<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Vector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Bivector<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Bivector<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(1, 2)).0,
+                (-p(0, 2)).0,
+                ((p(0, 1) - p(1, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Pseudoscalar<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Pseudoscalar<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Paravector<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Paravector<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 1) + p(1, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Rotor<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Rotor<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(1, 3)).0,
+                (-p(0, 3)).0,
+                ((p(0, 2) - p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Odd<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Rotor<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Odd<S2, T, OB>) -> Rotor<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Rotor {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+                (p(0, 3)).0,
+                (p(1, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Multivector<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 1) + p(1, 2))).0,
+                (p(1, 6)).0,
+                (-p(0, 6)).0,
+                ((p(0, 5) - p(1, 4))).0,
+                (p(0, 7)).0,
+                (p(1, 7)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Horizontal<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Horizontal<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Vee<Tilt<S2, T, OB>> for Tilt<S1, T, OA> {
+    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>>;
+    #[inline(always)]
+    fn vee(self, rhs: Tilt<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Joined<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Vee::vee(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(0, 1) - p(1, 0))).0,
             ],
         }
     }

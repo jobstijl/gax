@@ -10,7 +10,7 @@ mod oracle_tests;
 mod products;
 mod sandwich;
 
-pub use kinds::reciprocal_frame;
+pub use kinds::{complement_pairs, reciprocal_frame};
 pub use oracle_tests::emit_tests;
 
 use crate::spec::{AlgebraSpec, KindSpec};

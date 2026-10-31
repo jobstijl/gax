@@ -2195,3 +2195,231 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
         gx::Transform::transform(v, x)
     }
 }
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginLine<S, T, O>> for Translator<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginLine<S, T, O>) -> Line<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = xv[0] * t0;
+        let t2 = xv[1] * t0;
+        let t3 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = xv[0] * t5;
+        let t7 = (-xv[1]).mul_add(t3, t6);
+        let t8 = t7 * T::from_i64(2);
+            return Line { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 3>([t1, t2, t8]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[1];
+        let m3 = m1 * T::from_i64(2);
+        let m4 = m2 * T::from_i64(2);
+        let m5 = -m4;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m0)).0, (x[1].scale(m0)).0, (x[0].scale(m3) + x[1].scale(m5)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginLine<S, T, O>> for Translator<(), T, OV> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginLine<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginLine<(), f64, O>> for Translator<(), T, OV> {
+    type Output = gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[1];
+        let m3 = m1 * T::from_i64(2);
+        let m4 = m2 * T::from_i64(2);
+        let m5 = -m4;
+        gx::Prepared::from_entries([m0, m3, m5])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginLine<S, T, O>> for gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginLine<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[0].scale(m[1]) + x[1].scale(m[2])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>> for Line<(OriginLine<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: [[m[0], T::zero()], [T::zero(), m[0]], [m[1], m[2]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Translator, 3> for OriginLine<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>) -> Line<(OriginLine<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginLine<(), f64, O>, gx::batch::Plain> for Translator {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = Translator<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Translator<(), T>) -> Translator<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Translator<(), T>) -> Translator<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Translator<(), T>) -> gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3> {
+        gx::Prepare::<OriginLine<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Translator, OriginLine<(), f64, O>, W, 3> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Translator, OriginLine<(), f64, O>, T, 3>, x: OriginLine<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Translator<(), T>, x: OriginLine<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginLine<S, T, O>> for gx::Unit<Translator<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginLine<S, T, O>) -> Line<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = xv[0] * t0;
+        let t2 = xv[1] * t0;
+        let t3 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = xv[0] * t5;
+        let t7 = (-xv[1]).mul_add(t3, t6);
+        let t8 = t7 * T::from_i64(2);
+            return Line { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 3>([t1, t2, t8]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[1];
+        let m3 = m1 * T::from_i64(2);
+        let m4 = m2 * T::from_i64(2);
+        let m5 = -m4;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m0)).0, (x[1].scale(m0)).0, (x[0].scale(m3) + x[1].scale(m5)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginLine<S, T, O>> for gx::Unit<Translator<(), T, OV>> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginLine<S, T, O>) -> Line<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginLine<(), f64, O>> for gx::Unit<Translator<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[1];
+        let m3 = m1 * T::from_i64(2);
+        let m4 = m2 * T::from_i64(2);
+        let m5 = -m4;
+        gx::Prepared::from_entries([m0, m3, m5])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginLine<S, T, O>> for gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3> {
+    type Output = Line<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginLine<S, T, O>) -> Line<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Line { o: core::marker::PhantomData, c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[0].scale(m[1]) + x[1].scale(m[2])).0] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>> for Line<(OriginLine<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>) -> Self {
+        let m = p.m;
+        Line { o: core::marker::PhantomData, c: [[m[0], T::zero()], [T::zero(), m[0]], [m[1], m[2]]] }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Translator>, 3> for OriginLine<(), f64, O> {
+    type Output = Line<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>) -> Line<(OriginLine<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginLine<(), f64, O>, gx::batch::Certified> for Translator {
+    type Y = Line<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Translator<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Translator<(), T>) -> gx::Unit<Translator<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Translator<(), T>>) -> Translator<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Translator<(), T>>) -> gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3> {
+        gx::Prepare::<OriginLine<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, W, 3> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Translator>, OriginLine<(), f64, O>, T, 3>, x: OriginLine<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Translator<(), T>>, x: OriginLine<(), T, O>) -> Line<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}

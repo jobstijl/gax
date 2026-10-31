@@ -58,6 +58,14 @@ pub type OddSoa<E = f32> = gx::batch::Soa<Odd, E>;
 pub type MultivectorSoa<E = f32> = gx::batch::Soa<Multivector, E>;
 
 #[cfg(feature = "batch")]
+/// [`Direction`] values in struct-of-arrays form, for the batch kernels.
+pub type DirectionSoa<E = f32> = gx::batch::Soa<Direction, E>;
+
+#[cfg(feature = "batch")]
+/// [`OriginHyperplane`] values in struct-of-arrays form, for the batch kernels.
+pub type OriginHyperplaneSoa<E = f32> = gx::batch::Soa<OriginHyperplane, E>;
+
+#[cfg(feature = "batch")]
 /// [`Vector`] values in struct-of-arrays form, for the batch kernels.
 pub type HyperplaneSoa<E = f32> = gx::batch::Soa<Vector, E>;
 
@@ -995,6 +1003,208 @@ impl<O: gx::Orientation> From<MultivectorGpu16> for Multivector<(), f32, O> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// [`Direction`] in the GPU layout of the `gax::wgsl` modules: its 4 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Direction`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DirectionGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Direction { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<DirectionGpu>() == 16);
+    assert!(core::mem::align_of::<DirectionGpu>() == 16);
+    assert!(core::mem::offset_of!(DirectionGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for DirectionGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for DirectionGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Direction<(), f32, O>> for DirectionGpu {
+    #[inline]
+    fn from(x: Direction<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        DirectionGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Direction<(), f32, O>>> for DirectionGpu {
+    #[inline]
+    fn from(x: gx::Unit<Direction<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<DirectionGpu> for Direction<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: DirectionGpu) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Direction`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::stap_f16`): its 4
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DirectionGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Direction { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<DirectionGpu16>() == 8);
+    assert!(core::mem::align_of::<DirectionGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for DirectionGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for DirectionGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Direction<(), f32, O>> for DirectionGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Direction<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        DirectionGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<DirectionGpu16> for Direction<(), f32, O> {
+    #[inline]
+    fn from(g: DirectionGpu16) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`OriginHyperplane`] in the GPU layout of the `gax::wgsl` modules: its 4 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `OriginHyperplane`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct OriginHyperplaneGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct OriginHyperplane { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<OriginHyperplaneGpu>() == 16);
+    assert!(core::mem::align_of::<OriginHyperplaneGpu>() == 16);
+    assert!(core::mem::offset_of!(OriginHyperplaneGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for OriginHyperplaneGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for OriginHyperplaneGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginHyperplane<(), f32, O>> for OriginHyperplaneGpu {
+    #[inline]
+    fn from(x: OriginHyperplane<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        OriginHyperplaneGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<OriginHyperplane<(), f32, O>>> for OriginHyperplaneGpu {
+    #[inline]
+    fn from(x: gx::Unit<OriginHyperplane<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginHyperplaneGpu> for OriginHyperplane<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: OriginHyperplaneGpu) -> Self {
+        OriginHyperplane::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`OriginHyperplane`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::stap_f16`): its 4
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct OriginHyperplaneGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct OriginHyperplane { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<OriginHyperplaneGpu16>() == 8);
+    assert!(core::mem::align_of::<OriginHyperplaneGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for OriginHyperplaneGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for OriginHyperplaneGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginHyperplane<(), f32, O>> for OriginHyperplaneGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: OriginHyperplane<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        OriginHyperplaneGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<OriginHyperplaneGpu16> for OriginHyperplane<(), f32, O> {
+    #[inline]
+    fn from(g: OriginHyperplaneGpu16) -> Self {
+        OriginHyperplane::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// Alias of [`VectorGpu`].
 pub type HyperplaneGpu = VectorGpu;
 
@@ -1063,6 +1273,8 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Motor", core::mem::size_of::<MotorGpu>(), core::mem::align_of::<MotorGpu>(), core::mem::offset_of!(MotorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu>(), core::mem::align_of::<OddGpu>(), core::mem::offset_of!(OddGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu>(), core::mem::align_of::<MultivectorGpu>(), core::mem::offset_of!(MultivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Direction", core::mem::size_of::<DirectionGpu>(), core::mem::align_of::<DirectionGpu>(), core::mem::offset_of!(DirectionGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("OriginHyperplane", core::mem::size_of::<OriginHyperplaneGpu>(), core::mem::align_of::<OriginHyperplaneGpu>(), core::mem::offset_of!(OriginHyperplaneGpu, c), core::mem::size_of::<[f32; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]
@@ -1077,4 +1289,106 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Motor", core::mem::size_of::<MotorGpu16>(), core::mem::align_of::<MotorGpu16>(), core::mem::offset_of!(MotorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu16>(), core::mem::align_of::<OddGpu16>(), core::mem::offset_of!(OddGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu16>(), core::mem::align_of::<MultivectorGpu16>(), core::mem::offset_of!(MultivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Direction", core::mem::size_of::<DirectionGpu16>(), core::mem::align_of::<DirectionGpu16>(), core::mem::offset_of!(DirectionGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("OriginHyperplane", core::mem::size_of::<OriginHyperplaneGpu16>(), core::mem::align_of::<OriginHyperplaneGpu16>(), core::mem::offset_of!(OriginHyperplaneGpu16, c), core::mem::size_of::<[u16; 4]>()),
 ];
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Direction<(Direction,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Direction<(Direction,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Direction,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Direction<(Direction,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|o| {
+            <(Direction,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<Direction<(OriginHyperplane,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: Direction<(OriginHyperplane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginHyperplane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for Direction<(OriginHyperplane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|o| {
+            <(OriginHyperplane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginHyperplane<(Direction,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: OriginHyperplane<(Direction,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(Direction,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for OriginHyperplane<(Direction,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        OriginHyperplane::from_coeffs(core::array::from_fn(|o| {
+            <(Direction,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// The map as a WGSL `mat4x4<f32>` (columns are inputs; transposes the output-first layout).
+impl<O: gx::Orientation> From<OriginHyperplane<(OriginHyperplane,), f32, O>> for gx::GpuMat<4> {
+    #[inline]
+    fn from(m: OriginHyperplane<(OriginHyperplane,), f32, O>) -> Self {
+        let mut cols = [[0.0; 4]; 4];
+        for (o, row) in m.c.iter().enumerate() {
+            for (i, col) in cols.iter_mut().enumerate() {
+                col[o] = <(OriginHyperplane,) as gx::Slots>::get_flat(row, i);
+            }
+        }
+        gx::GpuMat { cols }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::GpuMat<4>> for OriginHyperplane<(OriginHyperplane,), f32> {
+    #[inline]
+    fn from(g: gx::GpuMat<4>) -> Self {
+        OriginHyperplane::from_coeffs(core::array::from_fn(|o| {
+            <(OriginHyperplane,) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }))
+    }
+}

@@ -1,0 +1,5 @@
+error[E0599]: no method named `adjugate` found for struct `gax::pga3d::oriented::Rotor<S, T, O>` in the current scope
+ --> tests/compile_fail/adjugate_no_complement.rs:7:15
+  |
+7 |     let _ = m.adjugate();
+  |               ^^^^^^^^ method not found in `gax::pga3d::oriented::Rotor<(gax::pga3d::oriented::Rotor,)>`

@@ -12,6 +12,7 @@ law_suite::law_suite! {
     scalar: Scalar,
     slot: Vector,
     other: Rotor,
+    dimension: 2,
     products: [
         (Gp, gp, Scalar, Scalar),
         (Gp, gp, Scalar, Vector),
@@ -486,6 +487,9 @@ law_suite::law_suite! {
     outer: [
         (Vector, Pseudoscalar),
     ],
+    outer_two: [
+        (Vector, Pseudoscalar, Wedge, wedge),
+    ],
     top: [
         (Vector, Pseudoscalar),
     ],
@@ -497,6 +501,22 @@ law_suite::law_suite! {
         (Vee, vee, Vector, Vector),
         (Dot, dot, Vector, Vector),
         (ScalarProduct, scalar_product, Vector, Vector),
+    ],
+    adjugates: [
+        (Scalar, Scalar),
+        (Scalar, Pseudoscalar),
+        (Vector, Vector),
+        (Pseudoscalar, Pseudoscalar),
+        (Pseudoscalar, Scalar),
+        (Rotor, Rotor),
+        (Multivector, Multivector),
+    ],
+    adjoints: [
+        (Scalar, Scalar),
+        (Vector, Vector),
+        (Pseudoscalar, Pseudoscalar),
+        (Rotor, Rotor),
+        (Multivector, Multivector),
     ],
     divisions: [
         (Scalar, Vector, Rotor),

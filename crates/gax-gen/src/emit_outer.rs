@@ -25,25 +25,28 @@ pub fn terms(n: u32, k: u32) -> usize {
     blades * blades * minor
 }
 
-/// The grade of a kind holding every blade of one grade (in any order and orientation).
-fn full_grade(spec: &AlgebraSpec, k: &KindSpec) -> Option<u32> {
+/// The grade of a kind whose blades are all of one grade.
+fn single_grade(k: &KindSpec) -> Option<u32> {
     let g: BTreeSet<u32> = k.layout.grades();
-    let &g = g.iter().next().filter(|_| g.len() == 1)?;
-    let all = spec.algebra.blades_of_grade(g).count();
-    (k.layout.len() == all).then_some(g)
+    g.iter().next().copied().filter(|_| g.len() == 1)
 }
 
-/// Emit `Outermorphism<B>` impls for maps on the grade-1 and grade-(n-1) kinds, up to
+/// The number of `k`-subsets of `n` things.
+fn choose(n: usize, k: usize) -> usize {
+    (0..k).fold(1, |c, i| c * (n - i) / (i + 1))
+}
+
+/// Emit `Outermorphism<B>` impls for maps on the kinds of grade 1 and grade n-1, up to
 /// [`OUTER_MAX_TERMS`], and list them as `(base kind, extended kind, whether the extended kind
-/// is the top)`. The pairs are independent, so they are derived in parallel and written in
+/// is the top)`. A base holds all (anti)vectors, or some of them, as a `part` does (PGA3D's
+/// `OriginPlane` and `Direction`): its extensions are then the kinds of the subalgebra those
+/// factors span. The pairs are independent, so they are derived in parallel and written in
 /// order.
 pub fn outermorphisms(spec: &AlgebraSpec) -> (String, Vec<(String, String, bool)>) {
     let n = spec.algebra.dim() as u32;
-    // Only kinds holding *all* blades of their grade can be the base of an outermorphism.
-    let bases = spec
-        .kinds
-        .iter()
-        .filter(|v| full_grade(spec, v).is_some_and(|gv| gv == 1 || (gv + 1 == n && n > 2)));
+    let bases = spec.kinds.iter().filter(|v| {
+        v.layout.len() >= 2 && single_grade(v).is_some_and(|gv| gv == 1 || (gv + 1 == n && n > 2))
+    });
     let jobs: Vec<(&KindSpec, &KindSpec)> = bases
         .flat_map(|v| spec.kinds.iter().map(move |b| (v, b)))
         .collect();
@@ -61,8 +64,8 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> (String, Vec<(String, String, bool)
 }
 
 /// The outermorphism from maps on the base kind `v` to the kind `b`, if `b` extends it (holds
-/// every blade of its grade, as every extension of a general map fills it) within
-/// [`OUTER_MAX_TERMS`].
+/// every product of that many of `v`'s factors, as every extension of a general map fills
+/// it) within [`OUTER_MAX_TERMS`].
 #[allow(clippy::too_many_lines)]
 fn outermorphism(
     spec: &AlgebraSpec,
@@ -71,7 +74,7 @@ fn outermorphism(
 ) -> Option<(String, (String, String, bool))> {
     let alg = &spec.algebra;
     let n = alg.dim() as u32;
-    let gv = full_grade(spec, v)?;
+    let gv = single_grade(v)?;
     let wedge = gv == 1;
     let nv = v.layout.len();
     // The map's entries t[o][i] as variables o * nv + i.
@@ -91,14 +94,15 @@ fn outermorphism(
                 .collect(),
         )
     };
-    let gb = full_grade(spec, b)?;
-    if b.name == v.name || (wedge && gb < 1) {
+    let gb = single_grade(b)?;
+    if b.name == v.name || (wedge && gb < 1) || (!wedge && gb > n - 1) {
         return None;
     }
     // The number of vector factors of a blade of B.
     let k = if wedge { gb } else { n - gb };
-    // One factor: B is another kind of V's grade, not an extension.
-    if k == 1 || terms(n, k) > OUTER_MAX_TERMS {
+    // One factor: B is another kind of V's grade, not an extension. And B holds every product
+    // of k of V's factors (each of its blades factoring into V's is checked below).
+    if k == 1 || b.layout.len() != choose(nv, k as usize) || terms(nv as u32, k) > OUTER_MAX_TERMS {
         return None;
     }
     let mut columns: Vec<Vec<Poly>> = Vec::new();
@@ -162,7 +166,7 @@ fn outermorphism(
         "impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<{bn}<(), f64, X>> for {vn}<({vn}<(), f64, O>,), T, O> {{\n    type Output = {bn}<({bn}<(), f64, {oo}>,), T, {oo}>;\n    /// The extension of a map on `{vn}` to `{bn}`, factor by factor with `{how}`.\n    #[inline]\n    fn outermorphism(self) -> Self::Output {{\n        let t = self.c;\n{lets}        {}\n    }}\n}}\n\n",
         crate::emit::kind_literal(bn, &format!("[{}]", rows.join(", ")))
     );
-    Some((code, (vn.clone(), bn.clone(), k == n)))
+    Some((code, (vn.clone(), bn.clone(), k as usize == nv)))
 }
 
 #[cfg(test)]

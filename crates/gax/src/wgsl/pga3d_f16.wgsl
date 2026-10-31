@@ -76,6 +76,21 @@ struct Multivector {
     c3: vec4<f16>,
 }
 
+// `Spin`: [e23, e31, e12]
+struct Spin {
+    c0: vec4<f16>,
+}
+
+// `Moment`: [e01, e02, e03]
+struct Moment {
+    c0: vec4<f16>,
+}
+
+// `OriginPlane`: [e1, e2, e3]
+struct OriginPlane {
+    c0: vec4<f16>,
+}
+
 alias Twist = Line;
 
 alias Forque = Line;
@@ -137,6 +152,21 @@ fn flector_new(e1: f16, e2: f16, e3: f16, e0: f16, e032: f16, e013: f16, e021: f
 // A `Multivector` from its coefficients.
 fn multivector_new(s: f16, e0: f16, e1: f16, e2: f16, e3: f16, e01: f16, e02: f16, e03: f16, e12: f16, e31: f16, e23: f16, e021: f16, e013: f16, e032: f16, e123: f16, e0123: f16) -> Multivector {
     return Multivector(vec4<f16>(s, e0, e1, e2), vec4<f16>(e3, e01, e02, e03), vec4<f16>(e12, e31, e23, e021), vec4<f16>(e013, e032, e123, e0123));
+}
+
+// A `Spin` from its coefficients.
+fn spin_new(e23: f16, e31: f16, e12: f16) -> Spin {
+    return Spin(vec4<f16>(e23, e31, e12, 0.0));
+}
+
+// A `Moment` from its coefficients.
+fn moment_new(e01: f16, e02: f16, e03: f16) -> Moment {
+    return Moment(vec4<f16>(e01, e02, e03, 0.0));
+}
+
+// A `OriginPlane` from its coefficients.
+fn origin_plane_new(e1: f16, e2: f16, e3: f16) -> OriginPlane {
+    return OriginPlane(vec4<f16>(e1, e2, e3, 0.0));
 }
 
 // A `Plane` as a `Flector`.
@@ -256,6 +286,27 @@ fn multivector_reverse(x: Multivector) -> Multivector {
     let t8 = -x.c3.y;
     let t9 = -x.c3.z;
     return Multivector(vec4<f16>(x.c0.x, x.c0.y, x.c0.z, x.c0.w), vec4<f16>(x.c1.x, t0, t1, t2), vec4<f16>(t3, t4, t5, t6), vec4<f16>(t7, t8, t9, x.c3.w));
+}
+
+// The reverse `~x`.
+fn spin_reverse(x: Spin) -> Spin {
+    let t0 = -x.c0.x;
+    let t1 = -x.c0.y;
+    let t2 = -x.c0.z;
+    return Spin(vec4<f16>(t0, t1, t2, 0.0));
+}
+
+// The reverse `~x`.
+fn moment_reverse(x: Moment) -> Moment {
+    let t0 = -x.c0.x;
+    let t1 = -x.c0.y;
+    let t2 = -x.c0.z;
+    return Moment(vec4<f16>(t0, t1, t2, 0.0));
+}
+
+// The reverse `~x`.
+fn origin_plane_reverse(x: OriginPlane) -> OriginPlane {
+    return OriginPlane(vec4<f16>(x.c0.x, x.c0.y, x.c0.z, 0.0));
 }
 
 // The geometric product of a `Plane` and a `Plane` (composition).
@@ -2377,6 +2428,106 @@ fn multivector_norm_squared(x: Multivector) -> f16 {
     return t14;
 }
 
+// The squared norm: the scalar part of `x ~x`.
+fn spin_norm_squared(x: Spin) -> f16 {
+    let t1 = x.c0.y * x.c0.y;
+    let t3 = fma(x.c0.x, x.c0.x, t1);
+    let t4 = fma(x.c0.z, x.c0.z, t3);
+    return t4;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn spin_normalized(x: Spin) -> Spin {
+    let p1 = f32(x.c0.y) * f32(x.c0.y);
+    let p3 = fma(f32(x.c0.x), f32(x.c0.x), p1);
+    let p4 = fma(f32(x.c0.z), f32(x.c0.z), p3);
+    let s0 = f16(study_rsqrt_abs(p4));
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    let t2 = x.c0.z * s0;
+    return Spin(vec4<f16>(t0, t1, t2, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn spin_renormalize_fast(x: Spin) -> Spin {
+    let t1 = x.c0.y * x.c0.y;
+    let t3 = fma(x.c0.x, x.c0.x, t1);
+    let t4 = fma(x.c0.z, x.c0.z, t3);
+    let t6 = fma(-t4, (1.0 / 3.0), 1.0);
+    let t7 = x.c0.x * t6;
+    let t8 = x.c0.y * t6;
+    let t9 = x.c0.z * t6;
+    let t10 = t7 * (3.0 / 2.0);
+    let t11 = t8 * (3.0 / 2.0);
+    let t12 = t9 * (3.0 / 2.0);
+    return Spin(vec4<f16>(t10, t11, t12, 0.0));
+}
+
+// The exponential, a unit `Rotor`: `exp(B) = C(B²) + S(B²) B`.
+fn spin_exp(x: Spin) -> Rotor {
+    let p1 = f32(x.c0.y) * f32(x.c0.y);
+    let p3 = fma(f32(x.c0.x), f32(x.c0.x), p1);
+    let p4 = fma(f32(x.c0.z), f32(x.c0.z), p3);
+    let p5 = -p4;
+    let r1 = study_exp_rotation(p5, 0.0);
+    let c0 = f16(r1[0]);
+    let c1 = f16(r1[1]);
+    let s0 = f16(r1[2]);
+    let s1 = f16(r1[3]);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    let t2 = x.c0.z * s0;
+    return Rotor(vec4<f16>(c0, t0, t1, t2));
+}
+
+// The exponential, a unit `Translator`: `exp(B) = C(B²) + S(B²) B`.
+fn moment_exp(x: Moment) -> Translator {
+    let r1 = study_exp_complex(0.0, 0.0);
+    let c0 = f16(r1[0]);
+    let c1 = f16(r1[1]);
+    let s0 = f16(r1[2]);
+    let s1 = f16(r1[3]);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    let t2 = x.c0.z * s0;
+    return Translator(vec4<f16>(c0, t0, t1, t2));
+}
+
+// The squared norm: the scalar part of `x ~x`.
+fn origin_plane_norm_squared(x: OriginPlane) -> f16 {
+    let t1 = x.c0.y * x.c0.y;
+    let t3 = fma(x.c0.x, x.c0.x, t1);
+    let t4 = fma(x.c0.z, x.c0.z, t3);
+    return t4;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn origin_plane_normalized(x: OriginPlane) -> OriginPlane {
+    let p1 = f32(x.c0.y) * f32(x.c0.y);
+    let p3 = fma(f32(x.c0.x), f32(x.c0.x), p1);
+    let p4 = fma(f32(x.c0.z), f32(x.c0.z), p3);
+    let s0 = f16(study_rsqrt_abs(p4));
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    let t2 = x.c0.z * s0;
+    return OriginPlane(vec4<f16>(t0, t1, t2, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn origin_plane_renormalize_fast(x: OriginPlane) -> OriginPlane {
+    let t1 = x.c0.y * x.c0.y;
+    let t3 = fma(x.c0.x, x.c0.x, t1);
+    let t4 = fma(x.c0.z, x.c0.z, t3);
+    let t6 = fma(-t4, (1.0 / 3.0), 1.0);
+    let t7 = x.c0.x * t6;
+    let t8 = x.c0.y * t6;
+    let t9 = x.c0.z * t6;
+    let t10 = t7 * (3.0 / 2.0);
+    let t11 = t8 * (3.0 / 2.0);
+    let t12 = t9 * (3.0 / 2.0);
+    return OriginPlane(vec4<f16>(t10, t11, t12, 0.0));
+}
+
 // `v x ~v` for `Plane` v and `Scalar` x (`v >> x`).
 fn plane_sandwich_scalar(v: Plane, x: Scalar) -> Scalar {
     let t1 = v.c0.y * v.c0.y;
@@ -3363,6 +3514,232 @@ fn unit_plane_sandwich_multivector(v: Plane, x: Multivector) -> Multivector {
     let t96 = x.c3.z * t49;
     let t97 = t49 * t94;
     return Multivector(vec4<f16>(t95, t51, t54, t57), vec4<f16>(t60, t65, t70, t75), vec4<f16>(t78, t81, t84, t87), vec4<f16>(t90, t93, t96, t97));
+}
+
+// `v x ~v` for `Plane` v and `Spin` x (`v >> x`).
+fn plane_sandwich_spin(v: Plane, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = v.c0.z * v.c0.w;
+    let t7 = v.c0.y * v.c0.w;
+    let t8 = v.c0.x * v.c0.w;
+    let t9 = t0 - t1;
+    let t10 = t9 - t2;
+    let t11 = t2 + t9;
+    let t12 = t0 + t1;
+    let t13 = t12 - t2;
+    let t16 = x.c0.z * t4;
+    let t19 = x.c0.z * t5;
+    let t21 = x.c0.y * t5;
+    let t24 = x.c0.z * t7;
+    let t25 = x.c0.x * t6;
+    let t28 = x.c0.y * t8;
+    let t29 = fma(x.c0.y, t3, t16);
+    let t30 = t29 * 2.0;
+    let t31 = fma(x.c0.x, t10, t30);
+    let t32 = fma(x.c0.x, t3, t19);
+    let t33 = t32 * 2.0;
+    let t34 = fma(-x.c0.y, t11, t33);
+    let t35 = fma(x.c0.x, t4, t21);
+    let t36 = t35 * 2.0;
+    let t37 = fma(-x.c0.z, t13, t36);
+    let t38 = fma(-x.c0.y, t6, t24);
+    let t39 = t38 * 2.0;
+    let t40 = fma(-x.c0.z, t8, t25);
+    let t41 = t40 * 2.0;
+    let t42 = fma(-x.c0.x, t7, t28);
+    let t43 = t42 * 2.0;
+    return Line(vec4<f16>(t31, t34, t37, t39), vec4<f16>(t41, t43, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Plane` v and `Spin` x (`v >> x`).
+fn unit_plane_sandwich_spin(v: Plane, x: Spin) -> Line {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * v.c0.w;
+    let t6 = v.c0.y * v.c0.w;
+    let t7 = v.c0.z * v.c0.w;
+    let t8 = v.c0.x * t4;
+    let t9 = v.c0.y * t4;
+    let t10 = v.c0.z * t4;
+    let t11 = x.c0.z * t6;
+    let t14 = x.c0.x * t7;
+    let t15 = x.c0.y * t5;
+    let t17 = t8 * 2.0;
+    let t19 = v.c0.y * v.c0.y;
+    let t21 = fma(v.c0.x, v.c0.x, t19);
+    let t22 = fma(v.c0.z, v.c0.z, t21);
+    let t24 = fma(-x.c0.x, t22, t17);
+    let t25 = t9 * 2.0;
+    let t27 = fma(-x.c0.y, t22, t25);
+    let t28 = t10 * 2.0;
+    let t30 = fma(-x.c0.z, t22, t28);
+    let t31 = fma(-x.c0.y, t7, t11);
+    let t32 = t31 * 2.0;
+    let t33 = fma(-x.c0.z, t5, t14);
+    let t34 = t33 * 2.0;
+    let t35 = fma(-x.c0.x, t6, t15);
+    let t36 = t35 * 2.0;
+    return Line(vec4<f16>(t24, t27, t30, t32), vec4<f16>(t34, t36, 0.0, 0.0));
+}
+
+// `v x ~v` for `Plane` v and `Moment` x (`v >> x`).
+fn plane_sandwich_moment(v: Plane, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = t0 - t1;
+    let t7 = t6 - t2;
+    let t8 = t2 + t6;
+    let t9 = t0 + t1;
+    let t10 = t9 - t2;
+    let t13 = x.c0.z * t4;
+    let t15 = x.c0.y * t8;
+    let t16 = x.c0.z * t5;
+    let t18 = x.c0.y * t5;
+    let t19 = x.c0.z * t10;
+    let t20 = fma(x.c0.y, t3, t13);
+    let t21 = t20 * 2.0;
+    let t22 = fma(x.c0.x, t7, t21);
+    let t23 = -t22;
+    let t24 = fma(x.c0.x, t3, t16);
+    let t26 = fma(-t24, 2.0, t15);
+    let t27 = fma(x.c0.x, t4, t18);
+    let t29 = fma(-t27, 2.0, t19);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t23), vec4<f16>(t26, t29, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Plane` v and `Moment` x (`v >> x`).
+fn unit_plane_sandwich_moment(v: Plane, x: Moment) -> Line {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t10 = v.c0.y * v.c0.y;
+    let t12 = fma(v.c0.x, v.c0.x, t10);
+    let t13 = fma(v.c0.z, v.c0.z, t12);
+    let t14 = x.c0.x * t13;
+    let t15 = fma(-t5, 2.0, t14);
+    let t17 = x.c0.y * t13;
+    let t18 = fma(-t6, 2.0, t17);
+    let t20 = x.c0.z * t13;
+    let t21 = fma(-t7, 2.0, t20);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t15), vec4<f16>(t18, t21, 0.0, 0.0));
+}
+
+// `v x ~v` for `Plane` v and `OriginPlane` x (`v >> x`).
+fn plane_sandwich_origin_plane(v: Plane, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = t0 - t1;
+    let t4 = v.c0.y * x.c0.y;
+    let t5 = fma(v.c0.x, x.c0.x, t4);
+    let t6 = v.c0.z * x.c0.z;
+    let t7 = v.c0.x * v.c0.y;
+    let t8 = v.c0.z * v.c0.z;
+    let t10 = v.c0.x * t6;
+    let t12 = x.c0.x * t2;
+    let t14 = v.c0.y * t6;
+    let t16 = x.c0.y * t2;
+    let t19 = v.c0.z * t6;
+    let t20 = v.c0.z * t5;
+    let t22 = v.c0.w * t5;
+    let t23 = fma(-x.c0.x, t8, t12);
+    let t24 = fma(x.c0.y, t7, t10);
+    let t26 = fma(t24, 2.0, t23);
+    let t27 = fma(x.c0.y, t8, t16);
+    let t28 = fma(x.c0.x, t7, t14);
+    let t30 = fma(t28, 2.0, -t27);
+    let t31 = fma(-x.c0.z, t0, t19);
+    let t32 = fma(-x.c0.z, t1, t31);
+    let t34 = fma(t20, 2.0, t32);
+    let t35 = fma(v.c0.w, t6, t22);
+    let t36 = t35 * 2.0;
+    return Plane(vec4<f16>(t26, t30, t34, t36));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Plane` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn plane_matrix_origin_plane(v: Plane) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.w;
+    let m8 = v.c0.z * v.c0.w;
+    let m9 = m0 - m1;
+    let m10 = m9 - m2;
+    let m11 = m3 * 2.0;
+    let m12 = m4 * 2.0;
+    let m13 = m2 + m9;
+    let m14 = -m13;
+    let m15 = m5 * 2.0;
+    let m16 = m2 - m0;
+    let m17 = m16 - m1;
+    let m18 = m6 * 2.0;
+    let m19 = m7 * 2.0;
+    let m20 = m8 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m10, m11, m12, m18), vec4<f16>(m11, m14, m15, m19), vec4<f16>(m12, m15, m17, m20));
+}
+
+// `v x ~v` for a unit `Plane` v and `OriginPlane` x (`v >> x`).
+fn unit_plane_sandwich_origin_plane(v: Plane, x: OriginPlane) -> Plane {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t8 = v.c0.w * t4;
+    let t9 = t5 * 2.0;
+    let t11 = v.c0.y * v.c0.y;
+    let t13 = fma(v.c0.x, v.c0.x, t11);
+    let t14 = fma(v.c0.z, v.c0.z, t13);
+    let t16 = fma(-x.c0.x, t14, t9);
+    let t17 = t6 * 2.0;
+    let t19 = fma(-x.c0.y, t14, t17);
+    let t20 = t7 * 2.0;
+    let t22 = fma(-x.c0.z, t14, t20);
+    let t23 = t8 * 2.0;
+    return Plane(vec4<f16>(t16, t19, t22, t23));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Plane` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_plane_matrix_origin_plane(v: Plane) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.w;
+    let m8 = v.c0.z * v.c0.w;
+    let m9 = m0 - m1;
+    let m10 = m9 - m2;
+    let m11 = m3 * 2.0;
+    let m12 = m4 * 2.0;
+    let m13 = m2 + m9;
+    let m14 = -m13;
+    let m15 = m5 * 2.0;
+    let m16 = m2 - m0;
+    let m17 = m16 - m1;
+    let m18 = m6 * 2.0;
+    let m19 = m7 * 2.0;
+    let m20 = m8 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m10, m11, m12, m18), vec4<f16>(m11, m14, m15, m19), vec4<f16>(m12, m15, m17, m20));
 }
 
 // `v x ~v` for `Line` v and `Scalar` x (`v >> x`).
@@ -4491,6 +4868,282 @@ fn unit_line_sandwich_multivector(v: Line, x: Multivector) -> Multivector {
     return Multivector(vec4<f16>(t123, t71, t74, t77), vec4<f16>(t80, t87, t94, t101), vec4<f16>(t104, t107, t110, t114), vec4<f16>(t118, t122, t124, t125));
 }
 
+// `v x ~v` for `Line` v and `Spin` x (`v >> x`).
+fn line_sandwich_spin(v: Line, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c1.x;
+    let t4 = v.c0.z * v.c0.z;
+    let t5 = v.c0.z * v.c1.y;
+    let t6 = v.c0.x * v.c0.y;
+    let t7 = v.c0.x * v.c0.z;
+    let t8 = v.c0.y * v.c0.z;
+    let t10 = v.c0.y * v.c0.w;
+    let t12 = v.c0.z * v.c0.w;
+    let t14 = v.c0.z * v.c1.x;
+    let t15 = t0 - t2;
+    let t16 = t1 - t3;
+    let t17 = t15 - t4;
+    let t18 = t4 + t15;
+    let t19 = t0 + t2;
+    let t20 = t19 - t4;
+    let t21 = t16 - t5;
+    let t22 = fma(v.c0.x, v.c1.x, t10);
+    let t23 = fma(v.c0.x, v.c1.y, t12);
+    let t24 = t5 + t16;
+    let t25 = fma(v.c0.y, v.c1.y, t14);
+    let t26 = t1 + t3;
+    let t27 = t26 - t5;
+    let t30 = x.c0.z * t7;
+    let t33 = x.c0.z * t8;
+    let t35 = x.c0.y * t8;
+    let t38 = x.c0.y * t22;
+    let t42 = x.c0.z * t25;
+    let t44 = x.c0.y * t25;
+    let t46 = fma(x.c0.y, t6, t30);
+    let t47 = t46 * 2.0;
+    let t48 = fma(x.c0.x, t17, t47);
+    let t49 = fma(x.c0.x, t6, t33);
+    let t50 = t49 * 2.0;
+    let t51 = fma(-x.c0.y, t18, t50);
+    let t52 = fma(x.c0.x, t7, t35);
+    let t53 = t52 * 2.0;
+    let t54 = fma(-x.c0.z, t20, t53);
+    let t55 = fma(x.c0.x, t21, t38);
+    let t56 = fma(x.c0.z, t23, t55);
+    let t57 = t56 * 2.0;
+    let t58 = fma(x.c0.x, t22, t42);
+    let t59 = fma(-x.c0.y, t24, t58);
+    let t60 = t59 * 2.0;
+    let t61 = fma(x.c0.x, t23, t44);
+    let t62 = fma(-x.c0.z, t27, t61);
+    let t63 = t62 * 2.0;
+    return Line(vec4<f16>(t48, t51, t54, t57), vec4<f16>(t60, t63, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Line` v and `Spin` x (`v >> x`).
+fn unit_line_sandwich_spin(v: Line, x: Spin) -> Line {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * v.c0.w;
+    let t7 = fma(v.c0.x, v.c1.x, t6);
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = fma(v.c0.x, v.c1.y, t9);
+    let t12 = v.c0.z * v.c1.x;
+    let t13 = fma(v.c0.y, v.c1.y, t12);
+    let t14 = v.c0.x * t4;
+    let t15 = v.c0.y * t4;
+    let t16 = v.c0.z * t4;
+    let t17 = v.c0.x * v.c0.w;
+    let t18 = x.c0.x * t17;
+    let t20 = x.c0.z * t10;
+    let t21 = v.c0.y * v.c1.x;
+    let t22 = x.c0.y * t21;
+    let t24 = x.c0.z * t13;
+    let t25 = v.c0.z * v.c1.y;
+    let t26 = x.c0.z * t25;
+    let t28 = x.c0.y * t13;
+    let t29 = t14 * 2.0;
+    let t31 = v.c0.y * v.c0.y;
+    let t33 = fma(v.c0.x, v.c0.x, t31);
+    let t34 = fma(v.c0.z, v.c0.z, t33);
+    let t36 = fma(-x.c0.x, t34, t29);
+    let t37 = t15 * 2.0;
+    let t39 = fma(-x.c0.y, t34, t37);
+    let t40 = t16 * 2.0;
+    let t42 = fma(-x.c0.z, t34, t40);
+    let t43 = fma(x.c0.y, t7, t20);
+    let t45 = t18 * 4.0;
+    let t46 = fma(t43, 2.0, t45);
+    let t47 = fma(x.c0.x, t7, t24);
+    let t49 = t22 * 4.0;
+    let t50 = fma(t47, 2.0, t49);
+    let t51 = fma(x.c0.x, t10, t28);
+    let t53 = t26 * 4.0;
+    let t54 = fma(t51, 2.0, t53);
+    return Line(vec4<f16>(t36, t39, t42, t46), vec4<f16>(t50, t54, 0.0, 0.0));
+}
+
+// `v x ~v` for `Line` v and `Moment` x (`v >> x`).
+fn line_sandwich_moment(v: Line, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = t0 - t1;
+    let t7 = t6 - t2;
+    let t8 = t2 + t6;
+    let t9 = t0 + t1;
+    let t10 = t9 - t2;
+    let t13 = x.c0.z * t4;
+    let t16 = x.c0.z * t5;
+    let t18 = x.c0.y * t5;
+    let t20 = fma(x.c0.y, t3, t13);
+    let t21 = t20 * 2.0;
+    let t22 = fma(x.c0.x, t7, t21);
+    let t23 = fma(x.c0.x, t3, t16);
+    let t24 = t23 * 2.0;
+    let t25 = fma(-x.c0.y, t8, t24);
+    let t26 = fma(x.c0.x, t4, t18);
+    let t27 = t26 * 2.0;
+    let t28 = fma(-x.c0.z, t10, t27);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t22), vec4<f16>(t25, t28, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Line` v and `Moment` x (`v >> x`).
+fn unit_line_sandwich_moment(v: Line, x: Moment) -> Line {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t8 = t5 * 2.0;
+    let t10 = v.c0.y * v.c0.y;
+    let t12 = fma(v.c0.x, v.c0.x, t10);
+    let t13 = fma(v.c0.z, v.c0.z, t12);
+    let t15 = fma(-x.c0.x, t13, t8);
+    let t16 = t6 * 2.0;
+    let t18 = fma(-x.c0.y, t13, t16);
+    let t19 = t7 * 2.0;
+    let t21 = fma(-x.c0.z, t13, t19);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t15), vec4<f16>(t18, t21, 0.0, 0.0));
+}
+
+// `v x ~v` for `Line` v and `OriginPlane` x (`v >> x`).
+fn line_sandwich_origin_plane(v: Line, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = v.c0.y * v.c1.y;
+    let t8 = v.c0.x * v.c1.y;
+    let t10 = v.c0.x * v.c1.x;
+    let t12 = t0 - t1;
+    let t13 = t12 - t2;
+    let t14 = t2 + t12;
+    let t15 = t0 + t1;
+    let t16 = t15 - t2;
+    let t17 = fma(-v.c0.z, v.c1.x, t6);
+    let t18 = fma(-v.c0.z, v.c0.w, t8);
+    let t19 = fma(-v.c0.y, v.c0.w, t10);
+    let t22 = x.c0.z * t4;
+    let t25 = x.c0.z * t5;
+    let t27 = x.c0.y * t5;
+    let t31 = x.c0.z * t19;
+    let t32 = fma(x.c0.y, t3, t22);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t13, t33);
+    let t35 = fma(x.c0.x, t3, t25);
+    let t36 = t35 * 2.0;
+    let t37 = fma(-x.c0.y, t14, t36);
+    let t38 = fma(x.c0.x, t4, t27);
+    let t39 = t38 * 2.0;
+    let t40 = fma(-x.c0.z, t16, t39);
+    let t41 = fma(x.c0.x, t17, t31);
+    let t42 = fma(-x.c0.y, t18, t41);
+    let t43 = t42 * 2.0;
+    return Plane(vec4<f16>(t34, t37, t40, t43));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Line` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn line_matrix_origin_plane(v: Line) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = v.c0.y * v.c1.y;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = v.c0.x * v.c1.x;
+    let m12 = m0 - m1;
+    let m13 = m12 - m2;
+    let m14 = m3 * 2.0;
+    let m15 = m4 * 2.0;
+    let m16 = m2 + m12;
+    let m17 = -m16;
+    let m18 = m5 * 2.0;
+    let m19 = m2 - m0;
+    let m20 = m19 - m1;
+    let m21 = fma(-v.c0.z, v.c1.x, m6);
+    let m22 = m21 * 2.0;
+    let m23 = fma(-v.c0.x, v.c1.y, m9);
+    let m24 = m23 * 2.0;
+    let m25 = fma(-v.c0.y, v.c0.w, m10);
+    let m26 = m25 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m13, m14, m15, m22), vec4<f16>(m14, m17, m18, m24), vec4<f16>(m15, m18, m20, m26));
+}
+
+// `v x ~v` for a unit `Line` v and `OriginPlane` x (`v >> x`).
+fn unit_line_sandwich_origin_plane(v: Line, x: OriginPlane) -> Plane {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t8 = v.c0.x * v.c1.x;
+    let t10 = v.c0.x * v.c1.y;
+    let t12 = v.c0.y * v.c0.w;
+    let t13 = x.c0.z * t12;
+    let t14 = v.c0.y * v.c1.y;
+    let t15 = x.c0.x * t14;
+    let t16 = v.c0.z * v.c0.w;
+    let t18 = v.c0.z * v.c1.x;
+    let t20 = t5 * 2.0;
+    let t22 = v.c0.y * v.c0.y;
+    let t24 = fma(v.c0.x, v.c0.x, t22);
+    let t25 = fma(v.c0.z, v.c0.z, t24);
+    let t27 = fma(-x.c0.x, t25, t20);
+    let t28 = t6 * 2.0;
+    let t30 = fma(-x.c0.y, t25, t28);
+    let t31 = t7 * 2.0;
+    let t33 = fma(-x.c0.z, t25, t31);
+    let t34 = fma(x.c0.z, t8, t15);
+    let t35 = fma(x.c0.y, t16, t34);
+    let t36 = fma(x.c0.y, t10, t13);
+    let t37 = fma(x.c0.x, t18, t36);
+    let t38 = t35 - t37;
+    let t39 = t38 * 2.0;
+    return Plane(vec4<f16>(t27, t30, t33, t39));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Line` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_line_matrix_origin_plane(v: Line) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = v.c0.y * v.c1.y;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = v.c0.x * v.c1.x;
+    let m12 = m0 - m1;
+    let m13 = m12 - m2;
+    let m14 = m3 * 2.0;
+    let m15 = m4 * 2.0;
+    let m16 = m2 + m12;
+    let m17 = -m16;
+    let m18 = m5 * 2.0;
+    let m19 = m2 - m0;
+    let m20 = m19 - m1;
+    let m21 = fma(-v.c0.z, v.c1.x, m6);
+    let m22 = m21 * 2.0;
+    let m23 = fma(-v.c0.x, v.c1.y, m9);
+    let m24 = m23 * 2.0;
+    let m25 = fma(-v.c0.y, v.c0.w, m10);
+    let m26 = m25 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m13, m14, m15, m22), vec4<f16>(m14, m17, m18, m24), vec4<f16>(m15, m18, m20, m26));
+}
+
 // `v x ~v` for `Point` v and `Scalar` x (`v >> x`).
 fn point_sandwich_scalar(v: Point, x: Scalar) -> Scalar {
     let t0 = v.c0.w * v.c0.w;
@@ -5019,6 +5672,136 @@ fn unit_point_sandwich_multivector(v: Point, x: Multivector) -> Multivector {
     let t51 = fma(-x.c3.y, t0, t50);
     let t52 = -t31;
     return Multivector(vec4<f16>(t4, t36, t9, t10), vec4<f16>(t11, t39, t42, t45), vec4<f16>(t21, t22, t23, t47), vec4<f16>(t49, t51, t30, t52));
+}
+
+// `v x ~v` for `Point` v and `Spin` x (`v >> x`).
+fn point_sandwich_spin(v: Point, x: Spin) -> Line {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.w;
+    let t3 = v.c0.z * v.c0.w;
+    let t4 = x.c0.x * t0;
+    let t5 = x.c0.y * t0;
+    let t6 = x.c0.z * t0;
+    let t7 = x.c0.z * t2;
+    let t10 = x.c0.x * t3;
+    let t11 = x.c0.y * t1;
+    let t13 = fma(-x.c0.y, t3, t7);
+    let t14 = t13 * 2.0;
+    let t15 = fma(-x.c0.z, t1, t10);
+    let t16 = t15 * 2.0;
+    let t17 = fma(-x.c0.x, t2, t11);
+    let t18 = t17 * 2.0;
+    return Line(vec4<f16>(t4, t5, t6, t14), vec4<f16>(t16, t18, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Point` v and `Spin` x (`v >> x`).
+fn unit_point_sandwich_spin(v: Point, x: Spin) -> Line {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.w;
+    let t3 = v.c0.z * v.c0.w;
+    let t4 = x.c0.x * t0;
+    let t5 = x.c0.y * t0;
+    let t6 = x.c0.z * t0;
+    let t7 = x.c0.z * t2;
+    let t10 = x.c0.x * t3;
+    let t11 = x.c0.y * t1;
+    let t13 = fma(-x.c0.y, t3, t7);
+    let t14 = t13 * 2.0;
+    let t15 = fma(-x.c0.z, t1, t10);
+    let t16 = t15 * 2.0;
+    let t17 = fma(-x.c0.x, t2, t11);
+    let t18 = t17 * 2.0;
+    return Line(vec4<f16>(t4, t5, t6, t14), vec4<f16>(t16, t18, 0.0, 0.0));
+}
+
+// `v x ~v` for `Point` v and `Moment` x (`v >> x`).
+fn point_sandwich_moment(v: Point, x: Moment) -> Line {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = -t1;
+    let t5 = -t2;
+    let t6 = -t3;
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t4), vec4<f16>(t5, t6, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Point` v and `Moment` x (`v >> x`).
+fn unit_point_sandwich_moment(v: Point, x: Moment) -> Line {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = -t1;
+    let t5 = -t2;
+    let t6 = -t3;
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t4), vec4<f16>(t5, t6, 0.0, 0.0));
+}
+
+// `v x ~v` for `Point` v and `OriginPlane` x (`v >> x`).
+fn point_sandwich_origin_plane(v: Point, x: OriginPlane) -> Plane {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = v.c0.x * v.c0.w;
+    let t6 = v.c0.y * v.c0.w;
+    let t7 = x.c0.y * t6;
+    let t8 = v.c0.z * v.c0.w;
+    let t10 = fma(x.c0.x, t4, t7);
+    let t11 = fma(x.c0.z, t8, t10);
+    let t12 = t11 * 2.0;
+    let t13 = -t12;
+    return Plane(vec4<f16>(t1, t2, t3, t13));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Point` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn point_matrix_origin_plane(v: Point) -> mat3x4<f16> {
+    let m0 = v.c0.w * v.c0.w;
+    let m1 = v.c0.x * v.c0.w;
+    let m2 = v.c0.y * v.c0.w;
+    let m3 = v.c0.z * v.c0.w;
+    let m4 = m1 * 2.0;
+    let m5 = -m4;
+    let m6 = m2 * 2.0;
+    let m7 = -m6;
+    let m8 = m3 * 2.0;
+    let m9 = -m8;
+    return mat3x4<f16>(vec4<f16>(m0, 0.0, 0.0, m5), vec4<f16>(0.0, m0, 0.0, m7), vec4<f16>(0.0, 0.0, m0, m9));
+}
+
+// `v x ~v` for a unit `Point` v and `OriginPlane` x (`v >> x`).
+fn unit_point_sandwich_origin_plane(v: Point, x: OriginPlane) -> Plane {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = v.c0.x * v.c0.w;
+    let t6 = v.c0.y * v.c0.w;
+    let t7 = x.c0.y * t6;
+    let t8 = v.c0.z * v.c0.w;
+    let t10 = fma(x.c0.x, t4, t7);
+    let t11 = fma(x.c0.z, t8, t10);
+    let t12 = t11 * 2.0;
+    let t13 = -t12;
+    return Plane(vec4<f16>(t1, t2, t3, t13));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Point` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_point_matrix_origin_plane(v: Point) -> mat3x4<f16> {
+    let m0 = v.c0.w * v.c0.w;
+    let m1 = v.c0.x * v.c0.w;
+    let m2 = v.c0.y * v.c0.w;
+    let m3 = v.c0.z * v.c0.w;
+    let m4 = m1 * 2.0;
+    let m5 = -m4;
+    let m6 = m2 * 2.0;
+    let m7 = -m6;
+    let m8 = m3 * 2.0;
+    let m9 = -m8;
+    return mat3x4<f16>(vec4<f16>(m0, 0.0, 0.0, m5), vec4<f16>(0.0, m0, 0.0, m7), vec4<f16>(0.0, 0.0, m0, m9));
 }
 
 // `v x ~v` for `Rotor` v and `Scalar` x (`v >> x`).
@@ -6266,6 +7049,287 @@ fn unit_rotor_sandwich_multivector(v: Rotor, x: Multivector) -> Multivector {
     return Multivector(vec4<f16>(t24, t25, t66, t69), vec4<f16>(t72, t75, t78, t81), vec4<f16>(t84, t87, t90, t93), vec4<f16>(t96, t99, t62, t63));
 }
 
+// `v x ~v` for `Rotor` v and `Spin` x (`v >> x`).
+fn rotor_sandwich_spin(v: Rotor, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t0 + t1;
+    let t13 = t2 + t3;
+    let t14 = t12 - t13;
+    let t15 = t6 + t7;
+    let t16 = t5 - t8;
+    let t17 = t6 - t7;
+    let t18 = t10 + t11;
+    let t19 = t4 + t9;
+    let t20 = t5 + t8;
+    let t21 = t4 - t9;
+    let t22 = t10 - t11;
+    let t24 = x.c0.y * t15;
+    let t28 = x.c0.z * t19;
+    let t29 = x.c0.x * t20;
+    let t32 = fma(-x.c0.z, t16, t24);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t14, t33);
+    let t35 = fma(-x.c0.x, t17, t28);
+    let t36 = t35 * 2.0;
+    let t37 = fma(x.c0.y, t18, t36);
+    let t38 = fma(-x.c0.y, t21, t29);
+    let t39 = t38 * 2.0;
+    let t40 = fma(x.c0.z, t22, t39);
+    return Line(vec4<f16>(t34, t37, t40, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Spin` x (`v >> x`).
+fn unit_rotor_sandwich_spin(v: Rotor, x: Spin) -> Line {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.y * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.z * t29;
+    let t39 = fma(t36, 2.0, t38);
+    return Line(vec4<f16>(t31, t35, t39, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Rotor` v and `Moment` x (`v >> x`).
+fn rotor_sandwich_moment(v: Rotor, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t0 + t1;
+    let t13 = t2 + t3;
+    let t14 = t12 - t13;
+    let t15 = t6 + t7;
+    let t16 = t5 - t8;
+    let t17 = t6 - t7;
+    let t18 = t10 + t11;
+    let t19 = t4 + t9;
+    let t20 = t5 + t8;
+    let t21 = t4 - t9;
+    let t22 = t10 - t11;
+    let t24 = x.c0.y * t15;
+    let t28 = x.c0.z * t19;
+    let t29 = x.c0.x * t20;
+    let t32 = fma(-x.c0.z, t16, t24);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t14, t33);
+    let t35 = fma(-x.c0.x, t17, t28);
+    let t36 = t35 * 2.0;
+    let t37 = fma(x.c0.y, t18, t36);
+    let t38 = fma(-x.c0.y, t21, t29);
+    let t39 = t38 * 2.0;
+    let t40 = fma(x.c0.z, t22, t39);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t34), vec4<f16>(t37, t40, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Moment` x (`v >> x`).
+fn unit_rotor_sandwich_moment(v: Rotor, x: Moment) -> Line {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.y * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.z * t29;
+    let t39 = fma(t36, 2.0, t38);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t31), vec4<f16>(t35, t39, 0.0, 0.0));
+}
+
+// `v x ~v` for `Rotor` v and `OriginPlane` x (`v >> x`).
+fn rotor_sandwich_origin_plane(v: Rotor, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t0 + t1;
+    let t13 = t2 + t3;
+    let t14 = t12 - t13;
+    let t15 = t6 + t7;
+    let t16 = t5 - t8;
+    let t17 = t6 - t7;
+    let t18 = t10 + t11;
+    let t19 = t4 + t9;
+    let t20 = t5 + t8;
+    let t21 = t4 - t9;
+    let t22 = t10 - t11;
+    let t24 = x.c0.y * t15;
+    let t28 = x.c0.z * t19;
+    let t29 = x.c0.x * t20;
+    let t32 = fma(-x.c0.z, t16, t24);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t14, t33);
+    let t35 = fma(-x.c0.x, t17, t28);
+    let t36 = t35 * 2.0;
+    let t37 = fma(x.c0.y, t18, t36);
+    let t38 = fma(-x.c0.y, t21, t29);
+    let t39 = t38 * 2.0;
+    let t40 = fma(x.c0.z, t22, t39);
+    return Plane(vec4<f16>(t34, t37, t40, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Rotor` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn rotor_matrix_origin_plane(v: Rotor) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    return mat3x4<f16>(vec4<f16>(m14, m20, m25, 0.0), vec4<f16>(m16, m21, m27, 0.0), vec4<f16>(m18, m23, m28, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `OriginPlane` x (`v >> x`).
+fn unit_rotor_sandwich_origin_plane(v: Rotor, x: OriginPlane) -> Plane {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.y * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.z * t29;
+    let t39 = fma(t36, 2.0, t38);
+    return Plane(vec4<f16>(t31, t35, t39, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Rotor` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_rotor_matrix_origin_plane(v: Rotor) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    return mat3x4<f16>(vec4<f16>(m14, m20, m25, 0.0), vec4<f16>(m16, m21, m27, 0.0), vec4<f16>(m18, m23, m28, 0.0));
+}
+
 // `v x ~v` for `Translator` v and `Scalar` x (`v >> x`).
 fn translator_sandwich_scalar(v: Translator, x: Scalar) -> Scalar {
     let t0 = v.c0.x * v.c0.x;
@@ -6762,6 +7826,122 @@ fn unit_translator_sandwich_multivector(v: Translator, x: Multivector) -> Multiv
     let t48 = fma(-t27, 2.0, t26);
     let t50 = fma(-t29, 2.0, t28);
     return Multivector(vec4<f16>(t4, t35, t9, t10), vec4<f16>(t11, t38, t41, t44), vec4<f16>(t21, t22, t23, t46), vec4<f16>(t48, t50, t30, t31));
+}
+
+// `v x ~v` for `Translator` v and `Spin` x (`v >> x`).
+fn translator_sandwich_spin(v: Translator, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.y;
+    let t2 = v.c0.x * v.c0.z;
+    let t3 = v.c0.x * v.c0.w;
+    let t4 = x.c0.x * t0;
+    let t5 = x.c0.y * t0;
+    let t6 = x.c0.z * t0;
+    let t8 = x.c0.y * t3;
+    let t9 = x.c0.z * t1;
+    let t12 = x.c0.x * t2;
+    let t13 = fma(-x.c0.z, t2, t8);
+    let t14 = t13 * 2.0;
+    let t15 = fma(-x.c0.x, t3, t9);
+    let t16 = t15 * 2.0;
+    let t17 = fma(-x.c0.y, t1, t12);
+    let t18 = t17 * 2.0;
+    return Line(vec4<f16>(t4, t5, t6, t14), vec4<f16>(t16, t18, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Translator` v and `Spin` x (`v >> x`).
+fn unit_translator_sandwich_spin(v: Translator, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.y;
+    let t2 = v.c0.x * v.c0.z;
+    let t3 = v.c0.x * v.c0.w;
+    let t4 = x.c0.x * t0;
+    let t5 = x.c0.y * t0;
+    let t6 = x.c0.z * t0;
+    let t8 = x.c0.y * t3;
+    let t9 = x.c0.z * t1;
+    let t12 = x.c0.x * t2;
+    let t13 = fma(-x.c0.z, t2, t8);
+    let t14 = t13 * 2.0;
+    let t15 = fma(-x.c0.x, t3, t9);
+    let t16 = t15 * 2.0;
+    let t17 = fma(-x.c0.y, t1, t12);
+    let t18 = t17 * 2.0;
+    return Line(vec4<f16>(t4, t5, t6, t14), vec4<f16>(t16, t18, 0.0, 0.0));
+}
+
+// `v x ~v` for `Translator` v and `Moment` x (`v >> x`).
+fn translator_sandwich_moment(v: Translator, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t1), vec4<f16>(t2, t3, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Translator` v and `Moment` x (`v >> x`).
+fn unit_translator_sandwich_moment(v: Translator, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t1), vec4<f16>(t2, t3, 0.0, 0.0));
+}
+
+// `v x ~v` for `Translator` v and `OriginPlane` x (`v >> x`).
+fn translator_sandwich_origin_plane(v: Translator, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = v.c0.x * v.c0.y;
+    let t6 = v.c0.x * v.c0.z;
+    let t7 = x.c0.y * t6;
+    let t8 = v.c0.x * v.c0.w;
+    let t10 = fma(x.c0.x, t4, t7);
+    let t11 = fma(x.c0.z, t8, t10);
+    let t12 = t11 * 2.0;
+    return Plane(vec4<f16>(t1, t2, t3, t12));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Translator` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn translator_matrix_origin_plane(v: Translator) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.x * v.c0.y;
+    let m2 = v.c0.x * v.c0.z;
+    let m3 = v.c0.x * v.c0.w;
+    let m4 = m1 * 2.0;
+    let m5 = m2 * 2.0;
+    let m6 = m3 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m0, 0.0, 0.0, m4), vec4<f16>(0.0, m0, 0.0, m5), vec4<f16>(0.0, 0.0, m0, m6));
+}
+
+// `v x ~v` for a unit `Translator` v and `OriginPlane` x (`v >> x`).
+fn unit_translator_sandwich_origin_plane(v: Translator, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = v.c0.x * v.c0.y;
+    let t6 = v.c0.x * v.c0.z;
+    let t7 = x.c0.y * t6;
+    let t8 = v.c0.x * v.c0.w;
+    let t10 = fma(x.c0.x, t4, t7);
+    let t11 = fma(x.c0.z, t8, t10);
+    let t12 = t11 * 2.0;
+    return Plane(vec4<f16>(t1, t2, t3, t12));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Translator` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_translator_matrix_origin_plane(v: Translator) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.x * v.c0.y;
+    let m2 = v.c0.x * v.c0.z;
+    let m3 = v.c0.x * v.c0.w;
+    let m4 = m1 * 2.0;
+    let m5 = m2 * 2.0;
+    let m6 = m3 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m0, 0.0, 0.0, m4), vec4<f16>(0.0, m0, 0.0, m5), vec4<f16>(0.0, 0.0, m0, m6));
 }
 
 // `v x ~v` for `Motor` v and `Scalar` x (`v >> x`).
@@ -8459,6 +9639,442 @@ fn unit_motor_sandwich_multivector(v: Motor, x: Multivector) -> Multivector {
     let t174 = t173 * 2.0;
     let t175 = fma(x.c3.y, t45, t174);
     return Multivector(vec4<f16>(t66, t124, t127, t130), vec4<f16>(t133, t140, t147, t154), vec4<f16>(t157, t160, t163, t167), vec4<f16>(t171, t175, t119, t120));
+}
+
+// `v x ~v` for `Motor` v and `Spin` x (`v >> x`).
+fn motor_sandwich_spin(v: Motor, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c1.w;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c1.x;
+    let t4 = v.c0.z * v.c0.z;
+    let t5 = v.c0.z * v.c1.y;
+    let t6 = v.c0.w * v.c0.w;
+    let t7 = v.c0.w * v.c1.z;
+    let t8 = v.c0.x * v.c0.y;
+    let t9 = v.c0.x * v.c0.z;
+    let t10 = v.c0.x * v.c0.w;
+    let t11 = v.c0.x * v.c1.x;
+    let t12 = v.c0.x * v.c1.y;
+    let t13 = v.c0.x * v.c1.z;
+    let t14 = v.c0.y * v.c0.z;
+    let t15 = v.c0.y * v.c0.w;
+    let t19 = v.c0.z * v.c0.w;
+    let t20 = v.c0.z * v.c1.x;
+    let t23 = v.c0.w * v.c1.x;
+    let t24 = v.c0.w * v.c1.y;
+    let t26 = t0 - t2;
+    let t27 = t1 + t3;
+    let t28 = t4 - t6;
+    let t29 = t5 - t7;
+    let t30 = fma(-v.c0.y, v.c1.w, t11);
+    let t31 = fma(-v.c0.z, v.c1.w, t12);
+    let t32 = fma(-v.c0.w, v.c1.w, t13);
+    let t33 = fma(v.c0.y, v.c1.y, t20);
+    let t34 = fma(v.c0.y, v.c1.z, t23);
+    let t35 = fma(v.c0.z, v.c1.z, t24);
+    let t36 = t0 + t2;
+    let t37 = t4 + t6;
+    let t38 = t36 - t37;
+    let t39 = t10 + t14;
+    let t40 = t9 - t15;
+    let t41 = t10 - t14;
+    let t42 = t26 + t28;
+    let t43 = t8 + t19;
+    let t44 = t9 + t15;
+    let t45 = t8 - t19;
+    let t46 = t26 - t28;
+    let t47 = t1 + t5;
+    let t48 = t7 - t3;
+    let t49 = t47 + t48;
+    let t50 = t32 + t33;
+    let t51 = t31 - t34;
+    let t52 = t32 - t33;
+    let t53 = t27 - t29;
+    let t54 = t30 + t35;
+    let t55 = t31 + t34;
+    let t56 = t30 - t35;
+    let t57 = t27 + t29;
+    let t59 = x.c0.y * t39;
+    let t63 = x.c0.z * t43;
+    let t64 = x.c0.x * t44;
+    let t68 = x.c0.y * t50;
+    let t72 = x.c0.z * t54;
+    let t73 = x.c0.x * t55;
+    let t76 = fma(-x.c0.z, t40, t59);
+    let t77 = t76 * 2.0;
+    let t78 = fma(x.c0.x, t38, t77);
+    let t79 = fma(-x.c0.x, t41, t63);
+    let t80 = t79 * 2.0;
+    let t81 = fma(x.c0.y, t42, t80);
+    let t82 = fma(-x.c0.y, t45, t64);
+    let t83 = t82 * 2.0;
+    let t84 = fma(x.c0.z, t46, t83);
+    let t85 = fma(-x.c0.x, t49, t68);
+    let t86 = fma(-x.c0.z, t51, t85);
+    let t87 = t86 * 2.0;
+    let t88 = fma(-x.c0.x, t52, t72);
+    let t89 = fma(-x.c0.y, t53, t88);
+    let t90 = t89 * 2.0;
+    let t91 = fma(-x.c0.y, t56, t73);
+    let t92 = fma(-x.c0.z, t57, t91);
+    let t93 = t92 * 2.0;
+    return Line(vec4<f16>(t78, t81, t84, t87), vec4<f16>(t90, t93, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Motor` v and `Spin` x (`v >> x`).
+fn unit_motor_sandwich_spin(v: Motor, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.x * v.c1.x;
+    let t8 = v.c0.x * v.c1.y;
+    let t9 = v.c0.x * v.c1.z;
+    let t10 = v.c0.y * v.c0.z;
+    let t11 = v.c0.y * v.c0.w;
+    let t12 = v.c0.y * v.c1.x;
+    let t16 = v.c0.z * v.c0.w;
+    let t17 = v.c0.z * v.c1.x;
+    let t18 = v.c0.z * v.c1.y;
+    let t21 = v.c0.w * v.c1.x;
+    let t22 = v.c0.w * v.c1.y;
+    let t23 = v.c0.w * v.c1.z;
+    let t25 = t0 - t1;
+    let t26 = t2 - t3;
+    let t27 = fma(-v.c0.y, v.c1.w, t7);
+    let t28 = fma(-v.c0.z, v.c1.w, t8);
+    let t29 = fma(-v.c0.w, v.c1.w, t9);
+    let t30 = fma(v.c0.y, v.c1.y, t17);
+    let t31 = fma(v.c0.y, v.c1.z, t21);
+    let t32 = fma(v.c0.z, v.c1.z, t22);
+    let t33 = t0 + t1;
+    let t34 = t2 + t3;
+    let t35 = t33 - t34;
+    let t36 = t6 + t10;
+    let t37 = t5 - t11;
+    let t38 = t6 - t10;
+    let t39 = t25 + t26;
+    let t40 = t4 + t16;
+    let t41 = t5 + t11;
+    let t42 = t4 - t16;
+    let t43 = t25 - t26;
+    let t44 = t18 + t23;
+    let t45 = t29 + t30;
+    let t46 = t28 - t31;
+    let t47 = t29 - t30;
+    let t48 = t12 + t23;
+    let t49 = t27 + t32;
+    let t50 = t28 + t31;
+    let t51 = t27 - t32;
+    let t52 = t12 + t18;
+    let t54 = x.c0.y * t36;
+    let t58 = x.c0.z * t40;
+    let t59 = x.c0.x * t41;
+    let t62 = x.c0.x * t44;
+    let t63 = x.c0.y * t45;
+    let t66 = x.c0.y * t48;
+    let t67 = x.c0.z * t49;
+    let t68 = x.c0.x * t50;
+    let t70 = x.c0.z * t52;
+    let t71 = fma(-x.c0.z, t37, t54);
+    let t72 = t71 * 2.0;
+    let t73 = fma(x.c0.x, t35, t72);
+    let t74 = fma(-x.c0.x, t38, t58);
+    let t75 = t74 * 2.0;
+    let t76 = fma(x.c0.y, t39, t75);
+    let t77 = fma(-x.c0.y, t42, t59);
+    let t78 = t77 * 2.0;
+    let t79 = fma(x.c0.z, t43, t78);
+    let t80 = fma(-x.c0.z, t46, t63);
+    let t81 = t80 * 2.0;
+    let t83 = fma(-t62, 4.0, t81);
+    let t84 = fma(-x.c0.x, t47, t67);
+    let t85 = t84 * 2.0;
+    let t87 = fma(-t66, 4.0, t85);
+    let t88 = fma(-x.c0.y, t51, t68);
+    let t89 = t88 * 2.0;
+    let t91 = fma(-t70, 4.0, t89);
+    return Line(vec4<f16>(t73, t76, t79, t83), vec4<f16>(t87, t91, 0.0, 0.0));
+}
+
+// `v x ~v` for `Motor` v and `Moment` x (`v >> x`).
+fn motor_sandwich_moment(v: Motor, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t0 + t1;
+    let t13 = t2 + t3;
+    let t14 = t12 - t13;
+    let t15 = t6 + t7;
+    let t16 = t5 - t8;
+    let t17 = t6 - t7;
+    let t18 = t10 + t11;
+    let t19 = t4 + t9;
+    let t20 = t5 + t8;
+    let t21 = t4 - t9;
+    let t22 = t10 - t11;
+    let t24 = x.c0.y * t15;
+    let t28 = x.c0.z * t19;
+    let t29 = x.c0.x * t20;
+    let t32 = fma(-x.c0.z, t16, t24);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t14, t33);
+    let t35 = fma(-x.c0.x, t17, t28);
+    let t36 = t35 * 2.0;
+    let t37 = fma(x.c0.y, t18, t36);
+    let t38 = fma(-x.c0.y, t21, t29);
+    let t39 = t38 * 2.0;
+    let t40 = fma(x.c0.z, t22, t39);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t34), vec4<f16>(t37, t40, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Motor` v and `Moment` x (`v >> x`).
+fn unit_motor_sandwich_moment(v: Motor, x: Moment) -> Line {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.y * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.z * t29;
+    let t39 = fma(t36, 2.0, t38);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t31), vec4<f16>(t35, t39, 0.0, 0.0));
+}
+
+// `v x ~v` for `Motor` v and `OriginPlane` x (`v >> x`).
+fn motor_sandwich_origin_plane(v: Motor, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t11 = v.c0.y * v.c1.w;
+    let t12 = v.c0.z * v.c1.z;
+    let t16 = v.c0.z * v.c1.w;
+    let t17 = v.c0.w * v.c1.x;
+    let t19 = v.c0.y * v.c1.y;
+    let t21 = v.c0.w * v.c1.w;
+    let t22 = t0 - t1;
+    let t23 = t2 - t3;
+    let t24 = t0 + t1;
+    let t25 = t2 + t3;
+    let t26 = t24 - t25;
+    let t27 = t6 + t7;
+    let t28 = t5 - t8;
+    let t29 = t6 - t7;
+    let t30 = t22 + t23;
+    let t31 = t4 + t9;
+    let t32 = t5 + t8;
+    let t33 = t4 - t9;
+    let t34 = t22 - t23;
+    let t35 = fma(v.c0.x, v.c1.x, t11);
+    let t36 = fma(-v.c0.w, v.c1.y, t12);
+    let t37 = t35 + t36;
+    let t38 = fma(v.c0.x, v.c1.y, t16);
+    let t39 = fma(-v.c0.y, v.c1.z, t17);
+    let t40 = t38 + t39;
+    let t41 = fma(v.c0.x, v.c1.z, t19);
+    let t42 = fma(-v.c0.z, v.c1.x, t21);
+    let t43 = t41 + t42;
+    let t45 = x.c0.y * t27;
+    let t49 = x.c0.z * t31;
+    let t50 = x.c0.x * t32;
+    let t54 = x.c0.y * t40;
+    let t56 = fma(-x.c0.z, t28, t45);
+    let t57 = t56 * 2.0;
+    let t58 = fma(x.c0.x, t26, t57);
+    let t59 = fma(-x.c0.x, t29, t49);
+    let t60 = t59 * 2.0;
+    let t61 = fma(x.c0.y, t30, t60);
+    let t62 = fma(-x.c0.y, t33, t50);
+    let t63 = t62 * 2.0;
+    let t64 = fma(x.c0.z, t34, t63);
+    let t65 = fma(x.c0.x, t37, t54);
+    let t66 = fma(x.c0.z, t43, t65);
+    let t67 = t66 * 2.0;
+    return Plane(vec4<f16>(t58, t61, t64, t67));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Motor` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn motor_matrix_origin_plane(v: Motor) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m11 = v.c0.y * v.c1.w;
+    let m12 = v.c0.z * v.c1.z;
+    let m16 = v.c0.z * v.c1.w;
+    let m17 = v.c0.w * v.c1.x;
+    let m19 = v.c0.y * v.c1.y;
+    let m21 = v.c0.w * v.c1.w;
+    let m22 = m0 - m1;
+    let m23 = m2 - m3;
+    let m24 = m0 + m1;
+    let m25 = m2 + m3;
+    let m26 = m24 - m25;
+    let m27 = m6 + m7;
+    let m28 = m27 * 2.0;
+    let m29 = m8 - m5;
+    let m30 = m29 * 2.0;
+    let m31 = m7 - m6;
+    let m32 = m31 * 2.0;
+    let m33 = m22 + m23;
+    let m34 = m4 + m9;
+    let m35 = m34 * 2.0;
+    let m36 = m5 + m8;
+    let m37 = m36 * 2.0;
+    let m38 = m9 - m4;
+    let m39 = m38 * 2.0;
+    let m40 = m22 - m23;
+    let m41 = fma(v.c0.x, v.c1.x, m11);
+    let m42 = fma(-v.c0.w, v.c1.y, m12);
+    let m43 = m41 + m42;
+    let m44 = m43 * 2.0;
+    let m45 = fma(v.c0.x, v.c1.y, m16);
+    let m46 = fma(-v.c0.y, v.c1.z, m17);
+    let m47 = m45 + m46;
+    let m48 = m47 * 2.0;
+    let m49 = fma(v.c0.x, v.c1.z, m19);
+    let m50 = fma(-v.c0.z, v.c1.x, m21);
+    let m51 = m49 + m50;
+    let m52 = m51 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m26, m32, m37, m44), vec4<f16>(m28, m33, m39, m48), vec4<f16>(m30, m35, m40, m52));
+}
+
+// `v x ~v` for a unit `Motor` v and `OriginPlane` x (`v >> x`).
+fn unit_motor_sandwich_origin_plane(v: Motor, x: OriginPlane) -> Plane {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = v.c0.y * v.c1.w;
+    let t23 = v.c0.z * v.c1.w;
+    let t24 = x.c0.y * t23;
+    let t25 = v.c0.w * v.c1.w;
+    let t28 = v.c1.y * t9;
+    let t30 = fma(-v.c0.z, t14, t16);
+    let t33 = v.c0.y * v.c0.y;
+    let t35 = v.c0.w * v.c0.w;
+    let t36 = fma(v.c0.x, v.c0.x, t33);
+    let t37 = fma(v.c0.z, v.c0.z, t35);
+    let t38 = t36 + t37;
+    let t39 = x.c0.x * t38;
+    let t40 = fma(t30, 2.0, t39);
+    let t41 = fma(-v.c0.w, t4, t17);
+    let t43 = x.c0.y * t38;
+    let t44 = fma(t41, 2.0, t43);
+    let t45 = fma(-v.c0.y, t9, t20);
+    let t47 = x.c0.z * t38;
+    let t48 = fma(t45, 2.0, t47);
+    let t49 = fma(x.c0.x, t21, t24);
+    let t50 = fma(x.c0.z, t25, t49);
+    let t51 = fma(v.c1.x, t4, t28);
+    let t52 = fma(v.c1.z, t14, t51);
+    let t53 = t50 + t52;
+    let t54 = t53 * 2.0;
+    return Plane(vec4<f16>(t40, t44, t48, t54));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Motor` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_motor_matrix_origin_plane(v: Motor) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m11 = v.c0.y * v.c1.w;
+    let m12 = v.c0.z * v.c1.z;
+    let m16 = v.c0.z * v.c1.w;
+    let m17 = v.c0.w * v.c1.x;
+    let m19 = v.c0.y * v.c1.y;
+    let m21 = v.c0.w * v.c1.w;
+    let m22 = m0 - m1;
+    let m23 = m2 - m3;
+    let m24 = m0 + m1;
+    let m25 = m2 + m3;
+    let m26 = m24 - m25;
+    let m27 = m6 + m7;
+    let m28 = m27 * 2.0;
+    let m29 = m8 - m5;
+    let m30 = m29 * 2.0;
+    let m31 = m7 - m6;
+    let m32 = m31 * 2.0;
+    let m33 = m22 + m23;
+    let m34 = m4 + m9;
+    let m35 = m34 * 2.0;
+    let m36 = m5 + m8;
+    let m37 = m36 * 2.0;
+    let m38 = m9 - m4;
+    let m39 = m38 * 2.0;
+    let m40 = m22 - m23;
+    let m41 = fma(v.c0.x, v.c1.x, m11);
+    let m42 = fma(-v.c0.w, v.c1.y, m12);
+    let m43 = m41 + m42;
+    let m44 = m43 * 2.0;
+    let m45 = fma(v.c0.x, v.c1.y, m16);
+    let m46 = fma(-v.c0.y, v.c1.z, m17);
+    let m47 = m45 + m46;
+    let m48 = m47 * 2.0;
+    let m49 = fma(v.c0.x, v.c1.z, m19);
+    let m50 = fma(-v.c0.z, v.c1.x, m21);
+    let m51 = m49 + m50;
+    let m52 = m51 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m26, m32, m37, m44), vec4<f16>(m28, m33, m39, m48), vec4<f16>(m30, m35, m40, m52));
 }
 
 // `v x ~v` for `Flector` v and `Scalar` x (`v >> x`).
@@ -10195,6 +11811,446 @@ fn unit_flector_sandwich_multivector(v: Flector, x: Multivector) -> Multivector 
     return Multivector(vec4<f16>(t66, t124, t127, t130), vec4<f16>(t133, t140, t147, t154), vec4<f16>(t157, t160, t163, t167), vec4<f16>(t171, t176, t119, t177));
 }
 
+// `v x ~v` for `Flector` v and `Spin` x (`v >> x`).
+fn flector_sandwich_spin(v: Flector, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c1.x;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c1.y;
+    let t4 = v.c0.z * v.c0.z;
+    let t5 = v.c0.z * v.c1.z;
+    let t6 = v.c0.w * v.c1.w;
+    let t7 = v.c1.w * v.c1.w;
+    let t8 = v.c0.x * v.c0.y;
+    let t9 = v.c0.x * v.c0.z;
+    let t13 = v.c0.x * v.c1.w;
+    let t14 = v.c0.y * v.c0.z;
+    let t16 = v.c0.y * v.c1.x;
+    let t18 = v.c0.y * v.c1.w;
+    let t20 = v.c0.z * v.c1.x;
+    let t21 = v.c0.z * v.c1.y;
+    let t22 = v.c0.z * v.c1.w;
+    let t23 = v.c1.x * v.c1.w;
+    let t24 = v.c1.y * v.c1.w;
+    let t25 = v.c1.z * v.c1.w;
+    let t26 = t0 - t2;
+    let t27 = t1 - t3;
+    let t28 = t4 - t7;
+    let t29 = t5 - t6;
+    let t30 = fma(v.c0.x, v.c0.w, t23);
+    let t31 = fma(v.c0.x, v.c1.y, t16);
+    let t32 = fma(v.c0.x, v.c1.z, t20);
+    let t33 = fma(v.c0.y, v.c0.w, t24);
+    let t34 = fma(v.c0.y, v.c1.z, t21);
+    let t35 = fma(v.c0.z, v.c0.w, t25);
+    let t36 = t26 - t28;
+    let t37 = t8 - t22;
+    let t38 = t9 + t18;
+    let t39 = t8 + t22;
+    let t40 = t26 + t28;
+    let t41 = t13 - t14;
+    let t42 = t9 - t18;
+    let t43 = t13 + t14;
+    let t44 = t0 + t2;
+    let t45 = t4 + t7;
+    let t46 = t44 - t45;
+    let t47 = t27 - t29;
+    let t48 = t31 - t35;
+    let t49 = t32 + t33;
+    let t50 = t31 + t35;
+    let t51 = t27 + t29;
+    let t52 = t30 - t34;
+    let t53 = t32 - t33;
+    let t54 = t30 + t34;
+    let t55 = t1 + t3;
+    let t56 = t5 + t6;
+    let t57 = t55 - t56;
+    let t60 = x.c0.z * t38;
+    let t61 = x.c0.x * t39;
+    let t65 = x.c0.y * t43;
+    let t68 = x.c0.y * t48;
+    let t70 = x.c0.x * t50;
+    let t74 = x.c0.y * t54;
+    let t76 = fma(x.c0.y, t37, t60);
+    let t77 = t76 * 2.0;
+    let t78 = fma(x.c0.x, t36, t77);
+    let t79 = fma(-x.c0.z, t41, t61);
+    let t80 = t79 * 2.0;
+    let t81 = fma(-x.c0.y, t40, t80);
+    let t82 = fma(x.c0.x, t42, t65);
+    let t83 = t82 * 2.0;
+    let t84 = fma(-x.c0.z, t46, t83);
+    let t85 = fma(x.c0.x, t47, t68);
+    let t86 = fma(x.c0.z, t49, t85);
+    let t87 = t86 * 2.0;
+    let t88 = fma(-x.c0.y, t51, t70);
+    let t89 = fma(-x.c0.z, t52, t88);
+    let t90 = t89 * 2.0;
+    let t91 = fma(x.c0.x, t53, t74);
+    let t92 = fma(-x.c0.z, t57, t91);
+    let t93 = t92 * 2.0;
+    return Line(vec4<f16>(t78, t81, t84, t87), vec4<f16>(t90, t93, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Flector` v and `Spin` x (`v >> x`).
+fn unit_flector_sandwich_spin(v: Flector, x: Spin) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c1.w * v.c1.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t9 = v.c0.x * v.c1.w;
+    let t10 = v.c0.y * v.c0.z;
+    let t12 = v.c0.y * v.c1.x;
+    let t13 = v.c0.y * v.c1.y;
+    let t15 = v.c0.y * v.c1.w;
+    let t17 = v.c0.z * v.c1.x;
+    let t18 = v.c0.z * v.c1.y;
+    let t19 = v.c0.z * v.c1.z;
+    let t20 = v.c0.z * v.c1.w;
+    let t21 = v.c0.w * v.c1.w;
+    let t22 = v.c1.x * v.c1.w;
+    let t23 = v.c1.y * v.c1.w;
+    let t24 = v.c1.z * v.c1.w;
+    let t25 = t0 - t1;
+    let t26 = t2 - t3;
+    let t27 = fma(v.c0.x, v.c0.w, t22);
+    let t28 = fma(v.c0.x, v.c1.y, t12);
+    let t29 = fma(v.c0.x, v.c1.z, t17);
+    let t30 = fma(v.c0.y, v.c0.w, t23);
+    let t31 = fma(v.c0.y, v.c1.z, t18);
+    let t32 = fma(v.c0.z, v.c0.w, t24);
+    let t33 = t25 - t26;
+    let t34 = t4 - t20;
+    let t35 = t5 + t15;
+    let t36 = t4 + t20;
+    let t37 = t25 + t26;
+    let t38 = t9 - t10;
+    let t39 = t5 - t15;
+    let t40 = t9 + t10;
+    let t41 = t0 + t1;
+    let t42 = t2 + t3;
+    let t43 = t41 - t42;
+    let t44 = t13 + t19;
+    let t45 = t28 - t32;
+    let t46 = t29 + t30;
+    let t47 = t28 + t32;
+    let t48 = t13 + t21;
+    let t49 = t27 - t31;
+    let t50 = t29 - t30;
+    let t51 = t27 + t31;
+    let t52 = t19 + t21;
+    let t55 = x.c0.z * t35;
+    let t56 = x.c0.x * t36;
+    let t60 = x.c0.y * t40;
+    let t62 = x.c0.x * t44;
+    let t64 = x.c0.z * t46;
+    let t65 = x.c0.x * t47;
+    let t66 = x.c0.y * t48;
+    let t69 = x.c0.y * t51;
+    let t70 = x.c0.z * t52;
+    let t71 = fma(x.c0.y, t34, t55);
+    let t72 = t71 * 2.0;
+    let t73 = fma(x.c0.x, t33, t72);
+    let t74 = fma(-x.c0.z, t38, t56);
+    let t75 = t74 * 2.0;
+    let t76 = fma(-x.c0.y, t37, t75);
+    let t77 = fma(x.c0.x, t39, t60);
+    let t78 = t77 * 2.0;
+    let t79 = fma(-x.c0.z, t43, t78);
+    let t80 = fma(x.c0.y, t45, t64);
+    let t81 = t80 * 2.0;
+    let t83 = fma(-t62, 4.0, t81);
+    let t84 = fma(-x.c0.z, t49, t65);
+    let t86 = t66 * 4.0;
+    let t87 = fma(t84, 2.0, t86);
+    let t88 = fma(x.c0.x, t50, t69);
+    let t90 = t70 * 4.0;
+    let t91 = fma(t88, 2.0, t90);
+    return Line(vec4<f16>(t73, t76, t79, t83), vec4<f16>(t87, t91, 0.0, 0.0));
+}
+
+// `v x ~v` for `Flector` v and `Moment` x (`v >> x`).
+fn flector_sandwich_moment(v: Flector, x: Moment) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c1.w * v.c1.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c1.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c1.w;
+    let t9 = v.c0.z * v.c1.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t10 - t11;
+    let t13 = t4 - t9;
+    let t14 = t5 + t8;
+    let t15 = t4 + t9;
+    let t16 = t10 + t11;
+    let t17 = t6 - t7;
+    let t18 = t5 - t8;
+    let t19 = t6 + t7;
+    let t20 = t0 + t1;
+    let t21 = t2 + t3;
+    let t22 = t20 - t21;
+    let t25 = x.c0.z * t14;
+    let t28 = x.c0.z * t17;
+    let t30 = x.c0.y * t19;
+    let t31 = x.c0.z * t22;
+    let t32 = fma(x.c0.y, t13, t25);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t12, t33);
+    let t35 = -t34;
+    let t36 = fma(-x.c0.x, t15, t28);
+    let t37 = t36 * 2.0;
+    let t38 = fma(x.c0.y, t16, t37);
+    let t39 = fma(x.c0.x, t18, t30);
+    let t41 = fma(-t39, 2.0, t31);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t35), vec4<f16>(t38, t41, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Flector` v and `Moment` x (`v >> x`).
+fn unit_flector_sandwich_moment(v: Flector, x: Moment) -> Line {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t7 = v.c1.w * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t7);
+    let t9 = fma(-v.c0.y, x.c0.x, t8);
+    let t10 = v.c0.x * x.c0.z;
+    let t13 = fma(-v.c0.z, x.c0.x, t10);
+    let t14 = fma(-v.c1.w, x.c0.y, t13);
+    let t16 = v.c0.z * t14;
+    let t18 = v.c1.w * t14;
+    let t20 = v.c1.w * t9;
+    let t21 = fma(v.c0.y, t9, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c1.w * v.c1.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = -t31;
+    let t33 = fma(-v.c0.y, t4, t18);
+    let t35 = x.c0.y * t29;
+    let t36 = fma(t33, 2.0, t35);
+    let t37 = fma(v.c0.z, t4, t20);
+    let t39 = x.c0.z * t29;
+    let t40 = fma(-t37, 2.0, t39);
+    return Line(vec4<f16>(0.0, 0.0, 0.0, t32), vec4<f16>(t36, t40, 0.0, 0.0));
+}
+
+// `v x ~v` for `Flector` v and `OriginPlane` x (`v >> x`).
+fn flector_sandwich_origin_plane(v: Flector, x: OriginPlane) -> Plane {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c1.w * v.c1.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c1.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c1.w;
+    let t9 = v.c0.z * v.c1.w;
+    let t11 = v.c0.y * v.c1.z;
+    let t13 = v.c1.x * v.c1.w;
+    let t16 = v.c0.z * v.c1.x;
+    let t17 = v.c1.y * v.c1.w;
+    let t20 = v.c0.z * v.c0.w;
+    let t21 = v.c1.z * v.c1.w;
+    let t22 = t0 - t1;
+    let t23 = t2 - t3;
+    let t24 = t22 - t23;
+    let t25 = t4 - t9;
+    let t26 = t5 + t8;
+    let t27 = t4 + t9;
+    let t28 = t22 + t23;
+    let t29 = t6 - t7;
+    let t30 = t5 - t8;
+    let t31 = t6 + t7;
+    let t32 = t0 + t1;
+    let t33 = t2 + t3;
+    let t34 = t32 - t33;
+    let t35 = fma(v.c0.x, v.c0.w, t11);
+    let t36 = fma(v.c0.z, v.c1.y, t13);
+    let t37 = t35 - t36;
+    let t38 = fma(v.c0.x, v.c1.z, t17);
+    let t39 = fma(v.c0.y, v.c0.w, t16);
+    let t40 = t38 - t39;
+    let t41 = fma(v.c0.x, v.c1.y, t20);
+    let t42 = fma(v.c0.y, v.c1.x, t21);
+    let t43 = t41 - t42;
+    let t46 = x.c0.z * t26;
+    let t47 = x.c0.x * t27;
+    let t51 = x.c0.y * t31;
+    let t55 = x.c0.z * t43;
+    let t56 = fma(x.c0.y, t25, t46);
+    let t57 = t56 * 2.0;
+    let t58 = fma(x.c0.x, t24, t57);
+    let t59 = fma(-x.c0.z, t29, t47);
+    let t60 = t59 * 2.0;
+    let t61 = fma(-x.c0.y, t28, t60);
+    let t62 = fma(x.c0.x, t30, t51);
+    let t63 = t62 * 2.0;
+    let t64 = fma(-x.c0.z, t34, t63);
+    let t65 = fma(x.c0.x, t37, t55);
+    let t66 = fma(-x.c0.y, t40, t65);
+    let t67 = t66 * 2.0;
+    return Plane(vec4<f16>(t58, t61, t64, t67));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for `Flector` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn flector_matrix_origin_plane(v: Flector) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c1.w * v.c1.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c1.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c1.w;
+    let m9 = v.c0.z * v.c1.w;
+    let m11 = v.c0.y * v.c1.z;
+    let m13 = v.c1.x * v.c1.w;
+    let m16 = v.c0.z * v.c1.x;
+    let m17 = v.c1.y * v.c1.w;
+    let m20 = v.c0.z * v.c0.w;
+    let m21 = v.c1.z * v.c1.w;
+    let m22 = m0 - m1;
+    let m23 = m2 - m3;
+    let m24 = m22 - m23;
+    let m25 = m4 - m9;
+    let m26 = m25 * 2.0;
+    let m27 = m5 + m8;
+    let m28 = m27 * 2.0;
+    let m29 = m4 + m9;
+    let m30 = m29 * 2.0;
+    let m31 = m22 + m23;
+    let m32 = -m31;
+    let m33 = m7 - m6;
+    let m34 = m33 * 2.0;
+    let m35 = m5 - m8;
+    let m36 = m35 * 2.0;
+    let m37 = m6 + m7;
+    let m38 = m37 * 2.0;
+    let m39 = m2 + m3;
+    let m40 = m0 + m1;
+    let m41 = m39 - m40;
+    let m42 = fma(v.c0.x, v.c0.w, m11);
+    let m43 = fma(v.c0.z, v.c1.y, m13);
+    let m44 = m42 - m43;
+    let m45 = m44 * 2.0;
+    let m46 = fma(v.c0.y, v.c0.w, m16);
+    let m47 = fma(v.c0.x, v.c1.z, m17);
+    let m48 = m46 - m47;
+    let m49 = m48 * 2.0;
+    let m50 = fma(v.c0.x, v.c1.y, m20);
+    let m51 = fma(v.c0.y, v.c1.x, m21);
+    let m52 = m50 - m51;
+    let m53 = m52 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m24, m30, m36, m45), vec4<f16>(m26, m32, m38, m49), vec4<f16>(m28, m34, m41, m53));
+}
+
+// `v x ~v` for a unit `Flector` v and `OriginPlane` x (`v >> x`).
+fn unit_flector_sandwich_origin_plane(v: Flector, x: OriginPlane) -> Plane {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t7 = v.c1.w * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t7);
+    let t9 = fma(-v.c0.y, x.c0.x, t8);
+    let t10 = v.c0.x * x.c0.z;
+    let t13 = fma(-v.c0.z, x.c0.x, t10);
+    let t14 = fma(-v.c1.w, x.c0.y, t13);
+    let t16 = v.c0.z * t14;
+    let t17 = v.c0.y * t4;
+    let t20 = v.c1.w * t9;
+    let t21 = v.c0.y * v.c1.x;
+    let t23 = v.c0.z * v.c1.x;
+    let t25 = v.c0.w * t4;
+    let t26 = v.c1.x * v.c1.w;
+    let t27 = x.c0.x * t26;
+    let t30 = fma(v.c0.y, t9, t16);
+    let t33 = v.c0.y * v.c0.y;
+    let t35 = v.c1.w * v.c1.w;
+    let t36 = fma(v.c0.x, v.c0.x, t33);
+    let t37 = fma(v.c0.z, v.c0.z, t35);
+    let t38 = t36 + t37;
+    let t39 = x.c0.x * t38;
+    let t40 = fma(t30, 2.0, t39);
+    let t41 = fma(-v.c1.w, t14, t17);
+    let t42 = t41 * 2.0;
+    let t44 = fma(-x.c0.y, t38, t42);
+    let t45 = fma(v.c0.z, t4, t20);
+    let t46 = t45 * 2.0;
+    let t48 = fma(-x.c0.z, t38, t46);
+    let t49 = fma(x.c0.y, t23, t25);
+    let t50 = fma(v.c1.y, t14, t49);
+    let t51 = fma(x.c0.z, t21, t27);
+    let t52 = fma(v.c1.z, t9, t51);
+    let t53 = t50 - t52;
+    let t54 = t53 * 2.0;
+    return Plane(vec4<f16>(t40, t44, t48, t54));
+}
+
+// The matrix of `x -> v x ~v` on `OriginPlane` for a unit `Flector` v (`v >> OriginPlane::slot()`); apply it as `m * x`.
+fn unit_flector_matrix_origin_plane(v: Flector) -> mat3x4<f16> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c1.w * v.c1.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c1.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c1.w;
+    let m9 = v.c0.z * v.c1.w;
+    let m11 = v.c0.y * v.c1.z;
+    let m13 = v.c1.x * v.c1.w;
+    let m16 = v.c0.z * v.c1.x;
+    let m17 = v.c1.y * v.c1.w;
+    let m20 = v.c0.z * v.c0.w;
+    let m21 = v.c1.z * v.c1.w;
+    let m22 = m0 - m1;
+    let m23 = m2 - m3;
+    let m24 = m22 - m23;
+    let m25 = m4 - m9;
+    let m26 = m25 * 2.0;
+    let m27 = m5 + m8;
+    let m28 = m27 * 2.0;
+    let m29 = m4 + m9;
+    let m30 = m29 * 2.0;
+    let m31 = m22 + m23;
+    let m32 = -m31;
+    let m33 = m7 - m6;
+    let m34 = m33 * 2.0;
+    let m35 = m5 - m8;
+    let m36 = m35 * 2.0;
+    let m37 = m6 + m7;
+    let m38 = m37 * 2.0;
+    let m39 = m2 + m3;
+    let m40 = m0 + m1;
+    let m41 = m39 - m40;
+    let m42 = fma(v.c0.x, v.c0.w, m11);
+    let m43 = fma(v.c0.z, v.c1.y, m13);
+    let m44 = m42 - m43;
+    let m45 = m44 * 2.0;
+    let m46 = fma(v.c0.y, v.c0.w, m16);
+    let m47 = fma(v.c0.x, v.c1.z, m17);
+    let m48 = m46 - m47;
+    let m49 = m48 * 2.0;
+    let m50 = fma(v.c0.x, v.c1.y, m20);
+    let m51 = fma(v.c0.y, v.c1.x, m21);
+    let m52 = m50 - m51;
+    let m53 = m52 * 2.0;
+    return mat3x4<f16>(vec4<f16>(m24, m30, m36, m45), vec4<f16>(m26, m32, m38, m49), vec4<f16>(m28, m34, m41, m53));
+}
+
 // Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
 // `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
 struct StudyDual {
@@ -10343,6 +12399,15 @@ fn study_acosh_sq(y: StudyDual) -> StudyDual {
     series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
     series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
     return sd_select_small(t, 1e-8, series, direct);
+}
+
+// `exp(B) = c0 + c1 I + (s0 + s1 I) B` for `B² = lambda + mu I`, `I² = -1`, as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs).
+fn study_exp_complex(lambda: f32, mu: f32) -> vec4<f32> {
+    let x = StudyDual(vec2<f32>(lambda, mu), vec2<f32>(0.0, 0.0));
+    let c = study_exp_c(x).p;
+    let s = study_exp_s(x).p;
+    return vec4<f32>(c.x, c.y, s.x, s.y);
 }
 
 // `exp(B) = C + S B` for `B² = lambda + mu I` with `I² = 0` and `lambda <= 0`, as

@@ -24,6 +24,7 @@ law_suite::law_suite! {
     scalar: Scalar,
     slot: Hyperplane,
     other: Point,
+    dimension: 5,
     products: [
         (Gp, gp, Scalar, Scalar),
         (Gp, gp, Scalar, Hyperplane),
@@ -99,6 +100,8 @@ law_suite::law_suite! {
         (Point, Scalar),
         (Point, Hyperplane),
     ],
+    outer_two: [
+    ],
     top: [
         (Point, Scalar),
     ],
@@ -107,6 +110,15 @@ law_suite::law_suite! {
     pairings: [
         (Vee, vee, Hyperplane, Point),
         (Vee, vee, Point, Hyperplane),
+    ],
+    adjugates: [
+        (Hyperplane, Hyperplane),
+        (Hyperplane, Point),
+        (Point, Point),
+        (Point, Hyperplane),
+    ],
+    adjoints: [
+        (Scalar, Scalar),
     ],
     divisions: [
     ],

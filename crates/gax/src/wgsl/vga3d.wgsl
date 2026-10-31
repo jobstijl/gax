@@ -53,6 +53,16 @@ struct Multivector {
     c1: vec4<f32>,
 }
 
+// `Horizontal`: [e1, e2]
+struct Horizontal {
+    c0: vec4<f32>,
+}
+
+// `Tilt`: [e23, e31]
+struct Tilt {
+    c0: vec4<f32>,
+}
+
 alias Even = Rotor;
 
 alias Twist = Bivector;
@@ -97,6 +107,16 @@ fn odd_new(e1: f32, e2: f32, e3: f32, e123: f32) -> Odd {
 // A `Multivector` from its coefficients.
 fn multivector_new(s: f32, e1: f32, e2: f32, e3: f32, e23: f32, e31: f32, e12: f32, e123: f32) -> Multivector {
     return Multivector(vec4<f32>(s, e1, e2, e3), vec4<f32>(e23, e31, e12, e123));
+}
+
+// A `Horizontal` from its coefficients.
+fn horizontal_new(e1: f32, e2: f32) -> Horizontal {
+    return Horizontal(vec4<f32>(e1, e2, 0.0, 0.0));
+}
+
+// A `Tilt` from its coefficients.
+fn tilt_new(e23: f32, e31: f32) -> Tilt {
+    return Tilt(vec4<f32>(e23, e31, 0.0, 0.0));
 }
 
 // A `Vector` as a `Odd`.
@@ -154,6 +174,18 @@ fn multivector_reverse(x: Multivector) -> Multivector {
     let t2 = -x.c1.z;
     let t3 = -x.c1.w;
     return Multivector(vec4<f32>(x.c0.x, x.c0.y, x.c0.z, x.c0.w), vec4<f32>(t0, t1, t2, t3));
+}
+
+// The reverse `~x`.
+fn horizontal_reverse(x: Horizontal) -> Horizontal {
+    return Horizontal(vec4<f32>(x.c0.x, x.c0.y, 0.0, 0.0));
+}
+
+// The reverse `~x`.
+fn tilt_reverse(x: Tilt) -> Tilt {
+    let t0 = -x.c0.x;
+    let t1 = -x.c0.y;
+    return Tilt(vec4<f32>(t0, t1, 0.0, 0.0));
 }
 
 // The geometric product of a `Vector` and a `Vector` (composition).
@@ -598,6 +630,81 @@ fn multivector_norm_squared(x: Multivector) -> f32 {
     let t13 = t11 + t12;
     let t14 = t10 + t13;
     return t14;
+}
+
+// The squared norm: the scalar part of `x ~x`.
+fn horizontal_norm_squared(x: Horizontal) -> f32 {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    return t2;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn horizontal_normalized(x: Horizontal) -> Horizontal {
+    let p1 = x.c0.y * x.c0.y;
+    let p2 = fma(x.c0.x, x.c0.x, p1);
+    let s0 = study_rsqrt_abs(p2);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return Horizontal(vec4<f32>(t0, t1, 0.0, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn horizontal_renormalize_fast(x: Horizontal) -> Horizontal {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    let t3 = x.c0.x * t2;
+    let t4 = x.c0.y * t2;
+    let t6 = x.c0.x * (3.0 / 2.0);
+    let t7 = fma(-t3, (1.0 / 2.0), t6);
+    let t9 = x.c0.y * (3.0 / 2.0);
+    let t10 = fma(-t4, (1.0 / 2.0), t9);
+    return Horizontal(vec4<f32>(t7, t10, 0.0, 0.0));
+}
+
+// The squared norm: the scalar part of `x ~x`.
+fn tilt_norm_squared(x: Tilt) -> f32 {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    return t2;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn tilt_normalized(x: Tilt) -> Tilt {
+    let p1 = x.c0.y * x.c0.y;
+    let p2 = fma(x.c0.x, x.c0.x, p1);
+    let s0 = study_rsqrt_abs(p2);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return Tilt(vec4<f32>(t0, t1, 0.0, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn tilt_renormalize_fast(x: Tilt) -> Tilt {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    let t3 = x.c0.x * t2;
+    let t4 = x.c0.y * t2;
+    let t6 = x.c0.x * (3.0 / 2.0);
+    let t7 = fma(-t3, (1.0 / 2.0), t6);
+    let t9 = x.c0.y * (3.0 / 2.0);
+    let t10 = fma(-t4, (1.0 / 2.0), t9);
+    return Tilt(vec4<f32>(t7, t10, 0.0, 0.0));
+}
+
+// The exponential, a unit `Rotor`: `exp(B) = C(B²) + S(B²) B`.
+fn tilt_exp(x: Tilt) -> Rotor {
+    let p1 = x.c0.y * x.c0.y;
+    let p2 = fma(x.c0.x, x.c0.x, p1);
+    let p3 = -p2;
+    let r1 = study_exp_rotation(p3, 0.0);
+    let c0 = r1[0];
+    let c1 = r1[1];
+    let s0 = r1[2];
+    let s1 = r1[3];
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return Rotor(vec4<f32>(c0, t0, t1, 0.0));
 }
 
 // `v x ~v` for `Vector` v and `Scalar` x (`v >> x`).
@@ -1124,6 +1231,86 @@ fn unit_vector_sandwich_multivector(v: Vector, x: Multivector) -> Multivector {
     let t39 = x.c0.x * t21;
     let t40 = x.c1.w * t21;
     return Multivector(vec4<f32>(t39, t23, t26, t29), vec4<f32>(t32, t35, t38, t40));
+}
+
+// `v x ~v` for `Vector` v and `Horizontal` x (`v >> x`).
+fn vector_sandwich_horizontal(v: Vector, x: Horizontal) -> Vector {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = fma(-v.c0.y, v.c0.y, t0);
+    let t7 = t6 - t2;
+    let t8 = t2 + t6;
+    let t10 = x.c0.y * t3;
+    let t11 = x.c0.x * t3;
+    let t14 = x.c0.y * t5;
+    let t15 = t10 * 2.0;
+    let t16 = fma(x.c0.x, t7, t15);
+    let t17 = t11 * 2.0;
+    let t18 = fma(-x.c0.y, t8, t17);
+    let t19 = fma(x.c0.x, t4, t14);
+    let t20 = t19 * 2.0;
+    return Vector(vec4<f32>(t16, t18, t20, 0.0));
+}
+
+// `v x ~v` for a unit `Vector` v and `Horizontal` x (`v >> x`).
+fn unit_vector_sandwich_horizontal(v: Vector, x: Horizontal) -> Vector {
+    let t1 = v.c0.y * x.c0.y;
+    let t2 = fma(v.c0.x, x.c0.x, t1);
+    let t3 = v.c0.x * t2;
+    let t4 = v.c0.y * t2;
+    let t5 = v.c0.z * t2;
+    let t6 = t3 * 2.0;
+    let t8 = v.c0.y * v.c0.y;
+    let t10 = fma(v.c0.x, v.c0.x, t8);
+    let t11 = fma(v.c0.z, v.c0.z, t10);
+    let t13 = fma(-x.c0.x, t11, t6);
+    let t14 = t4 * 2.0;
+    let t16 = fma(-x.c0.y, t11, t14);
+    let t17 = t5 * 2.0;
+    return Vector(vec4<f32>(t13, t16, t17, 0.0));
+}
+
+// `v x ~v` for `Vector` v and `Tilt` x (`v >> x`).
+fn vector_sandwich_tilt(v: Vector, x: Tilt) -> Bivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = fma(-v.c0.y, v.c0.y, t0);
+    let t7 = t6 - t2;
+    let t8 = t2 + t6;
+    let t10 = x.c0.y * t3;
+    let t11 = x.c0.x * t3;
+    let t14 = x.c0.y * t5;
+    let t15 = t10 * 2.0;
+    let t16 = fma(x.c0.x, t7, t15);
+    let t17 = t11 * 2.0;
+    let t18 = fma(-x.c0.y, t8, t17);
+    let t19 = fma(x.c0.x, t4, t14);
+    let t20 = t19 * 2.0;
+    return Bivector(vec4<f32>(t16, t18, t20, 0.0));
+}
+
+// `v x ~v` for a unit `Vector` v and `Tilt` x (`v >> x`).
+fn unit_vector_sandwich_tilt(v: Vector, x: Tilt) -> Bivector {
+    let t1 = v.c0.y * x.c0.y;
+    let t2 = fma(v.c0.x, x.c0.x, t1);
+    let t3 = v.c0.x * t2;
+    let t4 = v.c0.y * t2;
+    let t5 = v.c0.z * t2;
+    let t6 = t3 * 2.0;
+    let t8 = v.c0.y * v.c0.y;
+    let t10 = fma(v.c0.x, v.c0.x, t8);
+    let t11 = fma(v.c0.z, v.c0.z, t10);
+    let t13 = fma(-x.c0.x, t11, t6);
+    let t14 = t4 * 2.0;
+    let t16 = fma(-x.c0.y, t11, t14);
+    let t17 = t5 * 2.0;
+    return Bivector(vec4<f32>(t13, t16, t17, 0.0));
 }
 
 // `v x ~v` for `Rotor` v and `Scalar` x (`v >> x`).
@@ -1918,6 +2105,118 @@ fn unit_rotor_sandwich_multivector(v: Rotor, x: Multivector) -> Multivector {
     let t60 = t59 * 2.0;
     let t61 = fma(x.c1.z, t23, t60);
     return Multivector(vec4<f32>(t24, t46, t49, t52), vec4<f32>(t55, t58, t61, t43));
+}
+
+// `v x ~v` for `Rotor` v and `Horizontal` x (`v >> x`).
+fn rotor_sandwich_horizontal(v: Rotor, x: Horizontal) -> Vector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c0.z;
+    let t7 = v.c0.y * v.c0.w;
+    let t8 = v.c0.x * v.c0.y;
+    let t10 = fma(-v.c0.w, v.c0.w, t0);
+    let t11 = fma(-v.c0.z, v.c0.z, t2);
+    let t12 = t10 + t11;
+    let t13 = t1 + t3;
+    let t14 = t1 - t3;
+    let t15 = t10 - t11;
+    let t16 = fma(v.c0.x, v.c0.z, t7);
+    let t17 = fma(-v.c0.z, v.c0.w, t8);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t21 = x.c0.y * t15;
+    let t22 = x.c0.x * t16;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t27 = fma(-t20, 2.0, t21);
+    let t28 = fma(-x.c0.y, t17, t22);
+    let t29 = t28 * 2.0;
+    return Vector(vec4<f32>(t25, t27, t29, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Horizontal` x (`v >> x`).
+fn unit_rotor_sandwich_horizontal(v: Rotor, x: Horizontal) -> Vector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c0.z;
+    let t7 = v.c0.y * v.c0.w;
+    let t8 = v.c0.x * v.c0.y;
+    let t10 = fma(-v.c0.w, v.c0.w, t0);
+    let t11 = fma(-v.c0.z, v.c0.z, t2);
+    let t12 = t10 + t11;
+    let t13 = t1 + t3;
+    let t14 = t1 - t3;
+    let t15 = t10 - t11;
+    let t16 = fma(v.c0.x, v.c0.z, t7);
+    let t17 = fma(-v.c0.z, v.c0.w, t8);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t21 = x.c0.y * t15;
+    let t22 = x.c0.x * t16;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t27 = fma(-t20, 2.0, t21);
+    let t28 = fma(-x.c0.y, t17, t22);
+    let t29 = t28 * 2.0;
+    return Vector(vec4<f32>(t25, t27, t29, 0.0));
+}
+
+// `v x ~v` for `Rotor` v and `Tilt` x (`v >> x`).
+fn rotor_sandwich_tilt(v: Rotor, x: Tilt) -> Bivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c0.z;
+    let t7 = v.c0.y * v.c0.w;
+    let t8 = v.c0.x * v.c0.y;
+    let t10 = fma(-v.c0.w, v.c0.w, t0);
+    let t11 = fma(-v.c0.z, v.c0.z, t2);
+    let t12 = t10 + t11;
+    let t13 = t1 + t3;
+    let t14 = t1 - t3;
+    let t15 = t10 - t11;
+    let t16 = fma(v.c0.x, v.c0.z, t7);
+    let t17 = fma(-v.c0.z, v.c0.w, t8);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t21 = x.c0.y * t15;
+    let t22 = x.c0.x * t16;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t27 = fma(-t20, 2.0, t21);
+    let t28 = fma(-x.c0.y, t17, t22);
+    let t29 = t28 * 2.0;
+    return Bivector(vec4<f32>(t25, t27, t29, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Tilt` x (`v >> x`).
+fn unit_rotor_sandwich_tilt(v: Rotor, x: Tilt) -> Bivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.w;
+    let t2 = v.c0.y * v.c0.y;
+    let t3 = v.c0.y * v.c0.z;
+    let t7 = v.c0.y * v.c0.w;
+    let t8 = v.c0.x * v.c0.y;
+    let t10 = fma(-v.c0.w, v.c0.w, t0);
+    let t11 = fma(-v.c0.z, v.c0.z, t2);
+    let t12 = t10 + t11;
+    let t13 = t1 + t3;
+    let t14 = t1 - t3;
+    let t15 = t10 - t11;
+    let t16 = fma(v.c0.x, v.c0.z, t7);
+    let t17 = fma(-v.c0.z, v.c0.w, t8);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t21 = x.c0.y * t15;
+    let t22 = x.c0.x * t16;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t27 = fma(-t20, 2.0, t21);
+    let t28 = fma(-x.c0.y, t17, t22);
+    let t29 = t28 * 2.0;
+    return Bivector(vec4<f32>(t25, t27, t29, 0.0));
 }
 
 // `v x ~v` for `Odd` v and `Scalar` x (`v >> x`).
@@ -2720,6 +3019,118 @@ fn unit_odd_sandwich_multivector(v: Odd, x: Multivector) -> Multivector {
     let t60 = t59 * 2.0;
     let t61 = fma(-x.c1.z, t23, t60);
     return Multivector(vec4<f32>(t24, t46, t49, t52), vec4<f32>(t55, t58, t61, t43));
+}
+
+// `v x ~v` for `Odd` v and `Horizontal` x (`v >> x`).
+fn odd_sandwich_horizontal(v: Odd, x: Horizontal) -> Vector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.y;
+    let t3 = v.c0.z * v.c0.z;
+    let t4 = v.c0.z * v.c0.w;
+    let t6 = v.c0.x * v.c0.z;
+    let t9 = v.c0.y * v.c0.z;
+    let t10 = fma(-v.c0.y, v.c0.y, t0);
+    let t11 = fma(-v.c0.w, v.c0.w, t3);
+    let t12 = t10 - t11;
+    let t13 = t1 - t4;
+    let t14 = t1 + t4;
+    let t15 = t10 + t11;
+    let t16 = fma(-v.c0.y, v.c0.w, t6);
+    let t17 = fma(v.c0.x, v.c0.w, t9);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t23 = x.c0.y * t17;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t26 = t20 * 2.0;
+    let t27 = fma(-x.c0.y, t15, t26);
+    let t28 = fma(x.c0.x, t16, t23);
+    let t29 = t28 * 2.0;
+    return Vector(vec4<f32>(t25, t27, t29, 0.0));
+}
+
+// `v x ~v` for a unit `Odd` v and `Horizontal` x (`v >> x`).
+fn unit_odd_sandwich_horizontal(v: Odd, x: Horizontal) -> Vector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.y;
+    let t3 = v.c0.z * v.c0.z;
+    let t4 = v.c0.z * v.c0.w;
+    let t6 = v.c0.x * v.c0.z;
+    let t9 = v.c0.y * v.c0.z;
+    let t10 = fma(-v.c0.y, v.c0.y, t0);
+    let t11 = fma(-v.c0.w, v.c0.w, t3);
+    let t12 = t10 - t11;
+    let t13 = t1 - t4;
+    let t14 = t1 + t4;
+    let t15 = t10 + t11;
+    let t16 = fma(-v.c0.y, v.c0.w, t6);
+    let t17 = fma(v.c0.x, v.c0.w, t9);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t23 = x.c0.y * t17;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t26 = t20 * 2.0;
+    let t27 = fma(-x.c0.y, t15, t26);
+    let t28 = fma(x.c0.x, t16, t23);
+    let t29 = t28 * 2.0;
+    return Vector(vec4<f32>(t25, t27, t29, 0.0));
+}
+
+// `v x ~v` for `Odd` v and `Tilt` x (`v >> x`).
+fn odd_sandwich_tilt(v: Odd, x: Tilt) -> Bivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.y;
+    let t3 = v.c0.z * v.c0.z;
+    let t4 = v.c0.z * v.c0.w;
+    let t6 = v.c0.x * v.c0.z;
+    let t9 = v.c0.y * v.c0.z;
+    let t10 = fma(-v.c0.y, v.c0.y, t0);
+    let t11 = fma(-v.c0.w, v.c0.w, t3);
+    let t12 = t10 - t11;
+    let t13 = t1 - t4;
+    let t14 = t1 + t4;
+    let t15 = t10 + t11;
+    let t16 = fma(-v.c0.y, v.c0.w, t6);
+    let t17 = fma(v.c0.x, v.c0.w, t9);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t23 = x.c0.y * t17;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t26 = t20 * 2.0;
+    let t27 = fma(-x.c0.y, t15, t26);
+    let t28 = fma(x.c0.x, t16, t23);
+    let t29 = t28 * 2.0;
+    return Bivector(vec4<f32>(t25, t27, t29, 0.0));
+}
+
+// `v x ~v` for a unit `Odd` v and `Tilt` x (`v >> x`).
+fn unit_odd_sandwich_tilt(v: Odd, x: Tilt) -> Bivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.x * v.c0.y;
+    let t3 = v.c0.z * v.c0.z;
+    let t4 = v.c0.z * v.c0.w;
+    let t6 = v.c0.x * v.c0.z;
+    let t9 = v.c0.y * v.c0.z;
+    let t10 = fma(-v.c0.y, v.c0.y, t0);
+    let t11 = fma(-v.c0.w, v.c0.w, t3);
+    let t12 = t10 - t11;
+    let t13 = t1 - t4;
+    let t14 = t1 + t4;
+    let t15 = t10 + t11;
+    let t16 = fma(-v.c0.y, v.c0.w, t6);
+    let t17 = fma(v.c0.x, v.c0.w, t9);
+    let t19 = x.c0.y * t13;
+    let t20 = x.c0.x * t14;
+    let t23 = x.c0.y * t17;
+    let t24 = t19 * 2.0;
+    let t25 = fma(x.c0.x, t12, t24);
+    let t26 = t20 * 2.0;
+    let t27 = fma(-x.c0.y, t15, t26);
+    let t28 = fma(x.c0.x, t16, t23);
+    let t29 = t28 * 2.0;
+    return Bivector(vec4<f32>(t25, t27, t29, 0.0));
 }
 
 // `exp(B) = C + S B` for `B² = lambda + mu I` with `I² = 0` and `lambda <= 0`, as

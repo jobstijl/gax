@@ -421,6 +421,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Scalar`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -1394,6 +1417,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Vector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
     }
 }
 
@@ -3216,6 +3262,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A, B),
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Bivector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// The inverse map, `A <- Bivector`.
     #[inline]
@@ -4267,6 +4336,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A, B)
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Trivector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<T: gx::Coef, O: gx::Orientation> Trivector<(Trivector<(), f64, O>,), T, O> {
     /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
     /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
@@ -5167,6 +5259,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Pseudoscalar`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
     }
 }
 
@@ -7044,6 +7159,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A, B), T, 
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Even`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// The inverse map, `A <- Even`.
     #[inline]
@@ -8277,6 +8415,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A, B), T, O
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Odd`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// The inverse map, `A <- Odd`.
     #[inline]
@@ -9465,6 +9626,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A, 
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Multivector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
@@ -10309,6 +10493,12 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Scalar<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Scalar<(), f64, O> {
+    type Out = Pseudoscalar<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Scalar<(), f64, O> {
@@ -10343,6 +10533,12 @@ impl<O: gx::Orientation> gx::GradePart<0> for Scalar<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Vector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(3, -1, 1)], &[(2, -1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, 1)], &[(3, -1)], &[(2, -1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Vector<(), f64, O> {
+    type Out = Trivector<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(3, true), (2, false), (1, true), (0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Vector<(), f64, O> {
@@ -10406,6 +10602,12 @@ impl<O: gx::Orientation> gx::GradePart<2> for Twist<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Bivector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)], &[(3, 1, 1)], &[(4, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(5, 1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, -1)], &[(3, 1)], &[(4, 1)], &[(1, 1)], &[(2, 1)], &[(5, 1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Bivector<(), f64, O> {
+    type Out = Bivector<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(5, false), (4, true), (3, false), (2, false), (1, true), (0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Bivector<(), f64, O> {
@@ -10442,6 +10644,12 @@ impl<O: gx::Orientation> gx::GradePart<2> for Bivector<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Trivector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(1, 1, 1)], &[(0, 1, 1)], &[(2, 1, 1)], &[(3, 1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(1, 1)], &[(0, 1)], &[(2, 1)], &[(3, 1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Trivector<(), f64, O> {
+    type Out = Vector<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(3, true), (2, false), (1, true), (0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Trivector<(), f64, O> {
@@ -10470,6 +10678,12 @@ impl<O: gx::Orientation> gx::GradePart<3> for Trivector<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Pseudoscalar<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, -1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Pseudoscalar<(), f64, O> {
+    type Out = Scalar<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {
@@ -10538,6 +10752,12 @@ impl<O: gx::Orientation> gx::GradePart<2> for Motor<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Even<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, -1, 1)], &[(4, 1, 1)], &[(5, 1, 1)], &[(2, 1, 1)], &[(3, 1, 1)], &[(6, 1, 1)], &[(7, -1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, -1)], &[(4, 1)], &[(5, 1)], &[(2, 1)], &[(3, 1)], &[(6, 1)], &[(7, -1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Even<(), f64, O> {
+    type Out = Even<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(7, false), (6, false), (5, true), (4, false), (3, false), (2, true), (1, false), (0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Even<(), f64, O> {
@@ -10590,6 +10810,12 @@ impl<O: gx::Orientation> gx::GradePart<4> for Even<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Odd<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(3, -1, 1)], &[(2, -1, 1)], &[(5, 1, 1)], &[(4, 1, 1)], &[(6, 1, 1)], &[(7, 1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, 1)], &[(3, -1)], &[(2, -1)], &[(5, 1)], &[(4, 1)], &[(6, 1)], &[(7, 1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Odd<(), f64, O> {
+    type Out = Odd<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(7, true), (6, false), (5, true), (4, false), (3, true), (2, false), (1, true), (0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Odd<(), f64, O> {
@@ -10625,6 +10851,12 @@ impl<O: gx::Orientation> gx::GradePart<3> for Odd<(), f64, O> {
 #[diagnostic::do_not_recommend]
 impl<O: gx::Orientation> gx::Reciprocal for Multivector<(), f64, O> {
     const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(4, -1, 1)], &[(3, -1, 1)], &[(5, -1, 1)], &[(8, 1, 1)], &[(9, 1, 1)], &[(6, 1, 1)], &[(7, 1, 1)], &[(10, 1, 1)], &[(12, 1, 1)], &[(11, 1, 1)], &[(13, 1, 1)], &[(14, 1, 1)], &[(15, -1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, 1)], &[(2, 1)], &[(4, -1)], &[(3, -1)], &[(5, -1)], &[(8, 1)], &[(9, 1)], &[(6, 1)], &[(7, 1)], &[(10, 1)], &[(12, 1)], &[(11, 1)], &[(13, 1)], &[(14, 1)], &[(15, -1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Multivector<(), f64, O> {
+    type Out = Multivector<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(15, false), (14, true), (13, false), (12, true), (11, false), (10, false), (9, true), (8, false), (7, false), (6, true), (5, false), (4, true), (3, false), (2, true), (1, false), (0, false)];
 }
 
 impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Multivector<(), f64, O> {

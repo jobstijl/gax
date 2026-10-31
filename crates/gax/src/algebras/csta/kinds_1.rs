@@ -421,6 +421,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Scalar`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -1406,6 +1429,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Vector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
     }
 }
 
@@ -3861,6 +3907,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A, B),
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Bivector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Bivector<(A,), T, O> {
     /// The inverse map, `A <- Bivector`.
     #[inline]
@@ -5278,6 +5347,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A, B)
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Trivector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// The inverse map, `A <- Trivector`.
     #[inline]
@@ -6243,6 +6335,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A, B
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Quadvector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Quadvector<(A,), T, O> {
     /// The inverse map, `A <- Quadvector`.
     #[inline]
@@ -7137,6 +7252,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quintvector<(A, 
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Quintvector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Quintvector`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
     }
 }
 
@@ -8083,6 +8221,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Pseudoscalar`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
     }
 }
 
@@ -11034,6 +11195,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A, B), T, 
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Even<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Even`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Even<(A,), T, O> {
     /// The inverse map, `A <- Even`.
     #[inline]
@@ -11231,98 +11415,5 @@ impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Even<S, T, 
     fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Even { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Div<R> for Even<S, T, O>
-where
-    Self: gx::DivBy<R>,
-{
-    type Output = <Self as gx::DivBy<R>>::Output;
-    #[inline(always)]
-    fn div(self, rhs: R) -> Self::Output {
-        gx::DivBy::div_by(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<Even<S, f32, O>> for f32 {
-    type Output = Even<S, f32, O>;
-    #[inline(always)]
-    fn mul(self, rhs: Even<S, f32, O>) -> Even<S, f32, O> {
-        rhs.gp(self)
-    }
-}
-
-impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<Even<S, f64, O>> for f64 {
-    type Output = Even<S, f64, O>;
-    #[inline(always)]
-    fn mul(self, rhs: Even<S, f64, O>) -> Even<S, f64, O> {
-        rhs.gp(self)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Mul<R> for Even<S, T, O>
-where
-    Self: gx::Gp<R>,
-{
-    type Output = <Self as gx::Gp<R>>::Output;
-    #[inline(always)]
-    fn mul(self, rhs: R) -> Self::Output {
-        gx::Gp::gp(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitXor<R> for Even<S, T, O>
-where
-    Self: gx::Wedge<R>,
-{
-    type Output = <Self as gx::Wedge<R>>::Output;
-    #[inline(always)]
-    fn bitxor(self, rhs: R) -> Self::Output {
-        gx::Wedge::wedge(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitAnd<R> for Even<S, T, O>
-where
-    Self: gx::Vee<R>,
-{
-    type Output = <Self as gx::Vee<R>>::Output;
-    #[inline(always)]
-    fn bitand(self, rhs: R) -> Self::Output {
-        gx::Vee::vee(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitOr<R> for Even<S, T, O>
-where
-    Self: gx::Dot<R>,
-{
-    type Output = <Self as gx::Dot<R>>::Output;
-    #[inline(always)]
-    fn bitor(self, rhs: R) -> Self::Output {
-        gx::Dot::dot(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shr<R> for Even<S, T, O>
-where
-    Self: gx::Transform<R>,
-{
-    type Output = <Self as gx::Transform<R>>::Output;
-    #[inline(always)]
-    fn shr(self, rhs: R) -> Self::Output {
-        gx::Transform::transform(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shl<R> for Even<S, T, O>
-where
-    Self: gx::TransformInv<R>,
-{
-    type Output = <Self as gx::TransformInv<R>>::Output;
-    #[inline(always)]
-    fn shl(self, rhs: R) -> Self::Output {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 }

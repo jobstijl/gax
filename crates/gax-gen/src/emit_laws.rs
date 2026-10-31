@@ -364,8 +364,11 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
     let mut s = String::new();
     let _ = writeln!(
         s,
-        "    scalar: {},\n    slot: {},\n    other: {},",
-        scalar.name, slot.name, other.name
+        "    scalar: {},\n    slot: {},\n    other: {},\n    dimension: {},",
+        scalar.name,
+        slot.name,
+        other.name,
+        spec.algebra.dim()
     );
     let op_pair = |op: BinOp, a: &str, b: &str| {
         let (t, m, _) = op.names();
@@ -453,6 +456,23 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
         "outer",
         outer.iter().map(|(v, b, _)| format!("({v}, {b})")),
     );
+    // The outermorphisms onto two factors, against the product that defines them.
+    list(
+        &mut s,
+        "outer_two",
+        outer.iter().filter_map(|(v, b, _)| {
+            let n = spec.algebra.dim() as u32;
+            let gv = *cx.kind(v).layout.grades().iter().next()?;
+            let gb = *cx.kind(b).layout.grades().iter().next()?;
+            let (k, op) = if gv == 1 {
+                (gb, BinOp::Wedge)
+            } else {
+                (n - gb, BinOp::Vee)
+            };
+            let (t, m, _) = op.names();
+            (k == 2).then(|| format!("({v}, {b}, {t}, {m})"))
+        }),
+    );
     list(
         &mut s,
         "top",
@@ -469,6 +489,9 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
             .into_iter()
             .map(|(op, a, b)| op_pair(op, &a, &b)),
     );
+    let (adjugates, adjoints) = transposes(&cx);
+    list(&mut s, "adjugates", adjugates);
+    list(&mut s, "adjoints", adjoints);
     list(&mut s, "divisions", divisions(&cx));
     let [sampled, sampled_unit, sampled_actions, sampled_equivariant] = sampled(&cx);
     list(&mut s, "sampled", sampled);
@@ -630,6 +653,26 @@ fn pairings(cx: &Cx, scalar: &KindSpec) -> Vec<(BinOp, String, String)> {
         }
     }
     pairings
+}
+
+/// The maps `B <- A` of the transpose laws, as `(A, B)`: for the adjugate, every law kind with
+/// a declared complement, into itself and into its complement; for the adjoint, every law kind
+/// with a reciprocal frame, into itself.
+fn transposes(cx: &Cx) -> (Vec<String>, Vec<String>) {
+    let mut adjugates = Vec::new();
+    let mut adjoints = Vec::new();
+    for a in &cx.law_kinds {
+        if let Some((c, _)) = crate::emit::complement_pairs(cx.spec, a) {
+            adjugates.push(format!("({0}, {0})", a.name));
+            if c.name != a.name && cx.is_law(&c.name) {
+                adjugates.push(format!("({}, {})", a.name, c.name));
+            }
+        }
+        if crate::emit::reciprocal_frame(cx.spec, a).is_some() {
+            adjoints.push(format!("({0}, {0})", a.name));
+        }
+    }
+    (adjugates, adjoints)
 }
 
 /// The determinant of the unit versors' sandwiches on the base kinds of the outermorphisms to

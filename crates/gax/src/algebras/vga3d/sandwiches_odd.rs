@@ -2789,3 +2789,639 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
         gx::Transform::transform(v, x)
     }
 }
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Horizontal<S, T, O>> for Odd<(), T, OV> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Horizontal<S, T, O>) -> Vector<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[1];
+        let t3 = v[2] * v[2];
+        let t4 = v[2] * v[3];
+        let t6 = v[0] * v[2];
+        let t9 = v[1] * v[2];
+        let t10 = (-v[1]).mul_add(v[1], t0);
+        let t11 = (-v[3]).mul_add(v[3], t3);
+        let t12 = t10 - t11;
+        let t13 = t1 - t4;
+        let t14 = t1 + t4;
+        let t15 = t10 + t11;
+        let t16 = (-v[1]).mul_add(v[3], t6);
+        let t17 = v[0].mul_add(v[3], t9);
+        let t19 = xv[1] * t13;
+        let t20 = xv[0] * t14;
+        let t23 = xv[1] * t17;
+        let t24 = t19 * T::from_i64(2);
+        let t25 = xv[0].mul_add(t12, t24);
+        let t26 = t20 * T::from_i64(2);
+        let t27 = (-xv[1]).mul_add(t15, t26);
+        let t28 = xv[0].mul_add(t16, t23);
+        let t29 = t28 * T::from_i64(2);
+            return Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t25, t27, t29]), [true, true, true]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14)).0, (x[0].scale(m16) + x[1].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m22)).0], [true, true, true]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Horizontal<S, T, O>> for Odd<(), T, OV> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Horizontal<S, T, O>) -> Vector<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Horizontal<(), f64, O>> for Odd<(), T, OV> {
+    type Output = gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Horizontal<S, T, O>> for gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Horizontal<S, T, O>) -> Vector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5])).0], [true, true, true]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>> for Vector<(Horizontal<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>) -> Self {
+        let m = p.m;
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Horizontal<(), f64, O>,), T, 3>([[m[0], m[1]], [m[2], m[3]], [m[4], m[5]]], [true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Odd, 6> for Horizontal<(), f64, O> {
+    type Output = Vector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>) -> Vector<(Horizontal<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Horizontal<(), f64, O>, gx::batch::Plain> for Odd {
+    type Y = Vector<(), f64, O>;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6> {
+        gx::Prepare::<Horizontal<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Horizontal<(), f64, O>, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Horizontal<(), f64, O>, T, 6>, x: Horizontal<(), T, O>) -> Vector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Horizontal<(), T, O>) -> Vector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Horizontal<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Horizontal<S, T, O>) -> Vector<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[1];
+        let t3 = v[2] * v[2];
+        let t4 = v[2] * v[3];
+        let t6 = v[0] * v[2];
+        let t9 = v[1] * v[2];
+        let t10 = (-v[1]).mul_add(v[1], t0);
+        let t11 = (-v[3]).mul_add(v[3], t3);
+        let t12 = t10 - t11;
+        let t13 = t1 - t4;
+        let t14 = t1 + t4;
+        let t15 = t10 + t11;
+        let t16 = (-v[1]).mul_add(v[3], t6);
+        let t17 = v[0].mul_add(v[3], t9);
+        let t19 = xv[1] * t13;
+        let t20 = xv[0] * t14;
+        let t23 = xv[1] * t17;
+        let t24 = t19 * T::from_i64(2);
+        let t25 = xv[0].mul_add(t12, t24);
+        let t26 = t20 * T::from_i64(2);
+        let t27 = (-xv[1]).mul_add(t15, t26);
+        let t28 = xv[0].mul_add(t16, t23);
+        let t29 = t28 * T::from_i64(2);
+            return Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t25, t27, t29]), [true, true, true]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14)).0, (x[0].scale(m16) + x[1].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m22)).0], [true, true, true]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Horizontal<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Horizontal<S, T, O>) -> Vector<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Horizontal<(), f64, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Horizontal<S, T, O>> for gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Horizontal<S, T, O>) -> Vector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5])).0], [true, true, true]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>> for Vector<(Horizontal<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>) -> Self {
+        let m = p.m;
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Horizontal<(), f64, O>,), T, 3>([[m[0], m[1]], [m[2], m[3]], [m[4], m[5]]], [true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Odd>, 6> for Horizontal<(), f64, O> {
+    type Output = Vector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>) -> Vector<(Horizontal<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Horizontal<(), f64, O>, gx::batch::Certified> for Odd {
+    type Y = Vector<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6> {
+        gx::Prepare::<Horizontal<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Horizontal<(), f64, O>, T, 6>, x: Horizontal<(), T, O>) -> Vector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Horizontal<(), T, O>) -> Vector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Tilt<S, T, O>> for Odd<(), T, OV> {
+    type Output = Bivector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Tilt<S, T, O>) -> Bivector<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[1];
+        let t3 = v[2] * v[2];
+        let t4 = v[2] * v[3];
+        let t6 = v[0] * v[2];
+        let t9 = v[1] * v[2];
+        let t10 = (-v[1]).mul_add(v[1], t0);
+        let t11 = (-v[3]).mul_add(v[3], t3);
+        let t12 = t10 - t11;
+        let t13 = t1 - t4;
+        let t14 = t1 + t4;
+        let t15 = t10 + t11;
+        let t16 = (-v[1]).mul_add(v[3], t6);
+        let t17 = v[0].mul_add(v[3], t9);
+        let t19 = xv[1] * t13;
+        let t20 = xv[0] * t14;
+        let t23 = xv[1] * t17;
+        let t24 = t19 * T::from_i64(2);
+        let t25 = xv[0].mul_add(t12, t24);
+        let t26 = t20 * T::from_i64(2);
+        let t27 = (-xv[1]).mul_add(t15, t26);
+        let t28 = xv[0].mul_add(t16, t23);
+        let t29 = t28 * T::from_i64(2);
+            return Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t25, t27, t29]), [false, false, false]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14)).0, (x[0].scale(m16) + x[1].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m22)).0], [false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Tilt<S, T, O>> for Odd<(), T, OV> {
+    type Output = Bivector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Tilt<S, T, O>) -> Bivector<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Tilt<(), f64, O>> for Odd<(), T, OV> {
+    type Output = gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Tilt<(), f64, O>, T, 6> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Tilt<S, T, O>> for gx::Prepared<Odd, Tilt<(), f64, O>, T, 6> {
+    type Output = Bivector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Tilt<S, T, O>) -> Bivector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5])).0], [false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>> for Bivector<(Tilt<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>) -> Self {
+        let m = p.m;
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Tilt<(), f64, O>,), T, 3>([[m[0], m[1]], [m[2], m[3]], [m[4], m[5]]], [false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Odd, 6> for Tilt<(), f64, O> {
+    type Output = Bivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>) -> Bivector<(Tilt<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Tilt<(), f64, O>, gx::batch::Plain> for Odd {
+    type Y = Bivector<(), f64, O>;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Tilt<(), f64, O>, T, 6> {
+        gx::Prepare::<Tilt<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Tilt<(), f64, O>, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Tilt<(), f64, O>, T, 6>, x: Tilt<(), T, O>) -> Bivector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Tilt<(), T, O>) -> Bivector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Tilt<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Bivector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Tilt<S, T, O>) -> Bivector<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[1];
+        let t3 = v[2] * v[2];
+        let t4 = v[2] * v[3];
+        let t6 = v[0] * v[2];
+        let t9 = v[1] * v[2];
+        let t10 = (-v[1]).mul_add(v[1], t0);
+        let t11 = (-v[3]).mul_add(v[3], t3);
+        let t12 = t10 - t11;
+        let t13 = t1 - t4;
+        let t14 = t1 + t4;
+        let t15 = t10 + t11;
+        let t16 = (-v[1]).mul_add(v[3], t6);
+        let t17 = v[0].mul_add(v[3], t9);
+        let t19 = xv[1] * t13;
+        let t20 = xv[0] * t14;
+        let t23 = xv[1] * t17;
+        let t24 = t19 * T::from_i64(2);
+        let t25 = xv[0].mul_add(t12, t24);
+        let t26 = t20 * T::from_i64(2);
+        let t27 = (-xv[1]).mul_add(t15, t26);
+        let t28 = xv[0].mul_add(t16, t23);
+        let t29 = t28 * T::from_i64(2);
+            return Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t25, t27, t29]), [false, false, false]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14)).0, (x[0].scale(m16) + x[1].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m22)).0], [false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Tilt<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Bivector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Tilt<S, T, O>) -> Bivector<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Tilt<(), f64, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[1];
+        let m3 = v[2] * v[2];
+        let m4 = v[2] * v[3];
+        let m6 = v[0] * v[2];
+        let m9 = v[1] * v[2];
+        let m10 = (-v[1]).mul_add(v[1], m0);
+        let m11 = (-v[3]).mul_add(v[3], m3);
+        let m12 = m10 - m11;
+        let m13 = m1 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m1 + m4;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m10 + m11;
+        let m18 = -m17;
+        let m19 = (-v[1]).mul_add(v[3], m6);
+        let m20 = m19 * T::from_i64(2);
+        let m21 = v[0].mul_add(v[3], m9);
+        let m22 = m21 * T::from_i64(2);
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Tilt<S, T, O>> for gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6> {
+    type Output = Bivector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Tilt<S, T, O>) -> Bivector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5])).0], [false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>> for Bivector<(Tilt<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>) -> Self {
+        let m = p.m;
+        Bivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Tilt<(), f64, O>,), T, 3>([[m[0], m[1]], [m[2], m[3]], [m[4], m[5]]], [false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Odd>, 6> for Tilt<(), f64, O> {
+    type Output = Bivector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>) -> Bivector<(Tilt<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Tilt<(), f64, O>, gx::batch::Certified> for Odd {
+    type Y = Bivector<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6> {
+        gx::Prepare::<Tilt<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Tilt<(), f64, O>, T, 6>, x: Tilt<(), T, O>) -> Bivector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Tilt<(), T, O>) -> Bivector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}

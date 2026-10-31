@@ -56,6 +56,18 @@ pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
 /// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
 pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
 
+#[doc = "A vector in the plane `z = 0`: horizontal, for z up (a wavevector along a surface, a position on a floor). Its complement is `Tilt`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Horizontal`] is the kind for any orientation,
+/// [`intrinsic::Horizontal`] and [`extrinsic::Horizontal`] name either one.
+pub type Horizontal<S = (), T = f64> = oriented::Horizontal<S, T, gx::Extrinsic>;
+
+#[doc = "A bivector containing `e3`: a vertical plane through the origin, the generator of a rotation about a horizontal axis (a tilt, for z up); intrinsic, the dual of a horizontal vector, as a direction. Its complement is `Horizontal`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Tilt`] is the kind for any orientation,
+/// [`intrinsic::Tilt`] and [`extrinsic::Tilt`] name either one.
+pub type Tilt<S = (), T = f64> = oriented::Tilt<S, T, gx::Extrinsic>;
+
 /// Every kind of the algebra, intrinsic (ADR-051).
 pub mod intrinsic {
     use super::{gx, oriented};
@@ -76,6 +88,10 @@ pub mod intrinsic {
     pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Intrinsic>;
     /// [`oriented::Multivector`], intrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Horizontal`], intrinsic.
+    pub type Horizontal<S = (), T = f64> = oriented::Horizontal<S, T, gx::Intrinsic>;
+    /// [`oriented::Tilt`], intrinsic.
+    pub type Tilt<S = (), T = f64> = oriented::Tilt<S, T, gx::Intrinsic>;
 }
 
 /// Every kind of the algebra, extrinsic (ADR-051).
@@ -98,6 +114,10 @@ pub mod extrinsic {
     pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
     /// [`oriented::Multivector`], extrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Horizontal`], extrinsic.
+    pub type Horizontal<S = (), T = f64> = oriented::Horizontal<S, T, gx::Extrinsic>;
+    /// [`oriented::Tilt`], extrinsic.
+    pub type Tilt<S = (), T = f64> = oriented::Tilt<S, T, gx::Extrinsic>;
 }
 
 /// The kinds as structs generic over their orientation `O` (ADR-051), with every

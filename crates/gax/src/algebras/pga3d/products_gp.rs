@@ -258,6 +258,76 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Scalar<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Scalar<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Scalar<S1, T, OA> {
+    type Output = Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Plane {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Plane<S1, T, OA> {
     type Output = Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -539,6 +609,84 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (((p(0, 15) + p(1, 7)) - (p(2, 6) + p(3, 10)))).0,
                 (((p(0, 10) + p(1, 9)) + p(2, 8))).0,
                 (((p(0, 13) + p(1, 12)) + (p(2, 11) + p(3, 14)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Plane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-p(3, 0)).0,
+                (-p(3, 1)).0,
+                (-p(3, 2)).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Plane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Plane<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                (p(3, 0)).0,
+                (p(3, 1)).0,
+                (p(3, 2)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -834,6 +982,84 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Line<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(5, 1) - p(4, 2))).0,
+                ((p(3, 2) - p(5, 0))).0,
+                ((p(4, 0) - p(3, 1))).0,
+                (((p(3, 0) + p(4, 1)) + p(5, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Line<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Line<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(3, 0) + p(4, 1)) + p(5, 2))).0,
+                ((p(5, 1) - p(4, 2))).0,
+                ((p(3, 2) - p(5, 0))).0,
+                ((p(4, 0) - p(3, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Point<S1, T, OA> {
     type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1110,6 +1336,80 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Point<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(3, 0)).0,
+                (-p(3, 1)).0,
+                (-p(3, 2)).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Point<S1, T, OA> {
+    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            o: core::marker::PhantomData,
+            c: [
+                (p(3, 0)).0,
+                (p(3, 1)).0,
+                (p(3, 2)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Point<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(3, 0)).0,
+                (p(3, 1)).0,
+                (p(3, 2)).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Direction<S1, T, OA> {
     type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1342,6 +1642,58 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Direction<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1555,6 +1907,52 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (-p(0, 2)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Pseudoscalar<S1, T, OA> {
+    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1846,6 +2244,80 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Rotor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(0, 0) + p(3, 1)) - p(2, 2))).0,
+                (((p(0, 1) + p(1, 2)) - p(3, 0))).0,
+                (((p(0, 2) + p(2, 0)) - p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(3, 1)) - p(2, 2))).0,
+                (((p(0, 1) + p(1, 2)) - p(3, 0))).0,
+                (((p(0, 2) + p(2, 0)) - p(1, 1))).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(3, 1)) - p(2, 2))).0,
+                (((p(0, 1) + p(1, 2)) - p(3, 0))).0,
+                (((p(0, 2) + p(2, 0)) - p(1, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Translator<S1, T, OA> {
     type Output = Translator<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -2112,6 +2584,82 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (((p(0, 13) + p(3, 3)) - (p(1, 14) + p(2, 4)))).0,
                 (p(0, 14)).0,
                 (((p(0, 15) + p(1, 10)) + (p(2, 9) + p(3, 8)))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Translator<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                ((p(3, 1) - p(2, 2))).0,
+                ((p(1, 2) - p(3, 0))).0,
+                ((p(2, 0) - p(1, 1))).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Translator<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Translator<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                ((p(3, 1) - p(2, 2))).0,
+                ((p(1, 2) - p(3, 0))).0,
+                ((p(2, 0) - p(1, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -2411,6 +2959,84 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Motor<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(0, 0) + p(3, 1)) - p(2, 2))).0,
+                (((p(0, 1) + p(1, 2)) - p(3, 0))).0,
+                (((p(0, 2) + p(2, 0)) - p(1, 1))).0,
+                (((p(6, 1) - p(5, 2)) - p(7, 0))).0,
+                (((p(4, 2) - p(6, 0)) - p(7, 1))).0,
+                (((p(5, 0) - p(4, 1)) - p(7, 2))).0,
+                (((p(4, 0) + p(5, 1)) + p(6, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Motor<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(3, 1)) - p(2, 2))).0,
+                (((p(0, 1) + p(1, 2)) - p(3, 0))).0,
+                (((p(0, 2) + p(2, 0)) - p(1, 1))).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Motor<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(3, 1)) - p(2, 2))).0,
+                (((p(0, 1) + p(1, 2)) - p(3, 0))).0,
+                (((p(0, 2) + p(2, 0)) - p(1, 1))).0,
+                (((p(4, 0) + p(5, 1)) + p(6, 2))).0,
+                (((p(6, 1) - p(5, 2)) - p(7, 0))).0,
+                (((p(4, 2) - p(6, 0)) - p(7, 1))).0,
+                (((p(5, 0) - p(4, 1)) - p(7, 2))).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Flector<S1, T, OA> {
     type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -2700,6 +3326,84 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 ((((p(0, 15) + p(1, 7)) + (p(4, 0) + p(6, 9))) + ((p(7, 5) - p(2, 6)) - (p(3, 10) + p(5, 8))))).0,
                 (((p(0, 10) + p(1, 9)) + (p(2, 8) + p(7, 0)))).0,
                 ((((p(0, 13) + p(1, 12)) + (p(2, 11) + p(3, 14))) - ((p(4, 2) + p(5, 3)) + (p(6, 4) + p(7, 1))))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Flector<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 1) - p(1, 2)) - p(7, 0))).0,
+                (((p(0, 2) - p(2, 0)) - p(7, 1))).0,
+                (((p(1, 0) - p(0, 1)) - p(7, 2))).0,
+                (((p(4, 0) + p(5, 1)) + p(6, 2))).0,
+                (((p(6, 1) - p(3, 0)) - p(5, 2))).0,
+                (((p(4, 2) - p(3, 1)) - p(6, 0))).0,
+                (((p(5, 0) - p(3, 2)) - p(4, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Flector<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                (((p(1, 2) + p(7, 0)) - p(2, 1))).0,
+                (((p(2, 0) + p(7, 1)) - p(0, 2))).0,
+                (((p(0, 1) + p(7, 2)) - p(1, 0))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Flector<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                (((p(1, 2) + p(7, 0)) - p(2, 1))).0,
+                (((p(2, 0) + p(7, 1)) - p(0, 2))).0,
+                (((p(0, 1) + p(7, 2)) - p(1, 0))).0,
+                (((p(3, 0) + p(5, 2)) - p(6, 1))).0,
+                (((p(3, 1) + p(6, 0)) - p(4, 2))).0,
+                (((p(3, 2) + p(4, 1)) - p(5, 0))).0,
+                (-((p(4, 0) + p(5, 1)) + p(6, 2))).0,
             ],
         }
     }
@@ -3074,6 +3778,1114 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (((((p(0, 13) + p(2, 15)) + (p(3, 7) + p(7, 3))) + ((p(8, 12) + p(11, 9)) + (p(13, 0) + p(14, 5)))) - (((p(1, 10) + p(4, 6)) + (p(5, 14) + p(6, 4))) + ((p(9, 11) + p(10, 1)) + (p(12, 8) + p(15, 2)))))).0,
                 ((((p(0, 14) + p(2, 10)) + (p(3, 9) + p(4, 8))) + ((p(8, 4) + p(9, 3)) + (p(10, 2) + p(14, 0))))).0,
                 (((((p(0, 15) + p(1, 14)) + (p(2, 13) + p(3, 12))) + ((p(4, 11) + p(5, 10)) + (p(6, 9) + p(7, 8)))) + (((p(8, 7) + p(9, 6)) + (p(10, 5) + p(15, 0))) - ((p(11, 4) + p(12, 3)) + (p(13, 2) + p(14, 1)))))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(8, 2) + p(9, 1)) + p(10, 0))).0,
+                (((p(11, 2) + p(12, 1)) + p(13, 0))).0,
+                (((p(4, 1) - p(3, 2)) - p(14, 0))).0,
+                (((p(2, 2) - p(4, 0)) - p(14, 1))).0,
+                (((p(3, 0) - p(2, 1)) - p(14, 2))).0,
+                (((p(7, 1) - p(6, 2)) - p(15, 0))).0,
+                (((p(5, 2) - p(7, 0)) - p(15, 1))).0,
+                (((p(6, 0) - p(5, 1)) - p(15, 2))).0,
+                (((p(0, 2) + p(9, 0)) - p(10, 1))).0,
+                (((p(0, 1) + p(10, 2)) - p(8, 0))).0,
+                (((p(0, 0) + p(8, 1)) - p(9, 2))).0,
+                (((p(12, 0) - p(1, 2)) - p(13, 1))).0,
+                (((p(13, 2) - p(1, 1)) - p(11, 0))).0,
+                (((p(11, 1) - p(1, 0)) - p(12, 2))).0,
+                (((p(2, 0) + p(3, 1)) + p(4, 2))).0,
+                (((p(5, 0) + p(6, 1)) + p(7, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((p(2, 0) + p(3, 1)) + p(4, 2))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(8, 1)) - p(9, 2))).0,
+                (((p(0, 1) + p(10, 2)) - p(8, 0))).0,
+                (((p(0, 2) + p(9, 0)) - p(10, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(2, 1) + p(14, 2)) - p(3, 0))).0,
+                (((p(4, 0) + p(14, 1)) - p(2, 2))).0,
+                (((p(3, 2) + p(14, 0)) - p(4, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(8, 2) + p(9, 1)) + p(10, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 0) + p(3, 1)) + p(4, 2))).0,
+                (((p(5, 0) + p(6, 1)) + p(7, 2))).0,
+                (((p(0, 0) + p(8, 1)) - p(9, 2))).0,
+                (((p(0, 1) + p(10, 2)) - p(8, 0))).0,
+                (((p(0, 2) + p(9, 0)) - p(10, 1))).0,
+                (((p(1, 0) + p(12, 2)) - p(11, 1))).0,
+                (((p(1, 1) + p(11, 0)) - p(13, 2))).0,
+                (((p(1, 2) + p(13, 1)) - p(12, 0))).0,
+                (((p(2, 1) + p(14, 2)) - p(3, 0))).0,
+                (((p(4, 0) + p(14, 1)) - p(2, 2))).0,
+                (((p(3, 2) + p(14, 0)) - p(4, 1))).0,
+                (((p(6, 0) - p(5, 1)) - p(15, 2))).0,
+                (((p(5, 2) - p(7, 0)) - p(15, 1))).0,
+                (((p(7, 1) - p(6, 2)) - p(15, 0))).0,
+                (((p(8, 2) + p(9, 1)) + p(10, 0))).0,
+                (-((p(11, 2) + p(12, 1)) + p(13, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Scalar<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Plane<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Plane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-p(0, 3)).0,
+                (-p(1, 3)).0,
+                (-p(2, 3)).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Line<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Line<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 4) - p(1, 5))).0,
+                ((p(0, 5) - p(2, 3))).0,
+                ((p(1, 3) - p(0, 4))).0,
+                (((p(0, 3) + p(1, 4)) + p(2, 5))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Point<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Point<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(0, 3)).0,
+                (-p(1, 3)).0,
+                (-p(2, 3)).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Direction<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Direction<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Pseudoscalar<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Pseudoscalar<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Rotor<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Rotor<S2, T, OB>) -> Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Rotor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(2, 2)) - p(1, 3))).0,
+                (((p(0, 3) + p(1, 0)) - p(2, 1))).0,
+                (((p(1, 1) + p(2, 0)) - p(0, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Translator<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Translator<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                ((p(2, 2) - p(1, 3))).0,
+                ((p(0, 3) - p(2, 1))).0,
+                ((p(1, 1) - p(0, 2))).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Motor<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Motor<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(2, 2)) - p(1, 3))).0,
+                (((p(0, 3) + p(1, 0)) - p(2, 1))).0,
+                (((p(1, 1) + p(2, 0)) - p(0, 2))).0,
+                (((p(2, 5) - p(0, 7)) - p(1, 6))).0,
+                (((p(0, 6) - p(1, 7)) - p(2, 4))).0,
+                (((p(1, 4) - p(0, 5)) - p(2, 7))).0,
+                (((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Flector<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Flector<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(2, 1) - p(0, 7)) - p(1, 2))).0,
+                (((p(0, 2) - p(1, 7)) - p(2, 0))).0,
+                (((p(1, 0) - p(0, 1)) - p(2, 7))).0,
+                (((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+                (((p(2, 5) - p(0, 3)) - p(1, 6))).0,
+                (((p(0, 6) - p(1, 3)) - p(2, 4))).0,
+                (((p(1, 4) - p(0, 5)) - p(2, 3))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Multivector<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(0, 10) + p(1, 9)) + p(2, 8))).0,
+                (((p(0, 13) + p(1, 12)) + p(2, 11))).0,
+                (((p(2, 3) - p(0, 14)) - p(1, 4))).0,
+                (((p(0, 4) - p(1, 14)) - p(2, 2))).0,
+                (((p(1, 2) - p(0, 3)) - p(2, 14))).0,
+                (((p(2, 6) - p(0, 15)) - p(1, 7))).0,
+                (((p(0, 7) - p(1, 15)) - p(2, 5))).0,
+                (((p(1, 5) - p(0, 6)) - p(2, 15))).0,
+                (((p(1, 10) + p(2, 0)) - p(0, 9))).0,
+                (((p(0, 8) + p(1, 0)) - p(2, 10))).0,
+                (((p(0, 0) + p(2, 9)) - p(1, 8))).0,
+                (((p(1, 13) - p(0, 12)) - p(2, 1))).0,
+                (((p(0, 11) - p(1, 1)) - p(2, 13))).0,
+                (((p(2, 12) - p(0, 1)) - p(1, 11))).0,
+                (((p(0, 2) + p(1, 3)) + p(2, 4))).0,
+                (((p(0, 5) + p(1, 6)) + p(2, 7))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Rotor {
+            o: core::marker::PhantomData,
+            c: [
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Spin<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Scalar<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Plane<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Plane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Line<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Line<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Point<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Point<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(0, 3)).0,
+                (-p(1, 3)).0,
+                (-p(2, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Rotor<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Rotor<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(2, 2)) - p(1, 3))).0,
+                (((p(0, 3) + p(1, 0)) - p(2, 1))).0,
+                (((p(1, 1) + p(2, 0)) - p(0, 2))).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Translator<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Translator<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Motor<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Motor<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(2, 2)) - p(1, 3))).0,
+                (((p(0, 3) + p(1, 0)) - p(2, 1))).0,
+                (((p(1, 1) + p(2, 0)) - p(0, 2))).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Flector<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Flector<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                (((p(2, 1) - p(0, 7)) - p(1, 2))).0,
+                (((p(0, 2) - p(1, 7)) - p(2, 0))).0,
+                (((p(1, 0) - p(0, 1)) - p(2, 7))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Multivector<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 2) + p(1, 3)) + p(2, 4))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(2, 9)) - p(1, 8))).0,
+                (((p(0, 8) + p(1, 0)) - p(2, 10))).0,
+                (((p(1, 10) + p(2, 0)) - p(0, 9))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(1, 2) - p(0, 3)) - p(2, 14))).0,
+                (((p(0, 4) - p(1, 14)) - p(2, 2))).0,
+                (((p(2, 3) - p(0, 14)) - p(1, 4))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 10) + p(1, 9)) + p(2, 8))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for Moment<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Scalar<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Scalar<S2, T, OB>) -> Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Plane {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Plane<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Plane<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                (-p(0, 3)).0,
+                (-p(1, 3)).0,
+                (-p(2, 3)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Line<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Line<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (-((p(0, 3) + p(1, 4)) + p(2, 5))).0,
+                ((p(1, 5) - p(2, 4))).0,
+                ((p(2, 3) - p(0, 5))).0,
+                ((p(0, 4) - p(1, 3))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Point<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Point<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 3)).0,
+                (p(1, 3)).0,
+                (p(2, 3)).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Direction<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Direction<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Pseudoscalar<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Pseudoscalar<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Rotor<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Rotor<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(2, 2)) - p(1, 3))).0,
+                (((p(0, 3) + p(1, 0)) - p(2, 1))).0,
+                (((p(1, 1) + p(2, 0)) - p(0, 2))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Translator<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Translator<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (-((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                ((p(2, 1) - p(0, 3))).0,
+                ((p(0, 2) - p(1, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Motor<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Motor<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(2, 2)) - p(1, 3))).0,
+                (((p(0, 3) + p(1, 0)) - p(2, 1))).0,
+                (((p(1, 1) + p(2, 0)) - p(0, 2))).0,
+                (-((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+                (((p(0, 7) + p(1, 6)) - p(2, 5))).0,
+                (((p(1, 7) + p(2, 4)) - p(0, 6))).0,
+                (((p(0, 5) + p(2, 7)) - p(1, 4))).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Flector<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Flector<S2, T, OB>) -> Motor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Motor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                (((p(0, 7) + p(1, 2)) - p(2, 1))).0,
+                (((p(1, 7) + p(2, 0)) - p(0, 2))).0,
+                (((p(0, 1) + p(2, 7)) - p(1, 0))).0,
+                (((p(2, 5) - p(0, 3)) - p(1, 6))).0,
+                (((p(0, 6) - p(1, 3)) - p(2, 4))).0,
+                (((p(1, 4) - p(0, 5)) - p(2, 3))).0,
+                (((p(0, 4) + p(1, 5)) + p(2, 6))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Multivector<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 2) + p(1, 3)) + p(2, 4))).0,
+                (-((p(0, 5) + p(1, 6)) + p(2, 7))).0,
+                (((p(0, 0) + p(2, 9)) - p(1, 8))).0,
+                (((p(0, 8) + p(1, 0)) - p(2, 10))).0,
+                (((p(1, 10) + p(2, 0)) - p(0, 9))).0,
+                (((p(2, 12) - p(0, 1)) - p(1, 11))).0,
+                (((p(0, 11) - p(1, 1)) - p(2, 13))).0,
+                (((p(1, 13) - p(0, 12)) - p(2, 1))).0,
+                (((p(0, 3) + p(2, 14)) - p(1, 2))).0,
+                (((p(1, 14) + p(2, 2)) - p(0, 4))).0,
+                (((p(0, 14) + p(1, 4)) - p(2, 3))).0,
+                (((p(0, 6) + p(2, 15)) - p(1, 5))).0,
+                (((p(1, 15) + p(2, 5)) - p(0, 7))).0,
+                (((p(0, 15) + p(1, 7)) - p(2, 6))).0,
+                (((p(0, 10) + p(1, 9)) + p(2, 8))).0,
+                (((p(0, 13) + p(1, 12)) + p(2, 11))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Spin<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Spin<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<Moment<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: Moment<S2, T, OB>) -> Flector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Gp<OriginPlane<S2, T, OB>> for OriginPlane<S1, T, OA> {
+    type Output = Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn gp(self, rhs: OriginPlane<S2, T, OB>) -> Rotor<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Rotor {
+            o: core::marker::PhantomData,
+            c: [
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
             ],
         }
     }

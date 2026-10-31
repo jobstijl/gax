@@ -64,6 +64,18 @@ pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
 /// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
 pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
 
+#[doc = "A direction in spacetime: an ideal event (an event at infinity), the weightless part of an `Event`, such as the direction of a worldline. Its slots take steps and velocities. It pairs with `OriginHyperplane`s, its complement."]
+///
+/// In its default orientation, intrinsic: [`oriented::Direction`] is the kind for any orientation,
+/// [`intrinsic::Direction`] and [`extrinsic::Direction`] name either one.
+pub type Direction<S = (), T = f64> = oriented::Direction<S, T, gx::Intrinsic>;
+
+#[doc = "A hyperplane through the origin event, `a x + b y + c z + d t = 0`: the non-degenerate part of a hyperplane, which reads a step: a clock's or a ruler's readout. It pairs with `Direction`s, its complement."]
+///
+/// In its default orientation, extrinsic: [`oriented::OriginHyperplane`] is the kind for any orientation,
+/// [`intrinsic::OriginHyperplane`] and [`extrinsic::OriginHyperplane`] name either one.
+pub type OriginHyperplane<S = (), T = f64> = oriented::OriginHyperplane<S, T, gx::Extrinsic>;
+
 /// Every kind of the algebra, intrinsic (ADR-051).
 pub mod intrinsic {
     use super::{gx, oriented};
@@ -86,6 +98,10 @@ pub mod intrinsic {
     pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Intrinsic>;
     /// [`oriented::Multivector`], intrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Direction`], intrinsic.
+    pub type Direction<S = (), T = f64> = oriented::Direction<S, T, gx::Intrinsic>;
+    /// [`oriented::OriginHyperplane`], intrinsic.
+    pub type OriginHyperplane<S = (), T = f64> = oriented::OriginHyperplane<S, T, gx::Intrinsic>;
 }
 
 /// Every kind of the algebra, extrinsic (ADR-051).
@@ -110,6 +126,10 @@ pub mod extrinsic {
     pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
     /// [`oriented::Multivector`], extrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Direction`], extrinsic.
+    pub type Direction<S = (), T = f64> = oriented::Direction<S, T, gx::Extrinsic>;
+    /// [`oriented::OriginHyperplane`], extrinsic.
+    pub type OriginHyperplane<S = (), T = f64> = oriented::OriginHyperplane<S, T, gx::Extrinsic>;
 }
 
 /// The kinds as structs generic over their orientation `O` (ADR-051), with every

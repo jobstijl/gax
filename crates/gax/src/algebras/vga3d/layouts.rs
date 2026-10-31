@@ -42,6 +42,14 @@ pub type OddSoa<E = f32> = gx::batch::Soa<Odd, E>;
 pub type MultivectorSoa<E = f32> = gx::batch::Soa<Multivector, E>;
 
 #[cfg(feature = "batch")]
+/// [`Horizontal`] values in struct-of-arrays form, for the batch kernels.
+pub type HorizontalSoa<E = f32> = gx::batch::Soa<Horizontal, E>;
+
+#[cfg(feature = "batch")]
+/// [`Tilt`] values in struct-of-arrays form, for the batch kernels.
+pub type TiltSoa<E = f32> = gx::batch::Soa<Tilt, E>;
+
+#[cfg(feature = "batch")]
 /// [`Rotor`] values in struct-of-arrays form, for the batch kernels.
 pub type EvenSoa<E = f32> = gx::batch::Soa<Rotor, E>;
 
@@ -862,6 +870,208 @@ impl<O: gx::Orientation> From<MultivectorGpu16> for Multivector<(), f32, O> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// [`Horizontal`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Horizontal`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct HorizontalGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Horizontal { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<HorizontalGpu>() == 16);
+    assert!(core::mem::align_of::<HorizontalGpu>() == 16);
+    assert!(core::mem::offset_of!(HorizontalGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for HorizontalGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for HorizontalGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Horizontal<(), f32, O>> for HorizontalGpu {
+    #[inline]
+    fn from(x: Horizontal<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        HorizontalGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Horizontal<(), f32, O>>> for HorizontalGpu {
+    #[inline]
+    fn from(x: gx::Unit<Horizontal<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<HorizontalGpu> for Horizontal<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: HorizontalGpu) -> Self {
+        Horizontal::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Horizontal`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::vga3d_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct HorizontalGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Horizontal { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<HorizontalGpu16>() == 8);
+    assert!(core::mem::align_of::<HorizontalGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for HorizontalGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for HorizontalGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Horizontal<(), f32, O>> for HorizontalGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Horizontal<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        HorizontalGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<HorizontalGpu16> for Horizontal<(), f32, O> {
+    #[inline]
+    fn from(g: HorizontalGpu16) -> Self {
+        Horizontal::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`Tilt`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Tilt`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TiltGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Tilt { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TiltGpu>() == 16);
+    assert!(core::mem::align_of::<TiltGpu>() == 16);
+    assert!(core::mem::offset_of!(TiltGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TiltGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TiltGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Tilt<(), f32, O>> for TiltGpu {
+    #[inline]
+    fn from(x: Tilt<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        TiltGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Tilt<(), f32, O>>> for TiltGpu {
+    #[inline]
+    fn from(x: gx::Unit<Tilt<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltGpu> for Tilt<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: TiltGpu) -> Self {
+        Tilt::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Tilt`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::vga3d_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TiltGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Tilt { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TiltGpu16>() == 8);
+    assert!(core::mem::align_of::<TiltGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TiltGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TiltGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Tilt<(), f32, O>> for TiltGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Tilt<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        TiltGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltGpu16> for Tilt<(), f32, O> {
+    #[inline]
+    fn from(g: TiltGpu16) -> Self {
+        Tilt::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// Alias of [`RotorGpu`].
 pub type EvenGpu = RotorGpu;
 
@@ -897,6 +1107,8 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Rotor", core::mem::size_of::<RotorGpu>(), core::mem::align_of::<RotorGpu>(), core::mem::offset_of!(RotorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu>(), core::mem::align_of::<OddGpu>(), core::mem::offset_of!(OddGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu>(), core::mem::align_of::<MultivectorGpu>(), core::mem::offset_of!(MultivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Horizontal", core::mem::size_of::<HorizontalGpu>(), core::mem::align_of::<HorizontalGpu>(), core::mem::offset_of!(HorizontalGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Tilt", core::mem::size_of::<TiltGpu>(), core::mem::align_of::<TiltGpu>(), core::mem::offset_of!(TiltGpu, c), core::mem::size_of::<[f32; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]
@@ -910,6 +1122,8 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Rotor", core::mem::size_of::<RotorGpu16>(), core::mem::align_of::<RotorGpu16>(), core::mem::offset_of!(RotorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu16>(), core::mem::align_of::<OddGpu16>(), core::mem::offset_of!(OddGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu16>(), core::mem::align_of::<MultivectorGpu16>(), core::mem::offset_of!(MultivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Horizontal", core::mem::size_of::<HorizontalGpu16>(), core::mem::align_of::<HorizontalGpu16>(), core::mem::offset_of!(HorizontalGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Tilt", core::mem::size_of::<TiltGpu16>(), core::mem::align_of::<TiltGpu16>(), core::mem::offset_of!(TiltGpu16, c), core::mem::size_of::<[u16; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]

@@ -212,6 +212,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Scalar<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Line<S2, T, OB>> for Line<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -399,6 +420,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (p(0, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Line<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
             ],
         }
     }
@@ -745,6 +785,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Rotor<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Scalar<S2, T, OB>> for Translator<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -952,6 +1013,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (p(0, 5)).0,
                 (p(0, 6)).0,
                 (p(0, 7)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Translator<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1173,6 +1255,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Motor<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Line<S2, T, OB>> for Flector<S1, T, OA> {
     type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
@@ -1360,6 +1463,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 (p(0, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Flector<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
             ],
         }
     }
@@ -1613,6 +1735,243 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
                 ((p(0, 5) + p(2, 7))).0,
                 (p(0, 6)).0,
                 (p(0, 7)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for Multivector<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(2, 0) + p(3, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Line<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Line<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Point<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Point<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(1, 2)).0,
+                (p(0, 2)).0,
+                ((p(1, 0) - p(0, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Direction<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Direction<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(1, 0) - p(0, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Pseudoscalar<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Pseudoscalar<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            o: core::marker::PhantomData,
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Rotor<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Rotor<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(1, 1)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Translator<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Translator<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(1, 1) - p(0, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Motor<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Motor<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            o: core::marker::PhantomData,
+            c: [
+                (-p(1, 1)).0,
+                (p(0, 1)).0,
+                ((p(1, 2) - p(0, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Flector<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Translator<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Flector<S2, T, OB>) -> Translator<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Translator {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+                (p(0, 3)).0,
+                (p(1, 3)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Multivector<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: Multivector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 2) + p(1, 3))).0,
+                ((p(1, 5) - p(0, 4))).0,
+                (-p(1, 6)).0,
+                (p(0, 6)).0,
+                (p(1, 7)).0,
+                (p(0, 7)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginLine<S2, T, OB>> for OriginLine<S1, T, OA> {
+    type Output = Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    #[inline(always)]
+    fn lc(self, rhs: OriginLine<S2, T, OB>) -> Scalar<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
+        let a = self.c.map(gx::__private::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            o: core::marker::PhantomData,
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
             ],
         }
     }

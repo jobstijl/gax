@@ -6578,3 +6578,1861 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
         gx::Transform::transform(v, x)
     }
 }
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for Odd<(), T, OV> {
+    type Output = Quadvector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t4 = v[11] * v[11];
+        let t5 = v[12] * v[12];
+        let t6 = v[13] * v[13];
+        let t7 = v[14] * v[14];
+        let t11 = v[1] * v[11];
+        let t12 = v[1] * v[13];
+        let t13 = v[1] * v[14];
+        let t16 = v[2] * v[11];
+        let t18 = v[2] * v[14];
+        let t20 = v[3] * v[11];
+        let t26 = v[11] * v[12];
+        let t27 = v[11] * v[13];
+        let t28 = v[11] * v[14];
+        let t29 = v[12] * v[13];
+        let t30 = v[12] * v[14];
+        let t31 = v[13] * v[14];
+        let t32 = v[1].mul_add(v[1], t5);
+        let t33 = v[2].mul_add(v[2], t6);
+        let t34 = v[3].mul_add(v[3], t7);
+        let t35 = v[4].mul_add(v[4], t4);
+        let t36 = v[1].mul_add(v[2], t29);
+        let t37 = v[1].mul_add(v[3], t30);
+        let t38 = v[1].mul_add(v[4], t26);
+        let t39 = (-v[4]).mul_add(v[12], t11);
+        let t40 = (-v[2]).mul_add(v[12], t12);
+        let t41 = (-v[3]).mul_add(v[12], t13);
+        let t42 = v[2].mul_add(v[3], t31);
+        let t43 = v[2].mul_add(v[4], t27);
+        let t44 = (-v[4]).mul_add(v[13], t16);
+        let t45 = (-v[3]).mul_add(v[13], t18);
+        let t46 = v[3].mul_add(v[4], t28);
+        let t47 = (-v[4]).mul_add(v[14], t20);
+        let t48 = t32 - t33;
+        let t49 = t32 + t33;
+        let t50 = t34 - t35;
+        let t51 = t34 + t35;
+        let t52 = t48 - t50;
+        let t53 = t36 - t47;
+        let t54 = t37 + t44;
+        let t55 = t38 + t45;
+        let t56 = t36 + t47;
+        let t57 = t48 + t50;
+        let t58 = t39 - t42;
+        let t59 = t41 - t43;
+        let t60 = t37 - t44;
+        let t61 = t39 + t42;
+        let t62 = t49 - t51;
+        let t63 = t40 + t46;
+        let t64 = t38 - t45;
+        let t65 = t41 + t43;
+        let t66 = t40 - t46;
+        let t67 = t49 + t51;
+        let t70 = xv[2] * t54;
+        let t72 = xv[0] * t56;
+        let t77 = xv[1] * t61;
+        let t82 = xv[2] * t66;
+        let t84 = xv[1].mul_add(t53, t70);
+        let t85 = xv[3].mul_add(t55, t84);
+        let t86 = t85 * T::from_i64(2);
+        let t87 = xv[0].mul_add(t52, t86);
+        let t88 = (-xv[2]).mul_add(t58, t72);
+        let t89 = (-xv[3]).mul_add(t59, t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = (-xv[1]).mul_add(t57, t90);
+        let t92 = xv[0].mul_add(t60, t77);
+        let t93 = xv[3].mul_add(t63, t92);
+        let t94 = t93 * T::from_i64(2);
+        let t95 = (-xv[2]).mul_add(t62, t94);
+        let t96 = (-xv[0]).mul_add(t64, t82);
+        let t97 = (-xv[1]).mul_add(t65, t96);
+        let t98 = t97 * T::from_i64(2);
+        let t99 = (-xv[3]).mul_add(t67, t98);
+            return Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>(gx::slots::from_values::<S, T, 5>([t87, t91, t95, t99, T::from_i64(0)]), [false, false, false, false, false]) };
+        }
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m32 = v[1].mul_add(v[1], m5);
+        let m33 = v[2].mul_add(v[2], m6);
+        let m34 = v[3].mul_add(v[3], m7);
+        let m35 = v[4].mul_add(v[4], m4);
+        let m36 = v[1].mul_add(v[2], m29);
+        let m37 = v[1].mul_add(v[3], m30);
+        let m38 = v[1].mul_add(v[4], m26);
+        let m39 = (-v[4]).mul_add(v[12], m11);
+        let m40 = (-v[2]).mul_add(v[12], m12);
+        let m41 = (-v[3]).mul_add(v[12], m13);
+        let m42 = v[2].mul_add(v[3], m31);
+        let m43 = v[2].mul_add(v[4], m27);
+        let m44 = (-v[4]).mul_add(v[13], m16);
+        let m45 = (-v[3]).mul_add(v[13], m18);
+        let m46 = v[3].mul_add(v[4], m28);
+        let m47 = (-v[4]).mul_add(v[14], m20);
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m48 - m50;
+        let m53 = m36 - m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 + m44;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m38 + m45;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m36 + m47;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m48 + m50;
+        let m62 = -m61;
+        let m63 = m42 - m39;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m43 - m41;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m37 - m44;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m39 + m42;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m51 - m49;
+        let m72 = m40 + m46;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m45 - m38;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = m41 + m43;
+        let m77 = m76 * T::from_i64(2);
+        let m78 = -m77;
+        let m79 = m40 - m46;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = m49 + m51;
+        let m82 = -m81;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[0].scale(m60) + x[1].scale(m62) + x[2].scale(m64) + x[3].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m71) + x[3].scale(m73)).0, (x[0].scale(m75) + x[1].scale(m78) + x[2].scale(m80) + x[3].scale(m82)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for Odd<(), T, OV> {
+    type Output = Quadvector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction<(), f64, O>> for Odd<(), T, OV> {
+    type Output = gx::Prepared<Odd, Direction<(), f64, O>, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Direction<(), f64, O>, T, 16> {
+        let v = self.c;
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m32 = v[1].mul_add(v[1], m5);
+        let m33 = v[2].mul_add(v[2], m6);
+        let m34 = v[3].mul_add(v[3], m7);
+        let m35 = v[4].mul_add(v[4], m4);
+        let m36 = v[1].mul_add(v[2], m29);
+        let m37 = v[1].mul_add(v[3], m30);
+        let m38 = v[1].mul_add(v[4], m26);
+        let m39 = (-v[4]).mul_add(v[12], m11);
+        let m40 = (-v[2]).mul_add(v[12], m12);
+        let m41 = (-v[3]).mul_add(v[12], m13);
+        let m42 = v[2].mul_add(v[3], m31);
+        let m43 = v[2].mul_add(v[4], m27);
+        let m44 = (-v[4]).mul_add(v[13], m16);
+        let m45 = (-v[3]).mul_add(v[13], m18);
+        let m46 = v[3].mul_add(v[4], m28);
+        let m47 = (-v[4]).mul_add(v[14], m20);
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m48 - m50;
+        let m53 = m36 - m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 + m44;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m38 + m45;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m36 + m47;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m48 + m50;
+        let m62 = -m61;
+        let m63 = m42 - m39;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m43 - m41;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m37 - m44;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m39 + m42;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m51 - m49;
+        let m72 = m40 + m46;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m45 - m38;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = m41 + m43;
+        let m77 = m76 * T::from_i64(2);
+        let m78 = -m77;
+        let m79 = m40 - m46;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = m49 + m51;
+        let m82 = -m81;
+        gx::Prepared::from_entries([m52, m54, m56, m58, m60, m62, m64, m66, m68, m70, m71, m73, m75, m78, m80, m82])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<Odd, Direction<(), f64, O>, T, 16> {
+    type Output = Quadvector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Odd, Direction<(), f64, O>, T, 16>> for Quadvector<(Direction<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Direction<(), f64, O>, T, 16>) -> Self {
+        let m = p.m;
+        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 5>([[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Odd, 16> for Direction<(), f64, O> {
+    type Output = Quadvector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Odd, Direction<(), f64, O>, T, 16>) -> Quadvector<(Direction<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Plain> for Odd {
+    type Y = Quadvector<(), f64, O>;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Direction<(), f64, O>, T, 16>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Direction<(), f64, O>, T, 16> {
+        gx::Prepare::<Direction<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Direction<(), f64, O>, T, 16>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Direction<(), f64, O>, W, 16> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Direction<(), f64, O>, T, 16>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Quadvector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2] * v[2];
+        let u4 = v[11] * v[11];
+        let u6 = v[13] * v[13];
+        let u10 = v[2] * v[6];
+        let u12 = v[4] * v[15];
+        let u13 = v[8] * v[12];
+        let u15 = v[10] * v[14];
+        let u18 = v[2] * v[8];
+        let u20 = v[4] * v[7];
+        let u22 = v[6] * v[12];
+        let u23 = v[10] * v[11];
+        let u25 = v[1] * v[10];
+        let u28 = v[4] * v[6];
+        let u29 = v[5] * v[14];
+        let u31 = v[9] * v[11];
+        let u33 = v[1] * v[15];
+        let u36 = v[4] * v[5];
+        let u38 = v[7] * v[13];
+        let u39 = v[8] * v[11];
+        let u42 = v[3] * v[14];
+        let u43 = v[4] * v[11];
+        let u44 = v[1].mul_add(v[1], u1);
+        let u45 = v[3].mul_add(v[3], u44);
+        let u46 = (-v[4]).mul_add(v[4], u4);
+        let u47 = u45 + u46;
+        let u48 = v[12].mul_add(v[12], u6);
+        let u49 = v[14].mul_add(v[14], T::from_i64(1));
+        let u50 = u48 + u49;
+        let u51 = u47 - u50;
+        let u52 = v[1].mul_add(v[5], u10);
+        let u53 = v[3].mul_add(v[7], u13);
+        let u54 = u52 + u53;
+        let u55 = v[9].mul_add(v[13], u15);
+        let u56 = v[0].mul_add(v[11], u12);
+        let u57 = u55 - u56;
+        let u58 = u54 + u57;
+        let u59 = u58 * T::from_i64(2);
+        let u60 = v[1].mul_add(v[9], u20);
+        let u61 = v[5].mul_add(v[13], u23);
+        let u62 = u60 + u61;
+        let u63 = v[0].mul_add(v[14], u18);
+        let u64 = v[3].mul_add(v[15], u22);
+        let u65 = u63 + u64;
+        let u66 = u62 - u65;
+        let u67 = u66 * T::from_i64(2);
+        let u68 = v[0].mul_add(v[13], u25);
+        let u69 = v[2].mul_add(v[15], u29);
+        let u70 = u68 + u69;
+        let u71 = v[3].mul_add(v[8], u28);
+        let u72 = v[7].mul_add(v[12], u31);
+        let u73 = u71 + u72;
+        let u74 = u70 - u73;
+        let u75 = u74 * T::from_i64(2);
+        let u76 = v[2].mul_add(v[10], u36);
+        let u77 = v[6].mul_add(v[14], u39);
+        let u78 = u76 + u77;
+        let u79 = v[0].mul_add(v[12], u33);
+        let u80 = v[3].mul_add(v[9], u38);
+        let u81 = u79 + u80;
+        let u82 = u78 - u81;
+        let u83 = u82 * T::from_i64(2);
+        let u84 = (-v[1]).mul_add(v[12], u43);
+        let u85 = v[2].mul_add(v[13], u42);
+        let u86 = u84 - u85;
+        let u87 = u86 * T::from_i64(2);
+            T::check_unit(&[u51, u59, u67, u75, u83, u87]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t4 = v[11] * v[11];
+        let t5 = v[12] * v[12];
+        let t6 = v[13] * v[13];
+        let t7 = v[14] * v[14];
+        let t11 = v[1] * v[11];
+        let t12 = v[1] * v[13];
+        let t13 = v[1] * v[14];
+        let t16 = v[2] * v[11];
+        let t18 = v[2] * v[14];
+        let t20 = v[3] * v[11];
+        let t26 = v[11] * v[12];
+        let t27 = v[11] * v[13];
+        let t28 = v[11] * v[14];
+        let t29 = v[12] * v[13];
+        let t30 = v[12] * v[14];
+        let t31 = v[13] * v[14];
+        let t32 = v[1].mul_add(v[1], t5);
+        let t33 = v[2].mul_add(v[2], t6);
+        let t34 = v[3].mul_add(v[3], t7);
+        let t35 = v[4].mul_add(v[4], t4);
+        let t36 = v[1].mul_add(v[2], t29);
+        let t37 = v[1].mul_add(v[3], t30);
+        let t38 = v[1].mul_add(v[4], t26);
+        let t39 = (-v[4]).mul_add(v[12], t11);
+        let t40 = (-v[2]).mul_add(v[12], t12);
+        let t41 = (-v[3]).mul_add(v[12], t13);
+        let t42 = v[2].mul_add(v[3], t31);
+        let t43 = v[2].mul_add(v[4], t27);
+        let t44 = (-v[4]).mul_add(v[13], t16);
+        let t45 = (-v[3]).mul_add(v[13], t18);
+        let t46 = v[3].mul_add(v[4], t28);
+        let t47 = (-v[4]).mul_add(v[14], t20);
+        let t48 = t32 - t33;
+        let t49 = t32 + t33;
+        let t50 = t34 - t35;
+        let t51 = t34 + t35;
+        let t52 = t48 - t50;
+        let t53 = t36 - t47;
+        let t54 = t37 + t44;
+        let t55 = t38 + t45;
+        let t56 = t36 + t47;
+        let t57 = t48 + t50;
+        let t58 = t39 - t42;
+        let t59 = t41 - t43;
+        let t60 = t37 - t44;
+        let t61 = t39 + t42;
+        let t62 = t49 - t51;
+        let t63 = t40 + t46;
+        let t64 = t38 - t45;
+        let t65 = t41 + t43;
+        let t66 = t40 - t46;
+        let t67 = t49 + t51;
+        let t70 = xv[2] * t54;
+        let t72 = xv[0] * t56;
+        let t77 = xv[1] * t61;
+        let t82 = xv[2] * t66;
+        let t84 = xv[1].mul_add(t53, t70);
+        let t85 = xv[3].mul_add(t55, t84);
+        let t86 = t85 * T::from_i64(2);
+        let t87 = xv[0].mul_add(t52, t86);
+        let t88 = (-xv[2]).mul_add(t58, t72);
+        let t89 = (-xv[3]).mul_add(t59, t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = (-xv[1]).mul_add(t57, t90);
+        let t92 = xv[0].mul_add(t60, t77);
+        let t93 = xv[3].mul_add(t63, t92);
+        let t94 = t93 * T::from_i64(2);
+        let t95 = (-xv[2]).mul_add(t62, t94);
+        let t96 = (-xv[0]).mul_add(t64, t82);
+        let t97 = (-xv[1]).mul_add(t65, t96);
+        let t98 = t97 * T::from_i64(2);
+        let t99 = (-xv[3]).mul_add(t67, t98);
+            return Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>(gx::slots::from_values::<S, T, 5>([t87, t91, t95, t99, T::from_i64(0)]), [false, false, false, false, false]) };
+        }
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m32 = v[1].mul_add(v[1], m5);
+        let m33 = v[2].mul_add(v[2], m6);
+        let m34 = v[3].mul_add(v[3], m7);
+        let m35 = v[4].mul_add(v[4], m4);
+        let m36 = v[1].mul_add(v[2], m29);
+        let m37 = v[1].mul_add(v[3], m30);
+        let m38 = v[1].mul_add(v[4], m26);
+        let m39 = (-v[4]).mul_add(v[12], m11);
+        let m40 = (-v[2]).mul_add(v[12], m12);
+        let m41 = (-v[3]).mul_add(v[12], m13);
+        let m42 = v[2].mul_add(v[3], m31);
+        let m43 = v[2].mul_add(v[4], m27);
+        let m44 = (-v[4]).mul_add(v[13], m16);
+        let m45 = (-v[3]).mul_add(v[13], m18);
+        let m46 = v[3].mul_add(v[4], m28);
+        let m47 = (-v[4]).mul_add(v[14], m20);
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m48 - m50;
+        let m53 = m36 - m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 + m44;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m38 + m45;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m36 + m47;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m48 + m50;
+        let m62 = -m61;
+        let m63 = m42 - m39;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m43 - m41;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m37 - m44;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m39 + m42;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m51 - m49;
+        let m72 = m40 + m46;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m45 - m38;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = m41 + m43;
+        let m77 = m76 * T::from_i64(2);
+        let m78 = -m77;
+        let m79 = m40 - m46;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = m49 + m51;
+        let m82 = -m81;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[0].scale(m60) + x[1].scale(m62) + x[2].scale(m64) + x[3].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m71) + x[3].scale(m73)).0, (x[0].scale(m75) + x[1].scale(m78) + x[2].scale(m80) + x[3].scale(m82)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Quadvector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction<(), f64, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2] * v[2];
+        let u4 = v[11] * v[11];
+        let u6 = v[13] * v[13];
+        let u10 = v[2] * v[6];
+        let u12 = v[4] * v[15];
+        let u13 = v[8] * v[12];
+        let u15 = v[10] * v[14];
+        let u18 = v[2] * v[8];
+        let u20 = v[4] * v[7];
+        let u22 = v[6] * v[12];
+        let u23 = v[10] * v[11];
+        let u25 = v[1] * v[10];
+        let u28 = v[4] * v[6];
+        let u29 = v[5] * v[14];
+        let u31 = v[9] * v[11];
+        let u33 = v[1] * v[15];
+        let u36 = v[4] * v[5];
+        let u38 = v[7] * v[13];
+        let u39 = v[8] * v[11];
+        let u42 = v[3] * v[14];
+        let u43 = v[4] * v[11];
+        let u44 = v[1].mul_add(v[1], u1);
+        let u45 = v[3].mul_add(v[3], u44);
+        let u46 = (-v[4]).mul_add(v[4], u4);
+        let u47 = u45 + u46;
+        let u48 = v[12].mul_add(v[12], u6);
+        let u49 = v[14].mul_add(v[14], T::from_i64(1));
+        let u50 = u48 + u49;
+        let u51 = u47 - u50;
+        let u52 = v[1].mul_add(v[5], u10);
+        let u53 = v[3].mul_add(v[7], u13);
+        let u54 = u52 + u53;
+        let u55 = v[9].mul_add(v[13], u15);
+        let u56 = v[0].mul_add(v[11], u12);
+        let u57 = u55 - u56;
+        let u58 = u54 + u57;
+        let u59 = u58 * T::from_i64(2);
+        let u60 = v[1].mul_add(v[9], u20);
+        let u61 = v[5].mul_add(v[13], u23);
+        let u62 = u60 + u61;
+        let u63 = v[0].mul_add(v[14], u18);
+        let u64 = v[3].mul_add(v[15], u22);
+        let u65 = u63 + u64;
+        let u66 = u62 - u65;
+        let u67 = u66 * T::from_i64(2);
+        let u68 = v[0].mul_add(v[13], u25);
+        let u69 = v[2].mul_add(v[15], u29);
+        let u70 = u68 + u69;
+        let u71 = v[3].mul_add(v[8], u28);
+        let u72 = v[7].mul_add(v[12], u31);
+        let u73 = u71 + u72;
+        let u74 = u70 - u73;
+        let u75 = u74 * T::from_i64(2);
+        let u76 = v[2].mul_add(v[10], u36);
+        let u77 = v[6].mul_add(v[14], u39);
+        let u78 = u76 + u77;
+        let u79 = v[0].mul_add(v[12], u33);
+        let u80 = v[3].mul_add(v[9], u38);
+        let u81 = u79 + u80;
+        let u82 = u78 - u81;
+        let u83 = u82 * T::from_i64(2);
+        let u84 = (-v[1]).mul_add(v[12], u43);
+        let u85 = v[2].mul_add(v[13], u42);
+        let u86 = u84 - u85;
+        let u87 = u86 * T::from_i64(2);
+            T::check_unit(&[u51, u59, u67, u75, u83, u87]);
+        }
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m32 = v[1].mul_add(v[1], m5);
+        let m33 = v[2].mul_add(v[2], m6);
+        let m34 = v[3].mul_add(v[3], m7);
+        let m35 = v[4].mul_add(v[4], m4);
+        let m36 = v[1].mul_add(v[2], m29);
+        let m37 = v[1].mul_add(v[3], m30);
+        let m38 = v[1].mul_add(v[4], m26);
+        let m39 = (-v[4]).mul_add(v[12], m11);
+        let m40 = (-v[2]).mul_add(v[12], m12);
+        let m41 = (-v[3]).mul_add(v[12], m13);
+        let m42 = v[2].mul_add(v[3], m31);
+        let m43 = v[2].mul_add(v[4], m27);
+        let m44 = (-v[4]).mul_add(v[13], m16);
+        let m45 = (-v[3]).mul_add(v[13], m18);
+        let m46 = v[3].mul_add(v[4], m28);
+        let m47 = (-v[4]).mul_add(v[14], m20);
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m48 - m50;
+        let m53 = m36 - m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 + m44;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m38 + m45;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m36 + m47;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m48 + m50;
+        let m62 = -m61;
+        let m63 = m42 - m39;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m43 - m41;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m37 - m44;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m39 + m42;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m51 - m49;
+        let m72 = m40 + m46;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m45 - m38;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = m41 + m43;
+        let m77 = m76 * T::from_i64(2);
+        let m78 = -m77;
+        let m79 = m40 - m46;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = m49 + m51;
+        let m82 = -m81;
+        gx::Prepared::from_entries([m52, m54, m56, m58, m60, m62, m64, m66, m68, m70, m71, m73, m75, m78, m80, m82])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16> {
+    type Output = Quadvector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>> for Quadvector<(Direction<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>) -> Self {
+        let m = p.m;
+        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 5>([[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Odd>, 16> for Direction<(), f64, O> {
+    type Output = Quadvector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>) -> Quadvector<(Direction<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Certified> for Odd {
+    type Y = Quadvector<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16> {
+        gx::Prepare::<Direction<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, W, 16> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Direction<(), f64, O>, T, 16>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginHyperplane<S, T, O>> for Odd<(), T, OV> {
+    type Output = Odd<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginHyperplane<S, T, O>) -> Odd<S, T, O> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t0 = v[1] * xv[0];
+        let t1 = v[2] * xv[1];
+        let t3 = t0 + t1;
+        let t4 = v[3].mul_add(xv[2], t3);
+        let t7 = v[11] * xv[2];
+        let t8 = v[1].mul_add(xv[1], t7);
+        let t9 = (-v[2]).mul_add(xv[0], t8);
+        let t10 = v[1] * xv[2];
+        let t13 = (-v[3]).mul_add(xv[0], t10);
+        let t14 = (-v[11]).mul_add(xv[1], t13);
+        let t15 = v[1] * xv[3];
+        let t18 = v[13].mul_add(xv[2], t15);
+        let t19 = (-v[4]).mul_add(xv[0], t18);
+        let t20 = v[2] * xv[2];
+        let t23 = v[11].mul_add(xv[0], t20);
+        let t24 = (-v[3]).mul_add(xv[1], t23);
+        let t25 = v[2] * xv[3];
+        let t28 = (-v[4]).mul_add(xv[1], t25);
+        let t29 = (-v[12]).mul_add(xv[2], t28);
+        let t32 = v[12] * xv[1];
+        let t33 = v[3].mul_add(xv[3], t32);
+        let t34 = (-v[4]).mul_add(xv[2], t33);
+        let t35 = v[11] * xv[3];
+        let t38 = (-v[12]).mul_add(xv[0], t35);
+        let t39 = (-v[13]).mul_add(xv[1], t38);
+        let t40 = v[1] * v[11];
+        let t42 = (-v[4]).mul_add(v[12], t40);
+        let t43 = v[4] * xv[3];
+        let t44 = t0 - t43;
+        let t45 = v[12] * xv[3];
+        let t46 = t20 - t45;
+        let t47 = t43 - t4;
+        let t48 = t45 - t24;
+        let t49 = v[13] * xv[0];
+        let t50 = t49 - t34;
+        let t52 = v[13].mul_add(xv[3], t14);
+        let t54 = v[14].mul_add(xv[0], t29);
+        let t56 = v[14].mul_add(xv[1], -t19);
+        let t58 = v[14].mul_add(xv[2], -t39);
+        let t60 = v[14].mul_add(xv[3], -t9);
+        let t61 = v[1] * v[1];
+        let t62 = v[2] * v[2];
+        let t63 = v[3] * v[3];
+        let t64 = v[4] * v[4];
+        let t65 = v[11] * v[11];
+        let t66 = v[12] * v[12];
+        let t67 = v[13] * v[13];
+        let t68 = v[14] * v[14];
+        let t69 = v[3] * v[11];
+        let t72 = v[6] * t52;
+        let t75 = v[9] * t54;
+        let t76 = v[10] * t50;
+        let t77 = v[15] * t58;
+        let t80 = v[1] * v[3];
+        let t81 = xv[2] * t80;
+        let t84 = xv[0] * t63;
+        let t85 = xv[1] * t69;
+        let t86 = xv[0] * t64;
+        let t89 = xv[0] * t66;
+        let t91 = v[13] * t34;
+        let t92 = xv[0] * t68;
+        let t97 = xv[1] * t63;
+        let t98 = xv[0] * t69;
+        let t100 = xv[1] * t64;
+        let t102 = v[11] * v[13];
+        let t105 = v[12] * t49;
+        let t106 = xv[1] * t67;
+        let t107 = xv[1] * t68;
+        let t108 = v[14] * t19;
+        let t112 = xv[2] * t62;
+        let t114 = v[2] * v[11];
+        let t116 = v[2] * v[12];
+        let t117 = xv[3] * t116;
+        let t120 = xv[2] * t64;
+        let t121 = v[4] * t49;
+        let t124 = xv[2] * t67;
+        let t125 = xv[2] * t68;
+        let t126 = v[14] * t39;
+        let t127 = xv[1] * t42;
+        let t129 = xv[3] * t62;
+        let t131 = xv[3] * t64;
+        let t134 = xv[3] * t66;
+        let t135 = v[12] * t24;
+        let t138 = xv[3] * t68;
+        let t139 = v[14] * t9;
+        let t143 = v[7] * t50;
+        let t145 = v[9] * t52;
+        let t146 = v[10] * t60;
+        let t147 = v[15] * t47;
+        let t148 = v[8].mul_add(t56, t76);
+        let t149 = (-v[0]).mul_add(t47, t77);
+        let t150 = t148 + t149;
+        let t151 = v[5].mul_add(t48, t72);
+        let t152 = v[7].mul_add(t60, t75);
+        let t153 = t151 + t152;
+        let t154 = t150 - t153;
+        let t155 = t154 * T::from_i64(2);
+        let t156 = xv[0].mul_add(t61, t86);
+        let t157 = xv[0].mul_add(t65, t89);
+        let t158 = t156 + t157;
+        let t159 = xv[0].mul_add(t62, t84);
+        let t160 = xv[0].mul_add(t67, t92);
+        let t161 = t159 + t160;
+        let t162 = t158 - t161;
+        let t163 = v[1].mul_add(t1, t81);
+        let t164 = v[11].mul_add(t46, t91);
+        let t165 = t163 + t164;
+        let t166 = v[4].mul_add(t15, t85);
+        let t167 = v[14].mul_add(t29, t166);
+        let t168 = t165 - t167;
+        let t170 = t168.mul_add(T::from_i64(2), t162);
+        let t171 = xv[1].mul_add(t62, t100);
+        let t172 = xv[1].mul_add(t65, t106);
+        let t173 = t171 + t172;
+        let t174 = xv[1].mul_add(t61, t97);
+        let t175 = xv[1].mul_add(t66, t107);
+        let t176 = t174 + t175;
+        let t177 = t173 - t176;
+        let t178 = v[2].mul_add(t44, t98);
+        let t179 = v[3].mul_add(t46, t105);
+        let t180 = t178 + t179;
+        let t181 = (-xv[3]).mul_add(t102, t108);
+        let t182 = (-xv[2]).mul_add(t42, t181);
+        let t183 = t180 + t182;
+        let t185 = t183.mul_add(T::from_i64(2), t177);
+        let t186 = xv[2].mul_add(t63, t120);
+        let t187 = xv[2].mul_add(t65, t125);
+        let t188 = t186 + t187;
+        let t189 = xv[2].mul_add(t61, t112);
+        let t190 = xv[2].mul_add(t66, t124);
+        let t191 = t189 + t190;
+        let t192 = t188 - t191;
+        let t193 = v[3].mul_add(t1, t117);
+        let t194 = v[3].mul_add(t44, t121);
+        let t195 = t193 + t194;
+        let t196 = (-v[13]).mul_add(t15, t127);
+        let t197 = xv[0].mul_add(t114, t126);
+        let t198 = t196 - t197;
+        let t199 = t195 + t198;
+        let t201 = t199.mul_add(T::from_i64(2), t192);
+        let t202 = xv[3].mul_add(t61, t129);
+        let t203 = xv[3].mul_add(t63, t131);
+        let t204 = t202 + t203;
+        let t205 = xv[3].mul_add(t65, t134);
+        let t206 = xv[3].mul_add(t67, t138);
+        let t207 = t205 + t206;
+        let t208 = t204 + t207;
+        let t209 = v[4].mul_add(t4, t135);
+        let t210 = (-v[13]).mul_add(t14, t139);
+        let t211 = t209 + t210;
+        let t213 = t211.mul_add(T::from_i64(2), -t208);
+        let t214 = v[5].mul_add(t56, t143);
+        let t215 = v[8].mul_add(t48, t145);
+        let t216 = t214 + t215;
+        let t217 = (-v[0]).mul_add(t58, t146);
+        let t218 = v[6].mul_add(t54, t147);
+        let t219 = t217 - t218;
+        let t220 = t216 + t219;
+        let t221 = t220 * T::from_i64(2);
+            return Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>(gx::slots::from_values::<S, T, 16>([t155, t170, t185, t201, t213, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t221]), [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]) };
+        }
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m34 = v[3] * v[6];
+        let m36 = v[5] * v[11];
+        let m37 = v[9] * v[14];
+        let m39 = v[12] * v[15];
+        let m41 = v[1] * v[7];
+        let m44 = v[6] * v[11];
+        let m46 = v[10] * v[12];
+        let m47 = v[13] * v[15];
+        let m50 = v[2] * v[5];
+        let m52 = v[7] * v[11];
+        let m53 = v[8] * v[13];
+        let m55 = v[14] * v[15];
+        let m57 = v[1] * v[8];
+        let m59 = v[3] * v[10];
+        let m61 = v[6] * v[13];
+        let m63 = v[11] * v[15];
+        let m66 = v[2] * v[10];
+        let m67 = v[3] * v[9];
+        let m70 = v[7] * v[13];
+        let m71 = v[8] * v[11];
+        let m73 = v[1] * v[10];
+        let m75 = v[3] * v[8];
+        let m77 = v[5] * v[14];
+        let m79 = v[9] * v[11];
+        let m82 = v[2] * v[8];
+        let m83 = v[3] * v[15];
+        let m86 = v[6] * v[12];
+        let m87 = v[10] * v[11];
+        let m90 = v[2] * v[6];
+        let m92 = v[4] * v[15];
+        let m93 = v[8] * v[12];
+        let m95 = v[10] * v[14];
+        let m96 = v[1].mul_add(v[1], m5);
+        let m97 = v[2].mul_add(v[2], m6);
+        let m98 = v[3].mul_add(v[3], m7);
+        let m99 = v[4].mul_add(v[4], m4);
+        let m100 = v[1].mul_add(v[2], m29);
+        let m101 = v[1].mul_add(v[3], m30);
+        let m102 = v[1].mul_add(v[4], m26);
+        let m103 = (-v[4]).mul_add(v[12], m11);
+        let m104 = (-v[2]).mul_add(v[12], m12);
+        let m105 = (-v[3]).mul_add(v[12], m13);
+        let m106 = v[2].mul_add(v[3], m31);
+        let m107 = v[2].mul_add(v[4], m27);
+        let m108 = (-v[4]).mul_add(v[13], m16);
+        let m109 = (-v[3]).mul_add(v[13], m18);
+        let m110 = v[3].mul_add(v[4], m28);
+        let m111 = (-v[4]).mul_add(v[14], m20);
+        let m112 = m96 - m97;
+        let m113 = m96 + m97;
+        let m114 = m98 - m99;
+        let m115 = m98 + m99;
+        let m116 = v[0].mul_add(v[1], m34);
+        let m117 = v[4].mul_add(v[8], m36);
+        let m118 = m116 + m117;
+        let m119 = v[10].mul_add(v[13], m39);
+        let m120 = v[2].mul_add(v[7], m37);
+        let m121 = m119 - m120;
+        let m122 = m118 + m121;
+        let m123 = m122 * T::from_i64(2);
+        let m124 = v[0].mul_add(v[2], m41);
+        let m125 = v[4].mul_add(v[9], m44);
+        let m126 = m124 + m125;
+        let m127 = v[8].mul_add(v[14], m47);
+        let m128 = v[3].mul_add(v[5], m46);
+        let m129 = m127 - m128;
+        let m130 = m126 + m129;
+        let m131 = m130 * T::from_i64(2);
+        let m132 = v[0].mul_add(v[3], m50);
+        let m133 = v[4].mul_add(v[10], m52);
+        let m134 = m132 + m133;
+        let m135 = v[9].mul_add(v[12], m55);
+        let m136 = v[1].mul_add(v[6], m53);
+        let m137 = m135 - m136;
+        let m138 = m134 + m137;
+        let m139 = m138 * T::from_i64(2);
+        let m140 = v[0].mul_add(v[4], m57);
+        let m141 = v[2].mul_add(v[9], m59);
+        let m142 = m140 + m141;
+        let m143 = v[5].mul_add(v[12], m61);
+        let m144 = v[7].mul_add(v[14], m63);
+        let m145 = m143 + m144;
+        let m146 = m142 + m145;
+        let m147 = m146 * T::from_i64(2);
+        let m148 = -m147;
+        let m149 = m112 - m114;
+        let m150 = m100 - m111;
+        let m151 = m150 * T::from_i64(2);
+        let m152 = m101 + m108;
+        let m153 = m152 * T::from_i64(2);
+        let m154 = m102 + m109;
+        let m155 = m154 * T::from_i64(2);
+        let m156 = -m155;
+        let m157 = m100 + m111;
+        let m158 = m157 * T::from_i64(2);
+        let m159 = m112 + m114;
+        let m160 = -m159;
+        let m161 = m106 - m103;
+        let m162 = m161 * T::from_i64(2);
+        let m163 = m105 - m107;
+        let m164 = m163 * T::from_i64(2);
+        let m165 = m101 - m108;
+        let m166 = m165 * T::from_i64(2);
+        let m167 = m103 + m106;
+        let m168 = m167 * T::from_i64(2);
+        let m169 = m115 - m113;
+        let m170 = m104 + m110;
+        let m171 = m170 * T::from_i64(2);
+        let m172 = -m171;
+        let m173 = m102 - m109;
+        let m174 = m173 * T::from_i64(2);
+        let m175 = m105 + m107;
+        let m176 = m175 * T::from_i64(2);
+        let m177 = m110 - m104;
+        let m178 = m177 * T::from_i64(2);
+        let m179 = m113 + m115;
+        let m180 = -m179;
+        let m181 = v[1].mul_add(v[15], m66);
+        let m182 = v[4].mul_add(v[5], m70);
+        let m183 = m181 + m182;
+        let m184 = v[0].mul_add(v[12], m67);
+        let m185 = v[6].mul_add(v[14], m71);
+        let m186 = m184 + m185;
+        let m187 = m183 - m186;
+        let m188 = m187 * T::from_i64(2);
+        let m189 = v[2].mul_add(v[15], m75);
+        let m190 = v[4].mul_add(v[6], m77);
+        let m191 = m189 + m190;
+        let m192 = v[0].mul_add(v[13], m73);
+        let m193 = v[7].mul_add(v[12], m79);
+        let m194 = m192 + m193;
+        let m195 = m191 - m194;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = v[1].mul_add(v[9], m83);
+        let m198 = v[4].mul_add(v[7], m86);
+        let m199 = m197 + m198;
+        let m200 = v[0].mul_add(v[14], m82);
+        let m201 = v[5].mul_add(v[13], m87);
+        let m202 = m200 + m201;
+        let m203 = m199 - m202;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = v[0].mul_add(v[11], m93);
+        let m206 = v[9].mul_add(v[13], m95);
+        let m207 = m205 + m206;
+        let m208 = v[1].mul_add(v[5], m90);
+        let m209 = v[3].mul_add(v[7], m92);
+        let m210 = m208 + m209;
+        let m211 = m207 - m210;
+        let m212 = m211 * T::from_i64(2);
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m123) + x[1].scale(m131) + x[2].scale(m139) + x[3].scale(m148)).0, (x[0].scale(m149) + x[1].scale(m151) + x[2].scale(m153) + x[3].scale(m156)).0, (x[0].scale(m158) + x[1].scale(m160) + x[2].scale(m162) + x[3].scale(m164)).0, (x[0].scale(m166) + x[1].scale(m168) + x[2].scale(m169) + x[3].scale(m172)).0, (x[0].scale(m174) + x[1].scale(m176) + x[2].scale(m178) + x[3].scale(m180)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m188) + x[1].scale(m196) + x[2].scale(m204) + x[3].scale(m212)).0], [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginHyperplane<S, T, O>> for Odd<(), T, OV> {
+    type Output = Odd<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginHyperplane<S, T, O>) -> Odd<S, T, O> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginHyperplane<(), f64, O>> for Odd<(), T, OV> {
+    type Output = gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24> {
+        let v = self.c;
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m34 = v[3] * v[6];
+        let m36 = v[5] * v[11];
+        let m37 = v[9] * v[14];
+        let m39 = v[12] * v[15];
+        let m41 = v[1] * v[7];
+        let m44 = v[6] * v[11];
+        let m46 = v[10] * v[12];
+        let m47 = v[13] * v[15];
+        let m50 = v[2] * v[5];
+        let m52 = v[7] * v[11];
+        let m53 = v[8] * v[13];
+        let m55 = v[14] * v[15];
+        let m57 = v[1] * v[8];
+        let m59 = v[3] * v[10];
+        let m61 = v[6] * v[13];
+        let m63 = v[11] * v[15];
+        let m66 = v[2] * v[10];
+        let m67 = v[3] * v[9];
+        let m70 = v[7] * v[13];
+        let m71 = v[8] * v[11];
+        let m73 = v[1] * v[10];
+        let m75 = v[3] * v[8];
+        let m77 = v[5] * v[14];
+        let m79 = v[9] * v[11];
+        let m82 = v[2] * v[8];
+        let m83 = v[3] * v[15];
+        let m86 = v[6] * v[12];
+        let m87 = v[10] * v[11];
+        let m90 = v[2] * v[6];
+        let m92 = v[4] * v[15];
+        let m93 = v[8] * v[12];
+        let m95 = v[10] * v[14];
+        let m96 = v[1].mul_add(v[1], m5);
+        let m97 = v[2].mul_add(v[2], m6);
+        let m98 = v[3].mul_add(v[3], m7);
+        let m99 = v[4].mul_add(v[4], m4);
+        let m100 = v[1].mul_add(v[2], m29);
+        let m101 = v[1].mul_add(v[3], m30);
+        let m102 = v[1].mul_add(v[4], m26);
+        let m103 = (-v[4]).mul_add(v[12], m11);
+        let m104 = (-v[2]).mul_add(v[12], m12);
+        let m105 = (-v[3]).mul_add(v[12], m13);
+        let m106 = v[2].mul_add(v[3], m31);
+        let m107 = v[2].mul_add(v[4], m27);
+        let m108 = (-v[4]).mul_add(v[13], m16);
+        let m109 = (-v[3]).mul_add(v[13], m18);
+        let m110 = v[3].mul_add(v[4], m28);
+        let m111 = (-v[4]).mul_add(v[14], m20);
+        let m112 = m96 - m97;
+        let m113 = m96 + m97;
+        let m114 = m98 - m99;
+        let m115 = m98 + m99;
+        let m116 = v[0].mul_add(v[1], m34);
+        let m117 = v[4].mul_add(v[8], m36);
+        let m118 = m116 + m117;
+        let m119 = v[10].mul_add(v[13], m39);
+        let m120 = v[2].mul_add(v[7], m37);
+        let m121 = m119 - m120;
+        let m122 = m118 + m121;
+        let m123 = m122 * T::from_i64(2);
+        let m124 = v[0].mul_add(v[2], m41);
+        let m125 = v[4].mul_add(v[9], m44);
+        let m126 = m124 + m125;
+        let m127 = v[8].mul_add(v[14], m47);
+        let m128 = v[3].mul_add(v[5], m46);
+        let m129 = m127 - m128;
+        let m130 = m126 + m129;
+        let m131 = m130 * T::from_i64(2);
+        let m132 = v[0].mul_add(v[3], m50);
+        let m133 = v[4].mul_add(v[10], m52);
+        let m134 = m132 + m133;
+        let m135 = v[9].mul_add(v[12], m55);
+        let m136 = v[1].mul_add(v[6], m53);
+        let m137 = m135 - m136;
+        let m138 = m134 + m137;
+        let m139 = m138 * T::from_i64(2);
+        let m140 = v[0].mul_add(v[4], m57);
+        let m141 = v[2].mul_add(v[9], m59);
+        let m142 = m140 + m141;
+        let m143 = v[5].mul_add(v[12], m61);
+        let m144 = v[7].mul_add(v[14], m63);
+        let m145 = m143 + m144;
+        let m146 = m142 + m145;
+        let m147 = m146 * T::from_i64(2);
+        let m148 = -m147;
+        let m149 = m112 - m114;
+        let m150 = m100 - m111;
+        let m151 = m150 * T::from_i64(2);
+        let m152 = m101 + m108;
+        let m153 = m152 * T::from_i64(2);
+        let m154 = m102 + m109;
+        let m155 = m154 * T::from_i64(2);
+        let m156 = -m155;
+        let m157 = m100 + m111;
+        let m158 = m157 * T::from_i64(2);
+        let m159 = m112 + m114;
+        let m160 = -m159;
+        let m161 = m106 - m103;
+        let m162 = m161 * T::from_i64(2);
+        let m163 = m105 - m107;
+        let m164 = m163 * T::from_i64(2);
+        let m165 = m101 - m108;
+        let m166 = m165 * T::from_i64(2);
+        let m167 = m103 + m106;
+        let m168 = m167 * T::from_i64(2);
+        let m169 = m115 - m113;
+        let m170 = m104 + m110;
+        let m171 = m170 * T::from_i64(2);
+        let m172 = -m171;
+        let m173 = m102 - m109;
+        let m174 = m173 * T::from_i64(2);
+        let m175 = m105 + m107;
+        let m176 = m175 * T::from_i64(2);
+        let m177 = m110 - m104;
+        let m178 = m177 * T::from_i64(2);
+        let m179 = m113 + m115;
+        let m180 = -m179;
+        let m181 = v[1].mul_add(v[15], m66);
+        let m182 = v[4].mul_add(v[5], m70);
+        let m183 = m181 + m182;
+        let m184 = v[0].mul_add(v[12], m67);
+        let m185 = v[6].mul_add(v[14], m71);
+        let m186 = m184 + m185;
+        let m187 = m183 - m186;
+        let m188 = m187 * T::from_i64(2);
+        let m189 = v[2].mul_add(v[15], m75);
+        let m190 = v[4].mul_add(v[6], m77);
+        let m191 = m189 + m190;
+        let m192 = v[0].mul_add(v[13], m73);
+        let m193 = v[7].mul_add(v[12], m79);
+        let m194 = m192 + m193;
+        let m195 = m191 - m194;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = v[1].mul_add(v[9], m83);
+        let m198 = v[4].mul_add(v[7], m86);
+        let m199 = m197 + m198;
+        let m200 = v[0].mul_add(v[14], m82);
+        let m201 = v[5].mul_add(v[13], m87);
+        let m202 = m200 + m201;
+        let m203 = m199 - m202;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = v[0].mul_add(v[11], m93);
+        let m206 = v[9].mul_add(v[13], m95);
+        let m207 = m205 + m206;
+        let m208 = v[1].mul_add(v[5], m90);
+        let m209 = v[3].mul_add(v[7], m92);
+        let m210 = m208 + m209;
+        let m211 = m207 - m210;
+        let m212 = m211 * T::from_i64(2);
+        gx::Prepared::from_entries([m123, m131, m139, m148, m149, m151, m153, m156, m158, m160, m162, m164, m166, m168, m169, m172, m174, m176, m178, m180, m188, m196, m204, m212])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginHyperplane<S, T, O>> for gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24> {
+    type Output = Odd<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginHyperplane<S, T, O>) -> Odd<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 16>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[0].scale(m[16]) + x[1].scale(m[17]) + x[2].scale(m[18]) + x[3].scale(m[19])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[20]) + x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23])).0], [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>> for Odd<(OriginHyperplane<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>) -> Self {
+        let m = p.m;
+        Odd { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (OriginHyperplane<(), f64, O>,), T, 16>([[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]], [m[16], m[17], m[18], m[19]], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [m[20], m[21], m[22], m[23]]], [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<Odd, 24> for OriginHyperplane<(), f64, O> {
+    type Output = Odd<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>) -> Odd<(OriginHyperplane<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginHyperplane<(), f64, O>, gx::batch::Plain> for Odd {
+    type Y = Odd<(), f64, O>;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24> {
+        gx::Prepare::<OriginHyperplane<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, OriginHyperplane<(), f64, O>, W, 24> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, OriginHyperplane<(), f64, O>, T, 24>, x: OriginHyperplane<(), T, O>) -> Odd<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: OriginHyperplane<(), T, O>) -> Odd<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<OriginHyperplane<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginHyperplane<S, T, O>) -> Vector<S, T, O> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2] * v[2];
+        let u4 = v[11] * v[11];
+        let u6 = v[13] * v[13];
+        let u10 = v[2] * v[6];
+        let u12 = v[4] * v[15];
+        let u13 = v[8] * v[12];
+        let u15 = v[10] * v[14];
+        let u18 = v[2] * v[8];
+        let u20 = v[4] * v[7];
+        let u22 = v[6] * v[12];
+        let u23 = v[10] * v[11];
+        let u25 = v[1] * v[10];
+        let u28 = v[4] * v[6];
+        let u29 = v[5] * v[14];
+        let u31 = v[9] * v[11];
+        let u33 = v[1] * v[15];
+        let u36 = v[4] * v[5];
+        let u38 = v[7] * v[13];
+        let u39 = v[8] * v[11];
+        let u42 = v[3] * v[14];
+        let u43 = v[4] * v[11];
+        let u44 = v[1].mul_add(v[1], u1);
+        let u45 = v[3].mul_add(v[3], u44);
+        let u46 = (-v[4]).mul_add(v[4], u4);
+        let u47 = u45 + u46;
+        let u48 = v[12].mul_add(v[12], u6);
+        let u49 = v[14].mul_add(v[14], T::from_i64(1));
+        let u50 = u48 + u49;
+        let u51 = u47 - u50;
+        let u52 = v[1].mul_add(v[5], u10);
+        let u53 = v[3].mul_add(v[7], u13);
+        let u54 = u52 + u53;
+        let u55 = v[9].mul_add(v[13], u15);
+        let u56 = v[0].mul_add(v[11], u12);
+        let u57 = u55 - u56;
+        let u58 = u54 + u57;
+        let u59 = u58 * T::from_i64(2);
+        let u60 = v[1].mul_add(v[9], u20);
+        let u61 = v[5].mul_add(v[13], u23);
+        let u62 = u60 + u61;
+        let u63 = v[0].mul_add(v[14], u18);
+        let u64 = v[3].mul_add(v[15], u22);
+        let u65 = u63 + u64;
+        let u66 = u62 - u65;
+        let u67 = u66 * T::from_i64(2);
+        let u68 = v[0].mul_add(v[13], u25);
+        let u69 = v[2].mul_add(v[15], u29);
+        let u70 = u68 + u69;
+        let u71 = v[3].mul_add(v[8], u28);
+        let u72 = v[7].mul_add(v[12], u31);
+        let u73 = u71 + u72;
+        let u74 = u70 - u73;
+        let u75 = u74 * T::from_i64(2);
+        let u76 = v[2].mul_add(v[10], u36);
+        let u77 = v[6].mul_add(v[14], u39);
+        let u78 = u76 + u77;
+        let u79 = v[0].mul_add(v[12], u33);
+        let u80 = v[3].mul_add(v[9], u38);
+        let u81 = u79 + u80;
+        let u82 = u78 - u81;
+        let u83 = u82 * T::from_i64(2);
+        let u84 = (-v[1]).mul_add(v[12], u43);
+        let u85 = v[2].mul_add(v[13], u42);
+        let u86 = u84 - u85;
+        let u87 = u86 * T::from_i64(2);
+            T::check_unit(&[u51, u59, u67, u75, u83, u87]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t1 = v[2] * xv[1];
+        let t2 = v[3] * xv[2];
+        let t4 = v[1].mul_add(xv[0], t1);
+        let t5 = (-v[4]).mul_add(xv[3], t2);
+        let t6 = t4 + t5;
+        let t9 = v[11] * xv[2];
+        let t10 = v[14] * xv[3];
+        let t11 = v[1].mul_add(xv[1], t9);
+        let t12 = v[2].mul_add(xv[0], t10);
+        let t13 = t11 - t12;
+        let t16 = v[11] * xv[1];
+        let t17 = v[13] * xv[3];
+        let t18 = v[1].mul_add(xv[2], t17);
+        let t19 = v[3].mul_add(xv[0], t16);
+        let t20 = t18 - t19;
+        let t23 = v[13] * xv[2];
+        let t24 = v[14] * xv[1];
+        let t25 = v[1].mul_add(xv[3], t23);
+        let t26 = v[4].mul_add(xv[0], t24);
+        let t27 = t25 - t26;
+        let t30 = v[11] * xv[0];
+        let t31 = v[12] * xv[3];
+        let t32 = v[2].mul_add(xv[2], t30);
+        let t33 = v[3].mul_add(xv[1], t31);
+        let t34 = t32 - t33;
+        let t37 = v[12] * xv[2];
+        let t38 = v[14] * xv[0];
+        let t39 = v[2].mul_add(xv[3], t38);
+        let t40 = v[4].mul_add(xv[1], t37);
+        let t41 = t39 - t40;
+        let t44 = v[12] * xv[1];
+        let t45 = v[13] * xv[0];
+        let t46 = v[3].mul_add(xv[3], t44);
+        let t47 = v[4].mul_add(xv[2], t45);
+        let t48 = t46 - t47;
+        let t49 = v[11] * xv[3];
+        let t52 = v[14] * xv[2];
+        let t53 = (-v[12]).mul_add(xv[0], t49);
+        let t54 = v[13].mul_add(xv[1], t52);
+        let t55 = t53 - t54;
+        let t57 = v[5] * t34;
+        let t59 = v[7] * t13;
+        let t61 = v[9] * t41;
+        let t63 = v[15] * t55;
+        let t65 = v[3] * t20;
+        let t67 = v[12] * t55;
+        let t70 = v[12] * t48;
+        let t71 = v[14] * t27;
+        let t73 = v[11] * t13;
+        let t74 = v[12] * t41;
+        let t77 = v[12] * t34;
+        let t79 = v[14] * t13;
+        let t80 = v[0].mul_add(t6, t57);
+        let t81 = (-v[6]).mul_add(t20, t59);
+        let t82 = t80 + t81;
+        let t83 = v[8].mul_add(t27, t61);
+        let t84 = v[10].mul_add(t48, t63);
+        let t85 = t83 + t84;
+        let t86 = t82 - t85;
+        let t87 = t86 * T::from_i64(2);
+        let t88 = v[2].mul_add(t13, t65);
+        let t89 = v[4].mul_add(t27, t67);
+        let t90 = t88 - t89;
+        let t93 = v[2] * v[2];
+        let t96 = v[11] * v[11];
+        let t97 = v[12] * v[12];
+        let t99 = v[14] * v[14];
+        let t100 = v[1].mul_add(v[1], t93);
+        let t101 = v[3].mul_add(v[3], t96);
+        let t102 = t100 + t101;
+        let t103 = v[4].mul_add(v[4], t97);
+        let t104 = v[13].mul_add(v[13], t99);
+        let t105 = t103 + t104;
+        let t106 = t102 - t105;
+        let t107 = xv[0] * t106;
+        let t108 = t90.mul_add(T::from_i64(2), t107);
+        let t109 = v[2].mul_add(t6, t71);
+        let t110 = v[11].mul_add(t20, t70);
+        let t111 = t109 - t110;
+        let t112 = t111 * T::from_i64(2);
+        let t114 = (-xv[1]).mul_add(t106, t112);
+        let t115 = v[3].mul_add(t6, t73);
+        let t116 = (-v[13]).mul_add(t27, t74);
+        let t117 = t115 + t116;
+        let t118 = t117 * T::from_i64(2);
+        let t120 = (-xv[2]).mul_add(t106, t118);
+        let t121 = v[4].mul_add(t6, t77);
+        let t122 = (-v[13]).mul_add(t20, t79);
+        let t123 = t121 + t122;
+        let t124 = t123 * T::from_i64(2);
+        let t126 = (-xv[3]).mul_add(t106, t124);
+            return Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>(gx::slots::from_values::<S, T, 5>([t87, t108, t114, t120, t126]), [true, true, true, true, true]) };
+        }
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m34 = v[3] * v[6];
+        let m36 = v[5] * v[11];
+        let m37 = v[9] * v[14];
+        let m39 = v[12] * v[15];
+        let m41 = v[1] * v[7];
+        let m44 = v[6] * v[11];
+        let m46 = v[10] * v[12];
+        let m47 = v[13] * v[15];
+        let m50 = v[2] * v[5];
+        let m52 = v[7] * v[11];
+        let m53 = v[8] * v[13];
+        let m55 = v[14] * v[15];
+        let m57 = v[1] * v[8];
+        let m59 = v[3] * v[10];
+        let m61 = v[6] * v[13];
+        let m63 = v[11] * v[15];
+        let m64 = v[1].mul_add(v[1], m5);
+        let m65 = v[2].mul_add(v[2], m6);
+        let m66 = v[3].mul_add(v[3], m7);
+        let m67 = v[4].mul_add(v[4], m4);
+        let m68 = v[1].mul_add(v[2], m29);
+        let m69 = v[1].mul_add(v[3], m30);
+        let m70 = v[1].mul_add(v[4], m26);
+        let m71 = (-v[4]).mul_add(v[12], m11);
+        let m72 = (-v[2]).mul_add(v[12], m12);
+        let m73 = (-v[3]).mul_add(v[12], m13);
+        let m74 = v[2].mul_add(v[3], m31);
+        let m75 = v[2].mul_add(v[4], m27);
+        let m76 = (-v[4]).mul_add(v[13], m16);
+        let m77 = (-v[3]).mul_add(v[13], m18);
+        let m78 = v[3].mul_add(v[4], m28);
+        let m79 = (-v[4]).mul_add(v[14], m20);
+        let m80 = m64 - m65;
+        let m81 = m64 + m65;
+        let m82 = m66 - m67;
+        let m83 = m66 + m67;
+        let m84 = v[0].mul_add(v[1], m34);
+        let m85 = v[4].mul_add(v[8], m36);
+        let m86 = m84 + m85;
+        let m87 = v[10].mul_add(v[13], m39);
+        let m88 = v[2].mul_add(v[7], m37);
+        let m89 = m87 - m88;
+        let m90 = m86 + m89;
+        let m91 = m90 * T::from_i64(2);
+        let m92 = v[0].mul_add(v[2], m41);
+        let m93 = v[4].mul_add(v[9], m44);
+        let m94 = m92 + m93;
+        let m95 = v[8].mul_add(v[14], m47);
+        let m96 = v[3].mul_add(v[5], m46);
+        let m97 = m95 - m96;
+        let m98 = m94 + m97;
+        let m99 = m98 * T::from_i64(2);
+        let m100 = v[0].mul_add(v[3], m50);
+        let m101 = v[4].mul_add(v[10], m52);
+        let m102 = m100 + m101;
+        let m103 = v[9].mul_add(v[12], m55);
+        let m104 = v[1].mul_add(v[6], m53);
+        let m105 = m103 - m104;
+        let m106 = m102 + m105;
+        let m107 = m106 * T::from_i64(2);
+        let m108 = v[0].mul_add(v[4], m57);
+        let m109 = v[2].mul_add(v[9], m59);
+        let m110 = m108 + m109;
+        let m111 = v[5].mul_add(v[12], m61);
+        let m112 = v[7].mul_add(v[14], m63);
+        let m113 = m111 + m112;
+        let m114 = m110 + m113;
+        let m115 = m114 * T::from_i64(2);
+        let m116 = -m115;
+        let m117 = m80 - m82;
+        let m118 = m68 - m79;
+        let m119 = m118 * T::from_i64(2);
+        let m120 = m69 + m76;
+        let m121 = m120 * T::from_i64(2);
+        let m122 = m70 + m77;
+        let m123 = m122 * T::from_i64(2);
+        let m124 = -m123;
+        let m125 = m68 + m79;
+        let m126 = m125 * T::from_i64(2);
+        let m127 = m80 + m82;
+        let m128 = -m127;
+        let m129 = m74 - m71;
+        let m130 = m129 * T::from_i64(2);
+        let m131 = m73 - m75;
+        let m132 = m131 * T::from_i64(2);
+        let m133 = m69 - m76;
+        let m134 = m133 * T::from_i64(2);
+        let m135 = m71 + m74;
+        let m136 = m135 * T::from_i64(2);
+        let m137 = m83 - m81;
+        let m138 = m72 + m78;
+        let m139 = m138 * T::from_i64(2);
+        let m140 = -m139;
+        let m141 = m70 - m77;
+        let m142 = m141 * T::from_i64(2);
+        let m143 = m73 + m75;
+        let m144 = m143 * T::from_i64(2);
+        let m145 = m78 - m72;
+        let m146 = m145 * T::from_i64(2);
+        let m147 = m81 + m83;
+        let m148 = -m147;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m91) + x[1].scale(m99) + x[2].scale(m107) + x[3].scale(m116)).0, (x[0].scale(m117) + x[1].scale(m119) + x[2].scale(m121) + x[3].scale(m124)).0, (x[0].scale(m126) + x[1].scale(m128) + x[2].scale(m130) + x[3].scale(m132)).0, (x[0].scale(m134) + x[1].scale(m136) + x[2].scale(m137) + x[3].scale(m140)).0, (x[0].scale(m142) + x[1].scale(m144) + x[2].scale(m146) + x[3].scale(m148)).0], [true, true, true, true, true]) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<OriginHyperplane<S, T, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform_inv(self, x: OriginHyperplane<S, T, O>) -> Vector<S, T, O> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<OriginHyperplane<(), f64, O>> for gx::Unit<Odd<(), T, OV>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2] * v[2];
+        let u4 = v[11] * v[11];
+        let u6 = v[13] * v[13];
+        let u10 = v[2] * v[6];
+        let u12 = v[4] * v[15];
+        let u13 = v[8] * v[12];
+        let u15 = v[10] * v[14];
+        let u18 = v[2] * v[8];
+        let u20 = v[4] * v[7];
+        let u22 = v[6] * v[12];
+        let u23 = v[10] * v[11];
+        let u25 = v[1] * v[10];
+        let u28 = v[4] * v[6];
+        let u29 = v[5] * v[14];
+        let u31 = v[9] * v[11];
+        let u33 = v[1] * v[15];
+        let u36 = v[4] * v[5];
+        let u38 = v[7] * v[13];
+        let u39 = v[8] * v[11];
+        let u42 = v[3] * v[14];
+        let u43 = v[4] * v[11];
+        let u44 = v[1].mul_add(v[1], u1);
+        let u45 = v[3].mul_add(v[3], u44);
+        let u46 = (-v[4]).mul_add(v[4], u4);
+        let u47 = u45 + u46;
+        let u48 = v[12].mul_add(v[12], u6);
+        let u49 = v[14].mul_add(v[14], T::from_i64(1));
+        let u50 = u48 + u49;
+        let u51 = u47 - u50;
+        let u52 = v[1].mul_add(v[5], u10);
+        let u53 = v[3].mul_add(v[7], u13);
+        let u54 = u52 + u53;
+        let u55 = v[9].mul_add(v[13], u15);
+        let u56 = v[0].mul_add(v[11], u12);
+        let u57 = u55 - u56;
+        let u58 = u54 + u57;
+        let u59 = u58 * T::from_i64(2);
+        let u60 = v[1].mul_add(v[9], u20);
+        let u61 = v[5].mul_add(v[13], u23);
+        let u62 = u60 + u61;
+        let u63 = v[0].mul_add(v[14], u18);
+        let u64 = v[3].mul_add(v[15], u22);
+        let u65 = u63 + u64;
+        let u66 = u62 - u65;
+        let u67 = u66 * T::from_i64(2);
+        let u68 = v[0].mul_add(v[13], u25);
+        let u69 = v[2].mul_add(v[15], u29);
+        let u70 = u68 + u69;
+        let u71 = v[3].mul_add(v[8], u28);
+        let u72 = v[7].mul_add(v[12], u31);
+        let u73 = u71 + u72;
+        let u74 = u70 - u73;
+        let u75 = u74 * T::from_i64(2);
+        let u76 = v[2].mul_add(v[10], u36);
+        let u77 = v[6].mul_add(v[14], u39);
+        let u78 = u76 + u77;
+        let u79 = v[0].mul_add(v[12], u33);
+        let u80 = v[3].mul_add(v[9], u38);
+        let u81 = u79 + u80;
+        let u82 = u78 - u81;
+        let u83 = u82 * T::from_i64(2);
+        let u84 = (-v[1]).mul_add(v[12], u43);
+        let u85 = v[2].mul_add(v[13], u42);
+        let u86 = u84 - u85;
+        let u87 = u86 * T::from_i64(2);
+            T::check_unit(&[u51, u59, u67, u75, u83, u87]);
+        }
+        let m4 = v[11] * v[11];
+        let m5 = v[12] * v[12];
+        let m6 = v[13] * v[13];
+        let m7 = v[14] * v[14];
+        let m11 = v[1] * v[11];
+        let m12 = v[1] * v[13];
+        let m13 = v[1] * v[14];
+        let m16 = v[2] * v[11];
+        let m18 = v[2] * v[14];
+        let m20 = v[3] * v[11];
+        let m26 = v[11] * v[12];
+        let m27 = v[11] * v[13];
+        let m28 = v[11] * v[14];
+        let m29 = v[12] * v[13];
+        let m30 = v[12] * v[14];
+        let m31 = v[13] * v[14];
+        let m34 = v[3] * v[6];
+        let m36 = v[5] * v[11];
+        let m37 = v[9] * v[14];
+        let m39 = v[12] * v[15];
+        let m41 = v[1] * v[7];
+        let m44 = v[6] * v[11];
+        let m46 = v[10] * v[12];
+        let m47 = v[13] * v[15];
+        let m50 = v[2] * v[5];
+        let m52 = v[7] * v[11];
+        let m53 = v[8] * v[13];
+        let m55 = v[14] * v[15];
+        let m57 = v[1] * v[8];
+        let m59 = v[3] * v[10];
+        let m61 = v[6] * v[13];
+        let m63 = v[11] * v[15];
+        let m64 = v[1].mul_add(v[1], m5);
+        let m65 = v[2].mul_add(v[2], m6);
+        let m66 = v[3].mul_add(v[3], m7);
+        let m67 = v[4].mul_add(v[4], m4);
+        let m68 = v[1].mul_add(v[2], m29);
+        let m69 = v[1].mul_add(v[3], m30);
+        let m70 = v[1].mul_add(v[4], m26);
+        let m71 = (-v[4]).mul_add(v[12], m11);
+        let m72 = (-v[2]).mul_add(v[12], m12);
+        let m73 = (-v[3]).mul_add(v[12], m13);
+        let m74 = v[2].mul_add(v[3], m31);
+        let m75 = v[2].mul_add(v[4], m27);
+        let m76 = (-v[4]).mul_add(v[13], m16);
+        let m77 = (-v[3]).mul_add(v[13], m18);
+        let m78 = v[3].mul_add(v[4], m28);
+        let m79 = (-v[4]).mul_add(v[14], m20);
+        let m80 = m64 - m65;
+        let m81 = m64 + m65;
+        let m82 = m66 - m67;
+        let m83 = m66 + m67;
+        let m84 = v[0].mul_add(v[1], m34);
+        let m85 = v[4].mul_add(v[8], m36);
+        let m86 = m84 + m85;
+        let m87 = v[10].mul_add(v[13], m39);
+        let m88 = v[2].mul_add(v[7], m37);
+        let m89 = m87 - m88;
+        let m90 = m86 + m89;
+        let m91 = m90 * T::from_i64(2);
+        let m92 = v[0].mul_add(v[2], m41);
+        let m93 = v[4].mul_add(v[9], m44);
+        let m94 = m92 + m93;
+        let m95 = v[8].mul_add(v[14], m47);
+        let m96 = v[3].mul_add(v[5], m46);
+        let m97 = m95 - m96;
+        let m98 = m94 + m97;
+        let m99 = m98 * T::from_i64(2);
+        let m100 = v[0].mul_add(v[3], m50);
+        let m101 = v[4].mul_add(v[10], m52);
+        let m102 = m100 + m101;
+        let m103 = v[9].mul_add(v[12], m55);
+        let m104 = v[1].mul_add(v[6], m53);
+        let m105 = m103 - m104;
+        let m106 = m102 + m105;
+        let m107 = m106 * T::from_i64(2);
+        let m108 = v[0].mul_add(v[4], m57);
+        let m109 = v[2].mul_add(v[9], m59);
+        let m110 = m108 + m109;
+        let m111 = v[5].mul_add(v[12], m61);
+        let m112 = v[7].mul_add(v[14], m63);
+        let m113 = m111 + m112;
+        let m114 = m110 + m113;
+        let m115 = m114 * T::from_i64(2);
+        let m116 = -m115;
+        let m117 = m80 - m82;
+        let m118 = m68 - m79;
+        let m119 = m118 * T::from_i64(2);
+        let m120 = m69 + m76;
+        let m121 = m120 * T::from_i64(2);
+        let m122 = m70 + m77;
+        let m123 = m122 * T::from_i64(2);
+        let m124 = -m123;
+        let m125 = m68 + m79;
+        let m126 = m125 * T::from_i64(2);
+        let m127 = m80 + m82;
+        let m128 = -m127;
+        let m129 = m74 - m71;
+        let m130 = m129 * T::from_i64(2);
+        let m131 = m73 - m75;
+        let m132 = m131 * T::from_i64(2);
+        let m133 = m69 - m76;
+        let m134 = m133 * T::from_i64(2);
+        let m135 = m71 + m74;
+        let m136 = m135 * T::from_i64(2);
+        let m137 = m83 - m81;
+        let m138 = m72 + m78;
+        let m139 = m138 * T::from_i64(2);
+        let m140 = -m139;
+        let m141 = m70 - m77;
+        let m142 = m141 * T::from_i64(2);
+        let m143 = m73 + m75;
+        let m144 = m143 * T::from_i64(2);
+        let m145 = m78 - m72;
+        let m146 = m145 * T::from_i64(2);
+        let m147 = m81 + m83;
+        let m148 = -m147;
+        gx::Prepared::from_entries([m91, m99, m107, m116, m117, m119, m121, m124, m126, m128, m130, m132, m134, m136, m137, m140, m142, m144, m146, m148])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<OriginHyperplane<S, T, O>> for gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20> {
+    type Output = Vector<S, T, O>;
+    #[inline(always)]
+    fn transform(self, x: OriginHyperplane<S, T, O>) -> Vector<S, T, O> {
+        let m = self.m;
+        let x = x.c.map(gx::__private::SlotArr::<S, T>);
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[0].scale(m[16]) + x[1].scale(m[17]) + x[2].scale(m[18]) + x[3].scale(m[19])).0], [true, true, true, true, true]) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>> for Vector<(OriginHyperplane<(), f64, O>,), T, O> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>) -> Self {
+        let m = p.m;
+        Vector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (OriginHyperplane<(), f64, O>,), T, 5>([[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]], [m[16], m[17], m[18], m[19]]], [true, true, true, true, true]) }
+    }
+}
+
+impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Odd>, 20> for OriginHyperplane<(), f64, O> {
+    type Output = Vector<(), f64, O>;
+    #[inline]
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>) -> Vector<(OriginHyperplane<(), f64, O>,), T, O> {
+        p.into()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<O: gx::Orientation> gx::batch::SandwichKernel<OriginHyperplane<(), f64, O>, gx::batch::Certified> for Odd {
+    type Y = Vector<(), f64, O>;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20> {
+        gx::Prepare::<OriginHyperplane<(), f64, O>>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, W, 20> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, OriginHyperplane<(), f64, O>, T, 20>, x: OriginHyperplane<(), T, O>) -> Vector<(), T, O> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: OriginHyperplane<(), T, O>) -> Vector<(), T, O> {
+        gx::Transform::transform(v, x)
+    }
+}

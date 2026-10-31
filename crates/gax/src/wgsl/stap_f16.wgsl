@@ -79,6 +79,16 @@ struct Multivector {
     c7: vec4<f16>,
 }
 
+// `Direction`: [e0324, e0134, e0214, e0123]
+struct Direction {
+    c0: vec4<f16>,
+}
+
+// `OriginHyperplane`: [e1, e2, e3, e4]
+struct OriginHyperplane {
+    c0: vec4<f16>,
+}
+
 alias Hyperplane = Vector;
 
 alias Line = Trivector;
@@ -136,6 +146,16 @@ fn odd_new(e0: f16, e1: f16, e2: f16, e3: f16, e4: f16, e023: f16, e031: f16, e0
 // A `Multivector` from its coefficients.
 fn multivector_new(s: f16, e0: f16, e1: f16, e2: f16, e3: f16, e4: f16, e01: f16, e02: f16, e03: f16, e04: f16, e23: f16, e31: f16, e12: f16, e41: f16, e42: f16, e43: f16, e023: f16, e031: f16, e012: f16, e014: f16, e024: f16, e034: f16, e123: f16, e234: f16, e314: f16, e124: f16, e0324: f16, e0134: f16, e0214: f16, e0123: f16, e1234: f16, e01234: f16) -> Multivector {
     return Multivector(vec4<f16>(s, e0, e1, e2), vec4<f16>(e3, e4, e01, e02), vec4<f16>(e03, e04, e23, e31), vec4<f16>(e12, e41, e42, e43), vec4<f16>(e023, e031, e012, e014), vec4<f16>(e024, e034, e123, e234), vec4<f16>(e314, e124, e0324, e0134), vec4<f16>(e0214, e0123, e1234, e01234));
+}
+
+// A `Direction` from its coefficients.
+fn direction_new(e0324: f16, e0134: f16, e0214: f16, e0123: f16) -> Direction {
+    return Direction(vec4<f16>(e0324, e0134, e0214, e0123));
+}
+
+// A `OriginHyperplane` from its coefficients.
+fn origin_hyperplane_new(e1: f16, e2: f16, e3: f16, e4: f16) -> OriginHyperplane {
+    return OriginHyperplane(vec4<f16>(e1, e2, e3, e4));
 }
 
 // A `Vector` as a `Odd`.
@@ -246,6 +266,16 @@ fn multivector_reverse(x: Multivector) -> Multivector {
     let t18 = -x.c6.x;
     let t19 = -x.c6.y;
     return Multivector(vec4<f16>(x.c0.x, x.c0.y, x.c0.z, x.c0.w), vec4<f16>(x.c1.x, x.c1.y, t0, t1), vec4<f16>(t2, t3, t4, t5), vec4<f16>(t6, t7, t8, t9), vec4<f16>(t10, t11, t12, t13), vec4<f16>(t14, t15, t16, t17), vec4<f16>(t18, t19, x.c6.z, x.c6.w), vec4<f16>(x.c7.x, x.c7.y, x.c7.z, x.c7.w));
+}
+
+// The reverse `~x`.
+fn direction_reverse(x: Direction) -> Direction {
+    return Direction(vec4<f16>(x.c0.x, x.c0.y, x.c0.z, x.c0.w));
+}
+
+// The reverse `~x`.
+fn origin_hyperplane_reverse(x: OriginHyperplane) -> OriginHyperplane {
+    return OriginHyperplane(vec4<f16>(x.c0.x, x.c0.y, x.c0.z, x.c0.w));
 }
 
 // The geometric product of a `Vector` and a `Vector` (composition).
@@ -3400,6 +3430,50 @@ fn multivector_norm_squared(x: Multivector) -> f16 {
     return t30;
 }
 
+// The squared norm: the scalar part of `x ~x`.
+fn origin_hyperplane_norm_squared(x: OriginHyperplane) -> f16 {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = x.c0.z * x.c0.z;
+    let t4 = fma(x.c0.x, x.c0.x, t1);
+    let t5 = fma(-x.c0.w, x.c0.w, t2);
+    let t6 = t4 + t5;
+    return t6;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn origin_hyperplane_normalized(x: OriginHyperplane) -> OriginHyperplane {
+    let p1 = f32(x.c0.y) * f32(x.c0.y);
+    let p2 = f32(x.c0.z) * f32(x.c0.z);
+    let p4 = fma(f32(x.c0.x), f32(x.c0.x), p1);
+    let p5 = fma(-f32(x.c0.w), f32(x.c0.w), p2);
+    let p6 = p4 + p5;
+    let s0 = f16(study_rsqrt_abs(p6));
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    let t2 = x.c0.z * s0;
+    let t3 = x.c0.w * s0;
+    return OriginHyperplane(vec4<f16>(t0, t1, t2, t3));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn origin_hyperplane_renormalize_fast(x: OriginHyperplane) -> OriginHyperplane {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = x.c0.z * x.c0.z;
+    let t4 = fma(x.c0.x, x.c0.x, t1);
+    let t5 = fma(-x.c0.w, x.c0.w, t2);
+    let t6 = t4 + t5;
+    let t8 = fma(-t6, (1.0 / 3.0), 1.0);
+    let t9 = x.c0.x * t8;
+    let t10 = x.c0.y * t8;
+    let t11 = x.c0.z * t8;
+    let t12 = x.c0.w * t8;
+    let t13 = t9 * (3.0 / 2.0);
+    let t14 = t10 * (3.0 / 2.0);
+    let t15 = t11 * (3.0 / 2.0);
+    let t16 = t12 * (3.0 / 2.0);
+    return OriginHyperplane(vec4<f16>(t13, t14, t15, t16));
+}
+
 // `v x ~v` for `Vector` v and `Scalar` x (`v >> x`).
 fn vector_sandwich_scalar(v: Vector, x: Scalar) -> Scalar {
     let t1 = v.c0.z * v.c0.z;
@@ -4843,6 +4917,145 @@ fn unit_vector_sandwich_multivector(v: Vector, x: Multivector) -> Multivector {
     let t269 = t151 * t267;
     let t270 = x.c7.w * t151;
     return Multivector(vec4<f16>(t268, t153, t156, t159), vec4<f16>(t162, t165, t171, t175), vec4<f16>(t179, t183, t187, t191), vec4<f16>(t195, t200, t204, t208), vec4<f16>(t214, t219, t224, t229), vec4<f16>(t235, t241, t244, t247), vec4<f16>(t250, t253, t256, t259), vec4<f16>(t262, t266, t269, t270));
+}
+
+// `v x ~v` for `Vector` v and `Direction` x (`v >> x`).
+fn vector_sandwich_direction(v: Vector, x: Direction) -> Quadvector {
+    let t0 = v.c0.y * v.c0.y;
+    let t1 = v.c0.z * v.c0.z;
+    let t2 = t0 - t1;
+    let t3 = t0 + t1;
+    let t5 = v.c0.z * x.c0.y;
+    let t6 = fma(v.c0.y, x.c0.x, t5);
+    let t7 = v.c0.w * v.c0.w;
+    let t8 = v.c1.x * v.c1.x;
+    let t9 = t7 - t8;
+    let t10 = t7 + t8;
+    let t12 = v.c1.x * x.c0.w;
+    let t13 = fma(v.c0.w, x.c0.z, t12);
+    let t14 = v.c0.y * v.c0.z;
+    let t15 = v.c0.w * v.c1.x;
+    let t17 = v.c0.y * t13;
+    let t18 = x.c0.x * t2;
+    let t21 = v.c0.z * t13;
+    let t23 = x.c0.y * t9;
+    let t25 = v.c0.w * t6;
+    let t27 = x.c0.z * t10;
+    let t29 = v.c1.x * t6;
+    let t31 = x.c0.w * t10;
+    let t32 = fma(-x.c0.x, t9, t18);
+    let t33 = fma(x.c0.y, t14, t17);
+    let t35 = fma(t33, 2.0, t32);
+    let t36 = fma(x.c0.y, t2, t23);
+    let t37 = fma(x.c0.x, t14, t21);
+    let t39 = fma(t37, 2.0, -t36);
+    let t40 = fma(-x.c0.z, t3, t27);
+    let t41 = fma(x.c0.w, t15, t25);
+    let t43 = fma(t41, 2.0, t40);
+    let t44 = fma(x.c0.w, t3, t31);
+    let t45 = fma(x.c0.z, t15, t29);
+    let t47 = fma(t45, 2.0, t44);
+    let t48 = -t47;
+    return Quadvector(vec4<f16>(t35, t39, t43, t48), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Vector` v and `Direction` x (`v >> x`).
+fn unit_vector_sandwich_direction(v: Vector, x: Direction) -> Quadvector {
+    let t1 = v.c0.z * x.c0.y;
+    let t3 = v.c1.x * x.c0.w;
+    let t4 = fma(v.c0.y, x.c0.x, t1);
+    let t5 = fma(v.c0.w, x.c0.z, t3);
+    let t6 = t4 + t5;
+    let t7 = v.c0.y * t6;
+    let t8 = v.c0.z * t6;
+    let t9 = v.c0.w * t6;
+    let t10 = v.c1.x * t6;
+    let t11 = t7 * 2.0;
+    let t13 = v.c0.z * v.c0.z;
+    let t14 = v.c0.w * v.c0.w;
+    let t16 = fma(v.c0.y, v.c0.y, t13);
+    let t17 = fma(-v.c1.x, v.c1.x, t14);
+    let t18 = t16 + t17;
+    let t20 = fma(-x.c0.x, t18, t11);
+    let t21 = t8 * 2.0;
+    let t23 = fma(-x.c0.y, t18, t21);
+    let t24 = t9 * 2.0;
+    let t26 = fma(-x.c0.z, t18, t24);
+    let t28 = x.c0.w * t18;
+    let t29 = fma(t10, 2.0, t28);
+    let t30 = -t29;
+    return Quadvector(vec4<f16>(t20, t23, t26, t30), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Vector` v and `OriginHyperplane` x (`v >> x`).
+fn vector_sandwich_origin_hyperplane(v: Vector, x: OriginHyperplane) -> Vector {
+    let t1 = v.c0.z * x.c0.y;
+    let t2 = fma(v.c0.y, x.c0.x, t1);
+    let t3 = v.c0.w * x.c0.z;
+    let t5 = fma(-v.c1.x, x.c0.w, t3);
+    let t6 = v.c0.y * v.c0.y;
+    let t7 = v.c0.z * v.c0.z;
+    let t8 = t6 - t7;
+    let t9 = t6 + t7;
+    let t10 = v.c0.w * v.c0.w;
+    let t11 = v.c1.x * v.c1.x;
+    let t12 = t10 - t11;
+    let t13 = t10 + t11;
+    let t14 = v.c0.y * v.c0.z;
+    let t15 = v.c0.w * v.c1.x;
+    let t17 = v.c0.x * t5;
+    let t19 = v.c0.y * t5;
+    let t20 = x.c0.x * t8;
+    let t23 = v.c0.z * t5;
+    let t25 = x.c0.y * t12;
+    let t27 = v.c0.w * t2;
+    let t29 = x.c0.z * t13;
+    let t31 = v.c1.x * t2;
+    let t33 = x.c0.w * t13;
+    let t34 = fma(v.c0.x, t2, t17);
+    let t35 = t34 * 2.0;
+    let t36 = fma(-x.c0.x, t12, t20);
+    let t37 = fma(x.c0.y, t14, t19);
+    let t39 = fma(t37, 2.0, t36);
+    let t40 = fma(x.c0.y, t8, t25);
+    let t41 = fma(x.c0.x, t14, t23);
+    let t43 = fma(t41, 2.0, -t40);
+    let t44 = fma(-x.c0.z, t9, t29);
+    let t45 = fma(-x.c0.w, t15, t27);
+    let t47 = fma(t45, 2.0, t44);
+    let t48 = fma(x.c0.w, t9, t33);
+    let t49 = fma(x.c0.z, t15, t31);
+    let t51 = fma(t49, 2.0, -t48);
+    return Vector(vec4<f16>(t35, t39, t43, t47), vec4<f16>(t51, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Vector` v and `OriginHyperplane` x (`v >> x`).
+fn unit_vector_sandwich_origin_hyperplane(v: Vector, x: OriginHyperplane) -> Vector {
+    let t1 = v.c0.z * x.c0.y;
+    let t2 = v.c0.w * x.c0.z;
+    let t4 = fma(v.c0.y, x.c0.x, t1);
+    let t5 = fma(-v.c1.x, x.c0.w, t2);
+    let t6 = t4 + t5;
+    let t7 = v.c0.x * t6;
+    let t8 = v.c0.y * t6;
+    let t9 = v.c0.z * t6;
+    let t10 = v.c0.w * t6;
+    let t11 = v.c1.x * t6;
+    let t12 = t7 * 2.0;
+    let t13 = t8 * 2.0;
+    let t15 = v.c0.z * v.c0.z;
+    let t16 = v.c0.w * v.c0.w;
+    let t18 = fma(v.c0.y, v.c0.y, t15);
+    let t19 = fma(-v.c1.x, v.c1.x, t16);
+    let t20 = t18 + t19;
+    let t22 = fma(-x.c0.x, t20, t13);
+    let t23 = t9 * 2.0;
+    let t25 = fma(-x.c0.y, t20, t23);
+    let t26 = t10 * 2.0;
+    let t28 = fma(-x.c0.z, t20, t26);
+    let t29 = t11 * 2.0;
+    let t31 = fma(-x.c0.w, t20, t29);
+    return Vector(vec4<f16>(t12, t22, t25, t28), vec4<f16>(t31, 0.0, 0.0, 0.0));
 }
 
 // `v x ~v` for `Motor` v and `Scalar` x (`v >> x`).
@@ -9619,6 +9832,411 @@ fn unit_motor_sandwich_multivector(v: Motor, x: Multivector) -> Multivector {
     let t750 = t749 * 4.0;
     let t751 = fma(x.c7.w, t211, t750);
     return Multivector(vec4<f16>(t338, t542, t546, t550), vec4<f16>(t554, t558, t569, t580), vec4<f16>(t591, t602, t609, t616), vec4<f16>(t623, t630, t637, t644), vec4<f16>(t655, t666, t677, t688), vec4<f16>(t699, t710, t714, t718), vec4<f16>(t722, t726, t731, t736), vec4<f16>(t741, t746, t532, t751));
+}
+
+// `v x ~v` for `Motor` v and `Direction` x (`v >> x`).
+fn motor_sandwich_direction(v: Motor, x: Direction) -> Quadvector {
+    let t4 = v.c2.x * v.c2.x;
+    let t5 = v.c2.y * v.c2.y;
+    let t6 = v.c2.z * v.c2.z;
+    let t7 = v.c3.w * v.c3.w;
+    let t11 = v.c0.x * v.c2.x;
+    let t12 = v.c0.x * v.c2.y;
+    let t13 = v.c0.x * v.c2.z;
+    let t16 = v.c1.y * v.c2.y;
+    let t17 = v.c1.y * v.c2.z;
+    let t21 = v.c1.z * v.c2.z;
+    let t26 = v.c2.x * v.c2.y;
+    let t27 = v.c2.x * v.c2.z;
+    let t28 = v.c2.x * v.c3.w;
+    let t29 = v.c2.y * v.c2.z;
+    let t30 = v.c2.y * v.c3.w;
+    let t31 = v.c2.z * v.c3.w;
+    let t32 = fma(v.c0.x, v.c0.x, t7);
+    let t33 = fma(v.c1.y, v.c1.y, t4);
+    let t34 = fma(v.c1.z, v.c1.z, t5);
+    let t35 = fma(v.c1.w, v.c1.w, t6);
+    let t36 = fma(v.c0.x, v.c1.y, t28);
+    let t37 = fma(v.c0.x, v.c1.z, t30);
+    let t38 = fma(v.c0.x, v.c1.w, t31);
+    let t39 = fma(-v.c1.y, v.c3.w, t11);
+    let t40 = fma(-v.c1.z, v.c3.w, t12);
+    let t41 = fma(-v.c1.w, v.c3.w, t13);
+    let t42 = fma(v.c1.y, v.c1.z, t26);
+    let t43 = fma(v.c1.y, v.c1.w, t27);
+    let t44 = fma(-v.c1.z, v.c2.x, t16);
+    let t45 = fma(-v.c1.w, v.c2.x, t17);
+    let t46 = fma(v.c1.z, v.c1.w, t29);
+    let t47 = fma(-v.c1.w, v.c2.y, t21);
+    let t48 = t32 - t33;
+    let t49 = t32 + t33;
+    let t50 = t34 - t35;
+    let t51 = t34 + t35;
+    let t52 = t49 - t51;
+    let t53 = t38 + t42;
+    let t54 = t37 - t43;
+    let t55 = t39 - t47;
+    let t56 = t38 - t42;
+    let t57 = t48 + t50;
+    let t58 = t36 + t46;
+    let t59 = t40 + t45;
+    let t60 = t37 + t43;
+    let t61 = t36 - t46;
+    let t62 = t48 - t50;
+    let t63 = t41 - t44;
+    let t64 = t39 + t47;
+    let t65 = t40 - t45;
+    let t66 = t41 + t44;
+    let t67 = t49 + t51;
+    let t69 = x.c0.y * t53;
+    let t74 = x.c0.z * t58;
+    let t76 = x.c0.x * t60;
+    let t81 = x.c0.y * t65;
+    let t83 = x.c0.w * t67;
+    let t84 = fma(-x.c0.z, t54, t69);
+    let t85 = fma(-x.c0.w, t55, t84);
+    let t86 = t85 * 2.0;
+    let t87 = fma(x.c0.x, t52, t86);
+    let t88 = fma(-x.c0.x, t56, t74);
+    let t89 = fma(-x.c0.w, t59, t88);
+    let t90 = t89 * 2.0;
+    let t91 = fma(x.c0.y, t57, t90);
+    let t92 = fma(-x.c0.y, t61, t76);
+    let t93 = fma(-x.c0.w, t63, t92);
+    let t94 = t93 * 2.0;
+    let t95 = fma(x.c0.z, t62, t94);
+    let t96 = fma(x.c0.x, t64, t81);
+    let t97 = fma(x.c0.z, t66, t96);
+    let t99 = fma(-t97, 2.0, t83);
+    return Quadvector(vec4<f16>(t87, t91, t95, t99), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Motor` v and `Direction` x (`v >> x`).
+fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Quadvector {
+    let t4 = v.c2.x * v.c2.x;
+    let t5 = v.c2.y * v.c2.y;
+    let t6 = v.c2.z * v.c2.z;
+    let t7 = v.c3.w * v.c3.w;
+    let t11 = v.c0.x * v.c2.x;
+    let t12 = v.c0.x * v.c2.y;
+    let t13 = v.c0.x * v.c2.z;
+    let t16 = v.c1.y * v.c2.y;
+    let t17 = v.c1.y * v.c2.z;
+    let t21 = v.c1.z * v.c2.z;
+    let t26 = v.c2.x * v.c2.y;
+    let t27 = v.c2.x * v.c2.z;
+    let t28 = v.c2.x * v.c3.w;
+    let t29 = v.c2.y * v.c2.z;
+    let t30 = v.c2.y * v.c3.w;
+    let t31 = v.c2.z * v.c3.w;
+    let t32 = fma(v.c0.x, v.c0.x, t7);
+    let t33 = fma(v.c1.y, v.c1.y, t4);
+    let t34 = fma(v.c1.z, v.c1.z, t5);
+    let t35 = fma(v.c1.w, v.c1.w, t6);
+    let t36 = fma(v.c0.x, v.c1.y, t28);
+    let t37 = fma(v.c0.x, v.c1.z, t30);
+    let t38 = fma(v.c0.x, v.c1.w, t31);
+    let t39 = fma(-v.c1.y, v.c3.w, t11);
+    let t40 = fma(-v.c1.z, v.c3.w, t12);
+    let t41 = fma(-v.c1.w, v.c3.w, t13);
+    let t42 = fma(v.c1.y, v.c1.z, t26);
+    let t43 = fma(v.c1.y, v.c1.w, t27);
+    let t44 = fma(-v.c1.z, v.c2.x, t16);
+    let t45 = fma(-v.c1.w, v.c2.x, t17);
+    let t46 = fma(v.c1.z, v.c1.w, t29);
+    let t47 = fma(-v.c1.w, v.c2.y, t21);
+    let t48 = t32 - t33;
+    let t49 = t32 + t33;
+    let t50 = t34 - t35;
+    let t51 = t34 + t35;
+    let t52 = t49 - t51;
+    let t53 = t38 + t42;
+    let t54 = t37 - t43;
+    let t55 = t39 - t47;
+    let t56 = t38 - t42;
+    let t57 = t48 + t50;
+    let t58 = t36 + t46;
+    let t59 = t40 + t45;
+    let t60 = t37 + t43;
+    let t61 = t36 - t46;
+    let t62 = t48 - t50;
+    let t63 = t41 - t44;
+    let t64 = t39 + t47;
+    let t65 = t40 - t45;
+    let t66 = t41 + t44;
+    let t67 = t49 + t51;
+    let t69 = x.c0.y * t53;
+    let t74 = x.c0.z * t58;
+    let t76 = x.c0.x * t60;
+    let t81 = x.c0.y * t65;
+    let t83 = x.c0.w * t67;
+    let t84 = fma(-x.c0.z, t54, t69);
+    let t85 = fma(-x.c0.w, t55, t84);
+    let t86 = t85 * 2.0;
+    let t87 = fma(x.c0.x, t52, t86);
+    let t88 = fma(-x.c0.x, t56, t74);
+    let t89 = fma(-x.c0.w, t59, t88);
+    let t90 = t89 * 2.0;
+    let t91 = fma(x.c0.y, t57, t90);
+    let t92 = fma(-x.c0.y, t61, t76);
+    let t93 = fma(-x.c0.w, t63, t92);
+    let t94 = t93 * 2.0;
+    let t95 = fma(x.c0.z, t62, t94);
+    let t96 = fma(x.c0.x, t64, t81);
+    let t97 = fma(x.c0.z, t66, t96);
+    let t99 = fma(-t97, 2.0, t83);
+    return Quadvector(vec4<f16>(t87, t91, t95, t99), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Motor` v and `OriginHyperplane` x (`v >> x`).
+fn motor_sandwich_origin_hyperplane(v: Motor, x: OriginHyperplane) -> Odd {
+    let t0 = v.c0.x * x.c0.x;
+    let t3 = fma(v.c1.w, x.c0.y, t0);
+    let t4 = fma(-v.c1.z, x.c0.z, t3);
+    let t5 = v.c0.x * x.c0.y;
+    let t8 = fma(v.c1.y, x.c0.z, t5);
+    let t9 = fma(-v.c1.w, x.c0.x, t8);
+    let t10 = v.c0.x * x.c0.z;
+    let t13 = fma(v.c1.z, x.c0.x, t10);
+    let t14 = fma(-v.c1.y, x.c0.y, t13);
+    let t15 = v.c0.x * x.c0.w;
+    let t18 = fma(v.c2.x, x.c0.x, t15);
+    let t19 = fma(v.c2.y, x.c0.y, t18);
+    let t21 = v.c1.z * x.c0.y;
+    let t23 = fma(v.c1.y, x.c0.x, t21);
+    let t24 = fma(v.c1.w, x.c0.z, t23);
+    let t26 = v.c2.y * x.c0.z;
+    let t28 = fma(v.c1.y, x.c0.w, t26);
+    let t29 = fma(-v.c2.z, x.c0.y, t28);
+    let t32 = v.c2.z * x.c0.x;
+    let t33 = fma(v.c1.z, x.c0.w, t32);
+    let t34 = fma(-v.c2.x, x.c0.z, t33);
+    let t36 = v.c2.x * x.c0.y;
+    let t38 = fma(v.c1.w, x.c0.w, t36);
+    let t39 = fma(-v.c2.y, x.c0.x, t38);
+    let t40 = v.c2.x * x.c0.w;
+    let t41 = t0 + t40;
+    let t42 = v.c2.y * x.c0.w;
+    let t43 = t5 + t42;
+    let t44 = v.c2.z * x.c0.w;
+    let t45 = t10 + t44;
+    let t46 = v.c2.z * x.c0.z;
+    let t47 = t15 + t46;
+    let t49 = v.c2.x * v.c2.y;
+    let t50 = fma(v.c1.y, v.c1.z, t49);
+    let t51 = t4 + t40;
+    let t52 = t9 + t42;
+    let t53 = t19 + t46;
+    let t54 = t14 + t44;
+    let t56 = fma(v.c3.w, x.c0.x, -t29);
+    let t58 = fma(v.c3.w, x.c0.y, -t34);
+    let t60 = fma(v.c3.w, x.c0.z, -t39);
+    let t62 = fma(v.c3.w, x.c0.w, -t24);
+    let t63 = v.c0.x * v.c0.x;
+    let t64 = v.c1.y * v.c1.y;
+    let t65 = v.c1.z * v.c1.z;
+    let t66 = v.c1.w * v.c1.w;
+    let t67 = v.c2.x * v.c2.x;
+    let t68 = v.c2.y * v.c2.y;
+    let t69 = v.c2.z * v.c2.z;
+    let t70 = v.c3.w * v.c3.w;
+    let t71 = v.c1.y * v.c1.w;
+    let t72 = v.c1.z * v.c1.w;
+    let t74 = v.c0.z * t52;
+    let t75 = v.c0.w * t54;
+    let t78 = v.c3.x * t58;
+    let t80 = v.c3.z * t62;
+    let t82 = x.c0.x * t64;
+    let t86 = x.c0.x * t66;
+    let t87 = v.c1.w * t43;
+    let t91 = x.c0.x * t69;
+    let t92 = x.c0.x * t70;
+    let t94 = x.c0.y * t50;
+    let t98 = x.c0.y * t65;
+    let t99 = x.c0.z * t72;
+    let t100 = x.c0.y * t66;
+    let t105 = x.c0.y * t69;
+    let t106 = x.c0.y * t70;
+    let t108 = x.c0.x * t50;
+    let t113 = x.c0.z * t65;
+    let t114 = x.c0.y * t72;
+    let t116 = x.c0.z * t66;
+    let t118 = x.c0.z * t68;
+    let t120 = v.c2.z * t19;
+    let t121 = x.c0.z * t70;
+    let t124 = x.c0.w * t64;
+    let t126 = x.c0.w * t66;
+    let t129 = x.c0.w * t68;
+    let t130 = v.c2.y * t9;
+    let t132 = v.c2.z * t14;
+    let t133 = x.c0.w * t70;
+    let t136 = v.c0.z * t58;
+    let t139 = v.c2.w * t51;
+    let t141 = v.c3.y * t54;
+    let t142 = v.c3.z * t53;
+    let t143 = fma(v.c0.y, t51, t74);
+    let t144 = fma(-v.c1.x, t53, t75);
+    let t145 = t143 + t144;
+    let t146 = fma(v.c2.w, t56, t78);
+    let t147 = fma(v.c3.y, t60, t80);
+    let t148 = t146 + t147;
+    let t149 = t145 - t148;
+    let t150 = t149 * 2.0;
+    let t151 = fma(x.c0.x, t63, t82);
+    let t152 = fma(x.c0.x, t67, t92);
+    let t153 = t151 + t152;
+    let t154 = fma(x.c0.x, t65, t86);
+    let t155 = fma(x.c0.x, t68, t91);
+    let t156 = t154 + t155;
+    let t157 = t153 - t156;
+    let t158 = fma(x.c0.z, t71, t87);
+    let t159 = fma(v.c2.x, t47, t158);
+    let t160 = fma(-v.c1.z, t45, t94);
+    let t161 = fma(-v.c3.w, t29, t160);
+    let t162 = t159 + t161;
+    let t164 = fma(t162, 2.0, t157);
+    let t165 = fma(x.c0.y, t63, t98);
+    let t166 = fma(x.c0.y, t68, t106);
+    let t167 = t165 + t166;
+    let t168 = fma(x.c0.y, t64, t100);
+    let t169 = fma(x.c0.y, t67, t105);
+    let t170 = t168 + t169;
+    let t171 = t167 - t170;
+    let t172 = fma(v.c1.y, t45, t99);
+    let t173 = fma(v.c2.y, t47, t172);
+    let t174 = fma(-v.c1.w, t41, t108);
+    let t175 = fma(-v.c3.w, t34, t174);
+    let t176 = t173 + t175;
+    let t178 = fma(t176, 2.0, t171);
+    let t179 = fma(x.c0.z, t63, t116);
+    let t180 = fma(x.c0.z, t69, t121);
+    let t181 = t179 + t180;
+    let t182 = fma(x.c0.z, t64, t113);
+    let t183 = fma(x.c0.z, t67, t118);
+    let t184 = t182 + t183;
+    let t185 = t181 - t184;
+    let t186 = fma(x.c0.x, t71, t114);
+    let t187 = fma(v.c1.z, t41, t186);
+    let t188 = fma(-v.c1.y, t43, t120);
+    let t189 = fma(-v.c3.w, t39, t188);
+    let t190 = t187 + t189;
+    let t192 = fma(t190, 2.0, t185);
+    let t193 = fma(x.c0.w, t63, t124);
+    let t194 = fma(x.c0.w, t65, t126);
+    let t195 = t193 + t194;
+    let t196 = fma(x.c0.w, t67, t129);
+    let t197 = fma(x.c0.w, t69, t133);
+    let t198 = t196 + t197;
+    let t199 = t195 + t198;
+    let t200 = fma(v.c2.x, t4, t130);
+    let t201 = fma(-v.c3.w, t24, t132);
+    let t202 = t200 + t201;
+    let t204 = fma(t202, 2.0, t199);
+    let t205 = fma(v.c0.y, t56, t136);
+    let t206 = fma(v.c0.w, t60, t139);
+    let t207 = t205 + t206;
+    let t208 = fma(v.c3.x, t52, t141);
+    let t209 = fma(-v.c1.x, t62, t142);
+    let t210 = t208 + t209;
+    let t211 = t207 + t210;
+    let t212 = t211 * 2.0;
+    return Odd(vec4<f16>(t150, t164, t178, t192), vec4<f16>(t204, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t212));
+}
+
+// `v x ~v` for a unit `Motor` v and `OriginHyperplane` x (`v >> x`).
+fn unit_motor_sandwich_origin_hyperplane(v: Motor, x: OriginHyperplane) -> Vector {
+    let t2 = v.c1.w * x.c0.y;
+    let t3 = v.c2.x * x.c0.w;
+    let t4 = fma(v.c0.x, x.c0.x, t2);
+    let t5 = fma(-v.c1.z, x.c0.z, t3);
+    let t6 = t4 + t5;
+    let t8 = v.c1.y * x.c0.z;
+    let t10 = v.c2.y * x.c0.w;
+    let t11 = fma(v.c0.x, x.c0.y, t8);
+    let t12 = fma(-v.c1.w, x.c0.x, t10);
+    let t13 = t11 + t12;
+    let t16 = v.c1.z * x.c0.x;
+    let t17 = v.c2.z * x.c0.w;
+    let t18 = fma(v.c0.x, x.c0.z, t16);
+    let t19 = fma(-v.c1.y, x.c0.y, t17);
+    let t20 = t18 + t19;
+    let t22 = v.c2.x * x.c0.x;
+    let t24 = v.c2.z * x.c0.z;
+    let t25 = fma(v.c0.x, x.c0.w, t22);
+    let t26 = fma(v.c2.y, x.c0.y, t24);
+    let t27 = t25 + t26;
+    let t29 = v.c1.z * x.c0.y;
+    let t30 = v.c1.w * x.c0.z;
+    let t32 = fma(v.c1.y, x.c0.x, t29);
+    let t33 = fma(-v.c3.w, x.c0.w, t30);
+    let t34 = t32 + t33;
+    let t36 = v.c2.y * x.c0.z;
+    let t38 = v.c3.w * x.c0.x;
+    let t39 = fma(v.c1.y, x.c0.w, t36);
+    let t40 = fma(v.c2.z, x.c0.y, t38);
+    let t41 = t39 - t40;
+    let t44 = v.c2.z * x.c0.x;
+    let t45 = v.c3.w * x.c0.y;
+    let t46 = fma(v.c1.z, x.c0.w, t44);
+    let t47 = fma(v.c2.x, x.c0.z, t45);
+    let t48 = t46 - t47;
+    let t50 = v.c2.x * x.c0.y;
+    let t52 = v.c3.w * x.c0.z;
+    let t53 = fma(v.c1.w, x.c0.w, t50);
+    let t54 = fma(v.c2.y, x.c0.x, t52);
+    let t55 = t53 - t54;
+    let t57 = v.c0.z * t13;
+    let t60 = v.c2.w * t41;
+    let t62 = v.c3.y * t55;
+    let t63 = v.c3.z * t34;
+    let t66 = v.c2.x * t27;
+    let t67 = v.c3.w * t41;
+    let t70 = v.c2.y * t27;
+    let t71 = v.c3.w * t48;
+    let t74 = v.c2.z * t27;
+    let t75 = v.c3.w * t55;
+    let t77 = v.c2.y * t13;
+    let t78 = v.c2.z * t20;
+    let t80 = fma(v.c0.y, t6, t57);
+    let t81 = fma(v.c0.w, t20, t60);
+    let t82 = t80 + t81;
+    let t83 = fma(v.c3.x, t48, t62);
+    let t84 = fma(-v.c1.x, t27, t63);
+    let t85 = t83 + t84;
+    let t86 = t82 + t85;
+    let t87 = t86 * 2.0;
+    let t88 = fma(v.c1.w, t13, t66);
+    let t89 = fma(v.c1.z, t20, t67);
+    let t90 = t88 - t89;
+    let t93 = v.c1.y * v.c1.y;
+    let t95 = v.c1.w * v.c1.w;
+    let t97 = v.c2.y * v.c2.y;
+    let t99 = v.c3.w * v.c3.w;
+    let t100 = fma(v.c0.x, v.c0.x, t93);
+    let t101 = fma(v.c1.z, v.c1.z, t95);
+    let t102 = t100 + t101;
+    let t103 = fma(v.c2.x, v.c2.x, t97);
+    let t104 = fma(v.c2.z, v.c2.z, t99);
+    let t105 = t103 + t104;
+    let t106 = t102 - t105;
+    let t107 = x.c0.x * t106;
+    let t108 = fma(t90, 2.0, t107);
+    let t109 = fma(v.c1.y, t20, t70);
+    let t110 = fma(v.c1.w, t6, t71);
+    let t111 = t109 - t110;
+    let t113 = x.c0.y * t106;
+    let t114 = fma(t111, 2.0, t113);
+    let t115 = fma(v.c1.z, t6, t74);
+    let t116 = fma(v.c1.y, t13, t75);
+    let t117 = t115 - t116;
+    let t119 = x.c0.z * t106;
+    let t120 = fma(t117, 2.0, t119);
+    let t121 = fma(v.c2.x, t6, t77);
+    let t122 = fma(-v.c3.w, t34, t78);
+    let t123 = t121 + t122;
+    let t125 = x.c0.w * t106;
+    let t126 = fma(t123, 2.0, t125);
+    return Vector(vec4<f16>(t87, t108, t114, t120), vec4<f16>(t126, 0.0, 0.0, 0.0));
 }
 
 // `v x ~v` for `Odd` v and `Scalar` x (`v >> x`).
@@ -14484,6 +15102,420 @@ fn unit_odd_sandwich_multivector(v: Odd, x: Multivector) -> Multivector {
     let t759 = t758 * 4.0;
     let t760 = fma(x.c7.w, t205, t759);
     return Multivector(vec4<f16>(t346, t550, t554, t558), vec4<f16>(t562, t566, t577, t588), vec4<f16>(t599, t610, t617, t624), vec4<f16>(t631, t638, t645, t652), vec4<f16>(t663, t674, t685, t696), vec4<f16>(t707, t718, t722, t726), vec4<f16>(t730, t734, t739, t744), vec4<f16>(t749, t754, t755, t760));
+}
+
+// `v x ~v` for `Odd` v and `Direction` x (`v >> x`).
+fn odd_sandwich_direction(v: Odd, x: Direction) -> Quadvector {
+    let t4 = v.c2.w * v.c2.w;
+    let t5 = v.c3.x * v.c3.x;
+    let t6 = v.c3.y * v.c3.y;
+    let t7 = v.c3.z * v.c3.z;
+    let t11 = v.c0.y * v.c2.w;
+    let t12 = v.c0.y * v.c3.y;
+    let t13 = v.c0.y * v.c3.z;
+    let t16 = v.c0.z * v.c2.w;
+    let t18 = v.c0.z * v.c3.z;
+    let t20 = v.c0.w * v.c2.w;
+    let t26 = v.c2.w * v.c3.x;
+    let t27 = v.c2.w * v.c3.y;
+    let t28 = v.c2.w * v.c3.z;
+    let t29 = v.c3.x * v.c3.y;
+    let t30 = v.c3.x * v.c3.z;
+    let t31 = v.c3.y * v.c3.z;
+    let t32 = fma(v.c0.y, v.c0.y, t5);
+    let t33 = fma(v.c0.z, v.c0.z, t6);
+    let t34 = fma(v.c0.w, v.c0.w, t7);
+    let t35 = fma(v.c1.x, v.c1.x, t4);
+    let t36 = fma(v.c0.y, v.c0.z, t29);
+    let t37 = fma(v.c0.y, v.c0.w, t30);
+    let t38 = fma(v.c0.y, v.c1.x, t26);
+    let t39 = fma(-v.c1.x, v.c3.x, t11);
+    let t40 = fma(-v.c0.z, v.c3.x, t12);
+    let t41 = fma(-v.c0.w, v.c3.x, t13);
+    let t42 = fma(v.c0.z, v.c0.w, t31);
+    let t43 = fma(v.c0.z, v.c1.x, t27);
+    let t44 = fma(-v.c1.x, v.c3.y, t16);
+    let t45 = fma(-v.c0.w, v.c3.y, t18);
+    let t46 = fma(v.c0.w, v.c1.x, t28);
+    let t47 = fma(-v.c1.x, v.c3.z, t20);
+    let t48 = t32 - t33;
+    let t49 = t32 + t33;
+    let t50 = t34 - t35;
+    let t51 = t34 + t35;
+    let t52 = t48 - t50;
+    let t53 = t36 - t47;
+    let t54 = t37 + t44;
+    let t55 = t38 + t45;
+    let t56 = t36 + t47;
+    let t57 = t48 + t50;
+    let t58 = t39 - t42;
+    let t59 = t41 - t43;
+    let t60 = t37 - t44;
+    let t61 = t39 + t42;
+    let t62 = t49 - t51;
+    let t63 = t40 + t46;
+    let t64 = t38 - t45;
+    let t65 = t41 + t43;
+    let t66 = t40 - t46;
+    let t67 = t49 + t51;
+    let t70 = x.c0.z * t54;
+    let t72 = x.c0.x * t56;
+    let t77 = x.c0.y * t61;
+    let t82 = x.c0.z * t66;
+    let t84 = fma(x.c0.y, t53, t70);
+    let t85 = fma(x.c0.w, t55, t84);
+    let t86 = t85 * 2.0;
+    let t87 = fma(x.c0.x, t52, t86);
+    let t88 = fma(-x.c0.z, t58, t72);
+    let t89 = fma(-x.c0.w, t59, t88);
+    let t90 = t89 * 2.0;
+    let t91 = fma(-x.c0.y, t57, t90);
+    let t92 = fma(x.c0.x, t60, t77);
+    let t93 = fma(x.c0.w, t63, t92);
+    let t94 = t93 * 2.0;
+    let t95 = fma(-x.c0.z, t62, t94);
+    let t96 = fma(-x.c0.x, t64, t82);
+    let t97 = fma(-x.c0.y, t65, t96);
+    let t98 = t97 * 2.0;
+    let t99 = fma(-x.c0.w, t67, t98);
+    return Quadvector(vec4<f16>(t87, t91, t95, t99), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Odd` v and `Direction` x (`v >> x`).
+fn unit_odd_sandwich_direction(v: Odd, x: Direction) -> Quadvector {
+    let t4 = v.c2.w * v.c2.w;
+    let t5 = v.c3.x * v.c3.x;
+    let t6 = v.c3.y * v.c3.y;
+    let t7 = v.c3.z * v.c3.z;
+    let t11 = v.c0.y * v.c2.w;
+    let t12 = v.c0.y * v.c3.y;
+    let t13 = v.c0.y * v.c3.z;
+    let t16 = v.c0.z * v.c2.w;
+    let t18 = v.c0.z * v.c3.z;
+    let t20 = v.c0.w * v.c2.w;
+    let t26 = v.c2.w * v.c3.x;
+    let t27 = v.c2.w * v.c3.y;
+    let t28 = v.c2.w * v.c3.z;
+    let t29 = v.c3.x * v.c3.y;
+    let t30 = v.c3.x * v.c3.z;
+    let t31 = v.c3.y * v.c3.z;
+    let t32 = fma(v.c0.y, v.c0.y, t5);
+    let t33 = fma(v.c0.z, v.c0.z, t6);
+    let t34 = fma(v.c0.w, v.c0.w, t7);
+    let t35 = fma(v.c1.x, v.c1.x, t4);
+    let t36 = fma(v.c0.y, v.c0.z, t29);
+    let t37 = fma(v.c0.y, v.c0.w, t30);
+    let t38 = fma(v.c0.y, v.c1.x, t26);
+    let t39 = fma(-v.c1.x, v.c3.x, t11);
+    let t40 = fma(-v.c0.z, v.c3.x, t12);
+    let t41 = fma(-v.c0.w, v.c3.x, t13);
+    let t42 = fma(v.c0.z, v.c0.w, t31);
+    let t43 = fma(v.c0.z, v.c1.x, t27);
+    let t44 = fma(-v.c1.x, v.c3.y, t16);
+    let t45 = fma(-v.c0.w, v.c3.y, t18);
+    let t46 = fma(v.c0.w, v.c1.x, t28);
+    let t47 = fma(-v.c1.x, v.c3.z, t20);
+    let t48 = t32 - t33;
+    let t49 = t32 + t33;
+    let t50 = t34 - t35;
+    let t51 = t34 + t35;
+    let t52 = t48 - t50;
+    let t53 = t36 - t47;
+    let t54 = t37 + t44;
+    let t55 = t38 + t45;
+    let t56 = t36 + t47;
+    let t57 = t48 + t50;
+    let t58 = t39 - t42;
+    let t59 = t41 - t43;
+    let t60 = t37 - t44;
+    let t61 = t39 + t42;
+    let t62 = t49 - t51;
+    let t63 = t40 + t46;
+    let t64 = t38 - t45;
+    let t65 = t41 + t43;
+    let t66 = t40 - t46;
+    let t67 = t49 + t51;
+    let t70 = x.c0.z * t54;
+    let t72 = x.c0.x * t56;
+    let t77 = x.c0.y * t61;
+    let t82 = x.c0.z * t66;
+    let t84 = fma(x.c0.y, t53, t70);
+    let t85 = fma(x.c0.w, t55, t84);
+    let t86 = t85 * 2.0;
+    let t87 = fma(x.c0.x, t52, t86);
+    let t88 = fma(-x.c0.z, t58, t72);
+    let t89 = fma(-x.c0.w, t59, t88);
+    let t90 = t89 * 2.0;
+    let t91 = fma(-x.c0.y, t57, t90);
+    let t92 = fma(x.c0.x, t60, t77);
+    let t93 = fma(x.c0.w, t63, t92);
+    let t94 = t93 * 2.0;
+    let t95 = fma(-x.c0.z, t62, t94);
+    let t96 = fma(-x.c0.x, t64, t82);
+    let t97 = fma(-x.c0.y, t65, t96);
+    let t98 = t97 * 2.0;
+    let t99 = fma(-x.c0.w, t67, t98);
+    return Quadvector(vec4<f16>(t87, t91, t95, t99), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Odd` v and `OriginHyperplane` x (`v >> x`).
+fn odd_sandwich_origin_hyperplane(v: Odd, x: OriginHyperplane) -> Odd {
+    let t0 = v.c0.y * x.c0.x;
+    let t1 = v.c0.z * x.c0.y;
+    let t3 = t0 + t1;
+    let t4 = fma(v.c0.w, x.c0.z, t3);
+    let t7 = v.c2.w * x.c0.z;
+    let t8 = fma(v.c0.y, x.c0.y, t7);
+    let t9 = fma(-v.c0.z, x.c0.x, t8);
+    let t10 = v.c0.y * x.c0.z;
+    let t13 = fma(-v.c0.w, x.c0.x, t10);
+    let t14 = fma(-v.c2.w, x.c0.y, t13);
+    let t15 = v.c0.y * x.c0.w;
+    let t18 = fma(v.c3.y, x.c0.z, t15);
+    let t19 = fma(-v.c1.x, x.c0.x, t18);
+    let t20 = v.c0.z * x.c0.z;
+    let t23 = fma(v.c2.w, x.c0.x, t20);
+    let t24 = fma(-v.c0.w, x.c0.y, t23);
+    let t25 = v.c0.z * x.c0.w;
+    let t28 = fma(-v.c1.x, x.c0.y, t25);
+    let t29 = fma(-v.c3.x, x.c0.z, t28);
+    let t32 = v.c3.x * x.c0.y;
+    let t33 = fma(v.c0.w, x.c0.w, t32);
+    let t34 = fma(-v.c1.x, x.c0.z, t33);
+    let t35 = v.c2.w * x.c0.w;
+    let t38 = fma(-v.c3.x, x.c0.x, t35);
+    let t39 = fma(-v.c3.y, x.c0.y, t38);
+    let t40 = v.c0.y * v.c2.w;
+    let t42 = fma(-v.c1.x, v.c3.x, t40);
+    let t43 = v.c1.x * x.c0.w;
+    let t44 = t0 - t43;
+    let t45 = v.c3.x * x.c0.w;
+    let t46 = t20 - t45;
+    let t47 = t43 - t4;
+    let t48 = t45 - t24;
+    let t49 = v.c3.y * x.c0.x;
+    let t50 = t49 - t34;
+    let t52 = fma(v.c3.y, x.c0.w, t14);
+    let t54 = fma(v.c3.z, x.c0.x, t29);
+    let t56 = fma(v.c3.z, x.c0.y, -t19);
+    let t58 = fma(v.c3.z, x.c0.z, -t39);
+    let t60 = fma(v.c3.z, x.c0.w, -t9);
+    let t61 = v.c0.y * v.c0.y;
+    let t62 = v.c0.z * v.c0.z;
+    let t63 = v.c0.w * v.c0.w;
+    let t64 = v.c1.x * v.c1.x;
+    let t65 = v.c2.w * v.c2.w;
+    let t66 = v.c3.x * v.c3.x;
+    let t67 = v.c3.y * v.c3.y;
+    let t68 = v.c3.z * v.c3.z;
+    let t69 = v.c0.w * v.c2.w;
+    let t72 = v.c1.z * t52;
+    let t75 = v.c2.y * t54;
+    let t76 = v.c2.z * t50;
+    let t77 = v.c3.w * t58;
+    let t80 = v.c0.y * v.c0.w;
+    let t81 = x.c0.z * t80;
+    let t84 = x.c0.x * t63;
+    let t85 = x.c0.y * t69;
+    let t86 = x.c0.x * t64;
+    let t89 = x.c0.x * t66;
+    let t91 = v.c3.y * t34;
+    let t92 = x.c0.x * t68;
+    let t97 = x.c0.y * t63;
+    let t98 = x.c0.x * t69;
+    let t100 = x.c0.y * t64;
+    let t102 = v.c2.w * v.c3.y;
+    let t105 = v.c3.x * t49;
+    let t106 = x.c0.y * t67;
+    let t107 = x.c0.y * t68;
+    let t108 = v.c3.z * t19;
+    let t112 = x.c0.z * t62;
+    let t114 = v.c0.z * v.c2.w;
+    let t116 = v.c0.z * v.c3.x;
+    let t117 = x.c0.w * t116;
+    let t120 = x.c0.z * t64;
+    let t121 = v.c1.x * t49;
+    let t124 = x.c0.z * t67;
+    let t125 = x.c0.z * t68;
+    let t126 = v.c3.z * t39;
+    let t127 = x.c0.y * t42;
+    let t129 = x.c0.w * t62;
+    let t131 = x.c0.w * t64;
+    let t134 = x.c0.w * t66;
+    let t135 = v.c3.x * t24;
+    let t138 = x.c0.w * t68;
+    let t139 = v.c3.z * t9;
+    let t143 = v.c1.w * t50;
+    let t145 = v.c2.y * t52;
+    let t146 = v.c2.z * t60;
+    let t147 = v.c3.w * t47;
+    let t148 = fma(v.c2.x, t56, t76);
+    let t149 = fma(-v.c0.x, t47, t77);
+    let t150 = t148 + t149;
+    let t151 = fma(v.c1.y, t48, t72);
+    let t152 = fma(v.c1.w, t60, t75);
+    let t153 = t151 + t152;
+    let t154 = t150 - t153;
+    let t155 = t154 * 2.0;
+    let t156 = fma(x.c0.x, t61, t86);
+    let t157 = fma(x.c0.x, t65, t89);
+    let t158 = t156 + t157;
+    let t159 = fma(x.c0.x, t62, t84);
+    let t160 = fma(x.c0.x, t67, t92);
+    let t161 = t159 + t160;
+    let t162 = t158 - t161;
+    let t163 = fma(v.c0.y, t1, t81);
+    let t164 = fma(v.c2.w, t46, t91);
+    let t165 = t163 + t164;
+    let t166 = fma(v.c1.x, t15, t85);
+    let t167 = fma(v.c3.z, t29, t166);
+    let t168 = t165 - t167;
+    let t170 = fma(t168, 2.0, t162);
+    let t171 = fma(x.c0.y, t62, t100);
+    let t172 = fma(x.c0.y, t65, t106);
+    let t173 = t171 + t172;
+    let t174 = fma(x.c0.y, t61, t97);
+    let t175 = fma(x.c0.y, t66, t107);
+    let t176 = t174 + t175;
+    let t177 = t173 - t176;
+    let t178 = fma(v.c0.z, t44, t98);
+    let t179 = fma(v.c0.w, t46, t105);
+    let t180 = t178 + t179;
+    let t181 = fma(-x.c0.w, t102, t108);
+    let t182 = fma(-x.c0.z, t42, t181);
+    let t183 = t180 + t182;
+    let t185 = fma(t183, 2.0, t177);
+    let t186 = fma(x.c0.z, t63, t120);
+    let t187 = fma(x.c0.z, t65, t125);
+    let t188 = t186 + t187;
+    let t189 = fma(x.c0.z, t61, t112);
+    let t190 = fma(x.c0.z, t66, t124);
+    let t191 = t189 + t190;
+    let t192 = t188 - t191;
+    let t193 = fma(v.c0.w, t1, t117);
+    let t194 = fma(v.c0.w, t44, t121);
+    let t195 = t193 + t194;
+    let t196 = fma(-v.c3.y, t15, t127);
+    let t197 = fma(x.c0.x, t114, t126);
+    let t198 = t196 - t197;
+    let t199 = t195 + t198;
+    let t201 = fma(t199, 2.0, t192);
+    let t202 = fma(x.c0.w, t61, t129);
+    let t203 = fma(x.c0.w, t63, t131);
+    let t204 = t202 + t203;
+    let t205 = fma(x.c0.w, t65, t134);
+    let t206 = fma(x.c0.w, t67, t138);
+    let t207 = t205 + t206;
+    let t208 = t204 + t207;
+    let t209 = fma(v.c1.x, t4, t135);
+    let t210 = fma(-v.c3.y, t14, t139);
+    let t211 = t209 + t210;
+    let t213 = fma(t211, 2.0, -t208);
+    let t214 = fma(v.c1.y, t56, t143);
+    let t215 = fma(v.c2.x, t48, t145);
+    let t216 = t214 + t215;
+    let t217 = fma(-v.c0.x, t58, t146);
+    let t218 = fma(v.c1.z, t54, t147);
+    let t219 = t217 - t218;
+    let t220 = t216 + t219;
+    let t221 = t220 * 2.0;
+    return Odd(vec4<f16>(t155, t170, t185, t201), vec4<f16>(t213, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t221));
+}
+
+// `v x ~v` for a unit `Odd` v and `OriginHyperplane` x (`v >> x`).
+fn unit_odd_sandwich_origin_hyperplane(v: Odd, x: OriginHyperplane) -> Vector {
+    let t1 = v.c0.z * x.c0.y;
+    let t2 = v.c0.w * x.c0.z;
+    let t4 = fma(v.c0.y, x.c0.x, t1);
+    let t5 = fma(-v.c1.x, x.c0.w, t2);
+    let t6 = t4 + t5;
+    let t9 = v.c2.w * x.c0.z;
+    let t10 = v.c3.z * x.c0.w;
+    let t11 = fma(v.c0.y, x.c0.y, t9);
+    let t12 = fma(v.c0.z, x.c0.x, t10);
+    let t13 = t11 - t12;
+    let t16 = v.c2.w * x.c0.y;
+    let t17 = v.c3.y * x.c0.w;
+    let t18 = fma(v.c0.y, x.c0.z, t17);
+    let t19 = fma(v.c0.w, x.c0.x, t16);
+    let t20 = t18 - t19;
+    let t23 = v.c3.y * x.c0.z;
+    let t24 = v.c3.z * x.c0.y;
+    let t25 = fma(v.c0.y, x.c0.w, t23);
+    let t26 = fma(v.c1.x, x.c0.x, t24);
+    let t27 = t25 - t26;
+    let t30 = v.c2.w * x.c0.x;
+    let t31 = v.c3.x * x.c0.w;
+    let t32 = fma(v.c0.z, x.c0.z, t30);
+    let t33 = fma(v.c0.w, x.c0.y, t31);
+    let t34 = t32 - t33;
+    let t37 = v.c3.x * x.c0.z;
+    let t38 = v.c3.z * x.c0.x;
+    let t39 = fma(v.c0.z, x.c0.w, t38);
+    let t40 = fma(v.c1.x, x.c0.y, t37);
+    let t41 = t39 - t40;
+    let t44 = v.c3.x * x.c0.y;
+    let t45 = v.c3.y * x.c0.x;
+    let t46 = fma(v.c0.w, x.c0.w, t44);
+    let t47 = fma(v.c1.x, x.c0.z, t45);
+    let t48 = t46 - t47;
+    let t49 = v.c2.w * x.c0.w;
+    let t52 = v.c3.z * x.c0.z;
+    let t53 = fma(-v.c3.x, x.c0.x, t49);
+    let t54 = fma(v.c3.y, x.c0.y, t52);
+    let t55 = t53 - t54;
+    let t57 = v.c1.y * t34;
+    let t59 = v.c1.w * t13;
+    let t61 = v.c2.y * t41;
+    let t63 = v.c3.w * t55;
+    let t65 = v.c0.w * t20;
+    let t67 = v.c3.x * t55;
+    let t70 = v.c3.x * t48;
+    let t71 = v.c3.z * t27;
+    let t73 = v.c2.w * t13;
+    let t74 = v.c3.x * t41;
+    let t77 = v.c3.x * t34;
+    let t79 = v.c3.z * t13;
+    let t80 = fma(v.c0.x, t6, t57);
+    let t81 = fma(-v.c1.z, t20, t59);
+    let t82 = t80 + t81;
+    let t83 = fma(v.c2.x, t27, t61);
+    let t84 = fma(v.c2.z, t48, t63);
+    let t85 = t83 + t84;
+    let t86 = t82 - t85;
+    let t87 = t86 * 2.0;
+    let t88 = fma(v.c0.z, t13, t65);
+    let t89 = fma(v.c1.x, t27, t67);
+    let t90 = t88 - t89;
+    let t93 = v.c0.z * v.c0.z;
+    let t96 = v.c2.w * v.c2.w;
+    let t97 = v.c3.x * v.c3.x;
+    let t99 = v.c3.z * v.c3.z;
+    let t100 = fma(v.c0.y, v.c0.y, t93);
+    let t101 = fma(v.c0.w, v.c0.w, t96);
+    let t102 = t100 + t101;
+    let t103 = fma(v.c1.x, v.c1.x, t97);
+    let t104 = fma(v.c3.y, v.c3.y, t99);
+    let t105 = t103 + t104;
+    let t106 = t102 - t105;
+    let t107 = x.c0.x * t106;
+    let t108 = fma(t90, 2.0, t107);
+    let t109 = fma(v.c0.z, t6, t71);
+    let t110 = fma(v.c2.w, t20, t70);
+    let t111 = t109 - t110;
+    let t112 = t111 * 2.0;
+    let t114 = fma(-x.c0.y, t106, t112);
+    let t115 = fma(v.c0.w, t6, t73);
+    let t116 = fma(-v.c3.y, t27, t74);
+    let t117 = t115 + t116;
+    let t118 = t117 * 2.0;
+    let t120 = fma(-x.c0.z, t106, t118);
+    let t121 = fma(v.c1.x, t6, t77);
+    let t122 = fma(-v.c3.y, t20, t79);
+    let t123 = t121 + t122;
+    let t124 = t123 * 2.0;
+    let t126 = fma(-x.c0.w, t106, t124);
+    return Vector(vec4<f16>(t87, t108, t114, t120), vec4<f16>(t126, 0.0, 0.0, 0.0));
 }
 
 // Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative

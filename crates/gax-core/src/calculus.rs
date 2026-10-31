@@ -52,13 +52,16 @@ use core::ops::Add;
 #[diagnostic::on_unimplemented(
     message = "`{Self}` has no reciprocal frame",
     label = "no reciprocal frame",
-    note = "the Gram matrix of the kind's blades under the scalar product is singular: the kind holds a null direction (such as PGA's `e0`), so a derivative cannot be taken back to an element of it",
+    note = "the Gram matrix of the kind's blades under the scalar product is singular: the kind holds a null direction (such as PGA's `e0`), so a derivative cannot be taken back to an element of it, nor a map transposed through the metric (`adjoint`)",
     note = "`gax::jet::gradient` and `jacobian` give the derivative as the form or map it is, which needs no metric"
 )]
 pub trait Reciprocal: Kind {
     /// The reciprocal blades: `FRAME[i]` lists `e^i` as `(coefficient index, numerator,
     /// denominator)` in this kind's layout.
     const FRAME: &'static [&'static [(usize, i64, i64)]];
+    /// The Gram matrix of the kind's blades under the scalar product, whose inverse `FRAME`
+    /// is: `GRAM[i]` lists the nonzero `⟨e_i e_k⟩₀` as `(k, value)`, in this kind's layout.
+    const GRAM: &'static [&'static [(usize, i64)]];
 }
 
 /// The reciprocal blade `e^i` of a kind's coefficient `i`: `e^i ∗ e_k = δ_ik`.

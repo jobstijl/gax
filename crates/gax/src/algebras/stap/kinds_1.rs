@@ -421,6 +421,29 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A, B), T
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Scalar<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Scalar`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A,), T, O> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -1403,6 +1426,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A, B), T
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Vector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+}
+
 impl<T: gx::Coef, O: gx::Orientation> Vector<(Vector<(), f64, O>,), T, O> {
     /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
     /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
@@ -2370,6 +2406,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A, B),
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Bivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
     }
 }
 
@@ -3789,6 +3838,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A, B)
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Trivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Trivector<(A,), T, O> {
     /// The inverse map, `A <- Trivector`.
     #[inline]
@@ -4915,6 +4977,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A, B
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Quadvector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+}
+
 impl<T: gx::Coef, O: gx::Orientation> Quadvector<(Quadvector<(), f64, O>,), T, O> {
     /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
     /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
@@ -5749,6 +5824,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Pseudoscalar<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
     }
 }
 
@@ -6590,6 +6678,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Motor<(A, B), T,
         Self: gx::OfBoth<P, Q>,
     {
         gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Motor<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
     }
 }
 
@@ -8517,6 +8618,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A, B), T, O
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Odd<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
     /// The inverse map, `A <- Odd`.
     #[inline]
@@ -10423,6 +10537,19 @@ impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A, 
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Multivector<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
@@ -10914,418 +11041,366 @@ impl<T: gx::Real, O: gx::Orientation> gx::Norm for Multivector<(), T, O> {
     }
 }
 
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
+#[doc = "A direction in spacetime: an ideal event (an event at infinity), the weightless part of an `Event`, such as the direction of a worldline. Its slots take steps and velocities. It pairs with `OriginHyperplane`s, its complement."]
+///
+/// Blades, in coefficient order: `[e0324, e0134, e0214, e0123]`.
+///
+/// `S` lists the open slots: `Direction` (that is, `Direction<()>`) is a value, `Direction<(A,)>` a
+/// linear map from `A`, `Direction<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
+/// the orientation of the output, intrinsic by default (ADR-051).
+#[repr(C)]
+pub struct Direction<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Intrinsic> {
+    /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
+    pub c: [S::Arr<T>; 4],
+    o: core::marker::PhantomData<O>,
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Clone for Direction<S, T, O> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Copy for Direction<S, T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> PartialEq for Direction<S, T, O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.c == other.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Direction<S, T, O> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut d = f.debug_struct(if O::SIGN < 0 { "intrinsic Direction" } else { "Direction" });
+        for (b, c) in <Direction as gx::Kind>::BLADES.iter().zip(self.c.iter()) {
+            d.field(b, c);
+        }
+        d.finish()
+    }
+}
+
+// SAFETY: `Arr<X>` is `[X; 4]`, the layout `gx::FlatKind` promises.
+unsafe impl<O: gx::Orientation> gx::FlatKind for Direction<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Kind for Direction<(), f64, O> {
+    const N: usize = 4;
+    const NAME: &'static str = "Direction";
+    const MODULE: &'static str = module_path!();
+    const BLADES: &'static [&'static str] = &["e0324", "e0134", "e0214", "e0123"];
+    type Arr<X: gx::Elem> = [X; 4];
+    type Mv<S: gx::Slots, T: gx::Coef> = Direction<S, T, O>;
+    type Scalar = Scalar;
+    type Orientation = O;
+    const DEFAULT_INTRINSIC: bool = true;
+    #[inline(always)]
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 4] {
+        [f(0), f(1), f(2), f(3)]
+    }
+    #[inline(always)]
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 4], mut f: impl FnMut(&X) -> Y) -> [Y; 4] {
+        [f(&a[0]), f(&a[1]), f(&a[2]), f(&a[3])]
+    }
+    #[inline(always)]
+    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
+        a: &[X; 4],
+        b: &[Y; 4],
+        mut f: impl FnMut(&X, &Y) -> Z,
+    ) -> [Z; 4] {
+        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2]), f(&a[3], &b[3])]
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Direction<S, T, O> {
+    type Kind = Direction<(), f64, O>;
+    type Slots = S;
+    type Coef = T;
+    #[inline(always)]
+    fn from_coeffs(c: [S::Arr<T>; 4]) -> Self {
+        Direction { o: core::marker::PhantomData, c }
+    }
+    #[inline(always)]
+    fn coeffs(&self) -> &[S::Arr<T>; 4] {
+        &self.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Direction<S, T, O> {
+    /// Construct from output-first coefficients.
+    #[inline(always)]
+    pub const fn from_coeffs(c: [S::Arr<T>; 4]) -> Self {
+        Direction { o: core::marker::PhantomData, c }
+    }
+
+    /// All coefficients zero.
+    #[inline(always)]
+    pub fn zero() -> Self {
+        Direction { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0); 4] }
+    }
+
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Direction<S, U, O> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
+    /// Fill the first open slot with a value, or compose a map into it.
+    #[inline(always)]
+    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
+    where
+        Self: gx::Of<X>,
+    {
+        gx::Of::of(self, x)
+    }
+
+    /// This value or map as a `K` of its own orientation (`K` names only the kind, so turbofish
+    /// it: `x.cast::<Line>()`): the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    where
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Direction<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
+    {
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
+    }
+
+    /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
+    /// (a file, a GPU buffer, a raw `new`) whose orientation the type does not know.
+    #[inline(always)]
+    pub fn with_orientation<O2: gx::Orientation>(self) -> Direction<S, T, O2> {
+        Direction { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Direction<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Direction<(), f64, O>: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
+    #[inline]
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
+    where
+        Self: gx::LeastSquaresDyad<X>,
+    {
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
+    }
+
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
+    where
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
+    {
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
+    where
+        Self: gx::OfDyad,
+    {
+        gx::OfDyad::of_dyad(self, x)
+    }
+
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Direction<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
+    where
+        S: gx::__private::MoveToFront<I>,
+    {
+        Direction { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Direction`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Direction<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    where
+        S: gx::__private::MoveToFront<I>,
+        Direction<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Direction<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::__private::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Direction { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
+    /// See [`gx::Gp`].
+    #[inline(always)]
+    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
+    where
+        Self: gx::Gp<R>,
+    {
+        gx::Gp::gp(self, rhs)
+    }
+
+    /// See [`gx::Wedge`].
+    #[inline(always)]
+    pub fn wedge<R>(self, rhs: R) -> <Self as gx::Wedge<R>>::Output
+    where
+        Self: gx::Wedge<R>,
+    {
+        gx::Wedge::wedge(self, rhs)
+    }
+
+    /// See [`gx::Vee`].
+    #[inline(always)]
+    pub fn vee<R>(self, rhs: R) -> <Self as gx::Vee<R>>::Output
+    where
+        Self: gx::Vee<R>,
+    {
+        gx::Vee::vee(self, rhs)
+    }
+
+    /// See [`gx::Dot`].
+    #[inline(always)]
+    pub fn dot<R>(self, rhs: R) -> <Self as gx::Dot<R>>::Output
+    where
+        Self: gx::Dot<R>,
+    {
+        gx::Dot::dot(self, rhs)
+    }
+
+    /// See [`gx::Rc`].
+    #[inline(always)]
+    pub fn rc<R>(self, rhs: R) -> <Self as gx::Rc<R>>::Output
+    where
+        Self: gx::Rc<R>,
+    {
+        gx::Rc::rc(self, rhs)
+    }
+
+    /// See [`gx::Commutator`].
+    #[inline(always)]
+    pub fn commutator<R>(self, rhs: R) -> <Self as gx::Commutator<R>>::Output
+    where
+        Self: gx::Commutator<R>,
+    {
+        gx::Commutator::commutator(self, rhs)
+    }
+
+    /// See [`gx::Anticommutator`].
+    #[inline(always)]
+    pub fn anticommutator<R>(self, rhs: R) -> <Self as gx::Anticommutator<R>>::Output
+    where
+        Self: gx::Anticommutator<R>,
+    {
+        gx::Anticommutator::anticommutator(self, rhs)
+    }
+
+    /// See [`gx::Reverse`].
+    #[inline(always)]
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+        gx::Reverse::reverse(self)
+    }
+
+    /// See [`gx::Involute`].
+    #[inline(always)]
+    pub fn involute(self) -> <Self as gx::Involute>::Output {
+        gx::Involute::involute(self)
+    }
+
+    /// See [`gx::Conjugate`].
+    #[inline(always)]
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+        gx::Conjugate::conjugate(self)
+    }
+
+    /// See [`gx::Dual`].
+    #[inline(always)]
+    pub fn dual(self) -> <Self as gx::Dual>::Output {
+        gx::Dual::dual(self)
+    }
+
+    /// See [`gx::Undual`].
+    #[inline(always)]
+    pub fn undual(self) -> <Self as gx::Undual>::Output {
+        gx::Undual::undual(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Direction<S, T, O> {
+    type Out = Direction<S, T, O2>;
+    #[inline(always)]
+    fn reorient(self) -> Direction<S, T, O2> {
+        Direction { o: core::marker::PhantomData, c: self.c }
+    }
+}
+
+impl<T: gx::Coef> Direction<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e0324: T, e0134: T, e0214: T, e0123: T) -> Self {
+        Direction { o: core::marker::PhantomData, c: [e0324, e0134, e0214, e0123] }
+    }
+
+    /// The identity map on `Direction`: a `Direction` with one open `Direction` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Direction<(Direction<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Direction { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Direction<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e0324: T, e0134: T, e0214: T, e0123: T) -> Self {
+        Direction { o: core::marker::PhantomData, c: [e0324, e0134, e0214, e0123] }
+    }
+
+    /// The identity map on `Direction`: a `Direction` with one open `Direction` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Direction<(Direction<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Direction { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Direction<(), T, O> {
+    type Map = Direction<(Direction<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Direction { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
 }
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Scalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Vector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Bivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Trivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Quadvector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Motor<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Odd<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Vector<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Bivector<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Trivector<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Quadvector<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Odd<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::__private::False;
-}
-
-impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Multivector<(), f64, OA> {
-    type Out = gx::orientation::Same<OA, OB>;
-}
-
-#[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Scalar<(), f64, O> {
-    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)]];
-}
-
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Scalar<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<0> for Scalar<(), f64, O> {
-    type Out = Scalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Vector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Vector<(), f64, O>> for Vector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Vector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Vector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Vector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Vector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Vector<(), f64, O> {
-    type Out = Vector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Bivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Bivector<(), f64, O>> for Bivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Bivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (6, 7, false), (7, 8, false), (8, 9, false), (9, 10, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Bivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Bivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 6, false), (1, 7, false), (2, 8, false), (3, 9, false), (4, 10, false), (5, 11, false), (6, 12, false), (7, 13, false), (8, 14, false), (9, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Bivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<2> for Bivector<(), f64, O> {
-    type Out = Bivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Trivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Trivector<(), f64, O>> for Trivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Trivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 6, false), (2, 7, false), (3, 8, false), (4, 9, false), (5, 10, false), (6, 11, false), (7, 12, false), (8, 13, false), (9, 14, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Trivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Trivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 16, false), (1, 17, false), (2, 18, false), (3, 19, false), (4, 20, false), (5, 21, false), (6, 22, false), (7, 23, false), (8, 24, false), (9, 25, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Trivector<(), f64, O> {}

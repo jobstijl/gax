@@ -224,6 +224,52 @@ where
     }))
 }
 
+/// A value of a map's input kind with fresh coefficients.
+pub fn fresh_input<M: Extensor<Coef = Sym, Slots = (K,)>, K: Kind>(_: &M) -> K::Mv<(), Sym> {
+    fresh()
+}
+
+/// The identity map on `K`, through its slot.
+pub fn slot<K: Kind, C: Coef>() -> <K::Mv<(), C> as gax::Slot>::Map
+where
+    K::Mv<(), C>: gax::Slot,
+{
+    <K::Mv<(), C> as gax::Slot>::slot()
+}
+
+/// Whether a map is the identity matrix in its coefficients.
+pub fn is_identity<M: Extensor<Slots = (K,)>, K: Kind>(m: &M) -> bool {
+    let (one, zero) = (M::Coef::one(), M::Coef::zero());
+    <M::Kind as Kind>::N == K::N
+        && m.coeffs().as_ref().iter().enumerate().all(|(o, col)| {
+            col.as_ref()
+                .iter()
+                .enumerate()
+                .all(|(i, x)| *x == if i == o { one } else { zero })
+        })
+}
+
+/// `t` with each coefficient times `(−1)^(k(n−k))` for the grade `k` of its output blade and
+/// again for that of its input blade: the sign of swapping the pairing of a blade with its
+/// complement in `n` dimensions, which applying the adjugate twice leaves.
+pub fn swap_signs<M: Extensor<Slots = (K,)>, K: Kind>(t: &M, n: usize) -> M {
+    let odd = |b: &str| {
+        let k = blade_grade(b);
+        k * (n - k) % 2 == 1
+    };
+    let c = t.coeffs().as_ref();
+    M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|o| {
+        K::arr_from_fn(|i| {
+            let x = c[o].as_ref()[i];
+            if odd(<M::Kind as Kind>::BLADES[o]) != odd(K::BLADES[i]) {
+                -x
+            } else {
+                x
+            }
+        })
+    }))
+}
+
 /// The determinant of a map, read from its extension to the top grade.
 pub fn top_coefficient<M: Extensor>(m: &M) -> M::Coef {
     <M::Slots as Slots>::get_flat(&m.coeffs().as_ref()[0], 0)
@@ -497,7 +543,7 @@ pub(crate) use sample_versor_field;
 /// The law suite of an algebra. The lists are generated from what the generator emitted.
 macro_rules! law_suite {
     (
-        scalar: $scalar:ident, slot: $slot:ident, other: $other:ident,
+        scalar: $scalar:ident, slot: $slot:ident, other: $other:ident, dimension: $dim:literal,
         products: [$(($ptr:ident, $pm:ident, $pa:ident, $pb:ident)),* $(,)?],
         unary: [$(($utr:ident, $um:ident, $ua:ident)),* $(,)?],
         sandwiches: [$(($sv:ident, $sx:ident)),* $(,)?],
@@ -508,9 +554,12 @@ macro_rules! law_suite {
         violations: [$(($nv:ident, $ntr:ident, $nm:ident, $na:ident, $nb:ident)),* $(,)?],
         conjugations: [$(($cv:ident, $cx:ident, $cs:literal, $cp:literal)),* $(,)?],
         outer: [$(($ov:ident, $ob:ident)),* $(,)?],
+        outer_two: [$(($xv:ident, $xb:ident, $xtr:ident, $xm:ident)),* $(,)?],
         top: [$(($tv:ident, $tb:ident)),* $(,)?],
         unit_det: [$(($dv:ident, $dx:ident, $dt:ident, $de:literal)),* $(,)?],
         pairings: [$(($rtr:ident, $rm:ident, $ra:ident, $rb:ident)),* $(,)?],
+        adjugates: [$(($ja:ident, $jb:ident)),* $(,)?],
+        adjoints: [$(($ka:ident, $kb:ident)),* $(,)?],
         divisions: [$(($divnum:ident, $divden:ident, $divback:ident)),* $(,)?],
         sampled: [$(($zv:ident, $zvec:ident, $zmv:ident, $zk:literal, $zp:literal, $zs:literal, $zx:ident)),* $(,)?],
         sampled_unit: [$(($uv:ident, $uvec:ident, $umv:ident, $uk:literal, $up:literal, $us:literal, $ux:ident)),* $(,)?],
@@ -752,8 +801,9 @@ macro_rules! law_suite {
 
         #[allow(unused_imports)]
         use law_suite::{
-            adjoint, close, factor, flat, fresh, law, oriented, projects_to, random_f64, reset,
-            same_mod, top_coefficient, unit_basis, var, versor_basis, T,
+            adjoint, close, factor, flat, fresh, fresh_input, is_identity, law, oriented,
+            projects_to, random_f64, reset, same_mod, scalar_part, slot, swap_signs,
+            top_coefficient, unit_basis, var, versor_basis, T,
         };
         #[allow(unused_imports)]
         use gax::{Coef, Extensor, Kind, Unit};
@@ -976,6 +1026,18 @@ macro_rules! law_suite {
                 // The identity extends to the identity (its orientation is the factors', ADR-051).
                 law($ov::<(), T>::slot().outermorphism::<$ob>().c == $ob::<(), T>::slot().c, name);
             })();)*
+            // On two factors it is the product that defines it: `∧` for vectors, `∨` for
+            // antivectors, the factors' product cast to the extended kind.
+            $((|| {
+                reset();
+                let f: $xv<($xv,), T> = fresh();
+                let (a, b): ($xv<(), T>, $xv<(), T>) = (fresh(), fresh());
+                law(
+                    f.outermorphism::<$xb>().of(gax::$xtr::$xm(a, b).cast::<$xb>())
+                        == gax::$xtr::$xm(f.of(a), f.of(b)).cast::<$xb>(),
+                    concat!(stringify!($xv), " to ", stringify!($xb), " on two factors"),
+                );
+            })();)*
             $((|| {
                 reset();
                 let (f, g): ($tv<($tv,), T>, $tv<($tv,), T>) = (fresh(), fresh());
@@ -1068,6 +1130,67 @@ macro_rules! law_suite {
                     let solved: $ra<($ra,), f64> = pf.solve(gax::$rtr::$rm($ra::slot(), tf));
                     let closed: $ra<($ra,), f64> = adjoint(&pf, &tf);
                     law(close(&solved, &closed, 1e-12), name);
+                }
+            })();)*
+        }
+
+        /// G: the adjugate of `t: B <- A`, the transpose through the regressive product, for
+        /// every kind with a declared complement as `A` and itself and its complement as `B`.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn adjugates() {
+            $((|| {
+                reset();
+                let name = concat!("adjugate of ", stringify!($jb), " <- ", stringify!($ja));
+                let t: $jb<($ja,), T> = fresh();
+                let s: $ja<($ja,), T> = fresh();
+                let adj = t.adjugate();
+                let (c, a): (_, $ja<(), T>) = (fresh_input(&adj), fresh());
+                // The defining identity, through the generated regressive product.
+                law(scalar_part(&(adj.of(c) & a)) == scalar_part(&(c & t.of(a))), name);
+                // It reverses composition and fixes the identity.
+                law(t.of(s).adjugate() == s.adjugate().of(adj), name);
+                law(is_identity(&$ja::<(), T>::slot().adjugate()), name);
+                // Twice: `t`, up to the sign of swapping each pairing.
+                law(adj.adjugate() == swap_signs(&t, $dim), name);
+
+                // The pairing's solve agrees (f64): `(C(A) & A)₀` solved against `(C(B) & t)₀`.
+                type Ca = <$ja as gax::Complement>::Out;
+                type Cb = <$jb as gax::Complement>::Out;
+                let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+                let pf = (slot::<Ca, f64>() & $ja::<(), f64>::slot()).cast::<$scalar>();
+                for _ in 0..4 {
+                    let tf: $jb<($ja,), f64> = random_f64(&mut seed);
+                    let solved = pf.solve((slot::<Cb, f64>() & tf).cast::<$scalar>());
+                    law(close(&solved, &tf.adjugate(), 1e-12), name);
+                }
+            })();)*
+        }
+
+        /// G: the adjoint of `t: B <- A`, the transpose through the scalar product, for every
+        /// kind on which the scalar product is non-degenerate.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn adjoints() {
+            $((|| {
+                reset();
+                let name = concat!("adjoint of ", stringify!($kb), " <- ", stringify!($ka));
+                let t: $kb<($ka,), T> = fresh();
+                let s: $ka<($ka,), T> = fresh();
+                let adj = t.adjoint();
+                let (a, b): ($ka<(), T>, $kb<(), T>) = (fresh(), fresh());
+                law(adj.of(b).scalar_product(a) == b.scalar_product(t.of(a)), name);
+                law(t.of(s).adjoint() == s.adjoint().of(adj), name);
+                law($ka::<(), T>::slot().adjoint() == $ka::slot(), name);
+                law(adj.adjoint() == t, name);
+
+                // The pairing's solve agrees (f64).
+                let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+                let pf = $ka::<(), f64>::slot().scalar_product($ka::<(), f64>::slot());
+                for _ in 0..4 {
+                    let tf: $kb<($ka,), f64> = random_f64(&mut seed);
+                    let solved = pf.solve($kb::<(), f64>::slot().scalar_product(tf));
+                    law(close(&solved, &tf.adjoint(), 1e-12), name);
                 }
             })();)*
         }

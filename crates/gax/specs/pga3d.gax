@@ -15,6 +15,11 @@ versor Translator = [1, e01, e02, e03] "A translation by `(dx, dy, dz)`: `1 - (d
 versor Motor = [1, e23, e31, e12, e01, e02, e03, e0123] "A rigid motion: the even subalgebra.";
 versor Flector = [e1, e2, e3, e0, e032, e013, e021, e123] "An improper rigid motion: the odd subalgebra.";
 kind Multivector = [1, e0, e1, e2, e3, e01, e02, e03, e12, e31, e23, e021, e013, e032, e123, e0123] "A general multivector, in the bivector.net order.";
+// The Euclidean and ideal parts of the planes and lines, each the complement of another
+// kind's, so that maps on them have adjugates and outermorphisms of their own (ADR-054).
+part Spin = [e23, e31, e12] "The Euclidean part of a line, `e23, e31, e12`: a line through the origin. Extrinsic (the default), the axis of a rotation about the origin, an angular velocity; intrinsic, a force through the origin. Its complement is `Moment`, and a map on `OriginPlane`s extends to it.";
+part Moment = [e01, e02, e03] intrinsic "The ideal part of a line, `e01, e02, e03`: a line at infinity. Intrinsic (the default), a couple (a pure torque) or an angular momentum; extrinsic, the translation part of a twist, a velocity. Its complement is `Spin`, and a map on `Direction`s extends to it.";
+part OriginPlane = [e1, e2, e3] "A plane through the origin, `a x + b y + c z = 0`: the Euclidean part of a plane, its normal as a plane. It pairs with `Direction`s, its complement.";
 
 // The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
 // (its dual), Even and Odd (the versors).

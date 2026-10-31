@@ -1,0 +1,5 @@
+error[E0599]: no method named `adjoint` found for struct `Plane<S, T, O>` in the current scope
+ --> tests/compile_fail/adjoint_degenerate.rs:7:15
+  |
+7 |     let _ = m.adjoint();
+  |               ^^^^^^^ method not found in `Plane<(Plane,)>`

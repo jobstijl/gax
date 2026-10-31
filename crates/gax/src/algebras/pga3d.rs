@@ -75,6 +75,24 @@ pub type Flector<S = (), T = f64> = oriented::Flector<S, T, gx::Extrinsic>;
 /// [`intrinsic::Multivector`] and [`extrinsic::Multivector`] name either one.
 pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
 
+#[doc = "The Euclidean part of a line, `e23, e31, e12`: a line through the origin. gx::Extrinsic (the default), the axis of a rotation about the origin, an angular velocity; intrinsic, a force through the origin. Its complement is `Moment`, and a map on `OriginPlane`s extends to it."]
+///
+/// In its default orientation, extrinsic: [`oriented::Spin`] is the kind for any orientation,
+/// [`intrinsic::Spin`] and [`extrinsic::Spin`] name either one.
+pub type Spin<S = (), T = f64> = oriented::Spin<S, T, gx::Extrinsic>;
+
+#[doc = "The ideal part of a line, `e01, e02, e03`: a line at infinity. gx::Intrinsic (the default), a couple (a pure torque) or an angular momentum; extrinsic, the translation part of a twist, a velocity. Its complement is `Spin`, and a map on `Direction`s extends to it."]
+///
+/// In its default orientation, intrinsic: [`oriented::Moment`] is the kind for any orientation,
+/// [`intrinsic::Moment`] and [`extrinsic::Moment`] name either one.
+pub type Moment<S = (), T = f64> = oriented::Moment<S, T, gx::Intrinsic>;
+
+#[doc = "A plane through the origin, `a x + b y + c z = 0`: the Euclidean part of a plane, its normal as a plane. It pairs with `Direction`s, its complement."]
+///
+/// In its default orientation, extrinsic: [`oriented::OriginPlane`] is the kind for any orientation,
+/// [`intrinsic::OriginPlane`] and [`extrinsic::OriginPlane`] name either one.
+pub type OriginPlane<S = (), T = f64> = oriented::OriginPlane<S, T, gx::Extrinsic>;
+
 /// Every kind of the algebra, intrinsic (ADR-051).
 pub mod intrinsic {
     use super::{gx, oriented};
@@ -101,6 +119,12 @@ pub mod intrinsic {
     pub type Flector<S = (), T = f64> = oriented::Flector<S, T, gx::Intrinsic>;
     /// [`oriented::Multivector`], intrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
+    /// [`oriented::Spin`], intrinsic.
+    pub type Spin<S = (), T = f64> = oriented::Spin<S, T, gx::Intrinsic>;
+    /// [`oriented::Moment`], intrinsic.
+    pub type Moment<S = (), T = f64> = oriented::Moment<S, T, gx::Intrinsic>;
+    /// [`oriented::OriginPlane`], intrinsic.
+    pub type OriginPlane<S = (), T = f64> = oriented::OriginPlane<S, T, gx::Intrinsic>;
 }
 
 /// Every kind of the algebra, extrinsic (ADR-051).
@@ -129,6 +153,12 @@ pub mod extrinsic {
     pub type Flector<S = (), T = f64> = oriented::Flector<S, T, gx::Extrinsic>;
     /// [`oriented::Multivector`], extrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
+    /// [`oriented::Spin`], extrinsic.
+    pub type Spin<S = (), T = f64> = oriented::Spin<S, T, gx::Extrinsic>;
+    /// [`oriented::Moment`], extrinsic.
+    pub type Moment<S = (), T = f64> = oriented::Moment<S, T, gx::Extrinsic>;
+    /// [`oriented::OriginPlane`], extrinsic.
+    pub type OriginPlane<S = (), T = f64> = oriented::OriginPlane<S, T, gx::Extrinsic>;
 }
 
 /// The kinds as structs generic over their orientation `O` (ADR-051), with every
@@ -136,7 +166,8 @@ pub mod extrinsic {
 pub mod oriented {
 use super::gx;
 
-include!("pga3d/kinds.rs");
+include!("pga3d/kinds_1.rs");
+include!("pga3d/kinds_2.rs");
 include!("pga3d/products_gp.rs");
 include!("pga3d/products_wedge.rs");
 include!("pga3d/products_vee.rs");

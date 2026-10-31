@@ -457,3 +457,59 @@ impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line
         Line { o: core::marker::PhantomData, c: [[m72, m73, m74, m75, m76, m77], [m78, m79, m80, m81, m82, m83], [m84, m85, m86, m87, m88, m89], [m90, m91, m92, m93, m94, m95], [m96, m97, m98, m99, m100, m101], [m102, m103, m104, m105, m106, m107]] }
     }
 }
+
+impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Moment<(), f64, X>> for Direction<(Direction<(), f64, O>,), T, O> {
+    type Output = Moment<(Moment<(), f64, gx::Intrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a map on `Direction` to `Moment`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Moment { o: core::marker::PhantomData, c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Spin<(), f64, X>> for OriginPlane<(OriginPlane<(), f64, O>,), T, O> {
+    type Output = Spin<(Spin<(), f64, gx::Extrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a map on `OriginPlane` to `Spin`, factor by factor with `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Spin { o: core::marker::PhantomData, c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}

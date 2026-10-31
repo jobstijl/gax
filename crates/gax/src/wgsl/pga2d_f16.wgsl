@@ -66,6 +66,11 @@ struct Multivector {
     c1: vec4<f16>,
 }
 
+// `OriginLine`: [e1, e2]
+struct OriginLine {
+    c0: vec4<f16>,
+}
+
 alias Twist = Point;
 
 alias Forque = Line;
@@ -122,6 +127,11 @@ fn flector_new(e1: f16, e2: f16, e0: f16, e012: f16) -> Flector {
 // A `Multivector` from its coefficients.
 fn multivector_new(s: f16, e0: f16, e1: f16, e2: f16, e01: f16, e20: f16, e12: f16, e012: f16) -> Multivector {
     return Multivector(vec4<f16>(s, e0, e1, e2), vec4<f16>(e01, e20, e12, e012));
+}
+
+// A `OriginLine` from its coefficients.
+fn origin_line_new(e1: f16, e2: f16) -> OriginLine {
+    return OriginLine(vec4<f16>(e1, e2, 0.0, 0.0));
 }
 
 // A `Line` as a `Flector`.
@@ -209,6 +219,11 @@ fn multivector_reverse(x: Multivector) -> Multivector {
     let t2 = -x.c1.z;
     let t3 = -x.c1.w;
     return Multivector(vec4<f16>(x.c0.x, x.c0.y, x.c0.z, x.c0.w), vec4<f16>(t0, t1, t2, t3));
+}
+
+// The reverse `~x`.
+fn origin_line_reverse(x: OriginLine) -> OriginLine {
+    return OriginLine(vec4<f16>(x.c0.x, x.c0.y, 0.0, 0.0));
 }
 
 // The geometric product of a `Line` and a `Line` (composition).
@@ -975,6 +990,36 @@ fn multivector_norm_squared(x: Multivector) -> f16 {
     return t6;
 }
 
+// The squared norm: the scalar part of `x ~x`.
+fn origin_line_norm_squared(x: OriginLine) -> f16 {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    return t2;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn origin_line_normalized(x: OriginLine) -> OriginLine {
+    let p1 = f32(x.c0.y) * f32(x.c0.y);
+    let p2 = fma(f32(x.c0.x), f32(x.c0.x), p1);
+    let s0 = f16(study_rsqrt_abs(p2));
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return OriginLine(vec4<f16>(t0, t1, 0.0, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn origin_line_renormalize_fast(x: OriginLine) -> OriginLine {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    let t3 = x.c0.x * t2;
+    let t4 = x.c0.y * t2;
+    let t6 = x.c0.x * (3.0 / 2.0);
+    let t7 = fma(-t3, (1.0 / 2.0), t6);
+    let t9 = x.c0.y * (3.0 / 2.0);
+    let t10 = fma(-t4, (1.0 / 2.0), t9);
+    return OriginLine(vec4<f16>(t7, t10, 0.0, 0.0));
+}
+
 // `v x ~v` for `Line` v and `Scalar` x (`v >> x`).
 fn line_sandwich_scalar(v: Line, x: Scalar) -> Scalar {
     let t1 = v.c0.y * v.c0.y;
@@ -1504,6 +1549,44 @@ fn unit_line_sandwich_multivector(v: Line, x: Multivector) -> Multivector {
     return Multivector(vec4<f16>(t34, t22, t24, t26), vec4<f16>(t29, t32, t35, t36));
 }
 
+// `v x ~v` for `Line` v and `OriginLine` x (`v >> x`).
+fn line_sandwich_origin_line(v: Line, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = v.c0.x * v.c0.z;
+    let t4 = v.c0.y * v.c0.z;
+    let t5 = fma(-v.c0.y, v.c0.y, t0);
+    let t7 = x.c0.y * t2;
+    let t8 = x.c0.x * t2;
+    let t11 = x.c0.y * t4;
+    let t12 = t7 * 2.0;
+    let t13 = fma(x.c0.x, t5, t12);
+    let t14 = t8 * 2.0;
+    let t15 = fma(-x.c0.y, t5, t14);
+    let t16 = fma(x.c0.x, t3, t11);
+    let t17 = t16 * 2.0;
+    return Line(vec4<f16>(t13, t15, t17, 0.0));
+}
+
+// `v x ~v` for a unit `Line` v and `OriginLine` x (`v >> x`).
+fn unit_line_sandwich_origin_line(v: Line, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = v.c0.x * v.c0.z;
+    let t4 = v.c0.y * v.c0.z;
+    let t5 = fma(-v.c0.y, v.c0.y, t0);
+    let t7 = x.c0.y * t2;
+    let t8 = x.c0.x * t2;
+    let t11 = x.c0.y * t4;
+    let t12 = t7 * 2.0;
+    let t13 = fma(x.c0.x, t5, t12);
+    let t14 = t8 * 2.0;
+    let t15 = fma(-x.c0.y, t5, t14);
+    let t16 = fma(x.c0.x, t3, t11);
+    let t17 = t16 * 2.0;
+    return Line(vec4<f16>(t13, t15, t17, 0.0));
+}
+
 // `v x ~v` for `Point` v and `Scalar` x (`v >> x`).
 fn point_sandwich_scalar(v: Point, x: Scalar) -> Scalar {
     let t0 = v.c0.z * v.c0.z;
@@ -1874,6 +1957,36 @@ fn unit_point_sandwich_multivector(v: Point, x: Multivector) -> Multivector {
     let t22 = t11 * 2.0;
     let t23 = fma(-x.c1.y, t0, t22);
     return Multivector(vec4<f16>(t3, t17, t18, t19), vec4<f16>(t21, t23, t13, t14));
+}
+
+// `v x ~v` for `Point` v and `OriginLine` x (`v >> x`).
+fn point_sandwich_origin_line(v: Point, x: OriginLine) -> Line {
+    let t0 = v.c0.z * v.c0.z;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = x.c0.y * t5;
+    let t7 = -t1;
+    let t8 = -t2;
+    let t9 = fma(x.c0.x, t3, t6);
+    let t10 = t9 * 2.0;
+    return Line(vec4<f16>(t7, t8, t10, 0.0));
+}
+
+// `v x ~v` for a unit `Point` v and `OriginLine` x (`v >> x`).
+fn unit_point_sandwich_origin_line(v: Point, x: OriginLine) -> Line {
+    let t0 = v.c0.z * v.c0.z;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = x.c0.y * t5;
+    let t7 = -t1;
+    let t8 = -t2;
+    let t9 = fma(x.c0.x, t3, t6);
+    let t10 = t9 * 2.0;
+    return Line(vec4<f16>(t7, t8, t10, 0.0));
 }
 
 // `v x ~v` for `Rotor` v and `Scalar` x (`v >> x`).
@@ -2300,6 +2413,34 @@ fn unit_rotor_sandwich_multivector(v: Rotor, x: Multivector) -> Multivector {
     return Multivector(vec4<f16>(t21, t22, t13, t15), vec4<f16>(t17, t19, t23, t24));
 }
 
+// `v x ~v` for `Rotor` v and `OriginLine` x (`v >> x`).
+fn rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t7 = x.c0.y * t3;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t11 = fma(-t6, 2.0, t7);
+    return Line(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `OriginLine` x (`v >> x`).
+fn unit_rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t7 = x.c0.y * t3;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t11 = fma(-t6, 2.0, t7);
+    return Line(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
 // `v x ~v` for `Translator` v and `Scalar` x (`v >> x`).
 fn translator_sandwich_scalar(v: Translator, x: Scalar) -> Scalar {
     let t0 = v.c0.x * v.c0.x;
@@ -2650,6 +2791,32 @@ fn unit_translator_sandwich_multivector(v: Translator, x: Multivector) -> Multiv
     let t19 = fma(x.c1.x, t0, t18);
     let t21 = fma(-t12, 2.0, t11);
     return Multivector(vec4<f16>(t3, t17, t7, t8), vec4<f16>(t19, t21, t13, t14));
+}
+
+// `v x ~v` for `Translator` v and `OriginLine` x (`v >> x`).
+fn translator_sandwich_origin_line(v: Translator, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = x.c0.x * t5;
+    let t7 = fma(-x.c0.y, t3, t6);
+    let t8 = t7 * 2.0;
+    return Line(vec4<f16>(t1, t2, t8, 0.0));
+}
+
+// `v x ~v` for a unit `Translator` v and `OriginLine` x (`v >> x`).
+fn unit_translator_sandwich_origin_line(v: Translator, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = x.c0.x * t5;
+    let t7 = fma(-x.c0.y, t3, t6);
+    let t8 = t7 * 2.0;
+    return Line(vec4<f16>(t1, t2, t8, 0.0));
 }
 
 // `v x ~v` for `Motor` v and `Scalar` x (`v >> x`).
@@ -3216,6 +3383,48 @@ fn unit_motor_sandwich_multivector(v: Motor, x: Multivector) -> Multivector {
     let t40 = x.c1.z * t26;
     let t41 = x.c1.w * t26;
     return Multivector(vec4<f16>(t39, t28, t30, t32), vec4<f16>(t35, t38, t40, t41));
+}
+
+// `v x ~v` for `Motor` v and `OriginLine` x (`v >> x`).
+fn motor_sandwich_origin_line(v: Motor, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t4 = v.c0.y * v.c0.z;
+    let t5 = v.c0.x * v.c0.z;
+    let t7 = fma(-v.c0.y, v.c0.y, t0);
+    let t8 = fma(v.c0.x, v.c0.w, t4);
+    let t9 = fma(-v.c0.y, v.c0.w, t5);
+    let t11 = x.c0.y * t2;
+    let t12 = x.c0.x * t2;
+    let t13 = x.c0.y * t7;
+    let t14 = x.c0.x * t8;
+    let t16 = t11 * 2.0;
+    let t17 = fma(x.c0.x, t7, t16);
+    let t19 = fma(-t12, 2.0, t13);
+    let t20 = fma(-x.c0.y, t9, t14);
+    let t21 = t20 * 2.0;
+    return Line(vec4<f16>(t17, t19, t21, 0.0));
+}
+
+// `v x ~v` for a unit `Motor` v and `OriginLine` x (`v >> x`).
+fn unit_motor_sandwich_origin_line(v: Motor, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t4 = v.c0.y * v.c0.z;
+    let t5 = v.c0.x * v.c0.z;
+    let t7 = fma(-v.c0.y, v.c0.y, t0);
+    let t8 = fma(v.c0.x, v.c0.w, t4);
+    let t9 = fma(-v.c0.y, v.c0.w, t5);
+    let t11 = x.c0.y * t2;
+    let t12 = x.c0.x * t2;
+    let t13 = x.c0.y * t7;
+    let t14 = x.c0.x * t8;
+    let t16 = t11 * 2.0;
+    let t17 = fma(x.c0.x, t7, t16);
+    let t19 = fma(-t12, 2.0, t13);
+    let t20 = fma(-x.c0.y, t9, t14);
+    let t21 = t20 * 2.0;
+    return Line(vec4<f16>(t17, t19, t21, 0.0));
 }
 
 // `v x ~v` for `Flector` v and `Scalar` x (`v >> x`).
@@ -3798,6 +4007,48 @@ fn unit_flector_sandwich_multivector(v: Flector, x: Multivector) -> Multivector 
     let t41 = t26 * t39;
     let t42 = x.c1.w * t26;
     return Multivector(vec4<f16>(t40, t28, t30, t32), vec4<f16>(t35, t38, t41, t42));
+}
+
+// `v x ~v` for `Flector` v and `OriginLine` x (`v >> x`).
+fn flector_sandwich_origin_line(v: Flector, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = v.c0.x * v.c0.z;
+    let t6 = v.c0.y * v.c0.z;
+    let t7 = fma(-v.c0.y, v.c0.y, t0);
+    let t8 = fma(-v.c0.y, v.c0.w, t3);
+    let t9 = fma(v.c0.x, v.c0.w, t6);
+    let t11 = x.c0.y * t2;
+    let t12 = x.c0.x * t2;
+    let t15 = x.c0.y * t9;
+    let t16 = t11 * 2.0;
+    let t17 = fma(x.c0.x, t7, t16);
+    let t18 = t12 * 2.0;
+    let t19 = fma(-x.c0.y, t7, t18);
+    let t20 = fma(x.c0.x, t8, t15);
+    let t21 = t20 * 2.0;
+    return Line(vec4<f16>(t17, t19, t21, 0.0));
+}
+
+// `v x ~v` for a unit `Flector` v and `OriginLine` x (`v >> x`).
+fn unit_flector_sandwich_origin_line(v: Flector, x: OriginLine) -> Line {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = v.c0.x * v.c0.z;
+    let t6 = v.c0.y * v.c0.z;
+    let t7 = fma(-v.c0.y, v.c0.y, t0);
+    let t8 = fma(-v.c0.y, v.c0.w, t3);
+    let t9 = fma(v.c0.x, v.c0.w, t6);
+    let t11 = x.c0.y * t2;
+    let t12 = x.c0.x * t2;
+    let t15 = x.c0.y * t9;
+    let t16 = t11 * 2.0;
+    let t17 = fma(x.c0.x, t7, t16);
+    let t18 = t12 * 2.0;
+    let t19 = fma(-x.c0.y, t7, t18);
+    let t20 = fma(x.c0.x, t8, t15);
+    let t21 = t20 * 2.0;
+    return Line(vec4<f16>(t17, t19, t21, 0.0));
 }
 
 // Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative

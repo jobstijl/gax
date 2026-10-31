@@ -10,6 +10,9 @@ part Paravector = [1, e1, e2, e3] "A scalar plus a vector: a spin state's densit
 versor Rotor = [1, e23, e31, e12] "A rotor: the even subalgebra, isomorphic to the quaternions.";
 versor Odd = [e1, e2, e3, e123] "The odd subalgebra: rotoreflections.";
 kind Multivector = [1, e1, e2, e3, e23, e31, e12, e123] "A general multivector.";
+// The horizontal vectors and the tilts (for z up), complements of each other (ADR-054).
+part Horizontal = [e1, e2] "A vector in the plane `z = 0`: horizontal, for z up (a wavevector along a surface, a position on a floor). Its complement is `Tilt`.";
+part Tilt = [e23, e31] "A bivector containing `e3`: a vertical plane through the origin, the generator of a rotation about a horizontal axis (a tilt, for z up); intrinsic, the dual of a horizontal vector, as a direction. Its complement is `Horizontal`.";
 
 // The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
 // (its dual), Even and Odd (the versors).

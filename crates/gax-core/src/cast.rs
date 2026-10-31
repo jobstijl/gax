@@ -64,6 +64,26 @@ pub trait GradePart<const G: usize>: Kind {
     const SHARED: &'static [(usize, usize, bool)];
 }
 
+/// The kind whose blades are exactly the complements of `Self`'s, in the opposite orientation
+/// (a complement flips it, as a dual does: ADR-051): PGA3D's planes for its points, its
+/// `OriginPlane`s for its `Direction`s. Through the scalar part of the regressive product the
+/// two kinds pair to ordinary numbers, and that pairing is a constant signed permutation:
+/// each blade pairs with its complement alone, to `±1`. The adjugate of a map
+/// ([`Adjugate`](crate::transpose::Adjugate)) is its transpose through it. Generated for
+/// every kind whose complement is declared.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` has no complement kind",
+    label = "no declared kind holds exactly the complements of these blades",
+    note = "the adjugate maps between the complements of a map's kinds; a standard algebra declares a `part` for the common ones (PGA3D's `OriginPlane` for `Direction`, `Moment` for `Spin`), and `algebra!` takes your own"
+)]
+pub trait Complement: Kind {
+    /// The complement kind, in the opposite orientation.
+    type Out: Kind;
+    /// Per blade `i` of `Self`: the index `j` of its complement in [`Complement::Out`], and
+    /// whether their pairing `⟨Out_j ∨ Self_i⟩₀` (complement on the left) is `−1`.
+    const PAIRS: &'static [(usize, bool)];
+}
+
 /// Move the blades of `m` listed in `shared` into a `K`, every other coefficient zero.
 #[inline(always)]
 fn move_blades<M: Extensor, K: Kind>(

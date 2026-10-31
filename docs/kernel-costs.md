@@ -263,6 +263,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Line>` `>>` `Flector` | 16 mul, 6 add | 8 mul, 2 add |
 | `Line` `>>` `Multivector` | 26 mul, 10 add | 8 mul, 2 add |
 | `Unit<Line>` `>>` `Multivector` | 26 mul, 10 add | 8 mul, 2 add |
+| `Line` `>>` `OriginLine` | 14 mul, 4 add | 8 mul, 1 add |
+| `Unit<Line>` `>>` `OriginLine` | 14 mul, 4 add | 8 mul, 1 add |
 | `Point` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Point>` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Point` `>>` `Line` | 9 mul, 2 add | 5 mul, 0 add |
@@ -283,6 +285,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Point>` `>>` `Flector` | 10 mul, 2 add | 5 mul, 0 add |
 | `Point` `>>` `Multivector` | 18 mul, 4 add | 5 mul, 0 add |
 | `Unit<Point>` `>>` `Multivector` | 18 mul, 4 add | 5 mul, 0 add |
+| `Point` `>>` `OriginLine` | 8 mul, 1 add | 5 mul, 0 add |
+| `Unit<Point>` `>>` `OriginLine` | 8 mul, 1 add | 5 mul, 0 add |
 | `Rotor` `>>` `Scalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Rotor>` `>>` `Scalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Rotor` `>>` `Line` | 10 mul, 4 add | 4 mul, 2 add |
@@ -303,6 +307,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Rotor>` `>>` `Flector` | 11 mul, 4 add | 4 mul, 2 add |
 | `Rotor` `>>` `Multivector` | 19 mul, 6 add | 4 mul, 2 add |
 | `Unit<Rotor>` `>>` `Multivector` | 19 mul, 6 add | 4 mul, 2 add |
+| `Rotor` `>>` `OriginLine` | 9 mul, 3 add | 4 mul, 1 add |
+| `Unit<Rotor>` `>>` `OriginLine` | 9 mul, 3 add | 4 mul, 1 add |
 | `Translator` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Translator>` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Translator` `>>` `Line` | 9 mul, 2 add | 5 mul, 0 add |
@@ -323,6 +329,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Translator>` `>>` `Flector` | 10 mul, 2 add | 5 mul, 0 add |
 | `Translator` `>>` `Multivector` | 18 mul, 4 add | 5 mul, 0 add |
 | `Unit<Translator>` `>>` `Multivector` | 18 mul, 4 add | 5 mul, 0 add |
+| `Translator` `>>` `OriginLine` | 8 mul, 1 add | 5 mul, 0 add |
+| `Unit<Translator>` `>>` `OriginLine` | 8 mul, 1 add | 5 mul, 0 add |
 | `Motor` `>>` `Scalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Motor>` `>>` `Scalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Motor` `>>` `Line` | 17 mul, 8 add | 10 mul, 4 add |
@@ -343,6 +351,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Motor>` `>>` `Flector` | 18 mul, 8 add | 10 mul, 4 add |
 | `Motor` `>>` `Multivector` | 28 mul, 14 add | 12 mul, 6 add |
 | `Unit<Motor>` `>>` `Multivector` | 28 mul, 14 add | 12 mul, 6 add |
+| `Motor` `>>` `OriginLine` | 16 mul, 6 add | 10 mul, 3 add |
+| `Unit<Motor>` `>>` `OriginLine` | 16 mul, 6 add | 10 mul, 3 add |
 | `Flector` `>>` `Scalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Flector>` `>>` `Scalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Flector` `>>` `Line` | 17 mul, 8 add | 10 mul, 4 add |
@@ -363,6 +373,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Flector>` `>>` `Flector` | 18 mul, 8 add | 10 mul, 4 add |
 | `Flector` `>>` `Multivector` | 28 mul, 14 add | 12 mul, 6 add |
 | `Unit<Flector>` `>>` `Multivector` | 28 mul, 14 add | 12 mul, 6 add |
+| `Flector` `>>` `OriginLine` | 16 mul, 6 add | 10 mul, 3 add |
+| `Unit<Flector>` `>>` `OriginLine` | 16 mul, 6 add | 10 mul, 3 add |
 
 ## pga3d
 
@@ -390,6 +402,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Plane>` `>>` `Flector` | 32 mul, 14 add | 15 mul, 6 add |
 | `Plane` `>>` `Multivector` | 74 mul, 40 add | 15 mul, 6 add |
 | `Unit<Plane>` `>>` `Multivector` | 67 mul, 30 add | 15 mul, 6 add |
+| `Plane` `>>` `Spin` | 30 mul, 14 add | 15 mul, 5 add |
+| `Unit<Plane>` `>>` `Spin` | 27 mul, 10 add | 15 mul, 5 add |
+| `Plane` `>>` `Moment` | 18 mul, 11 add | 9 mul, 5 add |
+| `Unit<Plane>` `>>` `Moment` | 15 mul, 7 add | 9 mul, 5 add |
+| `Plane` `>>` `OriginPlane` | 25 mul, 12 add | 15 mul, 5 add |
+| `Unit<Plane>` `>>` `OriginPlane` | 17 mul, 7 add | 15 mul, 5 add |
 | `Line` `>>` `Scalar` | 9 mul, 4 add | 7 mul, 4 add |
 | `Unit<Line>` `>>` `Scalar` | 4 mul, 2 add | 3 mul, 2 add |
 | `Line` `>>` `Plane` | 29 mul, 18 add | 18 mul, 9 add |
@@ -412,6 +430,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Line>` `>>` `Flector` | 42 mul, 21 add | 18 mul, 9 add |
 | `Line` `>>` `Multivector` | 85 mul, 58 add | 28 mul, 18 add |
 | `Unit<Line>` `>>` `Multivector` | 83 mul, 43 add | 27 mul, 12 add |
+| `Line` `>>` `Spin` | 39 mul, 25 add | 24 mul, 13 add |
+| `Unit<Line>` `>>` `Spin` | 39 mul, 16 add | 24 mul, 8 add |
+| `Line` `>>` `Moment` | 18 mul, 11 add | 9 mul, 5 add |
+| `Unit<Line>` `>>` `Moment` | 15 mul, 7 add | 9 mul, 5 add |
+| `Line` `>>` `OriginPlane` | 28 mul, 16 add | 18 mul, 8 add |
+| `Unit<Line>` `>>` `OriginPlane` | 28 mul, 12 add | 18 mul, 8 add |
 | `Point` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Point>` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Point` `>>` `Plane` | 12 mul, 3 add | 7 mul, 0 add |
@@ -434,6 +458,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Point>` `>>` `Flector` | 22 mul, 6 add | 7 mul, 0 add |
 | `Point` `>>` `Multivector` | 39 mul, 12 add | 7 mul, 0 add |
 | `Unit<Point>` `>>` `Multivector` | 39 mul, 12 add | 7 mul, 0 add |
+| `Point` `>>` `Spin` | 16 mul, 3 add | 7 mul, 0 add |
+| `Unit<Point>` `>>` `Spin` | 16 mul, 3 add | 7 mul, 0 add |
+| `Point` `>>` `Moment` | 4 mul, 0 add | 1 mul, 0 add |
+| `Unit<Point>` `>>` `Moment` | 4 mul, 0 add | 1 mul, 0 add |
+| `Point` `>>` `OriginPlane` | 11 mul, 2 add | 7 mul, 0 add |
+| `Unit<Point>` `>>` `OriginPlane` | 11 mul, 2 add | 7 mul, 0 add |
 | `Rotor` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Rotor>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Rotor` `>>` `Plane` | 23 mul, 20 add | 16 mul, 14 add |
@@ -456,6 +486,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Rotor>` `>>` `Flector` | 36 mul, 26 add | 16 mul, 14 add |
 | `Rotor` `>>` `Multivector` | 62 mul, 38 add | 16 mul, 14 add |
 | `Unit<Rotor>` `>>` `Multivector` | 62 mul, 38 add | 16 mul, 14 add |
+| `Rotor` `>>` `Spin` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Rotor>` `>>` `Spin` | 25 mul, 15 add | 16 mul, 13 add |
+| `Rotor` `>>` `Moment` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Rotor>` `>>` `Moment` | 25 mul, 15 add | 16 mul, 13 add |
+| `Rotor` `>>` `OriginPlane` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Rotor>` `>>` `OriginPlane` | 25 mul, 15 add | 16 mul, 13 add |
 | `Translator` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Translator>` `>>` `Scalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Translator` `>>` `Plane` | 12 mul, 3 add | 7 mul, 0 add |
@@ -478,6 +514,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Translator>` `>>` `Flector` | 22 mul, 6 add | 7 mul, 0 add |
 | `Translator` `>>` `Multivector` | 39 mul, 12 add | 7 mul, 0 add |
 | `Unit<Translator>` `>>` `Multivector` | 39 mul, 12 add | 7 mul, 0 add |
+| `Translator` `>>` `Spin` | 16 mul, 3 add | 7 mul, 0 add |
+| `Unit<Translator>` `>>` `Spin` | 16 mul, 3 add | 7 mul, 0 add |
+| `Translator` `>>` `Moment` | 4 mul, 0 add | 1 mul, 0 add |
+| `Unit<Translator>` `>>` `Moment` | 4 mul, 0 add | 1 mul, 0 add |
+| `Translator` `>>` `OriginPlane` | 11 mul, 2 add | 7 mul, 0 add |
+| `Unit<Translator>` `>>` `OriginPlane` | 11 mul, 2 add | 7 mul, 0 add |
 | `Motor` `>>` `Scalar` | 11 mul, 6 add | 9 mul, 6 add |
 | `Unit<Motor>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Motor` `>>` `Plane` | 39 mul, 32 add | 31 mul, 23 add |
@@ -500,6 +542,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Motor>` `>>` `Flector` | 55 mul, 44 add | 34 mul, 26 add |
 | `Motor` `>>` `Multivector` | 96 mul, 86 add | 48 mul, 46 add |
 | `Unit<Motor>` `>>` `Multivector` | 96 mul, 80 add | 46 mul, 41 add |
+| `Motor` `>>` `Spin` | 50 mul, 44 add | 41 mul, 32 add |
+| `Unit<Motor>` `>>` `Spin` | 52 mul, 40 add | 40 mul, 28 add |
+| `Motor` `>>` `Moment` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Motor>` `>>` `Moment` | 25 mul, 15 add | 16 mul, 13 add |
+| `Motor` `>>` `OriginPlane` | 38 mul, 30 add | 31 mul, 22 add |
+| `Unit<Motor>` `>>` `OriginPlane` | 35 mul, 20 add | 31 mul, 22 add |
 | `Flector` `>>` `Scalar` | 11 mul, 6 add | 9 mul, 6 add |
 | `Unit<Flector>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Flector` `>>` `Plane` | 39 mul, 32 add | 31 mul, 23 add |
@@ -522,6 +570,12 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Flector>` `>>` `Flector` | 55 mul, 44 add | 34 mul, 26 add |
 | `Flector` `>>` `Multivector` | 96 mul, 86 add | 48 mul, 46 add |
 | `Unit<Flector>` `>>` `Multivector` | 96 mul, 80 add | 46 mul, 41 add |
+| `Flector` `>>` `Spin` | 50 mul, 44 add | 41 mul, 32 add |
+| `Unit<Flector>` `>>` `Spin` | 52 mul, 40 add | 40 mul, 28 add |
+| `Flector` `>>` `Moment` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Flector>` `>>` `Moment` | 25 mul, 15 add | 16 mul, 13 add |
+| `Flector` `>>` `OriginPlane` | 38 mul, 30 add | 31 mul, 22 add |
+| `Unit<Flector>` `>>` `OriginPlane` | 35 mul, 20 add | 31 mul, 22 add |
 
 ## sta
 
@@ -604,6 +658,10 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Vector>` `>>` `Odd` | 89 mul, 48 add | 24 mul, 12 add |
 | `Vector` `>>` `Multivector` | 199 mul, 120 add | 24 mul, 12 add |
 | `Unit<Vector>` `>>` `Multivector` | 175 mul, 93 add | 24 mul, 12 add |
+| `Vector` `>>` `Direction` | 30 mul, 18 add | 16 mul, 8 add |
+| `Unit<Vector>` `>>` `Direction` | 20 mul, 10 add | 16 mul, 8 add |
+| `Vector` `>>` `OriginHyperplane` | 33 mul, 19 add | 24 mul, 8 add |
+| `Unit<Vector>` `>>` `OriginHyperplane` | 22 mul, 10 add | 24 mul, 8 add |
 | `Motor` `>>` `Scalar` | 55 mul, 38 add | 49 mul, 38 add |
 | `Unit<Motor>` `>>` `Scalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Motor` `>>` `Vector` | 136 mul, 105 add | 121 mul, 102 add |
@@ -622,6 +680,10 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Motor>` `>>` `Odd` | 219 mul, 249 add | 154 mul, 163 add |
 | `Motor` `>>` `Multivector` | 340 mul, 480 add | 192 mul, 304 add |
 | `Unit<Motor>` `>>` `Multivector` | 341 mul, 411 add | 182 mul, 243 add |
+| `Motor` `>>` `Direction` | 52 mul, 48 add | 44 mul, 36 add |
+| `Unit<Motor>` `>>` `Direction` | 52 mul, 48 add | 44 mul, 36 add |
+| `Motor` `>>` `OriginHyperplane` | 120 mul, 93 add | 116 mul, 92 add |
+| `Unit<Motor>` `>>` `OriginHyperplane` | 73 mul, 54 add | 80 mul, 64 add |
 | `Odd` `>>` `Scalar` | 55 mul, 38 add | 49 mul, 38 add |
 | `Unit<Odd>` `>>` `Scalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Odd` `>>` `Vector` | 143 mul, 107 add | 121 mul, 102 add |
@@ -640,6 +702,10 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Odd>` `>>` `Odd` | 219 mul, 257 add | 154 mul, 171 add |
 | `Odd` `>>` `Multivector` | 340 mul, 488 add | 192 mul, 312 add |
 | `Unit<Odd>` `>>` `Multivector` | 341 mul, 419 add | 182 mul, 251 add |
+| `Odd` `>>` `Direction` | 52 mul, 48 add | 44 mul, 36 add |
+| `Unit<Odd>` `>>` `Direction` | 52 mul, 48 add | 44 mul, 36 add |
+| `Odd` `>>` `OriginHyperplane` | 127 mul, 95 add | 116 mul, 92 add |
+| `Unit<Odd>` `>>` `OriginHyperplane` | 73 mul, 54 add | 80 mul, 64 add |
 
 ## vga2d
 
@@ -686,6 +752,10 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Vector>` `>>` `Odd` | 16 mul, 7 add | 9 mul, 6 add |
 | `Vector` `>>` `Multivector` | 32 mul, 18 add | 9 mul, 6 add |
 | `Unit<Vector>` `>>` `Multivector` | 29 mul, 12 add | 9 mul, 6 add |
+| `Vector` `>>` `Horizontal` | 15 mul, 6 add | 9 mul, 3 add |
+| `Unit<Vector>` `>>` `Horizontal` | 13 mul, 5 add | 9 mul, 3 add |
+| `Vector` `>>` `Tilt` | 15 mul, 6 add | 9 mul, 3 add |
+| `Unit<Vector>` `>>` `Tilt` | 13 mul, 5 add | 9 mul, 3 add |
 | `Rotor` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Rotor>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Rotor` `>>` `Vector` | 22 mul, 19 add | 16 mul, 13 add |
@@ -702,6 +772,10 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Rotor>` `>>` `Odd` | 26 mul, 15 add | 16 mul, 14 add |
 | `Rotor` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
 | `Unit<Rotor>` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
+| `Rotor` `>>` `Horizontal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Rotor>` `>>` `Horizontal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Rotor` `>>` `Tilt` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Rotor>` `>>` `Tilt` | 19 mul, 11 add | 14 mul, 8 add |
 | `Odd` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Odd>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Odd` `>>` `Vector` | 22 mul, 19 add | 16 mul, 13 add |
@@ -718,4 +792,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Odd>` `>>` `Odd` | 26 mul, 15 add | 16 mul, 14 add |
 | `Odd` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
 | `Unit<Odd>` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
+| `Odd` `>>` `Horizontal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Odd>` `>>` `Horizontal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Odd` `>>` `Tilt` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Odd>` `>>` `Tilt` | 19 mul, 11 add | 14 mul, 8 add |
 
