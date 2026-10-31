@@ -1,41 +1,54 @@
 //! numga's `relativity/kerr`: light around a rotating black hole, in the spacetime algebra
-//! (STA). In Kerr–Schild form the inverse metric is the identity plus a null dyad,
-//! `g⁻¹ = 1 + 2 H l (l · ·)`, with a scalar profile `H` and a null direction `l`, and the ray
-//! Hamiltonian is its quadratic form, `½ p² + H (l · p)²`. Its momentum derivative is the
-//! ray's tangent, and minus its position derivative the momentum's rate, without component
-//! equations: the profile's gradient is a vector, the null direction's derivative a map with
-//! the step left open (`Vector<(Vector,)>`), and the gradient of `l · v` is that map's adjoint
-//! applied to `v`, a pairing solve (gax has no transpose). Momentum is a covector, represented
-//! by its Minkowski dual. Units set G and c to one; the spin is a spatial bivector of
-//! magnitude J/M. Ingoing Kerr–Schild coordinates cover the future horizon.
+//! (STA, `x+y+z+t-`) and in gauge theory gravity. Events and the directions between them are
+//! antivectors; a ray's momentum is a vector, which pairs with a direction to a number. The
+//! geometry is a flat background and a position gauge field that carries the directions of a
+//! local frame, measured flat, to those of the Kerr geometry: the identity plus the profile
+//! `H` times the null dyad, `d ↦ d + H l (l♭ ∨ d)`, whose inverse is the identity less the
+//! dyad, as the dyad squares to zero. A ray's Hamiltonian is minus half the flat square of its
+//! momentum, raised and carried into the local frame. Its momentum derivative is the ray's
+//! tangent, and minus its position derivative the momentum's rate, without component
+//! equations: the profile's gradient is a vector, the null direction's derivative a map from
+//! a step to its change, and the gradient of `p ∨ l` that map's adjugate applied to `p`. The
+//! rotation gauge field is the plane the local frame turns in per step along a direction; its
+//! commutator carries the camera's screen along each ray. Units set G and c to one; the spin,
+//! intrinsic, the patch of the plane the hole turns in, has magnitude J/M. Ingoing
+//! Kerr–Schild coordinates cover the future horizon.
 //!
-//! A camera traces rays back from its pixels until each is captured or escapes. The disk takes
-//! a share of each ray it crosses, by its optical depth along the ray, and the camera's screen
-//! is carried along by parallel transport: its commutator with the plane the local frame turns
-//! in. Each crossing glows as a blackbody at the disk's temperature (Page and Thorne) times the
+//! A coordinate-static camera traces rays back from its pixels until each is captured or
+//! escapes. The disk takes a share of each ray it crosses, by its optical depth along the ray.
+//! Each crossing glows as a blackbody at the disk's temperature (Page and Thorne) times the
 //! ratio of the frequency the camera sees to the one the orbiting gas emits; the light is
-//! polarized across the gas's azimuthal magnetic field, a coherency map on the screen that an
-//! analyzer reads.
+//! polarized across the gas's azimuthal magnetic field, a coherency map from the screen's
+//! slices to its directions that an analyzer reads.
 //!
 //! The animation: on the left, equatorial rays as the spin sweeps from -0.8 M to 0.8 M and
 //! back (the dark disc is the horizon); on the right, the camera's view 75° from the spin axis,
 //! the disk's gas orbiting (its clumps carried along their orbits) over the lensed sky, and
 //! below it the same view through a polarizer whose axis turns half a turn per loop.
 //!
-//! Differences from numga: gax's STA has no kind for the screen plane `x y`, so the camera's
-//! screen frame and the coherency are maps on vectors that read only `x` and `y`; numga's
-//! batched ray generators become one loop per ray; the colours of the disk are gax-colour's
-//! Planckian locus at the visible luminance of Planck's law (numga integrates the spectrum
-//! against the CIE matching functions), and the sky is a star catalogue looked up by direction
-//! rather than a texture. Reference: Pelle et al., Skylight (2022), equations 24–26,
+//! numga keeps the metric formulation it replaced, the metric and its Christoffel connection,
+//! and sets the two side by side in a comparison notebook; here it is `metric.rs`, and the
+//! notebook's checks are its tests: the same rays to 1e-8, the same pixels, temperatures and
+//! polarization. numga's GPU variant renders the same camera in a WGSL shader; the CPU canvas
+//! stands in for it, and its shader tests are not ported.
+//!
+//! Differences from numga: gax's STA has no kinds for numga's screen directions and slices
+//! (`X Y` and `x y`), so the camera's screen frame is a map on every direction that reads only
+//! `x` and `y`, and the coherency one on vectors; numga's batched loops become one loop per ray;
+//! the colours of the disk are gax-colour's Planckian locus at the visible luminance of
+//! Planck's law (numga integrates the spectrum against the CIE matching functions), and the
+//! sky is a star catalogue looked up by direction rather than a texture. Reference: Pelle et
+//! al., Skylight (2022), equations 24–26,
 //! <https://academic.oup.com/mnras/article/515/1/1316/6631564>.
 //!
-//! `kerr.rs` holds the geometry and the rays, `disk.rs` the disk, `scenes.rs` numga's two
-//! scenes, and `emission.rs` the colours of the disk's and the sky's light.
+//! `kerr.rs` holds the geometry and the rays, `disk.rs` the disk, `metric.rs` the metric
+//! formulation, `scenes.rs` numga's two scenes, and `emission.rs` the colours of the disk's
+//! and the sky's light.
 
 mod disk;
 mod emission;
 mod kerr;
+mod metric;
 mod scenes;
 
 use emission::{Clumps, Sky, blackbody, blackbody_colour, emissivity, flowing_waves};
@@ -46,17 +59,17 @@ use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, ORIGIN2, Point2, Rect, backdrop, caption, colormap, light,
     palette, par_map, run_with,
 };
-use kerr::V;
+use kerr::{D, read, space, unit_length, x, y, z};
 use scenes::Glint;
 
 /// The loop, numga's 80 frames of 80 ms: the spin sweeps there and back, the polarizer turns
 /// half a turn, and the disk's gas turns through [`scenes::FLOW_TIME`].
 const SECONDS: f32 = 6.4;
-/// The spins of the sweep traced at start-up: one per frame at 25 frames per second.
+/// The animation's frames per loop, numga's 160: the sweep traces half of them and one more
+/// at start-up, as numga's, and plays them forward and back.
 const SWEEP_FRAMES: usize = 160;
-/// The camera's pixels, numga's: 150 000 rays, traced at start-up in about two seconds on
-/// eight or more cores.
-const CAMERA_SIZE: [usize; 2] = [480, 320];
+/// The camera's pixels, numga's: 68 000 rays, traced at start-up.
+const CAMERA_SIZE: [usize; 2] = [320, 213];
 /// A star's image is this share of a pixel wide (numga's is that share of a texel of its sky
 /// texture).
 const STAR_WIDTH: f64 = 0.6;
@@ -80,16 +93,27 @@ struct Scene {
     clumps: Clumps,
 }
 
-/// An event's place in the equatorial plane, for drawing.
-fn on_plane(event: V) -> Point2 {
-    Point2::xy(event.e1() as f32, event.e2() as f32)
+/// An event's place in the equatorial plane, for drawing: its readings by the slices `x`
+/// and `y`.
+fn on_plane(event: D) -> Point2 {
+    Point2::xy(read(x(), event) as f32, read(y(), event) as f32)
+}
+
+/// The sweep's step at a frame: forward over the first half of the loop, then back.
+fn sweep_step(frame: usize) -> usize {
+    let half = SWEEP_FRAMES / 2;
+    if frame <= half {
+        frame
+    } else {
+        SWEEP_FRAMES - frame
+    }
 }
 
 /// The sweep's paths, at each of its spins.
 fn sweep_paths() -> Vec<Vec<Vec<Point2>>> {
-    let frames: Vec<usize> = (0..SWEEP_FRAMES).collect();
-    par_map(&frames, |&k| {
-        let paths = scenes::sweep(scenes::sweep_spin(k, SWEEP_FRAMES));
+    let steps: Vec<usize> = (0..=SWEEP_FRAMES / 2).collect();
+    par_map(&steps, |&k| {
+        let paths = scenes::sweep(scenes::sweep_spin(k, SWEEP_FRAMES / 2));
         paths
             .iter()
             .map(|path| path.iter().map(|e| on_plane(*e)).collect())
@@ -106,8 +130,9 @@ fn camera_view() -> (Vec<Shine>, Vec<Light>) {
     let skies = par_map(&resolutions, |r| {
         // A captured ray, or one the disk absorbed whole, brings no sky.
         r.sky.map_or(light(0.0, 0.0, 0.0, 1.0), |escape| {
-            let d = escape.direction;
-            let direction = vga3d::Vector::new(d.e1(), d.e2(), d.e3()).normalized();
+            // The direction's part in the lab's space, at unit length.
+            let d = unit_length(space(escape.direction));
+            let direction = vga3d::Vector::new(read(x(), d), read(y(), d), read(z(), d));
             sky.light(direction, star_width) * escape.weight as f32
         })
     });
@@ -145,7 +170,7 @@ fn camera_lights(s: &Scene, t: f32) -> (Vec<Light>, Vec<Light>) {
     let progress = f64::from(t / SECONDS);
     let turn = core::f64::consts::PI * progress;
     // From `x` towards `y`: `exp(−½ turn xy)` in `x+y+z+t-`.
-    let analyzer = (kerr::xy() * (-turn / 2.0)).exp() >> kerr::x();
+    let analyzer = (kerr::xy() * (-turn / 2.0)).exp() >> x();
     let lit = par_map(&s.shines, |shine| {
         let waves = flowing_waves(&s.clumps, &shine.glint, progress);
         let light = shine.glow * emissivity(shine.glint.radius, waves) as f32;
@@ -197,8 +222,9 @@ fn titled_view(c: &mut Canvas, rect: Rect, pixels: &[Light], title: &str) {
 /// `√(r₊² + a²)`.
 fn draw_sweep(c: &mut Canvas, ax: &Axes, s: &Scene, t: f32) {
     let frame = ((t / SECONDS * SWEEP_FRAMES as f32).round() as usize) % SWEEP_FRAMES;
-    let spin = scenes::sweep_spin(frame, SWEEP_FRAMES);
-    let paths = &s.sweep[frame];
+    let step = sweep_step(frame);
+    let spin = scenes::sweep_spin(step, SWEEP_FRAMES / 2);
+    let paths = &s.sweep[step];
     for (i, path) in paths.iter().enumerate() {
         let shade = 0.05 + 0.9 * i as f32 / (paths.len() - 1) as f32;
         ax.polyline(c, path, 1.0, colormap::coolwarm(shade).faded(0.9));
@@ -297,7 +323,7 @@ fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     caption(
         c,
         "KERR: LIGHT AROUND A ROTATING BLACK HOLE",
-        "NULL RAYS FROM THE GEOMETRIC DERIVATIVES OF THEIR HAMILTONIAN (STA); A THIN DISK AT ITS SHIFTED TEMPERATURE",
+        "NULL RAYS IN GAUGE THEORY GRAVITY (STA), FROM THE DERIVATIVES OF THEIR HAMILTONIAN; A THIN DISK AT ITS SHIFTED TEMPERATURE",
     );
 }
 

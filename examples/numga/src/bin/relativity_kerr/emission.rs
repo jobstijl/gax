@@ -2,8 +2,8 @@
 //! clumpy texture carried along its orbits, and a catalogue of stars over a dusty band.
 
 use crate::disk::carried;
-use crate::kerr::{V, xy};
-use crate::scenes::{FLOW_TIME, Glint, camera_hole};
+use crate::kerr::{D, read, x, xy, y};
+use crate::scenes::{CAMERA_DISTANCE, FLOW_TIME, Glint, camera_hole};
 use gax::{vga2d, vga3d};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::{phasor, wave};
@@ -110,9 +110,9 @@ impl Clumps {
 /// rotor, raised to the wave's whole turns (which keep it continuous around), times its phase
 /// across.
 #[allow(clippy::disallowed_methods)] // a statistic: unit variance from waves of variance ½
-fn clump_waves(clumps: &Clumps, point: V, radius: f64) -> f64 {
+fn clump_waves(clumps: &Clumps, point: D, radius: f64) -> f64 {
     let east = vga2d::Vector::new(1.0, 0.0);
-    let direction = vga2d::Vector::new(point.e1(), point.e2()).normalized();
+    let direction = vga2d::Vector::new(read(x(), point), read(y(), point)).normalized();
     let around = east * direction;
     let powers: Vec<vga2d::Rotor> =
         std::iter::successors(Some(vga2d::Rotor::new(1.0, 0.0)), |p| Some(*p * around))
@@ -142,7 +142,14 @@ pub fn emissivity(radius: f64, waves: f64) -> f64 {
 pub fn flowing_waves(clumps: &Clumps, glint: &Glint, progress: f64) -> f64 {
     let hole = camera_hole();
     let at = |elapsed: f64| {
-        let gas = carried(glint.event, glint.radius, xy(), hole, elapsed);
+        let gas = carried(
+            glint.event,
+            glint.radius,
+            xy(),
+            hole,
+            CAMERA_DISTANCE,
+            elapsed,
+        );
         clump_waves(clumps, gas, glint.radius)
     };
     let now = at(FLOW_TIME * progress);

@@ -1,13 +1,13 @@
-//! numga's `kerr/scenarios.py`: equatorial rays as the spin sweeps, and a camera looking at a
-//! thin disk around a spinning hole.
+//! numga's `kerr/scenarios.py`: equatorial rays as the spin sweeps, and a coordinate-static
+//! camera looking at a thin disk around a spinning hole.
 
 use crate::disk::{
     Coherency, Crossing, Disk, Resolution, disk_coherency, disk_temperature, frequency_ratio,
     innermost_stable_orbit, resolve,
 };
 use crate::kerr::{
-    Hole, PolarizedRay, Ray, Rotor, V, camera_rays, camera_screen, camera_trace, initial_momentum,
-    polarized_rates, trace, x, xy, y, z,
+    D, Hole, PolarizedRay, Ray, Rotor, along_x, along_y, along_z, camera_rays, camera_screen,
+    camera_trace, initial_momentum, polarized_rates, rates, trace, x, xy, z,
 };
 use gax_numga_examples::par_map;
 use gax_numga_examples::signal::{phasor, tangent};
@@ -25,7 +25,7 @@ const STEPS: usize = 400;
 const STOP_FRACTION: f64 = 0.8;
 
 pub const CAMERA_SPIN: f64 = 0.8 * MASS;
-const CAMERA_DISTANCE: f64 = 28.0 * MASS;
+pub const CAMERA_DISTANCE: f64 = 28.0 * MASS;
 /// The camera's tilt from the spin axis, degrees.
 const INCLINATION: f64 = 75.0;
 /// Half the camera's vertical field of view, degrees.
@@ -43,7 +43,7 @@ const POLARIZATION_DEGREE: f64 = 0.8;
 /// The coordinate time the disk turns through in one loop of the animation.
 pub const FLOW_TIME: f64 = 50.0 * MASS;
 
-/// The hole with spin `spin` about `+z`.
+/// The hole with spin `spin` in the plane `x ∧ y`.
 pub fn hole(spin: f64) -> Hole {
     Hole::about_z(spin, MASS)
 }
@@ -53,25 +53,26 @@ pub fn camera_hole() -> Hole {
     hole(CAMERA_SPIN)
 }
 
-/// The spin of frame `frame` of `frames` of the sweep: from `-MAX_SPIN` up and back.
-pub fn sweep_spin(frame: usize, frames: usize) -> f64 {
-    let angle = core::f64::consts::TAU * frame as f64 / frames as f64;
+/// The spin of step `step` of the sweep's `steps`: one sweep from `-MAX_SPIN` to `MAX_SPIN`,
+/// which the animation plays forward and back.
+pub fn sweep_spin(step: usize, steps: usize) -> f64 {
+    let angle = core::f64::consts::PI * step as f64 / steps as f64;
     -MAX_SPIN * phasor(angle).e20()
 }
 
 /// The paths of the equatorial rays at one spin: starting at `x = -EXTENT`, heading along
 /// `+x`, spread across.
-pub fn sweep(spin: f64) -> Vec<Vec<V>> {
+pub fn sweep(spin: f64) -> Vec<Vec<D>> {
     let hole = hole(spin);
     (0..RAYS)
         .map(|i| {
             let offset = -SPREAD + 2.0 * SPREAD * i as f64 / (RAYS - 1) as f64;
-            let event = x() * -EXTENT + y() * offset;
+            let event = along_x() * -EXTENT + along_y() * offset;
             let start = Ray {
                 event,
-                momentum: initial_momentum(event, x(), hole),
+                momentum: initial_momentum(event, along_x(), hole),
             };
-            trace(start, hole, STEP_SIZE, STEPS, STOP_FRACTION)
+            trace(start, hole, STEP_SIZE, STEPS, STOP_FRACTION, rates)
                 .map(|ray| ray.event)
                 .collect()
         })
@@ -79,14 +80,14 @@ pub fn sweep(spin: f64) -> Vec<Vec<V>> {
 }
 
 /// The camera's orientation: tilted from the spin axis in the plane `z ∧ x`, from `z`
-/// towards `x` (`exp(½ θ x ∧ z)` in `x+y+z+t-`, numga's `exp(½ θ z ∧ x)`).
+/// towards `x`.
 fn orientation() -> Rotor {
-    ((x() ^ z()) * (INCLINATION.to_radians() / 2.0)).exp()
+    ((z() ^ x()) * -(INCLINATION.to_radians() / 2.0)).exp()
 }
 
-/// Where the camera is: on its own `z` axis.
-pub fn eye() -> V {
-    (orientation() >> z()) * CAMERA_DISTANCE
+/// Where the camera is: on its own `Z` axis.
+pub fn eye() -> D {
+    (orientation() >> along_z()) * CAMERA_DISTANCE
 }
 
 /// The tangent of half the camera's vertical field of view.
@@ -122,7 +123,7 @@ pub fn camera_resolutions(size: [usize; 2]) -> Vec<Resolution<PolarizedRay>> {
             screen: camera_screen(*ray, orientation(), hole),
         };
         let steps = camera_trace(start, hole, STEP_FRACTION, CAMERA_STEPS, polarized_rates);
-        resolve(steps, &disk, ESCAPE_RADIUS, capture_radius(hole), hole)
+        resolve(steps, &disk, ESCAPE_RADIUS, capture_radius(hole), hole).0
     })
 }
 
@@ -130,7 +131,7 @@ pub fn camera_resolutions(size: [usize; 2]) -> Vec<Resolution<PolarizedRay>> {
 /// of its pixel's light it gives, its observed temperature in K, and its coherency.
 #[derive(Clone, Copy, Debug)]
 pub struct Glint {
-    pub event: V,
+    pub event: D,
     pub radius: f64,
     pub weight: f64,
     pub temperature: f64,
@@ -141,7 +142,7 @@ pub struct Glint {
 /// plane, and a blackbody shifted in frequency is a blackbody at the shifted temperature.
 pub fn glint(crossing: &Crossing<PolarizedRay>) -> Glint {
     let hole = camera_hole();
-    let ray = crossing.state.ray;
+    let PolarizedRay { ray, screen } = crossing.state;
     let shift = frequency_ratio(ray.event, ray.momentum, eye(), xy(), hole);
     let temperature = disk_temperature(crossing.radius, xy(), hole, DISK_TEMPERATURE_SCALE);
     Glint {
@@ -149,7 +150,14 @@ pub fn glint(crossing: &Crossing<PolarizedRay>) -> Glint {
         radius: crossing.radius,
         weight: crossing.weight,
         temperature: shift * temperature,
-        coherency: disk_coherency(crossing.state, z(), hole, POLARIZATION_DEGREE),
+        coherency: disk_coherency(
+            ray.event,
+            ray.momentum,
+            screen,
+            z(),
+            hole,
+            POLARIZATION_DEGREE,
+        ),
     }
 }
 
@@ -157,12 +165,12 @@ pub fn glint(crossing: &Crossing<PolarizedRay>) -> Glint {
 mod tests {
     use super::*;
     use crate::disk::tests::shares;
-    use crate::kerr::rates;
 
-    /// numga's checks of its camera, at 48 x 32 pixels rather than 480 x 320 (a hundredth of
-    /// the rays keeps the test quick): each pixel's light is shared at most once between the
-    /// disk and the sky, all of it when its ray escapes; where the rays cross the disk they
-    /// stay null, to the integrator's accuracy.
+    /// numga's checks of its camera, at 48 x 32 pixels rather than 320 x 213 (the animation's
+    /// test traces those): each pixel's light is shared at most once between the disk and the
+    /// sky, all of it when its ray escapes; where the rays cross the disk they stay null, to
+    /// the integrator's accuracy, and their temperatures are finite and not negative (numga's
+    /// GPU notebook's check of its pixels).
     #[test]
     fn scenes_pass_their_checks() {
         let image = camera_resolutions([48, 32]);
@@ -176,7 +184,9 @@ mod tests {
         for crossing in image.iter().flat_map(|r| &r.disk) {
             let ray = crossing.state.ray;
             // numga's tolerance: the camera's steps are a fifth of the oblate radius.
-            assert!((ray.momentum | rates(ray, hole).event).s().abs() < 7e-2);
+            assert!((ray.momentum & rates(ray, hole).event).s().abs() < 7e-2);
+            let seen = glint(crossing);
+            assert!(seen.temperature.is_finite() && seen.temperature >= 0.0);
         }
     }
 }
