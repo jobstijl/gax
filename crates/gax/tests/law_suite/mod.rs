@@ -1140,6 +1140,8 @@ macro_rules! law_suite {
         #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
         fn adjugates() {
             $((|| {
+                type Ca = <$ja as gax::Complement>::Out;
+                type Cb = <$jb as gax::Complement>::Out;
                 reset();
                 let name = concat!("adjugate of ", stringify!($jb), " <- ", stringify!($ja));
                 let t: $jb<($ja,), T> = fresh();
@@ -1155,8 +1157,6 @@ macro_rules! law_suite {
                 law(adj.adjugate() == swap_signs(&t, $dim), name);
 
                 // The pairing's solve agrees (f64): `(C(A) & A)₀` solved against `(C(B) & t)₀`.
-                type Ca = <$ja as gax::Complement>::Out;
-                type Cb = <$jb as gax::Complement>::Out;
                 let mut seed = 0x9e37_79b9_7f4a_7c15u64;
                 let pf = (slot::<Ca, f64>() & $ja::<(), f64>::slot()).cast::<$scalar>();
                 for _ in 0..4 {
