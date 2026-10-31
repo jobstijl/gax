@@ -154,8 +154,8 @@ impl Flat {
             .collect()
     }
 
-    /// The edges of a single face: the rim.
-    pub fn rim(&self) -> Vec<[Point2; 2]> {
+    /// The edges of a single face, the rim, each from its lower vertex.
+    pub fn rim_edges(&self) -> Vec<[usize; 2]> {
         let mut edges: Vec<[usize; 2]> = self
             .faces
             .iter()
@@ -167,11 +167,19 @@ impl Flat {
         while k < edges.len() {
             let run = edges[k..].iter().take_while(|e| **e == edges[k]).count();
             if run == 1 {
-                out.push([self.points[edges[k][0]], self.points[edges[k][1]]]);
+                out.push(edges[k]);
             }
             k += run;
         }
         out
+    }
+
+    /// The rim, as segments.
+    pub fn rim(&self) -> Vec<[Point2; 2]> {
+        self.rim_edges()
+            .into_iter()
+            .map(|[a, b]| [self.points[a], self.points[b]])
+            .collect()
     }
 
     /// Each face's centroid.
