@@ -1197,13 +1197,14 @@ mod tests {
             .collect()
     }
 
-    /// In PGA every kind with `e0` in a blade has a singular Gram matrix; the rotors do not.
+    /// In PGA every kind with `e0` in a blade has a singular Gram matrix; the rotors and the
+    /// parts through the origin (`Spin`, `OriginPlane`) do not.
     #[test]
     fn pga_frames_exist_only_without_the_null_direction() {
         for (name, frame) in frames(include_str!("../../../gax/specs/pga3d.gax")) {
             assert_eq!(
                 frame.is_some(),
-                name == "Scalar" || name == "Rotor",
+                matches!(name.as_str(), "Scalar" | "Rotor" | "Spin" | "OriginPlane"),
                 "{name}"
             );
         }
