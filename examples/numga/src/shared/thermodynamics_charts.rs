@@ -418,13 +418,29 @@ impl Diagram {
     /// across the frames of an animation; written after it ([`Diagram::write_names`]), they stay
     /// readable over it.
     pub fn place(&self, c: &Canvas, names: &[Floating]) -> Vec<Placed> {
+        self.place_around(c, names, &[])
+    }
+
+    /// [`Diagram::place`], the names kept clear of fixed labels too (written after them, with
+    /// [`Diagram::labels`]).
+    pub fn place_around(&self, c: &Canvas, names: &[Floating], fixed: &[Label]) -> Vec<Placed> {
         let rect = self.ax.rect;
         let [columns, rows] = c.pixels();
         let scale = columns as f32 / c.rect().width();
         let pad = 2.0 * self.unit;
         let [left, top] = rect.lo.to_euclidean();
         let [right, bottom] = rect.hi.to_euclidean();
-        let mut taken: Vec<[[f32; 2]; 2]> = Vec::new();
+        let boxed = |segs: Vec<(Vec<[Point2; 2]>, f32)>| {
+            let [lo, hi] = gax_numga_examples::points::bounds(
+                segs.into_iter().flat_map(|(s, _)| s.into_iter().flatten()),
+            );
+            [[lo[0] - pad, lo[1] - pad], [hi[0] + pad, hi[1] + pad]]
+        };
+        let mut taken: Vec<[[f32; 2]; 2]> = (fixed.iter())
+            .map(|l| {
+                boxed(self.text_segments(self.px(l.place), &l.text, l.size, l.anchor, l.shift))
+            })
+            .collect();
         let mut placed = Vec::new();
         for name in names {
             let mut best: Option<(f32, Point2, [[f32; 2]; 2])> = None;
@@ -470,6 +486,13 @@ impl Diagram {
         placed
     }
 
+    /// Write fixed labels.
+    pub fn labels(&self, c: &mut Canvas, labels: &[Label]) {
+        for l in labels {
+            self.label(c, l.place, &l.text, l.light, l.size, l.anchor, l.shift);
+        }
+    }
+
     /// Write placed names.
     pub fn write_names(&self, c: &mut Canvas, placed: &[Placed]) {
         for p in placed {
@@ -511,6 +534,32 @@ impl Floating {
             text: text.to_string(),
             light,
             anchor: LB,
+        }
+    }
+}
+
+/// A name written at a chart point, in its light and size, placed by its anchor and shifted a
+/// few numga pixels right and up.
+#[derive(Clone, Debug)]
+pub struct Label {
+    pub place: Point2,
+    pub text: String,
+    pub light: Light,
+    pub size: f32,
+    pub anchor: Anchor,
+    pub shift: [f32; 2],
+}
+
+impl Label {
+    /// A label in the names' size.
+    pub fn new(place: Point2, text: &str, light: Light, anchor: Anchor, shift: [f32; 2]) -> Label {
+        Label {
+            place,
+            text: text.to_string(),
+            light,
+            size: TEXT,
+            anchor,
+            shift,
         }
     }
 }
