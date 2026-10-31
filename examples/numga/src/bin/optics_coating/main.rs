@@ -1,13 +1,15 @@
 //! numga's `optics/coating`: optical layers from their constitutive maps in spacetime algebra.
 //! A medium is its constitutive map `χ`, from the field bivector `F` to the excitation
-//! `G = χ(F)` (numga's antibivectors are bivectors again in four dimensions). In a layer normal
-//! to `z`, with a fixed tangential wave covector `p` (its temporal part the unit `t`), the two
-//! Maxwell equations `k ∧ F = 0` and `k ∧ G = 0` split by whether they hold a derivative along
-//! `z`:
+//! `G = χ(F)`, an intrinsic bivector (numga's antibivector), a sum of dyads: the planes each
+//! axis of space sweeps through time read the electric field and carry the permittivities, the
+//! patches of the planes of space read the magnetic field and share one inverse permeability.
+//! In a layer normal to `z`, with a fixed tangential wavevector `p` (its part in time at unit
+//! frequency, `−t`), the two Maxwell equations `k ∧ F = 0` and `k ∧ G = 0` split by whether
+//! they hold a derivative along `z`:
 //!
 //! * Four do. Their amplitudes are the tangential electric field, the trivectors
-//!   `t ∧ (t · (z ∧ F))` (blades `txz tyz`), and the tangential magnetic excitation, the
-//!   vectors `t · (t ∧ (z ∧ G)*)` (blades `x y`). These are continuous across an interface.
+//!   `t ∧ (t⁻¹ · (z ∧ F))` (blades `txz tyz`), and the tangential magnetic excitation, the
+//!   vectors `t⁻¹ · (t ∧ (z ∧ G)*)` (blades `x y`). These are continuous across an interface.
 //! * Two do not. They fix the longitudinal fields: solving them reconstructs the whole field
 //!   from the four boundary amplitudes.
 //!
@@ -15,7 +17,9 @@
 //! normal indices of the layer's waves. A layer carries amplitudes across its thickness `d` by
 //! `exp(i k₀ d G)`, stacks compose, and in an isotropic exterior `(1 ± G / n) / 2` split the
 //! amplitudes into the incoming and returning waves. Their interface conditions give the
-//! reflection and transmission maps on the incident polarization, both polarizations coupled.
+//! reflection and transmission maps on the incident polarization, the tangential electric field
+//! (the planes `xt yt`), both polarizations coupled. The power a wave carries through a face is
+//! the energy current along the observer's time, read by the face.
 //!
 //! The scenes: a quarter-wave layer that matches glass to air, a stack of birefringent slices
 //! turned slice by slice (a helix) that reflects the circular polarization turning with it and
@@ -23,7 +27,8 @@
 //! reflected polarization. A leapfrog on a line of nodes, a gax field stepped by a sparse
 //! difference map, sends a pulse through the same helix in time.
 //!
-//! The animation shows that pulse. Its carrier is linear, half of each circular hand: the hand
+//! The animation shows that pulse, seen from aside and a little above, the slab a translucent
+//! box with its optic axes as rods. Its carrier is linear, half of each circular hand: the hand
 //! that turns with the helix comes back, the other passes, and the field's tip traces the hands'
 //! loops, coloured by its direction around the line. Below are the reflectance spectra of the
 //! coatings and of the helix, and the axion interface's reflection against the jump, with
@@ -36,11 +41,12 @@ mod coating;
 mod line;
 mod scenes;
 
-use coating::{Polarization, in_plane, t};
+use coating::{Direction, Polarization, in_plane};
 use gax::pga2d::Point;
+use gax::pga3d;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Rect, backdrop, caption, colormap, palette, run_with,
-    signal::haversine,
+    Align, Anim, Axes, Camera, Canvas, Light, Marker, Rect, Scene3, backdrop, caption, colormap,
+    palette, points::bounds, run_with, signal::haversine,
 };
 use scenes::{
     BAND_WAVELENGTH, CELLS, LINEAR, Results, SLAB_END, SLAB_START, helix, in_slab, positions,
@@ -49,106 +55,201 @@ use scenes::{
 
 /// One loop: the pulse's run along the line, its frames shown in turn.
 const SECONDS: f32 = 9.0;
-/// The tangential field's tip is drawn at a depth slanted by its `y`: microns of depth per unit
-/// of field (numga's oblique view).
-const SLANT: f64 = 1.0;
-/// Nanometres per micron, the depth axis's unit.
+/// Nanometres per micron, the scene's unit.
 const NM_PER_MICRON: f64 = 1000.0;
-/// The pulse panel's reach above and below the line, in units of the pulse's peak field.
-const FIELD_REACH: f64 = 1.25;
+/// The field drawn this many microns across the line per unit (numga's 3000 nm).
+const FIELD_LENGTH: f64 = 3.0;
+/// The stretch of line framed: shares of its length cut from its start and its end.
+const FRAMED: [f64; 2] = [0.08, 0.12];
+/// The view from aside and a little above: its elevation and its turn off the broadside, in
+/// radians (numga's 6° and 30°).
+const ELEVATION: f32 = 0.105;
+const AZIMUTH: f32 = 0.524;
+/// The optic axes' half length and the slab's half width across the line, in field units.
+const OPTIC_HALF_LENGTH: f64 = 0.6;
+const SLAB_HALF_WIDTH: f64 = 1.0;
+/// The least strength at which a spoke is drawn.
+const SPOKE_FLOOR: f64 = 0.02;
 
-/// A tangential vector's tip in the oblique view: its depth along the line (microns), moved by
-/// its `y` aslant, and its `x` up.
-fn oblique(depth: f64, v: Polarization) -> Point {
-    Point::xy(depth / NM_PER_MICRON + SLANT * v.e2(), v.e1())
+/// The beam's frame turned into the scene's, whose `z` is up: a half turn about the line along
+/// `x + z` carries the beam's line, along `z`, onto `x`, across the picture, and the field's `x`
+/// onto `z`, up (numga's `upright`).
+fn upright() -> gax::Unit<pga3d::Motor> {
+    pga3d::Motor::rotation_about(
+        pga3d::Point::direction(1.0, 0.0, 1.0),
+        core::f64::consts::PI,
+    )
 }
 
-/// The point of the line at `depth` (nm) in the oblique view.
-fn on_line(depth: f64) -> Point {
-    oblique(depth, Polarization::zero())
+/// The middle of the framed stretch of line, nm.
+fn framed_middle() -> f64 {
+    let positions = positions();
+    let (first, last) = (positions[0], positions[CELLS - 1]);
+    let span = last - first;
+    ((first + FRAMED[0] * span) + (last - FRAMED[1] * span)) / 2.0
 }
 
-/// The hue of a tangential vector's direction around the line, a light as bright as the vector
-/// is strong.
-fn direction_light(v: Polarization) -> Light {
+/// The scene's point of the beam's frame at `depth` (nm) along the line, moved across it by the
+/// field units `across` (its `x` and `y`).
+fn station(depth: f64, across: [f64; 2]) -> pga3d::Point {
+    let [x, y] = across.map(|a| a * FIELD_LENGTH);
+    let z = (depth - framed_middle()) / NM_PER_MICRON;
+    upright() >> pga3d::Point::xyz(x, y, z)
+}
+
+/// A direction across the line read in field units: its `x` and `y`.
+fn across(d: Direction) -> [f64; 2] {
+    [d.e234(), d.e314()]
+}
+
+/// The hue of a tangential field's direction around the line, a light as bright as the field
+/// is strong, and that strength.
+fn direction_light(v: Polarization) -> (Light, f64) {
     let east = Polarization::new(1.0, 0.0);
     let hue = east.angle_to(v) / core::f64::consts::TAU;
     let strength = (4.0 * v.norm()).min(1.0);
-    colormap::hsv(hue as f32).faded(1.6 * strength as f32)
+    (
+        colormap::hsv(hue as f32).faded(1.7 * strength as f32),
+        strength,
+    )
 }
 
-/// The pulse in the oblique view: the slab a band with its optic axes as rods, the field's tip
-/// along the line over faint spokes from the line, coloured by its direction. A field that turns
-/// traces loops; one that does not stays in its plane.
+/// The slab: a translucent box about the line, as long as the slab's stretch of it.
+fn draw_slab(sc: &mut Scene3) {
+    let w = SLAB_HALF_WIDTH;
+    let corner = |depth: f64, i: f64, j: f64| station(depth, [i * w, j * w]);
+    let ends = [SLAB_START, SLAB_END];
+    let light = palette::BLUE.faded(0.35);
+    let square = [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0)];
+    // The four long faces and the two ends.
+    for k in 0..4 {
+        let ((a, b), (c, d)) = (square[k], square[(k + 1) % 4]);
+        let [s, e] = ends;
+        sc.quad(
+            corner(s, a, b),
+            corner(e, a, b),
+            corner(e, c, d),
+            corner(s, c, d),
+            light,
+            0.12,
+        );
+    }
+    for depth in ends {
+        let [a, b, c, d] = square.map(|(i, j)| corner(depth, i, j));
+        sc.quad(a, b, c, d, light, 0.12);
+    }
+    let edges: Vec<[pga3d::Point; 2]> = (0..4)
+        .flat_map(|k| {
+            let ((a, b), (c, d)) = (square[k], square[(k + 1) % 4]);
+            ends.map(|depth| [corner(depth, a, b), corner(depth, c, d)])
+                .into_iter()
+                .chain([[corner(ends[0], a, b), corner(ends[1], a, b)]])
+        })
+        .collect();
+    sc.stroke(&edges, 1.0, palette::BLUE.faded(0.3));
+}
+
+/// The pulse seen from aside and a little above: the slab a translucent box with its optic axes
+/// as grey rods, the field's tip along the line over faint spokes from the line, coloured by
+/// its direction around the line. A field that turns traces loops; one that does not stays in
+/// its plane.
 fn draw_pulse(c: &mut Canvas, rect: Rect, s: &Results, at: f64) {
     let linear = &s.pulses[LINEAR];
     let count = linear.frames.len();
     let frame = &linear.frames[((at * count as f64) as usize).min(count - 1)];
     let positions = positions();
     let span = positions[CELLS - 1] - positions[0];
-    // numga's window: a little of each end cut away.
     let (lo, hi) = (
-        positions[0] + 0.08 * span,
-        positions[CELLS - 1] - 0.12 * span,
+        positions[0] + FRAMED[0] * span,
+        positions[CELLS - 1] - FRAMED[1] * span,
     );
-    let ax = Axes::new(
-        rect.inset(40.0, 22.0, 14.0, 30.0),
-        [(lo / NM_PER_MICRON) as f32, (hi / NM_PER_MICRON) as f32],
-        [-FIELD_REACH as f32, FIELD_REACH as f32],
-    );
-    ax.frame(
-        c,
-        "A LINEAR PULSE MEETS THE HELIX: ONE HAND RETURNS, THE OTHER PASSES",
-        "DEPTH (MICRONS)",
-        "",
-    );
-    let band = [
-        (SLAB_START, -FIELD_REACH),
-        (SLAB_END, -FIELD_REACH),
-        (SLAB_END, FIELD_REACH),
-        (SLAB_START, FIELD_REACH),
-    ]
-    .map(|(d, e)| Point::xy(d / NM_PER_MICRON, e));
-    ax.fill(c, &band, palette::BLUE.faded(0.06), 0.4);
-    let read = in_plane();
-    let rods: Vec<[Point; 2]> = positions
+    // Below the title and the note.
+    let size = (rect.height() / 26.0).clamp(4.0, 10.0);
+    let view = rect.inset(0.0, 3.2 * size + 6.0, 0.0, 0.0);
+    // Looking across the line from `−y`, turned off the broadside, at the scale where the
+    // framed line and the slab's box fill the view: measured at one pixel per micron first.
+    let camera = |scale: f32| {
+        Camera::parallel(
+            view,
+            scale,
+            -core::f32::consts::FRAC_PI_2 + AZIMUTH,
+            ELEVATION,
+        )
+    };
+    let unit = camera(1.0);
+    let reach = SLAB_HALF_WIDTH;
+    let corners = [SLAB_START, SLAB_END].into_iter().flat_map(|depth| {
+        [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0)]
+            .map(|(i, j)| station(depth, [i * reach, j * reach]))
+    });
+    let extent = [station(lo, [0.0; 2]), station(hi, [0.0; 2])]
+        .into_iter()
+        .chain(corners)
+        .filter_map(|p| unit.px(p));
+    let [low, high] = bounds(extent);
+    let scale =
+        (0.94 * view.width() / (high[0] - low[0])).min(0.9 * view.height() / (high[1] - low[1]));
+    let cam = camera(scale);
+    c.clip(rect);
+    let mut sc = Scene3::new(cam.viewport(view));
+    draw_slab(&mut sc);
+    let rods: Vec<[pga3d::Point; 2]> = positions
         .iter()
         .filter(|p| in_slab(**p))
         .step_by(3)
         .map(|p| {
-            let axis = read.of(helix(p - SLAB_START, 1.0).0) * 0.6;
-            [oblique(*p, -axis), oblique(*p, axis)]
+            let [x, y] = across(helix(p - SLAB_START, 1.0).0).map(|a| a * OPTIC_HALF_LENGTH);
+            [station(*p, [-x, -y]), station(*p, [x, y])]
         })
         .collect();
-    ax.stroke(c, &rods, 1.0, palette::INK.faded(0.15));
-    ax.line(c, on_line(lo), on_line(hi), 1.0, palette::GRID);
-    let tips: Vec<(Point, Light)> = positions
+    sc.stroke(&rods, 1.5, palette::INK.faded(0.35));
+    sc.seg(
+        station(lo, [0.0; 2]),
+        station(hi, [0.0; 2]),
+        1.5,
+        palette::INK.faded(0.45),
+    );
+    let read = in_plane();
+    let tips: Vec<(f64, pga3d::Point, Light, f64)> = positions
         .iter()
         .zip(frame.iter())
+        .filter(|(p, _)| (lo..=hi).contains(*p))
         .map(|(p, f)| {
-            // `F · t⁻¹`, with `t⁻¹ = −t` (numga's `F · t` in `t+x-y-z-`).
-            let e = read.of(-(f | t()));
-            (oblique(*p, e), direction_light(e))
+            let e = read.of(f);
+            let (light, strength) = direction_light(e);
+            (*p, station(*p, [e.e1(), e.e2()]), light, strength)
         })
         .collect();
-    for (p, (tip, light)) in positions.iter().zip(&tips).step_by(2) {
-        ax.line(c, on_line(*p), *tip, 1.0, light.faded(0.25));
+    // Every other node's spoke, where the field shows.
+    for (p, tip, light, strength) in tips.iter().step_by(2) {
+        if *strength > SPOKE_FLOOR {
+            sc.seg(station(*p, [0.0; 2]), *tip, 1.1, light.faded(0.5));
+        }
     }
-    for segment in tips.windows(2) {
-        ax.line(c, segment[0].0, segment[1].0, 1.6, segment[0].1);
+    for pair in tips.windows(2) {
+        sc.seg(pair[0].1, pair[1].1, 2.25, pair[0].2);
     }
+    sc.draw(c);
+    c.unclip();
+    let title_at = rect.lo + gax_numga_examples::Point2::direction(12.0, 1.2 * size + 6.0);
+    c.text(
+        "A LINEAR PULSE MEETS THE HELIX: ONE HAND RETURNS, THE OTHER PASSES",
+        title_at,
+        size,
+        palette::INK,
+        Align::Left,
+    );
     let fraction = |part: f64| 100.0 * part / linear.before;
     let note = format!(
         "AFTER THE RUN: {:.0}% REFLECTED, {:.0}% TRANSMITTED",
         fraction(linear.reflected),
         fraction(linear.transmitted)
     );
-    let size = (rect.height() / 30.0).clamp(4.0, 8.0);
-    ax.text(
-        c,
-        ax.at(0.01, 0.92),
+    let note_at = title_at + gax_numga_examples::Point2::direction(0.0, 1.6 * size);
+    c.text(
         &note,
-        size,
+        note_at,
+        0.8 * size,
         palette::INK.faded(0.7),
         Align::Left,
     );
@@ -219,8 +320,8 @@ fn draw_helix(c: &mut Canvas, rect: Rect, s: &Results, cursor: usize) {
     let label = Point::xy(BAND_WAVELENGTH + 8.0, 6.0);
     ax.text(c, label, "PULSE", size, faint, Align::Left);
     let curves = [
-        ("X + IY, WITH IT", percent(&s.helix[0][0]), palette::ORANGE),
-        ("X - IY, AGAINST", percent(&s.helix[1][0]), palette::SKY),
+        ("X TO Y, WITH IT", percent(&s.helix[0][0]), palette::ORANGE),
+        ("Y TO X, AGAINST", percent(&s.helix[1][0]), palette::SKY),
     ];
     draw_curves(c, &ax, &s.wavelengths, &curves, cursor);
 }

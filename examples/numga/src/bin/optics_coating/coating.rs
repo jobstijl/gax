@@ -2,9 +2,9 @@
 //! generator from its constitutive map, their spectral propagation through stacks, and the
 //! reflection and transmission of the waves of isotropic exteriors.
 //!
-//! numga's coating was written in `t+x-y-z-`; gax's STA is `x+y+z+t-` (ADR-055), so each
-//! contraction of two directions here reads with the opposite sign, and the comments say
-//! where that flips a formula: the observer's `t⁻¹` is `−t`, space squares to plus one.
+//! numga and gax share STA's `x+y+z+t-` (ADR-055), numga's `dual` is gax's `hodge`, and the
+//! regressive products agree, so the formulas read as numga's: time squares to minus one,
+//! space to plus one, and the observer's `t⁻¹` is `−t`.
 
 // numga's API in full: the tests use parts the animation does not.
 #![cfg_attr(not(test), allow(dead_code))]
@@ -21,12 +21,16 @@ pub type Excitation = intrinsic::Bivector;
 pub type Rotor = gax::Unit<Even>;
 /// numga's `Constitutive`: a field in, its excitation out (`Antibivector <- Bivector`).
 pub type Constitutive = intrinsic::Bivector<(Bivector,)>;
-/// An axion coupling is a pseudoscalar: a scalar with the orientation of the dual.
+/// An axion coupling is handed: an intrinsic scalar (numga's antipseudoscalar).
 pub type AxionCoupling = intrinsic::Scalar;
+/// A direction, the observer's time, an optic axis or a place along the line: an antivector,
+/// intrinsic (numga's `Direction`, ADR-051).
+pub type Direction = intrinsic::Trivector;
 
-/// numga's `Polarization`, the tangential blades `x y`: a vector of the interface plane,
-/// VGA2D's vector, with complex coefficients for its phase. [`tangential`] sends it into
-/// spacetime and [`in_plane`] reads it back.
+/// numga's `Polarization`, the tangential electric field: the observer's temporal planes
+/// across the layer, the blades `xt yt`. Their two coefficients are VGA2D's vector, with
+/// complex coefficients for the phase; [`tangential`] sends them into spacetime and
+/// [`in_plane`] reads them back.
 pub use gax::vga2d::Vector as Polarization;
 /// numga's `Boundary`, the four amplitudes continuous across an interface: the blades
 /// `x y txz tyz` of STA's odd part. gax's kinds are a closed family per algebra, and STA
@@ -50,8 +54,8 @@ pub type Propagation = Boundary<(Boundary,), C>;
 pub type Outgoing = Boundary<(Polarization,), C>;
 /// numga's `Readout`: a wave's polarization read from the amplitudes.
 pub type Readout = Polarization<(Boundary,), C>;
-/// numga's `ElectricMap`: a wave's electric vector from its tangential polarization.
-pub type ElectricMap = Vector<(Polarization,), C>;
+/// numga's `WaveMap`: a wave's field from its tangential electric field.
+pub type WaveMap = Bivector<(Polarization,), C>;
 /// numga's `PolarizationMap`.
 pub type PolarizationMap = Polarization<(Polarization,), C>;
 /// A tangential polarization with its temporal phase.
@@ -75,9 +79,36 @@ pub fn xy() -> B {
     x() ^ y()
 }
 
-/// The rotor turning by `angle` about the line `z`, from `x` towards `y`: `exp(−½ angle xy)`,
-/// as in Euclidean space (numga's `exp(½ angle xy)` in `t+x-y-z-`, where `xy` squared the
-/// other way round).
+/// A wave's phase is minus its wavevector's reading of the place: with its part in time minus
+/// the observer's slice, the phase grows with time at unit frequency and the wave travels along
+/// the wavevector's part in space. A tangential wavevector `parallel` holds it.
+pub fn unit_frequency() -> V {
+    -t()
+}
+
+/// The observer's direction in time, `−t*` (`*` the Hodge dual, numga's `dual`).
+pub fn time() -> Direction {
+    -t().hodge()
+}
+
+/// The observer's axes of space, `x* y* z*`.
+pub fn axes() -> [Direction; 3] {
+    [x(), y(), z()].map(|v| v.hodge())
+}
+
+/// The planes each axis sweeps through time, `axis ∨ time`, which read the electric field.
+pub fn swept_planes() -> [Excitation; 3] {
+    axes().map(|axis| axis & time())
+}
+
+/// The patches of the planes of space across each axis, `(yz)* (zx)* (xy)*`, which read the
+/// magnetic field.
+pub fn patches() -> [Excitation; 3] {
+    let (x, y, z) = (x(), y(), z());
+    [y ^ z, z ^ x, x ^ y].map(|plane| plane.hodge())
+}
+
+/// The rotor turning by `angle` about the line `z`, from `x` towards `y`: `exp(−½ angle xy)`.
 pub fn about_line(angle: f64) -> Rotor {
     (xy() * (-angle / 2.0)).exp()
 }
@@ -99,60 +130,56 @@ pub fn amplitudes() -> Boundary<(Odd,)> {
     embed().pinv()
 }
 
-/// The interface plane's vectors in spacetime: `e1, e2` to `x, y`.
-pub fn tangential() -> Vector<(Polarization,)> {
-    Vector::from_images([x(), y()])
+/// The tangential electric field in spacetime: `e1, e2` to the planes `xt, yt`.
+pub fn tangential() -> Bivector<(Polarization,)> {
+    let t = t();
+    Bivector::from_images([x() ^ t, y() ^ t])
 }
 
-/// A vector's tangential part, read in the interface plane.
-pub fn in_plane() -> Polarization<(Vector,)> {
+/// A field's tangential electric part, read as a polarization.
+pub fn in_plane() -> Polarization<(Bivector,)> {
     tangential().pinv()
 }
 
-/// The tangential electric field of a field, `t ∧ (t⁻¹ · (z ∧ F))`, with `t⁻¹ = −t` (numga's
-/// `t ∧ (t · (z ∧ F))`, where `t` squared to one).
+/// The tangential electric field of a field, `t ∧ (t⁻¹ · (z ∧ F))`.
 pub fn field_boundary() -> BoundaryMap {
     let (t, z) = (t(), z());
-    amplitudes().of((-(t ^ (t | (z ^ Bivector::slot())))).cast::<Odd>())
+    amplitudes().of((t ^ (t.inverse() | (z ^ Bivector::slot()))).cast::<Odd>())
 }
 
-/// The tangential magnetic excitation of an excitation, `t · (t ∧ (z ∧ G)*)` (numga's `dual`
-/// is gax's `hodge`).
+/// The tangential magnetic excitation of an excitation, `t⁻¹ · (t ∧ (z ∧ G)*)`.
 pub fn excitation_boundary() -> ExcitationBoundary {
     let (t, z) = (t(), z());
-    amplitudes().of((t | (t ^ (z ^ Excitation::slot()).hodge())).cast::<Odd>())
+    amplitudes().of((t.inverse() | (t ^ (z ^ Excitation::slot()).hodge())).cast::<Odd>())
 }
 
-/// The tangential electric field of the amplitudes as a polarization, `-t · (z · B)`:
-/// undoing the two wedges of [`field_boundary`].
+/// The tangential electric field the amplitudes hold, `z⁻¹ · B`: the wedge with the normal
+/// of [`field_boundary`] undone.
 pub fn electric_trace() -> Polarization<(Boundary,)> {
-    let (t, z) = (t(), z());
-    in_plane().of((-(t | (z | embed()))).cast::<Vector>())
+    in_plane().of((z().inverse() | embed()).cast::<Bivector>())
 }
 
-/// Principal electric responses along `x y z` and a scalar inverse permeability, in vacuum
-/// units: each axis's plane with the observer weighted by its permittivity, the magnetic
-/// planes by the reluctivity, then the Hodge dual (numga's `dual`).
+/// A dielectric at rest along [`time`], from its permittivity along each axis and its one
+/// reluctivity, the inverse permeability, in vacuum units: the dyads of the planes that read
+/// the field, each weighted by its material constant. Each dyad is a plane times its reading
+/// of the field, `P (F ∨ P)`; time squares to minus one, so the electric dyads enter with a
+/// minus.
 pub fn dielectric(permittivity: [f64; 3], reluctivity: f64) -> Constitutive {
     let open = Bivector::slot();
-    let electric: Bivector<(Bivector,)> = [x(), y(), z()]
+    let dyad = |plane: Excitation| plane * (open & plane);
+    let electric: Constitutive = swept_planes()
         .into_iter()
         .zip(permittivity)
-        .map(|(axis, e)| {
-            let plane = axis ^ t();
-            plane * (plane | open) * e
-        })
+        .map(|(plane, e)| dyad(plane) * -e)
         .sum();
-    // The planes `t` keeps: `t >> F` is `t F ~t`, and `t ~t = −1` here (numga's `+1`).
-    let magnetic = (open - (t() >> open)) * 0.5;
-    (electric + magnetic * reluctivity).hodge()
+    let magnetic: Constitutive = patches().into_iter().map(dyad).sum();
+    electric + magnetic * reluctivity
 }
 
-/// The axion response of strength `alpha`: the coupling, a pseudoscalar, times the identity
-/// on field planes. The coupling's number is declared the pseudoscalar's orientation. numga
-/// counted it along its `t x y z`, which is `−e1234` in `x+y+z+t-`: hence the minus.
+/// The axion response of strength `alpha`: the coupling, an intrinsic scalar, times the
+/// identity on field planes.
 pub fn axion_response(alpha: f64) -> Constitutive {
-    AxionCoupling::new(-alpha) * Bivector::slot()
+    AxionCoupling::new(alpha) * Bivector::slot()
 }
 
 /// A lossless nonmagnetic isotropic medium of refractive index `index`.
@@ -165,35 +192,36 @@ pub fn optical_distance(thickness: f64, wavelength: f64) -> f64 {
     TAU * thickness / wavelength
 }
 
-/// A layer normal to `z` at a fixed tangential wave covector.
+/// A layer normal to `z` at a fixed tangential wavevector.
 #[derive(Clone, Copy, Debug)]
 pub struct Medium {
+    pub response: Constitutive,
     pub boundary: BoundaryMap,
     pub reconstruct: FieldMap,
     pub generator: Generator,
 }
 
 impl Medium {
-    /// Reduce Maxwell to a layer normal to `z`, at the tangential wave covector `parallel`
-    /// (its temporal part the unit `t`). The longitudinal material response must be
-    /// invertible; no free surface charge or current is present.
+    /// Maxwell reduced to a layer normal to `z`, at the tangential wavevector `parallel`
+    /// (its part in time at unit frequency, [`unit_frequency`]). The longitudinal material
+    /// response must be invertible; no free surface charge or current is present.
     pub fn from_chi(chi: Constitutive, parallel: V) -> Medium {
         let (z, open) = (z(), Bivector::slot());
         // The four shared boundary amplitudes are continuous between different media.
         let boundary = field_boundary() + excitation_boundary().of(chi);
         // The remaining two equations contain no normal derivative: impose them as zero.
-        // (`z⁻¹ · (z ∧ ·)`, with `z⁻¹ = z` here; numga's `−z · (z ∧ ·)`, where `z⁻¹ = −z`.)
-        let constraint = (z | (z ^ (parallel ^ open))).cast::<Odd>()
+        let constraint = -(z | (z ^ (parallel ^ open))).cast::<Odd>()
             - (z * (z | (parallel ^ chi).hodge())).cast::<Odd>();
         // Six equations in STA's eight odd blades (the other two rows are zero): an exact
         // least-squares solve.
         let reconstruct = (embed().of(boundary) + constraint).lstsq(embed());
-        // Positive eigenvalues give phase propagation towards +z when temporal phase
-        // increases. (Minus numga's sum: the contraction with `z`, of square one here, reads
-        // the other way round.)
-        let generator = -(field_boundary().of(z | (parallel ^ reconstruct))
-            + excitation_boundary().of(z | (parallel ^ chi.of(reconstruct))));
+        // Maxwell's `parallel ∧ F + z ∧ dF/dz = 0`: undoing the wedge with the normal, the
+        // boundary state changes along z by minus the parallel part's. Positive eigenvalues
+        // give phase propagation towards +z when temporal phase increases.
+        let generator = -(field_boundary().of(z.inverse() | (parallel ^ reconstruct))
+            + excitation_boundary().of(z.inverse() | (parallel ^ chi.of(reconstruct))));
         Medium {
+            response: chi,
             boundary,
             reconstruct,
             generator,
@@ -309,31 +337,60 @@ pub fn interior(
     fields
 }
 
+/// The normal index `√(n² − k²)` of the waves of index `n` at the tangential wavevector
+/// `parallel`, `k` its part in space (Snell's law); real for the exterior waves, which must
+/// propagate.
+#[allow(clippy::disallowed_methods)] // Snell's law, a scalar root
+pub fn normal_index(index: f64, parallel: V) -> f64 {
+    // Space squares to plus one: the tangential wave's square is its length squared.
+    let tangential_wave = parallel - unit_frequency();
+    (index * index - tangential_wave.scalar_product(tangential_wave).s()).sqrt()
+}
+
+/// The potential of the tangential electric field: the wedge with the wavevector's part in
+/// time undone, `ω⁻¹ · E` with `ω` the [`unit_frequency`].
+pub fn tangential_potential() -> Vector<(Polarization,)> {
+    unit_frequency().inverse() | tangential()
+}
+
+/// The energy flow of a wave of field `field` and excitation `excitation` through the face
+/// `z`, in the sense of the face's orientation, summed over the two real quadratures of a
+/// cycle: the energy current along the observer's [`time`], the stress-energy
+/// `½ (F ∨ G) τ − (τ ∨ F) ∧ G`, read by the face.
+pub fn face_flux(field: Bivector<(), C>, excitation: intrinsic::Bivector<(), C>) -> f64 {
+    let (observer, face) = (time(), z());
+    let quadrature = |f: fn(C) -> f64| {
+        let (field, excitation) = (field.map_coefs(f), excitation.map_coefs(f));
+        let current = observer * ((field & excitation) * 0.5) - ((observer & field) ^ excitation);
+        (face & current).s()
+    };
+    quadrature(|c| c.re) + quadrature(|c| c.im)
+}
+
 /// The waves of an exterior medium at its face.
 #[derive(Clone, Copy, Debug)]
 pub struct Ports {
     pub outgoing: Outgoing,
     pub incoming: Readout,
     pub returning: Readout,
-    pub electric_field: ElectricMap,
-    pub normal_index: f64,
+    pub wave: WaveMap,
+    pub response: Constitutive,
 }
 
 impl Ports {
     /// Waves in a lossless, nonmagnetic isotropic exterior of refractive index `index`,
     /// including a real constant axion term. The normal index is real and nonzero: the
-    /// exterior waves must propagate. A polarization gives the tangential electric field,
+    /// exterior waves must propagate. A polarization is the tangential electric field,
     /// including its phase.
-    #[allow(clippy::disallowed_methods)] // the normal index √(n² - k²): Snell's law
     pub fn from_medium(medium: &Medium, index: f64, parallel: V) -> Ports {
-        // Space squares to plus one: the tangential wave's square is its length squared.
-        let tangential_wave = parallel - t();
-        let normal_index =
-            (index * index - tangential_wave.scalar_product(tangential_wave).s()).sqrt();
-        // Complete the tangential electric field to a field perpendicular to the ray.
-        let electric_field = tangential() - z() * (parallel | tangential()) / normal_index;
+        let normal_index = normal_index(index, parallel);
+        // The potential whose wave has the polarization as its tangential electric field,
+        // completed to be perpendicular to the ray.
+        let tangential = tangential_potential();
+        let potential = tangential - z() * (parallel | tangential) / normal_index;
         let wavevector = parallel + z() * normal_index;
-        let outgoing = medium.boundary.of(wavevector ^ electric_field);
+        let wave = wavevector ^ potential;
+        let outgoing = medium.boundary.of(wave);
         // Exterior evolution has just two eigenvalues, the signed normal indices.
         let one = Boundary::slot();
         let half = |sign: f64| {
@@ -344,8 +401,8 @@ impl Ports {
             outgoing: outgoing.map_coefs(C::real),
             incoming: half(1.0),
             returning: half(-1.0),
-            electric_field: electric_field.map_coefs(C::real),
-            normal_index,
+            wave: wave.map_coefs(C::real),
+            response: medium.response,
         }
     }
 
@@ -355,14 +412,12 @@ impl Ports {
         Ports::from_medium(&medium, index, parallel)
     }
 
-    /// Normal power flux, omitting the common factor of half the vacuum admittance.
+    /// The energy flow of the wave with this tangential electric field through the face, in
+    /// the sense of the face's orientation, summed over the two quadratures of a cycle: only
+    /// ratios between waves enter.
     pub fn power(&self, polarization: Wave) -> f64 {
-        let field = self.electric_field.of(polarization);
-        // Complex coefficients carry time phase: average the two real quadratures. The
-        // spatial metric is positive (numga's `t+x-y-z-` needed a minus sign here).
-        let (real, imaginary) = (field.map_coefs(|c| c.re), field.map_coefs(|c| c.im));
-        let magnitude = real.scalar_product(real).s() + imaginary.scalar_product(imaginary).s();
-        self.normal_index * magnitude
+        let field = self.wave.of(polarization);
+        face_flux(field, self.response.map_coefs(C::real).of(field))
     }
 }
 
@@ -397,7 +452,7 @@ fn inverse(m: PolarizationMap) -> PolarizationMap {
     (one.gp(trace) - m).gp(det.recip())
 }
 
-/// Solve the interface conditions with the incident polarization left open. The entrance
+/// The interface conditions solved as maps on the incident polarization. The entrance
 /// state is the substrate's outgoing wave, carried back through any coating to the entrance
 /// face.
 pub fn scatter(entrance: Outgoing, incident: &Ports) -> Scattering {
@@ -409,17 +464,18 @@ pub fn scatter(entrance: Outgoing, incident: &Ports) -> Scattering {
     }
 }
 
-/// The circular polarization `(x ± i y) / √2` of sense `sign`.
+/// The circular polarization `(xt ± i yt) / √2` of sense `sign`: its field turning from `xt`
+/// towards `yt` along the beam, or back.
 pub fn circular(sign: f64) -> Wave {
     Polarization::new(C::real(FRAC_1_SQRT_2), C::new(0.0, sign * FRAC_1_SQRT_2))
 }
 
-/// The plain `x` polarization.
+/// The plain `xt` polarization, the electric field along `x`.
 pub fn along_x() -> Wave {
     Polarization::new(C::real(1.0), C::real(0.0))
 }
 
-/// The plain `y` polarization.
+/// The plain `yt` polarization.
 pub fn along_y() -> Wave {
     Polarization::new(C::real(0.0), C::real(1.0))
 }
@@ -433,6 +489,9 @@ pub mod tests {
 
     /// numga's tolerance for the frequency-domain checks.
     pub const ROUND_OFF: f64 = 1e-10;
+    /// numga's energy flow at index 1.5 with the tangential wavevector `0.4 x`, of the `xt`
+    /// and `yt` polarizations (numga 35797de).
+    const SLANTED_POWER: [f64; 2] = [1.556_357_543_698_668, 1.445_683_229_480_096];
 
     /// The largest difference between the coefficients of two complex values or maps.
     fn gap<M: Extensor<Coef = C>>(a: M, b: M) -> f64 {
@@ -492,8 +551,9 @@ pub mod tests {
     fn bare_interface_matches_both_fresnel_polarizations_and_brewster_angle() {
         let (incident_index, substrate_index) = (1.0, 1.5);
         let tangent_at = |angle: f64| incident_index * angle.sin();
-        let ports_at =
-            |angle: f64, index: f64| Ports::isotropic(index, t() + x() * tangent_at(angle));
+        let ports_at = |angle: f64, index: f64| {
+            Ports::isotropic(index, unit_frequency() + x() * tangent_at(angle))
+        };
         let brewster = (substrate_index / incident_index).atan();
         for angle in [0.0f64, 0.4, 0.9, brewster] {
             let tangent = tangent_at(angle);
@@ -538,9 +598,9 @@ pub mod tests {
         let coating_index = (incident_index * substrate_index).sqrt();
         let optical_distance = core::f64::consts::PI / (2.0 * coating_index);
         let polarization = circular(1.0);
-        let medium = Medium::from_chi(isotropic(coating_index), t());
-        let incident = Ports::isotropic(incident_index, t());
-        let substrate = Ports::isotropic(substrate_index, t());
+        let medium = Medium::from_chi(isotropic(coating_index), unit_frequency());
+        let incident = Ports::isotropic(incident_index, unit_frequency());
+        let substrate = Ports::isotropic(substrate_index, unit_frequency());
         let coating = propagate(medium.generator, optical_distance);
         let result = scatter(coating.of(substrate.outgoing), &incident);
         let transmitted = polarization.gp(C::new(0.0, -(incident_index / substrate_index).sqrt()));
@@ -556,13 +616,13 @@ pub mod tests {
     fn quarter_wave_mirror(pairs: i32) {
         let (incident_index, substrate_index) = (1.0, 1.52);
         let (high_index, low_index) = (2.3, 1.46);
-        let incident = Ports::isotropic(incident_index, t());
-        let substrate = Ports::isotropic(substrate_index, t());
+        let incident = Ports::isotropic(incident_index, unit_frequency());
+        let substrate = Ports::isotropic(substrate_index, unit_frequency());
         // Two stacks: high-index first and low-index first.
         for (first, second) in [(high_index, low_index), (low_index, high_index)] {
             let ratio: f64 = first / second;
             let layers = (0..pairs).flat_map(|_| [first, second]).map(|index| {
-                let medium = Medium::from_chi(isotropic(index), t());
+                let medium = Medium::from_chi(isotropic(index), unit_frequency());
                 propagate(medium.generator, core::f64::consts::PI / (2.0 * index))
             });
             let result = scatter(compose(layers).of(substrate.outgoing), &incident);
@@ -611,7 +671,7 @@ pub mod tests {
         let admittances = |index: f64, normal: f64| [normal, index * index / normal];
         for angle in [0.0f64, 0.4, 0.85] {
             let tangent = incident_index * angle.sin();
-            let parallel = t() + x() * tangent;
+            let parallel = unit_frequency() + x() * tangent;
             let incident = Ports::isotropic(incident_index, parallel);
             let substrate = Ports::isotropic(substrate_index, parallel);
             let media = indices.map(|index| Medium::from_chi(isotropic(index), parallel));
@@ -668,10 +728,9 @@ pub mod tests {
         let permittivity = [2.2, 3.1, 4.3];
         let (reluctivity, axion) = (0.8, 0.37);
         let yz = y() ^ z();
-        // numga's turns, whose generators are the negatives here (see `about_line`).
-        let material_turn = (xy() * -0.23 + yz * -0.17).exp();
-        let frame_turn = (xy() * -0.31).exp();
-        let parallel = t() + x() * 0.4 + y() * 0.1;
+        let material_turn = (xy() * 0.23 + yz * 0.17).exp();
+        let frame_turn = (xy() * 0.31).exp();
+        let parallel = unit_frequency() + x() * 0.4 + y() * 0.1;
         let base = dielectric(permittivity, reluctivity);
         let open = Bivector::slot();
         let chi = (material_turn >> base.of(material_turn << open)) + axion_response(axion);
@@ -716,9 +775,13 @@ pub mod tests {
         let common_axion = 0.43;
         let base = isotropic(index);
         let scatter_between = |left: Constitutive, right: Constitutive| {
-            let incident = Ports::from_medium(&Medium::from_chi(left, t()), index, t());
-            let substrate_medium = Medium::from_chi(right, t());
-            let substrate = Ports::from_medium(&substrate_medium, index, t());
+            let incident = Ports::from_medium(
+                &Medium::from_chi(left, unit_frequency()),
+                index,
+                unit_frequency(),
+            );
+            let substrate_medium = Medium::from_chi(right, unit_frequency());
+            let substrate = Ports::from_medium(&substrate_medium, index, unit_frequency());
             (
                 scatter(substrate.outgoing, &incident),
                 incident,
@@ -765,13 +828,12 @@ pub mod tests {
         let thicknesses = [80.0, 140.0, 65.0];
         let wavelength = 630.0;
         let fractions = linspace(0.0, 1.0, 9);
-        let parallel = t() + x() * 0.3;
+        let parallel = unit_frequency() + x() * 0.3;
         let yz = y() ^ z();
         let open = Bivector::slot();
         let chis: Vec<Constitutive> = (0..3)
             .map(|k| {
-                // numga's turns, whose generators are the negatives here (see `about_line`).
-                let rotation = (xy() * -turns[k].0 + yz * -turns[k].1).exp();
+                let rotation = (xy() * turns[k].0 + yz * turns[k].1).exp();
                 let base = dielectric(permittivities[k], reluctivities[k]);
                 (rotation >> base.of(rotation << open)) + axion_response(axions[k])
             })
@@ -793,7 +855,7 @@ pub mod tests {
             .zip(thicknesses)
             .map(|(m, d)| propagate(m.generator, optical_distance(d, wavelength)));
         let result = scatter(compose(layers).of(substrate.outgoing), &incident);
-        let (normal, spatial_volume) = (z(), x() ^ y() ^ z());
+        let normal = z();
 
         for polarization in [circular(1.0), circular(-1.0)] {
             let transmitted = result.transmission.of(polarization);
@@ -817,28 +879,23 @@ pub mod tests {
                     complex(normal) ^ (chi.of(last) - right_excitation),
                     intrinsic::Trivector::zero()
                 ));
+                // The energy current along the observer's time, read by the face at every
+                // sample.
                 for field in &fields[k] {
-                    let electric = complex(t()) | *field;
-                    let magnetic = complex(t()) | chi.of(*field);
-                    let flux = |f: fn(C) -> f64| {
-                        (electric.map_coefs(f) ^ magnetic.map_coefs(f) ^ normal)
-                            .scalar_product(spatial_volume)
-                            .s()
-                    };
-                    let total = flux(|c| c.re) + flux(|c| c.im);
-                    assert!((total - transmitted_power).abs() < ROUND_OFF);
+                    let flux = face_flux(*field, chi.of(*field));
+                    assert!((flux - transmitted_power).abs() < ROUND_OFF);
                 }
                 (right_field, right_excitation) = (first, chi.of(first));
             }
 
             // At the entrance the sampled field meets the incident and reflected exterior waves.
-            let n = incident.normal_index;
-            let forward_wavevector = complex(parallel + z() * n);
+            let n = normal_index(incident_index, parallel);
             let backward_wavevector = complex(parallel - z() * n);
-            let backward_electric =
-                (tangential() + z() * (parallel | tangential()) / n).map_coefs(C::real);
-            let exterior_field = (forward_wavevector ^ incident.electric_field.of(polarization))
-                + (backward_wavevector ^ backward_electric.of(result.reflection.of(polarization)));
+            let tangential = tangential_potential();
+            let backward_potential =
+                (tangential + z() * (parallel | tangential) / n).map_coefs(C::real);
+            let exterior_field = incident.wave.of(polarization)
+                + (backward_wavevector ^ backward_potential.of(result.reflection.of(polarization)));
             assert!(close(
                 complex(normal) ^ (right_field - exterior_field),
                 Trivector::zero()
@@ -849,6 +906,39 @@ pub mod tests {
                 intrinsic::Trivector::zero()
             ));
         }
+    }
+
+    /// The dyads of [`dielectric`] are the Hodge dual of the weighted planes the port used
+    /// before numga wrote them as dyads: each axis's plane with the observer weighted by its
+    /// permittivity, the planes of space by the reluctivity.
+    #[test]
+    fn the_dielectric_dyads_are_the_dual_of_the_weighted_planes() {
+        let (permittivity, reluctivity) = ([2.2, 3.1, 4.3], 0.8);
+        let open = Bivector::slot();
+        let electric: Bivector<(Bivector,)> = [x(), y(), z()]
+            .into_iter()
+            .zip(permittivity)
+            .map(|(axis, e)| {
+                let plane = axis ^ t();
+                plane * (plane | open) * e
+            })
+            .sum();
+        // The planes `t` keeps: `t >> F` is `t F ~t`, and `t ~t = −1`.
+        let magnetic = (open - (t() >> open)) * 0.5;
+        let weighted = (electric + magnetic * reluctivity).hodge();
+        assert!(near(dielectric(permittivity, reluctivity), weighted));
+    }
+
+    /// The energy current's flow, against numga's (35797de): a unit tangential field of index
+    /// 1.5 carries 1.5 at normal incidence, and its two polarizations differ at a slant.
+    #[test]
+    fn the_face_reads_numgas_energy_flow() {
+        let normal = Ports::isotropic(1.5, unit_frequency());
+        assert!((normal.power(along_x()) - 1.5).abs() < ROUND_OFF);
+        assert!((normal.power(along_y()) - 1.5).abs() < ROUND_OFF);
+        let slanted = Ports::isotropic(1.5, unit_frequency() + x() * 0.4);
+        assert!((slanted.power(along_x()) - SLANTED_POWER[0]).abs() < 1e-9);
+        assert!((slanted.power(along_y()) - SLANTED_POWER[1]).abs() < 1e-9);
     }
 
     #[test]

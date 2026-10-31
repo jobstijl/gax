@@ -7,14 +7,15 @@ use gax::field::{Field, SparseMap};
 use gax::sta::{Bivector, Scalar, intrinsic, oriented};
 
 /// `t⁻¹ · (z ∧ X)`: a plane swept along the line, as the observer `t` sees it, a field's or an
-/// excitation's. With a difference along `z` it is the curl in both Maxwell equations. (`t⁻¹`
-/// is `−t`, as time squares to minus one; numga's `t · (z ∧ X)` in `t+x-y-z-`.)
+/// excitation's. With a difference along `z` it is the curl in both Maxwell equations.
 pub fn swept<O: Orientation>(x: oriented::Bivector<(), f64, O>) -> oriented::Bivector<(), f64, O> {
-    -(t() | (z() ^ x))
+    t().inverse() | (z() ^ x)
 }
 
-/// numga's regressive product of complementary grades (with numga's metric dual): minus
-/// gax's metric-free one in spacetime (see `electromagnetism_constitutive`).
+/// A field plane's pairing with an excitation, `−(F ∨ G)`: an electric plane pairs with its
+/// excitation to minus its energy (time squares to minus one), a magnetic plane to plus. numga
+/// sums `F ∨ G` as it stands, an energy of the opposite sign throughout, which its checks read
+/// only in ratios; the port counts it positive.
 pub fn pair(a: B, b: Excitation) -> Scalar {
     -(a & b)
 }
@@ -51,8 +52,8 @@ impl Line {
         }
     }
 
-    /// The field energy in each cell; magnetic planes pair with their excitation to minus
-    /// their energy.
+    /// The field energy in each cell, the electric planes' pairings less the magnetic
+    /// planes' (see [`pair`]).
     pub fn energy(&self, electric: &Field<B>, magnetic: &Field<B>) -> Field<Scalar> {
         Field::from_fn(electric.len(), |i| {
             let (e, m) = (electric.site(i), magnetic.site(i));
@@ -64,8 +65,8 @@ impl Line {
     /// Both exterior Maxwell equations, `d ∧ F = 0` and `d ∧ G = 0`, as a leapfrog, one
     /// state per step, without end.
     ///
-    /// The time part of `d ∧ X` is `t ∧ (dX / dt)`; contracting with the observer `t` undoes
-    /// that wedge, so each update is minus [`swept`] of the difference along `z`. Magnetic
+    /// The time part of `d ∧ X` is `t ∧ (dX / dt)`; contracting with the inverse of the
+    /// observer `t` undoes that wedge, so each update is minus [`swept`] of the difference along `z`. Magnetic
     /// planes move with the electric ones on either side; the excitation's spatial planes
     /// move with the excitation of the magnetic planes on either side, and the inverse
     /// response turns them back into electric planes.

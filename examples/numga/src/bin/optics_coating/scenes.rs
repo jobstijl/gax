@@ -4,8 +4,9 @@
 use core::f64::consts::TAU;
 
 use crate::coating::{
-    B, C, Constitutive, Medium, Polarization, Ports, Scattering, Spectrum, V, about_line, along_x,
-    axion_response, circular, compose, dielectric, isotropic, optical_distance, scatter, t, x,
+    B, C, Constitutive, Direction, Medium, Polarization, Ports, Scattering, Spectrum, about_line,
+    along_x, axion_response, circular, compose, dielectric, isotropic, optical_distance, scatter,
+    t, unit_frequency, x,
 };
 use crate::line::{Line, swept};
 use gax::field::Field;
@@ -51,11 +52,11 @@ pub const SLAB_START: f64 = 18000.0;
 pub const SLAB_END: f64 = SLAB_START + TURNS as f64 * PITCH;
 /// The pulse's centre and its envelope's standard deviation.
 const PULSE_START: f64 = 10000.0;
-const PULSE_WIDTH: f64 = 2000.0;
+const PULSE_WIDTH: f64 = 1000.0;
 /// How far light travels in the run.
 const DURATION: f64 = 27000.0;
 /// The states kept of the run, evenly spaced.
-const FRAMES: usize = 120;
+const FRAMES: usize = 168;
 /// The pulse's cases: its carrier turning with the helix, against it, and their average,
 /// which does not turn. The animation shows the last; the tests read the first two.
 #[cfg_attr(not(test), allow(dead_code))]
@@ -66,20 +67,23 @@ pub const LINEAR: usize = 2;
 
 /// The optic axis and the crystal's map at `depth` into a helix of sense `twist` (±1).
 /// Both senses use the same crystal; only the rotor transporting `χ` changes.
-pub fn helix(depth: f64, twist: f64) -> (V, Constitutive) {
+pub fn helix(depth: f64, twist: f64) -> (Direction, Constitutive) {
     let rotor = about_line(TAU * depth / PITCH * twist);
     let crystal = dielectric(CRYSTAL_PERMITTIVITY, 1.0);
-    (rotor >> x(), rotor >> crystal.of(rotor << Bivector::slot()))
+    (
+        rotor >> x().hodge(),
+        rotor >> crystal.of(rotor << Bivector::slot()),
+    )
 }
 
 /// The reflected and transmitted powers of `x` light on glass behind each coating, per
 /// coating and wavelength, at normal incidence.
 pub fn antireflection(wavelengths: &[f64]) -> [Vec<(f64, f64)>; 3] {
-    let incident = Ports::isotropic(INCIDENT_INDEX, t());
-    let substrate = Ports::isotropic(SUBSTRATE_INDEX, t());
+    let incident = Ports::isotropic(INCIDENT_INDEX, unit_frequency());
+    let substrate = Ports::isotropic(SUBSTRATE_INDEX, unit_frequency());
     core::array::from_fn(|k| {
         let index = COATING_INDICES[k];
-        let coating = Spectrum::of(Medium::from_chi(isotropic(index), t()).generator);
+        let coating = Spectrum::of(Medium::from_chi(isotropic(index), unit_frequency()).generator);
         let thickness = OPTICAL_THICKNESSES[k] / index;
         wavelengths
             .iter()
@@ -97,7 +101,7 @@ pub fn helix_layers(twist: f64) -> Vec<Spectrum> {
     (0..LAYERS)
         .map(|k| {
             let (_, chi) = helix((k as f64 + 0.5) * THICKNESS, twist);
-            Spectrum::of(Medium::from_chi(chi, t()).generator)
+            Spectrum::of(Medium::from_chi(chi, unit_frequency()).generator)
         })
         .collect()
 }
@@ -112,7 +116,7 @@ pub fn stack_scattering(layers: &[Spectrum], wavelength: f64, ports: &Ports) -> 
 /// The reflected and transmitted powers of each circular polarization on each helix,
 /// `[polarization][helix][wavelength]`.
 pub fn twisted(wavelengths: &[f64]) -> [[Vec<(f64, f64)>; 2]; 2] {
-    let ports = Ports::isotropic(SURROUNDING_INDEX, t());
+    let ports = Ports::isotropic(SURROUNDING_INDEX, unit_frequency());
     let helices = TWIST_SIGNS.map(|twist| {
         let layers = helix_layers(twist);
         wavelengths
@@ -135,13 +139,13 @@ pub fn twisted(wavelengths: &[f64]) -> [[Vec<(f64, f64)>; 2]; 2] {
 /// in total. Identical ordinary dielectric responses: all reflection comes from the jump.
 pub fn axion(jumps: &[f64]) -> Vec<[f64; 3]> {
     let chi = isotropic(SURROUNDING_INDEX);
-    let incident = Ports::isotropic(SURROUNDING_INDEX, t());
+    let incident = Ports::isotropic(SURROUNDING_INDEX, unit_frequency());
     let total = incident.power(along_x());
     jumps
         .iter()
         .map(|jump| {
-            let medium = Medium::from_chi(chi + axion_response(*jump), t());
-            let substrate = Ports::from_medium(&medium, SURROUNDING_INDEX, t());
+            let medium = Medium::from_chi(chi + axion_response(*jump), unit_frequency());
+            let substrate = Ports::from_medium(&medium, SURROUNDING_INDEX, unit_frequency());
             let reflected = scatter(substrate.outgoing, &incident)
                 .reflection
                 .of(along_x());
@@ -159,8 +163,9 @@ pub fn axion(jumps: &[f64]) -> Vec<[f64; 3]> {
 pub fn pulse(at: f64) -> [B; 3] {
     let envelope = (-((at - PULSE_START) / PULSE_WIDTH).powi(2) / 2.0).exp();
     let phase = optical_distance(SURROUNDING_INDEX * at, BAND_WAVELENGTH);
-    let [with, against] = TWIST_SIGNS.map(|hand| about_line(hand * phase) >> x());
-    [with, against, (with + against) * 0.5].map(|e| (e * envelope) ^ t())
+    let xt = x() ^ t();
+    let [with, against] = TWIST_SIGNS.map(|hand| about_line(hand * phase) >> xt);
+    [with, against, (with + against) * 0.5].map(|e| e * envelope)
 }
 
 /// The nodes' positions along the line, in nm.
@@ -272,7 +277,7 @@ mod tests {
         // numga's windings: the negative twist first.
         let windings = [-1.0, 1.0];
         let wavelengths = [500.0, 660.0, 850.0];
-        let ports = Ports::isotropic(SURROUNDING_INDEX, t());
+        let ports = Ports::isotropic(SURROUNDING_INDEX, unit_frequency());
         // [winding][wavelength] scattering, forwards and with the layers reversed.
         let scattering = |reverse: bool| -> Vec<Vec<Scattering>> {
             windings
@@ -290,7 +295,7 @@ mod tests {
                 .collect()
         };
         let (forward, backward) = (scattering(false), scattering(true));
-        // [polarization][winding][wavelength]: x + iy, then x - iy.
+        // [polarization][winding][wavelength]: xt + i yt, then xt - i yt.
         let reflectance = |p: usize, w: usize, l: usize| {
             forward[w][l].powers(circular([1.0, -1.0][p]), &ports, &ports)
         };
@@ -325,9 +330,9 @@ mod tests {
     fn selected_circular_wave_decays_through_the_twisted_reflector() {
         let wavelength = 660.0;
         let fractions = linspace(0.0, 1.0, 9);
-        let ports = Ports::isotropic(SURROUNDING_INDEX, t());
+        let ports = Ports::isotropic(SURROUNDING_INDEX, unit_frequency());
         let media: Vec<Medium> = (0..LAYERS)
-            .map(|k| Medium::from_chi(helix((k as f64 + 0.5) * THICKNESS, 1.0).1, t()))
+            .map(|k| Medium::from_chi(helix((k as f64 + 0.5) * THICKNESS, 1.0).1, unit_frequency()))
             .collect();
         let thicknesses = [THICKNESS; LAYERS];
         let result = stack_scattering(&helix_layers(1.0), wavelength, &ports);
@@ -360,17 +365,28 @@ mod tests {
     }
 
     /// numga's test and scenario check of the run: the leapfrog keeps the pulse's energy in
-    /// every case, measured once the pulses have left the helix (a method-accuracy check), and
-    /// the hand turning with the helix comes back while the other passes, as the reflectance
-    /// band says.
+    /// every case, measured once the pulses have left the helix (a method-accuracy check,
+    /// within the grid's dispersion of a pulse this short), and the hand turning with the helix
+    /// comes back while the other passes, as the reflectance band says, all but the part of
+    /// the short pulse's spectrum outside the band.
     #[test]
     fn stepped_pulse_keeps_its_energy_and_returns_the_hand_turning_with_the_helix() {
         let runs = &time_domain();
         for run in runs {
-            assert!(((run.reflected + run.transmitted) / run.before - 1.0).abs() < 1e-3);
+            assert!(((run.reflected + run.transmitted) / run.before - 1.0).abs() < 5e-3);
         }
-        assert!(runs[WITH].reflected / runs[WITH].before > 0.98);
+        assert!(runs[WITH].reflected / runs[WITH].before > 0.95);
         assert!(runs[AGAINST].reflected / runs[AGAINST].before < 0.01);
+        // The same run as numga's: its reflected and transmitted fractions (35797de).
+        let numga = [
+            [0.973_413_248_600_855_4, 0.024_207_671_189_019_14],
+            [0.004_368_150_677_310_02, 0.995_239_707_093_011_3],
+            [0.450_714_570_572_436_9, 0.547_976_687_316_669],
+        ];
+        for (run, [reflected, transmitted]) in runs.iter().zip(numga) {
+            assert!((run.reflected / run.before - reflected).abs() < 1e-9);
+            assert!((run.transmitted / run.before - transmitted).abs() < 1e-9);
+        }
     }
 
     /// numga's scenario check of the spectra: every one conserves energy.
