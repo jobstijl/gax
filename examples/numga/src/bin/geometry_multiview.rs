@@ -1,20 +1,25 @@
-//! numga's `geometry/multiview`: N-camera reconstruction and bundle adjustment with perspective
+//! numga's `estimation/multiview`: N-camera reconstruction and camera alignment with perspective
 //! cone quadrics. A camera is a projective map on points, `Camera = Point <- Point`; a quadric is
 //! its polarity map, `Plane <- Point`, with value `quadric(p) & p` at a point. A pixel's
-//! precision on the sensor is a disc; feeding the camera into it and carrying its polar planes
-//! back through the camera (the induced map on planes, solved from the incidence pairing) lifts
-//! it into a sight cone in the scene whose cross-section widens with depth.
+//! precision on the sensor is a ball; feeding the camera into it and carrying its polar planes
+//! back through the camera's adjugate (the induced map on planes, which a central projection
+//! has though it has no inverse) lifts it into a sight cone in the scene whose cross-section
+//! widens with depth.
 //!
-//! Bundle adjustment works on the cones directly: sum each point's cones over its cameras and
-//! take the fused cone's vertex (a gauge dyad on the weight makes it the pole of the plane at
-//! infinity), then take a Gauss-Newton step on each camera's pose twist with the cone value as
-//! the cost. A variant folds the points' response into the cameras' curvature by a Schur
-//! complement, which also gives each camera's marginal information.
+//! Alignment works on the cones directly: sum each point's cones over its cameras into a splat
+//! and take its centre (a gauge dyad on the weight makes it the pole of the plane at infinity),
+//! then take a Gauss-Newton step on each camera's pose twist with the cone value as the cost.
+//! The joint variant weighs the cones into pixel units and folds the points' response into the
+//! cameras' curvature by a Schur complement, which couples every pair of cameras through the
+//! points they share: the information is a form over the field of the cameras' twists, and one
+//! solve moves them all. A third aligns each pixel's sight line to the other cameras' belief
+//! without placing a point, and lands where the joint steps do.
 //!
 //! The core is written once, as a macro instantiated for PGA2D (the drawings) and PGA3D (the
-//! tests). The animation plays numga's four convergence scenarios in the plane: one, two and
-//! three moving cameras, and the Schur complement with each camera's pose covariance. The sight
-//! cones (a pixel wide) and the fused splats are rasterized per pixel from the quadrics.
+//! tests). The animation plays numga's four alignments in the plane: one and two moving cameras
+//! a step at a time, three free cameras at an even pace along their screws, and the joint steps
+//! with each moving camera's pose covariance. The sight cones (a pixel wide) and the fused
+//! splats are rasterized per pixel from the quadrics.
 
 use gax::ApproxEq;
 use gax::motions::Linear;
@@ -28,6 +33,7 @@ use gax_numga_examples::{
 /// a line in the plane), and its `Direction`, the ideal points.
 macro_rules! multiview_core {
     ($ga:ident, $Plane:ident) => {
+        use gax::sites::{SiteField, Sites};
         use gax::$ga::$Plane as Plane;
         use gax::$ga::{Direction, Motor, Point, Scalar, Twist};
         use gax::{Kind, Unit};
@@ -97,15 +103,12 @@ macro_rules! multiview_core {
             trans >> sensor.of(trans << Point::slot())
         }
 
-        /// The map on planes induced by a map on points, through incidence: `on_planes(t)(l) & p
-        /// == l & t(p)` for every plane and point, whether or not `t` is invertible.
-        pub fn on_planes(collineation: Camera) -> Plane<(Plane,)> {
-            (Plane::slot() & Point::slot()).solve(Plane::slot() & collineation)
-        }
-
-        /// A sensor disc pulled back through the camera into a perspective cone.
+        /// A sensor disc pulled back through the camera into a perspective cone: the disc of
+        /// the camera's images, carried back to planes by the camera's adjugate, the map on
+        /// planes induced through incidence (`adjugate(t)(l) & p == l & t(p)` for every plane
+        /// and point; a central projection has no inverse, but an adjugate).
         pub fn make_cone(camera: Camera, disc: Quadric) -> Quadric {
-            on_planes(camera).of(disc.of(camera))
+            camera.adjugate().of(disc.of(camera))
         }
 
         /// The cones moved from each camera's frame to the world, `[point][camera]`.
@@ -195,7 +198,7 @@ macro_rules! multiview_core {
 
         /// Camera poses and points by alternating triangulation with damped Gauss-Newton steps
         /// on the poses; `free` is 1 for each camera that moves, 0 for the anchors.
-        pub fn bundle_adjust(
+        pub fn align(
             initial: &[M],
             cones: &[Vec<Quadric>],
             iterations: usize,
@@ -212,9 +215,14 @@ macro_rules! multiview_core {
             (motors, points, fused)
         }
 
+        /// Uncertainty that does not grow with depth, in units of depth: calibration, the
+        /// extent of a point and whatever else the cones leave out. Pixel noise grows with
+        /// depth, and the two variances add.
+        pub const FLOOR: f64 = 0.1;
+
         /// The cones in pixel units: each divided by the square of the depth of its point in
-        /// its camera, the weight of the projected point, iterated since the points depend on
-        /// the weights.
+        /// its camera, the weight of the projected point, plus the floor's square, iterated
+        /// since the points depend on the weights (numga's three times).
         pub fn reweight_cones(
             camera: Camera,
             motors: &[M],
@@ -230,8 +238,8 @@ macro_rules! multiview_core {
                         row.iter()
                             .zip(motors)
                             .map(|(q, m)| {
-                                let z = (w() & camera.of(*m << *p)).s().abs().max(0.1);
-                                q.gp(1.0 / (z * z))
+                                let depth = (w() & camera.of(*m << *p)).s();
+                                q.gp(1.0 / (depth * depth + FLOOR * FLOOR))
                             })
                             .collect()
                     })
@@ -240,49 +248,100 @@ macro_rules! multiview_core {
             weighted
         }
 
-        /// Joint Gauss-Newton on the poses with depth reweighting and a Schur complement: each
-        /// point's response to a camera step, from its own curvature against the cross term,
-        /// is folded into the camera's curvature. Returns the poses, points, fused quadrics
-        /// and each camera's marginal information (zero on the anchors).
-        pub fn bundle_adjust_schur(
+        /// The information on all `N` poses together, a form over the field of the cameras'
+        /// twists.
+        pub type Joint<const N: usize> = Scalar<(Sites<Twist, N>, Sites<Twist, N>)>;
+
+        /// Camera `i`'s twist placed in the field of the cameras' twists, `Twist[N] <- Twist`.
+        pub fn place<const N: usize>(i: usize) -> SiteField<Twist, N, (Twist,), f64> {
+            SiteField::from_sites(core::array::from_fn(|k| {
+                Twist::slot().gp(if k == i { 1.0 } else { 0.0 })
+            }))
+        }
+
+        /// Camera `i`'s twist read from the field of the cameras' twists, `Twist <- Twist[N]`.
+        pub fn pick<const N: usize>(i: usize) -> Twist<(Sites<Twist, N>,)> {
+            SiteField::<Twist, N, (Sites<Twist, N>,), f64>::from_blocks(|a, b| {
+                Twist::slot().gp(if a == b { 1.0 } else { 0.0 })
+            })
+            .site(i)
+        }
+
+        /// Joint Gauss-Newton on the poses with depth reweighting and a Schur complement. A
+        /// step of one camera moves the points it sees, and a displaced point changes the cost
+        /// seen by every camera that observes it: solving each point's curvature against the
+        /// cross curvature gives its response to a step of each camera, and folded into the
+        /// cameras' own curvature as the Schur complement it couples every pair of cameras
+        /// through the points they share. The information is a form over the field of the
+        /// `N` cameras' twists, one least-squares solve moves all of them at once, and the
+        /// anchored cameras, zeroed in the form, fix where the scene lies. Returns the poses,
+        /// points, fused quadrics and the information of the last step.
+        pub fn align_jointly<const N: usize>(
             camera: Camera,
             initial: &[M],
             cones: &[Vec<Quadric>],
             iterations: usize,
             damping: f64,
             free: &[f64],
-        ) -> (Vec<M>, Vec<P>, Vec<Quadric>, Vec<Information>) {
+        ) -> (Vec<M>, Vec<P>, Vec<Quadric>, Joint<N>) {
+            assert_eq!(initial.len(), N);
             let mut motors = initial.to_vec();
-            let mut information = vec![Scalar::zero(); motors.len()];
+            let mut information = Joint::<N>::zero();
             for _ in 0..iterations {
                 let scaled = reweight_cones(camera, &motors, cones);
                 let (points, _) = triangulate(&motors, &scaled);
                 // A world displacement of a point, carried into each camera.
                 let moved: Vec<Point<(Direction,)>> =
                     motors.iter().map(|m| *m << embed()).collect();
-                let h_cam = camera_curvature(&motors, &scaled, &points);
-                information = h_cam;
+                let own = camera_curvature(&motors, &scaled, &points);
+                let mut blocks: Vec<Vec<Information>> = (0..N)
+                    .map(|i| {
+                        (0..N)
+                            .map(|j| if i == j { own[i] } else { Scalar::zero() })
+                            .collect()
+                    })
+                    .collect();
+                let mut slope: Scalar<(Sites<Twist, N>,)> = Scalar::zero();
                 for (p, row) in points.iter().zip(&scaled) {
-                    let h_pt: Scalar<(Direction, Direction)> =
+                    let point_curvature: Scalar<(Direction, Direction)> =
                         row.iter().zip(&moved).map(|(q, mv)| q.of(*mv) & *mv).sum();
-                    for (c, m) in motors.iter().enumerate() {
-                        let moving = motion(*m << *p);
-                        let polar = row[c].of(moving);
-                        let cross = polar & moved[c];
-                        // The point's displacement per camera step, then its compliance.
-                        let response = h_pt.solve(cross);
-                        information[c] -= polar & (*m << embed().of(response));
+                    let locals: Vec<P> = motors.iter().map(|m| *m << *p).collect();
+                    let polars: Vec<Plane<(Twist,)>> = (row.iter().zip(&locals))
+                        .map(|(q, local)| q.of(motion(*local)))
+                        .collect();
+                    // The point's displacement per step of each camera.
+                    let responses: Vec<Direction<(Twist,)>> = (polars.iter().zip(&moved))
+                        .map(|(polar, mv)| point_curvature.solve(*polar & *mv))
+                        .collect();
+                    for i in 0..N {
+                        for (j, response) in responses.iter().enumerate() {
+                            blocks[i][j] -= polars[i] & moved[i].of(*response);
+                        }
+                        let own_slope = row[i].of(locals[i]) & motion(locals[i]);
+                        slope += own_slope.of(pick::<N>(i)).gp(free[i]);
                     }
                 }
-                motors = step_motors(&motors, &scaled, &points, &information, damping, free);
+                information = Joint::<N>::zero();
+                for (i, row) in blocks.iter().enumerate() {
+                    for (j, block) in row.iter().enumerate() {
+                        information += block
+                            .of_both(pick::<N>(i), pick::<N>(j))
+                            .gp(free[i] * free[j]);
+                    }
+                }
+                let step: SiteField<Twist, N, (), f64> = information.lstsq_with(-slope, 1e-4);
+                motors = (motors.iter().enumerate())
+                    .map(|(c, m)| *m * step.site(c).gp(0.5 * damping).exp())
+                    .collect();
             }
             let (points, fused) = triangulate(&motors, &reweight_cones(camera, &motors, cones));
-            let information = information
-                .into_iter()
-                .zip(free)
-                .map(|(i, f)| i.gp(*f))
-                .collect();
             (motors, points, fused, information)
+        }
+
+        /// The block of the joint information between cameras `i` and `j`; camera `i`'s own,
+        /// `block(joint, i, i)`, is its information with the other cameras held in place.
+        pub fn block<const N: usize>(joint: Joint<N>, i: usize, j: usize) -> Information {
+            joint.of_both(place::<N>(i), place::<N>(j))
         }
 
         /// The objective: every point's cone value, summed over its cameras.
@@ -298,6 +357,7 @@ macro_rules! multiview_core {
         }
 
         /// The RMS distance between unit points: their difference is a direction.
+        #[cfg_attr(not(test), allow(dead_code))]
         #[allow(clippy::disallowed_methods)] // the root of a mean square, a statistic
         pub fn rmse(points: &[P], truth: &[P]) -> f64 {
             let sum: f64 = points
@@ -368,20 +428,106 @@ mod plane {
     /// Two convergent cameras, the second panned 5% too far, aligned by eight steps; the
     /// scenario's check is that the cone cost vanishes.
     #[cfg_attr(not(test), allow(dead_code))]
-    pub fn bundle_adjustment() -> (Vec<M>, Vec<P>, f64) {
+    pub fn aligned_pair() -> (Vec<M>, Vec<P>, f64) {
         let truth = rig(&[-BASELINE, BASELINE], &[gaze(), -gaze()]);
         let (_, cones) = observe(&truth);
         let initial = rig(&[-BASELINE, BASELINE], &[gaze(), -gaze() * 1.05]);
-        let (motors, points, _) = bundle_adjust(&initial, &cones, 8, 0.8, &[0.0, 1.0]);
+        let (motors, points, _) = align(&initial, &cones, 8, 0.8, &[0.0, 1.0]);
         let cost = cone_cost(&motors, &points, &cones);
         (motors, points, cost)
     }
 
+    /// Camera alignment without placing a point: each pixel's sight line is brought through
+    /// the belief of the other cameras about its point (numga's `align_rays_to_splats`). A
+    /// cone is minus twice the log-likelihood of its pixel as a function of where the point
+    /// lies, flat along the sight line, so a splat, the cones summed, is minus twice the log of
+    /// the belief about its point. A pixel's cost is the least value the splat of the other
+    /// cameras takes along its sight line: a sharp belief penalizes a line that misses it, a
+    /// broad one barely does. Along the line through the pinhole with heading `h` that least
+    /// value is the meet of the two points' polar planes paired with the line, over the
+    /// stiffness along the line, `polar(h) & h`; leaving each pixel's own cone out (it
+    /// vanishes along its own line) changes neither the cost nor its slope and lets the steps
+    /// converge as fast as `align_jointly`. Where along each line the belief is least, its
+    /// depth, weights the cones into pixel units for the next step. The pinhole and the pixels
+    /// are in the cameras' frames, `pixels[point][camera]`.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn align_rays_to_splats(
+        initial: &[M],
+        cones: &[Vec<Quadric>],
+        pinhole: P,
+        pixels: &[Vec<P>],
+        iterations: usize,
+        damping: f64,
+        free: &[f64],
+    ) -> (Vec<M>, Vec<Quadric>) {
+        // Each pixel's heading and sight line, and how the pinhole, the headings and the sight
+        // lines move per unit step of the pose; all fixed in the cameras' frames.
+        let headings: Vec<Vec<P>> = (pixels.iter())
+            .map(|row| row.iter().map(|p| *p - pinhole).collect())
+            .collect();
+        let pinhole_motion = Twist::slot().commutator(pinhole);
+        let mut motors = initial.to_vec();
+        let mut weighted = cones.to_vec();
+        let splats = |motors: &[M], weighted: &[Vec<Quadric>]| -> Vec<Quadric> {
+            world_cones(motors, weighted)
+                .into_iter()
+                .map(|row| row.into_iter().sum())
+                .collect()
+        };
+        for _ in 0..iterations {
+            let beliefs = splats(&motors, &weighted);
+            let mut slopes = vec![Scalar::<(Twist,)>::zero(); motors.len()];
+            let mut curvatures = vec![Information::zero(); motors.len()];
+            let mut depths = vec![vec![0.0; motors.len()]; pixels.len()];
+            for (p, belief) in beliefs.iter().enumerate() {
+                for (c, m) in motors.iter().enumerate() {
+                    // The belief as camera `c` sees it, less its own cone.
+                    let other = (*m << belief.of(*m >> Point::slot())) - weighted[p][c];
+                    let heading = headings[p][c];
+                    let ray = pinhole & heading;
+                    let ray_motion = Twist::slot().commutator(ray);
+                    let heading_motion = Twist::slot().commutator(heading);
+                    // The polar of the sight line, the meet of its points' polar planes, and
+                    // how it moves.
+                    let (polar_pinhole, polar_heading) = (other.of(pinhole), other.of(heading));
+                    let polar = polar_pinhole ^ polar_heading;
+                    let polar_motion = (other.of(pinhole_motion) ^ polar_heading)
+                        + (polar_pinhole ^ other.of(heading_motion));
+                    let stiffness = (polar_heading & heading).s();
+                    // The polar joined with the line's motion is the slope, the polar's motion
+                    // joined with the line's motion the curvature.
+                    slopes[c] += (polar & ray_motion).gp(1.0 / stiffness);
+                    curvatures[c] += (polar_motion & ray_motion).gp(1.0 / stiffness);
+                    depths[p][c] = -(polar_pinhole & heading).s() / stiffness;
+                }
+            }
+            motors = (motors.iter().enumerate())
+                .map(|(c, m)| {
+                    let step: Twist = curvatures[c].lstsq_with(-slopes[c], 1e-4);
+                    *m * step.gp(0.5 * damping * free[c]).exp()
+                })
+                .collect();
+            // Where along each sight line the belief is least puts the next fusion in pixel
+            // units; its sign drops out of its square.
+            weighted = (cones.iter().zip(&depths))
+                .map(|(row, ds)| {
+                    (row.iter().zip(ds))
+                        .map(|(q, d)| q.gp(1.0 / (d * d + FLOOR * FLOOR)))
+                        .collect()
+                })
+                .collect();
+        }
+        let beliefs = splats(&motors, &weighted);
+        (motors, beliefs)
+    }
+
     /// A convergence scenario: its name, the rig after each step from the initial poses, and
-    /// for the Schur scenario each camera's marginal information at each state.
+    /// for the joint steps each camera's own information at each state.
     pub struct Scenario {
         pub name: &'static str,
         pub free: Vec<f64>,
+        /// Whether it plays at an even pace along its states (else a step at a time).
+        pub even: bool,
         pub states: Vec<Vec<M>>,
         pub information: Option<Vec<Vec<Information>>>,
     }
@@ -397,12 +543,13 @@ mod plane {
         let mut states = vec![initial];
         for _ in 0..iterations {
             let last = states.last().expect("a state");
-            let (next, _, _) = bundle_adjust(last, &cones, 1, damping, &free);
+            let (next, _, _) = align(last, &cones, 1, damping, &free);
             states.push(next);
         }
         Scenario {
             name,
             free,
+            even: false,
             states,
             information: None,
         }
@@ -435,37 +582,60 @@ mod plane {
         )
     }
 
-    /// All three cameras perturbed and free, without anchors.
+    /// All three cameras misplaced and free, without anchors: numga's README picture, each
+    /// offset scaled by `[0.7, 1.2, 1]` and shifted by `[0, 0, -0.45]`, each turn scaled by
+    /// `[1.6, 2.2, 1]` and turned further by `[0, 0, 0.35]`, a tenth of each step taken.
     pub fn three_cameras(iterations: usize) -> Scenario {
         let initial = rig(
-            &[-BASELINE * 0.95, BASELINE, -0.1],
-            &[gaze() * 1.05, -gaze() * 1.25, 0.05],
+            &[-BASELINE * 0.7, BASELINE * 1.2, -0.45],
+            &[gaze() * 1.6, -gaze() * 2.2, 0.35],
         );
-        convergence(
-            "THREE FREE CAMERAS",
-            initial,
-            0.32,
-            vec![1.0; 3],
-            iterations,
-        )
+        Scenario {
+            even: true,
+            ..convergence("THREE FREE CAMERAS", initial, 0.1, vec![1.0; 3], iterations)
+        }
     }
 
-    /// One moving camera as in `one_camera`, by the joint step with the Schur complement; each
-    /// state carries the marginal information from the step taken there.
-    pub fn schur(iterations: usize) -> Scenario {
+    /// The depth at which a camera's turn counts as much as its move, about where the
+    /// landmarks are.
+    pub const LEVER: f64 = 1.5;
+
+    /// The distance travelled along an alignment, at each state from the start: per step the
+    /// pinholes' moves plus their cameras' turns counted at the lever's depth (twice the lever
+    /// times the norm of the screw, its log, which is half the angle), summed over the
+    /// cameras. Resampled at even shares of it, the alignment plays at an even pace.
+    pub fn pace(states: &[Vec<M>]) -> Vec<f64> {
+        let mut travelled = vec![0.0];
+        for pair in states.windows(2) {
+            let step: f64 = (pair[0].iter().zip(&pair[1]))
+                .map(|(a, b)| {
+                    let screw = (*b * a.reverse()).log();
+                    let (from, to) = (*a >> Point::origin(), *b >> Point::origin());
+                    (to - from).ideal_norm() + 2.0 * LEVER * screw.norm()
+                })
+                .sum();
+            travelled.push(travelled.last().expect("a start") + step);
+        }
+        travelled
+    }
+
+    /// One moving camera as in `one_camera`, by the joint steps; each state carries each
+    /// camera's own block of the information from the step taken there.
+    pub fn jointly(iterations: usize) -> Scenario {
         let (_, cones) = observe(&three_camera_truth());
         let free = vec![0.0, 1.0, 0.0];
         let mut motors = rig(&[-BASELINE, BASELINE, 0.0], &[gaze(), -gaze() * 1.25, 0.0]);
         let (mut states, mut information) = (Vec::new(), Vec::new());
         for _ in 0..=iterations {
-            let (next, _, _, info) = bundle_adjust_schur(pinhole(), &motors, &cones, 1, 0.7, &free);
+            let (next, _, _, joint) = align_jointly::<3>(pinhole(), &motors, &cones, 1, 0.7, &free);
             states.push(motors);
-            information.push(info);
+            information.push((0..3).map(|i| block(joint, i, i)).collect());
             motors = next;
         }
         Scenario {
-            name: "SCHUR COMPLEMENT, WITH POSE COVARIANCE",
+            name: "JOINT STEPS, WITH POSE COVARIANCE",
             free,
+            even: false,
             states,
             information: Some(information),
         }
@@ -486,11 +656,17 @@ mod space {
     multiview_core!(pga3d, Plane);
 }
 
-/// Each convergence scenario's states.
+/// Each convergence scenario's steps, and the three free cameras' (numga's 10 and 30).
 const ITERATIONS: usize = 10;
-/// Seconds per Gauss-Newton step, and the pause after each scenario.
+const FREE_ITERATIONS: usize = 30;
+/// Seconds per Gauss-Newton step, and the pause after each scenario stepped through (numga's
+/// frames of a third of a second).
 const PER_STEP: f32 = 0.33;
 const HOLD: f32 = 1.2;
+/// The seconds of the three free cameras' alignment, played at an even pace, and of the
+/// aligned rig held (numga's 108 and 18 frames of 40 ms).
+const EVEN: f32 = 4.32;
+const EVEN_HOLD: f32 = 0.72;
 /// The viewport's height, and the angular half-width of a pixel (the cone radius per unit
 /// depth).
 const Y_RANGE: [f32; 2] = [-0.3, 2.95];
@@ -498,21 +674,19 @@ const PIXEL_ANGLE: f64 = 0.035;
 
 struct Data {
     scenarios: Vec<plane::Scenario>,
-    truth: Vec<plane::P>,
     cones: Vec<Vec<plane::Quadric>>,
 }
 
-/// The four scenarios, and the truth and the sight cones they are measured against.
+/// The four scenarios, and the sight cones they are measured against.
 fn data() -> Data {
-    let (truth, cones) = plane::observe(&plane::three_camera_truth());
+    let (_, cones) = plane::observe(&plane::three_camera_truth());
     Data {
         scenarios: vec![
             plane::one_camera(ITERATIONS),
             plane::two_cameras(ITERATIONS),
-            plane::three_cameras(ITERATIONS),
-            plane::schur(ITERATIONS),
+            plane::three_cameras(FREE_ITERATIONS),
+            plane::jointly(ITERATIONS),
         ],
-        truth,
         cones,
     }
 }
@@ -658,7 +832,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
                 let n = l.normalized();
                 (
                     Point::direction(n.e1(), n.e2()),
-                    (v.max(1e-8).sqrt() * 0.08).min(1.0),
+                    (v.max(1e-8).sqrt() * 0.02).min(1.0),
                 )
             })
             .collect();
@@ -679,7 +853,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
         ax.dashed(c, &ring, 1.6, 4.0, colour);
         // The turning's standard deviation, a fan either side of the axis (scaled for display).
         #[allow(clippy::disallowed_methods)] // a standard deviation from a variance
-        let turn = (w & cov.of(w)).s().max(0.0).sqrt() * 0.35;
+        let turn = (w & cov.of(w)).s().max(0.0).sqrt() * 0.09;
         let half = turn.min(core::f64::consts::PI);
         let arc: Vec<Point> = (0..=24)
             .map(|i| {
@@ -716,8 +890,9 @@ fn draw_poses(
     }
 }
 
-/// The point error along each scenario's steps, log scale, with a decade of room above the
-/// errors for the legend: the scenario shown bold, with a dot at its progress.
+/// The cone cost along each scenario's steps, log scale: the scenario shown bold, with a dot at
+/// its progress. The cost, not the points' distance from the truth, measures the alignment: with
+/// every camera free the rig may settle anywhere, and with one anchored at any scale.
 fn draw_errors(
     c: &mut Canvas,
     chart: Rect,
@@ -726,26 +901,23 @@ fn draw_errors(
     motors: &[plane::M],
     progress: f32,
 ) {
-    let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 10.0]).log_y();
-    errors.frame(c, "POINT RMSE ALONG THE STEPS", "GAUSS-NEWTON STEP", "RMSE");
+    const FLOOR: f64 = 1e-13;
+    let cost = |m: &[plane::M]| {
+        let (points, _) = plane::triangulate(m, &data.cones);
+        plane::cone_cost(m, &points, &data.cones).max(FLOOR) as f32
+    };
+    let errors = Axes::new(chart, [0.0, FREE_ITERATIONS as f32], [FLOOR as f32, 10.0]).log_y();
+    errors.frame(c, "CONE COST ALONG THE STEPS", "GAUSS-NEWTON STEP", "COST");
     for (i, sc) in data.scenarios.iter().enumerate() {
-        // The chart's points: (step, error).
-        let curve: Vec<Point2> = sc
-            .states
-            .iter()
-            .enumerate()
-            .map(|(j, m)| {
-                let (points, _) = plane::triangulate(m, &data.cones);
-                Point2::xy(j as f32, plane::rmse(&points, &data.truth).max(1e-5) as f32)
-            })
+        // The chart's points: (step, cost).
+        let curve: Vec<Point2> = (sc.states.iter().enumerate())
+            .map(|(j, m)| Point2::xy(j as f32, cost(m)))
             .collect();
         let shown = if i == which { 2.4 } else { 1.0 };
         let strength = if i == which { 1.0 } else { 0.45 };
         errors.polyline(c, &curve, shown, (palette::series(i)).faded(strength));
         if i == which {
-            let (now, _) = plane::triangulate(motors, &data.cones);
-            let e = plane::rmse(&now, &data.truth).max(1e-5) as f32;
-            let here = Point2::xy(progress, e);
+            let here = Point2::xy(progress, cost(motors));
             errors.scatter(c, &[here], Marker::Dot, 9.0, palette::series(i));
         }
     }
@@ -782,7 +954,7 @@ fn draw_notes(c: &mut Canvas, chart: Rect, data: &Data, s: &plane::Scenario, mot
     let cost = plane::cone_cost(motors, &now, &data.cones);
     for (k, (text, size, light)) in [
         (
-            format!("CAMERAS ANCHORED: {}   FREE: {}", pick(false), pick(true)),
+            format!("ANCHORED: {}   FREE: {}", pick(false), pick(true)),
             12.0,
             palette::INK,
         ),
@@ -798,17 +970,45 @@ fn draw_notes(c: &mut Canvas, chart: Rect, data: &Data, s: &plane::Scenario, mot
     }
 }
 
+/// The seconds a scenario plays.
+fn duration(s: &plane::Scenario) -> f32 {
+    if s.even {
+        EVEN + EVEN_HOLD
+    } else {
+        PER_STEP * (s.states.len() - 1) as f32 + HOLD
+    }
+}
+
+/// Where a scenario is, `local` seconds in: the step `k` and the share `f` of the next one
+/// taken. Stepped scenarios ease into each step; the even one resamples its states at equal
+/// shares of the distance travelled along the screws between them.
+fn position(s: &plane::Scenario, local: f32) -> (usize, f64) {
+    let steps = s.states.len() - 1;
+    if s.even {
+        let pace = plane::pace(&s.states);
+        let share = f64::from((local / EVEN).min(1.0)) * pace[steps];
+        let k = (pace.partition_point(|p| *p <= share).max(1) - 1).min(steps - 1);
+        let f = ((share - pace[k]) / (pace[k + 1] - pace[k])).clamp(0.0, 1.0);
+        (k, f)
+    } else {
+        let progress = (local / PER_STEP).min(steps as f32);
+        let k = (progress as usize).min(steps - 1);
+        (k, smoothstep(f64::from(progress - k as f32)))
+    }
+}
+
 fn draw(c: &mut Canvas, data: &Data, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let per = PER_STEP * ITERATIONS as f32 + HOLD;
-    let which = ((t / per) as usize).min(data.scenarios.len() - 1);
+    let (mut which, mut local) = (0, t);
+    while which + 1 < data.scenarios.len() && local >= duration(&data.scenarios[which]) {
+        local -= duration(&data.scenarios[which]);
+        which += 1;
+    }
     let s = &data.scenarios[which];
-    let local = (t - which as f32 * per).max(0.0);
-    let progress = (local / PER_STEP).min(ITERATIONS as f32);
-    let k = (progress as usize).min(ITERATIONS - 1);
-    let f = smoothstep(f64::from(progress - k as f32));
+    let (k, f) = position(s, local.max(0.0));
+    let progress = k as f32 + f as f32;
     let motors: Vec<plane::M> = s.states[k]
         .iter()
         .zip(&s.states[k + 1])
@@ -822,13 +1022,13 @@ fn draw(c: &mut Canvas, data: &Data, t: f32) {
     draw_notes(c, chart, data, s, &motors);
     caption(
         c,
-        "MULTIVIEW: BUNDLE ADJUSTMENT ON CONE QUADRICS",
+        "MULTIVIEW: CAMERA ALIGNMENT ON CONE QUADRICS",
         &format!("{} (PGA2D), STEP {}", s.name, progress.round() as usize),
     );
 }
 
 fn main() {
-    let seconds = (PER_STEP * ITERATIONS as f32 + HOLD) * 4.0;
+    let seconds = data().scenarios.iter().map(duration).sum();
     run_with(Anim::new("multiview", seconds).size(960, 540), data, draw);
 }
 
@@ -880,25 +1080,94 @@ mod tests {
 
     /// Alternating Newton steps on the cone value recover the scene from a perturbed camera.
     #[test]
-    fn bundle_adjust_converges() {
+    fn alternating_alignment_converges() {
         let (truth, cones) = plane::observe(&plane::three_camera_truth());
         let g = plane::gaze();
         let initial = plane::rig(&[-0.75, 0.75, 0.0], &[g, -g * 1.05, 0.0]);
         let (start, _) = plane::triangulate(&initial, &cones);
-        let (_, points, _) = plane::bundle_adjust(&initial, &cones, 12, 0.9, &[0.0, 1.0, 0.0]);
+        let (_, points, _) = plane::align(&initial, &cones, 12, 0.9, &[0.0, 1.0, 0.0]);
         let (e0, e1) = (plane::rmse(&start, &truth), plane::rmse(&points, &truth));
         assert!(e1 < e0 && e1 < 0.02, "{e0} {e1}");
+    }
+
+    /// With two cameras free, a point's response to a step of one changes the cost seen by the
+    /// other: the joint step that accounts for it settles within a few steps. With one camera
+    /// anchored the scale of the scene is free, so the cone cost, not the distance to the true
+    /// poses, measures convergence.
+    #[test]
+    fn the_joint_step_moves_two_free_cameras_together() {
+        let (_, cones) = plane::observe(&plane::three_camera_truth());
+        let g = plane::gaze();
+        let mut motors = plane::rig(&[-0.75, 0.75 * 1.1, 0.15], &[g, -g * 1.25, 0.12]);
+        let cost = |m: &[plane::M]| plane::cone_cost(m, &plane::triangulate(m, &cones).0, &cones);
+        let initial = cost(&motors);
+        let mut previous = motors.clone();
+        for _ in 0..5 {
+            previous = motors.clone();
+            motors = plane::align_jointly::<3>(
+                plane::pinhole(),
+                &motors,
+                &cones,
+                1,
+                1.0,
+                &[0.0, 1.0, 1.0],
+            )
+            .0;
+        }
+        assert!(
+            cost(&motors) < 1e-5 * initial,
+            "{} {initial}",
+            cost(&motors)
+        );
+        for (a, b) in motors.iter().zip(&previous) {
+            assert!(a.max_abs_diff(b) < 1e-5);
+        }
+    }
+
+    /// Aligning sight lines to the other cameras' beliefs, weighted into pixel units by depths
+    /// read off those beliefs, recovers the perturbed camera as the joint step does, without
+    /// placing a point.
+    #[test]
+    fn ray_alignment_matches_the_joint_step() {
+        let truth_motors = plane::three_camera_truth();
+        let (truth, cones) = plane::observe(&truth_motors);
+        let g = plane::gaze();
+        let initial = plane::rig(&[-0.75, 0.75, 0.0], &[g, -g * 1.05, 0.0]);
+        let free = [0.0, 1.0, 0.0];
+        let camera = plane::pinhole();
+        let pixels: Vec<Vec<plane::P>> = (truth.iter())
+            .map(|p| {
+                (truth_motors.iter())
+                    .map(|m| plane::reading(camera.of(*m << *p)))
+                    .collect()
+            })
+            .collect();
+        let (by_rays, _) = plane::align_rays_to_splats(
+            &initial,
+            &cones,
+            plane::point(&[0.0, 0.0]),
+            &pixels,
+            4,
+            1.0,
+            &free,
+        );
+        let (jointly, _, _, _) =
+            plane::align_jointly::<3>(camera, &initial, &cones, 10, 1.0, &free);
+        for ((a, b), t) in by_rays.iter().zip(&jointly).zip(&truth_motors) {
+            assert!(a.max_abs_diff(t) < 1e-10, "{a:?} {t:?}");
+            assert!(a.max_abs_diff(b) < 1e-10, "{a:?} {b:?}");
+        }
     }
 
     /// The joint step with the Schur complement converges and returns the pose information:
     /// symmetric, zero on the anchored cameras, positive definite on the moving one.
     #[test]
-    fn schur_bundle_adjust_converges_and_yields_information() {
+    fn joint_alignment_converges_and_yields_information() {
         let (truth, cones) = plane::observe(&plane::three_camera_truth());
         let g = plane::gaze();
         let initial = plane::rig(&[-0.75, 0.75, 0.0], &[g, -g * 1.05, 0.0]);
         let (start, _) = plane::triangulate(&initial, &cones);
-        let (_, points, _, information) = plane::bundle_adjust_schur(
+        let (_, points, _, information) = plane::align_jointly::<3>(
             plane::pinhole(),
             &initial,
             &cones,
@@ -908,28 +1177,34 @@ mod tests {
         );
         let (e0, e1) = (plane::rmse(&start, &truth), plane::rmse(&points, &truth));
         assert!(e1 < e0 && e1 < 0.02, "{e0} {e1}");
-        assert_eq!(information.len(), 3);
-        for (k, info) in information.iter().enumerate() {
-            let gram = info.coeffs()[0];
-            // Symmetry compares entry (i, j) with (j, i): indices read best.
-            #[allow(clippy::needless_range_loop)]
-            for i in 0..3 {
-                for j in 0..3 {
-                    assert!((gram[i][j] - gram[j][i]).abs() < 1e-9);
-                    if k != 1 {
-                        assert_eq!(gram[i][j], 0.0);
+        // The information over the field of the three cameras' twists, block by block.
+        for i in 0..3 {
+            for j in 0..3 {
+                let (a, b) = (
+                    plane::block(information, i, j),
+                    plane::block(information, j, i),
+                );
+                let (a, b) = (a.coeffs()[0], b.coeffs()[0]);
+                // Symmetry compares entry (k, l) with (l, k): indices read best.
+                #[allow(clippy::needless_range_loop)]
+                for k in 0..3 {
+                    for l in 0..3 {
+                        assert!((a[k][l] - b[l][k]).abs() < 1e-9);
+                        if i != 1 || j != 1 {
+                            assert_eq!(a[k][l], 0.0);
+                        }
                     }
                 }
             }
         }
-        let (values, _) = information[1].eigh(plane::Information::identity());
+        let (values, _) = plane::block(information, 1, 1).eigh(plane::Information::identity());
         assert!(values.iter().all(|v| *v > 0.0), "{values:?}");
     }
 
     /// The figure's scenario: two cameras aligned, the cone cost vanishes.
     #[test]
     fn the_two_camera_rig_aligns() {
-        let (_, _, cost) = plane::bundle_adjustment();
+        let (_, _, cost) = plane::aligned_pair();
         assert!(cost.abs() < 1e-12, "{cost}");
     }
 
@@ -943,8 +1218,8 @@ mod tests {
         for s in [
             plane::one_camera(10),
             plane::two_cameras(10),
-            plane::three_cameras(10),
-            plane::schur(10),
+            plane::three_cameras(30),
+            plane::jointly(10),
         ] {
             let cost =
                 |m: &[plane::M]| plane::cone_cost(m, &plane::triangulate(m, &cones).0, &cones);
@@ -954,11 +1229,30 @@ mod tests {
                 "{} {costs:?}",
                 s.name
             );
-            assert!(costs[10] < 0.5 * costs[0], "{} {costs:?}", s.name);
+            let last = costs.len() - 1;
+            assert!(costs[last] < 0.5 * costs[0], "{} {costs:?}", s.name);
         }
-        let s = plane::schur(10);
+        let s = plane::jointly(10);
         let error = plane::rmse(&plane::triangulate(&s.states[10], &cones).0, &truth);
         assert!(error < 1e-4, "{error}");
+    }
+
+    /// The even pace counts a camera's move by its length and its turn by its angle times the
+    /// lever, summed over the cameras and the steps.
+    #[test]
+    fn the_pace_counts_moves_and_turns() {
+        let states = vec![
+            plane::rig(&[0.0, 1.0], &[0.0, 0.0]),
+            plane::rig(&[0.3, 1.0], &[0.0, 0.0]),
+            plane::rig(&[0.3, 1.0], &[0.0, 0.2]),
+        ];
+        let pace = plane::pace(&states);
+        assert!((pace[1] - 0.3).abs() < 1e-12, "{pace:?}");
+        // The turn about the pinhole moves it nowhere.
+        assert!(
+            (pace[2] - 0.3 - plane::LEVER * 0.2).abs() < 1e-12,
+            "{pace:?}"
+        );
     }
 
     // --- the same core in space ------------------------------------------------------------
@@ -1021,7 +1315,7 @@ mod tests {
     /// In space the moving camera returns from pose errors of tens of degrees and most of a
     /// metre.
     #[test]
-    fn bundle_adjust_3d_recovers_a_badly_perturbed_camera() {
+    fn alignment_3d_recovers_a_badly_perturbed_camera() {
         let (truth, cones) = rig_3d();
         // Rotation vectors in degrees (a turn by the length about the direction), translations
         // and iterations.
@@ -1039,8 +1333,7 @@ mod tests {
             let motors = vec![truth[0], perturbation * truth[1], truth[2]];
             let (start, _) = space::triangulate(&motors, &cones);
             let initial_cost = space::cone_cost(&motors, &start, &cones);
-            let (est, points, _) =
-                space::bundle_adjust(&motors, &cones, iterations, 0.7, &[0.0, 1.0, 0.0]);
+            let (est, points, _) = space::align(&motors, &cones, iterations, 0.7, &[0.0, 1.0, 0.0]);
             let centre = est[1] >> space::point(&[0.0, 0.0, 0.0]);
             let true_centre = space::point(&[0.75, 0.0, 0.0]);
             assert!(centre.max_abs_diff(&true_centre) < 0.02, "{centre:?}");
@@ -1062,12 +1355,12 @@ mod tests {
 
     /// In space, the second camera panned 5% too far aligns with the other two anchored.
     #[test]
-    fn bundle_adjust_3d_converges_from_a_small_perturbation() {
+    fn alignment_3d_converges_from_a_small_perturbation() {
         let (truth, cones) = rig_3d();
         let motors = vec![truth[0], right_camera(18f64.to_radians() * 1.05), truth[2]];
         let landmarks = landmarks();
         let (start, _) = space::triangulate(&motors, &cones);
-        let (_, points, _) = space::bundle_adjust(&motors, &cones, 10, 0.9, &[0.0, 1.0, 0.0]);
+        let (_, points, _) = space::align(&motors, &cones, 10, 0.9, &[0.0, 1.0, 0.0]);
         let (e0, e1) = (
             space::rmse(&start, &landmarks),
             space::rmse(&points, &landmarks),
