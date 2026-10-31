@@ -1,22 +1,24 @@
-//! numga's `geometry/epipolar`: two-view relative pose and reconstruction in PGA3D. A camera's
+//! numga's `estimation/epipolar`: two-view relative pose and reconstruction in PGA3D. A camera's
 //! sight rays are lines, and two sight rays meet in space exactly when their wedge vanishes,
 //! `ray_1 ^ ray_2 == 0`. For a candidate relative motor both cameras shoot rays; the residual of
 //! each pair is that wedge, read as a number, and leaving a twist open in the motion of the
 //! second ray, `Twist.commutator(motor >> ray_2)`, gives its Jacobian as a form on twists. Gauss-
-//! Newton on these forms recovers the relative pose without separating rotation and translation;
-//! least squares with a cutoff drops the unobservable scale of the baseline. With the pose known,
+//! Newton on these forms recovers the relative pose without separating rotation and translation,
+//! each step measured by the second camera's kinetic energy, a form on twists; least squares
+//! with a cutoff drops the unobservable scale of the baseline. With the pose known,
 //! each world point is the least of the summed squared distances to its two rays: `ray & Point`
 //! is the plane through a ray and an unknown point, and its square a rank-2 distance quadric.
 //!
-//! The animation shows the Gauss-Newton steps: the second camera's estimate turning from a pure
-//! translation onto the true pose, its epipolar lines swinging through the keypoints, and the
-//! triangulated house settling onto the true one, seen from a camera circling the scene.
+//! The animation shows numga's four Gauss-Newton steps: the second camera's estimate turning from
+//! a pure translation onto the true pose, its epipolar lines swinging through the keypoints, and
+//! the triangulated house settling onto the true wireframe one, seen from a camera swaying
+//! behind the cameras.
 
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar, intrinsic};
 use gax::{Unit, pga2d, vga3d};
 
 use gax_numga_examples::rng::{Draw, rng};
-use gax_numga_examples::signal::{smoothstep, wave};
+use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, colormap, palette, run_with,
@@ -41,40 +43,69 @@ mod epipolar {
         (Point::origin() & Point::slot()) ^ screen()
     }
 
-    /// The sensor's coordinates: the points of the screen as points of the plane, `z` dropped.
+    /// The sensor's coordinates: the points of the screen as points of the plane, `z` dropped
+    /// and `y` turned up (the camera's `y` points down).
     pub fn sensor() -> pga2d::Point<(Point,)> {
         pga2d::Point::from_images([
             pga2d::Point::new(1.0, 0.0, 0.0),
-            pga2d::Point::new(0.0, 1.0, 0.0),
+            pga2d::Point::new(0.0, -1.0, 0.0),
             pga2d::Point::new(0.0, 0.0, 0.0),
             pga2d::Point::new(0.0, 0.0, 1.0),
         ])
     }
 
-    /// World landmarks: the corners of a wireframe house and a grid of ground markers.
+    /// The house, in camera 1's frame, `x` to the right, `y` down and `z` ahead: the corners of
+    /// its walls, from the ground up to the eaves, front then back, and its roof's ridge over the
+    /// front and the back.
+    pub const WALLS: [[f64; 3]; 8] = [
+        [-0.5, 0.6, 3.0],
+        [0.5, 0.6, 3.0],
+        [0.5, 0.0, 3.0],
+        [-0.5, 0.0, 3.0],
+        [-0.5, 0.6, 4.0],
+        [0.5, 0.6, 4.0],
+        [0.5, 0.0, 4.0],
+        [-0.5, 0.0, 4.0],
+    ];
+    pub const ROOF: [[f64; 3]; 2] = [[0.0, -0.4, 3.0], [0.0, -0.4, 4.0]];
+
+    /// The house's edges, by the landmarks they join: the front and back walls' rings and the
+    /// four edges between them, and the roof's ridge and the rafters from its ends to the eaves.
+    pub const HOUSE_EDGES: [[usize; 2]; 17] = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 5],
+        [5, 6],
+        [6, 7],
+        [7, 4],
+        [0, 4],
+        [1, 5],
+        [2, 6],
+        [3, 7],
+        [8, 9],
+        [8, 2],
+        [8, 3],
+        [9, 6],
+        [9, 7],
+    ];
+
+    /// The landmarks: the house's wall and roof corners and a grid of markers on the ground in
+    /// front of it, 4 across (half width 0.8) by 3 ahead (depths 2.0 to 2.8), at the ground's
+    /// level 0.6 below the camera.
     pub fn house_landmarks() -> Vec<Point> {
-        let mut v = vec![
-            Point::xyz(-0.5, -0.4, 3.0),
-            Point::xyz(0.5, -0.4, 3.0),
-            Point::xyz(0.5, 0.4, 3.0),
-            Point::xyz(-0.5, 0.4, 3.0),
-            Point::xyz(-0.5, -0.4, 4.0),
-            Point::xyz(0.5, -0.4, 4.0),
-            Point::xyz(0.5, 0.4, 4.0),
-            Point::xyz(-0.5, 0.4, 4.0),
-            // The roof ridge and apex points.
-            Point::xyz(0.0, -0.4, 4.6),
-            Point::xyz(0.0, 0.4, 4.6),
-            Point::xyz(-0.25, 0.0, 4.3),
-            Point::xyz(0.25, 0.0, 4.3),
-        ];
-        // Ground markers on a 4 x 3 grid.
+        let mut v: Vec<Point> = WALLS
+            .iter()
+            .chain(&ROOF)
+            .map(|[x, y, z]| Point::xyz(*x, *y, *z))
+            .collect();
         for j in 0..3 {
             for i in 0..4 {
                 v.push(Point::xyz(
                     -0.8 + 1.6 * f64::from(i) / 3.0,
-                    -0.6 + 0.6 * f64::from(j),
-                    2.5,
+                    0.6,
+                    2.0 + 0.4 * f64::from(j),
                 ));
             }
         }
@@ -103,12 +134,33 @@ mod epipolar {
             .collect()
     }
 
+    /// Camera 2's kinetic energy on twists in its own frame, to measure the steps by: unit
+    /// masses a unit from its centre along each axis, each moving by its commutator with the
+    /// twist, and the energy the twist paired with their summed momenta, numga's
+    /// `Twist & (body & body.commutator(Twist)).sum()`.
+    pub fn kinetic() -> Scalar<(Line, Line)> {
+        let mut momentum: intrinsic::Line<(Line,)> = intrinsic::Line::zero();
+        for axis in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] {
+            for sign in [1.0, -1.0] {
+                let mass = Point::xyz(sign * axis[0], sign * axis[1], sign * axis[2]);
+                momentum += mass & mass.commutator(Line::slot());
+            }
+        }
+        Line::slot() & momentum
+    }
+
     /// One Gauss-Newton step on the relative motor. Two lines meet iff their wedge vanishes:
     /// the residual is that pseudoscalar, read as a scalar through the complement. Leaving the
     /// twist open in the commutator, the motion of the second ray, gives the Jacobian, a form on
     /// twists. The normal equations are forms summed over the pairs: the curvature is the
     /// Jacobian form times itself, the gradient the residual times it, with no metric chosen.
-    /// The cutoff in least squares drops the unobservable translation scale.
+    ///
+    /// The step solves them for the 5 observable degrees of freedom, measured by the kinetic
+    /// energy of camera 2 (numga's `curvature.lstsq(descent, energy, rcond=1e-4)`, here through
+    /// the eigenmodes of the curvature against the energy). The flattest mode is the
+    /// unobservable scale, which moves camera 2 along the baseline; the cutoff drops it by its
+    /// curvature per unit energy, and the step has no component along it in that energy, so
+    /// near the solution the baseline keeps its length.
     pub fn step(rays_1: &[L], rays_2: &[L], motor: M) -> M {
         let mut h: Scalar<(Line, Line)> = Scalar::zero();
         let mut rhs: Scalar<(Line,)> = Scalar::zero();
@@ -119,7 +171,16 @@ mod epipolar {
             h += j * j;
             rhs -= res * j;
         }
-        let step: Line = h.lstsq_with(rhs, 1e-4);
+        let to_camera_2 = motor << Line::slot();
+        let energy = kinetic().of_both(to_camera_2, to_camera_2);
+        let (curvatures, modes) = h.eigh(energy);
+        let largest = curvatures.iter().fold(0.0, |a: f64, b| a.max(*b));
+        let mut step = Line::zero();
+        for (curvature, mode) in curvatures.iter().zip(modes) {
+            if *curvature > 1e-4 * largest {
+                step += mode.gp(rhs.of(mode).s() / curvature);
+            }
+        }
         step.gp(0.5).exp() * motor
     }
 
@@ -165,6 +226,9 @@ mod epipolar {
         [-half, half].map(|x| line ^ Plane::with_normal(Point::direction(1.0, 0.0, 0.0), x))
     }
 
+    /// numga's Gauss-Newton steps.
+    pub const ITERATIONS: usize = 4;
+
     /// The scene, its noisy images and the recovery.
     pub struct Scene {
         pub landmarks: Vec<Point>,
@@ -196,7 +260,7 @@ mod epipolar {
         };
         let (noisy_1, noisy_2) = (jitter(&image_1), jitter(&image_2));
         let (rays_1, rays_2) = (rays(&noisy_1), rays(&noisy_2));
-        let motors = reconstruct(&rays_1, &rays_2, start, 10);
+        let motors = reconstruct(&rays_1, &rays_2, start, ITERATIONS);
         Scene {
             landmarks,
             image_1,
@@ -262,27 +326,44 @@ mod epipolar {
 
 use epipolar::*;
 
-/// Seconds per Gauss-Newton step shown, the steps shown, and the pause after them.
-const PER_STEP: f32 = 0.9;
-const SHOWN: usize = 5;
-const HOLD: f32 = 3.5;
+/// Seconds per Gauss-Newton step shown, eased along the screw from one iterate to the next at an
+/// even pace (numga's 12 frames of 40 ms), the steps shown, and the pause after them (22
+/// frames).
+const PER_STEP: f32 = 0.48;
+const SHOWN: usize = ITERATIONS;
+const HOLD: f32 = 0.88;
 
 /// The scenario's noise and seed. numga's checks (half a degree, two degrees, 10 cm) hold for
-/// its stream at seed 42 but not for every stream: over seeds the rotation error ranges from
-/// 0.1 to 2 degrees. Seed 4 is one that meets numga's checks; the test
+/// its stream at seed 42 (0.23 degrees, 1.3 degrees, 3 cm) but not for every stream: over
+/// seeds the rotation error ranges from 0.1 to 2.8 degrees. Seed 37 meets numga's checks with
+/// margins like numga's (0.14 degrees, 0.22 degrees, 3.5 cm); the test
 /// `the_checks_hold_loosely_for_any_seed` bounds the spread over many seeds.
 const NOISE: f64 = 0.0015;
-const SEED: u64 = 4;
+const SEED: u64 = 37;
 
 /// The scenario drawn, at its noise and seed.
 fn scene() -> Scene {
     epipolar(NOISE, SEED)
 }
 
-/// A camera's wireframe: its centre, sensor rectangle and optical axis, moved by its pose.
-fn frustum(s: &mut Scene3, pose: M, size: f64, color: Light, width: f32) {
+/// A quarter turn about `x` for display: the cameras look along `z` with `y` down; the view
+/// has `z` up.
+fn display() -> M {
+    Motor::rotation_about(
+        Point::direction(1.0, 0.0, 0.0),
+        -core::f64::consts::FRAC_PI_2,
+    )
+}
+
+/// A camera's wireframe: its centre, sensor rectangle and optical axis, moved by its pose and
+/// turned for display, its place scaled about camera 1 by `scale`.
+fn frustum(s: &mut Scene3, pose: M, scale: f64, size: f64, color: Light, width: f32) {
     let (w, h) = (0.5 * size, 0.38 * size);
-    let at = |x: f64, y: f64, z: f64| pose >> Point::xyz(x, y, z);
+    let at = |x: f64, y: f64, z: f64| {
+        let p = pose >> Point::xyz(x, y, z);
+        let centre = (pose >> Point::origin()).unitized();
+        display() >> (p + (scaled(centre, scale) - centre))
+    };
     let corners = [
         at(-w, -h, size),
         at(w, -h, size),
@@ -325,9 +406,10 @@ fn sensor_panel(
     }
 }
 
-/// The scene from a camera circling it: the true landmarks, the points triangulated by the
-/// motor shown, both cameras' rays to some of them, the frustums of camera 1, the true camera 2
-/// and the estimate, and the step's errors; the key below.
+/// The scene from a camera circling it: the true house, its edges and landmarks, the points
+/// triangulated by the motor shown, scaled about camera 1 to the true baseline, both cameras'
+/// rays to every fourth of them, the frustums of camera 1, the true camera 2 and the estimate,
+/// and the step's errors; the key below.
 fn draw_scene(c: &mut Canvas, rect: Rect, s: &Scene, motor: M, step: usize, t: f32) {
     let (x0, y0) = (rect.lo.e20(), rect.lo.e01());
     let (w, h) = (rect.hi.e20(), rect.hi.e01());
@@ -336,37 +418,47 @@ fn draw_scene(c: &mut Canvas, rect: Rect, s: &Scene, motor: M, step: usize, t: f
         palette::TOP.mix_light(palette::BOTTOM, y0 / h),
         palette::BOTTOM,
     );
-    let azimuth = -2.2 + 0.5 * wave(core::f32::consts::TAU * t / (PER_STEP * SHOWN as f32 + HOLD));
+    let azimuth = -2.25 + 0.2 * wave(core::f32::consts::TAU * t / (PER_STEP * SHOWN as f32 + HOLD));
     let cam = Camera::orbit(
         sub.rect(),
-        Point::xyz(0.25, 0.0, 2.3),
-        6.0,
+        Point::xyz(0.2, 1.9, -0.1),
+        4.6,
         azimuth,
-        0.3,
+        0.42,
         Lens::Perspective(0.75),
     );
     let mut scene = Scene3::new(cam);
-    let points = triangulate(&s.rays_1, &s.rays_2, motor);
+    let shown = |p: Point| display() >> p;
+    let truth: Vec<Point> = s.landmarks.iter().map(|l| shown(*l)).collect();
+    for [a, b] in HOUSE_EDGES {
+        scene.seg(truth[a], truth[b], 1.4, palette::GRID.faded(0.8));
+    }
+    let scale = baseline(s.true_motor).norm() / baseline(motor).norm();
+    let points: Vec<Point> = triangulate(&s.rays_1, &s.rays_2, motor)
+        .into_iter()
+        .map(|p| shown(scaled(p, scale)))
+        .collect();
     let n = points.len();
-    let centre_2 = motor >> Point::origin();
-    for (i, (p, l)) in points.iter().zip(&s.landmarks).enumerate() {
+    let centre_2 = shown(scaled((motor >> Point::origin()).unitized(), scale));
+    for (i, (p, l)) in points.iter().zip(&truth).enumerate() {
         let colour = colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
         scene.dot(*l, Marker::Ring, 10.0, palette::GRID);
         scene.dot(*p, Marker::Star, 12.0, colour);
-        if i % 5 == 0 {
-            scene.seg(ORIGIN3, *p, 0.8, palette::SKY.faded(0.4));
-            scene.seg(centre_2, *p, 0.8, palette::GREEN.faded(0.4));
+        if i % 4 == 0 {
+            scene.seg(ORIGIN3, *p, 0.8, colour.faded(0.4));
+            scene.seg(centre_2, *p, 0.8, colour.faded(0.4));
         }
     }
     frustum(
         &mut scene,
         Motor::translation(Point::direction(0.0, 0.0, 0.0)),
+        1.0,
         0.4,
         palette::SKY,
         1.6,
     );
-    frustum(&mut scene, s.true_motor, 0.4, palette::GRID, 1.2);
-    frustum(&mut scene, motor, 0.4, palette::GREEN, 1.8);
+    frustum(&mut scene, s.true_motor, 1.0, 0.4, palette::GRID, 1.2);
+    frustum(&mut scene, motor, scale, 0.4, palette::GREEN, 1.8);
     scene.draw(&mut sub);
     // The errors of the step, on two lines.
     for (k, line) in [
@@ -387,7 +479,11 @@ fn draw_scene(c: &mut Canvas, rect: Rect, s: &Scene, motor: M, step: usize, t: f
         sub.text(line, at, 11.0, palette::INK, Align::Left);
     }
     c.blit(&sub, Point2::xy(x0, y0));
-    let key = Axes::new(Rect::new(x0, h - 80.0, w, h), [0.0, 1.0], [0.0, 1.0]);
+    let key = Axes::new(
+        Rect::new(x0, y0, w - 4.0, y0 + 240.0),
+        [0.0, 1.0],
+        [0.0, 1.0],
+    );
     key.legend(
         c,
         &[
@@ -405,7 +501,7 @@ fn draw(c: &mut Canvas, s: &Scene, t: f32) {
     // The motor shown: along the Gauss-Newton steps, eased between them.
     let progress = (t / PER_STEP).min(SHOWN as f32);
     let k = (progress as usize).min(SHOWN - 1);
-    let f = smoothstep(f64::from(progress - k as f32));
+    let f = f64::from(progress - k as f32);
     let motor = Motor::interpolate(s.motors[k], s.motors[k + 1], f);
     let step = progress.round() as usize;
     // The sensors, left.
@@ -451,12 +547,19 @@ mod tests {
     use gax::pga3d::{Line, Point};
 
     /// Without noise, the relative pose and the world points are recovered exactly, up to the
-    /// baseline's scale.
+    /// baseline's scale, in numga's 4 steps: the axis planes and the baseline within numga's
+    /// cosine of 1e-6 (an angle of 1.4e-3; here 1e-3 and the camera centre to 1e-4), and the
+    /// house within numga's 1e-3 RMS (each landmark within 1e-2). The steps reproduce numga's
+    /// RMS errors, 4.4e-5 after three and 5.2e-9 after four.
     #[test]
     fn reconstruct_from_noise_free_images() {
         let s = epipolar(0.0, 1);
         let est = *s.motors.last().expect("a motor");
+        assert_eq!(s.motors.len(), ITERATIONS + 1);
         assert!(rotation_error(est, s.true_motor) < 1e-3);
+        assert!(baseline_error(est, s.true_motor) < 1e-3);
+        assert!(rms_error(&s, est) < 1e-3, "{}", rms_error(&s, est));
+        assert!((rms_error(&s, s.motors[3]) - 4.446e-5).abs() < 1e-7);
         let c_true = s.true_motor >> Point::origin();
         let c_est = est >> Point::origin();
         let scale =
