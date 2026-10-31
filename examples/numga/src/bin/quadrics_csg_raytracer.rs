@@ -21,10 +21,8 @@
 //! The animation orbits the camera about the scene: a ruled hyperboloid, a bowl cut open and a
 //! mirror ball on a checkered floor.
 
-#[path = "../shared/quadrics_tracing.rs"]
-mod tracing;
-
 use gax_colour::Light;
+use gax_numga_examples::shared::quadrics_tracing as tracing;
 use gax_numga_examples::{Anim, Canvas, Rect, backdrop, caption, run_with};
 
 mod csg {

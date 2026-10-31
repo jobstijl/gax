@@ -23,9 +23,6 @@
 //! slope -2. Temperature and volume are in their critical values, pressure in `R T_c / V_c`,
 //! energy in `R T_c`.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra fluid "Temperature and volume, `t0v0`: both generators square to zero.";
     basis et = 0, ev = 0;
@@ -36,6 +33,7 @@ gax::algebra! {
 
 use charts::{BOLD, Diagram, Family, Floating, MEDIUM, THIN};
 use gax_numga_examples::points::Pos2;
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Point2, Rect, caption, plot, run_with};
 
 mod fluctuations {

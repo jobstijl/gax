@@ -5,11 +5,8 @@
 //! against sliding when the full correction fits the static friction cone, then the rate the
 //! corrected step implies slowed by dynamic friction, part by part.
 
-// Each example that includes this module uses a part of it.
-#![allow(dead_code)]
-
+use crate::shared::mechanics_lie::rigid::{F, G, InertiaInv, M, P, R};
 use gax::pga3d::{Direction, Plane, Point};
-use gax_numga_examples::shared::mechanics_lie::rigid::{F, G, InertiaInv, M, P, R};
 
 /// A quadric: each point to its polar plane, its form `Q(p) & p` negative inside.
 pub type Quadric = Plane<(Point,)>;
@@ -142,7 +139,7 @@ pub fn project_contacts(
     friction: [f64; 2],
     dt: f64,
 ) -> (M, R) {
-    use gax_numga_examples::shared::mechanics_lie::Lie;
+    use crate::shared::mechanics_lie::Lie;
     let [stat, dynamic] = friction;
     let mut pressures = Vec::with_capacity(parts.len());
     for part in parts {

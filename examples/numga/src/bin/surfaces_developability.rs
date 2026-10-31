@@ -24,11 +24,9 @@
 //! `Mesh.closed` does), each face shaded flat by its own normal, creasing into patches as the
 //! flow runs, with the energy falling beside it. The corner angles are gax's `angle_between`.
 
-#[path = "../shared/simplicial.rs"]
-mod simplicial;
-
 use gax_numga_examples::plot::Axes;
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Point3, Rect, backdrop, caption,

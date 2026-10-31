@@ -1,15 +1,12 @@
 //! Drawing on triangle meshes of the plane, shared by the planar surfaces ports (Whitney forms,
 //! Dirac–Kähler fields, Regge calculus): a field linear on each face shaded pixel by pixel, its
-//! level lines, the wireframe and the rim. Each includes it with `#[path]` and uses part of it.
+//! level lines, the wireframe and the rim. Each uses part of it.
 //!
 //! A [`Flat`] mesh holds its vertices as drawing points and a grid of buckets over its faces,
 //! so that each pixel finds the face under it and its barycentric weights there: the joins of
 //! the pixel's point with each side over the join of the corners.
 
-// Each port uses part of the shared module.
-#![allow(dead_code)]
-
-use gax_numga_examples::{Axes, Canvas, Light, Point2};
+use crate::{Axes, Canvas, Light, Point2};
 
 /// Buckets along each axis of the grid over the mesh.
 const BUCKETS: usize = 48;

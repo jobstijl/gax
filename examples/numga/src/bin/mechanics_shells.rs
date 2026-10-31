@@ -26,14 +26,12 @@
 //! The animation shows both relaxing from a flat, slightly rough start, damped, lit by their
 //! faces' planes, with the energy each sheds.
 
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rect, backdrop, caption, label_above,
     palette, run_with, scene3,
 };
-
-#[path = "../shared/simplicial.rs"]
-mod simplicial;
 
 mod shells {
     use gax::field::{Field, SparseMap};

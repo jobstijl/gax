@@ -25,9 +25,6 @@
 //! height at zero temperature the energy again. Entropy is in nR, volume and temperature in
 //! reference values, energy in nRT₀.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra gas "Energy, entropy, volume, temperature and pressure, `u0s0v0t0p0`: every generator squares to zero.";
     basis eu = 0, es = 0, ev = 0, et = 0, ep = 0;
@@ -48,6 +45,7 @@ gax::algebra! {
 }
 
 use charts::{BOLD, Diagram, Family, Floating, MEDIUM, THIN};
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Point2, Rect, caption, run_with};
 
 mod legendre {

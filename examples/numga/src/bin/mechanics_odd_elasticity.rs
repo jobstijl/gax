@@ -18,14 +18,12 @@
 //! relaxation into travelling, decaying waves (bonds coloured by their extension, one particle's
 //! path traced).
 
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, label_above,
     palette, run_with,
 };
-
-#[path = "../shared/simplicial.rs"]
-mod simplicial;
 
 mod odd {
     use gax::field::{Field, SparseMap};

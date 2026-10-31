@@ -16,17 +16,15 @@
 //! the body so that its spin shows, each view following its top's travel across the table, and
 //! plots how far each top's axis points up.
 
-#[path = "../../shared/mechanics_contact.rs"]
-mod contact;
 #[cfg(test)]
 mod tests;
 mod tippe;
-#[path = "../../shared/quadrics_tracing.rs"]
-mod tracing;
 
 use gax::pga3d::{Plane, Point};
 use gax_colour::Light;
+use gax_numga_examples::shared::mechanics_contact as contact;
 use gax_numga_examples::shared::mechanics_lie::rigid::{M, R};
+use gax_numga_examples::shared::quadrics_tracing as tracing;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rect, backdrop, caption, label_above,
     palette, run_with,

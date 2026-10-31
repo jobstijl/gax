@@ -29,11 +29,10 @@
 mod rattleback;
 #[cfg(test)]
 mod tests;
-#[path = "../../shared/quadrics_tracing.rs"]
-mod tracing;
 
 use gax::pga3d::{Plane, Point};
 use gax_colour::Light;
+use gax_numga_examples::shared::quadrics_tracing as tracing;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rect, backdrop, caption, label_above,
     palette, run_with,

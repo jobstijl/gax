@@ -1,7 +1,7 @@
 //! numga's spacetime of the plane, `STA2D = x+y+t-`: two spatial directions that square to one
 //! and a time that squares to minus one. gax has no standard algebra for it; it is declared here,
 //! with numga's blades in numga's order (`x y t`, `xy xt yt`, `xyt`), and shared by the ports of
-//! Lie advection and of piezoelectricity, which include it with `#[path]` and use part of it.
+//! Lie advection and of piezoelectricity, which use part of it.
 //!
 //! Points are antivectors, intrinsic: the metric duals of the vectors, so that the point at
 //! `(x, y)` is `x yt − y xt` and the observer's direction in time, minus the dual of `t`, is
@@ -11,9 +11,6 @@
 //! planes of space, which read positions and displacements; `Temporal` (`xt yt`), the planes
 //! through time, extrinsic an electric field and intrinsic a spatial point or displacement; and
 //! `Magnetic` (`xy`) with its complement `Time` (`t`).
-
-// Each port uses part of the shared module.
-#![allow(dead_code)]
 
 gax::algebra! {
     algebra sta2d "numga's spacetime of the plane, `x+y+t-`: space `x` and `y` square to one, time `t` to minus one.";

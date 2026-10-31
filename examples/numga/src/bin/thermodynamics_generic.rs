@@ -20,9 +20,6 @@
 //! along them and the dissipative across; the entropy against time, rising in steps; and the
 //! entropy against the mechanical energy left, along the fixed total energy.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra oscillator "Position, momentum and the store's entropy, `q0p0s0`: every generator squares to zero.";
     basis eq = 0, ep = 0, es = 0;
@@ -35,6 +32,7 @@ gax::algebra! {
 use charts::{BOLD, Diagram, Family, MEDIUM};
 use gax_numga_examples::points::Point3;
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Point2, Rect, caption, run_with};
 
 mod generic {

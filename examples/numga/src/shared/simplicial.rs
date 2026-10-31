@@ -5,7 +5,7 @@
 //! homology of the edges (a breadth-first tree, the generators of the first homology, the
 //! circulation around faces and loops). Shared by the surfaces ports of Whitney forms,
 //! Dirac–Kähler fields, Regge calculus, frame fields, developability and connections; each
-//! includes it with `#[path]` and uses part of it.
+//! uses part of it.
 //!
 //! A mesh is a [`Topology`] of `N`-vertex top simplices with a [`Field`] of vertices of any
 //! kind: VGA2D or VGA3D vectors. The topology already numbers every simplex as numga does (the
@@ -29,9 +29,6 @@
 //! The geometry stays in the examples, as numga keeps it out of its mesh module: what is here
 //! knows only the simplices' vertex lists, except for the constructors, which place vertices,
 //! and [`closed`], which reads the enclosed volume to wind a surface outward.
-
-// Each port uses part of the shared module.
-#![allow(dead_code)]
 
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
@@ -620,7 +617,7 @@ pub fn torus(
 /// four, `levels` times, every vertex pushed out onto the sphere after each split (the port's
 /// `surfaces_sphere::icosphere` pushes them out once, at the end).
 pub fn icosphere(levels: usize) -> (Topology<3>, Field<Vector>) {
-    let g = gax_numga_examples::measure::GOLDEN;
+    let g = crate::measure::GOLDEN;
     let corners = [
         [-1.0, g, 0.0],
         [1.0, g, 0.0],
@@ -697,7 +694,7 @@ pub fn hex_disk(radius: f64, divisions: usize) -> (Topology<3>, Field<gax::vga2d
     }
     let vertices: Field<vga2d::Vector> = vertices.into_iter().collect();
     let placed = vertices.map(|v| Vector::new(v.e1(), v.e2(), 0.0));
-    let faces = gax_numga_examples::mesh::Mesh::triangulate(placed).faces;
+    let faces = crate::mesh::Mesh::triangulate(placed).faces;
     let t = Topology::new(vertices.len(), &faces).expect("the disk's triangles");
     (t, vertices)
 }

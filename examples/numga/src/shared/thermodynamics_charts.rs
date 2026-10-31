@@ -15,20 +15,18 @@
 //! The apparatus is a few boxes in a [`Scene3`], lit, the gas a translucent box coloured along
 //! the thermal ramp from icy blue to red heat.
 
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 
+use crate::canvas::{Canvas, Rect};
+use crate::font::{self, Align};
+use crate::plot::{self, Axes};
+use crate::points::{ORIGIN2, Point2, Point3, box_map};
+use crate::scene3::{Scene3, panel3};
+use crate::view::{Camera, Lens};
+use crate::{colormap, contour, palette};
 use gax::Extensor;
 use gax::pga2d::Line;
 use gax_colour::{Light, Srgb, light};
-use gax_numga_examples::canvas::{Canvas, Rect};
-use gax_numga_examples::font::{self, Align};
-use gax_numga_examples::plot::{self, Axes};
-use gax_numga_examples::points::{ORIGIN2, Point2, Point3, box_map};
-use gax_numga_examples::scene3::{Scene3, panel3};
-use gax_numga_examples::view::{Camera, Lens};
-use gax_numga_examples::{colormap, contour, palette};
 
 // --- colours --------------------------------------------------------------------------
 
@@ -431,9 +429,8 @@ impl Diagram {
         let [left, top] = rect.lo.to_euclidean();
         let [right, bottom] = rect.hi.to_euclidean();
         let boxed = |segs: Vec<(Vec<[Point2; 2]>, f32)>| {
-            let [lo, hi] = gax_numga_examples::points::bounds(
-                segs.into_iter().flat_map(|(s, _)| s.into_iter().flatten()),
-            );
+            let [lo, hi] =
+                crate::points::bounds(segs.into_iter().flat_map(|(s, _)| s.into_iter().flatten()));
             [[lo[0] - pad, lo[1] - pad], [hi[0] + pad, hi[1] + pad]]
         };
         let mut taken: Vec<[[f32; 2]; 2]> = (fixed.iter())
@@ -451,7 +448,7 @@ impl Diagram {
                     .into_iter()
                     .flat_map(|(s, _)| s.into_iter().flatten())
                     .collect();
-                let [lo, hi] = gax_numga_examples::points::bounds(segs);
+                let [lo, hi] = crate::points::bounds(segs);
                 let (lo, hi) = ([lo[0] - pad, lo[1] - pad], [hi[0] + pad, hi[1] + pad]);
                 let inside = lo[0] >= left && hi[0] <= right && lo[1] >= top && hi[1] <= bottom;
                 let clear = taken

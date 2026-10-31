@@ -18,9 +18,6 @@
 //! fixed total energy to where a level line touches it; the entropy along that line, a hill the
 //! state climbs, with its tangent; and the two temperatures closing on the common one.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra bodies "Two bodies' energies, `a0b0`: both generators square to zero, so nothing here uses a metric.";
     basis ea = 0, eb = 0;
@@ -32,6 +29,7 @@ gax::algebra! {
 use charts::{BOLD, Diagram, Family, MEDIUM};
 use gax_numga_examples::points::Point3;
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Point2, Rect, caption, run_with};
 
 mod exchange {

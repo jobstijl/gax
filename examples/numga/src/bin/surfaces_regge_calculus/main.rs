@@ -26,13 +26,10 @@ mod regge;
 #[cfg(test)]
 mod tests;
 
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
-#[path = "../../shared/surfaces_plane.rs"]
-mod surfaces_plane;
-
 use gax::field::Field;
 use gax_numga_examples::contour;
+use gax_numga_examples::shared::simplicial;
+use gax_numga_examples::shared::surfaces_plane;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, label_under, palette,
     run_with,

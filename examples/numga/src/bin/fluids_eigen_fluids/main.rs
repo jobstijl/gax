@@ -25,12 +25,10 @@ mod scenes;
 #[cfg(test)]
 mod tests;
 
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
-
 use eigen::*;
 use gax::field::Field;
 use gax_numga_examples::scene3::{Scene3, panel3};
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, ORIGIN3, Point2, Point3, Rect, backdrop, caption,

@@ -31,15 +31,13 @@ mod tests;
 
 use gax::field::Field;
 use gax_numga_examples::points::circle;
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, label_above, palette,
     run_with,
 };
 use seismic::*;
-
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
 
 /// One loop: the ball's travelling waves at 40 ms a frame, the planet's ringing twice.
 const SECONDS: f32 = 11.52;

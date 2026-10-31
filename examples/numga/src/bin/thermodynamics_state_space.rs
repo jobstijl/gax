@@ -19,9 +19,6 @@
 //! pressure-volume chart, where the work is; and each temperature against the heat taken in.
 //! Entropy is in nR, volume and temperature in their initial values, energy in nRT₀.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra gas "Entropy and volume, `s0v0`: both generators square to zero.";
     basis es = 0, ev = 0;
@@ -32,6 +29,7 @@ gax::algebra! {
 
 use charts::{BOLD, Diagram, Family, Floating, GasLines, MEDIUM};
 use gax_colour::Light;
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Point2, Rect, caption, run_with};
 
 mod heating {

@@ -21,9 +21,6 @@
 //! (grams on the chart), enthalpy in kJ per kg dry air; saturation by the Magnus approximation
 //! over liquid water.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra air "Temperature and water content, `t0w0`: both generators square to zero.";
     basis et = 0, ew = 0;
@@ -35,6 +32,7 @@ gax::algebra! {
 use charts::{BOLD, Diagram, Family, MEDIUM, THIN};
 use gax_numga_examples::points::Point3;
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Marker, Point2, Rect, caption, run_with};
 
 mod psychrometrics {

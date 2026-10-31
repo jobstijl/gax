@@ -5,12 +5,9 @@
 //! PGA3D quadrics (`quadrics_csg_raytracer`, `mechanics_rattleback`), numga's `quadric_regions`:
 //! where a ray crosses a quadric, and the first point where it meets an intersection of them.
 
-// Each example that includes this module uses a part of it.
-#![allow(dead_code)]
-
+use crate::{Point2, Rect, palette};
 use gax::pga3d::{Plane, Point};
 use gax_colour::Light;
-use gax_numga_examples::{Point2, Rect, palette};
 
 /// A solid quadric of PGA3D: from points to their polar planes, its form `quadric(p) & p`
 /// negative inside.

@@ -20,6 +20,7 @@
 //! the roots on them, right numga's three cases, the root triangles of the triples 112 and 123
 //! closing (they couple) and that of 235 left open (it does not).
 
+// Not in the library: an 8D algebra that would add about 2 minutes to every library build.
 #[path = "../shared/math_e8.rs"]
 mod e8;
 

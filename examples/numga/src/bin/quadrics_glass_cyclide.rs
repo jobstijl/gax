@@ -23,12 +23,9 @@
 //! with the CSG tracer `shared/quadrics_tracing.rs`. The animation orbits the camera about the
 //! cyclide.
 
-#[path = "../shared/quadrics_diagonal_cga.rs"]
-mod cga;
-#[path = "../shared/quadrics_tracing.rs"]
-mod tracing;
-
 use gax_colour::{Light, ops};
+use gax_numga_examples::shared::quadrics_diagonal_cga as cga;
+use gax_numga_examples::shared::quadrics_tracing as tracing;
 use gax_numga_examples::{Anim, Canvas, Rect, backdrop, caption, run_with};
 
 mod cyclide {

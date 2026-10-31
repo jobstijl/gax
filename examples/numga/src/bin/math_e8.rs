@@ -20,6 +20,7 @@
 //! nearest neighbours; right the four invariant planes, each with one root of every orbit
 //! riding its circle at the plane's rate.
 
+// Not in the library: an 8D algebra that would add about 2 minutes to every library build.
 #[path = "../shared/math_e8.rs"]
 mod e8;
 

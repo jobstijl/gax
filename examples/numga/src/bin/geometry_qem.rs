@@ -17,14 +17,12 @@
 
 use gax::pga3d::{Direction, Motor, OriginPlane, Plane, Point, intrinsic};
 use gax_numga_examples::measure::roots;
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Scene3, backdrop, caption,
     palette, run_with,
 };
-
-#[path = "../shared/simplicial.rs"]
-mod simplicial;
 
 mod qem {
     use super::*;

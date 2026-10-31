@@ -23,14 +23,10 @@ mod scenes;
 #[cfg(test)]
 mod tests;
 
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
-#[path = "../../shared/sta2d.rs"]
-mod sta2d;
-#[path = "../../shared/surfaces_plane.rs"]
-mod surfaces_plane;
-
 use advection::*;
+use gax_numga_examples::shared::simplicial;
+use gax_numga_examples::shared::sta2d;
+use gax_numga_examples::shared::surfaces_plane;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, label_under, palette,

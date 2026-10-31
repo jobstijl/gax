@@ -21,9 +21,6 @@
 //! cycle's enclosed area shaded on both. Entropy is in nR, volume and temperature in reference
 //! values, energy in nRT₀; work is positive when the gas does it.
 
-#[path = "../shared/thermodynamics_charts.rs"]
-mod charts;
-
 gax::algebra! {
     algebra gas "Entropy and volume, `s0v0`: both generators square to zero.";
     basis es = 0, ev = 0;
@@ -34,6 +31,7 @@ gax::algebra! {
 
 use charts::{BOLD, Diagram, Family, Floating, GasLines, THIN};
 use gax_colour::Light;
+use gax_numga_examples::shared::thermodynamics_charts as charts;
 use gax_numga_examples::{Anim, Canvas, Point2, caption, run_with};
 
 mod engine {

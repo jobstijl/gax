@@ -22,12 +22,9 @@ mod scenes;
 #[cfg(test)]
 mod tests;
 
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
-#[path = "../../shared/sta2d.rs"]
-mod sta2d;
-
 use gax::field::Field;
+use gax_numga_examples::shared::simplicial;
+use gax_numga_examples::shared::sta2d;
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Point2, Rect, backdrop, caption, label_under, palette, run_with,

@@ -21,13 +21,10 @@
 //! precesses and wanders, and plots the lean and spin of numga's four variations: the base, a
 //! sharper tip, a heavier disc and a more slippery ground.
 
-#[path = "../shared/mechanics_contact.rs"]
-mod contact;
-#[path = "../shared/quadrics_tracing.rs"]
-mod tracing;
-
 use gax::pga3d::{Direction, Line, Motor, Plane, Point};
 use gax_colour::light;
+use gax_numga_examples::shared::mechanics_contact as contact;
+use gax_numga_examples::shared::quadrics_tracing as tracing;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, par_map,
     run_with,

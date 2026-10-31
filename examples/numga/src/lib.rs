@@ -33,17 +33,24 @@ pub mod scene3;
 pub mod shared {
     pub mod electromagnetism_dipoles;
     pub mod geometry_scenegraph;
+    pub mod mechanics_contact;
     pub mod mechanics_lie;
     pub mod mechanics_simplex;
     pub mod mechanics_vga2d;
     pub mod mechanics_vga3d;
+    pub mod quadrics_diagonal_cga;
     pub mod quadrics_s3;
+    pub mod quadrics_tracing;
     pub mod quantum;
+    pub mod simplicial;
     pub mod spacetime;
+    pub mod sta2d;
     pub mod surfaces_hull;
     pub mod surfaces_loop;
+    pub mod surfaces_plane;
     pub mod surfaces_sphere;
     pub mod surfaces_spin;
+    pub mod thermodynamics_charts;
 }
 pub mod signal;
 pub mod testing;

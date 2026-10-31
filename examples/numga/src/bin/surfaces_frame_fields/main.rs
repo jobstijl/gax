@@ -23,15 +23,12 @@ mod frames;
 #[cfg(test)]
 mod tests;
 
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
-#[path = "../../shared/surfaces_plane.rs"]
-mod surfaces_plane;
-
 use frames::*;
 use gax::field::Field;
 use gax::mesh::Topology;
 use gax_numga_examples::scene3::{Scene3, panel3};
+use gax_numga_examples::shared::simplicial;
+use gax_numga_examples::shared::surfaces_plane;
 use gax_numga_examples::signal::{frame, linspace};
 use gax_numga_examples::{
     Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point3, Rect, backdrop, caption,

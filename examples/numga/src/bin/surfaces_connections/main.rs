@@ -42,13 +42,11 @@ mod scenes;
 #[cfg(test)]
 mod tests;
 
-#[path = "../../shared/simplicial.rs"]
-mod simplicial;
-
 use connections::*;
 use gax::field::Field;
 use gax_numga_examples::mesh::{Mesh, Vector3};
 use gax_numga_examples::scene3::{Scene3, panel3};
+use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::shared::surfaces_spin::{Hit, render};
 use gax_numga_examples::signal::{frame, phasor};
 use gax_numga_examples::{

@@ -20,6 +20,7 @@
 //! holds them, the systems lit in turn; right E8's diagram, coloured by the stage at which each
 //! mirror enters.
 
+// Not in the library: an 8D algebra that would add about 2 minutes to every library build.
 #[path = "../shared/math_e8.rs"]
 mod e8;
 

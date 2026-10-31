@@ -7,9 +7,6 @@
 //! (Hodge) dual, gax's `hodge()`; its inverse is `−hodge()` here, as the Hodge dual applied twice
 //! is `−1` in a five-dimensional algebra of signature (4, 1).
 
-// Each example that includes this module uses a part of it.
-#![allow(dead_code)]
-
 gax::algebra! {
     algebra cga "numga's CGA3D, R(4,1) in the diagonal basis x+y+z+w+e-.";
     basis ex = 1, ey = 1, ez = 1, ew = 1, ee = -1;
