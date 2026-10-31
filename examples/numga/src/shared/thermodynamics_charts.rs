@@ -390,9 +390,7 @@ impl Diagram {
         out
     }
 
-    /// A floating name: among candidate chart points, the one where the text, placed by its
-    /// anchor, covers the least light drawn so far, inside the plot; written there. Drawn
-    /// before what moves, it holds still across the frames of an animation.
+    /// A floating name, placed and written at once (see [`Diagram::place`]).
     pub fn float(
         &self,
         c: &mut Canvas,
@@ -401,41 +399,78 @@ impl Diagram {
         l: Light,
         anchor: Anchor,
     ) {
+        let name = Floating {
+            candidates: candidates.to_vec(),
+            text: text.to_string(),
+            light: l,
+            anchor,
+        };
+        let placed = self.place(c, &[name]);
+        self.write_names(c, &placed);
+    }
+
+    /// Places for floating names: for each, among its candidate chart points, the one where the
+    /// text, placed by its anchor, covers the least light drawn so far, inside the plot and
+    /// clear of the names placed before it. Placed before what moves is drawn, they hold still
+    /// across the frames of an animation; written after it ([`Diagram::write_names`]), they stay
+    /// readable over it.
+    pub fn place(&self, c: &Canvas, names: &[Floating]) -> Vec<Placed> {
         let rect = self.ax.rect;
         let [columns, rows] = c.pixels();
         let scale = columns as f32 / c.rect().width();
-        let mut best: Option<(f32, Point2)> = None;
-        for &p in candidates.iter().filter(|p| p.is_finite()) {
-            let place = self.px(p);
-            let segs: Vec<Point2> = self
-                .text_segments(place, text, TEXT, anchor, [0.0, 0.0])
-                .into_iter()
-                .flat_map(|(s, _)| s.into_iter().flatten())
-                .collect();
-            let [lo, hi] = gax_numga_examples::points::bounds(segs);
-            let pad = 2.0 * self.unit;
-            let inside = lo[0] - pad >= rect.lo.to_euclidean()[0]
-                && hi[0] + pad <= rect.hi.to_euclidean()[0]
-                && lo[1] - pad >= rect.lo.to_euclidean()[1]
-                && hi[1] + pad <= rect.hi.to_euclidean()[1];
-            if !inside {
-                continue;
-            }
-            let index = |v: f32, n: usize| ((v * scale).max(0.0) as usize).min(n);
-            let (x0, x1) = (index(lo[0] - pad, columns), index(hi[0] + pad, columns));
-            let (y0, y1) = (index(lo[1] - pad, rows), index(hi[1] + pad, rows));
-            let mut ink = 0.0;
-            for y in y0..y1 {
-                for x in x0..x1 {
-                    ink += c.get(x, y).luma();
+        let pad = 2.0 * self.unit;
+        let [left, top] = rect.lo.to_euclidean();
+        let [right, bottom] = rect.hi.to_euclidean();
+        let mut taken: Vec<[[f32; 2]; 2]> = Vec::new();
+        let mut placed = Vec::new();
+        for name in names {
+            let mut best: Option<(f32, Point2, [[f32; 2]; 2])> = None;
+            for &p in name.candidates.iter().filter(|p| p.is_finite()) {
+                let place = self.px(p);
+                let segs: Vec<Point2> = self
+                    .text_segments(place, &name.text, TEXT, name.anchor, [0.0, 0.0])
+                    .into_iter()
+                    .flat_map(|(s, _)| s.into_iter().flatten())
+                    .collect();
+                let [lo, hi] = gax_numga_examples::points::bounds(segs);
+                let (lo, hi) = ([lo[0] - pad, lo[1] - pad], [hi[0] + pad, hi[1] + pad]);
+                let inside = lo[0] >= left && hi[0] <= right && lo[1] >= top && hi[1] <= bottom;
+                let clear = taken
+                    .iter()
+                    .all(|[a, b]| hi[0] < a[0] || lo[0] > b[0] || hi[1] < a[1] || lo[1] > b[1]);
+                if !(inside && clear) {
+                    continue;
+                }
+                let index = |v: f32, n: usize| ((v * scale).max(0.0) as usize).min(n);
+                let (x0, x1) = (index(lo[0], columns), index(hi[0], columns));
+                let (y0, y1) = (index(lo[1], rows), index(hi[1], rows));
+                let mut ink = 0.0;
+                for y in y0..y1 {
+                    for x in x0..x1 {
+                        ink += c.get(x, y).luma();
+                    }
+                }
+                if best.is_none_or(|(least, ..)| ink < least) {
+                    best = Some((ink, place, [lo, hi]));
                 }
             }
-            if best.is_none_or(|(least, _)| ink < least) {
-                best = Some((ink, place));
+            if let Some((_, place, bounds)) = best {
+                taken.push(bounds);
+                placed.push(Placed {
+                    place,
+                    text: name.text.clone(),
+                    light: name.light,
+                    anchor: name.anchor,
+                });
             }
         }
-        if let Some((_, place)) = best {
-            self.write(c, place, text, l, TEXT, anchor, [0.0, 0.0]);
+        placed
+    }
+
+    /// Write placed names.
+    pub fn write_names(&self, c: &mut Canvas, placed: &[Placed]) {
+        for p in placed {
+            self.write(c, p.place, &p.text, p.light, TEXT, p.anchor, [0.0, 0.0]);
         }
     }
 
@@ -454,6 +489,36 @@ impl Diagram {
         let ends = tangent_points(point, direction, &reach);
         self.polyline(c, &ends, width, l);
     }
+}
+
+/// A name that finds its own place among candidate chart points (see [`Diagram::place`]).
+#[derive(Clone, Debug)]
+pub struct Floating {
+    pub candidates: Vec<Point2>,
+    pub text: String,
+    pub light: Light,
+    pub anchor: Anchor,
+}
+
+impl Floating {
+    /// A name with candidate places every so many samples along lines.
+    pub fn along(lines: &[Vec<Point2>], every: usize, text: &str, light: Light) -> Floating {
+        Floating {
+            candidates: along(lines, every),
+            text: text.to_string(),
+            light,
+            anchor: LB,
+        }
+    }
+}
+
+/// A floating name where it was placed, a canvas point.
+#[derive(Clone, Debug)]
+pub struct Placed {
+    pub place: Point2,
+    pub text: String,
+    pub light: Light,
+    pub anchor: Anchor,
 }
 
 /// A tick's number: as few digits as it needs.
@@ -777,7 +842,7 @@ fn rise(h: f32) -> Point3 {
 /// A cylinder's base and walls, tall enough for a fill of `maximum`, and its piston resting on a
 /// fill of `height`.
 pub fn cylinder(s: &mut Scene3, height: f32, maximum: f32) {
-    let grey = GREY;
+    let grey = GREY.faded(0.55);
     cuboid(
         s,
         Point3::xyz(0.0, 0.0, -0.08),
@@ -867,6 +932,6 @@ pub fn gas_cylinder(
         } else {
             load(s, height);
         }
-        fill(s, 0.0, height, thermal(warmth), 0.55);
+        fill(s, 0.0, height, thermal(warmth).faded(1.3), 0.7);
     });
 }
