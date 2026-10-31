@@ -330,16 +330,20 @@ pub struct Scene3 {
 /// reappears ahead near the antipode.
 pub fn crowd(frames: usize) -> Scene3 {
     // numga seeds 3; with this generator, seed 9 keeps every body off the eye for the
-    // animation's 240 frames (a body over the eye fills the view with its dark inside).
+    // animation's 160 frames (a body over the eye fills the view with its dark inside).
     let mut rng = rng(9);
     let bodies = admitted(population(&mut rng, 120, (0.05, 0.5)), 0, 28);
     let light = motion(along(Tangent::new(-0.34, 0.0, 0.94)).gp(0.8)) >> s3::origin();
     finish(bodies, frames, s3::identity(), light)
 }
 
+/// The time of a frame on S³, and the steps it is taken in (numga's 0.03 in 6).
+pub const S3_TIME_STEP: f64 = 0.03;
+pub const S3_SUBSTEPS: usize = 6;
+
 fn finish(bodies: Vec<s3::Body>, frames: usize, eye: s3::M, light: s3::P) -> Scene3 {
     Scene3 {
-        trajectory: s3::simulate(bodies, frames, 0.02, 8),
+        trajectory: s3::simulate(bodies, frames, S3_TIME_STEP, S3_SUBSTEPS),
         eye,
         light,
     }
@@ -350,7 +354,7 @@ fn finish(bodies: Vec<s3::Body>, frames: usize, eye: s3::M, light: s3::P) -> Sce
 /// sixty small ellipsoids in the belt. The eye a quarter turn along x, in the thick part, looking
 /// along y where it thins; the light behind the eye.
 pub fn gap(frames: usize) -> Scene3 {
-    // numga's seed 5 also keeps every body off the eye for the animation's 240 frames
+    // numga's seed 5 also keeps every body off the eye for the animation's 160 frames
     // with this generator (a body over the eye fills the view with its dark inside).
     let mut rng = rng(5);
     let deg = f64::to_radians;
@@ -376,9 +380,10 @@ pub fn gap(frames: usize) -> Scene3 {
 /// the antipode of its centre; the eye at the ideal point of x, lifted 35° along z and looking
 /// back down at the gap between the tips.
 pub fn needle(frames: usize) -> Scene3 {
-    // numga seeds 7; with this generator, seed 5 keeps every body off the eye for the
-    // animation's 240 frames (a body over the eye fills the view with its dark inside).
-    let mut rng = rng(5);
+    // numga seeds 7; with this generator, seed 20 keeps every body off the eye for the
+    // animation's 160 frames at numga's step (a body over the eye fills the view with its dark
+    // inside; seed 5, chosen for the earlier 240 frames of 0.02, passes over it at frame 126).
+    let mut rng = rng(20);
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([80.0, 4.0, 3.0].map(|a| tangent(deg(a))));
     let spin = turning(TangentPlane::new(2.0, 0.0, 0.0));
@@ -417,7 +422,7 @@ pub struct Tunnel {
 /// section at `+z` looks toward the narrow waist at `-w`; the light halfway to the wall.
 pub fn tunnel(frames: usize) -> Tunnel {
     // numga seeds 11; with this generator, seed 3 keeps every body off the eye for the
-    // animation's 240 frames (a body over the eye fills the view with its dark inside).
+    // animation's 160 frames (a body over the eye fills the view with its dark inside).
     let mut rng = rng(3);
     let deg = f64::to_radians;
     let tube = s3::quadric([

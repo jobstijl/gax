@@ -20,8 +20,12 @@ use gax_numga_examples::{
 };
 use scenes::{Scene3, s2};
 
-const SECONDS: f32 = 12.0;
-const FRAMES: usize = 240;
+/// numga's frames: of the colliding scenes on S², of the tumbling oval, and of every scene on
+/// S³; and the seconds of a frame.
+const S2_FRAMES: usize = 160;
+const TUMBLING_FRAMES: usize = 240;
+const S3_FRAMES: usize = 160;
+const FRAME_SECONDS: f32 = 0.04;
 
 /// The two simulations shown.
 struct Show {
@@ -31,11 +35,21 @@ struct Show {
     s3: Scene3,
 }
 
-fn show(s2_name: &str, s3_name: &str, frames: usize) -> Show {
+/// The S² scene's frames: the tumbling oval's, or the colliding scenes'.
+fn s2_frames(s2_name: &str) -> usize {
+    if s2_name == "tumbling" {
+        TUMBLING_FRAMES
+    } else {
+        S2_FRAMES
+    }
+}
+
+/// The two scenes, simulated for so many frames each.
+fn show(s2_name: &str, s3_name: &str, s2_frames: usize, frames: usize) -> Show {
     let s2 = match s2_name {
-        "tumbling" => scenes::tumbling(frames),
-        "hyperbolic" => scenes::hyperbolic(frames),
-        _ => scenes::crowded(frames),
+        "tumbling" => scenes::tumbling(s2_frames),
+        "hyperbolic" => scenes::hyperbolic(s2_frames),
+        _ => scenes::crowded(s2_frames),
     };
     let s3 = match s3_name {
         "gap" => scenes::gap(frames),
@@ -139,13 +153,20 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: Rect, f: usize) {
     );
 }
 
+/// The loop: the longer side's frames at numga's pace.
+fn seconds(show: &Show) -> f32 {
+    let frames = show.s2.energy.len().max(show.s3.trajectory.surfaces.len());
+    frames as f32 * FRAME_SECONDS
+}
+
 fn draw(show: &Show, c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
     let down = Point2::direction(0.0, 1.0);
-    let frames = show.s2.energy.len();
-    let f = frame((t / SECONDS).fract(), frames);
+    // Each side plays its own frames over the loop, the longer at numga's pace.
+    let fraction = (t / seconds(show)).fract();
+    let f = frame(fraction, show.s2.energy.len());
     caption(
         c,
         "QUADRIC RIGID BODIES ON S2 AND S3",
@@ -184,7 +205,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     let trajectory = &show.s3.trajectory;
     let view = s3::View {
         eye: show.s3.eye,
-        surfaces: trajectory.surfaces[f.min(trajectory.surfaces.len() - 1)].clone(),
+        surfaces: trajectory.surfaces[frame(fraction, trajectory.surfaces.len())].clone(),
         colors: trajectory.colors.iter().map(|l| (*l).faded(BODY)).collect(),
         light: show.s3.light,
         fov: 120f64.to_radians(),
@@ -215,9 +236,15 @@ fn main() {
             .cloned()
             .unwrap_or_else(|| default.to_string())
     };
-    let show = show(&arg("--s2", "crowded"), &arg("--s3", "crowd"), FRAMES);
+    let s2_name = arg("--s2", "crowded");
+    let show = show(
+        &s2_name,
+        &arg("--s3", "crowd"),
+        s2_frames(&s2_name),
+        S3_FRAMES,
+    );
     run(
-        Anim::new("elliptic physics", SECONDS)
+        Anim::new("elliptic physics", seconds(&show))
             .size(800, 450)
             .scale(2),
         move |c, t| draw(&show, c, t),
@@ -413,10 +440,10 @@ mod tests {
     #[test]
     fn the_bodies_keep_off_the_eye() {
         for (name, scene) in [
-            ("crowd", scenes::crowd(super::FRAMES)),
-            ("gap", scenes::gap(super::FRAMES)),
-            ("needle", scenes::needle(super::FRAMES)),
-            ("tunnel", scenes::tunnel(super::FRAMES).scene),
+            ("crowd", scenes::crowd(super::S3_FRAMES)),
+            ("gap", scenes::gap(super::S3_FRAMES)),
+            ("needle", scenes::needle(super::S3_FRAMES)),
+            ("tunnel", scenes::tunnel(super::S3_FRAMES).scene),
         ] {
             assert_eq!(scenes::eye_inside(&scene), None, "{name}");
         }
@@ -424,7 +451,7 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let show = super::show("crowded", "crowd", 3);
+        let show = super::show("crowded", "crowd", 3, 3);
         let c = gax_numga_examples::app::frame(
             &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
             0.5,
