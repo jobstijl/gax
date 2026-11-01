@@ -34,7 +34,6 @@ gax::algebra! {
     kind Bivector = [e12, e13, e14, e15, e23, e24, e25, e34, e35, e45];
     kind Trivector = [e123, e124, e125, e134, e135, e145, e234, e235, e245, e345];
     kind Antivector = [e2345, e1345, e1245, e1235, e1234] intrinsic;
-    kind Pseudoscalar = [e12345];
     versor Even = [1, e12, e13, e14, e15, e23, e24, e25, e34, e35, e45, e2345, e1345, e1245, e1235, e1234];
 }
 

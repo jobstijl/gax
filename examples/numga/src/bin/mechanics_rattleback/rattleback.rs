@@ -96,12 +96,11 @@ pub fn dynamics(
     let rate = rolling.of(spin);
     // The touching point changes as the body rocks; differentiate its support geometry. The
     // shell's centre is fixed in the body, so only the support moves.
-    let normal_rate = spin.commutator(normal).cast::<OriginPlane>();
+    let normal_rate = spin.commutator(normal);
     let contact_rate = shape.of(normal_rate) * (-1.0 / height)
         - support * ((normal & shape.of(normal_rate)).s() / (height * height));
     let rolling_change = (Point::from(contact_rate) * origin().inverse()).commutator(spin);
-    let force =
-        (origin() & Point::from((motor << Point::from(gravity)).cast::<Direction>())) * mass;
+    let force = (origin() & (motor << gravity)) * mass;
     // The adjugate pairs forces with allowed rolling motions, so the resting contact does no
     // work: `Moment <- Forque`, the angular momenta the forques pull back to.
     let pullback = rolling.adjugate();
@@ -312,12 +311,12 @@ pub fn rattleback() -> Rattleback {
         .iter()
         .zip(mirrors())
         .zip(SEMI_AXES)
-        .map(|((d, m), a)| ((*d * a) * (m & Direction::slot())).cast::<Direction>())
+        .map(|((d, m), a)| (*d * a) * (m & Direction::slot()))
         .sum();
     let shape: Shape = directions
         .iter()
         .zip(SEMI_AXES)
-        .map(|(d, a)| ((*d * (a * a)) * (OriginPlane::slot() & *d)).cast::<Direction>())
+        .map(|(d, a)| (*d * (a * a)) * (OriginPlane::slot() & *d))
         .sum();
     // The unit ball's planes across its axes carried onto the shell: each pairs with a
     // stretched direction as the ball's plane does with the direction, so the stretch's
@@ -337,17 +336,17 @@ pub fn rattleback() -> Rattleback {
     let tipped =
         (turn(y, z, CHAMFER_ROLL.to_radians()) * turn(x, z, -CHAMFER_PITCH.to_radians())) >> z;
     let [cx, cy, cz] = CHAMFER_THROUGH;
-    let corner = origin() + Point::from(direction(cx, cy, cz));
+    let corner = origin() + direction(cx, cy, cz);
     let chamfers = sides.map(|s| half_space(s >> (tipped - w * (tipped & corner).s())));
     // A ball on the shell's side, its diameter pressed in by the sink.
     #[allow(clippy::disallowed_methods)] // the ellipse's half width at the ball's place
     let side = SEMI_AXES[1] * (1.0 - (BALL_ALONG / SEMI_AXES[0]).powi(2)).sqrt();
     let seat = origin()
-        + Point::from(direction(
+        + direction(
             BALL_ALONG,
             side + BALL_RADIUS * (1.0 - 2.0 * BALL_SINK),
             0.0,
-        ));
+        );
     let balls = sides.map(|s| ball(s >> seat, BALL_RADIUS));
     let built = Body {
         underside,

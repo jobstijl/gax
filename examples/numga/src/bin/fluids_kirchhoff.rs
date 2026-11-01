@@ -36,7 +36,7 @@ use gax_numga_examples::{
 
 mod kirchhoff {
     use gax::Unit;
-    use gax::pga3d::{Direction, Forque, Line, Moment, Motor, Plane, Point, Twist, intrinsic};
+    use gax::pga3d::{Direction, Forque, Line, Moment, Motor, Plane, Point, Twist};
 
     /// A stretch, carrying the unit sphere onto the body, and a shape, the squared semi-axes
     /// along the body's axes: maps on directions.
@@ -73,13 +73,14 @@ mod kirchhoff {
     }
 
     /// The couple of a turn: half the sum, over the axes, of each direction joined with its own
-    /// velocity. A shift moves no direction, so it has no couple.
+    /// velocity (two directions join in a line at infinity, a moment). A shift moves no
+    /// direction, so it has no couple.
     pub fn turn_couple() -> Moment<(Twist,)> {
-        let joined: intrinsic::Line<(Twist,)> = directions()
+        let joined: Moment<(Twist,)> = directions()
             .iter()
             .map(|d| *d & d.commutator(Twist::slot()).cast::<Direction>())
             .sum();
-        (joined * 0.5).cast::<Moment>()
+        joined * 0.5
     }
 
     /// An ellipsoid in its own frame: the unit sphere stretched by each semi-axis along its
@@ -89,7 +90,7 @@ mod kirchhoff {
             .iter()
             .zip(axes())
             .zip(semi_axes)
-            .map(|((d, a), s)| ((*d * s) * (a & Direction::slot())).cast::<Direction>())
+            .map(|((d, a), s)| (*d * s) * (a & Direction::slot()))
             .sum()
     }
 
@@ -253,15 +254,15 @@ mod kirchhoff {
         (0..=N_OUTLINE)
             .map(|k| {
                 let angle = core::f64::consts::TAU * k as f64 / N_OUTLINE as f64;
-                let circle = (Motor::rotation_about(up, angle) >> long_axis()).cast::<Direction>();
-                centre() + Point::from(stretch.of(circle))
+                let circle = Motor::rotation_about(up, angle) >> long_axis();
+                centre() + stretch.of(circle)
             })
             .collect()
     }
 
     /// The tip of the long axis, in the body's frame.
     pub fn nose() -> Point {
-        centre() + Point::from(stretch(SEMI_AXES).of(long_axis()))
+        centre() + stretch(SEMI_AXES).of(long_axis())
     }
 
     /// The heading of a direction about the vertical, from the first axis of space.
@@ -527,8 +528,7 @@ mod tests {
         assert!((a - b).abs() <= 1e-12 * a.abs(), "{a} {b}");
         let [x, y, z] = axes();
         let motor = ((x ^ y) * -0.4).exp() * ((y ^ z) * 0.7).exp();
-        let turned =
-            (motor >> s.of((motor << Direction::slot()).cast::<Direction>())).cast::<Direction>();
+        let turned = motor >> s.of(motor << Direction::slot());
         let moved = super::kirchhoff::inertia(shape_of(turned), 1.5, 1.0, N_WIDENINGS);
         let c = ((motor >> second) & moved.of(motor >> first)).s();
         let d = (second & inertia.of(first)).s();
@@ -577,11 +577,7 @@ mod tests {
         }
         let headings: Vec<Vec<f64>> = motors
             .iter()
-            .map(|ms| {
-                ms.iter()
-                    .map(|m| heading((*m >> long_axis()).cast::<Direction>()))
-                    .collect()
-            })
+            .map(|ms| ms.iter().map(|m| heading(*m >> long_axis())).collect())
             .collect();
         assert!(headings[0].iter().all(|h| (h - HEADINGS[0]).abs() < 1e-12));
         let broadside = core::f64::consts::FRAC_PI_2;

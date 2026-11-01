@@ -13,7 +13,7 @@ fn size<M: gax::Extensor<Coef = f64>>(m: M) -> f64 {
 /// The point-to-plane map of the Euclidean metric: the inverse of the dual (numga's
 /// `Point.dual_inverse()`).
 fn euclidean() -> Metric {
-    Plane::slot().hodge().inverse()
+    Point::slot().hodge_inverse()
 }
 
 #[test]

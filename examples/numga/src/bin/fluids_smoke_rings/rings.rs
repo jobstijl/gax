@@ -193,20 +193,15 @@ pub fn backlund(points: &[Point], start: Point, twist: Circulation) -> Vec<Point
 }
 
 /// The fold across a unit edge as the Lorentz rotor of its offsets' paravectors: the boost
-/// along the direction the edge's point stands for, `rapidity` (`S.dual_inverse()`, gax's
-/// `hodge`), and the turn about it by `angle`, `exp(-(rapidity S* + angle S) / 2)`. The two
-/// generators commute (each is the other times the pseudoscalar), so the exponential is the
-/// boost's, `cosh - sinh` along the direction, times the turn's rotor. (gax has no exponential
-/// on `Multivector` or on a paravector-plus-bivector: written here.)
+/// along the direction the edge's point stands for, `rapidity` (`S.dual_inverse()`), and the
+/// turn about it by `angle`, `exp(-(rapidity S* + angle S) / 2)`, the exponential of a
+/// paravector-plus-bivector multivector (the two generators commute, each the other times the
+/// pseudoscalar, so it is the boost times the turn).
 pub fn lorentz_rotor(edge: Point, rapidity: f64, angle: f64) -> Multivector {
-    let length = edge.norm();
-    let along = edge.hodge() * (1.0 / length);
-    let half = rapidity * length / 2.0;
-    let boost =
-        Paravector::new(half.cosh(), 0.0, 0.0, 0.0) - along.cast::<Paravector>() * half.sinh();
+    let boost = edge.hodge_inverse().cast::<Multivector>() * rapidity;
     // The turn's generator: the angle (intrinsic, a parameter's) times the edge (a point).
-    let turn: Bivector = (edge * (-angle / 2.0)).with_orientation();
-    boost.cast::<Multivector>() * turn.exp().into_inner().cast::<Multivector>()
+    let turn: Bivector = (edge * angle).with_orientation();
+    ((boost + turn.cast::<Multivector>()) * -0.5).exp()
 }
 
 /// The fold's rapidity and turning angle for a parameter: `rapidity + i angle` is the logarithm

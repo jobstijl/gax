@@ -67,10 +67,9 @@ mod odd {
     }
 
     /// The unit force along a unit direction, which reads a displacement's component along it:
-    /// the inverse of the Hodge dual (numga's `dual_inverse`; in the plane's Euclidean metric
-    /// gax's metric-free `undual`).
+    /// the inverse of the Hodge dual (numga's `dual_inverse`).
     pub fn force_along(direction: Displacement) -> Force {
-        direction.undual()
+        direction.hodge_inverse()
     }
 
     /// A triangular lattice with free edges: its triangles, whose edges are the bonds, and its

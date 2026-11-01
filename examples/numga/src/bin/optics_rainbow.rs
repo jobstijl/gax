@@ -136,7 +136,7 @@ mod rainbow {
 
     /// The cosine of the angle between two unit directions: numga's `dot`, `⟨a ~b⟩₀`.
     pub fn cosine(a: Direction, b: Direction) -> f64 {
-        a.scalar_product(b.reverse()).s()
+        a.metric(b).s()
     }
 
     /// The angle in degrees from the point opposite the sun at which light leaving along `exit`

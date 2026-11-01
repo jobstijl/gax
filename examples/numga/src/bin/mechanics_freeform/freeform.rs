@@ -61,10 +61,10 @@ pub fn unit_volume() -> vga3d::intrinsic::Scalar {
     x & y & z
 }
 
-/// The Euclidean pairing of two directions, positive (numga's `dot`, `⟨a ~b⟩₀`; gax's `|` of
-/// bivectors is negative).
+/// The Euclidean pairing of two directions, positive (numga's `dot`, gax's `metric`,
+/// `⟨a ~b⟩₀`; gax's `|` of bivectors is negative).
 pub fn dot(a: Antivector, b: Antivector) -> f64 {
-    a.scalar_product(b.reverse()).s()
+    a.metric(b).s()
 }
 
 /// The point embedded among the affine points: the intrinsic one plus it.

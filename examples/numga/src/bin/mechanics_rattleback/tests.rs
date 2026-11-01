@@ -69,7 +69,7 @@ fn rolling_annihilates_contact_motion_and_contact_work() {
     let height = (normal & r.shape.of(normal)).s().sqrt();
     let contact = r.centre - r.shape.of(normal) * (1.0 / height);
     let rolling = Motor::translation(Point::from(contact)) >> Spin::slot();
-    let point = origin() + Point::from(contact);
+    let point = origin() + contact;
     let reaction = point & (x + y * 2.0 + z * 3.0).dual();
     assert!(
         point
@@ -109,7 +109,7 @@ fn reduced_balance_matches_newton_euler_and_has_zero_energy_derivative() {
         height,
         rolling,
     } = contact_geometry(motor, r.shape, r.centre, up());
-    let normal_rate = spin.commutator(normal).cast::<OriginPlane>();
+    let normal_rate = spin.commutator(normal);
     let height_rate = (normal & r.shape.of(normal_rate)).s() / height;
     let contact_rate = r.shape.of(normal_rate) * (-1.0 / height) - support * (height_rate / height);
     let rate_change = rolling.of(acceleration)
@@ -185,14 +185,15 @@ fn mirroring_the_body_mirrors_its_rolling_dynamics() {
         up(),
     );
     let mirror = (x + y * (1.0 / 3.0) + z * 0.2).normalized();
-    let flip = |d: Direction| (mirror >> Point::from(d)).cast::<Direction>();
-    let shape = (mirror
+    let flip = |d: Direction| mirror >> d;
+    // A plane through the origin reflects origin planes and spins to planes and lines in
+    // general (the sandwich of a full kind's value): cast back.
+    let shape = mirror
         >> r.shape
-            .of((mirror << OriginPlane::slot()).cast::<OriginPlane>()))
-    .cast::<Direction>();
+            .of((mirror << OriginPlane::slot()).cast::<OriginPlane>());
     let inertia = mirror >> r.inertia.of(mirror << Line::slot());
     let mirrored_motor = gax::Unit::new_unchecked(mirror >> motor.into_inner());
-    let mirrored_spin = (mirror >> Line::from(spin)).cast::<Spin>();
+    let mirrored_spin = (mirror >> spin).cast::<Spin>();
     let (mirrored_rate, mirrored_acceleration) = dynamics(
         mirrored_motor,
         mirrored_spin,
@@ -256,7 +257,7 @@ fn spin_reverses_and_energy_converges_with_the_time_step() {
     for launch in &fine {
         for m in &launch.motors {
             let support = contact_geometry(*m, r.shape, r.centre, up()).support;
-            let contact = origin() + Point::from(r.centre + support);
+            let contact = origin() + (r.centre + support);
             for q in others {
                 assert!((q.of(contact) & contact).s() < 0.0);
             }

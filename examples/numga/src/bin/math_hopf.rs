@@ -60,7 +60,7 @@ mod hopf {
     /// A unit spinor with a spin: the top eigenvector of the form `spin.dot(hopf)` (numga's
     /// `dot`, `⟨a ~b⟩₀`), whose eigenvalues are minus one twice and plus one twice.
     pub fn fibre_start(spin: Spin) -> Rotor {
-        let form: Scalar<(Rotor, Rotor)> = spin.scalar_product(hopf().reverse());
+        let form: Scalar<(Rotor, Rotor)> = spin.metric(hopf());
         form.eigh(Scalar::identity()).1[3]
     }
 
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn the_fibre_is_the_top_eigenspace_of_the_paired_form() {
         let spin: Spin = Spin::new(0.3, -0.5, 0.8).normalized();
-        let form: Scalar<(Rotor, Rotor)> = spin.scalar_product(hopf().reverse());
+        let form: Scalar<(Rotor, Rotor)> = spin.metric(hopf());
         let (values, spinors) = form.eigh(Scalar::identity());
         for (v, want) in values.iter().zip([-1.0, -1.0, 1.0, 1.0]) {
             assert!((v - want).abs() < 1e-12, "{values:?}");

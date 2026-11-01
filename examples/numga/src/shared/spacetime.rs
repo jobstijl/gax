@@ -12,9 +12,9 @@
 //! rotors, whose `exp`, `log` and `sqrt` gax generates in closed form.
 //!
 //! numga's `dual` is the metric (Hodge) dual, `~a I` with `I = xyzt`: gax's `hodge()`, which
-//! squares to minus one on even grades and to one on odd ones (so numga's `dual_inverse` is
-//! `-b.hodge()` on bivectors, `d.hodge()` on vectors and trivectors). gax's metric-free `dual()`
-//! differs from it in the sign of the blades with `t`, and is not used here.
+//! squares to minus one on even grades and to one on odd ones; numga's `dual_inverse` is gax's
+//! `hodge_inverse()` (`-b.hodge()` on bivectors, `d.hodge()` on vectors and trivectors). gax's
+//! metric-free `dual()` differs from it in the sign of the blades with `t`, and is not used here.
 
 pub use gax::sta::*;
 

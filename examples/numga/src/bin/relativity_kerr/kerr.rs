@@ -105,10 +105,9 @@ impl Hole {
         }
     }
 
-    /// The plane the hole turns in, whose dual is its spin (numga's `dual_inverse`: the Hodge
-    /// dual squares to minus one on STA's bivectors).
+    /// The plane the hole turns in, whose dual is its spin (numga's `dual_inverse`).
     pub fn turning(self) -> B {
-        -self.spin.hodge()
+        self.spin.hodge_inverse()
     }
 
     /// The spin squared, `a²`.

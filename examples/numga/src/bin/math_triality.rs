@@ -45,7 +45,6 @@ gax::algebra! {
 mod triality {
     use super::cl07::{Bivector, Generator, Multivector, Octonion, Scalar, Trivector, Vector};
     use gax::sites::{SiteField, Sites};
-    use gax_numga_examples::signal::phasor;
     use std::sync::OnceLock;
 
     pub type O = Octonion;
@@ -223,10 +222,9 @@ mod triality {
     }
 
     /// The half-angle exponential of a unit vector `u` (which squares to minus one):
-    /// `cos(angle / 2) + u sin(angle / 2)`, written out (gax has no exponential of a vector).
+    /// `exp(u angle / 2) = cos(angle / 2) + u sin(angle / 2)`, an octonion.
     pub fn half_turn(u: Vector, angle: f64) -> O {
-        let p = phasor(angle / 2.0);
-        unit(0).gp(p.e20()) + octonion(u).gp(p.e01())
+        (u * (angle / 2.0)).exp()
     }
 
     /// A plane rotation by `angle` and its two companions, for a unit vector `u`: `x ↦ u x u`,

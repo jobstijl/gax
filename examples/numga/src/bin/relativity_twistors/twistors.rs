@@ -27,7 +27,7 @@ gax::algebra! {
     kind Ray = [exyzt, exyzu, exytu, exztu, eyztu, exyzv, exytv, exztv, eyztv, exyuv, exzuv, eyzuv, extuv, eytuv, eztuv] intrinsic "A light ray, numga's antibivector: the join of its events.";
     kind Faraday = [exy, exz, eyz, ext, eyt, ezt];
     kind Phasor = [1, exyzt];
-    kind Twistor = [1, ey, ez, eu, eyz, eyu, ezu, eyzu] "A twistor: extrinsic, a twistor an event selects a ray from; intrinsic, a ray's twistor.";
+    kind Twistor = [1, ey, ez, eu, eyz, eyu, ezu, eyzu] intrinsic "A twistor: intrinsic, a ray's twistor; extrinsic, a twistor an event selects a ray from.";
 }
 
 /// A conformal vector.
@@ -49,19 +49,18 @@ pub type Full = cl42::Multivector;
 pub type IntrinsicFull = cl42::intrinsic::Multivector;
 /// An electromagnetic field: a bivector of spacetime.
 pub type Faraday = cl42::Faraday;
-/// A ray's twistor, intrinsic, and the twistors events select rays from, extrinsic. (The kind
-/// is declared extrinsic: declared intrinsic, gax's generated `inverse` of a kind closed under
-/// the product mixes the orientations and does not compile.)
-pub type Twistor = cl42::intrinsic::Twistor;
-pub type ExtrinsicTwistor = cl42::Twistor;
+/// A ray's twistor, intrinsic (the kind's default), and the twistors events select rays from,
+/// extrinsic.
+pub type Twistor = cl42::Twistor;
+pub type ExtrinsicTwistor = cl42::extrinsic::Twistor;
 /// A linear map on twistors.
-pub type TwistorMap = cl42::intrinsic::Twistor<(cl42::intrinsic::Twistor,)>;
+pub type TwistorMap = cl42::Twistor<(cl42::Twistor,)>;
 /// The action of an intrinsic multivector: from ray twistors to extrinsic ones.
-pub type IncidenceMap = cl42::Twistor<(cl42::intrinsic::Twistor,)>;
+pub type IncidenceMap = cl42::extrinsic::Twistor<(cl42::Twistor,)>;
 /// A bilinear form between twistors of the two orientations.
-pub type Pairing = cl42::Scalar<(cl42::intrinsic::Twistor, cl42::Twistor)>;
+pub type Pairing = cl42::Scalar<(cl42::Twistor, cl42::extrinsic::Twistor)>;
 /// A ray from pairs of twistors.
-pub type RayMap = cl42::Ray<(cl42::intrinsic::Twistor, cl42::intrinsic::Twistor)>;
+pub type RayMap = cl42::Ray<(cl42::Twistor, cl42::Twistor)>;
 
 /// The conformal vectors `x y z t u v`.
 pub fn x() -> V {

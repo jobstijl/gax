@@ -82,9 +82,9 @@ mod decomposition {
         // The squares of the planes are the roots of the cubic with these coefficients after
         // the leading one.
         let squares = cubic_roots([
-            b.scalar_product(b.reverse()).s(),
-            pair.scalar_product(pair.reverse()).s(),
-            triple.scalar_product(triple.reverse()).s(),
+            b.metric(b).s(),
+            pair.metric(pair).s(),
+            triple.metric(triple).s(),
         ]);
         let parts = squares.map(|square| {
             let top = triple.cast::<Even>() + b.cast::<Even>().gp(square);

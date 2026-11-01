@@ -52,7 +52,7 @@ pub fn e() -> Vector {
 /// numga's `dual_inverse` of a point, the inverse of its Hodge dual: the vector it is the dual
 /// of.
 pub fn dual_inverse(p: Quadvector) -> Vector {
-    (-p.hodge()).with_orientation()
+    p.hodge_inverse().with_orientation()
 }
 
 /// The origin and the point at infinity.

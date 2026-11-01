@@ -23,7 +23,7 @@ fn box_buoyancy_metacentric_heights_and_righting_arm_are_the_closed_forms() {
     let across = BOX_DRAFT / 2.0 + beam * beam / (12.0 * BOX_DRAFT) - GRAVITY_HEIGHT;
     let along = BOX_DRAFT / 2.0 + length * length / (12.0 * BOX_DRAFT) - GRAVITY_HEIGHT;
     let k = stiffness(&body, BOX_DRAFT - depth / 2.0, weight, centre, 1.0);
-    let [low, high] = eigenvalues(tilt_block(k)).map(|e| e / weight);
+    let [low, high] = eigenvalues(k).map(|e| e / weight);
     assert!(
         (low - across).abs() < 1e-12 && (high - along).abs() < 1e-12,
         "{low} {high}"
@@ -54,7 +54,7 @@ fn cube_floats_face_up_outside_the_band_of_densities() {
         .flat_map(|e| [e - 1e-3, e + 1e-3])
         .map(|d| {
             let k = stiffness(&cube, d - 0.5, d, Point::origin(), 1.0);
-            tilt_block(k)[0][0] > 0.0
+            heel_stiffness(k) > 0.0
         })
         .collect();
     assert_eq!(signs, [true, false, false, true]);
@@ -72,7 +72,7 @@ fn the_scenes_right_themselves_or_capsize() {
     #[allow(clippy::disallowed_methods)] // the small-heel slope's reference
     let sine = second.sin();
     for (load, k) in stiffnesses.iter().enumerate() {
-        let height = tilt_block(*k)[0][0] / weight;
+        let height = heel_stiffness(*k) / weight;
         let slope = arm(couples[1][load], weight) / sine;
         assert!((slope - height).abs() < 1e-2, "{load}: {slope} {height}");
     }

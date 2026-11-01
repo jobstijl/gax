@@ -40,7 +40,7 @@ pub fn coordinates(p: Point) -> [f64; 3] {
 
 /// numga's `a.dot(b)` on points, `⟨a ~b⟩`: their Euclidean inner product.
 pub fn dot(a: Point, b: Point) -> f64 {
-    a.scalar_product(b.reverse()).s()
+    a.metric(b).s()
 }
 
 /// The plane a tangent vector turns in at a normal: its Hodge dual.

@@ -125,8 +125,8 @@ mod rotation {
             s.entering,
         );
         // The flux through the cross-section turns the light in the cross-section's plane,
-        // numga's `dual_inverse`: minus the Hodge dual on bivectors.
-        let plane = -s.cross_section.hodge();
+        // numga's `dual_inverse`.
+        let plane = s.cross_section.hodge_inverse();
         let faraday_rate = plane * (s.magnetic_field & s.cross_section) * VERDET;
         let faraday = out_and_back(faraday_rate, faraday_rate, s.entering);
         [active, faraday]
@@ -168,10 +168,10 @@ mod rotation {
         ]
     }
 
-    /// Each field's polarization: the plane it sweeps through time (numga's `dual_inverse`,
-    /// minus the Hodge dual), met with the observer's slice of space.
+    /// Each field's polarization: the plane it sweeps through time (numga's `dual_inverse`),
+    /// met with the observer's slice of space.
     pub fn polarization(field: Field) -> Direction {
-        (-field.hodge()) ^ t()
+        field.hodge_inverse() ^ t()
     }
 }
 

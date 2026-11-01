@@ -2,15 +2,14 @@
 //! the stiffness against small tilts; the hull and the box; and the scenes.
 
 use gax::Unit;
-use gax::pga3d::{Forque, Line, Motor, Plane, Point, Scalar, Spin};
+use gax::pga3d::{Forque, Line, Motor, Plane, Point, Scalar, Spin, Tilt};
 use gax_numga_examples::shared::mechanics_simplex as simplex;
 
 /// A triangle: its corners, wound outward or all inward.
 pub type Triangle = [Point; 3];
-/// The energy of a small turn about a line through the origin: a form on spins. numga's is on
-/// tilts, the turns about horizontal lines through the origin (`e23`, `e31`), which have no
-/// PGA3D kind in gax; its tilt block is read off this form (`Stiffness::tilt`).
-pub type Stiffness = Scalar<(Spin, Spin)>;
+/// The energy of a small tilt, a turn about a horizontal line through the origin: a form on
+/// tilts (`e23` heel, `e31` trim), numga's.
+pub type Stiffness = Scalar<(Tilt, Tilt)>;
 
 /// The still water surface, the plane `z = 0`.
 pub fn water() -> Plane {
@@ -42,9 +41,9 @@ pub fn surface_at(height: f64) -> Plane {
     water() - Plane::infinity() * height
 }
 
-/// A heel and a trim as spins: the parts of the axes of heel and trim through the origin.
-pub fn tilts() -> [Spin; 2] {
-    [heel_axis().cast::<Spin>(), trim_axis().cast::<Spin>()]
+/// A heel and a trim as tilts: the parts of the axes of heel and trim through the origin.
+pub fn tilts() -> [Tilt; 2] {
+    [heel_axis().cast::<Tilt>(), trim_axis().cast::<Tilt>()]
 }
 
 /// The wet part of a triangle below a water surface, as two triangles wound as it is, either or
@@ -197,29 +196,27 @@ pub fn stiffness(
     fluid_weight: f64,
 ) -> Stiffness {
     let surface = surface_at(height);
-    let tilted = surface.commutator(Spin::slot());
-    let pushing: Forque<(Spin,)> = pressing(triangles, surface)
+    // A tilt is a spin (a slot only, it takes part in products as one).
+    let tilt = Spin::from(Tilt::slot());
+    let tilted = surface.commutator(tilt);
+    let pushing: Forque<(Tilt,)> = pressing(triangles, surface)
         .iter()
         .map(|(p, l)| (tilted & *p) * (-fluid_weight) * *l)
         .sum();
-    let weighing = (centre & (-up()).commutator(Spin::slot())) * weight;
-    Spin::slot() & (pushing + weighing)
+    let weighing = (centre & (-up()).commutator(tilt)) * weight;
+    tilt & (pushing + weighing)
 }
 
-/// The tilt block of a stiffness: its values on heel and trim, `[[heel, heel], [heel, trim]],
-/// [[trim, heel], [trim, trim]]`.
-pub fn tilt_block(k: Stiffness) -> [[f64; 2]; 2] {
-    let t = tilts();
-    [0, 1].map(|i| [0, 1].map(|j| k.of(t[i]).of(t[j]).s()))
+/// A stiffness on heel, the metacentric height times the weight in roll.
+pub fn heel_stiffness(k: Stiffness) -> f64 {
+    let [heel, _] = tilts();
+    k.of(heel).of(heel).s()
 }
 
-/// The eigenvalues of a symmetric 2 × 2 block, ascending: half the trace, less and plus the
-/// distance of the diagonal's half difference and the corner (gax has no 2 × 2 kind here).
+/// The eigenvalues of a stiffness, ascending.
 #[cfg(test)] // numga's check of the metacentric heights
-pub fn eigenvalues([[a, b], [_, d]]: [[f64; 2]; 2]) -> [f64; 2] {
-    let mean = (a + d) / 2.0;
-    let spread = gax::vga2d::Vector::new((a - d) / 2.0, b).norm();
-    [mean - spread, mean + spread]
+pub fn eigenvalues(k: Stiffness) -> [f64; 2] {
+    k.eigh(Stiffness::identity()).0
 }
 
 // --- shapes

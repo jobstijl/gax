@@ -135,10 +135,9 @@ mod photoelasticity {
             + (dyad(radial, tangent) + dyad(tangent, radial)) * shear_stress
     }
 
-    /// The cut across a direction: its Hodge dual (numga's `dual_inverse`; the Hodge dual takes
-    /// a vector to an antivector and back).
+    /// The cut across a direction: numga's `dual_inverse`, the inverse of the Hodge dual.
     pub fn across(direction: Planar) -> Cut {
-        direction.hodge()
+        direction.hodge_inverse()
     }
 
     /// The principal stresses, from least to greatest, and their directions: the eigenvectors of

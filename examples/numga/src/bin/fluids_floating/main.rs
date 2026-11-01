@@ -13,10 +13,9 @@
 //! of gravity) no longer coincide, and their sum is the righting couple.
 //!
 //! The water is a plane, the centres points, forces forques and turns twists. Over the turns
-//! about lines through the origin (`Spin::slot()`), the change of the net force under a small
-//! turn is a map, and paired with the turn it is the body's stiffness: on heel and trim its
-//! eigenvalues over the weight are the metacentric heights. (numga's tilts, `e23` and `e31`, are
-//! no PGA3D kind in gax; the stiffness is a form on spins, its tilt block read off it.)
+//! about horizontal lines through the origin, the tilts (`Tilt::slot()`, heel `e23` and trim
+//! `e31`), the change of the net force under a small tilt is a map, and paired with the tilt it
+//! is the body's stiffness: its eigenvalues over the weight are the metacentric heights.
 //!
 //! The animation shows numga's four: a Wigley hull heeled in the water, its wet surface darker
 //! with depth, with its buoyancy and its weight; the hull released from a heel with a low load,
@@ -94,7 +93,7 @@ fn scenes() -> Scenes {
         shown: (placement(turn, height), push),
         slopes: stiffnesses
             .iter()
-            .map(|k| tilt_block(*k)[0][0] / weight)
+            .map(|k| heel_stiffness(*k) / weight)
             .collect(),
         hull,
         weight,

@@ -33,7 +33,6 @@ gax::algebra! {
     kind Scalar = [1];
     versor Vector = [e1, e2, e3];
     kind Bivector = [e23, e31, e12];
-    kind Pseudoscalar = [e123];
     versor Rotor = [1, e23, e31, e12];
     kind Odd = [e1, e2, e3, e123];
     kind Nonscalar = [e1, e2, e3, e23, e31, e12, e123];

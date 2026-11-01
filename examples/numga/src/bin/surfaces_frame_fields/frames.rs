@@ -44,7 +44,7 @@ pub fn coordinates(p: Point) -> [f64; 3] {
 
 /// numga's `a.dot(b)` on points: `⟨a ~b⟩`, their Euclidean inner product.
 pub fn dot(a: Point, b: Point) -> f64 {
-    a.scalar_product(b.reverse()).s()
+    a.metric(b).s()
 }
 
 /// The sides of a triangle facing each corner, counter-clockwise.

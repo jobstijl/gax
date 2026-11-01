@@ -65,7 +65,7 @@ mod swimmer {
         #[allow(clippy::disallowed_methods)] // the Stokeslet's softened distance cubed
         let cube = softened * softened.sqrt();
         let along = unit_force() * (softened + radius * radius);
-        let across = (separation * (Force::slot() & separation)).cast::<Direction>();
+        let across = separation * (Force::slot() & separation);
         (along + across) * (1.0 / cube)
     }
 
@@ -230,7 +230,7 @@ mod swimmer {
             let m = self.poses[step];
             self.forces[step]
                 .iter()
-                .map(|f| force_of((m >> f.dual().cast::<Direction>()).cast::<Direction>()))
+                .map(|f| force_of(m >> f.dual().cast::<Direction>()))
                 .collect()
         }
     }

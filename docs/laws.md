@@ -61,7 +61,8 @@ on `Sym`.
   * every outermorphism of maps on kinds with at most 5 coefficients;
   * every scalar pairing whose matrix is a constant signed permutation;
   * the Hodge dual, its inverse and the metric on the kinds with at most 8 coefficients;
-  * the adjugate and adjoint of maps on every kind that has them.
+  * the adjugate and adjoint of maps on every kind that has them (but the `slot` parts, which
+    take part in no product: `tests/parts.rs` checks theirs through casts).
 
   Larger instances make the free polynomials explode (see ADR-025). The suites cover the eight
   standard algebras and PGA4D, declared through `algebra!`.
