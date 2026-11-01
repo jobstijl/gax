@@ -1165,8 +1165,8 @@ macro_rules! law_suite {
         #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
         fn paired_traces() {
             $((|| {
-                reset();
                 type C = <$tpk as gax::Complement>::Out;
+                reset();
                 let f: $tpk<($tpk,), T> = fresh();
                 let form = (slot::<C, T>() & f).cast::<$scalar>();
                 law(
