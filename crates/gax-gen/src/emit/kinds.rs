@@ -733,6 +733,17 @@ impl<A: Kind, T: Real, O: gx::Orientation> {name}<(A, A), T, O> {{
         Form::eigh_semidefinite(self, metric)
     }}
 
+    /// Least squares of a symmetric form in a metric: of the `x` with `self(x, ·) == rhs`, the
+    /// one smallest in `metric(x, x)`, its modes of curvature at most `rcond` times the largest
+    /// dropped (numga's `form.lstsq(rhs, metric, rcond=…)`; see [`Form::lstsq_in`]).
+    #[inline]
+    pub fn lstsq_in(self, rhs: <{name}<(), f64, O> as Kind>::Mv<(A,), T>, metric: Self, rcond: T) -> <A as Kind>::Mv<(), T>
+    where
+        Self: Form<Coef = T, Kind = {name}<(), f64, O>, Slot = A>,
+    {{
+        Form::lstsq_in(self, rhs, metric, rcond)
+    }}
+
     /// The identity form in the coefficient basis, `x, y ↦ Σᵢ xᵢ yᵢ`: the Euclidean metric
     /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
     /// matrix's own eigenproblem (see [`Form::identity`]).

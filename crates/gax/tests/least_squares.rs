@@ -135,3 +135,19 @@ fn single_precision() {
         assert!(worst <= 1e-5 * cond * scale, "{worst:e} (cond {cond:.1e})");
     }
 }
+
+/// A form's least squares in a metric is a method of the form itself (no `use gax::Form`):
+/// the energy flat along one direction leaves the step there at zero.
+#[test]
+fn a_forms_lstsq_in_needs_no_import() {
+    let e = |a, b, c, d| Plane::new(a, b, c, d) | Plane::slot();
+    let curvature: Scalar<(Plane, Plane)> = e(1.0, 0.0, 0.0, 0.0) * e(1.0, 0.0, 0.0, 0.0)
+        + (e(0.0, 1.0, 0.0, 0.0) * e(0.0, 1.0, 0.0, 0.0)) * 4.0
+        + (e(0.0, 0.0, 1.0, 0.0) * e(0.0, 0.0, 1.0, 0.0)) * 1e-9;
+    let metric = Scalar::<(Plane, Plane)>::identity();
+    let step = curvature.lstsq_in(e(2.0, 8.0, 5.0, 0.0), metric, 1e-6);
+    assert!(
+        step.approx_eq(&Plane::new(2.0, 2.0, 0.0, 0.0), 1e-12),
+        "{step:?}"
+    );
+}

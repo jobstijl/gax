@@ -665,6 +665,17 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Scalar<(A, A), T, O> {
         gx::Form::eigh_semidefinite(self, metric)
     }
 
+    /// Least squares of a symmetric form in a metric: of the `x` with `self(x, Â·) == rhs`, the
+    /// one smallest in `metric(x, x)`, its modes of curvature at most `rcond` times the largest
+    /// dropped (numga's `form.lstsq(rhs, metric, rcond=â¦)`; see [`gx::Form::lstsq_in`]).
+    #[inline]
+    pub fn lstsq_in(self, rhs: <Scalar<(), f64, O> as gx::Kind>::Mv<(A,), T>, metric: Self, rcond: T) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Scalar<(), f64, O>, Slot = A>,
+    {
+        gx::Form::lstsq_in(self, rhs, metric, rcond)
+    }
+
     /// The identity form in the coefficient basis, `x, y â¦ Î£áµ¢ xáµ¢ yáµ¢`: the Euclidean metric
     /// where the layout is orthonormal, so `form.eigh(Scalar::identity())` is the coefficient
     /// matrix's own eigenproblem (see [`gx::Form::identity`]).

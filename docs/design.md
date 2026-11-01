@@ -2549,9 +2549,8 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
 * **Least squares of a form in a metric (`Form::lstsq_in`).** numga's
   `lstsq(rhs, metric, rcond)` on forms: the form diagonalized against the metric, each mode
   solved alone, modes with `|λ|` at most `rcond` times the largest dropped (a ratio of
-  curvatures, independent of basis and units). A trait method: the generated types forward
-  `Form`'s other methods as inherent ones, and this one needs the generator to forward it too
-  (until then, `use gax::Form`).
+  curvatures, independent of basis and units). A trait method, forwarded as an inherent one
+  by the generated forms like `Form`'s others (2026-11-01), so callers need no import.
 * **Tests.** `tests/field_solvers.rs` (arithmetic; conductances of both signs against the
   stand-ins' undual route; a mobility; cells without a pairing; a saddle point against its
   flattened map; `eigh_all` against the sparse `eigh`, the inverted spectrum and the residuals;

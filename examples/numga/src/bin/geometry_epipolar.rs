@@ -15,7 +15,7 @@
 //! behind the cameras.
 
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar, intrinsic};
-use gax::{Form, Unit, pga2d, vga3d};
+use gax::{Unit, pga2d, vga3d};
 
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::signal::wave;
@@ -157,7 +157,7 @@ mod epipolar {
     ///
     /// The step solves them for the 5 observable degrees of freedom, measured by the kinetic
     /// energy of camera 2: numga's `curvature.lstsq(descent, energy, rcond=1e-4)`, gax's
-    /// `Form::lstsq_in`, which solves mode by mode of the curvature against the energy. The
+    /// `lstsq_in`, which solves mode by mode of the curvature against the energy. The
     /// flattest mode is the unobservable scale, which moves camera 2 along the baseline; the
     /// cutoff drops it by its curvature per unit energy, and the step has no component along it
     /// in that energy, so near the solution the baseline keeps its length.
@@ -173,7 +173,7 @@ mod epipolar {
         }
         let to_camera_2 = motor << Line::slot();
         let energy = kinetic().of_both(to_camera_2, to_camera_2);
-        let step = Form::lstsq_in(h, rhs, energy, 1e-4);
+        let step = h.lstsq_in(rhs, energy, 1e-4);
         step.gp(0.5).exp() * motor
     }
 
