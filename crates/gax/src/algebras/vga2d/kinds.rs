@@ -1860,6 +1860,26 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Vector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p2, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        Multivector::from_coeffs([c0, t0, t1, T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Vector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -4686,6 +4706,28 @@ impl<T: gx::Real, O: gx::Orientation> Multivector<(), T, O> {
         } else {
             None
         }
+    }
+
+}
+
+impl<T: gx::Real> Multivector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p3 = x[1].mul_add(x[1], p1);
+        let p4 = (-x[3]).mul_add(x[3], p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p4, T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Multivector::from_coeffs([c0, t0, t1, t2])
+        })
     }
 
 }

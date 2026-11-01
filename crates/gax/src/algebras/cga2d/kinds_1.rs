@@ -1896,6 +1896,30 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Vector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[3];
+        let p3 = x[0].mul_add(x[0], p1);
+        let p5 = (-p2).mul_add(T::from_i64(2), p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p5, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        Multivector::from_coeffs([c0, t0, t1, t2, t3, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Vector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -4888,6 +4912,30 @@ impl<T: gx::Real, O: gx::Orientation> Trivector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Trivector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p0 = x[0] * x[1];
+        let p2 = x[3] * x[3];
+        let p3 = x[2].mul_add(x[2], p2);
+        let p5 = p0.mul_add(T::from_i64(2), p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p5, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0, t1, t2, t3, T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Trivector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -5780,6 +5828,25 @@ impl<T: gx::Real, O: gx::Orientation> Pseudoscalar<(), T, O> {
     #[inline(always)]
     pub fn normalized(self) -> Self {
         self.unit().into_inner()
+    }
+
+}
+
+impl<T: gx::Real> Pseudoscalar<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Even`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Even<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = -p0;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p1, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        Even::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0])
+        })
     }
 
 }
@@ -6715,6 +6782,24 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
 }
 
 impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Motor`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Motor<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p0 = x[1] * x[1];
+        let p1 = -p0;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p1, T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Motor::from_coeffs([c0, t0, t1, t2])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -7925,6 +8010,40 @@ impl<T: gx::Real, O: gx::Orientation> Even<(), T, O> {
 }
 
 impl<T: gx::Real> Even<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e12oi`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Even`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Even<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p2 = x[3] * x[5];
+        let p3 = x[6] * x[6];
+        let p6 = x[3] * x[4];
+        let p7 = (-x[1]).mul_add(x[1], p3);
+        let p8 = x[2].mul_add(x[4], p2);
+        let p10 = p8.mul_add(T::from_i64(2), p7);
+        let p11 = x[1].mul_add(x[6], p6);
+        let p12 = (-x[2]).mul_add(x[5], p11);
+        let p13 = p12 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p10, p13, x[0], x[7]);
+        let t1 = x[6] * s1;
+        let t2 = x[2] * s0;
+        let t5 = x[3] * s0;
+        let t7 = x[5] * s1;
+        let t9 = x[5] * s0;
+        let t11 = x[6] * s0;
+        let t12 = x[1].mul_add(s0, t1);
+        let t13 = (-x[3]).mul_add(s1, t2);
+        let t14 = x[2].mul_add(s1, t5);
+        let t15 = x[4].mul_add(s0, t7);
+        let t16 = (-x[4]).mul_add(s1, t9);
+        let t17 = (-x[1]).mul_add(s1, t11);
+        Even::from_coeffs([c0, t12, t13, t14, t15, t16, t17, c1])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -11044,97 +11163,4 @@ impl<O: gx::Orientation> gx::Reciprocal for Odd<(), f64, O> {
 impl<O: gx::Orientation> gx::Complement for Odd<(), f64, O> {
     type Out = Odd<(), f64, gx::orientation::Flip<O>>;
     const PAIRS: &'static [(usize, bool)] = &[(7, true), (6, false), (5, true), (4, false), (3, true), (2, false), (1, true), (0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(4, 0, false), (5, 1, false), (6, 2, false), (7, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Odd<(), f64, O>> for Odd<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Odd<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 11, false), (5, 12, false), (6, 13, false), (7, 14, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Odd<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Odd<(), f64, O> {
-    type Out = Vector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<3> for Odd<(), f64, O> {
-    type Out = Trivector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(4, 0, false), (5, 1, false), (6, 2, false), (7, 3, false)];
-}
-
-#[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Multivector<(), f64, O> {
-    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)], &[(2, 1, 1)], &[(4, -1, 1)], &[(3, -1, 1)], &[(5, -1, 1)], &[(8, 1, 1)], &[(9, 1, 1)], &[(6, 1, 1)], &[(7, 1, 1)], &[(10, 1, 1)], &[(12, 1, 1)], &[(11, 1, 1)], &[(13, 1, 1)], &[(14, 1, 1)], &[(15, -1, 1)]];
-    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, 1)], &[(2, 1)], &[(4, -1)], &[(3, -1)], &[(5, -1)], &[(8, 1)], &[(9, 1)], &[(6, 1)], &[(7, 1)], &[(10, 1)], &[(12, 1)], &[(11, 1)], &[(13, 1)], &[(14, 1)], &[(15, -1)]];
-}
-
-impl<O: gx::Orientation> gx::Complement for Multivector<(), f64, O> {
-    type Out = Multivector<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(15, false), (14, true), (13, false), (12, true), (11, false), (10, false), (9, true), (8, false), (7, false), (6, true), (5, false), (4, true), (3, false), (2, true), (1, false), (0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Vector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Twist<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (8, 1, false), (9, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Bivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Trivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (5, 1, false), (8, 2, false), (9, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Even<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (5, 1, false), (6, 2, false), (7, 3, false), (8, 4, false), (9, 5, false), (10, 6, false), (15, 7, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Odd<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (11, 4, false), (12, 5, false), (13, 6, false), (14, 7, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Multivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<0> for Multivector<(), f64, O> {
-    type Out = Scalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Multivector<(), f64, O> {
-    type Out = Vector<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false)];
 }

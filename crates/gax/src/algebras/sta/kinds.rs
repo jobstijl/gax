@@ -1910,6 +1910,31 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Vector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p4 = x[0].mul_add(x[0], p1);
+        let p5 = (-x[3]).mul_add(x[3], p2);
+        let p6 = p4 + p5;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p6, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        Multivector::from_coeffs([c0, t0, t1, t2, t3, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Vector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -4054,6 +4079,31 @@ impl<T: gx::Real, O: gx::Orientation> Trivector<(), T, O> {
     #[inline(always)]
     pub fn normalized(self) -> Self {
         self.unit().into_inner()
+    }
+
+}
+
+impl<T: gx::Real> Trivector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p2 = x[2] * x[2];
+        let p3 = x[3] * x[3];
+        let p4 = x[1].mul_add(x[1], p2);
+        let p5 = (-x[0]).mul_add(x[0], p3);
+        let p6 = p4 + p5;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p6, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0, t1, t2, t3, T::from_i64(0)])
+        })
     }
 
 }
@@ -7135,6 +7185,42 @@ impl<T: gx::Real, O: gx::Orientation> Even<(), T, O> {
 }
 
 impl<T: gx::Real> Even<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e1234`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Even`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Even<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p4 = x[5] * x[5];
+        let p7 = x[2] * x[5];
+        let p9 = x[4].mul_add(x[4], p4);
+        let p10 = x[6].mul_add(x[6], p9);
+        let p11 = x[1].mul_add(x[1], p1);
+        let p12 = x[3].mul_add(x[3], p11);
+        let p13 = p10 - p12;
+        let p14 = x[1].mul_add(x[4], p7);
+        let p15 = x[3].mul_add(x[6], p14);
+        let p16 = p15 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p13, p16, x[0], x[7]);
+        let t1 = x[4] * s1;
+        let t3 = x[5] * s1;
+        let t5 = x[6] * s1;
+        let t7 = x[4] * s0;
+        let t9 = x[5] * s0;
+        let t11 = x[6] * s0;
+        let t12 = x[1].mul_add(s0, t1);
+        let t13 = x[2].mul_add(s0, t3);
+        let t14 = x[3].mul_add(s0, t5);
+        let t15 = (-x[1]).mul_add(s1, t7);
+        let t16 = (-x[2]).mul_add(s1, t9);
+        let t17 = (-x[3]).mul_add(s1, t11);
+        Even::from_coeffs([c0, t12, t13, t14, t15, t16, t17, c1])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]

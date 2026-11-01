@@ -1880,6 +1880,28 @@ impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Vector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Paravector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Paravector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p3 = x[0].mul_add(x[0], p1);
+        let p4 = x[2].mul_add(x[2], p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p4, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        Paravector::from_coeffs([c0, t0, t1, t2])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Vector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -3734,6 +3756,25 @@ impl<T: gx::Real, O: gx::Orientation> Pseudoscalar<(), T, O> {
 
 }
 
+impl<T: gx::Real> Pseudoscalar<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = -p0;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p1, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Pseudoscalar<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -4644,6 +4685,28 @@ impl<T: gx::Real, O: gx::Orientation> Paravector<(), T, O> {
         } else {
             None
         }
+    }
+
+}
+
+impl<T: gx::Real> Paravector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Paravector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Paravector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p3 = x[1].mul_add(x[1], p1);
+        let p4 = x[3].mul_add(x[3], p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p4, T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Paravector::from_coeffs([c0, t0, t1, t2])
+        })
     }
 
 }
@@ -5607,6 +5670,26 @@ impl<T: gx::Real, O: gx::Orientation> Rotor<(), T, O> {
 }
 
 impl<T: gx::Real> Rotor<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Rotor`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Rotor<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p3 = x[1].mul_add(x[1], p1);
+        let p4 = x[3].mul_add(x[3], p3);
+        let p5 = -p4;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p5, T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Rotor::from_coeffs([c0, t0, t1, t2])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -6648,6 +6731,31 @@ impl<T: gx::Real, O: gx::Orientation> Odd<(), T, O> {
 
 }
 
+impl<T: gx::Real> Odd<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e123`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p3 = x[0].mul_add(x[0], p1);
+        let p4 = x[2].mul_add(x[2], p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p4, T::from_i64(0), T::from_i64(0), x[3]);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[0] * s1;
+        let t4 = x[1] * s1;
+        let t5 = x[2] * s1;
+        Multivector::from_coeffs([c0, t0, t1, t2, t3, t4, t5, c1])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Odd<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -7620,6 +7728,45 @@ impl<T: gx::Real, O: gx::Orientation> Multivector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Multivector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e123`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p4 = x[5] * x[5];
+        let p7 = x[2] * x[5];
+        let p9 = x[1].mul_add(x[1], p1);
+        let p10 = x[3].mul_add(x[3], p9);
+        let p11 = x[4].mul_add(x[4], p4);
+        let p12 = x[6].mul_add(x[6], p11);
+        let p13 = p10 - p12;
+        let p14 = x[1].mul_add(x[4], p7);
+        let p15 = x[3].mul_add(x[6], p14);
+        let p16 = p15 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p13, p16, x[0], x[7]);
+        let t0 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t4 = x[3] * s0;
+        let t7 = x[4] * s0;
+        let t9 = x[5] * s0;
+        let t11 = x[6] * s0;
+        let t12 = (-x[4]).mul_add(s1, t0);
+        let t13 = (-x[5]).mul_add(s1, t2);
+        let t14 = (-x[6]).mul_add(s1, t4);
+        let t15 = x[1].mul_add(s1, t7);
+        let t16 = x[2].mul_add(s1, t9);
+        let t17 = x[3].mul_add(s1, t11);
+        Multivector::from_coeffs([c0, t12, t13, t14, t15, t16, t17, c1])
+        })
+    }
+
+}
+
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Multivector<(), T, O> {
     type Output = Multivector<(), T, O>;
     #[inline(always)]
@@ -8494,6 +8641,26 @@ impl<T: gx::Real, O: gx::Orientation> Horizontal<(), T, O> {
     #[inline(always)]
     pub fn normalized(self) -> Self {
         self.unit().into_inner()
+    }
+
+}
+
+impl<T: gx::Real> Horizontal<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Paravector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Paravector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p2, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        Paravector::from_coeffs([c0, t0, t1, T::from_i64(0)])
+        })
     }
 
 }

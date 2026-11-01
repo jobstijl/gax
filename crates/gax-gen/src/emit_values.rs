@@ -49,22 +49,22 @@ fn study_structure(alg: &Algebra, mv: &SymMv) -> Option<Study> {
 /// `(cosh b, sinh b)` or `(1, b)` by the sign of `B²`. Emitted where the algebra has a kind with
 /// exactly the support `{1, B}` for the result (STA's `Phasor`); a plain value, since
 /// `x ~x` need not be 1 (in STA `(cos b + sin b I)^~ = cos b + sin b I`).
-fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) {
+fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> bool {
     let alg = &spec.algebra;
     let blades: Vec<(u32, i8)> = k.layout.blades.iter().map(|&(m, s)| (m, s as i8)).collect();
     let others: Vec<(u32, i8)> = blades.iter().copied().filter(|b| b.0 != 0).collect();
     let [(b, sb)] = others.as_slice() else {
-        return;
+        return false;
     };
     let Some(isq) = blade_square(alg, *b) else {
-        return;
+        return false;
     };
     let support: BTreeSet<u32> = [0, *b].into_iter().collect();
     let Some(out) = spec.kinds.iter().find(|o| {
         o.layout.blades.len() == 2
             && o.layout.blades.iter().map(|x| x.0).collect::<BTreeSet<_>>() == support
     }) else {
-        return;
+        return false;
     };
     let pos = |layout: &crate::table::Layout, m: u32| layout.position(m);
     // The input's coefficients of 1 and B, signs applied.
@@ -113,9 +113,119 @@ fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) {
 ",
         coeffs.join(", ")
     );
+    true
 }
 
 /// Whether `p` is minus a sum of squares of single variables, hence never positive.
+/// The smallest declared kind holding `support`, parts included: for the results of methods
+/// that no existing result type depends on (`exp` of a VGA3D vector is a `Paravector`).
+fn kind_for_support_or_part<'a>(
+    spec: &'a AlgebraSpec,
+    support: &BTreeSet<u32>,
+) -> Option<&'a KindSpec> {
+    let grades: BTreeSet<u32> = support.iter().map(|m| m.count_ones()).collect();
+    spec.kinds
+        .iter()
+        .filter(|k| support.is_subset(&k.layout.support()))
+        .min_by_key(|k| (!k.layout.grades().is_subset(&grades), k.layout.len()))
+}
+
+/// `exp` of `x = z + V` with a central part `z = a + b J` (the scalar, and a blade `J` of the
+/// kind whose square is a scalar and which commutes with every other blade, or none) and a rest
+/// `V` whose square is a Study number `λ + μ J'` (`J'` the blade `J`, or any blade where there
+/// is no `J`): `exp(x) = exp(z) (C(V²) + S(V²) V)`, `C` and `S` Study numbers. This takes a
+/// single-grade kind whose square is a scalar (every kind of vectors: `cosh |v| + sinh |v| v̂`,
+/// or `cos` and `sin` where `v²` is negative), a scalar plus one (a paravector), and VGA3D's
+/// multivectors (`J = e123`, `(v + I w)² = v² − w² + 2 (v·w) I`). Bivector kinds have their
+/// own, unit, exponential. The result is a plain value, in the smallest kind holding it, parts
+/// included (no existing result changes): `exp(x) ~exp(x)` need not be 1.
+fn emit_exp_central(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, body: &mut String) -> bool {
+    let alg = &spec.algebra;
+    let nv = k.layout.len() as Var;
+    let masks: Vec<u32> = k.layout.blades.iter().map(|b| b.0).collect();
+    let commutes = |a: u32, b: u32| alg.blade_product(a, b) == alg.blade_product(b, a);
+    let candidates = std::iter::once(None).chain(
+        masks
+            .iter()
+            .filter(|&&j| {
+                j != 0 && blade_square(alg, j).is_some() && masks.iter().all(|&b| commutes(j, b))
+            })
+            .map(|&j| Some(j)),
+    );
+    for j in candidates {
+        let v: SymMv = x
+            .iter()
+            .filter(|(m, _)| **m != 0 && Some(**m) != j)
+            .map(|(m, p)| (*m, p.clone()))
+            .collect();
+        if v.is_empty() {
+            continue;
+        }
+        let vsq = symbolic::binop(alg, BinOp::Gp, &v, &v);
+        let Some(study) = study_structure(alg, &vsq) else {
+            continue;
+        };
+        let (isq, blade) = match (j, study.blade) {
+            (Some(jj), Some(b)) if b != jj => continue,
+            (Some(jj), _) => (blade_square(alg, jj).expect("filtered"), Some(jj)),
+            (None, b) => (study.isq, b),
+        };
+        let (c0, c1, s0, s1) = (nv, nv + 1, nv + 2, nv + 3);
+        let mut out = symbolic::add(&scalar_mv(Poly::var(c0)), &scale_mv(&v, &Poly::var(s0)));
+        if let Some(b) = blade {
+            out = symbolic::add(&out, &blade_mv(b, Poly::var(c1)));
+            let bv = symbolic::binop(alg, BinOp::Gp, &blade_mv(b, Poly::var(s1)), &v);
+            out = symbolic::add(&out, &bv);
+        }
+        let Some(out_kind) = kind_for_support_or_part(spec, &symbolic::support(&out)) else {
+            return false;
+        };
+        let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
+        let (lam, mu) = (
+            coef(&vsq, 0),
+            study.blade.map_or_else(Poly::zero, |b| coef(&vsq, b)),
+        );
+        let (a, b) = (coef(x, 0), j.map_or_else(Poly::zero, |jj| coef(x, jj)));
+        let pre = cse::compile_plain(&[lam, mu, a, b]);
+        let prog = cse::compile_plain(&coeffs);
+        let call = StudyCall {
+            pre: &pre,
+            args: &[0, 1, 2, 3],
+            outs: &["c0", "c1", "s0", "s1"],
+            post: &prog,
+            locals: &["c0", "c1", "s0", "s1"],
+        };
+        let (lets, outs) = study_method(
+            k,
+            &call,
+            |a| {
+                format!(
+                    "gx::__private::study::exp_coeffs_central({isq}, {}, {}, {}, {})",
+                    a[0], a[1], a[2], a[3]
+                )
+            },
+            None,
+            &mut Vec::new(),
+        );
+        let (on, oe) = (&out_kind.name, ext(out_kind));
+        let split = match j {
+            Some(jj) => format!(
+                "the central part `z` the scalar and `{}`, ",
+                alg.blade_name(jj)
+            ),
+            None if k.layout.position(0).is_some() => "the central part `z` the scalar, ".into(),
+            None => String::new(),
+        };
+        let _ = write!(
+            body,
+            "    /// The exponential, `exp(z + V) = exp(z) (C(V²) + S(V²) V)` with {split}`V` the rest and\n    /// `V²` a Study number (`cosh |v| + sinh |v| v̂` for a vector of positive square, `cos` and\n    /// `sin` for a negative one). A `{on}`, not a `Unit`: `x ~x` need not be 1.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> {on}<(), T{oe}> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n\n",
+            outs.join(", ")
+        );
+        return true;
+    }
+    false
+}
+
 fn nonpositive(p: &Poly) -> bool {
     !p.is_zero()
         && p.0
@@ -477,9 +587,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         meta.exp = emit_exp_fallback(spec, k, &mut body_ext);
     }
 
-    // exp of a scalar plus one blade whose square is a constant (STA's pseudoscalar, a phasor).
-    if meta.exp.is_none() && !all_grade2 {
-        emit_exp_single_blade(spec, k, &mut body_ext);
+    // exp of a scalar plus one blade whose square is a constant (STA's pseudoscalar, a phasor);
+    // else of a central part plus a rest whose square is a Study number (vectors, paravectors,
+    // VGA3D's multivectors).
+    if meta.exp.is_none() && !all_grade2 && !emit_exp_single_blade(spec, k, &mut body_ext) {
+        emit_exp_central(spec, k, &x, &mut body_ext);
     }
 
     // log: for unit versors whose parts are a Study number and a bivector.

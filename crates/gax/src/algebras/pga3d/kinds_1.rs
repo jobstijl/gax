@@ -1881,6 +1881,29 @@ impl<T: gx::Real, O: gx::Orientation> Plane<(), T, O> {
 
 }
 
+impl<T: gx::Real> Plane<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p3 = x[0].mul_add(x[0], p1);
+        let p4 = x[2].mul_add(x[2], p3);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p4, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[3] * s0;
+        let t1 = x[0] * s0;
+        let t2 = x[1] * s0;
+        let t3 = x[2] * s0;
+        Multivector::from_coeffs([c0, t0, t1, t2, t3, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Plane<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -3921,6 +3944,28 @@ impl<T: gx::Real, O: gx::Orientation> Point<(), T, O> {
 
 }
 
+impl<T: gx::Real> Point<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p0 = x[3] * x[3];
+        let p1 = -p0;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p1, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[2] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[0] * s0;
+        let t3 = x[3] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0, t1, t2, t3, T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Point<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -4714,6 +4759,25 @@ where
     }
 }
 
+impl<T: gx::Real> Direction<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[2] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[0] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0, t1, t2, T::from_i64(0), T::from_i64(0)])
+        })
+    }
+
+}
+
 #[doc = "The pseudoscalar `e0123`."]
 ///
 /// Blades, in coefficient order: `[e0123]`.
@@ -5427,6 +5491,23 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Pseudoscalar<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Motor`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Motor<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        Motor::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0])
+        })
+    }
+
 }
 
 #[doc = "A rotation about a line through the origin."]
@@ -6356,6 +6437,26 @@ impl<T: gx::Real, O: gx::Orientation> Rotor<(), T, O> {
 }
 
 impl<T: gx::Real> Rotor<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Rotor`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Rotor<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p3 = x[1].mul_add(x[1], p1);
+        let p4 = x[3].mul_add(x[3], p3);
+        let p5 = -p4;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p5, T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Rotor::from_coeffs([c0, t0, t1, t2])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -7338,6 +7439,22 @@ impl<T: gx::Real, O: gx::Orientation> Translator<(), T, O> {
 }
 
 impl<T: gx::Real> Translator<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Translator`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Translator<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, T::from_i64(0), T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Translator::from_coeffs([c0, t0, t1, t2])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -8454,6 +8571,36 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
 }
 
 impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e0123`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Motor`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Motor<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[2] * x[2];
+        let p4 = x[2] * x[5];
+        let p6 = x[1].mul_add(x[1], p1);
+        let p7 = x[3].mul_add(x[3], p6);
+        let p8 = -p7;
+        let p9 = x[1].mul_add(x[4], p4);
+        let p10 = x[3].mul_add(x[6], p9);
+        let p11 = p10 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(0, p8, p11, x[0], x[7]);
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        let t4 = x[4] * s0;
+        let t6 = x[5] * s0;
+        let t8 = x[6] * s0;
+        let t9 = (-x[1]).mul_add(s1, t4);
+        let t10 = (-x[2]).mul_add(s1, t6);
+        let t11 = (-x[3]).mul_add(s1, t8);
+        Motor::from_coeffs([c0, t0, t1, t2, t9, t10, t11, c1])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -11211,298 +11358,5 @@ impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Spin<(A,), T, O> {
         Self: gx::Adjoint,
     {
         gx::Adjoint::adjoint(self)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Spin<(A,), T, O> {
-    /// The inverse map, `A <- Spin`.
-    #[inline]
-    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Spin<(), f64, O>,), T>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Spin<(), f64, O>,), T>>,
-    {
-        gx::SquareMap::inverse(self)
-    }
-
-    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
-    /// finite (see [`gx::SquareMap::try_inverse`]).
-    #[inline]
-    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Spin<(), f64, O>,), T>>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Spin<(), f64, O>,), T>>,
-    {
-        gx::SquareMap::try_inverse(self)
-    }
-
-    /// The determinant of the map's coefficient matrix.
-    #[inline]
-    pub fn det(self) -> T
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::det(self)
-    }
-
-    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
-    #[inline]
-    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
-    where
-        Self: gx::SingularValues<Coef = T, Input = A>,
-    {
-        gx::SingularValues::svdvals(self)
-    }
-
-    /// The singular value decomposition of a map of any shape: values, right and left singular
-    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
-    #[inline]
-    pub fn svd(self) -> gx::Svd<A, Spin<(), f64, O>, T>
-    where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Spin<(), f64, O>>,
-    {
-        gx::SingularValues::svd(self)
-    }
-
-    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
-    /// symmetric (see [`gx::SquareMap::eigh`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Spin<(), f64, O> as gx::Kind>::Arr<T>, <Spin<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::eigh(self)
-    }
-
-    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
-    #[inline]
-    pub fn eigvals(self) -> <Spin<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::eigvals(self)
-    }
-
-    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Spin<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Spin<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A>,
-    {
-        gx::SquareMap::eig(self)
-    }
-
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
-    /// pairing's `solve` solves against its second slot instead).
-    #[inline]
-    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A>,
-        X: gx::Extensor<Kind = Spin<(), f64, O>, Coef = T>,
-    {
-        gx::SquareMap::solve(self, rhs)
-    }
-
-    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
-    /// finite (see [`gx::SquareMap::try_solve`]).
-    #[inline]
-    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Spin<(), f64, O>, Input = A>,
-        X: gx::Extensor<Kind = Spin<(), f64, O>, Coef = T>,
-    {
-        gx::SquareMap::try_solve(self, rhs)
-    }
-
-    /// The MooreâPenrose pseudo-inverse, `A <- Spin`, of a map of any shape: it sends `b` to
-    /// the least-norm least-squares solution of `self.of(x) â b`.
-    #[inline]
-    pub fn pinv(self) -> A::Mv<(Spin<(), f64, O>,), T>
-    where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Spin<(), f64, O>,), T>>,
-    {
-        gx::PseudoInverse::pinv(self)
-    }
-
-    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
-    #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Spin<(), f64, O>,), T>
-    where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Spin<(), f64, O>,), T>>,
-    {
-        gx::PseudoInverse::pinv_with(self, rcond)
-    }
-
-    /// The trace of a map from `Spin` to itself.
-    #[inline]
-    pub fn trace(self) -> T
-    where
-        Self: gx::Endomorphism<Coef = T, Kind = Spin<(), f64, O>, Input = Spin<(), f64, O>>,
-    {
-        gx::Endomorphism::trace(self)
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Spin<(A, B), T, O> {
-    /// Exchange the two slots.
-    #[inline]
-    pub fn swap(self) -> Spin<(B, A), T, O> {
-        self.at::<1>()
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Spin<S, T, O> {
-    type Output = Self;
-    #[inline(always)]
-    fn add(self, rhs: Self) -> Self {
-        Spin { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Spin<S, T, O> {
-    type Output = Self;
-    #[inline(always)]
-    fn sub(self, rhs: Self) -> Self {
-        Spin { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::iter::Sum for Spin<S, T, O> {
-    /// The sum of values or of maps; zero for none.
-    #[inline]
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |a, b| a + b)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign for Spin<S, T, O> {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign for Spin<S, T, O> {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Spin<S, T, O> {
-    type Output = Self;
-    #[inline(always)]
-    fn neg(self) -> Self {
-        Spin { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Spin<S, T, O> {
-    type Output = Self;
-    #[inline(always)]
-    fn gp(self, rhs: T) -> Self {
-        Spin { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Spin<S, T, O> {
-    type Output = Self;
-    #[inline(always)]
-    fn div_by(self, rhs: T) -> Self {
-        let r = rhs.recip();
-        Spin { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Div<R> for Spin<S, T, O>
-where
-    Self: gx::DivBy<R>,
-{
-    type Output = <Self as gx::DivBy<R>>::Output;
-    #[inline(always)]
-    fn div(self, rhs: R) -> Self::Output {
-        gx::DivBy::div_by(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<Spin<S, f32, O>> for f32 {
-    type Output = Spin<S, f32, O>;
-    #[inline(always)]
-    fn mul(self, rhs: Spin<S, f32, O>) -> Spin<S, f32, O> {
-        rhs.gp(self)
-    }
-}
-
-impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<Spin<S, f64, O>> for f64 {
-    type Output = Spin<S, f64, O>;
-    #[inline(always)]
-    fn mul(self, rhs: Spin<S, f64, O>) -> Spin<S, f64, O> {
-        rhs.gp(self)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Mul<R> for Spin<S, T, O>
-where
-    Self: gx::Gp<R>,
-{
-    type Output = <Self as gx::Gp<R>>::Output;
-    #[inline(always)]
-    fn mul(self, rhs: R) -> Self::Output {
-        gx::Gp::gp(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitXor<R> for Spin<S, T, O>
-where
-    Self: gx::Wedge<R>,
-{
-    type Output = <Self as gx::Wedge<R>>::Output;
-    #[inline(always)]
-    fn bitxor(self, rhs: R) -> Self::Output {
-        gx::Wedge::wedge(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitAnd<R> for Spin<S, T, O>
-where
-    Self: gx::Vee<R>,
-{
-    type Output = <Self as gx::Vee<R>>::Output;
-    #[inline(always)]
-    fn bitand(self, rhs: R) -> Self::Output {
-        gx::Vee::vee(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitOr<R> for Spin<S, T, O>
-where
-    Self: gx::Dot<R>,
-{
-    type Output = <Self as gx::Dot<R>>::Output;
-    #[inline(always)]
-    fn bitor(self, rhs: R) -> Self::Output {
-        gx::Dot::dot(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shr<R> for Spin<S, T, O>
-where
-    Self: gx::Transform<R>,
-{
-    type Output = <Self as gx::Transform<R>>::Output;
-    #[inline(always)]
-    fn shr(self, rhs: R) -> Self::Output {
-        gx::Transform::transform(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shl<R> for Spin<S, T, O>
-where
-    Self: gx::TransformInv<R>,
-{
-    type Output = <Self as gx::TransformInv<R>>::Output;
-    #[inline(always)]
-    fn shl(self, rhs: R) -> Self::Output {
-        gx::TransformInv::transform_inv(self, rhs)
     }
 }

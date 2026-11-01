@@ -485,6 +485,26 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   * The series now reach far enough that both branches are within a few ulps at the boundary.
     See [numerics.md](numerics.md), "Transcendental functions".
 * **6D log:** at first by inverse scaling and squaring, now in closed form up to 9D (ADR-033).
+* *Amended (2026-11-01, Phase 13): exponentials beyond bivectors.* numga exponentiates any value
+  whose square is simple, and three ports wrote theirs by hand: triality the half-angle turn
+  `cos + u sin` of an octonion unit vector, the smoke rings a Lorentz fold as a paravector
+  boost times a turn, Thomas-like boosts as `cosh + sinh v̂`. The scope chosen is every closed
+  form of the same shape as the bivectors': a kind whose values are `x = z + V`, with a central
+  part `z = a + b J` (the scalar, and a blade `J` of the kind that squares to a scalar and
+  commutes with every other blade of it, or no `J`) and a rest `V` whose square is a Study
+  number `λ + μ J'`, gets `exp(x) = exp(z) (C(V²) + S(V²) V)`, `C` and `S` from
+  `study::exp_coeffs` and `exp(z)` folded in (`exp_coeffs_central`). That takes every kind of
+  vectors (`v²` a scalar of either sign: `cosh |v| + sinh |v| v̂` or `cos` and `sin`, numga's
+  `x.exp()` for a timelike `x`), paravectors, scalar-plus-bivector kinds (`e^a exp(B)`),
+  STA's and PGA's even kinds (`e^(a + b I) exp(B)`), VGA2D's and VGA3D's multivectors
+  (`(v + I w)² = v² − w² + 2 (v·w) I` with `I = e123` central), and so the smoke rings'
+  paravector-plus-bivector. Not a general `exp` by scaling and squaring of any kind: where no
+  such split exists (STA's or CGA's multivectors) there is no method, as for the inverse
+  without a Study number. The result is a plain value (`exp(v) ~exp(v) = exp(2v)`), not a
+  `Unit`, in the smallest declared kind holding it with parts included (`exp` of a VGA3D vector
+  is a `Paravector`; the method is new, so no existing result type changes); bivector kinds
+  keep their unit exponentials, and STA's `Phasor`-like kinds `a + b B` theirs. Tested against
+  the power series (`tests/exp_closed_forms.rs`).
 
 ## ADR-020: Certification by a wrapper type, `Unit<M>`
 *Status: accepted.*

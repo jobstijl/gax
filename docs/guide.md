@@ -183,6 +183,14 @@ motors, and maps. `Unit<Motor>` certifies that `m ~m = 1`, and certified versors
 Get a unit with `unit()` (`normalized()` scales the same way and returns a plain value), `exp()`,
 or constructors such as `Motor::translation`.
 
+`exp()` of a bivector kind is a unit versor. Other kinds have an `exp()` where it has the same
+closed form, a central part times a rest whose square is a Study number: vectors
+(`cosh |v| + sinh |v| v̂`, or `cos` and `sin` where `v²` is negative, as for an octonion unit
+or a timelike vector), paravectors, even kinds (`e^(a + b I) exp(B)`), and VGA2D's and VGA3D's
+multivectors (a boost along a VGA3D vector `v` and a turn in the plane `v I` commute, and the
+exponential of `ζ v + θ v I` as a `Multivector` is their product). These return a plain value, in the smallest
+kind holding it (`Vector::exp` is a `Paravector` in VGA3D): `exp(v) ~exp(v) = exp(2v)` is not 1.
+
 **A plain versor.** On a plain value, `v >> x` is the sandwich `v x ~v` of any element of `v`'s
 kind, versor or not, and is typed for all of them. A general element can leave the passenger's
 grades: a CGA3D `Even` that is not a versor moves a quadvector to a quadvector plus a scalar

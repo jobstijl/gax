@@ -406,6 +406,42 @@ pub fn exp_coeffs<T: Real>(isq: i8, lambda: T, mu: T) -> [T; 4] {
     [c0, c1, s0, s1]
 }
 
+/// `(C, S)` of `exp(z + V) = exp(z) (C(V²) + S(V²) V)` for a central part `z = a + b J`
+/// (`J² = isq`, commuting with `V`) and `V² = lambda + mu J`, as Study numbers in `J`:
+/// `exp(z + V) = c0 + c1 J + (s0 + s1 J) V`. With `b = 0` and `J` the blade of `V²`, it is
+/// [`exp_coeffs`] scaled by `e^a`.
+///
+/// ```
+/// // VGA3D: z = a + b e123 (J² = −1) and V = v a vector, V² = |v|².
+/// use gax_core::__private::study::exp_coeffs_central;
+/// let (a, b, r) = (0.3f64, 0.5, 0.8);
+/// let [c0, c1, s0, s1] = exp_coeffs_central(-1, r * r, 0.0, a, b);
+/// let e = a.exp();
+/// assert!((c0 - e * b.cos() * r.cosh()).abs() < 1e-14);
+/// assert!((c1 - e * b.sin() * r.cosh()).abs() < 1e-14);
+/// assert!((s0 - e * b.cos() * r.sinh() / r).abs() < 1e-14);
+/// assert!((s1 - e * b.sin() * r.sinh() / r).abs() < 1e-14);
+/// ```
+#[inline(always)]
+pub fn exp_coeffs_central<T: Real>(isq: i8, lambda: T, mu: T, a: T, b: T) -> [T; 4] {
+    let [c0, c1, s0, s1] = exp_coeffs(isq, lambda, mu);
+    let e = a.exp();
+    let (e0, e1) = match isq {
+        0 => (e, e * b),
+        1 => (e * b.cosh(), e * b.sinh()),
+        _ => {
+            let (sin, cos) = b.sin_cos();
+            (e * cos, e * sin)
+        }
+    };
+    // (e0 + e1 J)(u0 + u1 J) with J² = isq.
+    let j2 = T::from_i64(i64::from(isq));
+    let times = |u0: T, u1: T| (e0 * u0 + j2 * e1 * u1, e0 * u1 + e1 * u0);
+    let (c0, c1) = times(c0, c1);
+    let (s0, s1) = times(s0, s1);
+    [c0, c1, s0, s1]
+}
+
 /// `(h0, h1)` with `log(R) = (h0 + h1 I) ⟨R⟩₂` for a unit versor `R` whose scalar and
 /// pseudoscalar parts are `c = c0 + c1 I` and whose bivector part squares to `u0 + u1 I`.
 ///

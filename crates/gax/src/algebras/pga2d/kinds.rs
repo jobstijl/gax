@@ -1861,6 +1861,27 @@ impl<T: gx::Real, O: gx::Orientation> Line<(), T, O> {
 
 }
 
+impl<T: gx::Real> Line<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p2, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[2] * s0;
+        let t1 = x[0] * s0;
+        let t2 = x[1] * s0;
+        Multivector::from_coeffs([c0, t0, t1, t2, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Line<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -4332,6 +4353,23 @@ where
     }
 }
 
+impl<T: gx::Real> Pseudoscalar<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t0])
+        })
+    }
+
+}
+
 #[doc = "A rotation about the origin, `cos(a/2) + sin(a/2) e12`."]
 ///
 /// Blades, in coefficient order: `[1, e12]`.
@@ -6179,6 +6217,21 @@ impl<T: gx::Real, O: gx::Orientation> Translator<(), T, O> {
 }
 
 impl<T: gx::Real> Translator<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Translator`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Translator<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, T::from_i64(0), T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        Translator::from_coeffs([c0, t0, t1])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -7176,6 +7229,24 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
 }
 
 impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Motor`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Motor<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p0 = x[1] * x[1];
+        let p1 = -p0;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p1, T::from_i64(0), x[0], T::from_i64(0));
+        let t0 = x[1] * s0;
+        let t1 = x[2] * s0;
+        let t2 = x[3] * s0;
+        Motor::from_coeffs([c0, t0, t1, t2])
+        })
+    }
+
     /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
     /// (`self.unit().log()`). This method only makes the compile error say so.
     #[doc(hidden)]
@@ -8173,6 +8244,29 @@ impl<T: gx::Real, O: gx::Orientation> Flector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Flector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e012`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(0, p2, T::from_i64(0), T::from_i64(0), x[3]);
+        let t0 = x[2] * s0;
+        let t1 = x[0] * s0;
+        let t2 = x[1] * s0;
+        let t3 = x[1] * s1;
+        let t4 = x[0] * s1;
+        Multivector::from_coeffs([c0, t0, t1, t2, t3, t4, T::from_i64(0), c1])
+        })
+    }
+
+}
+
 impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Flector<(), T, O> {
     /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
@@ -9139,6 +9233,38 @@ impl<T: gx::Real, O: gx::Orientation> Multivector<(), T, O> {
 
 }
 
+impl<T: gx::Real> Multivector<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with the central part `z` the scalar and `e012`, `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[3] * x[3];
+        let p4 = x[2] * x[5];
+        let p6 = x[2].mul_add(x[2], p1);
+        let p7 = (-x[6]).mul_add(x[6], p6);
+        let p8 = x[1].mul_add(x[6], p4);
+        let p9 = x[3].mul_add(x[4], p8);
+        let p10 = p9 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(0, p7, p10, x[0], x[7]);
+        let t0 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        let t5 = x[4] * s0;
+        let t7 = x[5] * s0;
+        let t8 = x[6] * s0;
+        let t9 = (-x[6]).mul_add(s1, t0);
+        let t10 = x[3].mul_add(s1, t5);
+        let t11 = x[2].mul_add(s1, t7);
+        Multivector::from_coeffs([c0, t9, t2, t3, t10, t11, t8, c1])
+        })
+    }
+
+}
+
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Multivector<(), T, O> {
     type Output = Multivector<(), T, O>;
     #[inline(always)]
@@ -10014,6 +10140,26 @@ impl<T: gx::Real, O: gx::Orientation> OriginLine<(), T, O> {
     #[inline(always)]
     pub fn normalized(self) -> Self {
         self.unit().into_inner()
+    }
+
+}
+
+impl<T: gx::Real> OriginLine<(), T, gx::Extrinsic> {
+    /// The exponential, `exp(z + V) = exp(z) (C(VÂ²) + S(VÂ²) V)` with `V` the rest and
+    /// `VÂ²` a Study number (`cosh |v| + sinh |v| vÌ` for a vector of positive square, `cos` and
+    /// `sin` for a negative one). A `Multivector`, not a `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> Multivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_central(-1, p2, T::from_i64(0), T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        Multivector::from_coeffs([c0, T::from_i64(0), t0, t1, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+        })
     }
 
 }
