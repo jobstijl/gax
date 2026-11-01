@@ -493,7 +493,7 @@ fn draw_bond(c: &mut Canvas, rect: Rect, b: &BondCycle, step: usize) {
 /// A deforming patch pushes on its boundary around its closed cycle.
 fn draw_patch(c: &mut Canvas, rect: Rect, s: &ShearCycle, step: usize) {
     let rest: Vec<Point2> = s.reference.iter().map(at).collect();
-    let boundary = simplicial::exterior(&s.mesh, 0);
+    let boundary = s.mesh.exterior(0);
     let tips = |k: usize| -> Vec<Point2> {
         let (places, forces, _) = &s.states[k];
         boundary

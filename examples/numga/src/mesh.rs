@@ -352,6 +352,19 @@ fn face_bivectors(edges: &[Field<Vector3>; 3]) -> Field<Bivector3> {
 }
 
 impl Mesh<Vector3> {
+    /// The same closed surface with its faces wound coherently and counter-clockwise seen from
+    /// outside, whatever sense they came in (numga's `Mesh.closed`, gax's `Mesh::outward`).
+    ///
+    /// # Panics
+    /// If the surface has a boundary or is not orientable.
+    #[must_use]
+    pub fn closed(&self) -> Self {
+        let mesh = gax::mesh::Mesh::new(self.vertices.clone(), &self.faces).expect("the faces");
+        let wound = mesh.outward().expect("a closed orientable surface");
+        let faces = wound.topology().simplices(2).map(|f| [f[0], f[1], f[2]]);
+        Mesh::new(self.vertices.clone(), faces.collect())
+    }
+
     /// `[F]`: each face's unit plane, counter-clockwise seen from outside.
     #[must_use]
     pub fn face_planes(&self) -> Field<Bivector3> {

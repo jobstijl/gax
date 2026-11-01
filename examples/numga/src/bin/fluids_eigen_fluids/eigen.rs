@@ -14,8 +14,6 @@ use gax::mesh::Topology;
 use gax::vga3d;
 use gax_numga_examples::par_map;
 
-use crate::simplicial::{boundary, incidence};
-
 /// A number (numga's `Scalar+`).
 pub type Scalar = vga3d::Scalar;
 /// A gradient (numga's `Plane+`).
@@ -64,14 +62,15 @@ pub struct Surface {
 impl Surface {
     pub fn new(mesh: Topology<3>, vertices: Field<Point>) -> Self {
         let edges = &mesh.d::<Scalar>(0) * &vertices;
-        let sides = boundary(&mesh, 2).read_all(&edges);
+        let sides = mesh.facets(2).read_all(&edges);
         let patches = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
         let areas = patches.map(|p| Scalar::new(p.norm()));
         let normals = patches.zip_with(&areas, |p, a| p * a.inverse());
         let corner_gradients: [Field<Plane>; 3] =
             [0, 1, 2].map(|k| sides[k].zip_with(&patches, |s, p| (s | p.inverse()) * 0.5));
-        let gradient =
-            incidence(&mesh, 2, 0).assemble(|f, k| corner_gradients[k].site(f) * Scalar::slot());
+        let gradient = mesh
+            .incidence(2, 0)
+            .assemble(|f, k| corner_gradients[k].site(f) * Scalar::slot());
         let mut dual_areas = Field::<Scalar>::zeros(mesh.len(0));
         for f in 0..mesh.len(2) {
             for &v in mesh.simplex(2, f) {

@@ -35,7 +35,7 @@ use gax_numga_examples::{
     run_with,
 };
 use regge::*;
-use simplicial::{exterior, faces};
+use simplicial::faces;
 use surfaces_plane::{Flat, arrow};
 
 /// Each figure's time on screen.
@@ -102,7 +102,7 @@ fn shown() -> Shown {
         core::array::from_fn(|k| sides(corners)[k].norm_squared() * EDGE_STRETCHES[k]);
     let (metric, ..) = triangle_geometry(corners, squared);
     let (mesh, vertices) = disk(DISK_RADIUS, DISK_DIVISIONS);
-    let rim = exterior(&mesh, 0);
+    let rim = mesh.exterior(0);
     let geometry: Vec<Intrinsic> = (0..3)
         .map(|case| mesh_geometry(&mesh, &vertices, &stretched(&mesh, &vertices, case)))
         .collect();
@@ -208,7 +208,7 @@ fn draw_basis(c: &mut Canvas, b: &Basis) {
     );
     let points = b.corners.map(at);
     let centroid = (b.corners[0] + b.corners[1] + b.corners[2]) * (1.0 / 3.0);
-    let ends = simplicial::corners(2, 1);
+    let ends = gax::mesh::corners(2, 1);
     // The forms' bound over the triangle: their largest size at its corners, where a quadratic
     // form on it peaks.
     let bound = b

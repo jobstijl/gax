@@ -3,7 +3,7 @@
 //! diamond, and the two materials.
 
 use super::whitney::*;
-use crate::simplicial::{exterior, hex_disk};
+use crate::simplicial::hex_disk;
 use gax::field::Field;
 use gax::mesh::Topology;
 
@@ -141,7 +141,7 @@ pub fn conductivities() -> [Conductivity; 2] {
 /// The electrodes, the rim vertices farther than `ELECTRODE_THRESHOLD` from the `y` axis, and
 /// the potential that holds them at their `x` (zero elsewhere).
 pub fn electrodes(mesh: &Topology<3>, vertices: &Field<Point>) -> (Vec<usize>, Field<Scalar>) {
-    let rim = exterior(mesh, 0);
+    let rim = mesh.exterior(0);
     let x = |v: usize| coordinates(vertices.site(v))[0];
     let held: Vec<usize> = rim
         .into_iter()

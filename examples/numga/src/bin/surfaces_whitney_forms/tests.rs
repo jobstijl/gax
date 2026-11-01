@@ -3,9 +3,10 @@
 
 use super::scenes::*;
 use super::whitney::*;
-use crate::simplicial::{boundary, corners, exterior, oriented, parity};
+use crate::simplicial::parity;
 use gax::dec::{Form, Geometry};
 use gax::field::{Field, SparseMap};
+use gax::mesh::corners;
 use gax::mesh::{Mesh, Topology};
 use gax::{vga2d, vga3d};
 use std::collections::BTreeMap;
@@ -131,7 +132,7 @@ fn barycentric_hats_and_edge_whitney_forms_on_single_triangle_and_diamond() {
 
 /// The one interior edge of a mesh of two triangles.
 fn interior_edge(mesh: &Topology<3>) -> usize {
-    let rim = exterior(mesh, 1);
+    let rim = mesh.exterior(1);
     (0..mesh.len(1))
         .find(|e| !rim.contains(e))
         .expect("a shared edge")
@@ -189,7 +190,7 @@ fn tetrahedral_whitney_0_1_2_forms_and_opposite_edge_helicity() {
         assert!(largest([curls[e] - alternating]) < 1e-13);
     }
     let edges = &mesh.d::<vga3d::Scalar>(0) * &vertices;
-    let own = oriented(&mesh, 3, 1).read_all(&edges);
+    let own = mesh.oriented(3, 1).read_all(&edges);
     for fraction in [0.2, 0.5, 0.85] {
         for (e, end) in ends.iter().enumerate() {
             let at = tet.corners[end[0]] * (1.0 - fraction) + tet.corners[end[1]] * fraction;
@@ -348,7 +349,7 @@ fn isotropic_and_anisotropic_conduction_patch_test_and_flux_balance() {
 
     // The linear patch test: a linear potential held on the whole rim is recovered everywhere,
     // for any material.
-    let rim = exterior(&mesh, 0);
+    let rim = mesh.exterior(0);
     let applied = Plane::new(1.25, -0.6);
     let exact = vertices.map(|p| applied & p);
     let held = Field::from_fn(vertices.len(), |v| {
@@ -473,7 +474,7 @@ fn gax_whitney_maps_give_the_same_forms() {
     let tet = tetrahedron(&tet_mesh, &tet_vertices, 0);
     let solid = Mesh::new(tet_vertices.map(|p| p.undual()), &[[0, 1, 2, 3]]).unwrap();
     let metric = Geometry::new(&solid);
-    let facing = boundary(&tet_mesh, 3);
+    let facing = tet_mesh.facets(3);
     for &p in &points {
         let at = tet.hats(p).map(|h| h.s());
         let edge_forms = tet.edge_forms(p);
@@ -489,7 +490,7 @@ fn gax_whitney_maps_give_the_same_forms() {
         }
         let face_forms = tet.face_forms(p);
         for (k, form) in face_forms.iter().enumerate() {
-            let (face, sign) = (facing.sites[0][k], f64::from(facing.signs[0][k]));
+            let (face, sign) = (facing.site(0, k), f64::from(facing.sign(0, k)));
             let whitney = tet_mesh.whitney(2, &unit3(4, face), 0, &at);
             assert!(largest([bivector3(&whitney, tet.gradients) * sign - *form]) < 1e-12);
         }

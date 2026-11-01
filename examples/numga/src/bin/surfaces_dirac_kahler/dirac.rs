@@ -5,11 +5,10 @@
 //! Points are antivectors, intrinsic (numga's `Point-`), the Hodge duals of vectors; a corner's
 //! hat gradient is the side facing it over twice the patch, a vector (numga's `Plane+`).
 
-use crate::simplicial::{
-    boundary, corners as local_corners, hex_disk, incidence, oriented, reading,
-};
+use crate::simplicial::hex_disk;
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
+use gax::mesh::corners as local_corners;
 use gax::vga2d;
 
 pub type Scalar<S = ()> = vga2d::Scalar<S>;
@@ -74,7 +73,7 @@ impl Operators {
     pub fn new(mesh: &Topology<3>, vertices: &Field<Point>) -> Self {
         let d1 = mesh.d::<Scalar>(1);
         let edges = &mesh.d::<Scalar>(0) * vertices;
-        let facing = boundary(mesh, 2);
+        let facing = mesh.facets(2);
         let sides: [Field<Point>; 3] = core::array::from_fn(|k| facing.read(k, &edges));
         let patches = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
         let areas = patches.map(|p| Scalar::new(p.s().abs()));
@@ -83,14 +82,14 @@ impl Operators {
         let twice = patches.map(|p| (p * 2.0).inverse());
         let corner_gradients: [Field<Plane>; 3] =
             core::array::from_fn(|k| sides[k].zip_with(&twice, |s, t| s * t));
-        let at_corners = incidence(mesh, 2, 0);
+        let at_corners = mesh.incidence(2, 0);
         let whitney0 = &mesh.means::<Scalar>(2) * Scalar::slot();
         let gradient = at_corners.assemble(|f, k| corner_gradients[k].site(f) * Scalar::slot());
 
         // At each centroid the hats are a third: an edge's 1-form is a third of the difference
         // of its ends' gradients.
         let ends = local_corners(2, 1);
-        let whitney1 = oriented(mesh, 2, 1).assemble(|f, k| {
+        let whitney1 = mesh.oriented(2, 1).assemble(|f, k| {
             let (tail, head) = (ends[k][0], ends[k][1]);
             (corner_gradients[head].site(f) - corner_gradients[tail].site(f))
                 * (1.0 / 3.0)
@@ -160,7 +159,7 @@ fn free_sites<K>(free: &[usize], n: usize, slot: K) -> SparseMap<K>
 where
     K: gax::Extensor + core::ops::Mul<f64, Output = K>,
 {
-    reading::<Scalar>(free, n).transpose_with(|c| slot * c.s())
+    SparseMap::<Scalar>::selection(free, n).transpose_with(|c| slot * c.s())
 }
 
 /// The harmonic stream function, one on the inner rim and zero on the outer, and its velocity,

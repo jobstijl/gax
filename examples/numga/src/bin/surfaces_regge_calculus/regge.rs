@@ -6,11 +6,10 @@
 //! metric is a correlation from displacements to planes (numga's `Plane+ <- Point-`), read on an
 //! edge by the join: `metric(edge) & edge` is its squared length.
 
-use crate::simplicial::{
-    boundary, corners as local_corners, exterior, hex_disk, incidence, reading,
-};
+use crate::simplicial::hex_disk;
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
+use gax::mesh::corners as local_corners;
 use gax::vga2d;
 use gax_numga_examples::measure::roots;
 
@@ -139,8 +138,8 @@ pub fn mesh_geometry(
     squared: &Field<Scalar>,
 ) -> Intrinsic {
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let facing = boundary(mesh, 2);
-    let edge_of = incidence(mesh, 2, 1);
+    let facing = mesh.facets(2);
+    let edge_of = mesh.incidence(2, 1);
     let faces = mesh.len(2);
     let mut metrics = Vec::with_capacity(faces);
     let mut conductivities = Vec::with_capacity(faces);
@@ -153,7 +152,7 @@ pub fn mesh_geometry(
         let patch = (sides[0] & sides[1]) * 0.5;
         let twice = (patch * 2.0).inverse();
         let basis = basis_of(sides.map(|s| s * twice));
-        let lengths: [f64; 3] = core::array::from_fn(|k| squared.site(edge_of.sites[f][k]).s());
+        let lengths: [f64; 3] = core::array::from_fn(|k| squared.site(edge_of.site(f, k)).s());
         let metric = basis[0] * lengths[0] + basis[1] * lengths[1] + basis[2] * lengths[2];
         let area = intrinsic_area(metric, sides, patch);
         let rotors = corner_rotors(metric, sides, area);
@@ -172,16 +171,16 @@ pub fn mesh_geometry(
     // carried back from the faces and summed, fall short of the flat turn by the defect: a full
     // turn inside, half a turn on the rim.
     let vertex_areas = &mesh.means::<Scalar>(2).reverse() * &areas;
-    let rim = exterior(mesh, 0);
+    let rim = mesh.exterior(0);
     let mut defects: Vec<Bivector> = (0..mesh.len(0))
         .map(|v| {
             let flat = if rim.contains(&v) { 1.0 } else { 2.0 };
             Bivector::new(flat * core::f64::consts::PI)
         })
         .collect();
-    let corner = incidence(mesh, 2, 0);
+    let corner = mesh.incidence(2, 0);
     for (f, t) in turns.iter().enumerate() {
-        for (&v, &turn) in corner.sites[f].iter().zip(t) {
+        for (&v, &turn) in corner.sites_of(f).iter().zip(t) {
             defects[v] -= turn;
         }
     }
@@ -201,10 +200,11 @@ pub fn mesh_geometry(
 /// facing it over twice the patch.
 pub fn gradient(mesh: &Topology<3>, vertices: &Field<Point>) -> SparseMap<Plane<(Scalar,)>> {
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let facing = boundary(mesh, 2);
+    let facing = mesh.facets(2);
     let sides: [Field<Point>; 3] = core::array::from_fn(|k| facing.read(k, &edges));
     let twice = sides[0].zip_with(&sides[1], |a, b| ((a & b) * 0.5 * 2.0).inverse());
-    incidence(mesh, 2, 0).assemble(|f, k| sides[k].site(f) * twice.site(f) * Scalar::slot())
+    mesh.incidence(2, 0)
+        .assemble(|f, k| sides[k].site(f) * twice.site(f) * Scalar::slot())
 }
 
 /// The conductance of the vertices: the faces' conductivities pulled back through the face
@@ -221,7 +221,7 @@ pub fn conductance(
 
 /// The map from the listed sites onto all `n`, `[n <- listed]`.
 fn onto(listed: &[usize], n: usize) -> SparseMap<Scalar<(Scalar,)>> {
-    reading::<Scalar>(listed, n).transpose_with(|c| c * Scalar::slot())
+    SparseMap::<Scalar>::selection(listed, n).transpose_with(|c| c * Scalar::slot())
 }
 
 /// Steady conduction with the electrodes held at the prescribed potential: the potential, the
@@ -247,7 +247,7 @@ pub fn intrinsic_conduction(
         .map(|f| -conductivities[f].of(gradients.site(f)))
         .collect();
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let facing = boundary(mesh, 2);
+    let facing = mesh.facets(2);
     let reference = facing
         .read(0, &edges)
         .zip_with(&facing.read(1, &edges), |a, b| {
@@ -304,7 +304,8 @@ pub fn stretched(mesh: &Topology<3>, vertices: &Field<Point>, case: usize) -> Fi
 /// potential holding them at their `x`.
 pub fn electrodes(mesh: &Topology<3>, vertices: &Field<Point>) -> (Vec<usize>, Field<Scalar>) {
     let x = |v: usize| coordinates(vertices.site(v))[0];
-    let held: Vec<usize> = exterior(mesh, 0)
+    let held: Vec<usize> = mesh
+        .exterior(0)
         .into_iter()
         .filter(|&v| x(v).abs() > ELECTRODE_THRESHOLD)
         .collect();

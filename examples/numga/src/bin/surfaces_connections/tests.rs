@@ -2,7 +2,7 @@
 
 use super::connections::*;
 use super::scenes::*;
-use crate::simplicial::{boundary, circulation, generators};
+
 use gax::field::Field;
 use gax_numga_examples::rng::{Draw, rng};
 
@@ -25,15 +25,15 @@ fn extra_turns_add_to_every_face_holonomy() {
     let mut draw = rng(0);
     let angles: Vec<f64> = (0..s.mesh.len(1)).map(|_| draw.normal() * 0.3).collect();
     let forward = adjusted_transport(&s.mesh, &s.normals, &angles);
-    let circulations = &circulation::<Scalar, 3>(&s.mesh, &[])
-        * &angles.iter().map(|&a| Scalar::new(a)).collect::<Field<_>>();
-    let facing = boundary(&s.mesh, 2);
+    let circulations =
+        &circulation(&s.mesh, &[]) * &angles.iter().map(|&a| Scalar::new(a)).collect::<Field<_>>();
+    let facing = s.mesh.facets(2);
     let curvatures = face_curvatures(&s.mesh, &s.normals);
     for f in 0..s.mesh.len(2) {
         // The side facing each corner, forward where the face runs along its edge.
         let side = |k: usize| {
-            let r = forward[facing.sites[f][k]];
-            if facing.signs[f][k] > 0 {
+            let r = forward[facing.site(f, k)];
+            if facing.sign(f, k) > 0 {
                 r
             } else {
                 r.reverse()
@@ -215,7 +215,7 @@ fn stripes_follow_their_targets_and_crosses_land_on_their_lines() {
 #[test]
 fn tree_and_cotree_generators_make_the_same_designs() {
     let s = Surface::torus(FIELD_MAJOR / 2, FIELD_MINOR / 2);
-    let loops = generators(&s.mesh);
+    let loops = s.mesh.cycles();
     assert_eq!(loops.len(), 2);
     let indices = face_indices(&s, &[3, 40], &[1.0, -1.0]);
     let d = design(&s, &indices, &loops);

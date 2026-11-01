@@ -2,8 +2,8 @@
 //! sphere under unequal vertex weights, with the scenario's checks of the affine slice.
 
 use super::flow::*;
-use crate::simplicial::corners as local_corners;
 use gax::field::Field;
+use gax::mesh::corners as local_corners;
 
 /// numga's parametrized test of the readings and the quotient's derivative, for one algebra:
 /// the corners `[1, 0, 1]`, `[0, 1, 1]`, `[−0.5, −0.2, 1]` (numga's antivector coefficients,

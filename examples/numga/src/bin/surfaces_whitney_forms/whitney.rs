@@ -11,7 +11,8 @@ use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 use gax::{vga2d, vga3d};
 
-use crate::simplicial::{boundary, corners as local_corners, incidence, oriented, parity, reading};
+use crate::simplicial::parity;
+use gax::mesh::corners as local_corners;
 
 /// A scalar (numga's `Scalar+`).
 pub type Scalar = vga2d::Scalar;
@@ -131,16 +132,16 @@ pub struct Tetrahedron {
 /// The tetrahedron `top` of a solid mesh.
 pub fn tetrahedron(mesh: &Topology<4>, vertices: &Field<SpacePoint>, top: usize) -> Tetrahedron {
     let corners: [SpacePoint; 4] =
-        core::array::from_fn(|k| incidence(mesh, 3, 0).pick(k, vertices).site(top));
+        core::array::from_fn(|k| mesh.incidence(3, 0).pick(k, vertices).site(top));
     let edges = &mesh.d::<vga3d::Scalar>(0) * vertices;
     // The first three edges of its own order run from its first corner.
-    let own = oriented(mesh, 3, 1).read_all(&edges);
+    let own = mesh.oriented(3, 1).read_all(&edges);
     let volume = (own[0].site(top) & own[1].site(top) & own[2].site(top)) * (1.0 / 6.0);
     // Each face's patch, half the join of two of its sides, read as the face facing each corner,
     // outward.
-    let sides = boundary(mesh, 2).read_all(&edges);
+    let sides = mesh.facets(2).read_all(&edges);
     let patches: Field<SpacePatch> = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
-    let outward = boundary(mesh, 3).read_all(&patches);
+    let outward = mesh.facets(3).read_all(&patches);
     let face_patches: [SpacePatch; 4] = core::array::from_fn(|k| outward[k].site(top));
     // A step from a corner across to its face reads three times the volume on the outward
     // patch, and the hat falls by one along it.
@@ -241,9 +242,9 @@ impl Operators {
     pub fn new(mesh: &Topology<3>, vertices: &Field<Point>) -> Self {
         let (d0, d1) = (mesh.d::<Scalar>(0), mesh.d::<Scalar>(1));
         let edges = &d0 * vertices;
-        let at_corners = incidence(mesh, 2, 0);
+        let at_corners = mesh.incidence(2, 0);
         let corners: [Field<Point>; 3] = core::array::from_fn(|k| at_corners.pick(k, vertices));
-        let facing = boundary(mesh, 2);
+        let facing = mesh.facets(2);
         let sides: [Field<Point>; 3] = core::array::from_fn(|k| facing.read(k, &edges));
         let patches = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
         let areas = patches.map(|p| Scalar::new(p.s().abs()));
@@ -259,7 +260,7 @@ impl Operators {
         // At each centroid the three hats are a third, so an edge's 1-form is a third of the
         // difference of its ends' gradients.
         let ends = local_corners(2, 1);
-        let own = oriented(mesh, 2, 1);
+        let own = mesh.oriented(2, 1);
         let centroid_form = |f: usize, k: usize| {
             let (tail, head) = (ends[k][0], ends[k][1]);
             (corner_gradients[head].site(f) - corner_gradients[tail].site(f)) * (1.0 / 3.0)
@@ -307,7 +308,7 @@ impl Operators {
     /// as the face runs along the stored edge.
     pub fn whitney1_at(&self, at: &Field<Point>) -> SparseMap<PlaneMap> {
         let twice = self.patches.map(|p| (p * 2.0).inverse());
-        boundary(&self.mesh, 2).assemble(|f, k| {
+        self.mesh.facets(2).assemble(|f, k| {
             ((at.site(f) - self.corners[k].site(f)) * twice.site(f)) * Scalar::slot()
         })
     }
@@ -358,7 +359,8 @@ impl Operators {
         let n = self.vertices.len();
         let conductance = self.conductance(conductivity);
         let free_vertices: Vec<usize> = (0..n).filter(|v| !electrodes.contains(v)).collect();
-        let free = (&reading::<Scalar>(&free_vertices, n) * Scalar::slot()).transpose();
+        let free =
+            (&SparseMap::<Scalar>::selection(&free_vertices, n) * Scalar::slot()).transpose();
         let rhs = -&free.adjugate().of(&conductance.of(prescribed));
         let system = free.adjugate().compose(&conductance.compose(&free));
         let potential = prescribed + &free.of(&system.solve(&rhs));
@@ -369,7 +371,7 @@ impl Operators {
         let quarter_turn = (Bivector::new(-core::f64::consts::FRAC_PI_4)).exp();
         let laplacian = self.conductance(isotropic());
         let unpinned: Vec<usize> = (1..n).collect();
-        let unpinned = (&reading::<Scalar>(&unpinned, n) * Scalar::slot()).transpose();
+        let unpinned = (&SparseMap::<Scalar>::selection(&unpinned, n) * Scalar::slot()).transpose();
         let turned = self
             .areas
             .zip_with(&current, |a, c| (quarter_turn >> c) * a.s());

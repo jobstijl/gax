@@ -10,8 +10,6 @@ use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 use gax::vga2d;
 
-use crate::simplicial::interior;
-
 /// A number.
 pub type Scalar = vga2d::Scalar;
 /// A map of numbers.
@@ -152,7 +150,7 @@ impl Drum {
             }
         }
         let mesh = Topology::new(vertices.len(), &faces).expect("the drum");
-        let inside = interior(&mesh, 0);
+        let inside = mesh.interior(0);
         let site = |v: usize| inside.binary_search(&v).ok();
         let lift = numbers(
             inside.iter().enumerate().map(|(k, &v)| (v, k, 1.0)),

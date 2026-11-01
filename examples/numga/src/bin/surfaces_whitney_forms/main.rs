@@ -34,6 +34,7 @@ mod tests;
 mod whitney;
 
 use gax::field::Field;
+use gax::mesh::corners as local_corners;
 use gax_numga_examples::measure::roots;
 use gax_numga_examples::scene3::{Scene3, panel3};
 use gax_numga_examples::shared::simplicial;
@@ -44,7 +45,7 @@ use gax_numga_examples::{
     caption, label_under, palette, run_with,
 };
 use scenes::*;
-use simplicial::{corners as local_corners, exterior, faces, sides as edge_sides};
+use simplicial::{faces, sides as edge_sides};
 use surfaces_plane::{Flat, arrow};
 use whitney::*;
 
@@ -146,7 +147,7 @@ fn edges() -> Edges {
     let forms = edge_whitney_forms(corners, &samples);
     let (mesh, vertices, _) = edge_diamond(ARROW_SUBDIVISIONS);
     let ops = Operators::new(&mesh, &vertices);
-    let rim = exterior(&mesh, 1);
+    let rim = mesh.exterior(1);
     let shared = (0..mesh.len(1))
         .find(|e| !rim.contains(e))
         .expect("a shared edge");

@@ -34,7 +34,7 @@ use gax_numga_examples::{
     Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point3, Rect, backdrop, caption,
     label_under, palette, run_with,
 };
-use simplicial::{exterior, faces, midpoint_split};
+use simplicial::{faces, midpoint_split};
 use surfaces_plane::Flat;
 
 /// The still figures' time on screen, and the relaxation's (numga's 46 frames of 40 ms, out and
@@ -185,7 +185,8 @@ fn disk() -> Disk {
     let flat = shadow(&mesh, &vertices);
     // The meridians run out to the rim vertices nearest in direction to even turns about the
     // vertical.
-    let rim: Vec<Point> = exterior(&mesh, 0)
+    let rim: Vec<Point> = mesh
+        .exterior(0)
         .into_iter()
         .map(|v| vertices.site(v))
         .collect();
@@ -295,7 +296,8 @@ fn sheet(s: &mut Scene3, mesh: &Topology<3>, vertices: &Field<Point>, light: Lig
         let lit = s.lit(a, b, c, light);
         s.tri(a, b, c, lit, opacity);
     }
-    let rim: Vec<[Point3; 2]> = exterior(mesh, 1)
+    let rim: Vec<[Point3; 2]> = mesh
+        .exterior(1)
         .into_iter()
         .map(|e| {
             let ends = mesh.simplex(1, e);

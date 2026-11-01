@@ -25,7 +25,6 @@ mod tests;
 
 use freeform::*;
 use gax::field::Field;
-use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::{frame, haversine};
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rect, backdrop, caption, label_above,

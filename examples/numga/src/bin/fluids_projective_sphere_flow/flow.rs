@@ -15,7 +15,7 @@
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 
-use crate::simplicial::{boundary, icosphere, incidence, sides};
+use crate::simplicial::{icosphere, sides};
 
 /// numga's core, instantiated for an algebra whose points are its grade-2 antivectors: its
 /// readings of one triangle.
@@ -25,7 +25,7 @@ macro_rules! readings {
         pub mod $module {
             #![allow(dead_code)] // each scene uses part of it
 
-            use crate::simplicial::corners as local_corners;
+            use gax::mesh::corners as local_corners;
 
             /// A number (numga's `Scalar+`).
             pub type Scalar = gax::$ga::Scalar;
@@ -142,7 +142,7 @@ pub struct Diffusion {
 
 /// Each face's corners as the vertices are lifted.
 pub fn face_corners(mesh: &Topology<3>, vertices: &Field<Point>) -> [Field<Point>; 3] {
-    let at = incidence(mesh, 2, 0);
+    let at = mesh.incidence(2, 0);
     [0, 1, 2].map(|k| at.pick(k, vertices))
 }
 
@@ -160,7 +160,7 @@ pub fn face_reciprocals(mesh: &Topology<3>, vertices: &Field<Point>) -> [Field<P
     let volumes = Field::from_fn(mesh.len(2), |f| {
         sphere::volume([0, 1, 2].map(|k| corners[k].site(f)))
     });
-    let facing = boundary(mesh, 2);
+    let facing = mesh.facets(2);
     [0, 1, 2].map(|k| {
         facing
             .read(k, &joins)
@@ -191,7 +191,7 @@ pub fn diffusion(
 ) -> Diffusion {
     let reciprocals = face_reciprocals(mesh, vertices);
     let section = &(&reciprocals[0] + &reciprocals[1]) + &reciprocals[2];
-    let at_corners = incidence(mesh, 2, 0);
+    let at_corners = mesh.incidence(2, 0);
     let slot = Scalar::slot();
     let n = mesh.len(0);
     let mut stiffness = SparseMap::from_triples(Vec::new(), (n, n));

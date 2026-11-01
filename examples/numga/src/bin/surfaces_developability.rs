@@ -34,9 +34,9 @@ use gax_numga_examples::{
 };
 
 mod developability {
-    use super::simplicial::{boundary, closed, corners as local_corners, incidence};
     use gax::field::Field;
     use gax::mesh::Topology;
+    use gax::mesh::corners as local_corners;
     use gax::vga3d;
 
     pub type Scalar = vga3d::Scalar;
@@ -71,7 +71,7 @@ mod developability {
         mesh: &Topology<3>,
         vertices: &Field<Point>,
     ) -> ([Field<Point>; 3], [Field<Scalar>; 3]) {
-        let edges = boundary(mesh, 2).read_all(&(&mesh.d::<Scalar>(0) * vertices));
+        let edges = mesh.facets(2).read_all(&(&mesh.d::<Scalar>(0) * vertices));
         let edges: [Field<Point>; 3] = [edges[0].clone(), edges[1].clone(), edges[2].clone()];
         let ends = local_corners(2, 1);
         let angles = core::array::from_fn(|k| {
@@ -91,12 +91,12 @@ mod developability {
         angles: &[Field<Scalar>; 3],
     ) -> (Field<Normal>, Vec<Spread>) {
         let normals = edges[0].zip_with(&edges[1], |a, b| (a & b).normalized());
-        let corners = incidence(mesh, 2, 0);
+        let corners = mesh.incidence(2, 0);
         let mut spreads = vec![Point::slot() * 0.0; mesh.len(0)];
         for f in 0..mesh.len(2) {
             let n = normals.site(f);
             let dyad = n.hodge() * (n & Point::slot());
-            for (&v, angle) in corners.sites[f].iter().zip(angles) {
+            for (&v, angle) in corners.sites_of(f).iter().zip(angles) {
                 spreads[v] += dyad * angle.site(f).s();
             }
         }
@@ -126,14 +126,14 @@ mod developability {
         normals: &Field<Normal>,
         directions: &[Point],
     ) -> Vec<Vector> {
-        let corners = incidence(mesh, 2, 0);
+        let corners = mesh.incidence(2, 0);
         let ends = local_corners(2, 1);
         let mut out = vec![Vector::new(0.0, 0.0, 0.0); mesh.len(0)];
         for f in 0..mesh.len(2) {
             let n = normals.site(f);
             let e: [Point; 3] = core::array::from_fn(|k| edges[k].site(f));
             let double_area = (e[0] & e[1]).norm();
-            let vertex = corners.sites[f].clone();
+            let vertex = corners.sites_of(f).to_vec();
             let d: [Point; 3] = core::array::from_fn(|k| directions[vertex[k]]);
             // A direction's pairing with the face's normal: its part along the normal.
             let along: [vga3d::intrinsic::Scalar; 3] = core::array::from_fn(|k| n & d[k]);
@@ -167,13 +167,13 @@ mod developability {
         edges: &[Field<Point>; 3],
         angles: &[Field<Scalar>; 3],
     ) -> Vec<f64> {
-        let corners = incidence(mesh, 2, 0);
+        let corners = mesh.incidence(2, 0);
         let mut out = vec![0.0; mesh.len(0)];
         for f in 0..mesh.len(2) {
             let e: [Point; 3] = core::array::from_fn(|k| edges[k].site(f));
             let double_area = (e[0] & e[1]).norm();
             for k in 0..3 {
-                out[corners.sites[f][k]] +=
+                out[corners.site(f, k)] +=
                     angles[k].site(f).s() * e[k].norm_squared() / (double_area * double_area);
             }
         }
@@ -224,7 +224,7 @@ mod developability {
     pub fn bunny() -> (Topology<3>, Field<Point>) {
         const BUNNY: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/bunny.obj"));
         let model = gax_numga_examples::mesh::Mesh::from_obj(BUNNY, SIZE);
-        let wound = closed(&model.faces, &model.vertices);
+        let wound = model.closed().faces;
         let upright = vga3d::Bivector::new(-core::f64::consts::FRAC_PI_4, 0.0, 0.0).exp();
         let vertices = model.vertices.map(|v| (upright >> v).hodge());
         (

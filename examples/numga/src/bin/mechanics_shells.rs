@@ -244,7 +244,7 @@ mod shells {
                 .collect()
         };
         let corners: [SparseMap<Scalar>; 4] =
-            core::array::from_fn(|k| simplicial::reading(&column(k), n));
+            core::array::from_fn(|k| SparseMap::selection(&column(k), n));
         let [ends, tips, across, opposite] = corners.each_ref().map(|c| c * points);
         let mut angles = Vec::with_capacity(sides.len());
         let mut bending = Vec::with_capacity(sides.len());

@@ -10,10 +10,8 @@
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 
-use crate::simplicial::{
-    boundary, corners as local_corners, incidence, interior, oriented, reading,
-};
 use crate::sta2d::{self, Bivector, Point, Vector, time, xy};
+use gax::mesh::corners as local_corners;
 
 /// A number (numga's `Scalar+`).
 pub type Scalar = sta2d::Scalar;
@@ -145,7 +143,7 @@ impl Operators {
         let d1 = &mesh.d::<Scalar>(1) * slot;
         let edges = &mesh.d::<Scalar>(0) * vertices;
         let edge_midpoints = &mesh.means::<Scalar>(1) * vertices;
-        let sides = boundary(mesh, 2).read_all(&edges);
+        let sides = mesh.facets(2).read_all(&edges);
         let patches: Field<Patch> = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
         // The prism each face sweeps in a unit of time; its size is the face's area.
         let prisms = patches.map(|p| time() & p);
@@ -156,10 +154,12 @@ impl Operators {
         let twice = prisms.map(|p| (p * 2.0).inverse());
         let corner_gradients: [Field<Plane>; 3] = [0, 1, 2]
             .map(|k| Field::from_fn(mesh.len(2), |f| (time() & sides[k].site(f)) * twice.site(f)));
-        let gradient = incidence(mesh, 2, 0).assemble(|f, k| corner_gradients[k].site(f) * slot);
+        let gradient = mesh
+            .incidence(2, 0)
+            .assemble(|f, k| corner_gradients[k].site(f) * slot);
         // The derivative of each edge's Whitney form is twice the wedge of its ends' gradients.
         let ends = local_corners(2, 1);
-        let curl = oriented(mesh, 2, 1).assemble(|f, k| {
+        let curl = mesh.oriented(2, 1).assemble(|f, k| {
             let (t, h) = (ends[k][0], ends[k][1]);
             (corner_gradients[t].site(f) ^ corner_gradients[h].site(f)) * 2.0 * slot
         });
@@ -173,8 +173,9 @@ impl Operators {
         let curl_stiffness = curl.adjugate().compose(&vacuum.compose(&curl));
         // A unit resistance on each interior edge turns its current into the rate of its reading;
         // the boundary's circulation stays fixed.
-        let inside = interior(mesh, 1);
-        let on_interior = (&reading::<Scalar>(&inside, mesh.len(1)) * slot).transpose();
+        let inside = mesh.interior(1);
+        let on_interior =
+            (&SparseMap::<Scalar>::selection(&inside, mesh.len(1)) * slot).transpose();
         let unit_resistance =
             SparseMap::from_diagonal(&Field::from_fn(inside.len(), |_| Amount::slot().undual()));
         let curl_laplacian = on_interior

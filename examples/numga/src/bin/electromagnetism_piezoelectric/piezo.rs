@@ -12,7 +12,6 @@
 use gax::field::{BlockMap, Field, SparseMap};
 use gax::mesh::Topology;
 
-use crate::simplicial::{boundary, incidence};
 use crate::sta2d::{self, time};
 
 /// A number.
@@ -133,7 +132,7 @@ pub fn triangles(
     vertices: &Field<Point>,
 ) -> (Field<Scalar>, [Field<Plane>; 3]) {
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let sides = boundary(mesh, 2).read_all(&edges);
+    let sides = mesh.facets(2).read_all(&edges);
     let double = sides[0].zip_with(&sides[1], |a, b| (a & b) & time());
     let gradients = [0, 1, 2]
         .map(|k| sides[k].zip_with(&double, |s, d| ((time() & s) * d.inverse()).cast::<Plane>()));
@@ -148,12 +147,12 @@ pub fn strain(
     displacement: &Field<Point>,
     gradients: &[Field<Plane>; 3],
 ) -> Vec<Strain> {
-    let at = incidence(mesh, 2, 0);
+    let at = mesh.incidence(2, 0);
     (0..mesh.len(2))
         .map(|f| {
             let gradient = (0..3)
                 .map(|k| {
-                    (undual(displacement.site(at.sites[f][k]))
+                    (undual(displacement.site(at.site(f, k)))
                         * (gradients[k].site(f) & Point::slot()))
                     .cast::<sta2d::Spatial>()
                 })
@@ -171,11 +170,11 @@ pub fn electric_field(
     potential: &Field<Scalar>,
     gradients: &[Field<Plane>; 3],
 ) -> Vec<Electric> {
-    let at = incidence(mesh, 2, 0);
+    let at = mesh.incidence(2, 0);
     (0..mesh.len(2))
         .map(|f| {
             (0..3)
-                .map(|k| sweep(gradients[k].site(f)) * -potential.site(at.sites[f][k]).s())
+                .map(|k| sweep(gradients[k].site(f)) * -potential.site(at.site(f, k)).s())
                 .fold(Electric::zero(), |a, b| a + b)
         })
         .collect()
@@ -209,7 +208,7 @@ pub fn assemble(
     width: f64,
 ) -> Blocks {
     let pairing = Plane::slot() & Point::slot();
-    let at = incidence(mesh, 2, 0);
+    let at = mesh.incidence(2, 0);
     let (mut mechanical, mut coupling, mut dielectric) = (Vec::new(), Vec::new(), Vec::new());
     for (f, &sign) in poling.iter().enumerate() {
         let g = [0, 1, 2].map(|k| gradients[k].site(f));
@@ -218,7 +217,7 @@ pub fn assemble(
         let polarized = g.map(|g| material.polarization.at::<1>().of(g) * sign);
         for a in 0..3 {
             for b in 0..3 {
-                let (va, vb) = (at.sites[f][a], at.sites[f][b]);
+                let (va, vb) = (at.site(f, a), at.site(f, b));
                 let work = material.elastic.at::<1>().of(g[b]).at::<2>().of(g[a]);
                 let force: MechanicalMap = pairing.solve(work);
                 mechanical.push((va, vb, force * weight));

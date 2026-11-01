@@ -14,9 +14,7 @@ use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 use gax::sta;
 
-use crate::simplicial::{
-    boundary, corners as local_corners, exterior, incidence, interior, oriented,
-};
+use gax::mesh::corners as local_corners;
 
 /// A number (numga's `Scalar+`).
 pub type Scalar = sta::Scalar;
@@ -91,7 +89,7 @@ impl Operators {
     pub fn new(mesh: &Topology<4>, vertices: &Field<Point>) -> Self {
         let slot = Scalar::slot();
         let corners: Vec<Field<Point>> = (0..4)
-            .map(|k| incidence(mesh, 3, 0).pick(k, vertices))
+            .map(|k| mesh.incidence(3, 0).pick(k, vertices))
             .collect();
         let centres = Field::from_fn(mesh.len(3), |t| {
             (0..4)
@@ -100,25 +98,27 @@ impl Operators {
                 * 0.25
         });
         let edges = &mesh.d::<Scalar>(0) * vertices;
-        let own = oriented(mesh, 3, 1).read_all(&edges);
+        let own = mesh.oriented(3, 1).read_all(&edges);
         let volumes = Field::from_fn(mesh.len(3), |t| {
             (own[0].site(t) & own[1].site(t) & own[2].site(t)) * (1.0 / 6.0)
         });
         let prisms = volumes.map(|v| v & time());
         // Each face's patch, half the join of two sides, read as the face facing each corner,
         // outward.
-        let sides = boundary(mesh, 2).read_all(&edges);
+        let sides = mesh.facets(2).read_all(&edges);
         let patches = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
-        let face_patches = boundary(mesh, 3).read_all(&patches);
+        let face_patches = mesh.facets(3).read_all(&patches);
         let thrice = prisms.map(|p| (p * 3.0).inverse());
         let corner_gradients: Vec<Field<Plane>> = (0..4)
             .map(|k| face_patches[k].zip_with(&thrice, |f, p| (f & time()) * p))
             .collect();
-        let gradient = incidence(mesh, 3, 0).assemble(|t, k| corner_gradients[k].site(t) * slot);
+        let gradient = mesh
+            .incidence(3, 0)
+            .assemble(|t, k| corner_gradients[k].site(t) * slot);
         // At each centroid the four hats are a quarter: an edge's 1-form is a quarter of the
         // difference of its ends' gradients.
         let ends = local_corners(3, 1);
-        let own_edges = oriented(mesh, 3, 1);
+        let own_edges = mesh.oriented(3, 1);
         let whitney1 = own_edges.assemble(|t, e| {
             let (tail, head) = (ends[e][0], ends[e][1]);
             (corner_gradients[head].site(t) - corner_gradients[tail].site(t)) * 0.25 * slot
@@ -128,7 +128,7 @@ impl Operators {
             let (tail, head) = (ends[e][0], ends[e][1]);
             (corner_gradients[tail].site(t) ^ corner_gradients[head].site(t)) * 2.0 * slot
         });
-        let whitney2 = boundary(mesh, 3).assemble(|t, k| {
+        let whitney2 = mesh.facets(3).assemble(|t, k| {
             (((centres.site(t) - corners[k].site(t)) & time()) * thrice.site(t)) * slot
         });
         // The energy pulls the vacuum, each tetrahedron's field to the excitation it causes
@@ -218,8 +218,8 @@ pub fn solid_torus(
 /// the normal flux through every wall triangle stays nothing. Each wall edge that steps around
 /// the tube takes the amplitude weighted by its step, over the root of their count.
 pub fn flux_preserving(mesh: &Topology<4>, n_major: usize, n_minor: usize) -> SparseMap<ScalarMap> {
-    let wall = exterior(mesh, 1);
-    let inside = interior(mesh, 1);
+    let wall = mesh.exterior(1);
+    let inside = mesh.interior(1);
     let ring = |v: usize| (v as i64 - n_major as i64).rem_euclid(n_minor as i64);
     let half = (n_minor / 2) as i64;
     let steps: Vec<(usize, i64)> = wall

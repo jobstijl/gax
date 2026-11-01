@@ -25,7 +25,6 @@ mod tests;
 use beltrami::*;
 use gax::vga3d::Vector;
 use gax_numga_examples::scene3::{Scene3, panel3};
-use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, backdrop,
@@ -86,7 +85,9 @@ fn shown() -> Shown {
         .map(|(x, l)| x * x / l)
         .sum();
     let shown = SHOWN.map(|k| at(k, cavity.mu.len()));
-    let wall = crate::simplicial::exterior(&o.mesh, 2)
+    let wall = o
+        .mesh
+        .exterior(2)
         .into_iter()
         .map(|f| {
             let corners = o.mesh.simplex(2, f);

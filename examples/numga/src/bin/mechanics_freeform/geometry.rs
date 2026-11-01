@@ -7,7 +7,6 @@ use gax::vga2d;
 
 use super::freeform::{Antivector, Vector, coordinates, point};
 use super::numerics::Halton;
-use super::simplicial;
 
 /// A closed surface: its triangles, wound outward, and its vertices.
 pub struct Surface {
@@ -182,7 +181,7 @@ pub fn load(
 ) -> (Surface, Vec<Antivector>, Vec<f64>, Vec<Antivector>) {
     const BUNNY: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/bunny.obj"));
     let model = gax_numga_examples::mesh::Mesh::from_obj(BUNNY, height);
-    let faces = simplicial::closed(&model.faces, &model.vertices);
+    let faces = model.closed().faces;
     let heights: Vec<f64> = model.vertices.iter().map(|v| v.e2()).collect();
     let extent = heights.iter().copied().fold(f64::MIN, f64::max)
         - heights.iter().copied().fold(f64::MAX, f64::min);

@@ -35,13 +35,13 @@ fn check_grades(divisions: usize, fields: &Fields) {
     let (mesh, vertices) = disk(1.0, divisions);
     let ops = Operators::new(&mesh, &vertices);
     let grades = grades(&ops, &mesh, &vertices, fields);
-    let at = crate::simplicial::incidence(&mesh, 2, 0);
+    let at = mesh.incidence(2, 0);
     let u = on_vertices(&vertices, |x, y| fields.vector(x, y));
     let omega = on_vertices(&vertices, |x, y| Bivector::new(fields.bivector(x, y)));
     let terms = |f: usize, part: &dyn Fn(Plane, Plane, Bivector) -> Full| {
         (0..3)
             .map(|k| {
-                let v = at.sites[f][k];
+                let v = at.site(f, k);
                 part(ops.corner_gradients[k].site(f), u.site(v), omega.site(v))
             })
             .reduce(|a, b| a + b)

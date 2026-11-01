@@ -54,7 +54,7 @@ use gax_numga_examples::{
     label_under, palette, run_with,
 };
 use scenes::*;
-use simplicial::{boundary, faces};
+use simplicial::faces;
 
 /// Each figure's time on screen.
 const FIGURE: f32 = 4.0;
@@ -459,7 +459,7 @@ fn corner_phases(
     s: &Surface,
     families: &[(&Field<Point>, Field<Point>, &[f64])],
 ) -> (Vec<Vec<[f64; 3]>>, Vec<Vec<f64>>) {
-    let facing = boundary(&s.mesh, 2);
+    let facing = s.mesh.facets(2);
     let n = families.len();
     let tau = core::f64::consts::TAU;
     let wrap = |x: f64| -((-x + core::f64::consts::PI).rem_euclid(tau) - core::f64::consts::PI);
@@ -491,7 +491,7 @@ fn corner_phases(
             for side in 0..3 {
                 // From corner `side` to the next: the edge facing the corner after them.
                 let k = (side + 2) % 3;
-                let (edge, forward) = (facing.sites[f][k], facing.signs[f][k] > 0);
+                let (edge, forward) = (facing.site(f, k), facing.sign(f, k) > 0);
                 let head = if forward { (side + 1) % 3 } else { side };
                 let (g, sense) = pick(head, fam);
                 let target = families[g].2[edge] * sense * if forward { 1.0 } else { -1.0 };

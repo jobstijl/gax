@@ -6,11 +6,10 @@
 //! coordinates (numga's `Point-`). A unit normal is the patch of a tangent plane, the join of two
 //! edges, an intrinsic vector (`Vector-`); its Hodge dual is the plane tangent vectors turn in.
 
-use crate::simplicial::{
-    boundary, circulation, corners as local_corners, edges as edge_list, incidence, spanning_tree,
-};
+use crate::simplicial::{edges as edge_list, spanning_tree};
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
+use gax::mesh::corners as local_corners;
 use gax::vga3d;
 
 pub type Scalar<S = ()> = vga3d::Scalar<S>;
@@ -50,18 +49,18 @@ pub fn plane(n: Normal) -> Bivector {
 
 /// The edges facing each corner of each face, counter-clockwise.
 fn sides(mesh: &Topology<3>, vertices: &Field<Point>) -> Vec<Field<Point>> {
-    boundary(mesh, 2).read_all(&(&mesh.d::<Scalar>(0) * vertices))
+    mesh.facets(2).read_all(&(&mesh.d::<Scalar>(0) * vertices))
 }
 
 /// The unit normal at each vertex: the sum of its faces' normals, each the join of two of the
 /// face's edges, twice the face's area large, normalized.
 pub fn vertex_normals(mesh: &Topology<3>, vertices: &Field<Point>) -> Field<Normal> {
     let s = sides(mesh, vertices);
-    let corners = incidence(mesh, 2, 0);
+    let corners = mesh.incidence(2, 0);
     let mut sum = vec![Normal::new(0.0, 0.0, 0.0); mesh.len(0)];
     for f in 0..mesh.len(2) {
         let n = s[0].site(f) & s[1].site(f);
-        for &v in &corners.sites[f] {
+        for &v in corners.sites_of(f) {
             sum[v] += n;
         }
     }
@@ -85,13 +84,13 @@ pub fn cotangent_weights(
 ) -> Field<Scalar> {
     let s = sides(mesh, vertices);
     let ends = local_corners(2, 1);
-    let facing = incidence(mesh, 2, 1);
+    let facing = mesh.incidence(2, 1);
     let mut weights = vec![0.0; mesh.len(1)];
     for f in 0..mesh.len(2) {
         for (k, end) in ends.iter().enumerate() {
             let (after, before) = (s[end[0]].site(f), s[end[1]].site(f));
             let cot = -dot(after, before) / after.commutator(before).norm();
-            weights[facing.sites[f][k]] += face_weights[f] * cot / 2.0;
+            weights[facing.site(f, k)] += face_weights[f] * cot / 2.0;
         }
     }
     weights.into_iter().map(Scalar::new).collect()
@@ -151,7 +150,7 @@ pub fn connection(
     forward: &[Rotor],
     weights: &Field<Scalar>,
 ) -> (SparseMap<PointMap>, SparseMap<PointMap>) {
-    let ends = boundary(mesh, 1);
+    let ends = mesh.facets(1);
     let identity = Point::slot();
     let covariant = ends.assemble(|e, k| {
         if k == 0 {
@@ -247,7 +246,7 @@ pub fn trivial_connection(
         let along: Vec<Normal> = g.iter().map(|&v| normals.site(v)).collect();
         target.push(-loop_turn(&along));
     }
-    let circulation = &circulation::<Scalar, 3>(mesh, generators) * Scalar::slot();
+    let circulation = &circulation(mesh, generators) * Scalar::slot();
     let mean = target[..faces].iter().sum::<f64>() / faces as f64;
     let met: Field<Scalar> = (0..target.len())
         .map(|r| {
@@ -263,6 +262,21 @@ pub fn trivial_connection(
     let solved = normal.cg(&met, 1e-15, 40 * target.len());
     let angles = transpose.of(&solved.x).iter().map(|s| s.s()).collect();
     (angles, circulation, target)
+}
+
+/// `[F + L, E]`: the circulation of edge values counter-clockwise around each face (`d(1)`), then
+/// around each closed loop of vertices (gax's `Topology::circulation`; numga's `circulation`).
+pub fn circulation(mesh: &Topology<3>, loops: &[Vec<usize>]) -> SparseMap<Scalar> {
+    let faces = mesh.len(2);
+    let around = mesh.d::<Scalar>(1);
+    let along = mesh.circulation::<Scalar>(loops);
+    let triples = around
+        .couplings()
+        .chain(along.couplings().map(|(l, e, c)| (faces + l, e, c)));
+    SparseMap::from_triples(
+        triples.collect::<Vec<_>>(),
+        (faces + loops.len(), mesh.len(1)),
+    )
 }
 
 /// The circulation of edge turns minus its target: what a trivial connection leaves.

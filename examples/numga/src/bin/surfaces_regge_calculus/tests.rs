@@ -1,7 +1,7 @@
 //! numga's tests of Regge calculus, and its scenario checks.
 
 use super::regge::*;
-use crate::simplicial::{edges as edge_list, exterior, interior};
+use crate::simplicial::edges as edge_list;
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 
@@ -73,7 +73,7 @@ fn cases(mesh: &Topology<3>, vertices: &Field<Point>) -> Vec<Intrinsic> {
 
 /// numga's Gauss–Bonnet, flatness, curvature and inverse-metric checks.
 fn check_geometry(mesh: &Topology<3>, geometry: &[Intrinsic], centre_tolerance: Option<f64>) {
-    let inside = interior(mesh, 0);
+    let inside = mesh.interior(0);
     for (case, g) in geometry.iter().enumerate() {
         // Discrete Gauss–Bonnet: the defects add up to a whole turn, whatever the metric.
         let total = g.defects.sum();
@@ -170,7 +170,7 @@ fn intrinsic_laplace_beltrami_cotangent_equivalence_and_flow() {
         Scalar::new(x * x - 0.35 * y * y)
     });
     let d0 = mesh.d::<Scalar>(0).map_cells(|c| c * Scalar::slot());
-    let at = crate::simplicial::incidence(&mesh, 2, 1);
+    let at = mesh.incidence(2, 1);
     let mut currents = Vec::new();
     for g in &geometry {
         let c = conductance(&mesh, &vertices, &g.conductivities);
@@ -187,7 +187,7 @@ fn intrinsic_laplace_beltrami_cotangent_equivalence_and_flow() {
         let mut weights = vec![0.0; mesh.len(1)];
         for (f, cot) in g.cotangents.iter().enumerate() {
             for k in 0..3 {
-                weights[at.sites[f][k]] += cot[k];
+                weights[at.site(f, k)] += cot[k];
             }
         }
         let weights = SparseMap::from_diagonal(
@@ -230,7 +230,7 @@ fn the_scenes_pass_numgas_checks() {
         check_balance(&mesh, &vertices, g);
     }
     assert_eq!(
-        exterior(&mesh, 0).len() + interior(&mesh, 0).len(),
+        mesh.exterior(0).len() + mesh.interior(0).len(),
         vertices.len()
     );
     assert_eq!(edge_list(&mesh).len(), mesh.len(1));

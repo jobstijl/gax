@@ -4,7 +4,6 @@
 
 use super::beltrami::*;
 use super::scenes::*;
-use crate::simplicial::exterior;
 use gax::field::{Field, SparseMap};
 use gax_numga_examples::signal::wave;
 
@@ -82,7 +81,7 @@ fn whitney_commutation_flux_preserving_subspace_and_chiral_beltrami_spectrum() {
     // The normal flux vanishes on every wall triangle.
     let flux = &d1 * &free_test;
     assert!(small(
-        exterior(&o.mesh, 2).iter().map(|&f| flux.site(f).s()),
+        o.mesh.exterior(2).iter().map(|&f| flux.site(f).s()),
         1e-14
     ));
 

@@ -4,8 +4,8 @@
 
 use super::scenes::*;
 use super::spacetime::*;
-use crate::simplicial::corners as local_corners;
 use gax::field::Field;
+use gax::mesh::corners as local_corners;
 
 /// Whether a list of numbers all lie within `tolerance` of zero.
 fn small(values: impl IntoIterator<Item = f64>, tolerance: f64) -> bool {

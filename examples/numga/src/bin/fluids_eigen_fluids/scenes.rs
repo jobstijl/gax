@@ -2,7 +2,7 @@
 //! layers on a sphere's 80, each run from its start by Runge–Kutta in mode space.
 
 use super::eigen::*;
-use crate::simplicial::{closed, icosphere};
+use crate::simplicial::icosphere;
 use gax::field::Field;
 use gax::mesh::Topology;
 use gax::vga3d;
@@ -64,7 +64,7 @@ pub const SPHERE_BLOCK: usize = 10;
 pub fn bunny() -> (Topology<3>, Field<Point>) {
     const BUNNY: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/bunny.obj"));
     let model = gax_numga_examples::mesh::Mesh::from_obj(BUNNY, BUNNY_SIZE);
-    let wound = closed(&model.faces, &model.vertices);
+    let wound = model.closed().faces;
     let upright = vga3d::Bivector::new(-core::f64::consts::FRAC_PI_4, 0.0, 0.0).exp();
     let vertices = model.vertices.map(|v| (upright >> v).hodge());
     let mesh = Topology::new(vertices.len(), &wound).expect("the bunny");

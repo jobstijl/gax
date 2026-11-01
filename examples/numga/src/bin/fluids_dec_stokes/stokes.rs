@@ -10,8 +10,6 @@ use gax::field::{BlockMap, Field, SparseMap};
 use gax::mesh::Topology;
 use gax::vga2d;
 
-use crate::simplicial::{boundary, incidence};
-
 /// A number (numga's `Scalar+`).
 pub type Scalar = vga2d::Scalar;
 /// A vorticity (numga's `Bivector+`).
@@ -110,13 +108,13 @@ impl Operators {
         let d1 = &circulations * Scalar::slot();
         let d0_vorticity = &differences * Bivector::slot();
         let edges = &differences * vertices;
-        let at_corners = incidence(mesh, 2, 0);
+        let at_corners = mesh.incidence(2, 0);
         let corners: [Field<Point>; 3] = [0, 1, 2].map(|k| at_corners.pick(k, vertices));
-        let facing = boundary(mesh, 2);
+        let facing = mesh.facets(2);
         let sides: [Field<Point>; 3] = [0, 1, 2].map(|k| {
             Field::from_fn(mesh.len(2), |f| {
-                let e = facing.sites[f][k];
-                edges.site(e) * (f64::from(facing.signs[f][k]) * signs[e])
+                let e = facing.site(f, k);
+                edges.site(e) * (f64::from(facing.sign(f, k)) * signs[e])
             })
         });
         let face_patches = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
@@ -247,8 +245,7 @@ pub fn stokes(
         .map(|a| a * viscosity);
     let edges = mesh.len(1);
     let free: Vec<usize> = (0..edges).filter(|e| !fixed.contains(e)).collect();
-    let embedding =
-        (&crate::simplicial::reading::<Scalar>(&free, edges) * Scalar::slot()).transpose();
+    let embedding = (&SparseMap::<Scalar>::selection(&free, edges) * Scalar::slot()).transpose();
     let stiffness = embedding.adjugate().compose(&viscous.compose(&embedding));
     let force = -&embedding
         .adjugate()
@@ -256,7 +253,7 @@ pub fn stokes(
     // Every face's balance but the first's.
     let faces = mesh.len(2);
     let rest: Vec<usize> = (1..faces).collect();
-    let restricted = &crate::simplicial::reading::<Scalar>(&rest, faces) * Scalar::slot();
+    let restricted = &SparseMap::<Scalar>::selection(&rest, faces) * Scalar::slot();
     let constraint = -&restricted.compose(&operators.d1.compose(&embedding));
     let balance = restricted.of(&operators.d1.of(prescribed));
 
@@ -271,13 +268,13 @@ pub fn stokes(
     let pressure = pressure.map(|p| p - Scalar::new(mean));
     let vorticity = &operators.curl.of(&flux) + &boundary_vorticity;
     // The first moment of the outward flux gives the face's mean velocity.
-    let facing = boundary(mesh, 2);
+    let facing = mesh.facets(2);
     let velocity = Field::from_fn(faces, |f| {
         let twice = 2.0 * operators.areas.site(f).s();
         (0..3)
             .map(|k| {
-                let e = facing.sites[f][k];
-                let outward = flux.site(e).s() * f64::from(facing.signs[f][k]) * operators.signs[e];
+                let e = facing.site(f, k);
+                let outward = flux.site(e).s() * f64::from(facing.sign(f, k)) * operators.signs[e];
                 (operators.corners[k].site(f) - operators.face_centres.site(f)) * outward
             })
             .fold(Point::zero(), |a, b| a + b)

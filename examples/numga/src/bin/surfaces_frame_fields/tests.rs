@@ -2,7 +2,7 @@
 //! imports no plotting library is the module split here: `frames.rs` draws nothing.)
 
 use super::frames::*;
-use crate::simplicial::{boundary, exterior, incidence, interior};
+
 use gax::field::{Field, SparseMap};
 
 /// The size of a value: the norm of its coefficients.
@@ -64,7 +64,7 @@ fn charge(s: &Skyrmion) -> f64 {
 fn skyrmion_topological_charge_and_cotangent_trace() {
     let (mesh, vertices) = triangular_disk(1.0, 6);
     let s = skyrmion_winding(&mesh, &vertices, core::f64::consts::PI);
-    let rim = exterior(&mesh, 0);
+    let rim = mesh.exterior(0);
     for v in 0..vertices.len() {
         let unit =
             s.scalar_parts[v] * s.scalar_parts[v] + s.bivector_norms[v] * s.bivector_norms[v];
@@ -80,8 +80,8 @@ fn skyrmion_topological_charge_and_cotangent_trace() {
 
     // The cotangent trace of the Maurer–Cartan form is its orthonormal trace on every face.
     let edges = &mesh.d::<Scalar>(0) * &vertices;
-    let sides = boundary(&mesh, 2).read_all(&edges);
-    let at = incidence(&mesh, 2, 0);
+    let sides = mesh.facets(2).read_all(&edges);
+    let at = mesh.incidence(2, 0);
     let axes = [
         point(1.0, 0.0, 0.0),
         point(0.0, 1.0, 0.0),
@@ -89,7 +89,7 @@ fn skyrmion_topological_charge_and_cotangent_trace() {
     ];
     for f in 0..mesh.len(2) {
         let g = gradients(core::array::from_fn(|k| sides[k].site(f)));
-        let r: [Rotor; 3] = core::array::from_fn(|k| s.rotors.site(at.sites[f][k]));
+        let r: [Rotor; 3] = core::array::from_fn(|k| s.rotors.site(at.site(f, k)));
         let chord = (r[0] + r[1] + r[2]) * (1.0 / 3.0);
         let differential = (0..3)
             .map(|k| r[k] * (g[k] & Point::slot()))
@@ -130,14 +130,15 @@ fn harmonic_rotor_frames_and_projected_relaxation() {
     // The Whitney 0-form gradient pulled back by its adjoint is the cotangent Laplacian on the
     // curved saddle.
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let sides = boundary(mesh, 2).read_all(&edges);
+    let sides = mesh.facets(2).read_all(&edges);
     let corner_gradients: [Field<Plane>; 3] = core::array::from_fn(|k| {
         Field::from_fn(mesh.len(2), |f| {
             gradients(core::array::from_fn(|j| sides[j].site(f)))[k]
         })
     });
-    let gradient =
-        incidence(mesh, 2, 0).assemble(|f, k| corner_gradients[k].site(f) * Scalar::slot());
+    let gradient = mesh
+        .incidence(2, 0)
+        .assemble(|f, k| corner_gradients[k].site(f) * Scalar::slot());
     let areas = SparseMap::from_diagonal(&operators.areas.map(|a| a * Plane::slot()));
     let stiffness = gradient.adjoint().compose(&areas.compose(&gradient));
     let d0 = mesh.d::<Scalar>(0);
@@ -151,7 +152,7 @@ fn harmonic_rotor_frames_and_projected_relaxation() {
     assert!((0..vertices.len()).all(|v| (a.site(v) - b.site(v)).s().abs() < 1e-14));
 
     // The chords satisfy Laplace's equation; their unit rotors keep the boundary's.
-    let free = interior(mesh, 0);
+    let free = mesh.interior(0);
     for prescribed in &saddle.prescribed {
         let (chords, rotors) = harmonic_rotor_frames(mesh, vertices, &saddle.rim, prescribed);
         let residual = operators.laplacian.of(&chords);
@@ -196,7 +197,7 @@ fn the_scenes_pass_numgas_checks() {
     assert!((charge(&s) - 1.0).abs() < 1.5e-2);
     let saddle = saddle_surface(DISK_RADIUS, SADDLE_DIVISIONS, SADDLE_HEIGHT);
     let operators = rotor_laplacian(&saddle.mesh, &saddle.vertices);
-    let free = interior(&saddle.mesh, 0);
+    let free = saddle.mesh.interior(0);
     for prescribed in &saddle.prescribed {
         let (chords, _) =
             harmonic_rotor_frames(&saddle.mesh, &saddle.vertices, &saddle.rim, prescribed);

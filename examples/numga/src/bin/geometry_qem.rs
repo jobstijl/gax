@@ -17,7 +17,6 @@
 
 use gax::pga3d::{Direction, Motor, OriginPlane, Plane, Point, intrinsic};
 use gax_numga_examples::measure::roots;
-use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::{haversine, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Scene3, backdrop, caption,
@@ -287,7 +286,7 @@ mod qem {
     pub fn bunny() -> Surface {
         const BUNNY: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/bunny.obj"));
         let model = gax_numga_examples::mesh::Mesh::from_obj(BUNNY, MESH_SIZE);
-        let faces = crate::simplicial::closed(&model.faces, &model.vertices);
+        let faces = model.closed().faces;
         let upright = Motor::rotation_about(
             Point::direction(1.0, 0.0, 0.0),
             core::f64::consts::FRAC_PI_2,

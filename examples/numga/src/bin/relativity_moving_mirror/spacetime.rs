@@ -13,8 +13,6 @@
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 
-use crate::simplicial::{boundary, incidence, reading};
-
 gax::algebra! {
     algebra lorentz "numga's spacetime plane `x+t-`: space `x` squares to one, time `t` to minus one.";
     basis ex = 1, et = -1;
@@ -131,11 +129,12 @@ pub struct Operators {
 impl Operators {
     pub fn new(mesh: &Topology<3>, vertices: &Field<Point>) -> Self {
         let edges = &mesh.d::<Scalar>(0) * vertices;
-        let sides = boundary(mesh, 2).read_all(&edges);
+        let sides = mesh.facets(2).read_all(&edges);
         let patches = sides[0].zip_with(&sides[1], |a, b| (a & b) * 0.5);
         let areas = patches.map(|p| Scalar::new(p.norm()));
         let twice = patches.map(|p| (p * 2.0).inverse());
-        let gradient = incidence(mesh, 2, 0)
+        let gradient = mesh
+            .incidence(2, 0)
             .assemble(|f, k| (sides[k].site(f) * twice.site(f)) * Scalar::slot());
         let response = SparseMap::from_diagonal(&areas.map(|a| dual() * a.s()));
         let wave = gradient.adjugate().compose(&response.compose(&gradient));
@@ -179,7 +178,7 @@ pub fn grid_sites(
 
 /// The map from values at the given vertices to a field on all `n`, zero elsewhere.
 pub fn placing(sites: &[usize], n: usize) -> SparseMap<ScalarMap> {
-    (&reading::<Scalar>(sites, n) * Scalar::slot()).transpose()
+    (&SparseMap::<Scalar>::selection(sites, n) * Scalar::slot()).transpose()
 }
 
 /// Solve the interior rows of the wave equation for the potential on the future rows: the
@@ -258,7 +257,7 @@ pub fn moving_mirror_wave(
         Scalar::new(envelope * carrier)
     });
     let seed = grid_sites(columns, 0..2, 1..columns - 1);
-    let initial = placing(&seed, n).of(&(&reading::<Scalar>(&seed, n) * &pulse));
+    let initial = placing(&seed, n).of(&(&SparseMap::<Scalar>::selection(&seed, n) * &pulse));
     let rhs = -&operators.wave.of(&initial);
     let potential = &initial + &march(operators, columns, rows, &rhs);
 

@@ -5,9 +5,9 @@
 //! Points are antivectors, intrinsic bivectors whose coefficients are the coordinates (numga's
 //! `Point-`); a corner's hat gradient is a vector (`Plane+`); a frame is a rotor.
 
-use crate::simplicial::{boundary, corners as local_corners, incidence, interior, reading};
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
+use gax::mesh::corners as local_corners;
 use gax::vga3d;
 
 pub type Scalar<S = ()> = vga3d::Scalar<S>;
@@ -139,16 +139,16 @@ pub fn skyrmion_winding(mesh: &Topology<3>, vertices: &Field<Point>, twist: f64)
     let rotors = vertices.map(|v| (v.commutator(up) * (-twist / 2.0)).exp().into_inner());
     let directors = rotors.map(|r| r >> up);
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let facing = boundary(mesh, 2);
+    let facing = mesh.facets(2);
     let sides = facing.read_all(&edges);
-    let at = incidence(mesh, 2, 0);
+    let at = mesh.incidence(2, 0);
     let ends = local_corners(2, 1);
     let mut energy_density = Vec::new();
     let mut solid_angles = Vec::new();
     for f in 0..mesh.len(2) {
         let s: [Point; 3] = core::array::from_fn(|k| sides[k].site(f));
         let g = gradients(s);
-        let r: [Rotor; 3] = core::array::from_fn(|k| rotors.site(at.sites[f][k]));
+        let r: [Rotor; 3] = core::array::from_fn(|k| rotors.site(at.site(f, k)));
         let chord = (r[0] + r[1] + r[2]) * (1.0 / 3.0);
         let differential: EvenMap = (0..3)
             .map(|k| r[k] * (g[k] & Point::slot()))
@@ -193,16 +193,16 @@ pub struct RotorLaplacian {
 
 pub fn rotor_laplacian(mesh: &Topology<3>, vertices: &Field<Point>) -> RotorLaplacian {
     let edges = &mesh.d::<Scalar>(0) * vertices;
-    let sides = boundary(mesh, 2).read_all(&edges);
+    let sides = mesh.facets(2).read_all(&edges);
     let areas = sides[0].zip_with(&sides[1], |a, b| Scalar::new(((a & b) * 0.5).norm()));
     let ends = local_corners(2, 1);
-    let facing = incidence(mesh, 2, 1);
+    let facing = mesh.incidence(2, 1);
     let mut weights = vec![0.0; mesh.len(1)];
     for f in 0..mesh.len(2) {
         for (k, end) in ends.iter().enumerate() {
             let cot =
                 -dot(sides[end[0]].site(f), sides[end[1]].site(f)) / (2.0 * areas.site(f).s());
-            weights[facing.sites[f][k]] += cot / 2.0;
+            weights[facing.site(f, k)] += cot / 2.0;
         }
     }
     let weights: Field<Scalar> = weights.into_iter().map(Scalar::new).collect();
@@ -219,7 +219,7 @@ pub fn rotor_laplacian(mesh: &Topology<3>, vertices: &Field<Point>) -> RotorLapl
 
 /// The map from the listed sites onto all `n`, cells on rotors.
 fn onto(listed: &[usize], n: usize) -> SparseMap<Rotor<(Rotor,)>> {
-    reading::<Scalar>(listed, n).transpose_with(|c| Rotor::slot() * c.s())
+    SparseMap::<Scalar>::selection(listed, n).transpose_with(|c| Rotor::slot() * c.s())
 }
 
 /// The harmonic chord field in the even subalgebra with the boundary's rotors pinned (linear),
@@ -232,7 +232,7 @@ pub fn harmonic_rotor_frames(
 ) -> (Field<Rotor>, Field<Rotor>) {
     let n = vertices.len();
     let operators = rotor_laplacian(mesh, vertices);
-    let free = onto(&interior(mesh, 0), n);
+    let free = onto(&mesh.interior(0), n);
     let pinned = onto(rim, n);
     let held = pinned.of(&pinned.adjoint().of(prescribed));
     let rhs = -&free.adjoint().of(&operators.laplacian.of(&held));
@@ -253,7 +253,7 @@ pub fn relax_rotor_frames(
     steps: usize,
 ) -> Vec<(Field<Rotor>, f64)> {
     let operators = rotor_laplacian(mesh, vertices);
-    let free = onto(&interior(mesh, 0), vertices.len());
+    let free = onto(&mesh.interior(0), vertices.len());
     let mut current = start.clone();
     let mut states = Vec::with_capacity(steps + 1);
     for k in 0..=steps {
@@ -344,7 +344,7 @@ pub fn saddle_surface(radius: f64, divisions: usize, height: f64) -> Saddle {
         let [x, y, _] = coordinates(p);
         p + up * (height * (x * x - y * y))
     });
-    let rim = crate::simplicial::exterior(&mesh, 0);
+    let rim = mesh.exterior(0);
     let (yz, zx, xy) = (
         plane(1.0, 0.0, 0.0),
         plane(0.0, 1.0, 0.0),

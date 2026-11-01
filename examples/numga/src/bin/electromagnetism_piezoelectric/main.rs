@@ -24,7 +24,6 @@ mod sta2d;
 mod tests;
 
 use gax::field::Field;
-use gax_numga_examples::shared::simplicial;
 use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Light, Point2, Rect, backdrop, caption, label_under, palette, run_with,
