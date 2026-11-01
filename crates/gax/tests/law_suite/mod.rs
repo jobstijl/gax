@@ -568,8 +568,60 @@ macro_rules! law_suite {
         casts: [$(($ca:ident, $cb:ident)),* $(,)?],
         sub_kinds: [$(($sa:ident, $sb:ident)),* $(,)?],
         grades: [$(($gk:ident, $gg:literal, $go:ident)),* $(,)?],
-        inverses: [$(($ik:ident, $io:ident)),* $(,)?] $(,)?
+        inverses: [$(($ik:ident, $io:ident)),* $(,)?],
+        hodges: [$(($ha:ident, $hb:ident, $hj:ident)),* $(,)?],
+        hodge_inverses: [$(($hk:ident)),* $(,)?],
+        complements: [$(($ca2:ident, $cb2:ident, $cp2:ident, $csign:literal)),* $(,)?] $(,)?
     ) => {
+        /// S: the Hodge dual against the regressive product. On blades of one grade the join
+        /// with a Hodge dual is the metric, `a & b.hodge() == a.metric(b)` (`⟨a ~b⟩₀`, numga's
+        /// `dot`), in every algebra (the dual vanishes on blades with a null vector, and so does
+        /// the metric).
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn hodge_metric() {
+            $((|| {
+                reset();
+                let name = concat!(stringify!($ha), " & ", stringify!($hb), ".hodge()");
+                let (a, b): ($ha<(), T>, $hb<(), T>) = (fresh(), fresh());
+                law((a & b.hodge()) == a.metric(b).cast::<$hj>(), name);
+                // On a map's output too.
+                let m: $ha<($slot,), T> = fresh();
+                law((m & b.hodge()) == m.metric(b).cast::<$hj>(), name);
+            })();)*
+        }
+
+        /// S: `hodge_inverse` inverts the Hodge dual on both sides, on values and maps, in the
+        /// non-degenerate algebras.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn hodge_inverses() {
+            $((|| {
+                reset();
+                let name = concat!(stringify!($hk), " hodge_inverse");
+                let x: $hk<(), T> = fresh();
+                law(x.hodge().hodge_inverse().cast::<$hk>() == x, name);
+                law(x.hodge_inverse().hodge().cast::<$hk>() == x, name);
+                let m: $hk<($slot,), T> = fresh();
+                law(m.hodge().hodge_inverse().cast::<$hk>() == m, name);
+            })();)*
+        }
+
+        /// S: on complementary grades the outer product is the regressive one times the
+        /// pseudoscalar, `a ^ b == (a & b) I` (metric free: `I` is the basis vectors' product).
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn complements() {
+            $((|| {
+                reset();
+                let name = concat!(stringify!($ca2), " ^ ", stringify!($cb2), " == (a & b) I");
+                let (a, b): ($ca2<(), T>, $cb2<(), T>) = (fresh(), fresh());
+                // `I` as the intrinsic volume form, as `hodge` takes it (ADR-051).
+                let i = oriented::$cp2::<(), T, gax::Intrinsic>::from_coeffs([<T as gax::Coef>::from_i64($csign)]);
+                law((a ^ b).cast::<$cp2>() == (a & b).cast::<$scalar>() * i, name);
+            })();)*
+        }
+
         /// N: the general inverse (Shirokov's, for kinds without a closed form), in `f64` on
         /// random values: `x x⁻¹ = x⁻¹ x = 1`. A wrong degree of the characteristic polynomial,
         /// or a null direction handled wrongly, misses by order 1; the error here is rounding,

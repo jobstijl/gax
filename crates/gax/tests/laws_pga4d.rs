@@ -230,4 +230,12 @@ law_suite::law_suite! {
     inverses: [
         (Multivector, Multivector),
     ],
+    hodges: [
+        (Hyperplane, Hyperplane, Scalar),
+        (Point, Point, Scalar),
+    ],
+    hodge_inverses: [
+    ],
+    complements: [
+    ],
 }

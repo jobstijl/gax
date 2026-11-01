@@ -345,3 +345,17 @@ pub trait Outermorphism<B> {
     /// Extend the map to `B`.
     fn outermorphism(self) -> Self::Output;
 }
+
+/// Not implemented for any type: the bound of the `hodge_inverse` that every kind of a
+/// degenerate algebra carries, so that the call fails with this message instead of "no method
+/// named `hodge_inverse`".
+#[doc(hidden)]
+#[diagnostic::on_unimplemented(
+    message = "`hodge_inverse` needs a non-degenerate metric, and `{Self}` belongs to a degenerate algebra",
+    label = "the Hodge dual here has no inverse",
+    note = "the Hodge dual `~x I` vanishes on blades containing a null basis vector (`e0` of PGA), so it loses them; the metric-free `dual()` and `undual()` are each other's inverse in every algebra"
+)]
+pub trait HodgeNeedsMetric: Sized {
+    /// Never called: no type implements the trait.
+    fn hodge_inverse(self) -> Self;
+}

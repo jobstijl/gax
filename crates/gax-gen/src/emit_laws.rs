@@ -512,6 +512,10 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
             .filter(|(_, m)| m.inverse_general)
             .map(|(k, m)| format!("({}, {})", k.name, m.inverse.as_deref().expect("emitted"))),
     );
+    let [hodges, hodge_inverses, complements] = hodge_laws(&cx);
+    list(&mut s, "hodges", hodges);
+    list(&mut s, "hodge_inverses", hodge_inverses);
+    list(&mut s, "complements", complements);
     Laws {
         invocation: s,
         equivariance,
@@ -631,6 +635,77 @@ fn conjugation(
             find_factor(&lhs, &rhs, n, basis),
         )
     })
+}
+
+/// Law S, the Hodge dual: `(A, B, J)` for single-grade law kinds of one grade with
+/// `a & b.hodge() == a.metric(b)` (`J` the regressive product's kind); `(K)` for every law kind
+/// with a Hodge dual in a non-degenerate algebra, for `hodge_inverse`; and `(A, B, P, sign)` for
+/// single-grade law kinds of complementary grades with `a ^ b == (a & b) I` (`P` the declared
+/// pseudoscalar kind, holding `I` with the sign `sign`).
+fn hodge_laws(cx: &Cx) -> [Vec<String>; 3] {
+    let spec = cx.spec;
+    let alg = &spec.algebra;
+    let n = alg.dim() as u32;
+    let product = |op: BinOp, a: &str, b: &str| {
+        cx.products
+            .iter()
+            .find(|(p, x, y, _)| *p == op && x == a && y == b)
+            .map(|(.., o)| o.clone())
+    };
+    let grade =
+        |k: &KindSpec| single_grade(k).then(|| *k.layout.grades().iter().next().expect("a grade"));
+    let mut hodges = Vec::new();
+    let mut inverses = Vec::new();
+    let mut complements = Vec::new();
+    for b in &cx.law_kinds {
+        let Some((h, _)) = crate::emit::hodge_map(spec, b, false) else {
+            continue;
+        };
+        if !cx.is_law(&h) {
+            continue;
+        }
+        if crate::emit::hodge_map(spec, b, true).is_some() {
+            inverses.push(format!("({})", b.name));
+        }
+        let rev = spec
+            .kind_for_support(&crate::table::unop_support(alg, UnOp::Reverse, &b.layout))
+            .expect("a kind");
+        for a in &cx.law_kinds {
+            if grade(a).is_none() || grade(a) != grade(b) {
+                continue;
+            }
+            if let (Some(j), Some(_)) = (
+                product(BinOp::Vee, &a.name, &h),
+                product(BinOp::Scalar, &a.name, &rev.name),
+            ) {
+                hodges.push(format!("({}, {}, {j})", a.name, b.name));
+            }
+        }
+    }
+    let full = alg.pseudoscalar();
+    if let Some(p) = spec
+        .kinds
+        .iter()
+        .find(|k| k.layout.blades.len() == 1 && k.layout.blades[0].0 == full)
+    {
+        for a in &cx.law_kinds {
+            for b in &cx.law_kinds {
+                let (Some(ga), Some(gb)) = (grade(a), grade(b)) else {
+                    continue;
+                };
+                if ga + gb == n
+                    && product(BinOp::Wedge, &a.name, &b.name).is_some()
+                    && product(BinOp::Vee, &a.name, &b.name).is_some()
+                {
+                    complements.push(format!(
+                        "({}, {}, {}, {})",
+                        a.name, b.name, p.name, p.layout.blades[0].1
+                    ));
+                }
+            }
+        }
+    }
+    [hodges, inverses, complements]
 }
 
 /// Pairings into the scalar kind that are constant signed permutations, for the adjoint laws.

@@ -126,7 +126,8 @@ pub mod extrinsic {
 pub mod oriented {
 use super::gx;
 
-include!("cga2d/kinds.rs");
+include!("cga2d/kinds_1.rs");
+include!("cga2d/kinds_2.rs");
 include!("cga2d/products_gp.rs");
 include!("cga2d/products_wedge.rs");
 include!("cga2d/products_vee.rs");

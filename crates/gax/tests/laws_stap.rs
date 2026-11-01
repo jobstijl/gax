@@ -693,4 +693,26 @@ law_suite::law_suite! {
     inverses: [
         (Multivector, Multivector),
     ],
+    hodges: [
+        (Scalar, Scalar, Scalar),
+        (Vector, Vector, Scalar),
+        (OriginHyperplane, Vector, Scalar),
+        (Quadvector, Quadvector, Scalar),
+        (Vector, OriginHyperplane, Scalar),
+        (OriginHyperplane, OriginHyperplane, Scalar),
+    ],
+    hodge_inverses: [
+    ],
+    complements: [
+        (Scalar, Pseudoscalar, Pseudoscalar, 1),
+        (Vector, Quadvector, Pseudoscalar, 1),
+        (Vector, Direction, Pseudoscalar, 1),
+        (Quadvector, Vector, Pseudoscalar, 1),
+        (Quadvector, OriginHyperplane, Pseudoscalar, 1),
+        (Pseudoscalar, Scalar, Pseudoscalar, 1),
+        (Direction, Vector, Pseudoscalar, 1),
+        (Direction, OriginHyperplane, Pseudoscalar, 1),
+        (OriginHyperplane, Quadvector, Pseudoscalar, 1),
+        (OriginHyperplane, Direction, Pseudoscalar, 1),
+    ],
 }

@@ -60,6 +60,7 @@ on `Sym`.
   * every sandwich that keeps its kind, for versors with at most 8 coefficients;
   * every outermorphism of maps on kinds with at most 5 coefficients;
   * every scalar pairing whose matrix is a constant signed permutation;
+  * the Hodge dual, its inverse and the metric on the kinds with at most 8 coefficients;
   * the adjugate and adjoint of maps on every kind that has them.
 
   Larger instances make the free polynomials explode (see ADR-025). The suites cover the eight
@@ -398,6 +399,18 @@ On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
 * [prop] The numga ports' hand-built metric: their edge ratios are `⋆₁`, their vertex areas the
   row sums of `M₀`, their reconstruction `W₁` at the centroids, within `10⁻¹²`
   (`examples/numga/src/mesh.rs`, `gax_dec_gives_the_metric`).
+
+### S. The Hodge dual and the regressive product (`hodge_metric`, `hodge_inverses`, `complements`)
+
+Generated per algebra from the kinds that have a Hodge dual (ADR-009, amended 2026-11-01):
+
+* [sym] On blades of one grade, `a & b.hodge() == a.metric(b)`, the metric `⟨a ~b⟩₀` (numga's
+  `dot`), on values and on maps' outputs: in every algebra, the degenerate ones and CGA's null
+  basis included (where the dual vanishes on a null blade, so does the metric).
+* [sym] In the non-degenerate algebras, `x.hodge().hodge_inverse() == x` and
+  `x.hodge_inverse().hodge() == x`, values and maps.
+* [sym] On blades of complementary grades, `a ^ b == (a & b) I`, with `I` the product of the
+  basis vectors (metric free), in the algebras with a pseudoscalar kind.
 
 ## 4. Licensed rewrites
 

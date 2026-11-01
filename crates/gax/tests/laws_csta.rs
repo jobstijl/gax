@@ -472,4 +472,22 @@ law_suite::law_suite! {
         (Odd, Multivector),
         (Multivector, Multivector),
     ],
+    hodges: [
+        (Scalar, Scalar, Scalar),
+        (Vector, Vector, Scalar),
+        (Quintvector, Quintvector, Scalar),
+        (Pseudoscalar, Pseudoscalar, Scalar),
+    ],
+    hodge_inverses: [
+        (Scalar),
+        (Vector),
+        (Quintvector),
+        (Pseudoscalar),
+    ],
+    complements: [
+        (Scalar, Pseudoscalar, Pseudoscalar, 1),
+        (Vector, Quintvector, Pseudoscalar, 1),
+        (Quintvector, Vector, Pseudoscalar, 1),
+        (Pseudoscalar, Scalar, Pseudoscalar, 1),
+    ],
 }

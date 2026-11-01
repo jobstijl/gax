@@ -2,6 +2,7 @@
 //! `gax_core::cast` and `gax_core::extensor` that relate them.
 
 use super::{Emitter, IMPL_ALL, IMPL_O, blade_ident, kind_literal, zero_slots};
+use crate::algebra::Algebra;
 use crate::poly::Rational;
 use crate::spec::{AlgebraSpec, KindSpec};
 use crate::table::{BinOp, binop_support};
@@ -316,6 +317,10 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
             let (tr, m, _) = op.names();
             let _ = write!(self.out, "\n{}", binary_method(tr, m));
         }
+        // numga's `dot`, the scalar product with the reverse: no tables of its own.
+        if has(BinOp::Scalar) {
+            self.w("\n    /// The metric on every grade, `⟨x ~b⟩₀`: numga's `dot`, the bilinear form of\n    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a\n    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner\n    /// product `|`, which is `⟨x b⟩₀` on vectors and negative on Euclidean bivectors. On blades\n    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).\n    #[inline(always)]\n    pub fn metric<B: Reverse>(self, b: B) -> <Self as ScalarProduct<<B as Reverse>::Output>>::Output\n    where\n        Self: ScalarProduct<<B as Reverse>::Output>,\n    {\n        ScalarProduct::scalar_product(self, Reverse::reverse(b))\n    }\n");
+        }
         for (tr, m) in [
             ("Reverse", "reverse"),
             ("Involute", "involute"),
@@ -328,19 +333,26 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
                 "\n    /// See [`{tr}`].\n    #[inline(always)]\n    pub fn {m}(self) -> <Self as {tr}>::Output {{\n        {tr}::{m}(self)\n    }}\n"
             );
         }
-        // The metric (Hodge) dual, where the algebra has a kind holding just the pseudoscalar.
-        let full = self.spec.algebra.pseudoscalar();
-        if let Some(ps) = self
-            .spec
-            .kinds
-            .iter()
-            .find(|k| k.layout.blades.len() == 1 && k.layout.blades[0].0 == full)
-            .filter(|ps| !binop_support(alg, BinOp::Gp, &k.layout, &ps.layout).is_empty())
-        {
-            let (pn, sign) = (&ps.name, if ps.layout.blades[0].1 > 0 { "" } else { "-" });
+        // The metric (Hodge) dual and its inverse, as linear maps on the blades (no pseudoscalar
+        // kind needed): wherever the image is not empty, and the inverse in non-degenerate
+        // algebras, with a refusal that says why in degenerate ones.
+        if let Some((on, exprs)) = hodge_map(self.spec, k, false) {
             let _ = write!(
                 self.out,
-                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not.\n    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume\n    /// form, the complement against the orientation of space.\n    #[inline(always)]\n    pub fn hodge(self) -> <<Self as Reverse>::Output as Gp<{pn}<(), T, gx::Intrinsic>>>::Output\n    where\n        <Self as Reverse>::Output: Gp<{pn}<(), T, gx::Intrinsic>>,\n    {{\n        Gp::gp(Reverse::reverse(self), {pn}::<(), T, gx::Intrinsic>::new({sign}T::one()))\n    }}\n"
+                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate\n    /// algebras.\n    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume\n    /// form, the complement against the orientation of space.\n    #[inline]\n    pub fn hodge(self) -> {on}<S, T, gx::orientation::Flip<O>> {{\n        let a = self.c;\n        {}\n    }}\n",
+                kind_literal(&on, &format!("[{}]", exprs.join(", ")))
+            );
+        }
+        if self.spec.algebra.signature().2 > 0 {
+            let _ = write!(
+                self.out,
+                "\n    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a\n    /// null basis vector, so it has no inverse. This method only makes the compile error say\n    /// so.\n    #[doc(hidden)]\n    #[inline(always)]\n    pub fn hodge_inverse(self) -> Self\n    where\n        Self: gx::__private::HodgeNeedsMetric,\n    {{\n        gx::__private::HodgeNeedsMetric::hodge_inverse(self)\n    }}\n"
+            );
+        } else if let Some((on, exprs)) = hodge_map(self.spec, k, true) {
+            let _ = write!(
+                self.out,
+                "\n    /// The inverse of the Hodge dual, `~(x I⁻¹)`: numga's `dual_inverse`, with\n    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of\n    /// grade `g` in `n` dimensions it is `(−1)^(g(n−g)) / (I ~I)` times `x.hodge()`: the same in\n    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the\n    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).\n    #[inline]\n    pub fn hodge_inverse(self) -> {on}<S, T, gx::orientation::Flip<O>> {{\n        let a = self.c;\n        {}\n    }}\n",
+                kind_literal(&on, &format!("[{}]", exprs.join(", ")))
             );
         }
         self.w("}\n\n");
@@ -1199,6 +1211,97 @@ pub(super) fn value_traits(
             "impl<T: gx::Real> gx::Sqrt for {name}<(), T, gx::Extrinsic> {{\n    type Output = gx::Unit<Self>;\n    #[inline(always)]\n    fn sqrt(self) -> Self::Output {{\n        Self::sqrt(self)\n    }}\n}}\n"
         );
     }
+}
+
+/// The Hodge dual `x ↦ ~x I` of kind `k` (or its inverse `x ↦ ~(x I⁻¹)`) as a linear map on
+/// blades: its output kind, the smallest holding the image, and each output coefficient's
+/// expression in the input's `a`. `None` where the image is empty (a kind of null blades), or,
+/// for the inverse, in a degenerate algebra.
+pub(crate) fn hodge_map(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    inverse: bool,
+) -> Option<(String, Vec<String>)> {
+    let alg = &spec.algebra;
+    let full = alg.pseudoscalar();
+    let n = alg.dim() as u32;
+    // `I I`, a scalar (`± det` of the metric): the inverse divides by it.
+    let ii: i64 = alg
+        .blade_product(full, full)
+        .iter()
+        .filter(|(m, _)| *m == 0)
+        .map(|(_, c)| *c)
+        .sum();
+    if inverse && ii == 0 {
+        return None;
+    }
+    // Per input blade, the image's blades and integer coefficients, the input's stored sign
+    // applied (the inverse then divides by `I I`).
+    let mut image: Vec<Vec<(u32, i64)>> = Vec::new();
+    for &(m, sign) in &k.layout.blades {
+        let terms: Vec<(u32, i64)> = alg
+            .blade_product(m, full)
+            .iter()
+            .map(|&(o, c)| {
+                // `~b I` reverses `b` (grade g); `~(b I)` reverses the result (grade n − g).
+                let g = if inverse {
+                    n - m.count_ones()
+                } else {
+                    m.count_ones()
+                };
+                (o, c * Algebra::reverse_sign(g) * sign)
+            })
+            .filter(|&(_, c)| c != 0)
+            .collect();
+        image.push(terms);
+    }
+    let support: BTreeSet<u32> = image.iter().flatten().map(|&(o, _)| o).collect();
+    if support.is_empty() {
+        return None;
+    }
+    let out = spec.kind_for_support(&support)?;
+    let den = if inverse { ii } else { 1 };
+    let exprs = out
+        .layout
+        .blades
+        .iter()
+        .map(|&(o, osign)| {
+            let terms: Vec<(usize, Rational)> = image
+                .iter()
+                .enumerate()
+                .flat_map(|(i, t)| {
+                    t.iter().filter(move |(m, _)| *m == o).map(move |&(_, c)| {
+                        (i, Rational::new(i128::from(c * osign), i128::from(den)))
+                    })
+                })
+                .collect();
+            match terms.as_slice() {
+                [] => zero_slots("S"),
+                [(i, c)] if *c == Rational::ONE => format!("a[{i}]"),
+                [(i, c)] if *c == Rational::int(-1) => format!("(-SlotArr::<S, T>(a[{i}])).0"),
+                _ => {
+                    let sum = terms
+                        .iter()
+                        .map(|(i, c)| {
+                            let x = format!("SlotArr::<S, T>(a[{i}])");
+                            if *c == Rational::ONE {
+                                x
+                            } else if *c == Rational::int(-1) {
+                                format!("(-{x})")
+                            } else if c.is_integer() {
+                                format!("{x}.scale(T::from_i64({}))", c.num())
+                            } else {
+                                format!("{x}.scale(T::from_ratio({}, {}))", c.num(), c.den())
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" + ");
+                    format!("({sum}).0")
+                }
+            }
+        })
+        .collect();
+    Some((out.name.clone(), exprs))
 }
 
 #[cfg(test)]

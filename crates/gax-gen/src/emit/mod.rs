@@ -10,6 +10,7 @@ mod oracle_tests;
 mod products;
 mod sandwich;
 
+pub(crate) use kinds::hodge_map;
 pub use kinds::{complement_pairs, reciprocal_frame};
 pub use oracle_tests::emit_tests;
 

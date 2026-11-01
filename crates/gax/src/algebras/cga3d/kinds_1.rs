@@ -294,6 +294,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -328,15 +341,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Pseudoscalar<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Pseudoscalar { o: core::marker::PhantomData, c: [a[0]] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Pseudoscalar<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Pseudoscalar { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0] }
     }
 }
 
@@ -1245,6 +1268,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -1279,15 +1315,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Quadvector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Quadvector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], (-gx::__private::SlotArr::<S, T>(a[3])).0, a[4]] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Quadvector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Quadvector { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, a[3], (-gx::__private::SlotArr::<S, T>(a[4])).0] }
     }
 }
 
@@ -2237,6 +2283,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -2271,15 +2330,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Trivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Trivector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (-gx::__private::SlotArr::<S, T>(a[3])).0, (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, a[0], a[1], a[2], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Trivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Trivector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[3], a[4], a[5], (-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
 
@@ -3257,6 +3326,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -3291,15 +3373,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Trivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Trivector { o: core::marker::PhantomData, c: [a[3], a[4], a[5], (-gx::__private::SlotArr::<S, T>(a[6])).0, (-gx::__private::SlotArr::<S, T>(a[7])).0, (-gx::__private::SlotArr::<S, T>(a[8])).0, a[0], a[1], a[2], (-gx::__private::SlotArr::<S, T>(a[9])).0] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Trivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Trivector { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[3])).0, (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, a[6], a[7], a[8], (-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, a[9]] }
     }
 }
 
@@ -4975,6 +5067,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -5009,15 +5114,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Bivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Bivector { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[6])).0, (-gx::__private::SlotArr::<S, T>(a[7])).0, (-gx::__private::SlotArr::<S, T>(a[8])).0, (-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, a[3], a[4], a[5], a[9]] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Bivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Bivector { o: core::marker::PhantomData, c: [a[6], a[7], a[8], a[0], a[1], a[2], (-gx::__private::SlotArr::<S, T>(a[3])).0, (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, (-gx::__private::SlotArr::<S, T>(a[9])).0] }
     }
 }
 
@@ -6476,6 +6591,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -6510,15 +6638,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Vector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Vector { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, a[3], (-gx::__private::SlotArr::<S, T>(a[4])).0] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Vector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Vector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], (-gx::__private::SlotArr::<S, T>(a[3])).0, a[4]] }
     }
 }
 
@@ -7439,6 +7577,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -7473,15 +7624,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Scalar<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Scalar { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Scalar<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Scalar { o: core::marker::PhantomData, c: [a[0]] }
     }
 }
 
@@ -8303,6 +8464,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -8337,15 +8511,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Odd<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Odd { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (-gx::__private::SlotArr::<S, T>(a[7])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, (-gx::__private::SlotArr::<S, T>(a[6])).0, a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0), a[0]] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Odd<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Odd { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[7], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[4], a[5], a[6], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0, S::from_flat(&mut |_| T::zero(), 0), (-gx::__private::SlotArr::<S, T>(a[0])).0] }
     }
 }
 
@@ -9434,6 +9618,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -9468,15 +9665,25 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Even<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
-    #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
-    where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
-    {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+    #[inline]
+    pub fn hodge(self) -> Odd<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Odd { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[11])).0, (-gx::__private::SlotArr::<S, T>(a[12])).0, (-gx::__private::SlotArr::<S, T>(a[13])).0, a[14], (-gx::__private::SlotArr::<S, T>(a[15])).0, a[4], a[5], a[6], (-gx::__private::SlotArr::<S, T>(a[7])).0, (-gx::__private::SlotArr::<S, T>(a[8])).0, (-gx::__private::SlotArr::<S, T>(a[9])).0, a[1], a[2], a[3], (-gx::__private::SlotArr::<S, T>(a[10])).0, a[0]] }
+    }
+
+    /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
+    /// `x.hodge().hodge_inverse() == x` and `x.hodge_inverse().hodge() == x`. On a blade of
+    /// grade `g` in `n` dimensions it is `(â1)^(g(nâg)) / (I ~I)` times `x.hodge()`: the same in
+    /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
+    /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
+    #[inline]
+    pub fn hodge_inverse(self) -> Odd<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Odd { o: core::marker::PhantomData, c: [a[11], a[12], a[13], (-gx::__private::SlotArr::<S, T>(a[14])).0, a[15], (-gx::__private::SlotArr::<S, T>(a[4])).0, (-gx::__private::SlotArr::<S, T>(a[5])).0, (-gx::__private::SlotArr::<S, T>(a[6])).0, a[7], a[8], a[9], (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0, a[10], (-gx::__private::SlotArr::<S, T>(a[0])).0] }
     }
 }
 
@@ -9993,1400 +10200,4 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
-}
-
-impl<T: gx::Real, O: gx::Orientation> Even<(), T, O> {
-    /// The squared norm: the scalar part of `x ~x`.
-    #[inline(always)]
-    pub fn norm_squared(self) -> T {
-        let x = self.c;
-        let t1 = x[1] * x[1];
-        let t3 = x[3] * x[3];
-        let t5 = x[5] * x[8];
-        let t8 = x[11] * x[11];
-        let t10 = x[13] * x[13];
-        let t11 = x[14] * x[15];
-        let t12 = x[0].mul_add(x[0], t1);
-        let t13 = x[2].mul_add(x[2], t3);
-        let t14 = t12 + t13;
-        let t15 = x[10].mul_add(x[10], t8);
-        let t16 = x[12].mul_add(x[12], t10);
-        let t17 = t15 + t16;
-        let t18 = t14 - t17;
-        let t19 = x[4].mul_add(x[7], t5);
-        let t20 = x[6].mul_add(x[9], t11);
-        let t21 = t19 + t20;
-        let t23 = (-t21).mul_add(T::from_i64(2), t18);
-        t23
-    }
-
-    /// The norm, `sqrt(|norm_squared|)`.
-    #[inline(always)]
-    pub fn norm(self) -> T {
-        self.norm_squared().abs().sqrt()
-    }
-
-    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (433 mul, 320 add, 1 div).
-    #[inline(always)]
-    pub fn inverse(self) -> Even<(), T, O> {
-        let x = self.c;
-        let (t326, t337, t348, t359, t392, t403, t414, t425, t436, t451, t457, t464, t469, t518, t525, t532, t541, t542, t543, t548, t549, t550, t552, t599, t600, t603, t605, t609, t610, t612, t615, t619, t620, t622, t623, t625, t628, t630, t631, t632, t635, t636, t639, t641, t644, t646, t647, t649, t650, t654, t655, t664, t671, t678, t685, t690, t693,) = {
-            let t0 = x[0] * x[0];
-            let t1 = x[1] * x[1];
-            let t2 = x[2] * x[2];
-            let t3 = x[3] * x[3];
-            let t4 = x[10] * x[10];
-            let t5 = x[11] * x[11];
-            let t6 = x[12] * x[12];
-            let t7 = x[13] * x[13];
-            let t8 = x[4] * x[7];
-            let t9 = x[5] * x[8];
-            let t10 = x[6] * x[9];
-            let t11 = x[14] * x[15];
-            let t12 = x[4] * x[8];
-            let t13 = x[4] * x[9];
-            let t14 = x[4] * x[15];
-            let t15 = x[5] * x[7];
-            let t16 = x[5] * x[9];
-            let t17 = x[5] * x[15];
-            let t18 = x[6] * x[7];
-            let t19 = x[6] * x[8];
-            let t20 = x[6] * x[15];
-            let t21 = x[7] * x[14];
-            let t22 = x[8] * x[14];
-            let t23 = x[9] * x[14];
-            let t24 = x[0] * x[1];
-            let t25 = x[0] * x[2];
-            let t26 = x[0] * x[3];
-            let t27 = x[1] * x[2];
-            let t28 = x[1] * x[3];
-            let t29 = x[2] * x[3];
-            let t30 = x[10] * x[11];
-            let t31 = x[10] * x[12];
-            let t32 = x[10] * x[13];
-            let t33 = x[11] * x[12];
-            let t34 = x[11] * x[13];
-            let t35 = x[12] * x[13];
-            let t36 = x[0] * x[11];
-            let t37 = x[0] * x[12];
-            let t38 = x[0] * x[13];
-            let t39 = x[1] * x[10];
-            let t40 = x[1] * x[12];
-            let t41 = x[1] * x[13];
-            let t42 = x[2] * x[10];
-            let t43 = x[2] * x[11];
-            let t44 = x[2] * x[13];
-            let t45 = x[3] * x[10];
-            let t46 = x[3] * x[11];
-            let t47 = x[3] * x[12];
-            let t50 = t0 * t2;
-            let t54 = t0 * t10;
-            let t56 = t0 * t5;
-            let t58 = t0 * t7;
-            let t61 = t21 * t24;
-            let t64 = t22 * t25;
-            let t66 = t20 * t26;
-            let t68 = t26 * t32;
-            let t72 = t16 * t36;
-            let t74 = t19 * t36;
-            let t75 = t1 * t1;
-            let t78 = t1 * t8;
-            let t81 = t1 * t4;
-            let t84 = t1 * t7;
-            let t85 = t1 * t11;
-            let t86 = t12 * t27;
-            let t89 = t13 * t28;
-            let t91 = t28 * t34;
-            let t93 = t17 * t41;
-            let t95 = t20 * t40;
-            let t103 = t2 * t4;
-            let t105 = t2 * t6;
-            let t107 = t2 * t11;
-            let t108 = t16 * t29;
-            let t111 = t13 * t42;
-            let t113 = t18 * t42;
-            let t115 = t21 * t44;
-            let t117 = t3 * t3;
-            let t121 = t3 * t4;
-            let t123 = t3 * t6;
-            let t125 = t3 * t11;
-            let t127 = t14 * t47;
-            let t128 = t15 * t45;
-            let t130 = t21 * t47;
-            let t132 = t8 * t8;
-            let t135 = t14 * t14;
-            let t139 = t7 * t8;
-            let t141 = t13 * t34;
-            let t145 = t16 * t16;
-            let t149 = t5 * t9;
-            let t153 = t17 * t31;
-            let t155 = t19 * t19;
-            let t158 = t18 * t34;
-            let t160 = t4 * t10;
-            let t163 = t7 * t10;
-            let t165 = t21 * t21;
-            let t168 = t22 * t31;
-            let t173 = t4 * t6;
-            let t176 = t5 * t5;
-            let t178 = t5 * t7;
-            let t179 = t5 * t11;
-            let t181 = t6 * t7;
-            let t183 = t7 * t7;
-            let t185 = t11 * t11;
-            let t186 = t0.mul_add(t0, t75);
-            let t187 = t2.mul_add(t2, t117);
-            let t188 = t186 + t187;
-            let t189 = t4.mul_add(t4, t176);
-            let t190 = t6.mul_add(t6, t183);
-            let t191 = t189 + t190;
-            let t192 = t188 + t191;
-            let t193 = t0.mul_add(t1, t50);
-            let t194 = t0.mul_add(t3, t56);
-            let t195 = t193 + t194;
-            let t196 = t0.mul_add(t6, t58);
-            let t197 = t1.mul_add(t2, t196);
-            let t198 = t195 + t197;
-            let t199 = t1.mul_add(t3, t81);
-            let t200 = t1.mul_add(t6, t84);
-            let t201 = t199 + t200;
-            let t202 = t2.mul_add(t3, t103);
-            let t203 = t2.mul_add(t5, t202);
-            let t204 = t201 + t203;
-            let t205 = t198 + t204;
-            let t206 = t2.mul_add(t7, t121);
-            let t207 = t3.mul_add(t5, t123);
-            let t208 = t206 + t207;
-            let t209 = t4.mul_add(t5, t173);
-            let t210 = t4.mul_add(t7, t209);
-            let t211 = t208 + t210;
-            let t212 = t5.mul_add(t6, t178);
-            let t213 = (-t0).mul_add(t4, t181);
-            let t214 = t212 + t213;
-            let t215 = t1.mul_add(t5, t105);
-            let t216 = t3.mul_add(t7, t215);
-            let t217 = t214 - t216;
-            let t218 = t211 + t217;
-            let t219 = t205 + t218;
-            let t221 = t0.mul_add(t11, t78);
-            let t222 = t2.mul_add(t9, t221);
-            let t223 = t3.mul_add(t10, t132);
-            let t224 = t12.mul_add(t12, t223);
-            let t225 = t222 + t224;
-            let t226 = t13.mul_add(t13, t135);
-            let t227 = t4.mul_add(t8, t226);
-            let t228 = t6.mul_add(t8, t139);
-            let t229 = t15.mul_add(t15, t228);
-            let t230 = t227 + t229;
-            let t231 = t225 + t230;
-            let t232 = t9.mul_add(t9, t145);
-            let t233 = t17.mul_add(t17, t232);
-            let t234 = t4.mul_add(t9, t149);
-            let t235 = t7.mul_add(t9, t234);
-            let t236 = t233 + t235;
-            let t237 = t18.mul_add(t18, t155);
-            let t238 = t10.mul_add(t10, t237);
-            let t239 = t20.mul_add(t20, t160);
-            let t240 = t5.mul_add(t10, t239);
-            let t241 = t238 + t240;
-            let t242 = t236 + t241;
-            let t243 = t231 + t242;
-            let t244 = t6.mul_add(t10, t165);
-            let t245 = t22.mul_add(t22, t244);
-            let t246 = t23.mul_add(t23, t179);
-            let t247 = t6.mul_add(t11, t246);
-            let t248 = t245 + t247;
-            let t249 = t7.mul_add(t11, t185);
-            let t250 = (-t0).mul_add(t8, t249);
-            let t251 = t0.mul_add(t9, t54);
-            let t252 = t1.mul_add(t9, t251);
-            let t253 = t250 - t252;
-            let t254 = t248 + t253;
-            let t255 = t1.mul_add(t10, t85);
-            let t256 = t2.mul_add(t8, t255);
-            let t257 = t2.mul_add(t10, t107);
-            let t258 = t3.mul_add(t8, t257);
-            let t259 = t256 + t258;
-            let t260 = t3.mul_add(t9, t125);
-            let t261 = t5.mul_add(t8, t260);
-            let t262 = t6.mul_add(t9, t163);
-            let t263 = t4.mul_add(t11, t262);
-            let t264 = t261 + t263;
-            let t265 = t259 + t264;
-            let t266 = t254 - t265;
-            let t267 = t243 + t266;
-            let t269 = t12.mul_add(t38, t72);
-            let t270 = t18.mul_add(t37, t86);
-            let t271 = t269 + t270;
-            let t272 = t15.mul_add(t27, t89);
-            let t273 = t18.mul_add(t28, t272);
-            let t274 = t271 + t273;
-            let t275 = t19.mul_add(t39, t95);
-            let t276 = t22.mul_add(t41, t108);
-            let t277 = t275 + t276;
-            let t278 = t19.mul_add(t29, t111);
-            let t279 = t14.mul_add(t44, t278);
-            let t280 = t277 + t279;
-            let t281 = t274 + t280;
-            let t282 = t23.mul_add(t43, t128);
-            let t283 = t17.mul_add(t46, t130);
-            let t284 = t282 + t283;
-            let t285 = t14.mul_add(t30, t153);
-            let t286 = t20.mul_add(t32, t285);
-            let t287 = t284 + t286;
-            let t288 = t21.mul_add(t30, t168);
-            let t289 = t23.mul_add(t32, t288);
-            let t290 = t14.mul_add(t24, t61);
-            let t291 = t24.mul_add(t30, t290);
-            let t292 = t289 - t291;
-            let t293 = t287 + t292;
-            let t294 = t281 + t293;
-            let t295 = t17.mul_add(t25, t64);
-            let t296 = t25.mul_add(t31, t66);
-            let t297 = t295 + t296;
-            let t298 = t23.mul_add(t26, t68);
-            let t299 = t13.mul_add(t37, t298);
-            let t300 = t297 + t299;
-            let t301 = t15.mul_add(t38, t74);
-            let t302 = t27.mul_add(t33, t91);
-            let t303 = t301 + t302;
-            let t304 = t16.mul_add(t39, t93);
-            let t305 = t23.mul_add(t40, t304);
-            let t306 = t303 + t305;
-            let t307 = t300 + t306;
-            let t308 = t29.mul_add(t35, t113);
-            let t309 = t20.mul_add(t43, t115);
-            let t310 = t308 + t309;
-            let t311 = t12.mul_add(t45, t127);
-            let t312 = t22.mul_add(t46, t311);
-            let t313 = t310 + t312;
-            let t314 = t12.mul_add(t33, t141);
-            let t315 = t15.mul_add(t33, t314);
-            let t316 = t16.mul_add(t35, t158);
-            let t317 = t19.mul_add(t35, t316);
-            let t318 = t315 + t317;
-            let t319 = t313 + t318;
-            let t320 = t307 + t319;
-            let t321 = t294 - t320;
-            let t322 = t321 * T::from_i64(8);
-            let t323 = t219.mul_add(T::from_i64(2), t192);
-            let t324 = t267.mul_add(T::from_i64(4), t322);
-            let t325 = t323 + t324;
-            let t326 = t325.recip();
-            let t327 = x[0] * x[4];
-            let t329 = x[1] * x[14];
-            let t330 = t326 * t329;
-            let t331 = x[5] * x[13];
-            let t332 = t326 * t331;
-            let t333 = x[6] * x[12];
-            let t335 = t326.mul_add(t327, t330);
-            let t336 = (-t326).mul_add(t333, t332);
-            let t337 = t335 + t336;
-            let t338 = x[0] * x[5];
-            let t340 = x[2] * x[14];
-            let t341 = t326 * t340;
-            let t342 = x[4] * x[13];
-            let t344 = x[6] * x[11];
-            let t345 = t326 * t344;
-            let t346 = t326.mul_add(t338, t341);
-            let t347 = (-t326).mul_add(t342, t345);
-            let t348 = t346 + t347;
-            let t349 = x[0] * x[6];
-            let t351 = x[3] * x[14];
-            let t352 = t326 * t351;
-            let t353 = x[4] * x[12];
-            let t354 = t326 * t353;
-            let t355 = x[5] * x[11];
-            let t357 = t326.mul_add(t349, t352);
-            let t358 = (-t326).mul_add(t355, t354);
-            let t359 = t357 + t358;
-            let t360 = x[0] * x[14];
-            let t361 = t326 * t360;
-            let t362 = x[1] * x[4];
-            let t364 = x[2] * x[5];
-            let t366 = x[3] * x[6];
-            let t367 = t326 * t366;
-            let t368 = (-t326).mul_add(t362, t361);
-            let t369 = t326.mul_add(t364, t367);
-            let t370 = t368 - t369;
-            let t371 = x[1] * x[5];
-            let t372 = t326 * t371;
-            let t373 = x[2] * x[4];
-            let t375 = x[6] * x[10];
-            let t377 = x[13] * x[14];
-            let t378 = t326 * t377;
-            let t379 = (-t326).mul_add(t373, t372);
-            let t380 = t326.mul_add(t375, t378);
-            let t381 = t379 - t380;
-            let t382 = x[1] * x[6];
-            let t384 = x[3] * x[4];
-            let t386 = x[5] * x[10];
-            let t387 = t326 * t386;
-            let t388 = x[12] * x[14];
-            let t389 = t326 * t388;
-            let t390 = t326.mul_add(t382, t387);
-            let t391 = (-t326).mul_add(t384, t389);
-            let t392 = t390 + t391;
-            let t393 = x[2] * x[6];
-            let t394 = t326 * t393;
-            let t395 = x[3] * x[5];
-            let t397 = x[4] * x[10];
-            let t399 = x[11] * x[14];
-            let t400 = t326 * t399;
-            let t401 = (-t326).mul_add(t395, t394);
-            let t402 = t326.mul_add(t397, t400);
-            let t403 = t401 - t402;
-            let t404 = x[4] * x[4];
-            let t406 = x[5] * x[5];
-            let t407 = t326 * t406;
-            let t408 = x[6] * x[6];
-            let t410 = x[14] * x[14];
-            let t411 = t326 * t410;
-            let t412 = t326.mul_add(t404, t407);
-            let t413 = t326.mul_add(t408, t411);
-            let t414 = t412 + t413;
-            let t415 = x[4] * x[11];
-            let t417 = x[5] * x[12];
-            let t418 = t326 * t417;
-            let t419 = x[6] * x[13];
-            let t420 = t326 * t419;
-            let t421 = x[10] * x[14];
-            let t423 = t326.mul_add(t415, t418);
-            let t424 = (-t326).mul_add(t421, t420);
-            let t425 = t423 + t424;
-            let t426 = x[7] * x[7];
-            let t428 = x[8] * x[8];
-            let t429 = t326 * t428;
-            let t430 = x[9] * x[9];
-            let t432 = x[15] * x[15];
-            let t433 = t326 * t432;
-            let t434 = t326.mul_add(t426, t429);
-            let t435 = t326.mul_add(t430, t433);
-            let t436 = t434 + t435;
-            let t437 = t0 * t326;
-            let t438 = t1 * t326;
-            let t439 = t2 * t326;
-            let t440 = t3 * t326;
-            let t441 = t4 * t326;
-            let t442 = t5 * t326;
-            let t443 = t6 * t326;
-            let t444 = t7 * t326;
-            let t445 = t437 + t442;
-            let t446 = t443 + t444;
-            let t447 = t445 + t446;
-            let t448 = t438 + t439;
-            let t449 = t440 + t441;
-            let t450 = t448 + t449;
-            let t451 = t447 - t450;
-            let t452 = t437 + t439;
-            let t453 = t440 + t442;
-            let t454 = t452 + t453;
-            let t455 = t438 + t441;
-            let t456 = t446 + t455;
-            let t457 = t454 - t456;
-            let t458 = t437 + t438;
-            let t459 = t440 + t443;
-            let t460 = t458 + t459;
-            let t461 = t439 + t441;
-            let t462 = t442 + t444;
-            let t463 = t461 + t462;
-            let t464 = t460 - t463;
-            let t465 = t439 + t444;
-            let t466 = t458 + t465;
-            let t467 = t442 + t443;
-            let t468 = t449 + t467;
-            let t469 = t466 - t468;
-            let t470 = t24 * t326;
-            let t472 = (-t30).mul_add(t326, t470);
-            let t473 = t25 * t326;
-            let t475 = (-t31).mul_add(t326, t473);
-            let t476 = t26 * t326;
-            let t478 = (-t32).mul_add(t326, t476);
-            let t479 = x[0] * x[10];
-            let t480 = t326 * t479;
-            let t481 = x[1] * x[11];
-            let t482 = t326 * t481;
-            let t483 = t480 + t482;
-            let t484 = t36 * t326;
-            let t486 = (-t39).mul_add(t326, t484);
-            let t487 = t37 * t326;
-            let t489 = (-t42).mul_add(t326, t487);
-            let t490 = t38 * t326;
-            let t492 = (-t45).mul_add(t326, t490);
-            let t493 = t27 * t326;
-            let t495 = (-t33).mul_add(t326, t493);
-            let t496 = t28 * t326;
-            let t498 = (-t34).mul_add(t326, t496);
-            let t499 = t40 * t326;
-            let t501 = (-t43).mul_add(t326, t499);
-            let t502 = t41 * t326;
-            let t504 = (-t46).mul_add(t326, t502);
-            let t505 = t29 * t326;
-            let t507 = (-t35).mul_add(t326, t505);
-            let t508 = x[2] * x[12];
-            let t509 = t326 * t508;
-            let t510 = x[3] * x[13];
-            let t511 = t326 * t510;
-            let t512 = t509 + t511;
-            let t513 = t44 * t326;
-            let t515 = (-t47).mul_add(t326, t513);
-            let t516 = t480 + t512;
-            let t518 = t482.mul_add(T::from_ratio(1, 2), t516);
-            let t519 = t440 + t452;
-            let t520 = t441 + t443;
-            let t521 = t444 + t520;
-            let t522 = t519 + t521;
-            let t523 = t483 + t509;
-            let t525 = t511.mul_add(T::from_ratio(1, 2), t523);
-            let t526 = t439 + t458;
-            let t527 = t441 + t442;
-            let t528 = t443 + t527;
-            let t529 = t526 + t528;
-            let t530 = t482 + t512;
-            let t532 = t530.mul_add(T::from_i64(2), t480);
-            let t533 = t440 + t448;
-            let t534 = t444 + t467;
-            let t535 = t533 + t534;
-            let t536 = t483 + t511;
-            let t538 = t536.mul_add(T::from_i64(2), t509);
-            let t539 = t440 + t458;
-            let t540 = t444 + t527;
-            let t541 = t539 + t540;
-            let t542 = t472 - t515;
-            let t543 = t472 + t515;
-            let t544 = t475 - t504;
-            let t545 = t475 + t504;
-            let t546 = t478 - t501;
-            let t547 = t478 + t501;
-            let t548 = t486 - t507;
-            let t549 = t486 + t507;
-            let t550 = t489 - t498;
-            let t551 = t489 + t498;
-            let t552 = t492 - t495;
-            let t553 = t492 + t495;
-            let t554 = x[0] * t0;
-            let t556 = x[0] * t535;
-            let t559 = x[9] * t359;
-            let t561 = x[15] * t370;
-            let t562 = x[1] * t1;
-            let t564 = x[1] * t522;
-            let t566 = x[8] * t381;
-            let t569 = x[15] * t337;
-            let t570 = x[2] * t2;
-            let t575 = x[9] * t403;
-            let t576 = x[12] * t538;
-            let t577 = x[15] * t348;
-            let t578 = x[3] * t3;
-            let t580 = x[3] * t529;
-            let t582 = x[8] * t403;
-            let t584 = x[13] * t525;
-            let t589 = x[7] * t414;
-            let t590 = x[14] * t543;
-            let t594 = x[8] * t414;
-            let t595 = x[14] * t544;
-            let t599 = x[9] * t414;
-            let t600 = x[14] * t547;
-            let t603 = x[8] * t553;
-            let t605 = x[15] * t542;
-            let t609 = x[9] * t549;
-            let t610 = x[15] * t545;
-            let t612 = x[7] * t551;
-            let t615 = x[15] * t546;
-            let t619 = x[9] * t381;
-            let t620 = x[10] * t4;
-            let t622 = x[10] * t535;
-            let t623 = x[15] * t425;
-            let t625 = x[7] * t425;
-            let t628 = x[11] * t5;
-            let t630 = x[11] * t522;
-            let t631 = x[15] * t403;
-            let t632 = x[2] * t538;
-            let t635 = x[9] * t337;
-            let t636 = x[12] * t6;
-            let t639 = x[15] * t392;
-            let t641 = x[7] * t348;
-            let t644 = x[13] * t7;
-            let t646 = x[13] * t529;
-            let t647 = x[15] * t381;
-            let t649 = x[5] * t545;
-            let t650 = x[6] * t546;
-            let t654 = x[8] * t544;
-            let t655 = x[9] * t547;
-            let t658 = t326.mul_add(t554, t556);
-            let t659 = (-x[10]).mul_add(t532, t658);
-            let t660 = (-x[7]).mul_add(t337, t561);
-            let t661 = x[8].mul_add(t348, t559);
-            let t662 = t660 - t661;
-            let t664 = t662.mul_add(T::from_i64(2), t659);
-            let t665 = t326.mul_add(t562, t564);
-            let t666 = x[7].mul_add(t370, t566);
-            let t667 = x[9].mul_add(t392, t666);
-            let t668 = x[11].mul_add(t518, t569);
-            let t669 = t667 + t668;
-            let t671 = t669.mul_add(T::from_i64(2), -t665);
-            let t672 = (-t326).mul_add(t570, t576);
-            let t673 = (-x[2]).mul_add(t541, t672);
-            let t674 = x[8].mul_add(t370, t575);
-            let t675 = (-x[7]).mul_add(t381, t577);
-            let t676 = t674 + t675;
-            let t678 = t676.mul_add(T::from_i64(2), t673);
-            let t679 = t326.mul_add(t578, t580);
-            let t680 = x[9].mul_add(t370, t584);
-            let t681 = x[15].mul_add(t359, t680);
-            let t682 = x[7].mul_add(t392, t582);
-            let t683 = t681 - t682;
-            let t685 = t683.mul_add(T::from_i64(2), -t679);
-            let t686 = x[6].mul_add(t551, t589);
-            let t687 = x[5].mul_add(t552, t590);
-            let t688 = t686 - t687;
-            let t689 = t688 * T::from_i64(2);
-            let t690 = (-x[4]).mul_add(t457, t689);
-            let t691 = x[4].mul_add(t553, t594);
-            let t692 = x[6].mul_add(t548, t595);
-            let t693 = t691 - t692;
-            (t326, t337, t348, t359, t392, t403, t414, t425, t436, t451, t457, t464, t469, t518, t525, t532, t541, t542, t543, t548, t549, t550, t552, t599, t600, t603, t605, t609, t610, t612, t615, t619, t620, t622, t623, t625, t628, t630, t631, t632, t635, t636, t639, t641, t644, t646, t647, t649, t650, t654, t655, t664, t671, t678, t685, t690, t693,)
-        };
-        let t694 = t693 * T::from_i64(2);
-        let t695 = (-x[5]).mul_add(t464, t694);
-        let t696 = x[5].mul_add(t549, t599);
-        let t697 = x[4].mul_add(t550, t600);
-        let t698 = t696 - t697;
-        let t699 = t698 * T::from_i64(2);
-        let t700 = (-x[6]).mul_add(t469, t699);
-        let t701 = x[4].mul_add(t436, t603);
-        let t702 = x[9].mul_add(t550, t605);
-        let t703 = t701 - t702;
-        let t704 = t703 * T::from_i64(2);
-        let t705 = (-x[7]).mul_add(t457, t704);
-        let t706 = x[5].mul_add(t436, t609);
-        let t707 = x[7].mul_add(t552, t610);
-        let t708 = t706 - t707;
-        let t709 = t708 * T::from_i64(2);
-        let t710 = (-x[8]).mul_add(t464, t709);
-        let t711 = x[6].mul_add(t436, t612);
-        let t712 = x[8].mul_add(t548, t615);
-        let t713 = t711 - t712;
-        let t714 = t713 * T::from_i64(2);
-        let t715 = (-x[9]).mul_add(t469, t714);
-        let t716 = t326.mul_add(t620, t622);
-        let t717 = (-x[0]).mul_add(t532, t716);
-        let t718 = x[8].mul_add(t392, t623);
-        let t719 = x[7].mul_add(t403, t619);
-        let t720 = t718 - t719;
-        let t722 = t720.mul_add(T::from_i64(2), t717);
-        let t723 = t326.mul_add(t628, t630);
-        let t724 = x[1].mul_add(t518, t625);
-        let t725 = x[8].mul_add(t359, t724);
-        let t726 = (-x[9]).mul_add(t348, t631);
-        let t727 = t725 + t726;
-        let t729 = t727.mul_add(T::from_i64(2), -t723);
-        let t730 = (-t326).mul_add(t636, t632);
-        let t731 = (-x[12]).mul_add(t541, t730);
-        let t732 = x[8].mul_add(t425, t635);
-        let t733 = x[7].mul_add(t359, t639);
-        let t734 = t732 - t733;
-        let t736 = t734.mul_add(T::from_i64(2), t731);
-        let t737 = t326.mul_add(t644, t646);
-        let t738 = x[3].mul_add(t525, t641);
-        let t739 = x[9].mul_add(t425, t738);
-        let t740 = (-x[8]).mul_add(t337, t647);
-        let t741 = t739 + t740;
-        let t743 = t741.mul_add(T::from_i64(2), -t737);
-        let t744 = x[4].mul_add(t542, t649);
-        let t745 = (-x[15]).mul_add(t414, t650);
-        let t746 = t744 + t745;
-        let t747 = t746 * T::from_i64(2);
-        let t748 = (-x[14]).mul_add(t451, t747);
-        let t749 = x[7].mul_add(t543, t654);
-        let t750 = (-x[14]).mul_add(t436, t655);
-        let t751 = t749 + t750;
-        let t752 = t751 * T::from_i64(2);
-        let t753 = (-x[15]).mul_add(t451, t752);
-        Even::from_coeffs([t664, t671, t678, t685, t690, t695, t700, t705, t710, t715, t722, t729, t736, t743, t748, t753])
-    }
-
-    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
-    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
-    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
-    /// and `x`, and `n = 16` the number of `x`'s), or its norm `d = N conj(N)` is lost to
-    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
-    #[inline]
-    pub fn try_inverse(self) -> Option<Even<(), T, O>> {
-        let x = self.c;
-        let t0 = x[0] * x[0];
-        let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
-        let t3 = x[3] * x[3];
-        let t4 = x[10] * x[10];
-        let t5 = x[11] * x[11];
-        let t6 = x[12] * x[12];
-        let t7 = x[13] * x[13];
-        let t8 = x[4] * x[7];
-        let t9 = x[5] * x[8];
-        let t10 = x[6] * x[9];
-        let t11 = x[14] * x[15];
-        let t12 = x[4] * x[8];
-        let t13 = x[4] * x[9];
-        let t14 = x[4] * x[15];
-        let t15 = x[5] * x[7];
-        let t16 = x[5] * x[9];
-        let t17 = x[5] * x[15];
-        let t18 = x[6] * x[7];
-        let t19 = x[6] * x[8];
-        let t20 = x[6] * x[15];
-        let t21 = x[7] * x[14];
-        let t22 = x[8] * x[14];
-        let t23 = x[9] * x[14];
-        let t24 = x[0] * x[11];
-        let t25 = x[0] * x[12];
-        let t26 = x[0] * x[13];
-        let t27 = x[1] * x[10];
-        let t28 = x[1] * x[12];
-        let t29 = x[1] * x[13];
-        let t30 = x[2] * x[10];
-        let t31 = x[2] * x[11];
-        let t32 = x[2] * x[13];
-        let t33 = x[3] * x[10];
-        let t34 = x[3] * x[11];
-        let t35 = x[3] * x[12];
-        let t36 = x[0] * x[1];
-        let t37 = x[0] * x[2];
-        let t38 = x[0] * x[3];
-        let t39 = x[1] * x[2];
-        let t40 = x[1] * x[3];
-        let t41 = x[2] * x[3];
-        let t42 = x[10] * x[11];
-        let t43 = x[10] * x[12];
-        let t44 = x[10] * x[13];
-        let t45 = x[11] * x[12];
-        let t46 = x[11] * x[13];
-        let t47 = x[12] * x[13];
-        let t49 = x[5] * x[5];
-        let t52 = x[8] * x[8];
-        let t54 = x[14] * x[14];
-        let t58 = x[2] * x[5];
-        let t60 = x[4] * x[11];
-        let t62 = x[6] * x[13];
-        let t63 = x[10] * x[14];
-        let t66 = x[2] * x[8];
-        let t68 = x[7] * x[11];
-        let t70 = x[9] * x[13];
-        let t71 = x[10] * x[15];
-        let t74 = t0 * t2;
-        let t78 = t0 * t10;
-        let t80 = t0 * t5;
-        let t82 = t0 * t7;
-        let t85 = t21 * t36;
-        let t88 = t22 * t37;
-        let t90 = t20 * t38;
-        let t92 = t26 * t33;
-        let t96 = t16 * t24;
-        let t98 = t19 * t24;
-        let t99 = t1 * t1;
-        let t102 = t1 * t8;
-        let t105 = t1 * t4;
-        let t108 = t1 * t7;
-        let t109 = t1 * t11;
-        let t110 = t12 * t39;
-        let t113 = t13 * t40;
-        let t115 = t29 * t34;
-        let t117 = t17 * t29;
-        let t119 = t20 * t28;
-        let t127 = t2 * t4;
-        let t129 = t2 * t6;
-        let t131 = t2 * t11;
-        let t132 = t16 * t41;
-        let t135 = t13 * t30;
-        let t137 = t18 * t30;
-        let t139 = t21 * t32;
-        let t141 = t3 * t3;
-        let t145 = t3 * t4;
-        let t147 = t3 * t6;
-        let t149 = t3 * t11;
-        let t151 = t14 * t35;
-        let t152 = t15 * t33;
-        let t154 = t21 * t35;
-        let t156 = t8 * t8;
-        let t159 = t14 * t14;
-        let t163 = t7 * t8;
-        let t165 = t13 * t46;
-        let t169 = t16 * t16;
-        let t173 = t5 * t9;
-        let t177 = t17 * t43;
-        let t179 = t19 * t19;
-        let t182 = t18 * t46;
-        let t184 = t4 * t10;
-        let t187 = t7 * t10;
-        let t189 = t21 * t21;
-        let t192 = t22 * t43;
-        let t197 = t4 * t6;
-        let t200 = t5 * t5;
-        let t202 = t5 * t7;
-        let t203 = t5 * t11;
-        let t205 = t6 * t7;
-        let t207 = t7 * t7;
-        let t209 = t11 * t11;
-        let t210 = t0 + t1;
-        let t211 = t2 + t3;
-        let t212 = t4 + t5;
-        let t213 = t6 + t7;
-        let t214 = t210 + t211;
-        let t215 = t212 + t213;
-        let t216 = x[4].mul_add(x[4], t49);
-        let t217 = x[6].mul_add(x[6], t216);
-        let t218 = x[7].mul_add(x[7], t52);
-        let t219 = t217 + t218;
-        let t220 = x[9].mul_add(x[9], t54);
-        let t221 = x[15].mul_add(x[15], t220);
-        let t222 = t214 + t215;
-        let t223 = t221 + t222;
-        let t224 = t219 + t223;
-        let t225 = t214 - t215;
-        let t226 = t8 + t9;
-        let t227 = t10 + t11;
-        let t228 = t226 + t227;
-        let t230 = (-t228).mul_add(T::from_i64(2), t225);
-        let t231 = x[0].mul_add(x[14], t60);
-        let t232 = x[5].mul_add(x[12], t62);
-        let t233 = t231 + t232;
-        let t234 = x[1].mul_add(x[4], t58);
-        let t235 = x[3].mul_add(x[6], t63);
-        let t236 = t234 + t235;
-        let t237 = t233 - t236;
-        let t238 = t237 * T::from_i64(2);
-        let t239 = x[0].mul_add(x[15], t71);
-        let t240 = x[1].mul_add(x[7], t66);
-        let t241 = t239 - t240;
-        let t242 = x[3].mul_add(x[9], t68);
-        let t243 = x[8].mul_add(x[12], t70);
-        let t244 = t242 + t243;
-        let t245 = t241 - t244;
-        let t246 = t245 * T::from_i64(2);
-        let t247 = t12 + t23;
-        let t248 = t26 + t31;
-        let t249 = t247 + t248;
-        let t250 = t15 + t20;
-        let t251 = t28 + t33;
-        let t252 = t250 + t251;
-        let t253 = t249 - t252;
-        let t254 = t253 * T::from_i64(2);
-        let t255 = t13 + t17;
-        let t256 = t30 + t34;
-        let t257 = t255 + t256;
-        let t258 = t18 + t22;
-        let t259 = t25 + t29;
-        let t260 = t258 + t259;
-        let t261 = t257 - t260;
-        let t262 = t261 * T::from_i64(2);
-        let t263 = t16 + t21;
-        let t264 = t24 + t35;
-        let t265 = t263 + t264;
-        let t266 = t14 + t19;
-        let t267 = t27 + t32;
-        let t268 = t266 + t267;
-        let t269 = t265 - t268;
-        let t270 = t269 * T::from_i64(2);
-        let t271 = t0.mul_add(t0, t99);
-        let t272 = t2.mul_add(t2, t141);
-        let t273 = t271 + t272;
-        let t274 = t4.mul_add(t4, t200);
-        let t275 = t6.mul_add(t6, t207);
-        let t276 = t274 + t275;
-        let t277 = t273 + t276;
-        let t278 = t0.mul_add(t1, t74);
-        let t279 = t0.mul_add(t3, t80);
-        let t280 = t278 + t279;
-        let t281 = t0.mul_add(t6, t82);
-        let t282 = t1.mul_add(t2, t281);
-        let t283 = t280 + t282;
-        let t284 = t1.mul_add(t3, t105);
-        let t285 = t1.mul_add(t6, t108);
-        let t286 = t284 + t285;
-        let t287 = t2.mul_add(t3, t127);
-        let t288 = t2.mul_add(t5, t287);
-        let t289 = t286 + t288;
-        let t290 = t283 + t289;
-        let t291 = t2.mul_add(t7, t145);
-        let t292 = t3.mul_add(t5, t147);
-        let t293 = t291 + t292;
-        let t294 = t4.mul_add(t5, t197);
-        let t295 = t4.mul_add(t7, t294);
-        let t296 = t293 + t295;
-        let t297 = t5.mul_add(t6, t202);
-        let t298 = (-t0).mul_add(t4, t205);
-        let t299 = t297 + t298;
-        let t300 = t1.mul_add(t5, t129);
-        let t301 = t3.mul_add(t7, t300);
-        let t302 = t299 - t301;
-        let t303 = t296 + t302;
-        let t304 = t290 + t303;
-        let t306 = t0.mul_add(t11, t102);
-        let t307 = t2.mul_add(t9, t306);
-        let t308 = t3.mul_add(t10, t156);
-        let t309 = t12.mul_add(t12, t308);
-        let t310 = t307 + t309;
-        let t311 = t13.mul_add(t13, t159);
-        let t312 = t4.mul_add(t8, t311);
-        let t313 = t6.mul_add(t8, t163);
-        let t314 = t15.mul_add(t15, t313);
-        let t315 = t312 + t314;
-        let t316 = t310 + t315;
-        let t317 = t9.mul_add(t9, t169);
-        let t318 = t17.mul_add(t17, t317);
-        let t319 = t4.mul_add(t9, t173);
-        let t320 = t7.mul_add(t9, t319);
-        let t321 = t318 + t320;
-        let t322 = t18.mul_add(t18, t179);
-        let t323 = t10.mul_add(t10, t322);
-        let t324 = t20.mul_add(t20, t184);
-        let t325 = t5.mul_add(t10, t324);
-        let t326 = t323 + t325;
-        let t327 = t321 + t326;
-        let t328 = t316 + t327;
-        let t329 = t6.mul_add(t10, t189);
-        let t330 = t22.mul_add(t22, t329);
-        let t331 = t23.mul_add(t23, t203);
-        let t332 = t6.mul_add(t11, t331);
-        let t333 = t330 + t332;
-        let t334 = t7.mul_add(t11, t209);
-        let t335 = (-t0).mul_add(t8, t334);
-        let t336 = t0.mul_add(t9, t78);
-        let t337 = t1.mul_add(t9, t336);
-        let t338 = t335 - t337;
-        let t339 = t333 + t338;
-        let t340 = t1.mul_add(t10, t109);
-        let t341 = t2.mul_add(t8, t340);
-        let t342 = t2.mul_add(t10, t131);
-        let t343 = t3.mul_add(t8, t342);
-        let t344 = t341 + t343;
-        let t345 = t3.mul_add(t9, t149);
-        let t346 = t5.mul_add(t8, t345);
-        let t347 = t6.mul_add(t9, t187);
-        let t348 = t4.mul_add(t11, t347);
-        let t349 = t346 + t348;
-        let t350 = t344 + t349;
-        let t351 = t339 - t350;
-        let t352 = t328 + t351;
-        let t354 = t12.mul_add(t26, t96);
-        let t355 = t18.mul_add(t25, t110);
-        let t356 = t354 + t355;
-        let t357 = t15.mul_add(t39, t113);
-        let t358 = t18.mul_add(t40, t357);
-        let t359 = t356 + t358;
-        let t360 = t19.mul_add(t27, t119);
-        let t361 = t22.mul_add(t29, t132);
-        let t362 = t360 + t361;
-        let t363 = t19.mul_add(t41, t135);
-        let t364 = t14.mul_add(t32, t363);
-        let t365 = t362 + t364;
-        let t366 = t359 + t365;
-        let t367 = t23.mul_add(t31, t152);
-        let t368 = t17.mul_add(t34, t154);
-        let t369 = t367 + t368;
-        let t370 = t14.mul_add(t42, t177);
-        let t371 = t20.mul_add(t44, t370);
-        let t372 = t369 + t371;
-        let t373 = t21.mul_add(t42, t192);
-        let t374 = t23.mul_add(t44, t373);
-        let t375 = t14.mul_add(t36, t85);
-        let t376 = t24.mul_add(t27, t375);
-        let t377 = t374 - t376;
-        let t378 = t372 + t377;
-        let t379 = t366 + t378;
-        let t380 = t17.mul_add(t37, t88);
-        let t381 = t25.mul_add(t30, t90);
-        let t382 = t380 + t381;
-        let t383 = t23.mul_add(t38, t92);
-        let t384 = t13.mul_add(t25, t383);
-        let t385 = t382 + t384;
-        let t386 = t15.mul_add(t26, t98);
-        let t387 = t28.mul_add(t31, t115);
-        let t388 = t386 + t387;
-        let t389 = t16.mul_add(t27, t117);
-        let t390 = t23.mul_add(t28, t389);
-        let t391 = t388 + t390;
-        let t392 = t385 + t391;
-        let t393 = t32.mul_add(t35, t137);
-        let t394 = t20.mul_add(t31, t139);
-        let t395 = t393 + t394;
-        let t396 = t12.mul_add(t33, t151);
-        let t397 = t22.mul_add(t34, t396);
-        let t398 = t395 + t397;
-        let t399 = t12.mul_add(t45, t165);
-        let t400 = t15.mul_add(t45, t399);
-        let t401 = t16.mul_add(t47, t182);
-        let t402 = t19.mul_add(t47, t401);
-        let t403 = t400 + t402;
-        let t404 = t398 + t403;
-        let t405 = t392 + t404;
-        let t406 = t379 - t405;
-        let t407 = t406 * T::from_i64(8);
-        let t408 = t304.mul_add(T::from_i64(2), t277);
-        let t409 = t352.mul_add(T::from_i64(4), t407);
-        let t410 = t408 + t409;
-        let (size, d) = (t224, t410);
-        let parts = t230 * t230 + t238 * t238 + t246 * t246 + t254 * t254 + t262 * t262 + t270 * t270;
-        let tol = T::from_i64(16) * T::epsilon();
-        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
-            Some(self.inverse()).filter(gx::Extensor::is_finite)
-        } else {
-            None
-        }
-    }
-
-    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
-    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
-    #[inline(always)]
-    pub fn unit(self) -> gx::Unit<Self> {
-        let x = self.c;
-        let p0 = x[4] * x[7];
-        let p1 = x[5] * x[8];
-        let p2 = x[6] * x[9];
-        let p3 = x[14] * x[15];
-        let p4 = x[0] * x[0];
-        let p5 = x[1] * x[1];
-        let p6 = x[2] * x[2];
-        let p7 = x[3] * x[3];
-        let p8 = x[4] * x[8];
-        let p9 = x[4] * x[9];
-        let p10 = x[4] * x[15];
-        let p11 = x[5] * x[7];
-        let p12 = x[5] * x[9];
-        let p13 = x[5] * x[15];
-        let p14 = x[6] * x[7];
-        let p15 = x[6] * x[8];
-        let p16 = x[6] * x[15];
-        let p17 = x[7] * x[14];
-        let p18 = x[8] * x[14];
-        let p19 = x[9] * x[14];
-        let p20 = x[10] * x[10];
-        let p21 = x[11] * x[11];
-        let p22 = x[12] * x[12];
-        let p23 = x[13] * x[13];
-        let p24 = x[0] * x[1];
-        let p25 = x[0] * x[2];
-        let p26 = x[0] * x[3];
-        let p27 = x[1] * x[2];
-        let p28 = x[1] * x[3];
-        let p29 = x[2] * x[3];
-        let p30 = x[10] * x[11];
-        let p31 = x[10] * x[12];
-        let p32 = x[10] * x[13];
-        let p33 = x[11] * x[12];
-        let p34 = x[11] * x[13];
-        let p35 = x[12] * x[13];
-        let p36 = x[0] * x[11];
-        let p37 = x[0] * x[12];
-        let p38 = x[0] * x[13];
-        let p39 = x[1] * x[10];
-        let p40 = x[1] * x[12];
-        let p41 = x[1] * x[13];
-        let p42 = x[2] * x[10];
-        let p43 = x[2] * x[11];
-        let p44 = x[2] * x[13];
-        let p45 = x[3] * x[10];
-        let p46 = x[3] * x[11];
-        let p47 = x[3] * x[12];
-        let p49 = p4 * p22;
-        let p53 = p17 * p24;
-        let p56 = p18 * p25;
-        let p58 = p16 * p26;
-        let p60 = p26 * p32;
-        let p63 = p11 * p38;
-        let p64 = p12 * p36;
-        let p67 = p0 * p5;
-        let p69 = p5 * p22;
-        let p72 = p11 * p27;
-        let p73 = p27 * p33;
-        let p75 = p14 * p28;
-        let p77 = p12 * p39;
-        let p80 = p16 * p40;
-        let p82 = p19 * p40;
-        let p83 = p1 * p6;
-        let p85 = p6 * p21;
-        let p90 = p9 * p42;
-        let p92 = p14 * p42;
-        let p95 = p19 * p43;
-        let p98 = p7 * p21;
-        let p100 = p8 * p45;
-        let p102 = p11 * p45;
-        let p104 = p17 * p47;
-        let p105 = p18 * p46;
-        let p107 = p9 * p9;
-        let p110 = p0 * p2;
-        let p112 = p0 * p3;
-        let p114 = p9 * p34;
-        let p117 = p12 * p12;
-        let p120 = p11 * p33;
-        let p122 = p1 * p3;
-        let p124 = p13 * p31;
-        let p126 = p15 * p15;
-        let p128 = p14 * p34;
-        let p131 = p2 * p3;
-        let p134 = p17 * p30;
-        let p135 = p18 * p18;
-        let p138 = p19 * p32;
-        let p139 = p3 * p20;
-        let p140 = p4 + p5;
-        let p141 = p6 + p7;
-        let p142 = p140 + p141;
-        let p143 = p20 + p21;
-        let p144 = p22 + p23;
-        let p145 = p143 + p144;
-        let p146 = p142 - p145;
-        let p147 = p0 + p1;
-        let p148 = p2 + p3;
-        let p149 = p147 + p148;
-        let p151 = (-p149).mul_add(T::from_i64(2), p146);
-        let p152 = p4.mul_add(p21, p49);
-        let p153 = p4.mul_add(p23, p152);
-        let p154 = p5.mul_add(p20, p69);
-        let p155 = p5.mul_add(p23, p154);
-        let p156 = p153 + p155;
-        let p157 = p6.mul_add(p20, p85);
-        let p158 = p6.mul_add(p23, p157);
-        let p159 = p7.mul_add(p20, p98);
-        let p160 = p7.mul_add(p22, p159);
-        let p161 = p158 + p160;
-        let p162 = p156 + p161;
-        let p163 = p8.mul_add(p8, p107);
-        let p164 = p10.mul_add(p10, p163);
-        let p165 = p11.mul_add(p11, p117);
-        let p166 = p13.mul_add(p13, p165);
-        let p167 = p164 + p166;
-        let p168 = p14.mul_add(p14, p126);
-        let p169 = p16.mul_add(p16, p168);
-        let p170 = p17.mul_add(p17, p135);
-        let p171 = p19.mul_add(p19, p170);
-        let p172 = p169 + p171;
-        let p173 = p167 + p172;
-        let p174 = p162 + p173;
-        let p176 = p10.mul_add(p24, p53);
-        let p177 = p24.mul_add(p30, p176);
-        let p178 = p13.mul_add(p25, p56);
-        let p179 = p177 + p178;
-        let p180 = p25.mul_add(p31, p58);
-        let p181 = p19.mul_add(p26, p60);
-        let p182 = p180 + p181;
-        let p183 = p179 + p182;
-        let p184 = p9.mul_add(p37, p63);
-        let p185 = p15.mul_add(p36, p73);
-        let p186 = p184 + p185;
-        let p187 = p28.mul_add(p34, p77);
-        let p188 = p13.mul_add(p41, p82);
-        let p189 = p187 + p188;
-        let p190 = p186 + p189;
-        let p191 = p183 + p190;
-        let p192 = p29.mul_add(p35, p92);
-        let p193 = p16.mul_add(p43, p192);
-        let p194 = p17.mul_add(p44, p100);
-        let p195 = p193 + p194;
-        let p196 = p10.mul_add(p47, p105);
-        let p197 = p0.mul_add(p1, p110);
-        let p198 = p196 + p197;
-        let p199 = p195 + p198;
-        let p200 = p0.mul_add(p21, p112);
-        let p201 = p8.mul_add(p33, p114);
-        let p202 = p200 + p201;
-        let p203 = p1.mul_add(p2, p120);
-        let p204 = p1.mul_add(p22, p122);
-        let p205 = p203 + p204;
-        let p206 = p202 + p205;
-        let p207 = p199 + p206;
-        let p208 = p191 + p207;
-        let p209 = p12.mul_add(p35, p128);
-        let p210 = p15.mul_add(p35, p209);
-        let p211 = p2.mul_add(p23, p131);
-        let p212 = p210 + p211;
-        let p213 = (-p3).mul_add(p4, p139);
-        let p214 = p8.mul_add(p38, p64);
-        let p215 = p213 - p214;
-        let p216 = p212 + p215;
-        let p217 = p14.mul_add(p37, p67);
-        let p218 = p8.mul_add(p27, p72);
-        let p219 = p217 + p218;
-        let p220 = p9.mul_add(p28, p75);
-        let p221 = p15.mul_add(p39, p80);
-        let p222 = p220 + p221;
-        let p223 = p219 + p222;
-        let p224 = p216 - p223;
-        let p225 = p18.mul_add(p41, p83);
-        let p226 = p12.mul_add(p29, p225);
-        let p227 = p15.mul_add(p29, p90);
-        let p228 = p226 + p227;
-        let p229 = p10.mul_add(p44, p95);
-        let p230 = p2.mul_add(p7, p102);
-        let p231 = p229 + p230;
-        let p232 = p228 + p231;
-        let p233 = p13.mul_add(p46, p104);
-        let p234 = p10.mul_add(p30, p124);
-        let p235 = p233 + p234;
-        let p236 = p16.mul_add(p32, p134);
-        let p237 = p18.mul_add(p31, p138);
-        let p238 = p236 + p237;
-        let p239 = p235 + p238;
-        let p240 = p232 + p239;
-        let p241 = p224 - p240;
-        let p242 = p208 + p241;
-        let p243 = p242 * T::from_i64(8);
-        let p244 = (-p174).mul_add(T::from_i64(4), p243);
-        let [s0, s1] = gx::__private::study::rsqrt_q(p151, p244);
-        let t0 = x[0] * x[11];
-        let t2 = x[1] * x[10];
-        let t4 = x[5] * x[9];
-        let t5 = s1 * t4;
-        let t6 = x[6] * x[8];
-        let t7 = s1 * t6;
-        let t8 = s1.mul_add(t0, t5);
-        let t9 = s1.mul_add(t2, t7);
-        let t10 = t8 - t9;
-        let t11 = x[0] * x[12];
-        let t13 = x[2] * x[10];
-        let t15 = x[4] * x[9];
-        let t16 = s1 * t15;
-        let t17 = x[6] * x[7];
-        let t18 = s1 * t17;
-        let t19 = s1.mul_add(t11, t18);
-        let t20 = s1.mul_add(t13, t16);
-        let t21 = t19 - t20;
-        let t22 = x[0] * x[13];
-        let t24 = x[3] * x[10];
-        let t26 = x[4] * x[8];
-        let t27 = s1 * t26;
-        let t28 = x[5] * x[7];
-        let t29 = s1 * t28;
-        let t30 = s1.mul_add(t22, t27);
-        let t31 = s1.mul_add(t24, t29);
-        let t32 = t30 - t31;
-        let t33 = x[1] * x[12];
-        let t35 = x[2] * x[11];
-        let t37 = x[6] * x[15];
-        let t38 = s1 * t37;
-        let t39 = x[9] * x[14];
-        let t40 = s1 * t39;
-        let t41 = s1.mul_add(t33, t38);
-        let t42 = s1.mul_add(t35, t40);
-        let t43 = t41 - t42;
-        let t44 = x[1] * x[13];
-        let t46 = x[3] * x[11];
-        let t48 = x[5] * x[15];
-        let t49 = s1 * t48;
-        let t50 = x[8] * x[14];
-        let t51 = s1 * t50;
-        let t52 = s1.mul_add(t44, t51);
-        let t53 = s1.mul_add(t46, t49);
-        let t54 = t52 - t53;
-        let t55 = x[2] * x[13];
-        let t57 = x[3] * x[12];
-        let t59 = x[4] * x[15];
-        let t60 = s1 * t59;
-        let t61 = x[7] * x[14];
-        let t62 = s1 * t61;
-        let t63 = s1.mul_add(t55, t60);
-        let t64 = s1.mul_add(t57, t62);
-        let t65 = t63 - t64;
-        let t66 = x[0] * x[14];
-        let t67 = s1 * t66;
-        let t68 = x[1] * x[4];
-        let t70 = x[2] * x[5];
-        let t72 = x[3] * x[6];
-        let t73 = s1 * t72;
-        let t74 = (-s1).mul_add(t68, t67);
-        let t75 = s1.mul_add(t70, t73);
-        let t76 = t74 - t75;
-        let t77 = x[0] * x[15];
-        let t78 = s1 * t77;
-        let t79 = x[1] * x[7];
-        let t81 = x[2] * x[8];
-        let t83 = x[3] * x[9];
-        let t84 = s1 * t83;
-        let t85 = (-s1).mul_add(t79, t78);
-        let t86 = s1.mul_add(t81, t84);
-        let t87 = t85 - t86;
-        let t88 = x[4] * x[11];
-        let t90 = x[5] * x[12];
-        let t91 = s1 * t90;
-        let t92 = x[6] * x[13];
-        let t93 = s1 * t92;
-        let t94 = x[10] * x[14];
-        let t96 = s1.mul_add(t88, t91);
-        let t97 = (-s1).mul_add(t94, t93);
-        let t98 = t96 + t97;
-        let t99 = x[7] * x[11];
-        let t101 = x[8] * x[12];
-        let t102 = s1 * t101;
-        let t103 = x[9] * x[13];
-        let t104 = s1 * t103;
-        let t105 = x[10] * x[15];
-        let t107 = s1.mul_add(t99, t102);
-        let t108 = (-s1).mul_add(t105, t104);
-        let t109 = t107 + t108;
-        let t110 = t27 + t29;
-        let t111 = t16 + t18;
-        let t112 = t60 + t62;
-        let t113 = t5 + t7;
-        let t114 = t49 + t51;
-        let t115 = t38 + t40;
-        let t116 = x[4] * x[7];
-        let t118 = s0 * T::from_ratio(1, 4);
-        let t119 = s1.mul_add(t116, -t118);
-        let t120 = x[5] * x[8];
-        let t122 = s1.mul_add(t120, -t118);
-        let t123 = x[6] * x[9];
-        let t125 = s1.mul_add(t123, -t118);
-        let t126 = x[14] * x[15];
-        let t128 = s1.mul_add(t126, -t118);
-        let t129 = x[0] * t128;
-        let t131 = x[2] * t114;
-        let t134 = x[12] * t21;
-        let t137 = x[1] * t119;
-        let t140 = x[10] * t10;
-        let t141 = x[12] * t43;
-        let t145 = x[2] * t122;
-        let t146 = x[3] * t113;
-        let t147 = x[10] * t21;
-        let t153 = x[3] * t125;
-        let t154 = x[10] * t32;
-        let t156 = x[12] * t65;
-        let t160 = x[6] * t21;
-        let t162 = x[14] * t65;
-        let t167 = x[12] * t98;
-        let t168 = x[14] * t54;
-        let t171 = x[5] * t10;
-        let t174 = x[14] * t43;
-        let t179 = x[11] * t109;
-        let t180 = x[15] * t65;
-        let t184 = x[9] * t10;
-        let t186 = x[15] * t54;
-        let t191 = x[13] * t109;
-        let t192 = x[15] * t43;
-        let t194 = x[2] * t21;
-        let t196 = x[10] * t128;
-        let t198 = x[12] * t114;
-        let t203 = x[10] * t112;
-        let t204 = x[11] * t119;
-        let t205 = x[12] * t110;
-        let t208 = x[1] * t43;
-        let t211 = x[11] * t110;
-        let t212 = x[12] * t122;
-        let t215 = x[1] * t54;
-        let t217 = x[10] * t115;
-        let t220 = x[13] * t125;
-        let t222 = x[4] * t65;
-        let t225 = x[10] * t98;
-        let t229 = x[8] * t54;
-        let t230 = x[9] * t43;
-        let t233 = x[1].mul_add(t112, t131);
-        let t234 = x[3].mul_add(t115, t233);
-        let t235 = x[11].mul_add(t10, t134);
-        let t236 = x[13].mul_add(t32, t235);
-        let t237 = t234 - t236;
-        let t238 = t237 * T::from_i64(2);
-        let t240 = (-t129).mul_add(T::from_i64(4), t238);
-        let t241 = x[0].mul_add(t112, t140);
-        let t242 = (-x[2]).mul_add(t110, t241);
-        let t243 = x[3].mul_add(t111, t141);
-        let t244 = x[13].mul_add(t54, t243);
-        let t245 = t242 - t244;
-        let t246 = t245 * T::from_i64(2);
-        let t248 = (-t137).mul_add(T::from_i64(4), t246);
-        let t249 = x[0].mul_add(t114, t147);
-        let t250 = x[11].mul_add(t43, t249);
-        let t251 = x[1].mul_add(t110, t146);
-        let t252 = x[13].mul_add(t65, t251);
-        let t253 = t250 - t252;
-        let t254 = t253 * T::from_i64(2);
-        let t256 = (-t145).mul_add(T::from_i64(4), t254);
-        let t257 = x[0].mul_add(t115, t154);
-        let t258 = x[11].mul_add(t54, t257);
-        let t259 = (-x[1]).mul_add(t111, t156);
-        let t260 = (-x[2]).mul_add(t113, t259);
-        let t261 = t258 + t260;
-        let t262 = t261 * T::from_i64(2);
-        let t264 = (-t153).mul_add(T::from_i64(4), t262);
-        let t265 = (-x[1]).mul_add(t76, t160);
-        let t266 = (-x[5]).mul_add(t32, t265);
-        let t267 = x[11].mul_add(t98, t162);
-        let t268 = t266 - t267;
-        let t269 = t268 * T::from_i64(2);
-        let t270 = x[4].mul_add(s0, t269);
-        let t271 = x[4].mul_add(t32, t168);
-        let t272 = (-x[2]).mul_add(t76, t271);
-        let t273 = x[6].mul_add(t10, t167);
-        let t274 = t272 - t273;
-        let t275 = t274 * T::from_i64(2);
-        let t276 = x[5].mul_add(s0, t275);
-        let t277 = (-x[3]).mul_add(t76, t171);
-        let t278 = (-x[4]).mul_add(t21, t277);
-        let t279 = x[13].mul_add(t98, t174);
-        let t280 = t278 - t279;
-        let t281 = t280 * T::from_i64(2);
-        let t282 = x[6].mul_add(s0, t281);
-        let t283 = x[8].mul_add(t32, t180);
-        let t284 = (-x[1]).mul_add(t87, t283);
-        let t285 = x[9].mul_add(t21, t179);
-        let t286 = t284 - t285;
-        let t287 = t286 * T::from_i64(2);
-        let t288 = x[7].mul_add(s0, t287);
-        let t289 = (-x[2]).mul_add(t87, t184);
-        let t290 = (-x[7]).mul_add(t32, t289);
-        let t291 = x[12].mul_add(t109, t186);
-        let t292 = t290 - t291;
-        let t293 = t292 * T::from_i64(2);
-        let t294 = x[8].mul_add(s0, t293);
-        let t295 = x[7].mul_add(t21, t192);
-        let t296 = (-x[3]).mul_add(t87, t295);
-        let t297 = x[8].mul_add(t10, t191);
-        let t298 = t296 - t297;
-        let t299 = t298 * T::from_i64(2);
-        let t300 = x[9].mul_add(s0, t299);
-        let t301 = x[11].mul_add(t112, t198);
-        let t302 = x[13].mul_add(t115, t301);
-        let t303 = x[1].mul_add(t10, t194);
-        let t304 = x[3].mul_add(t32, t303);
-        let t305 = t302 - t304;
-        let t306 = t305 * T::from_i64(2);
-        let t308 = (-t196).mul_add(T::from_i64(4), t306);
-        let t309 = x[0].mul_add(t10, t203);
-        let t310 = (-x[2]).mul_add(t43, t309);
-        let t311 = x[3].mul_add(t54, t205);
-        let t312 = x[13].mul_add(t111, t311);
-        let t313 = t310 - t312;
-        let t314 = t313 * T::from_i64(2);
-        let t316 = (-t204).mul_add(T::from_i64(4), t314);
-        let t317 = x[0].mul_add(t21, t208);
-        let t318 = x[10].mul_add(t114, t317);
-        let t319 = x[3].mul_add(t65, t211);
-        let t320 = x[13].mul_add(t113, t319);
-        let t321 = t318 - t320;
-        let t322 = t321 * T::from_i64(2);
-        let t324 = (-t212).mul_add(T::from_i64(4), t322);
-        let t325 = x[0].mul_add(t32, t215);
-        let t326 = x[2].mul_add(t65, t325);
-        let t327 = (-x[11]).mul_add(t111, t217);
-        let t328 = (-x[12]).mul_add(t113, t327);
-        let t329 = t326 + t328;
-        let t330 = t329 * T::from_i64(2);
-        let t332 = (-t220).mul_add(T::from_i64(4), t330);
-        let t333 = x[0].mul_add(t76, t222);
-        let t334 = x[6].mul_add(t43, t333);
-        let t335 = (-x[5]).mul_add(t54, t225);
-        let t336 = t334 + t335;
-        let t337 = t336 * T::from_i64(2);
-        let t338 = x[14].mul_add(s0, t337);
-        let t339 = x[0].mul_add(t87, t229);
-        let t340 = x[10].mul_add(t109, t339);
-        let t341 = x[7].mul_add(t65, t230);
-        let t342 = t340 - t341;
-        let t343 = t342 * T::from_i64(2);
-        let t344 = x[15].mul_add(s0, t343);
-        gx::Unit::new_unchecked(Even::from_coeffs([t240, t248, t256, t264, t270, t276, t282, t288, t294, t300, t308, t316, t324, t332, t338, t344]))
-    }
-
-    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
-    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
-    #[inline(always)]
-    pub fn normalized(self) -> Self {
-        self.unit().into_inner()
-    }
-
 }

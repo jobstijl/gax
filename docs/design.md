@@ -207,9 +207,28 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   equations and constitutive maps in STA need. It agrees with `dual` where every basis vector
   squares to `+1`, flips sign on blades with an odd number of negative squares (STA, R(4,1)), and
   vanishes on blades containing a null vector, where `dual` does not (so PGA keeps `dual`). It
-  is generated for every kind of an algebra with a pseudoscalar kind, values and maps alike
-  (found porting numga's electromagnetism and cyclide examples, where the metric-free dual gave
-  wrong results).
+  is generated for every kind whose image is not zero, values and maps alike (found porting
+  numga's electromagnetism and cyclide examples, where the metric-free dual gave wrong results).
+  * *Amended (2026-11-01, Phase 13): the Hodge dual without a pseudoscalar kind, its inverse,
+    and numga's `dot`.* `hodge()` was `Gp` with a declared one-blade pseudoscalar kind, so an
+    `algebra!` without one had none (the Penrose and G₂ ports declared one for it). It is now
+    emitted per kind as the linear map on blades `b ↦ ~b I` (a signed permutation in a diagonal
+    metric, sums in CGA's null basis), landing in the smallest declared kind holding the image,
+    which for every standard kind is the kind the product gave (checked when it changed: the
+    generated code changed in form only). The alternative, a clear error asking for the
+    declaration, was declined: the map needs nothing the generator does not know, and `algebra!`
+    always declares a `Multivector` to land in. `hodge_inverse()`, numga's `dual_inverse`, is
+    `x ↦ ~(x I⁻¹)`, so `x.hodge().hodge_inverse() == x` both ways; per blade of grade `g` it is
+    `(−1)^(g(n−g)) / (I ~I)` times the dual (`-x.hodge()` on STA's even grades and on the
+    plane's vectors, where the ports wrote that by hand). It exists in the non-degenerate
+    algebras; in a degenerate one the dual drops the null blades and cannot be inverted, and a
+    hidden method's bound (`HodgeNeedsMetric`) says so and points to `dual`/`undual`. numga's
+    `a.dot(b)`, the metric on every grade `⟨a ~b⟩₀`, is `a.metric(b)` (gax's `dot` is `|`, which
+    numga calls `inner` and which is negative on Euclidean bivectors): a generated method over
+    the scalar product and the reverse, with no tables of its own. Law S proves
+    `a & b.hodge() == a.metric(b)` on blades of one grade in every algebra (degenerate and
+    null bases included: the metric vanishes where the dual does), `a ^ b == (a & b) I` on
+    complementary grades, and `hodge_inverse` on both sides.
 * **Standard PGA layouts:** these are the bivector.net layouts:
   * PGA3D: `1,e0,e1,e2,e3,e01,e02,e03,e12,e31,e23,e021,e013,e032,e123,e0123`;
   * PGA2D: `1,e0,e1,e2,e01,e20,e12,e012`.

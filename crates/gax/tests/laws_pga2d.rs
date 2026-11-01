@@ -2355,4 +2355,26 @@ law_suite::law_suite! {
     inverses: [
         (Multivector, Multivector),
     ],
+    hodges: [
+        (Scalar, Scalar, Scalar),
+        (Line, Line, Scalar),
+        (OriginLine, Line, Scalar),
+        (Point, Point, Scalar),
+        (Line, OriginLine, Scalar),
+        (OriginLine, OriginLine, Scalar),
+    ],
+    hodge_inverses: [
+    ],
+    complements: [
+        (Scalar, Pseudoscalar, Pseudoscalar, 1),
+        (Line, Point, Pseudoscalar, 1),
+        (Line, Direction, Pseudoscalar, 1),
+        (Point, Line, Pseudoscalar, 1),
+        (Point, OriginLine, Pseudoscalar, 1),
+        (Direction, Line, Pseudoscalar, 1),
+        (Direction, OriginLine, Pseudoscalar, 1),
+        (Pseudoscalar, Scalar, Pseudoscalar, 1),
+        (OriginLine, Point, Pseudoscalar, 1),
+        (OriginLine, Direction, Pseudoscalar, 1),
+    ],
 }

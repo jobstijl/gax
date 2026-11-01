@@ -101,6 +101,7 @@ pub use unit::{Unit, Widen};
 #[doc(hidden)]
 pub mod __private {
     pub use crate::fill::{Bit, False, FillList, FillStep, KindEq, SplitLast, True};
+    pub use crate::ops::HodgeNeedsMetric;
     pub use crate::orientation::{Reorient, reflect};
     pub use crate::permute::MoveToFront;
     pub use crate::prepared::PreparedDense;

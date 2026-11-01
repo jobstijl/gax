@@ -162,7 +162,9 @@ let moved = open.fill(m); // the same as m >> p, as a flector whose plane part i
 | `v >> x` | `transform` | versor transport `v x ~v`: move `x` by the motor `v` |
 | `v << x` | `transform_inv` | the inverse transport `~v x v` |
 | | `lc`, `rc`, `scalar_product`, `commutator`, `anticommutator` | contractions, and the (anti)commutator |
+| | `metric` | the metric on every grade, `⟨a ~b⟩₀` (numga's `dot`) |
 | | `reverse`, `involute`, `conjugate`, `dual`, `undual` | involutions and complements |
+| | `hodge`, `hodge_inverse` | the Hodge dual `~x I` with the metric, and its inverse (non-degenerate algebras) |
 
 Every product exists between every pair of kinds whose product is nonzero, and the result's kind
 follows from the algebra. A product that is identically zero, such as `point ^ point` in 3D, does
@@ -1164,7 +1166,16 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   with negative squares they differ in sign on some blades: physics written with the Hodge dual
   (Maxwell, constitutive relations) needs `hodge()`. In CGA's null basis they differ on more than
   signs: `dual()` pairs `eo` with `eo`, so a round point's quadvector (numga's dual of a point)
-  is `Vector::up(x, y, z).hodge()`, and `dual()` gives a different round.
+  is `Vector::up(x, y, z).hodge()`, and `dual()` gives a different round. numga's
+  `dual_inverse` is `hodge_inverse()`, `~(x I⁻¹)` (in STA `-x.hodge()` on the even grades and
+  `x.hodge()` on the odd ones); in a degenerate algebra it does not exist, as the Hodge dual
+  drops the null blades.
+* **numga's `dot` is `metric`.** numga's `a.dot(b)` is `⟨a ~b⟩₀`, the metric on every grade
+  (positive on every blade of a Euclidean signature, zero between grades, `x.metric(x) ==
+  x.norm_squared()`): gax's `a.metric(b)`. gax's `a.dot(b)` is `a | b`, numga's `inner`, the
+  grade `|r − s|` part of the product, negative on Euclidean bivectors (`e12 | e12 = −1`). On
+  blades of one grade the metric is also `a & b.hodge()`, and on complementary grades
+  `a ^ b == (a & b) I` (laws.md, law S).
 * **Coming from numga.** Since numga 93c2ae3 (October 2026), its PGA3D has gax's basis: `w`
   first, the blades `wx wy wz wzy wxz wyx xyz wxyz` (gax's `e01 e02 e03 e032 e013 e021 e123
   e0123`). Joins, meets and `dual` agree in sign: the origin joined with a point on `+x` is

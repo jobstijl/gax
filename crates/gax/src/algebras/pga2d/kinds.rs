@@ -294,6 +294,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -328,15 +341,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Pseudoscalar<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Pseudoscalar { o: core::marker::PhantomData, c: [a[0]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -1245,6 +1269,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Line<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -1279,15 +1316,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Line<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Point<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Point { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -2169,6 +2217,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Point<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -2203,15 +2264,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Point<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Line<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Line { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[2]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -3123,6 +3195,18 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Direction<S, T, O> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn hodge_inverse(self) -> Self
+    where
+        Self: gx::__private::HodgeNeedsMetric,
+    {
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
+    }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Direction<S, T, O> {
@@ -3847,6 +3931,18 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn hodge_inverse(self) -> Self
+    where
+        Self: gx::__private::HodgeNeedsMetric,
+    {
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
+    }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Pseudoscalar<S, T, O> {
@@ -4539,6 +4635,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -4573,15 +4682,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Flector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Flector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1], a[0]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -5499,6 +5619,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Translator<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -5533,15 +5666,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Translator<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Pseudoscalar<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Pseudoscalar { o: core::marker::PhantomData, c: [a[0]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -6438,6 +6582,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -6472,15 +6629,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Flector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Flector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1], a[0]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -7414,6 +7582,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Flector<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -7448,15 +7629,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Flector<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Point<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Point { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -8339,6 +8531,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -8373,15 +8578,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Multivector<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Multivector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), a[6], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[3], a[2], S::from_flat(&mut |_| T::zero(), 0), a[0]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 
@@ -9249,6 +9465,19 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> OriginLine<S, T, O> {
         gx::Anticommutator::anticommutator(self, rhs)
     }
 
+    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
+    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
+    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
+    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
+    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
+    #[inline(always)]
+    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
+    where
+        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
+    {
+        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
+    }
+
     /// See [`gx::Reverse`].
     #[inline(always)]
     pub fn reverse(self) -> <Self as gx::Reverse>::Output {
@@ -9283,15 +9512,26 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> OriginLine<S, T, O> {
     /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
     /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
     /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not.
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> Point<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Point { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
     #[inline(always)]
-    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>>::Output
+    pub fn hodge_inverse(self) -> Self
     where
-        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T, gx::Intrinsic>>,
+        Self: gx::__private::HodgeNeedsMetric,
     {
-        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::<(), T, gx::Intrinsic>::new(T::one()))
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
     }
 }
 

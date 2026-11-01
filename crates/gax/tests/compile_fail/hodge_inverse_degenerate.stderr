@@ -1,0 +1,16 @@
+error[E0277]: `hodge_inverse` needs a non-degenerate metric, and `gax::pga3d::oriented::Point<(), {float}>` belongs to a degenerate algebra
+ --> tests/compile_fail/hodge_inverse_degenerate.rs:6:23
+  |
+6 |     let _ = p.hodge().hodge_inverse();
+  |                       ^^^^^^^^^^^^^ the Hodge dual here has no inverse
+  |
+  = help: the trait `gax::ops::HodgeNeedsMetric` is not implemented for `gax::pga3d::oriented::Point<(), {float}>`
+  = note: the Hodge dual `~x I` vanishes on blades containing a null basis vector (`e0` of PGA), so it loses them; the metric-free `dual()` and `undual()` are each other's inverse in every algebra
+note: required by a bound in `gax::pga3d::oriented::Point::<S, T, O>::hodge_inverse`
+ --> src/algebras/pga3d/kinds_1.rs
+  |
+  |     pub fn hodge_inverse(self) -> Self
+  |            ------------- required by a bound in this associated function
+  |     where
+  |         Self: gx::__private::HodgeNeedsMetric,
+  |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Point::<S, T, O>::hodge_inverse`
