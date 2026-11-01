@@ -312,7 +312,7 @@ impl<T: gx::Real, O: gx::Orientation> Spin<(), T, O> {
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (16 mul, 7 add, 1 div).
     #[inline(always)]
-    pub fn inverse(self) -> Line<(), T, O> {
+    pub fn inverse(self) -> Spin<(), T, O> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -334,7 +334,7 @@ impl<T: gx::Real, O: gx::Orientation> Spin<(), T, O> {
         let t24 = -t21;
         let t25 = -t22;
         let t26 = -t23;
-        Line::from_coeffs([t24, t25, t26, T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+        Spin::from_coeffs([t24, t25, t26])
     }
 
     /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
@@ -343,7 +343,7 @@ impl<T: gx::Real, O: gx::Orientation> Spin<(), T, O> {
     /// and `x`, and `n = 3` the number of `x`'s), or its norm `d = N conj(N)` is lost to
     /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
     #[inline]
-    pub fn try_inverse(self) -> Option<Line<(), T, O>> {
+    pub fn try_inverse(self) -> Option<Spin<(), T, O>> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -444,7 +444,7 @@ impl<T: gx::Real> gx::Exp for Spin<(), T, gx::Extrinsic> {
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Spin<(), T, O> {
-    type Output = Line<(), T, O>;
+    type Output = Spin<(), T, O>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -1580,9 +1580,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> OriginPlane<S, T, O> {
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
     #[inline]
-    pub fn hodge(self) -> Point<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge(self) -> Direction<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Point { o: core::marker::PhantomData, c: [a[0], a[1], a[2], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1], a[2]] }
     }
 
     /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
@@ -2038,7 +2038,7 @@ impl<T: gx::Real, O: gx::Orientation> OriginPlane<(), T, O> {
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (16 mul, 7 add, 1 div).
     #[inline(always)]
-    pub fn inverse(self) -> Plane<(), T, O> {
+    pub fn inverse(self) -> OriginPlane<(), T, O> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -2057,7 +2057,7 @@ impl<T: gx::Real, O: gx::Orientation> OriginPlane<(), T, O> {
         let t21 = x[0] * t20;
         let t22 = x[1] * t20;
         let t23 = x[2] * t20;
-        Plane::from_coeffs([t21, t22, t23, T::from_i64(0)])
+        OriginPlane::from_coeffs([t21, t22, t23])
     }
 
     /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
@@ -2066,7 +2066,7 @@ impl<T: gx::Real, O: gx::Orientation> OriginPlane<(), T, O> {
     /// and `x`, and `n = 3` the number of `x`'s), or its norm `d = N conj(N)` is lost to
     /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
     #[inline]
-    pub fn try_inverse(self) -> Option<Plane<(), T, O>> {
+    pub fn try_inverse(self) -> Option<OriginPlane<(), T, O>> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -2160,7 +2160,7 @@ impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for OriginPlane<
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for OriginPlane<(), T, O> {
-    type Output = Plane<(), T, O>;
+    type Output = OriginPlane<(), T, O>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -2186,6 +2186,1549 @@ impl<T: gx::Real, O: gx::Orientation> gx::Normalize for OriginPlane<(), T, O> {
     #[inline(always)]
     fn unit(self) -> gx::Unit<Self> {
         Self::unit(self)
+    }
+}
+
+#[doc = "The horizontal part of a spin, `e23, e31`: a horizontal line through the origin. gx::Extrinsic (the default), the axis of a tilt (heel and trim, for z up), its rate; intrinsic, a horizontal force through the origin. Its complement is `TiltMoment`."]
+///
+/// Blades, in coefficient order: `[e23, e31]`.
+///
+/// `S` lists the open slots: `Tilt` (that is, `Tilt<()>`) is a value, `Tilt<(A,)>` a
+/// linear map from `A`, `Tilt<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
+/// the orientation of the output, extrinsic by default (ADR-051).
+#[repr(C)]
+pub struct Tilt<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Extrinsic> {
+    /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
+    pub c: [S::Arr<T>; 2],
+    o: core::marker::PhantomData<O>,
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Clone for Tilt<S, T, O> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Copy for Tilt<S, T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> PartialEq for Tilt<S, T, O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.c == other.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for Tilt<S, T, O> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut d = f.debug_struct(if O::SIGN < 0 { "intrinsic Tilt" } else { "Tilt" });
+        for (b, c) in <Tilt as gx::Kind>::BLADES.iter().zip(self.c.iter()) {
+            d.field(b, c);
+        }
+        d.finish()
+    }
+}
+
+// SAFETY: `Arr<X>` is `[X; 2]`, the layout `gx::FlatKind` promises.
+unsafe impl<O: gx::Orientation> gx::FlatKind for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Kind for Tilt<(), f64, O> {
+    const N: usize = 2;
+    const NAME: &'static str = "Tilt";
+    const MODULE: &'static str = module_path!();
+    const BLADES: &'static [&'static str] = &["e23", "e31"];
+    type Arr<X: gx::Elem> = [X; 2];
+    type Mv<S: gx::Slots, T: gx::Coef> = Tilt<S, T, O>;
+    type Scalar = Scalar;
+    type Orientation = O;
+    const DEFAULT_INTRINSIC: bool = false;
+    #[inline(always)]
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 2] {
+        [f(0), f(1)]
+    }
+    #[inline(always)]
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 2], mut f: impl FnMut(&X) -> Y) -> [Y; 2] {
+        [f(&a[0]), f(&a[1])]
+    }
+    #[inline(always)]
+    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
+        a: &[X; 2],
+        b: &[Y; 2],
+        mut f: impl FnMut(&X, &Y) -> Z,
+    ) -> [Z; 2] {
+        [f(&a[0], &b[0]), f(&a[1], &b[1])]
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Tilt<S, T, O> {
+    type Kind = Tilt<(), f64, O>;
+    type Slots = S;
+    type Coef = T;
+    #[inline(always)]
+    fn from_coeffs(c: [S::Arr<T>; 2]) -> Self {
+        Tilt { o: core::marker::PhantomData, c }
+    }
+    #[inline(always)]
+    fn coeffs(&self) -> &[S::Arr<T>; 2] {
+        &self.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Tilt<S, T, O> {
+    /// Construct from output-first coefficients.
+    #[inline(always)]
+    pub const fn from_coeffs(c: [S::Arr<T>; 2]) -> Self {
+        Tilt { o: core::marker::PhantomData, c }
+    }
+
+    /// All coefficients zero.
+    #[inline(always)]
+    pub fn zero() -> Self {
+        Tilt { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0); 2] }
+    }
+
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Tilt<S, U, O> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
+    /// Fill the first open slot with a value, or compose a map into it.
+    #[inline(always)]
+    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
+    where
+        Self: gx::Of<X>,
+    {
+        gx::Of::of(self, x)
+    }
+
+    /// This value or map as a `K` of its own orientation (`K` names only the kind, so turbofish
+    /// it: `x.cast::<Line>()`): the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    where
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        Tilt<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
+    {
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
+    }
+
+    /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
+    /// (a file, a GPU buffer, a raw `new`) whose orientation the type does not know.
+    #[inline(always)]
+    pub fn with_orientation<O2: gx::Orientation>(self) -> Tilt<S, T, O2> {
+        Tilt { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Tilt<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Tilt<(), f64, O>: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
+    #[inline]
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
+    where
+        Self: gx::LeastSquaresDyad<X>,
+    {
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
+    }
+
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
+    where
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
+    {
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
+    where
+        Self: gx::OfDyad,
+    {
+        gx::OfDyad::of_dyad(self, x)
+    }
+
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Tilt<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
+    where
+        S: gx::__private::MoveToFront<I>,
+    {
+        Tilt { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Tilt`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Tilt<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    where
+        S: gx::__private::MoveToFront<I>,
+        Tilt<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Tilt<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::__private::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Tilt { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
+    /// See [`gx::Gp`].
+    #[inline(always)]
+    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
+    where
+        Self: gx::Gp<R>,
+    {
+        gx::Gp::gp(self, rhs)
+    }
+
+    /// See [`gx::Reverse`].
+    #[inline(always)]
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+        gx::Reverse::reverse(self)
+    }
+
+    /// See [`gx::Involute`].
+    #[inline(always)]
+    pub fn involute(self) -> <Self as gx::Involute>::Output {
+        gx::Involute::involute(self)
+    }
+
+    /// See [`gx::Conjugate`].
+    #[inline(always)]
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+        gx::Conjugate::conjugate(self)
+    }
+
+    /// See [`gx::Dual`].
+    #[inline(always)]
+    pub fn dual(self) -> <Self as gx::Dual>::Output {
+        gx::Dual::dual(self)
+    }
+
+    /// See [`gx::Undual`].
+    #[inline(always)]
+    pub fn undual(self) -> <Self as gx::Undual>::Output {
+        gx::Undual::undual(self)
+    }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
+    /// algebras.
+    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
+    /// form, the complement against the orientation of space.
+    #[inline]
+    pub fn hodge(self) -> TiltMoment<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        TiltMoment { o: core::marker::PhantomData, c: [a[0], a[1]] }
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn hodge_inverse(self) -> Self
+    where
+        Self: gx::__private::HodgeNeedsMetric,
+    {
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Tilt<S, T, O> {
+    type Out = Tilt<S, T, O2>;
+    #[inline(always)]
+    fn reorient(self) -> Tilt<S, T, O2> {
+        Tilt { o: core::marker::PhantomData, c: self.c }
+    }
+}
+
+impl<T: gx::Coef> Tilt<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e23: T, e31: T) -> Self {
+        Tilt { o: core::marker::PhantomData, c: [e23, e31] }
+    }
+
+    /// The identity map on `Tilt`: a `Tilt` with one open `Tilt` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Tilt<(Tilt<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        Tilt { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> Tilt<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e23: T, e31: T) -> Self {
+        Tilt { o: core::marker::PhantomData, c: [e23, e31] }
+    }
+
+    /// The identity map on `Tilt`: a `Tilt` with one open `Tilt` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> Tilt<(Tilt<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        Tilt { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Tilt<(), T, O> {
+    type Map = Tilt<(Tilt<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        Tilt { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> Tilt<(), T, O> {
+    /// Coefficient of `e23`.
+    #[inline(always)]
+    pub fn e23(&self) -> T {
+        self.c[0]
+    }
+
+    /// Coefficient of `e31`.
+    #[inline(always)]
+    pub fn e31(&self) -> T {
+        self.c[1]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Tilt<(A,), T, O> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Tilt`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Tilt<(), T, O>>) -> Self {
+        let images = images.as_ref();
+        Tilt { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Tilt<(A, B), T, O> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Tilt <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Tilt<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+    /// The adjoint, the transpose through the scalar product: the map `A <- Tilt`
+    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
+    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
+    #[inline]
+    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
+    where
+        Self: gx::Adjoint,
+    {
+        gx::Adjoint::adjoint(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Tilt<(A,), T, O> {
+    /// The inverse map, `A <- Tilt`.
+    #[inline]
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(Tilt<(), f64, O>,), T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Tilt<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(Tilt<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(Tilt<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
+    #[inline]
+    pub fn svd(self) -> gx::Svd<A, Tilt<(), f64, O>, T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Tilt<(), f64, O>>,
+    {
+        gx::SingularValues::svd(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Tilt<(), f64, O> as gx::Kind>::Arr<T>, <Tilt<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Tilt<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Tilt<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <Tilt<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Tilt<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Tilt<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = Tilt<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Tilt`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Tilt<(), f64, O>,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Tilt<(), f64, O>,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Tilt<(), f64, O>,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Tilt<(), f64, O>,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
+    }
+
+    /// The trace of a map from `Tilt` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Tilt<(), f64, O>, Input = Tilt<(), f64, O>>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Tilt<(A, B), T, O> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Tilt<(B, A), T, O> {
+        self.at::<1>()
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for Tilt<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self {
+        Tilt { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for Tilt<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self {
+        Tilt { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::iter::Sum for Tilt<S, T, O> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign for Tilt<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign for Tilt<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for Tilt<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self {
+        Tilt { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for Tilt<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn gp(self, rhs: T) -> Self {
+        Tilt { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for Tilt<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn div_by(self, rhs: T) -> Self {
+        let r = rhs.recip();
+        Tilt { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Div<R> for Tilt<S, T, O>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<Tilt<S, f32, O>> for f32 {
+    type Output = Tilt<S, f32, O>;
+    #[inline(always)]
+    fn mul(self, rhs: Tilt<S, f32, O>) -> Tilt<S, f32, O> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<Tilt<S, f64, O>> for f64 {
+    type Output = Tilt<S, f64, O>;
+    #[inline(always)]
+    fn mul(self, rhs: Tilt<S, f64, O>) -> Tilt<S, f64, O> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Mul<R> for Tilt<S, T, O>
+where
+    Self: gx::Gp<R>,
+{
+    type Output = <Self as gx::Gp<R>>::Output;
+    #[inline(always)]
+    fn mul(self, rhs: R) -> Self::Output {
+        gx::Gp::gp(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitXor<R> for Tilt<S, T, O>
+where
+    Self: gx::Wedge<R>,
+{
+    type Output = <Self as gx::Wedge<R>>::Output;
+    #[inline(always)]
+    fn bitxor(self, rhs: R) -> Self::Output {
+        gx::Wedge::wedge(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitAnd<R> for Tilt<S, T, O>
+where
+    Self: gx::Vee<R>,
+{
+    type Output = <Self as gx::Vee<R>>::Output;
+    #[inline(always)]
+    fn bitand(self, rhs: R) -> Self::Output {
+        gx::Vee::vee(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitOr<R> for Tilt<S, T, O>
+where
+    Self: gx::Dot<R>,
+{
+    type Output = <Self as gx::Dot<R>>::Output;
+    #[inline(always)]
+    fn bitor(self, rhs: R) -> Self::Output {
+        gx::Dot::dot(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shr<R> for Tilt<S, T, O>
+where
+    Self: gx::Transform<R>,
+{
+    type Output = <Self as gx::Transform<R>>::Output;
+    #[inline(always)]
+    fn shr(self, rhs: R) -> Self::Output {
+        gx::Transform::transform(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shl<R> for Tilt<S, T, O>
+where
+    Self: gx::TransformInv<R>,
+{
+    type Output = <Self as gx::TransformInv<R>>::Output;
+    #[inline(always)]
+    fn shl(self, rhs: R) -> Self::Output {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+}
+
+impl<T: gx::Real, O: gx::Orientation> Tilt<(), T, O> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline(always)]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t2 = x[0].mul_add(x[0], t1);
+        t2
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline(always)]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (10 mul, 3 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Tilt<(), T, O> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t3 = t0 * t1;
+        let t4 = t1 * t1;
+        let t5 = t0.mul_add(t0, t4);
+        let t7 = t3.mul_add(T::from_i64(2), t5);
+        let t8 = t7.recip();
+        let t10 = t1 * t8;
+        let t11 = t0.mul_add(t8, t10);
+        let t12 = x[0] * t11;
+        let t13 = x[1] * t11;
+        let t14 = -t12;
+        let t15 = -t13;
+        Tilt::from_coeffs([t14, t15])
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
+    /// where `x ~x`, the Study number `N` the inverse divides by, is zero next to `x`
+    /// (`|N| â¤ n Îµ âxâÂ²`, with `|N|Â²` and `âxâÂ²` the sums of the squared coefficients of `N`
+    /// and `x`, and `n = 2` the number of `x`'s), or its norm `d = N conj(N)` is lost to
+    /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
+    #[inline]
+    pub fn try_inverse(self) -> Option<Tilt<(), T, O>> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t3 = t0 * t1;
+        let t4 = t1 * t1;
+        let t5 = t0 + t1;
+        let t6 = t0.mul_add(t0, t4);
+        let t8 = t3.mul_add(T::from_i64(2), t6);
+        let (size, d) = (t5, t8);
+        let parts = t5 * t5;
+        let tol = T::from_i64(2) * T::epsilon();
+        if T::all_lt(tol * size, parts.sqrt()) && T::all_lt(tol * parts, d.abs()) {
+            Some(self.inverse()).filter(gx::Extensor::is_finite)
+        } else {
+            None
+        }
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline(always)]
+    pub fn unit(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let s0 = (p2).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        gx::Unit::new_unchecked(Tilt::from_coeffs([t0, t1]))
+    }
+
+    /// The same, uncertified: `self` scaled so that `x ~x = 1`, as a plain value. [`unit`](Self::unit)
+    /// returns it as a [`gx::Unit`], which the cheaper unit kernels take.
+    #[inline(always)]
+    pub fn normalized(self) -> Self {
+        self.unit().into_inner()
+    }
+
+}
+
+impl<T: gx::Real> Tilt<(), T, gx::Extrinsic> {
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B` with `BÂ²` a Study number.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Rotor<(), T>> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let p1 = x[1] * x[1];
+        let p2 = x[0].mul_add(x[0], p1);
+        let p3 = -p2;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs_rotation(p3, T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        gx::Unit::new_unchecked(Rotor::from_coeffs([c0, t0, t1, T::from_i64(0)]))
+        })
+    }
+
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Tilt<(), T, O> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t2 = x[0].mul_add(x[0], t1);
+        let t3 = x[0] * t2;
+        let t4 = x[1] * t2;
+        let t6 = x[0] * T::from_ratio(3, 2);
+        let t7 = (-t3).mul_add(T::from_ratio(1, 2), t6);
+        let t9 = x[1] * T::from_ratio(3, 2);
+        let t10 = (-t4).mul_add(T::from_ratio(1, 2), t9);
+        Tilt::from_coeffs([t7, t10])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
+}
+
+impl<T: gx::Real> gx::Exp for Tilt<(), T, gx::Extrinsic> {
+    type Output = gx::Unit<Rotor<(), T>>;
+    #[inline(always)]
+    fn exp(self) -> Self::Output {
+        Self::exp(self)
+    }
+}
+
+impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Tilt<(), T, O> {
+    type Output = Tilt<(), T, O>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+    #[inline(always)]
+    fn try_inverse(self) -> Option<Self::Output> {
+        Self::try_inverse(self)
+    }
+}
+
+impl<T: gx::Real, O: gx::Orientation> gx::Norm for Tilt<(), T, O> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real, O: gx::Orientation> gx::Normalize for Tilt<(), T, O> {
+    #[inline(always)]
+    fn unit(self) -> gx::Unit<Self> {
+        Self::unit(self)
+    }
+}
+
+#[doc = "The horizontal part of a moment, `e01, e02`. gx::Intrinsic (the default), the couple that tilts (a heeling or righting moment, for z up); extrinsic, a horizontal translation rate. Its complement is `Tilt`."]
+///
+/// Blades, in coefficient order: `[e01, e02]`.
+///
+/// `S` lists the open slots: `TiltMoment` (that is, `TiltMoment<()>`) is a value, `TiltMoment<(A,)>` a
+/// linear map from `A`, `TiltMoment<(A, B)>` a bilinear map. `T` is the coefficient type. `O` is
+/// the orientation of the output, intrinsic by default (ADR-051).
+#[repr(C)]
+pub struct TiltMoment<S: gx::Slots = (), T: gx::Coef = f64, O: gx::Orientation = gx::Intrinsic> {
+    /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
+    pub c: [S::Arr<T>; 2],
+    o: core::marker::PhantomData<O>,
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Clone for TiltMoment<S, T, O> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Copy for TiltMoment<S, T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> PartialEq for TiltMoment<S, T, O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.c == other.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::fmt::Debug for TiltMoment<S, T, O> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut d = f.debug_struct(if O::SIGN < 0 { "intrinsic TiltMoment" } else { "TiltMoment" });
+        for (b, c) in <TiltMoment as gx::Kind>::BLADES.iter().zip(self.c.iter()) {
+            d.field(b, c);
+        }
+        d.finish()
+    }
+}
+
+// SAFETY: `Arr<X>` is `[X; 2]`, the layout `gx::FlatKind` promises.
+unsafe impl<O: gx::Orientation> gx::FlatKind for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Kind for TiltMoment<(), f64, O> {
+    const N: usize = 2;
+    const NAME: &'static str = "TiltMoment";
+    const MODULE: &'static str = module_path!();
+    const BLADES: &'static [&'static str] = &["e01", "e02"];
+    type Arr<X: gx::Elem> = [X; 2];
+    type Mv<S: gx::Slots, T: gx::Coef> = TiltMoment<S, T, O>;
+    type Scalar = Scalar;
+    type Orientation = O;
+    const DEFAULT_INTRINSIC: bool = true;
+    #[inline(always)]
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 2] {
+        [f(0), f(1)]
+    }
+    #[inline(always)]
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 2], mut f: impl FnMut(&X) -> Y) -> [Y; 2] {
+        [f(&a[0]), f(&a[1])]
+    }
+    #[inline(always)]
+    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
+        a: &[X; 2],
+        b: &[Y; 2],
+        mut f: impl FnMut(&X, &Y) -> Z,
+    ) -> [Z; 2] {
+        [f(&a[0], &b[0]), f(&a[1], &b[1])]
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for TiltMoment<S, T, O> {
+    type Kind = TiltMoment<(), f64, O>;
+    type Slots = S;
+    type Coef = T;
+    #[inline(always)]
+    fn from_coeffs(c: [S::Arr<T>; 2]) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c }
+    }
+    #[inline(always)]
+    fn coeffs(&self) -> &[S::Arr<T>; 2] {
+        &self.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> TiltMoment<S, T, O> {
+    /// Construct from output-first coefficients.
+    #[inline(always)]
+    pub const fn from_coeffs(c: [S::Arr<T>; 2]) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c }
+    }
+
+    /// All coefficients zero.
+    #[inline(always)]
+    pub fn zero() -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0); 2] }
+    }
+
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> TiltMoment<S, U, O> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
+    /// Fill the first open slot with a value, or compose a map into it.
+    #[inline(always)]
+    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
+    where
+        Self: gx::Of<X>,
+    {
+        gx::Of::of(self, x)
+    }
+
+    /// This value or map as a `K` of its own orientation (`K` names only the kind, so turbofish
+    /// it: `x.cast::<Line>()`): the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
+    where
+        K: gx::__private::Reorient<O>,
+        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
+        TiltMoment<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
+    {
+        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
+    }
+
+    /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
+    /// (a file, a GPU buffer, a raw `new`) whose orientation the type does not know.
+    #[inline(always)]
+    pub fn with_orientation<O2: gx::Orientation>(self) -> TiltMoment<S, T, O2> {
+        TiltMoment { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<TiltMoment<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        TiltMoment<(), f64, O>: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
+    #[inline]
+    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
+    where
+        Self: gx::LeastSquaresDyad<X>,
+    {
+        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
+    }
+
+    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
+    where
+        Self: gx::LeastSquaresDyad<X, Coef = T>,
+    {
+        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
+    where
+        Self: gx::OfDyad,
+    {
+        gx::OfDyad::of_dyad(self, x)
+    }
+
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> TiltMoment<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
+    where
+        S: gx::__private::MoveToFront<I>,
+    {
+        TiltMoment { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `TiltMoment`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <TiltMoment<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
+    where
+        S: gx::__private::MoveToFront<I>,
+        TiltMoment<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> TiltMoment<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::__private::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        TiltMoment { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
+    /// See [`gx::Gp`].
+    #[inline(always)]
+    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
+    where
+        Self: gx::Gp<R>,
+    {
+        gx::Gp::gp(self, rhs)
+    }
+
+    /// See [`gx::Reverse`].
+    #[inline(always)]
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+        gx::Reverse::reverse(self)
+    }
+
+    /// See [`gx::Involute`].
+    #[inline(always)]
+    pub fn involute(self) -> <Self as gx::Involute>::Output {
+        gx::Involute::involute(self)
+    }
+
+    /// See [`gx::Conjugate`].
+    #[inline(always)]
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+        gx::Conjugate::conjugate(self)
+    }
+
+    /// See [`gx::Dual`].
+    #[inline(always)]
+    pub fn dual(self) -> <Self as gx::Dual>::Output {
+        gx::Dual::dual(self)
+    }
+
+    /// See [`gx::Undual`].
+    #[inline(always)]
+    pub fn undual(self) -> <Self as gx::Undual>::Output {
+        gx::Undual::undual(self)
+    }
+
+    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
+    /// null basis vector, so it has no inverse. This method only makes the compile error say
+    /// so.
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn hodge_inverse(self) -> Self
+    where
+        Self: gx::__private::HodgeNeedsMetric,
+    {
+        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for TiltMoment<S, T, O> {
+    type Out = TiltMoment<S, T, O2>;
+    #[inline(always)]
+    fn reorient(self) -> TiltMoment<S, T, O2> {
+        TiltMoment { o: core::marker::PhantomData, c: self.c }
+    }
+}
+
+impl<T: gx::Coef> TiltMoment<(), T, gx::Extrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e01: T, e02: T) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: [e01, e02] }
+    }
+
+    /// The identity map on `TiltMoment`: a `TiltMoment` with one open `TiltMoment` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> TiltMoment<(TiltMoment<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
+        TiltMoment { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef> TiltMoment<(), T, gx::Intrinsic> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e01: T, e02: T) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: [e01, e02] }
+    }
+
+    /// The identity map on `TiltMoment`: a `TiltMoment` with one open `TiltMoment` slot, both of this
+    /// orientation.
+    #[inline(always)]
+    pub fn slot() -> TiltMoment<(TiltMoment<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
+        TiltMoment { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Slot for TiltMoment<(), T, O> {
+    type Map = TiltMoment<(TiltMoment<(), f64, O>,), T, O>;
+    #[inline(always)]
+    fn slot() -> Self::Map {
+        TiltMoment { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> TiltMoment<(), T, O> {
+    /// Coefficient of `e01`.
+    #[inline(always)]
+    pub fn e01(&self) -> T {
+        self.c[0]
+    }
+
+    /// Coefficient of `e02`.
+    #[inline(always)]
+    pub fn e02(&self) -> T {
+        self.c[1]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> TiltMoment<(A,), T, O> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `TiltMoment`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<TiltMoment<(), T, O>>) -> Self {
+        let images = images.as_ref();
+        TiltMoment { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> TiltMoment<(A, B), T, O> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `TiltMoment <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> TiltMoment<(A,), T, O> {
+    /// The adjugate, the transpose through the regressive product: the map between
+    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
+    /// and defined for singular maps (see [`gx::Adjugate`]).
+    #[inline]
+    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
+    where
+        Self: gx::Adjugate,
+    {
+        gx::Adjugate::adjugate(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> TiltMoment<(A,), T, O> {
+    /// The inverse map, `A <- TiltMoment`.
+    #[inline]
+    pub fn inverse(self) -> <A as gx::Kind>::Mv<(TiltMoment<(), f64, O>,), T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(TiltMoment<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// [`inverse`](Self::inverse), or `None` where the map is singular or the inverse is not
+    /// finite (see [`gx::SquareMap::try_inverse`]).
+    #[inline]
+    pub fn try_inverse(self) -> Option<<A as gx::Kind>::Mv<(TiltMoment<(), f64, O>,), T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A, Inverse = <A as gx::Kind>::Mv<(TiltMoment<(), f64, O>,), T>>,
+    {
+        gx::SquareMap::try_inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular value decomposition of a map of any shape: values, right and left singular
+    /// vectors, `self.of(inputs[i]) == values[i] * outputs[i]` (see [`gx::Svd`]).
+    #[inline]
+    pub fn svd(self) -> gx::Svd<A, TiltMoment<(), f64, O>, T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = TiltMoment<(), f64, O>>,
+    {
+        gx::SingularValues::svd(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<TiltMoment<(), f64, O> as gx::Kind>::Arr<T>, <TiltMoment<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <TiltMoment<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<TiltMoment<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>, <TiltMoment<(), f64, O> as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them (a two-slot
+    /// pairing's `solve` solves against its second slot instead).
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = TiltMoment<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// [`solve`](Self::solve), or `None` where the map is singular or the solution is not
+    /// finite (see [`gx::SquareMap::try_solve`]).
+    #[inline]
+    pub fn try_solve<X>(self, rhs: X) -> Option<<A as gx::Kind>::Mv<X::Slots, T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = TiltMoment<(), f64, O>, Input = A>,
+        X: gx::Extensor<Kind = TiltMoment<(), f64, O>, Coef = T>,
+    {
+        gx::SquareMap::try_solve(self, rhs)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- TiltMoment`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(TiltMoment<(), f64, O>,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(TiltMoment<(), f64, O>,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(TiltMoment<(), f64, O>,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(TiltMoment<(), f64, O>,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
+    }
+
+    /// The trace of a map from `TiltMoment` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = TiltMoment<(), f64, O>, Input = TiltMoment<(), f64, O>>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> TiltMoment<(A, B), T, O> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> TiltMoment<(B, A), T, O> {
+        self.at::<1>()
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add for TiltMoment<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) + gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub for TiltMoment<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: core::array::from_fn(|i| (gx::__private::SlotArr::<S, T>(self.c[i]) - gx::__private::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::iter::Sum for TiltMoment<S, T, O> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign for TiltMoment<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign for TiltMoment<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Neg for TiltMoment<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: self.c.map(|x| (-gx::__private::SlotArr::<S, T>(x)).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Gp<T> for TiltMoment<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn gp(self, rhs: T) -> Self {
+        TiltMoment { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(rhs).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real, O: gx::Orientation> gx::DivBy<T> for TiltMoment<S, T, O> {
+    type Output = Self;
+    #[inline(always)]
+    fn div_by(self, rhs: T) -> Self {
+        let r = rhs.recip();
+        TiltMoment { o: core::marker::PhantomData, c: self.c.map(|x| gx::__private::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Div<R> for TiltMoment<S, T, O>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<TiltMoment<S, f32, O>> for f32 {
+    type Output = TiltMoment<S, f32, O>;
+    #[inline(always)]
+    fn mul(self, rhs: TiltMoment<S, f32, O>) -> TiltMoment<S, f32, O> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots, O: gx::Orientation> core::ops::Mul<TiltMoment<S, f64, O>> for f64 {
+    type Output = TiltMoment<S, f64, O>;
+    #[inline(always)]
+    fn mul(self, rhs: TiltMoment<S, f64, O>) -> TiltMoment<S, f64, O> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Mul<R> for TiltMoment<S, T, O>
+where
+    Self: gx::Gp<R>,
+{
+    type Output = <Self as gx::Gp<R>>::Output;
+    #[inline(always)]
+    fn mul(self, rhs: R) -> Self::Output {
+        gx::Gp::gp(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitXor<R> for TiltMoment<S, T, O>
+where
+    Self: gx::Wedge<R>,
+{
+    type Output = <Self as gx::Wedge<R>>::Output;
+    #[inline(always)]
+    fn bitxor(self, rhs: R) -> Self::Output {
+        gx::Wedge::wedge(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitAnd<R> for TiltMoment<S, T, O>
+where
+    Self: gx::Vee<R>,
+{
+    type Output = <Self as gx::Vee<R>>::Output;
+    #[inline(always)]
+    fn bitand(self, rhs: R) -> Self::Output {
+        gx::Vee::vee(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::BitOr<R> for TiltMoment<S, T, O>
+where
+    Self: gx::Dot<R>,
+{
+    type Output = <Self as gx::Dot<R>>::Output;
+    #[inline(always)]
+    fn bitor(self, rhs: R) -> Self::Output {
+        gx::Dot::dot(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shr<R> for TiltMoment<S, T, O>
+where
+    Self: gx::Transform<R>,
+{
+    type Output = <Self as gx::Transform<R>>::Output;
+    #[inline(always)]
+    fn shr(self, rhs: R) -> Self::Output {
+        gx::Transform::transform(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, R> core::ops::Shl<R> for TiltMoment<S, T, O>
+where
+    Self: gx::TransformInv<R>,
+{
+    type Output = <Self as gx::TransformInv<R>>::Output;
+    #[inline(always)]
+    fn shl(self, rhs: R) -> Self::Output {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+}
+
+impl<T: gx::Real> TiltMoment<(), T, gx::Extrinsic> {
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B` with `BÂ²` a Study number.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Translator<(), T>> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::__private::study::exp_coeffs(-1, T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        gx::Unit::new_unchecked(Translator::from_coeffs([c0, t0, t1, T::from_i64(0)]))
+        })
+    }
+
+}
+
+impl<T: gx::Real> gx::Exp for TiltMoment<(), T, gx::Extrinsic> {
+    type Output = gx::Unit<Translator<(), T>>;
+    #[inline(always)]
+    fn exp(self) -> Self::Output {
+        Self::exp(self)
     }
 }
 
@@ -2245,6 +3788,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Scalar<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Scalar<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Plane<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2298,6 +3849,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Plane<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Plane<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Plane<(), f64, OA> {
     type Out = gx::__private::False;
 }
 
@@ -2357,6 +3916,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Line<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Line<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Point<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2410,6 +3977,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Point<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Point<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Point<(), f64, OA> {
     type Out = gx::__private::False;
 }
 
@@ -2469,6 +4044,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Direction<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Direction<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2522,6 +4105,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Pseudoscalar<(), f64, OA> {
     type Out = gx::__private::False;
 }
 
@@ -2581,6 +4172,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Rotor<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Rotor<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Translator<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2634,6 +4233,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Translator<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Translator<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Translator<(), f64, OA> {
     type Out = gx::__private::False;
 }
 
@@ -2693,6 +4300,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Motor<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Motor<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Flector<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2746,6 +4361,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Flector<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Flector<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Flector<(), f64, OA> {
     type Out = gx::__private::False;
 }
 
@@ -2805,6 +4428,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Multivector<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Multivector<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Spin<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2858,6 +4489,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Spin<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Spin<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Spin<(), f64, OA> {
     type Out = gx::__private::False;
 }
 
@@ -2917,6 +4556,14 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane
     type Out = gx::__private::False;
 }
 
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Moment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Moment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for OriginPlane<(), f64, OA> {
     type Out = gx::__private::False;
 }
@@ -2970,6 +4617,142 @@ impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), 
 }
 
 impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for OriginPlane<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for OriginPlane<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for OriginPlane<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Plane<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Line<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Point<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Direction<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Rotor<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Translator<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Flector<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Spin<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::orientation::Same<OA, OB>;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for Tilt<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Scalar<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Plane<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Line<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Point<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Direction<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Pseudoscalar<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Rotor<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Translator<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Motor<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Flector<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Multivector<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Spin<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Moment<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<OriginPlane<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<Tilt<(), f64, OB>> for TiltMoment<(), f64, OA> {
+    type Out = gx::__private::False;
+}
+
+impl<OA: gx::Orientation, OB: gx::Orientation> gx::__private::KindEq<TiltMoment<(), f64, OB>> for TiltMoment<(), f64, OA> {
     type Out = gx::orientation::Same<OA, OB>;
 }
 
@@ -3090,6 +4873,14 @@ impl<O: gx::Orientation> gx::Cast<Moment<(), f64, O>> for Line<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(3, 0, false), (4, 1, false), (5, 2, false)];
 }
 
+impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Line<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<TiltMoment<(), f64, O>> for Line<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(3, 0, false), (4, 1, false)];
+}
+
 impl<O: gx::Orientation> gx::GradePart<2> for Line<(), f64, O> {
     type Out = Line<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
@@ -3157,7 +4948,7 @@ impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Direction<(), f64
 impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Direction<(), f64, O> {}
 
 impl<O: gx::Orientation> gx::GradePart<3> for Direction<(), f64, O> {
-    type Out = Point<(), f64, O>;
+    type Out = Direction<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
 
@@ -3229,6 +5020,10 @@ impl<O: gx::Orientation> gx::Cast<Spin<(), f64, O>> for Rotor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false)];
 }
 
+impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Rotor<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false)];
+}
+
 impl<O: gx::Orientation> gx::GradePart<0> for Rotor<(), f64, O> {
     type Out = Scalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
@@ -3271,6 +5066,10 @@ impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Translator<(),
 
 impl<O: gx::Orientation> gx::Cast<Moment<(), f64, O>> for Translator<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<TiltMoment<(), f64, O>> for Translator<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false)];
 }
 
 impl<O: gx::Orientation> gx::GradePart<0> for Translator<(), f64, O> {
@@ -3326,6 +5125,14 @@ impl<O: gx::Orientation> gx::Cast<Spin<(), f64, O>> for Motor<(), f64, O> {
 
 impl<O: gx::Orientation> gx::Cast<Moment<(), f64, O>> for Motor<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(4, 0, false), (5, 1, false), (6, 2, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Motor<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<TiltMoment<(), f64, O>> for Motor<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(4, 0, false), (5, 1, false)];
 }
 
 impl<O: gx::Orientation> gx::GradePart<0> for Motor<(), f64, O> {
@@ -3449,6 +5256,14 @@ impl<O: gx::Orientation> gx::Cast<OriginPlane<(), f64, O>> for Multivector<(), f
     const SHARED: &'static [(usize, usize, bool)] = &[(2, 0, false), (3, 1, false), (4, 2, false)];
 }
 
+impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Multivector<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(9, 1, false), (10, 0, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<TiltMoment<(), f64, O>> for Multivector<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false)];
+}
+
 impl<O: gx::Orientation> gx::GradePart<0> for Multivector<(), f64, O> {
     type Out = Scalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
@@ -3515,8 +5330,12 @@ impl<O: gx::Orientation> gx::Cast<Spin<(), f64, O>> for Spin<(), f64, O> {
 
 impl<O: gx::Orientation> gx::SubKind<Spin<(), f64, O>> for Spin<(), f64, O> {}
 
+impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Spin<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
 impl<O: gx::Orientation> gx::GradePart<2> for Spin<(), f64, O> {
-    type Out = Line<(), f64, O>;
+    type Out = Spin<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
 
@@ -3555,9 +5374,13 @@ impl<O: gx::Orientation> gx::Cast<Moment<(), f64, O>> for Moment<(), f64, O> {
 
 impl<O: gx::Orientation> gx::SubKind<Moment<(), f64, O>> for Moment<(), f64, O> {}
 
+impl<O: gx::Orientation> gx::Cast<TiltMoment<(), f64, O>> for Moment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
 impl<O: gx::Orientation> gx::GradePart<2> for Moment<(), f64, O> {
-    type Out = Line<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 3, false), (1, 4, false), (2, 5, false)];
+    type Out = Moment<(), f64, O>;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
 }
 
 #[diagnostic::do_not_recommend]
@@ -3596,6 +5419,104 @@ impl<O: gx::Orientation> gx::Cast<OriginPlane<(), f64, O>> for OriginPlane<(), f
 impl<O: gx::Orientation> gx::SubKind<OriginPlane<(), f64, O>> for OriginPlane<(), f64, O> {}
 
 impl<O: gx::Orientation> gx::GradePart<1> for OriginPlane<(), f64, O> {
-    type Out = Plane<(), f64, O>;
+    type Out = OriginPlane<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
+}
+
+#[diagnostic::do_not_recommend]
+impl<O: gx::Orientation> gx::Reciprocal for Tilt<(), f64, O> {
+    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, -1, 1)], &[(1, -1, 1)]];
+    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, -1)], &[(1, -1)]];
+}
+
+impl<O: gx::Orientation> gx::Complement for Tilt<(), f64, O> {
+    type Out = TiltMoment<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(0, false), (1, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<Line<(), f64, O>> for Tilt<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Line<(), f64, O>> for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Rotor<(), f64, O>> for Tilt<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Rotor<(), f64, O>> for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Tilt<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Tilt<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 10, false), (1, 9, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Spin<(), f64, O>> for Tilt<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Spin<(), f64, O>> for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Tilt<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Tilt<(), f64, O>> for Tilt<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::GradePart<2> for Tilt<(), f64, O> {
+    type Out = Tilt<(), f64, O>;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::Complement for TiltMoment<(), f64, O> {
+    type Out = Tilt<(), f64, gx::orientation::Flip<O>>;
+    const PAIRS: &'static [(usize, bool)] = &[(0, false), (1, false)];
+}
+
+impl<O: gx::Orientation> gx::Cast<Line<(), f64, O>> for TiltMoment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 3, false), (1, 4, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Line<(), f64, O>> for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Translator<(), f64, O>> for TiltMoment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Translator<(), f64, O>> for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for TiltMoment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 4, false), (1, 5, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for TiltMoment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 6, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<Moment<(), f64, O>> for TiltMoment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<Moment<(), f64, O>> for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::Cast<TiltMoment<(), f64, O>> for TiltMoment<(), f64, O> {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl<O: gx::Orientation> gx::SubKind<TiltMoment<(), f64, O>> for TiltMoment<(), f64, O> {}
+
+impl<O: gx::Orientation> gx::GradePart<2> for TiltMoment<(), f64, O> {
+    type Out = TiltMoment<(), f64, O>;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }

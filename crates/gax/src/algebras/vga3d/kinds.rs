@@ -8145,9 +8145,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Horizontal<S, T, O> {
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
     #[inline]
-    pub fn hodge(self) -> Bivector<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge(self) -> Tilt<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Bivector { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+        Tilt { o: core::marker::PhantomData, c: [a[0], a[1]] }
     }
 
     /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
@@ -8156,9 +8156,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Horizontal<S, T, O> {
     /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
     /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
     #[inline]
-    pub fn hodge_inverse(self) -> Bivector<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge_inverse(self) -> Tilt<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Bivector { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+        Tilt { o: core::marker::PhantomData, c: [a[0], a[1]] }
     }
 }
 
@@ -8583,7 +8583,7 @@ impl<T: gx::Real, O: gx::Orientation> Horizontal<(), T, O> {
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (10 mul, 3 add, 1 div).
     #[inline(always)]
-    pub fn inverse(self) -> Vector<(), T, O> {
+    pub fn inverse(self) -> Horizontal<(), T, O> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -8596,7 +8596,7 @@ impl<T: gx::Real, O: gx::Orientation> Horizontal<(), T, O> {
         let t11 = t0.mul_add(t8, t10);
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
-        Vector::from_coeffs([t12, t13, T::from_i64(0)])
+        Horizontal::from_coeffs([t12, t13])
     }
 
     /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
@@ -8605,7 +8605,7 @@ impl<T: gx::Real, O: gx::Orientation> Horizontal<(), T, O> {
     /// and `x`, and `n = 2` the number of `x`'s), or its norm `d = N conj(N)` is lost to
     /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
     #[inline]
-    pub fn try_inverse(self) -> Option<Vector<(), T, O>> {
+    pub fn try_inverse(self) -> Option<Horizontal<(), T, O>> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -8688,7 +8688,7 @@ impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for Horizontal<(
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Horizontal<(), T, O> {
-    type Output = Vector<(), T, O>;
+    type Output = Horizontal<(), T, O>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -9072,9 +9072,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Tilt<S, T, O> {
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
     #[inline]
-    pub fn hodge(self) -> Vector<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge(self) -> Horizontal<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+        Horizontal { o: core::marker::PhantomData, c: [a[0], a[1]] }
     }
 
     /// The inverse of the Hodge dual, `~(x Iâ»Â¹)`: numga's `dual_inverse`, with
@@ -9083,9 +9083,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Tilt<S, T, O> {
     /// Euclidean spaces of odd dimension, `-x.hodge()` on the vectors of the plane and on the
     /// even grades of STA. Flips the orientation, as `hodge` does (ADR-051).
     #[inline]
-    pub fn hodge_inverse(self) -> Vector<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge_inverse(self) -> Horizontal<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+        Horizontal { o: core::marker::PhantomData, c: [a[0], a[1]] }
     }
 }
 
@@ -9510,7 +9510,7 @@ impl<T: gx::Real, O: gx::Orientation> Tilt<(), T, O> {
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (10 mul, 3 add, 1 div).
     #[inline(always)]
-    pub fn inverse(self) -> Bivector<(), T, O> {
+    pub fn inverse(self) -> Tilt<(), T, O> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -9525,7 +9525,7 @@ impl<T: gx::Real, O: gx::Orientation> Tilt<(), T, O> {
         let t13 = x[1] * t11;
         let t14 = -t12;
         let t15 = -t13;
-        Bivector::from_coeffs([t14, t15, T::from_i64(0)])
+        Tilt::from_coeffs([t14, t15])
     }
 
     /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
@@ -9534,7 +9534,7 @@ impl<T: gx::Real, O: gx::Orientation> Tilt<(), T, O> {
     /// and `x`, and `n = 2` the number of `x`'s), or its norm `d = N conj(N)` is lost to
     /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
     #[inline]
-    pub fn try_inverse(self) -> Option<Bivector<(), T, O>> {
+    pub fn try_inverse(self) -> Option<Tilt<(), T, O>> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -9624,7 +9624,7 @@ impl<T: gx::Real> gx::Exp for Tilt<(), T, gx::Extrinsic> {
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for Tilt<(), T, O> {
-    type Output = Bivector<(), T, O>;
+    type Output = Tilt<(), T, O>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -10470,7 +10470,7 @@ impl<O: gx::Orientation> gx::Cast<Horizontal<(), f64, O>> for Horizontal<(), f64
 impl<O: gx::Orientation> gx::SubKind<Horizontal<(), f64, O>> for Horizontal<(), f64, O> {}
 
 impl<O: gx::Orientation> gx::GradePart<1> for Horizontal<(), f64, O> {
-    type Out = Vector<(), f64, O>;
+    type Out = Horizontal<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }
 
@@ -10510,6 +10510,6 @@ impl<O: gx::Orientation> gx::Cast<Tilt<(), f64, O>> for Tilt<(), f64, O> {
 impl<O: gx::Orientation> gx::SubKind<Tilt<(), f64, O>> for Tilt<(), f64, O> {}
 
 impl<O: gx::Orientation> gx::GradePart<2> for Tilt<(), f64, O> {
-    type Out = Bivector<(), f64, O>;
+    type Out = Tilt<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }

@@ -67,6 +67,7 @@ fn vga3d_vectors_paravectors_and_multivectors() {
 
 #[test]
 fn vga2d_and_sta() {
+    use gax::sta::{Even, Vector};
     // VGA2D: (v + b e12)² = |v|² − b², every multivector.
     use gax::vga2d::Multivector;
     let one = Multivector::new(1.0, 0.0, 0.0, 0.0);
@@ -78,7 +79,6 @@ fn vga2d_and_sta() {
     }
     // STA: a timelike vector squares to −1, so its exponential turns (cos, sin); a spacelike
     // one boosts. The even kind: e^z exp(B) with z = a + b e1234.
-    use gax::sta::{Even, Vector};
     let t = Vector::new(0.0, 0.0, 0.0, 0.8);
     let e = t.exp();
     assert!((e.s() - 0.8f64.cos()).abs() < 1e-15 && (e.e4() - 0.8f64.sin()).abs() < 1e-15);

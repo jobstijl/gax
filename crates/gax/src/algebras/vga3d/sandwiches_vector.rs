@@ -1013,9 +1013,9 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Pseudoscalar<(), f64, O>, gx:
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Paravector<S, T, O>> for Vector<(), T, OV> {
-    type Output = Multivector<S, T, O>;
+    type Output = Paravector<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Paravector<S, T, O>) -> Multivector<S, T, O> {
+    fn transform(self, x: Paravector<S, T, O>) -> Paravector<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
@@ -1043,7 +1043,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t28 = xv[1].mul_add(t4, t20);
         let t29 = t28 * T::from_i64(2);
         let t30 = (-xv[3]).mul_add(t11, t29);
-            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t12, t24, t27, t30, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)]), [false, true, true, true, false, false, false, true]) };
+            return Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t12, t24, t27, t30]), [false, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1062,14 +1062,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m14 = m5 * T::from_i64(2);
         let m15 = m2 - m7;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)], [false, true, true, true, false, false, false, true]) }
+        Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0], [false, true, true, true]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Paravector<S, T, O>> for Vector<(), T, OV> {
-    type Output = Multivector<S, T, O>;
+    type Output = Paravector<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Paravector<S, T, O>) -> Multivector<S, T, O> {
+    fn transform_inv(self, x: Paravector<S, T, O>) -> Paravector<S, T, O> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
@@ -1100,35 +1100,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Paravecto
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Paravector<S, T, O>> for gx::Prepared<Vector, Paravector<(), f64, O>, T, 7> {
-    type Output = Multivector<S, T, O>;
+    type Output = Paravector<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Paravector<S, T, O>) -> Multivector<S, T, O> {
+    fn transform(self, x: Paravector<S, T, O>) -> Paravector<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)], [false, true, true, true, false, false, false, true]) }
+        Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0], [false, true, true, true]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>> for Multivector<(Paravector<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>> for Paravector<(Paravector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Paravector<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, true, true, true, false, false, false, true]) }
+        Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Paravector<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]], [false, true, true, true]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<Vector, 7> for Paravector<(), f64, O> {
-    type Output = Multivector<(), f64, O>;
+    type Output = Paravector<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>) -> Multivector<(Paravector<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>) -> Paravector<(Paravector<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Paravector<(), f64, O>, gx::batch::Plain> for Vector {
-    type Y = Multivector<(), f64, O>;
+    type Y = Paravector<(), f64, O>;
     type Versor<T: gx::Coef> = Vector<(), T>;
     type Prepared<T: gx::Coef> = gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>;
     #[inline(always)]
@@ -1149,19 +1149,19 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Paravector<(), f64, O>, gx::b
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>, x: Paravector<(), T, O>) -> Multivector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Paravector<(), f64, O>, T, 7>, x: Paravector<(), T, O>) -> Paravector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Paravector<(), T, O>) -> Multivector<(), T, O> {
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Paravector<(), T, O>) -> Paravector<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Paravector<S, T, O>> for gx::Unit<Vector<(), T, OV>> {
-    type Output = Multivector<S, T, O>;
+    type Output = Paravector<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Paravector<S, T, O>) -> Multivector<S, T, O> {
+    fn transform(self, x: Paravector<S, T, O>) -> Paravector<S, T, O> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -1188,7 +1188,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t19 = t7 * T::from_i64(2);
         let t21 = (-xv[3]).mul_add(t13, t19);
         let t22 = xv[0] * t13;
-            return Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>(gx::slots::from_values::<S, T, 8>([t22, t15, t18, t21, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)]), [false, true, true, true, false, false, false, true]) };
+            return Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t22, t15, t18, t21]), [false, true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -1207,14 +1207,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m14 = m5 * T::from_i64(2);
         let m15 = m2 - m7;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)], [false, true, true, true, false, false, false, true]) }
+        Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0], [false, true, true, true]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Paravector<S, T, O>> for gx::Unit<Vector<(), T, OV>> {
-    type Output = Multivector<S, T, O>;
+    type Output = Paravector<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Paravector<S, T, O>) -> Multivector<S, T, O> {
+    fn transform_inv(self, x: Paravector<S, T, O>) -> Paravector<S, T, O> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
@@ -1253,35 +1253,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Paravecto
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Paravector<S, T, O>> for gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7> {
-    type Output = Multivector<S, T, O>;
+    type Output = Paravector<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Paravector<S, T, O>) -> Multivector<S, T, O> {
+    fn transform(self, x: Paravector<S, T, O>) -> Paravector<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 8>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)], [false, true, true, true, false, false, false, true]) }
+        Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0], [false, true, true, true]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>> for Multivector<(Paravector<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>> for Paravector<(Paravector<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>) -> Self {
         let m = p.m;
-        Multivector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Paravector<(), f64, O>,), T, 8>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, true, true, true, false, false, false, true]) }
+        Paravector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Paravector<(), f64, O>,), T, 4>([[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]], [false, true, true, true]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Vector>, 7> for Paravector<(), f64, O> {
-    type Output = Multivector<(), f64, O>;
+    type Output = Paravector<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>) -> Multivector<(Paravector<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>) -> Paravector<(Paravector<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Paravector<(), f64, O>, gx::batch::Certified> for Vector {
-    type Y = Multivector<(), f64, O>;
+    type Y = Paravector<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
     type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>;
     #[inline(always)]
@@ -1302,11 +1302,11 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Paravector<(), f64, O>, gx::b
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>, x: Paravector<(), T, O>) -> Multivector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Paravector<(), f64, O>, T, 7>, x: Paravector<(), T, O>) -> Paravector<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Paravector<(), T, O>) -> Multivector<(), T, O> {
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Paravector<(), T, O>) -> Paravector<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }

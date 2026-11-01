@@ -4508,9 +4508,9 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for Vector<(), T, OV> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[1] * v[1];
@@ -4548,7 +4548,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t45 = xv[2].mul_add(t15, t29);
         let t47 = t45.mul_add(T::from_i64(2), t44);
         let t48 = -t47;
-            return Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>(gx::slots::from_values::<S, T, 5>([t35, t39, t43, t48, T::from_i64(0)]), [false, false, false, false, false]) };
+            return Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t35, t39, t43, t48]), [false, false, false, false]) };
         }
         let m0 = v[1] * v[1];
         let m1 = v[2] * v[2];
@@ -4580,14 +4580,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m27 = m11 + m13;
         let m28 = -m27;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[0].scale(m15) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[0].scale(m16) + x[1].scale(m20) + x[2].scale(m22) + x[3].scale(m23)).0, (x[0].scale(m24) + x[1].scale(m25) + x[2].scale(m26) + x[3].scale(m28)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[0].scale(m15) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[0].scale(m16) + x[1].scale(m20) + x[2].scale(m22) + x[3].scale(m23)).0, (x[0].scale(m24) + x[1].scale(m25) + x[2].scale(m26) + x[3].scale(m28)).0], [false, false, false, false]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for Vector<(), T, OV> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform_inv(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
@@ -4631,35 +4631,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<Vector, Direction<(), f64, O>, T, 13> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0], [false, false, false, false]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Direction<(), f64, O>, T, 13>> for Quadvector<(Direction<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Vector, Direction<(), f64, O>, T, 13>> for Direction<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<Vector, Direction<(), f64, O>, T, 13>) -> Self {
         let m = p.m;
-        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 5>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [m[9], m[10], m[11], m[12]], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [m[9], m[10], m[11], m[12]]], [false, false, false, false]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<Vector, 13> for Direction<(), f64, O> {
-    type Output = Quadvector<(), f64, O>;
+    type Output = Direction<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<Vector, Direction<(), f64, O>, T, 13>) -> Quadvector<(Direction<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Vector, Direction<(), f64, O>, T, 13>) -> Direction<(Direction<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Plain> for Vector {
-    type Y = Quadvector<(), f64, O>;
+    type Y = Direction<(), f64, O>;
     type Versor<T: gx::Coef> = Vector<(), T>;
     type Prepared<T: gx::Coef> = gx::Prepared<Vector, Direction<(), f64, O>, T, 13>;
     #[inline(always)]
@@ -4680,19 +4680,19 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::ba
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Direction<(), f64, O>, T, 13>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Direction<(), f64, O>, T, 13>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Unit<Vector<(), T, OV>> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -4727,7 +4727,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t28 = xv[3] * t18;
         let t29 = t10.mul_add(T::from_i64(2), t28);
         let t30 = -t29;
-            return Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>(gx::slots::from_values::<S, T, 5>([t20, t23, t26, t30, T::from_i64(0)]), [false, false, false, false, false]) };
+            return Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t20, t23, t26, t30]), [false, false, false, false]) };
         }
         let m0 = v[1] * v[1];
         let m1 = v[2] * v[2];
@@ -4759,14 +4759,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m27 = m11 + m13;
         let m28 = -m27;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[0].scale(m15) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[0].scale(m16) + x[1].scale(m20) + x[2].scale(m22) + x[3].scale(m23)).0, (x[0].scale(m24) + x[1].scale(m25) + x[2].scale(m26) + x[3].scale(m28)).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[0].scale(m15) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[0].scale(m16) + x[1].scale(m20) + x[2].scale(m22) + x[3].scale(m23)).0, (x[0].scale(m24) + x[1].scale(m25) + x[2].scale(m26) + x[3].scale(m28)).0], [false, false, false, false]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for gx::Unit<Vector<(), T, OV>> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform_inv(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
@@ -4819,35 +4819,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 5>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)], [false, false, false, false, false]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0], [false, false, false, false]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>> for Quadvector<(Direction<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>> for Direction<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>) -> Self {
         let m = p.m;
-        Quadvector { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 5>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [m[9], m[10], m[11], m[12]], [T::zero(), T::zero(), T::zero(), T::zero()]], [false, false, false, false, false]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [m[9], m[10], m[11], m[12]]], [false, false, false, false]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Vector>, 13> for Direction<(), f64, O> {
-    type Output = Quadvector<(), f64, O>;
+    type Output = Direction<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>) -> Quadvector<(Direction<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>) -> Direction<(Direction<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Certified> for Vector {
-    type Y = Quadvector<(), f64, O>;
+    type Y = Direction<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
     type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>;
     #[inline(always)]
@@ -4868,11 +4868,11 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::ba
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Direction<(), f64, O>, T, 13>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }

@@ -179,6 +179,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         .flat_map(|v| {
             spec.kinds
                 .iter()
+                .filter(|x| x.operand)
                 .flat_map(move |x| [(v, x, false), (v, x, true)])
         })
         .collect();
@@ -249,8 +250,8 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     let phase = std::time::Instant::now();
     for op in BinOp::ALL {
         e.part(&format!("products_{}", format!("{op:?}").to_lowercase()));
-        for a in &spec.kinds {
-            for b in &spec.kinds {
+        for a in spec.kinds.iter().filter(|k| k.operand) {
+            for b in spec.kinds.iter().filter(|k| k.operand) {
                 e.binary(op, a, b);
             }
         }

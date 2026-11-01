@@ -1070,22 +1070,21 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<Spin<S2, T, OB>> for Direction<S1, T, OA> {
-    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Direction<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: Spin<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: Spin<S2, T, OB>) -> Direction<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Point {
+        Direction {
             o: core::marker::PhantomData,
             c: [
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -2895,22 +2894,21 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<Direction<S2, T, OB>> for Spin<S1, T, OA> {
-    type Output = Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Direction<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: Direction<S2, T, OB>) -> Point<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: Direction<S2, T, OB>) -> Direction<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Point {
+        Direction {
             o: core::marker::PhantomData,
             c: [
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -3049,45 +3047,39 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<Spin<S2, T, OB>> for Spin<S1, T, OA> {
-    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Spin<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: Spin<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: Spin<S2, T, OB>) -> Spin<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Line {
+        Spin {
             o: core::marker::PhantomData,
             c: [
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<Moment<S2, T, OB>> for Spin<S1, T, OA> {
-    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Moment<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: Moment<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: Moment<S2, T, OB>) -> Moment<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Line {
+        Moment {
             o: core::marker::PhantomData,
             c: [
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
@@ -3097,22 +3089,21 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<OriginPlane<S2, T, OB>> for Spin<S1, T, OA> {
-    type Output = Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = OriginPlane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: OriginPlane<S2, T, OB>) -> Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: OriginPlane<S2, T, OB>) -> OriginPlane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Plane {
+        OriginPlane {
             o: core::marker::PhantomData,
             c: [
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -3295,21 +3286,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<Spin<S2, T, OB>> for Moment<S1, T, OA> {
-    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Moment<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: Spin<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: Spin<S2, T, OB>) -> Moment<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Line {
+        Moment {
             o: core::marker::PhantomData,
             c: [
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
@@ -3577,22 +3565,21 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<Spin<S2, T, OB>> for OriginPlane<S1, T, OA> {
-    type Output = Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = OriginPlane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: Spin<S2, T, OB>) -> Plane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: Spin<S2, T, OB>) -> OriginPlane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Plane {
+        OriginPlane {
             o: core::marker::PhantomData,
             c: [
                 ((p(2, 1) - p(1, 2))).0,
                 ((p(0, 2) - p(2, 0))).0,
                 ((p(1, 0) - p(0, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -3621,24 +3608,21 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Commutator<OriginPlane<S2, T, OB>> for OriginPlane<S1, T, OA> {
-    type Output = Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Spin<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn commutator(self, rhs: OriginPlane<S2, T, OB>) -> Line<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn commutator(self, rhs: OriginPlane<S2, T, OB>) -> Spin<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Line {
+        Spin {
             o: core::marker::PhantomData,
             c: [
                 ((p(1, 2) - p(2, 1))).0,
                 ((p(2, 0) - p(0, 2))).0,
                 ((p(0, 1) - p(1, 0))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }

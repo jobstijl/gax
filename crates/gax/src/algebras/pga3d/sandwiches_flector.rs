@@ -1932,9 +1932,9 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Point<(), f64, O>, gx::batch:
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for Flector<(), T, OV> {
-    type Output = Point<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
@@ -1973,7 +1973,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t38 = xv[1].mul_add(t16, t37);
         let t39 = xv[0].mul_add(t18, t30);
         let t41 = (-t39).mul_add(T::from_i64(2), t31);
-            return Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t35, t38, t41, T::from_i64(0)]), [true, true, true, true]) };
+            return Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t35, t38, t41]), [true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2008,14 +2008,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m30 = m2 + m3;
         let m31 = m29 - m30;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [true, true, true]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for Flector<(), T, OV> {
-    type Output = Point<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Direction<S, T, O>) -> Point<S, T, O> {
+    fn transform_inv(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
@@ -2062,35 +2062,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<Flector, Direction<(), f64, O>, T, 9> {
-    type Output = Point<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [true, true, true]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, Direction<(), f64, O>, T, 9>> for Point<(Direction<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, Direction<(), f64, O>, T, 9>> for Direction<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<Flector, Direction<(), f64, O>, T, 9>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 3>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [true, true, true]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<Flector, 9> for Direction<(), f64, O> {
-    type Output = Point<(), f64, O>;
+    type Output = Direction<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, Direction<(), f64, O>, T, 9>) -> Point<(Direction<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, Direction<(), f64, O>, T, 9>) -> Direction<(Direction<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Plain> for Flector {
-    type Y = Point<(), f64, O>;
+    type Y = Direction<(), f64, O>;
     type Versor<T: gx::Coef> = Flector<(), T>;
     type Prepared<T: gx::Coef> = gx::Prepared<Flector, Direction<(), f64, O>, T, 9>;
     #[inline(always)]
@@ -2111,19 +2111,19 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::ba
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Direction<(), f64, O>, T, 9>, x: Direction<(), T, O>) -> Point<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Direction<(), f64, O>, T, 9>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Direction<(), T, O>) -> Point<(), T, O> {
+    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
-    type Output = Point<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -2169,7 +2169,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t37 = v[2].mul_add(t4, t20);
         let t39 = xv[2] * t29;
         let t40 = (-t37).mul_add(T::from_i64(2), t39);
-            return Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>(gx::slots::from_values::<S, T, 4>([t32, t36, t40, T::from_i64(0)]), [true, true, true, true]) };
+            return Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t32, t36, t40]), [true, true, true]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -2204,14 +2204,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m30 = m2 + m3;
         let m31 = m29 - m30;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [true, true, true]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
-    type Output = Point<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Direction<S, T, O>) -> Point<S, T, O> {
+    fn transform_inv(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
@@ -2274,35 +2274,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9> {
-    type Output = Point<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Point<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 4>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, S::from_flat(&mut |_| T::zero(), 0)], [true, true, true, true]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [true, true, true]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>> for Point<(Direction<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>> for Direction<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>) -> Self {
         let m = p.m;
-        Point { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 4>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [T::zero(), T::zero(), T::zero()]], [true, true, true, true]) }
+        Direction { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Direction<(), f64, O>,), T, 3>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [true, true, true]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Flector>, 9> for Direction<(), f64, O> {
-    type Output = Point<(), f64, O>;
+    type Output = Direction<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>) -> Point<(Direction<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>) -> Direction<(Direction<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Certified> for Flector {
-    type Y = Point<(), f64, O>;
+    type Y = Direction<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
     type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>;
     #[inline(always)]
@@ -2323,11 +2323,11 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::ba
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>, x: Direction<(), T, O>) -> Point<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Direction<(), f64, O>, T, 9>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Direction<(), T, O>) -> Point<(), T, O> {
+    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }
@@ -6521,9 +6521,9 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Spin<(), f64, O>, gx::batch::
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Moment<S, T, O>> for Flector<(), T, OV> {
-    type Output = Line<S, T, O>;
+    type Output = Moment<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+    fn transform(self, x: Moment<S, T, O>) -> Moment<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
@@ -6562,7 +6562,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t38 = xv[1].mul_add(t16, t37);
         let t39 = xv[0].mul_add(t18, t30);
         let t41 = (-t39).mul_add(T::from_i64(2), t31);
-            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([T::from_i64(0), T::from_i64(0), T::from_i64(0), t35, t38, t41]), [false, false, false, false, false, false]) };
+            return Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t35, t38, t41]), [false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -6597,14 +6597,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m30 = m2 + m3;
         let m31 = m29 - m30;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [false, false, false, false, false, false]) }
+        Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [false, false, false]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Moment<S, T, O>> for Flector<(), T, OV> {
-    type Output = Line<S, T, O>;
+    type Output = Moment<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+    fn transform_inv(self, x: Moment<S, T, O>) -> Moment<S, T, O> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
@@ -6651,35 +6651,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Moment<()
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Prepared<Flector, Moment<(), f64, O>, T, 9> {
-    type Output = Line<S, T, O>;
+    type Output = Moment<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+    fn transform(self, x: Moment<S, T, O>) -> Moment<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [false, false, false, false, false, false]) }
+        Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [false, false, false]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, Moment<(), f64, O>, T, 9>> for Line<(Moment<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Flector, Moment<(), f64, O>, T, 9>> for Moment<(Moment<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>) -> Self {
         let m = p.m;
-        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Moment<(), f64, O>,), T, 6>([[T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [false, false, false, false, false, false]) }
+        Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Moment<(), f64, O>,), T, 3>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [false, false, false]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<Flector, 9> for Moment<(), f64, O> {
-    type Output = Line<(), f64, O>;
+    type Output = Moment<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>) -> Line<(Moment<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>) -> Moment<(Moment<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch::Plain> for Flector {
-    type Y = Line<(), f64, O>;
+    type Y = Moment<(), f64, O>;
     type Versor<T: gx::Coef> = Flector<(), T>;
     type Prepared<T: gx::Coef> = gx::Prepared<Flector, Moment<(), f64, O>, T, 9>;
     #[inline(always)]
@@ -6700,19 +6700,19 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Line<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Moment<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Moment<(), T, O>) -> Line<(), T, O> {
+    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Moment<(), T, O>) -> Moment<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
-    type Output = Line<S, T, O>;
+    type Output = Moment<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+    fn transform(self, x: Moment<S, T, O>) -> Moment<S, T, O> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -6758,7 +6758,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t37 = v[2].mul_add(t4, t20);
         let t39 = xv[2] * t29;
         let t40 = (-t37).mul_add(T::from_i64(2), t39);
-            return Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>(gx::slots::from_values::<S, T, 6>([T::from_i64(0), T::from_i64(0), T::from_i64(0), t32, t36, t40]), [false, false, false, false, false, false]) };
+            return Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>(gx::slots::from_values::<S, T, 3>([t32, t36, t40]), [false, false, false]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -6793,14 +6793,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m30 = m2 + m3;
         let m31 = m29 - m30;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [false, false, false, false, false, false]) }
+        Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0], [false, false, false]) }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Moment<S, T, O>> for gx::Unit<Flector<(), T, OV>> {
-    type Output = Line<S, T, O>;
+    type Output = Moment<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+    fn transform_inv(self, x: Moment<S, T, O>) -> Moment<S, T, O> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
@@ -6863,35 +6863,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Moment<()
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Moment<S, T, O>> for gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9> {
-    type Output = Line<S, T, O>;
+    type Output = Moment<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Moment<S, T, O>) -> Line<S, T, O> {
+    fn transform(self, x: Moment<S, T, O>) -> Moment<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 6>([S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [false, false, false, false, false, false]) }
+        Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, S, T, 3>([(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0], [false, false, false]) }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>> for Line<(Moment<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>> for Moment<(Moment<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>) -> Self {
         let m = p.m;
-        Line { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Moment<(), f64, O>,), T, 6>([[T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero()], [m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [false, false, false, false, false, false]) }
+        Moment { o: core::marker::PhantomData, c: gx::__private::reflect::<O, (Moment<(), f64, O>,), T, 3>([[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]], [false, false, false]) }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Flector>, 9> for Moment<(), f64, O> {
-    type Output = Line<(), f64, O>;
+    type Output = Moment<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>) -> Line<(Moment<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>) -> Moment<(Moment<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch::Certified> for Flector {
-    type Y = Line<(), f64, O>;
+    type Y = Moment<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
     type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>;
     #[inline(always)]
@@ -6912,11 +6912,11 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Moment<(), f64, O>, gx::batch
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Line<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Moment<(), f64, O>, T, 9>, x: Moment<(), T, O>) -> Moment<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Moment<(), T, O>) -> Line<(), T, O> {
+    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Moment<(), T, O>) -> Moment<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }

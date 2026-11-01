@@ -259,42 +259,40 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<Direction<S2, T, OB>> for Scalar<S1, T, OA> {
-    type Output = Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Direction<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn lc(self, rhs: Direction<S2, T, OB>) -> Quadvector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn lc(self, rhs: Direction<S2, T, OB>) -> Direction<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Quadvector {
+        Direction {
             o: core::marker::PhantomData,
             c: [
                 (p(0, 0)).0,
                 (p(0, 1)).0,
                 (p(0, 2)).0,
                 (p(0, 3)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Lc<OriginHyperplane<S2, T, OB>> for Scalar<S1, T, OA> {
-    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = OriginHyperplane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn lc(self, rhs: OriginHyperplane<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn lc(self, rhs: OriginHyperplane<S2, T, OB>) -> OriginHyperplane<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Vector {
+        OriginHyperplane {
             o: core::marker::PhantomData,
             c: [
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
                 (p(0, 1)).0,
                 (p(0, 2)).0,

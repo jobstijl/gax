@@ -642,26 +642,22 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Rc<Scalar<S2, T, OB>> for Paravector<S1, T, OA> {
-    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Paravector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn rc(self, rhs: Scalar<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn rc(self, rhs: Scalar<S2, T, OB>) -> Paravector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Multivector {
+        Paravector {
             o: core::marker::PhantomData,
             c: [
                 (p(0, 0)).0,
                 (p(1, 0)).0,
                 (p(2, 0)).0,
                 (p(3, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -687,26 +683,22 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Rc<Paravector<S2, T, OB>> for Paravector<S1, T, OA> {
-    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Paravector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn rc(self, rhs: Paravector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn rc(self, rhs: Paravector<S2, T, OB>) -> Paravector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 7 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Multivector {
+        Paravector {
             o: core::marker::PhantomData,
             c: [
                 (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
                 (p(1, 0)).0,
                 (p(2, 0)).0,
                 (p(3, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1476,21 +1468,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Rc<Scalar<S2, T, OB>> for Horizontal<S1, T, OA> {
-    type Output = Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Horizontal<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn rc(self, rhs: Scalar<S2, T, OB>) -> Vector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn rc(self, rhs: Scalar<S2, T, OB>) -> Horizontal<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Vector {
+        Horizontal {
             o: core::marker::PhantomData,
             c: [
                 (p(0, 0)).0,
                 (p(1, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1516,25 +1507,21 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Rc<Paravector<S2, T, OB>> for Horizontal<S1, T, OA> {
-    type Output = Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Paravector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn rc(self, rhs: Paravector<S2, T, OB>) -> Multivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn rc(self, rhs: Paravector<S2, T, OB>) -> Paravector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Multivector {
+        Paravector {
             o: core::marker::PhantomData,
             c: [
                 ((p(0, 1) + p(1, 2))).0,
                 (p(0, 0)).0,
                 (p(1, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -1627,21 +1614,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Ori
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef, OA: gx::Orientation, OB: gx::Orientation> gx::Rc<Scalar<S2, T, OB>> for Tilt<S1, T, OA> {
-    type Output = Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
+    type Output = Tilt<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>>;
     #[inline(always)]
-    fn rc(self, rhs: Scalar<S2, T, OB>) -> Bivector<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
+    fn rc(self, rhs: Scalar<S2, T, OB>) -> Tilt<gx::Cat<S1, S2>, T, gx::orientation::Times<OA, OB>> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::__private::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
         }
         let a = self.c.map(gx::__private::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::__private::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Bivector {
+        Tilt {
             o: core::marker::PhantomData,
             c: [
                 (p(0, 0)).0,
                 (p(1, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }

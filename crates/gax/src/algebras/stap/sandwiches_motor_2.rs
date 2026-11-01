@@ -5952,9 +5952,9 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Multivector<(), f64, O>, gx::
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for Motor<(), T, OV> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t4 = v[8] * v[8];
@@ -6029,7 +6029,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t96 = xv[0].mul_add(t64, t81);
         let t97 = xv[2].mul_add(t66, t96);
         let t99 = (-t97).mul_add(T::from_i64(2), t83);
-            return Quadvector { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 5>([t87, t91, t95, t99, T::from_i64(0)]) };
+            return Direction { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 4>([t87, t91, t95, t99]) };
         }
         let m4 = v[8] * v[8];
         let m5 = v[9] * v[9];
@@ -6099,14 +6099,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m81 = -m80;
         let m82 = m49 + m51;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: [(x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[0].scale(m60) + x[1].scale(m61) + x[2].scale(m63) + x[3].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m71) + x[3].scale(m73)).0, (x[0].scale(m76) + x[1].scale(m78) + x[2].scale(m81) + x[3].scale(m82)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [(x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[0].scale(m60) + x[1].scale(m61) + x[2].scale(m63) + x[3].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m71) + x[3].scale(m73)).0, (x[0].scale(m76) + x[1].scale(m78) + x[2].scale(m81) + x[3].scale(m82)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for Motor<(), T, OV> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform_inv(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
@@ -6188,35 +6188,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<Motor, Direction<(), f64, O>, T, 16> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Direction<(), f64, O>, T, 16>> for Quadvector<(Direction<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<Motor, Direction<(), f64, O>, T, 16>> for Direction<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<Motor, Direction<(), f64, O>, T, 16>) -> Self {
         let m = p.m;
-        Quadvector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]], [T::zero(), T::zero(), T::zero(), T::zero()]] }
+        Direction { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<Motor, 16> for Direction<(), f64, O> {
-    type Output = Quadvector<(), f64, O>;
+    type Output = Direction<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<Motor, Direction<(), f64, O>, T, 16>) -> Quadvector<(Direction<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<Motor, Direction<(), f64, O>, T, 16>) -> Direction<(Direction<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Plain> for Motor {
-    type Y = Quadvector<(), f64, O>;
+    type Y = Direction<(), f64, O>;
     type Versor<T: gx::Coef> = Motor<(), T>;
     type Prepared<T: gx::Coef> = gx::Prepared<Motor, Direction<(), f64, O>, T, 16>;
     #[inline(always)]
@@ -6237,19 +6237,19 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::ba
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Direction<(), f64, O>, T, 16>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Motor, Direction<(), f64, O>, T, 16>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: Motor<(), T>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply<T: gx::Coef>(v: Motor<(), T>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let v = self.into_inner().c;
         #[cfg(feature = "check-units")]
         {
@@ -6393,7 +6393,7 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let t96 = xv[0].mul_add(t64, t81);
         let t97 = xv[2].mul_add(t66, t96);
         let t99 = (-t97).mul_add(T::from_i64(2), t83);
-            return Quadvector { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 5>([t87, t91, t95, t99, T::from_i64(0)]) };
+            return Direction { o: core::marker::PhantomData, c: gx::slots::from_values::<S, T, 4>([t87, t91, t95, t99]) };
         }
         let m4 = v[8] * v[8];
         let m5 = v[9] * v[9];
@@ -6463,14 +6463,14 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Tra
         let m81 = -m80;
         let m82 = m49 + m51;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: [(x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[0].scale(m60) + x[1].scale(m61) + x[2].scale(m63) + x[3].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m71) + x[3].scale(m73)).0, (x[0].scale(m76) + x[1].scale(m78) + x[2].scale(m81) + x[3].scale(m82)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [(x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[0].scale(m60) + x[1].scale(m61) + x[2].scale(m63) + x[3].scale(m66)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m71) + x[3].scale(m73)).0, (x[0].scale(m76) + x[1].scale(m78) + x[2].scale(m81) + x[3].scale(m82)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::TransformInv<Direction<S, T, O>> for gx::Unit<Motor<(), T, OV>> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform_inv(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform_inv(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
@@ -6621,35 +6621,35 @@ impl<T: gx::Coef, O: gx::Orientation, OV: gx::Orientation> gx::Prepare<Direction
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Transform<Direction<S, T, O>> for gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline(always)]
-    fn transform(self, x: Direction<S, T, O>) -> Quadvector<S, T, O> {
+    fn transform(self, x: Direction<S, T, O>) -> Direction<S, T, O> {
         let m = self.m;
         let x = x.c.map(gx::__private::SlotArr::<S, T>);
-        Quadvector { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
     }
 }
 
-impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>> for Quadvector<(Direction<(), f64, O>,), T, O> {
+impl<T: gx::Coef, O: gx::Orientation> From<gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>> for Direction<(Direction<(), f64, O>,), T, O> {
     /// The dense map of the prepared action.
     #[inline]
     fn from(p: gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>) -> Self {
         let m = p.m;
-        Quadvector { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]], [T::zero(), T::zero(), T::zero(), T::zero()]] }
+        Direction { o: core::marker::PhantomData, c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
     }
 }
 
 impl<O: gx::Orientation> gx::__private::PreparedDense<gx::Unit<Motor>, 16> for Direction<(), f64, O> {
-    type Output = Quadvector<(), f64, O>;
+    type Output = Direction<(), f64, O>;
     #[inline]
-    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>) -> Quadvector<(Direction<(), f64, O>,), T, O> {
+    fn to_dense<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>) -> Direction<(Direction<(), f64, O>,), T, O> {
         p.into()
     }
 }
 
 #[cfg(feature = "batch")]
 impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::batch::Certified> for Motor {
-    type Y = Quadvector<(), f64, O>;
+    type Y = Direction<(), f64, O>;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
     type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>;
     #[inline(always)]
@@ -6670,11 +6670,11 @@ impl<O: gx::Orientation> gx::batch::SandwichKernel<Direction<(), f64, O>, gx::ba
         gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Direction<(), f64, O>, T, 16>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
-    fn apply<T: gx::Coef>(v: gx::Unit<Motor<(), T>>, x: Direction<(), T, O>) -> Quadvector<(), T, O> {
+    fn apply<T: gx::Coef>(v: gx::Unit<Motor<(), T>>, x: Direction<(), T, O>) -> Direction<(), T, O> {
         gx::Transform::transform(v, x)
     }
 }

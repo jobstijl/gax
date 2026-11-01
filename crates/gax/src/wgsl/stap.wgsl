@@ -4917,7 +4917,7 @@ fn unit_vector_sandwich_multivector(v: Vector, x: Multivector) -> Multivector {
 }
 
 // `v x ~v` for `Vector` v and `Direction` x (`v >> x`).
-fn vector_sandwich_direction(v: Vector, x: Direction) -> Quadvector {
+fn vector_sandwich_direction(v: Vector, x: Direction) -> Direction {
     let t0 = v.c0.y * v.c0.y;
     let t1 = v.c0.z * v.c0.z;
     let t2 = t0 - t1;
@@ -4953,11 +4953,45 @@ fn vector_sandwich_direction(v: Vector, x: Direction) -> Quadvector {
     let t45 = fma(x.c0.z, t15, t29);
     let t47 = fma(t45, 2.0, t44);
     let t48 = -t47;
-    return Quadvector(vec4<f32>(t35, t39, t43, t48), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Direction(vec4<f32>(t35, t39, t43, t48));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Vector` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn vector_matrix_direction(v: Vector) -> mat4x4<f32> {
+    let m0 = v.c0.y * v.c0.y;
+    let m1 = v.c0.z * v.c0.z;
+    let m2 = v.c0.w * v.c0.w;
+    let m3 = v.c1.x * v.c1.x;
+    let m4 = v.c0.y * v.c0.z;
+    let m5 = v.c0.y * v.c0.w;
+    let m6 = v.c0.y * v.c1.x;
+    let m7 = v.c0.z * v.c0.w;
+    let m8 = v.c0.z * v.c1.x;
+    let m9 = v.c0.w * v.c1.x;
+    let m10 = m0 - m1;
+    let m11 = m0 + m1;
+    let m12 = m2 - m3;
+    let m13 = m2 + m3;
+    let m14 = m10 - m12;
+    let m15 = m4 * 2.0;
+    let m16 = m5 * 2.0;
+    let m17 = m6 * 2.0;
+    let m18 = m10 + m12;
+    let m19 = -m18;
+    let m20 = m7 * 2.0;
+    let m21 = m8 * 2.0;
+    let m22 = m13 - m11;
+    let m23 = m9 * 2.0;
+    let m24 = -m17;
+    let m25 = -m21;
+    let m26 = -m23;
+    let m27 = m11 + m13;
+    let m28 = -m27;
+    return mat4x4<f32>(vec4<f32>(m14, m15, m16, m24), vec4<f32>(m15, m19, m20, m25), vec4<f32>(m16, m20, m22, m26), vec4<f32>(m17, m21, m23, m28));
 }
 
 // `v x ~v` for a unit `Vector` v and `Direction` x (`v >> x`).
-fn unit_vector_sandwich_direction(v: Vector, x: Direction) -> Quadvector {
+fn unit_vector_sandwich_direction(v: Vector, x: Direction) -> Direction {
     let t1 = v.c0.z * x.c0.y;
     let t3 = v.c1.x * x.c0.w;
     let t4 = fma(v.c0.y, x.c0.x, t1);
@@ -4981,7 +5015,41 @@ fn unit_vector_sandwich_direction(v: Vector, x: Direction) -> Quadvector {
     let t28 = x.c0.w * t18;
     let t29 = fma(t10, 2.0, t28);
     let t30 = -t29;
-    return Quadvector(vec4<f32>(t20, t23, t26, t30), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Direction(vec4<f32>(t20, t23, t26, t30));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Vector` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_vector_matrix_direction(v: Vector) -> mat4x4<f32> {
+    let m0 = v.c0.y * v.c0.y;
+    let m1 = v.c0.z * v.c0.z;
+    let m2 = v.c0.w * v.c0.w;
+    let m3 = v.c1.x * v.c1.x;
+    let m4 = v.c0.y * v.c0.z;
+    let m5 = v.c0.y * v.c0.w;
+    let m6 = v.c0.y * v.c1.x;
+    let m7 = v.c0.z * v.c0.w;
+    let m8 = v.c0.z * v.c1.x;
+    let m9 = v.c0.w * v.c1.x;
+    let m10 = m0 - m1;
+    let m11 = m0 + m1;
+    let m12 = m2 - m3;
+    let m13 = m2 + m3;
+    let m14 = m10 - m12;
+    let m15 = m4 * 2.0;
+    let m16 = m5 * 2.0;
+    let m17 = m6 * 2.0;
+    let m18 = m10 + m12;
+    let m19 = -m18;
+    let m20 = m7 * 2.0;
+    let m21 = m8 * 2.0;
+    let m22 = m13 - m11;
+    let m23 = m9 * 2.0;
+    let m24 = -m17;
+    let m25 = -m21;
+    let m26 = -m23;
+    let m27 = m11 + m13;
+    let m28 = -m27;
+    return mat4x4<f32>(vec4<f32>(m14, m15, m16, m24), vec4<f32>(m15, m19, m20, m25), vec4<f32>(m16, m20, m22, m26), vec4<f32>(m17, m21, m23, m28));
 }
 
 // `v x ~v` for `Vector` v and `OriginHyperplane` x (`v >> x`).
@@ -9832,7 +9900,7 @@ fn unit_motor_sandwich_multivector(v: Motor, x: Multivector) -> Multivector {
 }
 
 // `v x ~v` for `Motor` v and `Direction` x (`v >> x`).
-fn motor_sandwich_direction(v: Motor, x: Direction) -> Quadvector {
+fn motor_sandwich_direction(v: Motor, x: Direction) -> Direction {
     let t4 = v.c2.x * v.c2.x;
     let t5 = v.c2.y * v.c2.y;
     let t6 = v.c2.z * v.c2.z;
@@ -9905,11 +9973,83 @@ fn motor_sandwich_direction(v: Motor, x: Direction) -> Quadvector {
     let t96 = fma(x.c0.x, t64, t81);
     let t97 = fma(x.c0.z, t66, t96);
     let t99 = fma(-t97, 2.0, t83);
-    return Quadvector(vec4<f32>(t87, t91, t95, t99), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Direction(vec4<f32>(t87, t91, t95, t99));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Motor` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn motor_matrix_direction(v: Motor) -> mat4x4<f32> {
+    let m4 = v.c2.x * v.c2.x;
+    let m5 = v.c2.y * v.c2.y;
+    let m6 = v.c2.z * v.c2.z;
+    let m7 = v.c3.w * v.c3.w;
+    let m11 = v.c0.x * v.c2.x;
+    let m12 = v.c0.x * v.c2.y;
+    let m13 = v.c0.x * v.c2.z;
+    let m16 = v.c1.y * v.c2.y;
+    let m17 = v.c1.y * v.c2.z;
+    let m21 = v.c1.z * v.c2.z;
+    let m26 = v.c2.x * v.c2.y;
+    let m27 = v.c2.x * v.c2.z;
+    let m28 = v.c2.x * v.c3.w;
+    let m29 = v.c2.y * v.c2.z;
+    let m30 = v.c2.y * v.c3.w;
+    let m31 = v.c2.z * v.c3.w;
+    let m32 = fma(v.c0.x, v.c0.x, m7);
+    let m33 = fma(v.c1.y, v.c1.y, m4);
+    let m34 = fma(v.c1.z, v.c1.z, m5);
+    let m35 = fma(v.c1.w, v.c1.w, m6);
+    let m36 = fma(v.c0.x, v.c1.y, m28);
+    let m37 = fma(v.c0.x, v.c1.z, m30);
+    let m38 = fma(v.c0.x, v.c1.w, m31);
+    let m39 = fma(-v.c1.y, v.c3.w, m11);
+    let m40 = fma(-v.c1.z, v.c3.w, m12);
+    let m41 = fma(-v.c1.w, v.c3.w, m13);
+    let m42 = fma(v.c1.y, v.c1.z, m26);
+    let m43 = fma(v.c1.y, v.c1.w, m27);
+    let m44 = fma(-v.c1.z, v.c2.x, m16);
+    let m45 = fma(-v.c1.w, v.c2.x, m17);
+    let m46 = fma(v.c1.z, v.c1.w, m29);
+    let m47 = fma(-v.c1.w, v.c2.y, m21);
+    let m48 = m32 - m33;
+    let m49 = m32 + m33;
+    let m50 = m34 - m35;
+    let m51 = m34 + m35;
+    let m52 = m49 - m51;
+    let m53 = m38 + m42;
+    let m54 = m53 * 2.0;
+    let m55 = m43 - m37;
+    let m56 = m55 * 2.0;
+    let m57 = m47 - m39;
+    let m58 = m57 * 2.0;
+    let m59 = m42 - m38;
+    let m60 = m59 * 2.0;
+    let m61 = m48 + m50;
+    let m62 = m36 + m46;
+    let m63 = m62 * 2.0;
+    let m64 = m40 + m45;
+    let m65 = m64 * 2.0;
+    let m66 = -m65;
+    let m67 = m37 + m43;
+    let m68 = m67 * 2.0;
+    let m69 = m46 - m36;
+    let m70 = m69 * 2.0;
+    let m71 = m48 - m50;
+    let m72 = m44 - m41;
+    let m73 = m72 * 2.0;
+    let m74 = m39 + m47;
+    let m75 = m74 * 2.0;
+    let m76 = -m75;
+    let m77 = m45 - m40;
+    let m78 = m77 * 2.0;
+    let m79 = m41 + m44;
+    let m80 = m79 * 2.0;
+    let m81 = -m80;
+    let m82 = m49 + m51;
+    return mat4x4<f32>(vec4<f32>(m52, m60, m68, m76), vec4<f32>(m54, m61, m70, m78), vec4<f32>(m56, m63, m71, m81), vec4<f32>(m58, m66, m73, m82));
 }
 
 // `v x ~v` for a unit `Motor` v and `Direction` x (`v >> x`).
-fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Quadvector {
+fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Direction {
     let t4 = v.c2.x * v.c2.x;
     let t5 = v.c2.y * v.c2.y;
     let t6 = v.c2.z * v.c2.z;
@@ -9982,7 +10122,79 @@ fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Quadvector {
     let t96 = fma(x.c0.x, t64, t81);
     let t97 = fma(x.c0.z, t66, t96);
     let t99 = fma(-t97, 2.0, t83);
-    return Quadvector(vec4<f32>(t87, t91, t95, t99), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Direction(vec4<f32>(t87, t91, t95, t99));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Motor` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_motor_matrix_direction(v: Motor) -> mat4x4<f32> {
+    let m4 = v.c2.x * v.c2.x;
+    let m5 = v.c2.y * v.c2.y;
+    let m6 = v.c2.z * v.c2.z;
+    let m7 = v.c3.w * v.c3.w;
+    let m11 = v.c0.x * v.c2.x;
+    let m12 = v.c0.x * v.c2.y;
+    let m13 = v.c0.x * v.c2.z;
+    let m16 = v.c1.y * v.c2.y;
+    let m17 = v.c1.y * v.c2.z;
+    let m21 = v.c1.z * v.c2.z;
+    let m26 = v.c2.x * v.c2.y;
+    let m27 = v.c2.x * v.c2.z;
+    let m28 = v.c2.x * v.c3.w;
+    let m29 = v.c2.y * v.c2.z;
+    let m30 = v.c2.y * v.c3.w;
+    let m31 = v.c2.z * v.c3.w;
+    let m32 = fma(v.c0.x, v.c0.x, m7);
+    let m33 = fma(v.c1.y, v.c1.y, m4);
+    let m34 = fma(v.c1.z, v.c1.z, m5);
+    let m35 = fma(v.c1.w, v.c1.w, m6);
+    let m36 = fma(v.c0.x, v.c1.y, m28);
+    let m37 = fma(v.c0.x, v.c1.z, m30);
+    let m38 = fma(v.c0.x, v.c1.w, m31);
+    let m39 = fma(-v.c1.y, v.c3.w, m11);
+    let m40 = fma(-v.c1.z, v.c3.w, m12);
+    let m41 = fma(-v.c1.w, v.c3.w, m13);
+    let m42 = fma(v.c1.y, v.c1.z, m26);
+    let m43 = fma(v.c1.y, v.c1.w, m27);
+    let m44 = fma(-v.c1.z, v.c2.x, m16);
+    let m45 = fma(-v.c1.w, v.c2.x, m17);
+    let m46 = fma(v.c1.z, v.c1.w, m29);
+    let m47 = fma(-v.c1.w, v.c2.y, m21);
+    let m48 = m32 - m33;
+    let m49 = m32 + m33;
+    let m50 = m34 - m35;
+    let m51 = m34 + m35;
+    let m52 = m49 - m51;
+    let m53 = m38 + m42;
+    let m54 = m53 * 2.0;
+    let m55 = m43 - m37;
+    let m56 = m55 * 2.0;
+    let m57 = m47 - m39;
+    let m58 = m57 * 2.0;
+    let m59 = m42 - m38;
+    let m60 = m59 * 2.0;
+    let m61 = m48 + m50;
+    let m62 = m36 + m46;
+    let m63 = m62 * 2.0;
+    let m64 = m40 + m45;
+    let m65 = m64 * 2.0;
+    let m66 = -m65;
+    let m67 = m37 + m43;
+    let m68 = m67 * 2.0;
+    let m69 = m46 - m36;
+    let m70 = m69 * 2.0;
+    let m71 = m48 - m50;
+    let m72 = m44 - m41;
+    let m73 = m72 * 2.0;
+    let m74 = m39 + m47;
+    let m75 = m74 * 2.0;
+    let m76 = -m75;
+    let m77 = m45 - m40;
+    let m78 = m77 * 2.0;
+    let m79 = m41 + m44;
+    let m80 = m79 * 2.0;
+    let m81 = -m80;
+    let m82 = m49 + m51;
+    return mat4x4<f32>(vec4<f32>(m52, m60, m68, m76), vec4<f32>(m54, m61, m70, m78), vec4<f32>(m56, m63, m71, m81), vec4<f32>(m58, m66, m73, m82));
 }
 
 // `v x ~v` for `Motor` v and `OriginHyperplane` x (`v >> x`).
@@ -15102,7 +15314,7 @@ fn unit_odd_sandwich_multivector(v: Odd, x: Multivector) -> Multivector {
 }
 
 // `v x ~v` for `Odd` v and `Direction` x (`v >> x`).
-fn odd_sandwich_direction(v: Odd, x: Direction) -> Quadvector {
+fn odd_sandwich_direction(v: Odd, x: Direction) -> Direction {
     let t4 = v.c2.w * v.c2.w;
     let t5 = v.c3.x * v.c3.x;
     let t6 = v.c3.y * v.c3.y;
@@ -15175,11 +15387,83 @@ fn odd_sandwich_direction(v: Odd, x: Direction) -> Quadvector {
     let t97 = fma(-x.c0.y, t65, t96);
     let t98 = t97 * 2.0;
     let t99 = fma(-x.c0.w, t67, t98);
-    return Quadvector(vec4<f32>(t87, t91, t95, t99), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Direction(vec4<f32>(t87, t91, t95, t99));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Odd` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn odd_matrix_direction(v: Odd) -> mat4x4<f32> {
+    let m4 = v.c2.w * v.c2.w;
+    let m5 = v.c3.x * v.c3.x;
+    let m6 = v.c3.y * v.c3.y;
+    let m7 = v.c3.z * v.c3.z;
+    let m11 = v.c0.y * v.c2.w;
+    let m12 = v.c0.y * v.c3.y;
+    let m13 = v.c0.y * v.c3.z;
+    let m16 = v.c0.z * v.c2.w;
+    let m18 = v.c0.z * v.c3.z;
+    let m20 = v.c0.w * v.c2.w;
+    let m26 = v.c2.w * v.c3.x;
+    let m27 = v.c2.w * v.c3.y;
+    let m28 = v.c2.w * v.c3.z;
+    let m29 = v.c3.x * v.c3.y;
+    let m30 = v.c3.x * v.c3.z;
+    let m31 = v.c3.y * v.c3.z;
+    let m32 = fma(v.c0.y, v.c0.y, m5);
+    let m33 = fma(v.c0.z, v.c0.z, m6);
+    let m34 = fma(v.c0.w, v.c0.w, m7);
+    let m35 = fma(v.c1.x, v.c1.x, m4);
+    let m36 = fma(v.c0.y, v.c0.z, m29);
+    let m37 = fma(v.c0.y, v.c0.w, m30);
+    let m38 = fma(v.c0.y, v.c1.x, m26);
+    let m39 = fma(-v.c1.x, v.c3.x, m11);
+    let m40 = fma(-v.c0.z, v.c3.x, m12);
+    let m41 = fma(-v.c0.w, v.c3.x, m13);
+    let m42 = fma(v.c0.z, v.c0.w, m31);
+    let m43 = fma(v.c0.z, v.c1.x, m27);
+    let m44 = fma(-v.c1.x, v.c3.y, m16);
+    let m45 = fma(-v.c0.w, v.c3.y, m18);
+    let m46 = fma(v.c0.w, v.c1.x, m28);
+    let m47 = fma(-v.c1.x, v.c3.z, m20);
+    let m48 = m32 - m33;
+    let m49 = m32 + m33;
+    let m50 = m34 - m35;
+    let m51 = m34 + m35;
+    let m52 = m48 - m50;
+    let m53 = m36 - m47;
+    let m54 = m53 * 2.0;
+    let m55 = m37 + m44;
+    let m56 = m55 * 2.0;
+    let m57 = m38 + m45;
+    let m58 = m57 * 2.0;
+    let m59 = m36 + m47;
+    let m60 = m59 * 2.0;
+    let m61 = m48 + m50;
+    let m62 = -m61;
+    let m63 = m42 - m39;
+    let m64 = m63 * 2.0;
+    let m65 = m43 - m41;
+    let m66 = m65 * 2.0;
+    let m67 = m37 - m44;
+    let m68 = m67 * 2.0;
+    let m69 = m39 + m42;
+    let m70 = m69 * 2.0;
+    let m71 = m51 - m49;
+    let m72 = m40 + m46;
+    let m73 = m72 * 2.0;
+    let m74 = m45 - m38;
+    let m75 = m74 * 2.0;
+    let m76 = m41 + m43;
+    let m77 = m76 * 2.0;
+    let m78 = -m77;
+    let m79 = m40 - m46;
+    let m80 = m79 * 2.0;
+    let m81 = m49 + m51;
+    let m82 = -m81;
+    return mat4x4<f32>(vec4<f32>(m52, m60, m68, m75), vec4<f32>(m54, m62, m70, m78), vec4<f32>(m56, m64, m71, m80), vec4<f32>(m58, m66, m73, m82));
 }
 
 // `v x ~v` for a unit `Odd` v and `Direction` x (`v >> x`).
-fn unit_odd_sandwich_direction(v: Odd, x: Direction) -> Quadvector {
+fn unit_odd_sandwich_direction(v: Odd, x: Direction) -> Direction {
     let t4 = v.c2.w * v.c2.w;
     let t5 = v.c3.x * v.c3.x;
     let t6 = v.c3.y * v.c3.y;
@@ -15252,7 +15536,79 @@ fn unit_odd_sandwich_direction(v: Odd, x: Direction) -> Quadvector {
     let t97 = fma(-x.c0.y, t65, t96);
     let t98 = t97 * 2.0;
     let t99 = fma(-x.c0.w, t67, t98);
-    return Quadvector(vec4<f32>(t87, t91, t95, t99), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Direction(vec4<f32>(t87, t91, t95, t99));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Odd` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_odd_matrix_direction(v: Odd) -> mat4x4<f32> {
+    let m4 = v.c2.w * v.c2.w;
+    let m5 = v.c3.x * v.c3.x;
+    let m6 = v.c3.y * v.c3.y;
+    let m7 = v.c3.z * v.c3.z;
+    let m11 = v.c0.y * v.c2.w;
+    let m12 = v.c0.y * v.c3.y;
+    let m13 = v.c0.y * v.c3.z;
+    let m16 = v.c0.z * v.c2.w;
+    let m18 = v.c0.z * v.c3.z;
+    let m20 = v.c0.w * v.c2.w;
+    let m26 = v.c2.w * v.c3.x;
+    let m27 = v.c2.w * v.c3.y;
+    let m28 = v.c2.w * v.c3.z;
+    let m29 = v.c3.x * v.c3.y;
+    let m30 = v.c3.x * v.c3.z;
+    let m31 = v.c3.y * v.c3.z;
+    let m32 = fma(v.c0.y, v.c0.y, m5);
+    let m33 = fma(v.c0.z, v.c0.z, m6);
+    let m34 = fma(v.c0.w, v.c0.w, m7);
+    let m35 = fma(v.c1.x, v.c1.x, m4);
+    let m36 = fma(v.c0.y, v.c0.z, m29);
+    let m37 = fma(v.c0.y, v.c0.w, m30);
+    let m38 = fma(v.c0.y, v.c1.x, m26);
+    let m39 = fma(-v.c1.x, v.c3.x, m11);
+    let m40 = fma(-v.c0.z, v.c3.x, m12);
+    let m41 = fma(-v.c0.w, v.c3.x, m13);
+    let m42 = fma(v.c0.z, v.c0.w, m31);
+    let m43 = fma(v.c0.z, v.c1.x, m27);
+    let m44 = fma(-v.c1.x, v.c3.y, m16);
+    let m45 = fma(-v.c0.w, v.c3.y, m18);
+    let m46 = fma(v.c0.w, v.c1.x, m28);
+    let m47 = fma(-v.c1.x, v.c3.z, m20);
+    let m48 = m32 - m33;
+    let m49 = m32 + m33;
+    let m50 = m34 - m35;
+    let m51 = m34 + m35;
+    let m52 = m48 - m50;
+    let m53 = m36 - m47;
+    let m54 = m53 * 2.0;
+    let m55 = m37 + m44;
+    let m56 = m55 * 2.0;
+    let m57 = m38 + m45;
+    let m58 = m57 * 2.0;
+    let m59 = m36 + m47;
+    let m60 = m59 * 2.0;
+    let m61 = m48 + m50;
+    let m62 = -m61;
+    let m63 = m42 - m39;
+    let m64 = m63 * 2.0;
+    let m65 = m43 - m41;
+    let m66 = m65 * 2.0;
+    let m67 = m37 - m44;
+    let m68 = m67 * 2.0;
+    let m69 = m39 + m42;
+    let m70 = m69 * 2.0;
+    let m71 = m51 - m49;
+    let m72 = m40 + m46;
+    let m73 = m72 * 2.0;
+    let m74 = m45 - m38;
+    let m75 = m74 * 2.0;
+    let m76 = m41 + m43;
+    let m77 = m76 * 2.0;
+    let m78 = -m77;
+    let m79 = m40 - m46;
+    let m80 = m79 * 2.0;
+    let m81 = m49 + m51;
+    let m82 = -m81;
+    return mat4x4<f32>(vec4<f32>(m52, m60, m68, m75), vec4<f32>(m54, m62, m70, m78), vec4<f32>(m56, m64, m71, m80), vec4<f32>(m58, m66, m73, m82));
 }
 
 // `v x ~v` for `Odd` v and `OriginHyperplane` x (`v >> x`).

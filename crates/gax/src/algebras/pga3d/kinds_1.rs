@@ -11227,9 +11227,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Spin<S, T, O> {
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
     #[inline]
-    pub fn hodge(self) -> Line<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge(self) -> Moment<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Line { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[0], a[1], a[2]] }
+        Moment { o: core::marker::PhantomData, c: [a[0], a[1], a[2]] }
     }
 
     /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a

@@ -117,19 +117,6 @@ fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) ->
 }
 
 /// Whether `p` is minus a sum of squares of single variables, hence never positive.
-/// The smallest declared kind holding `support`, parts included: for the results of methods
-/// that no existing result type depends on (`exp` of a VGA3D vector is a `Paravector`).
-fn kind_for_support_or_part<'a>(
-    spec: &'a AlgebraSpec,
-    support: &BTreeSet<u32>,
-) -> Option<&'a KindSpec> {
-    let grades: BTreeSet<u32> = support.iter().map(|m| m.count_ones()).collect();
-    spec.kinds
-        .iter()
-        .filter(|k| support.is_subset(&k.layout.support()))
-        .min_by_key(|k| (!k.layout.grades().is_subset(&grades), k.layout.len()))
-}
-
 /// `exp` of `x = z + V` with a central part `z = a + b J` (the scalar, and a blade `J` of the
 /// kind whose square is a scalar and which commutes with every other blade, or none) and a rest
 /// `V` whose square is a Study number `λ + μ J'` (`J'` the blade `J`, or any blade where there
@@ -177,7 +164,7 @@ fn emit_exp_central(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, body: &mut Stri
             let bv = symbolic::binop(alg, BinOp::Gp, &blade_mv(b, Poly::var(s1)), &v);
             out = symbolic::add(&out, &bv);
         }
-        let Some(out_kind) = kind_for_support_or_part(spec, &symbolic::support(&out)) else {
+        let Some(out_kind) = spec.kind_or_part_for_support(&symbolic::support(&out)) else {
             return false;
         };
         let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
@@ -711,7 +698,7 @@ fn emit_inverse_by(
     let alg = &spec.algebra;
     let nv = k.layout.len() as Var;
     let num = symbolic::binop(alg, BinOp::Gp, rev, conj);
-    let out_kind = spec.kind_for_support(&symbolic::support(&num))?.clone();
+    let out_kind = spec.result_kind(&symbolic::support(&num), &[k])?.clone();
     let r = nv;
     let coeffs: Vec<Poly> = symbolic::to_coeffs(&out_kind.layout, &num)
         .expect("fits")

@@ -48,7 +48,7 @@ impl Emitter<'_> {
         }
         let out = self
             .spec
-            .kind_for_support(&support)
+            .result_kind(&support, &[a, b])
             .expect("a full kind exists")
             .clone();
         let table = binop_table(alg, op, &a.layout, &b.layout, &out.layout);
@@ -142,7 +142,7 @@ impl Emitter<'_> {
         let support = unop_support(alg, op, &k.layout);
         let out = self
             .spec
-            .kind_for_support(&support)
+            .result_kind(&support, &[k])
             .expect("a full kind exists")
             .clone();
         let table = unop_table(alg, op, &k.layout, &out.layout);

@@ -69,6 +69,14 @@ pub type MomentSoa<E = f32> = gx::batch::Soa<Moment, E>;
 pub type OriginPlaneSoa<E = f32> = gx::batch::Soa<OriginPlane, E>;
 
 #[cfg(feature = "batch")]
+/// [`Tilt`] values in struct-of-arrays form, for the batch kernels.
+pub type TiltSoa<E = f32> = gx::batch::Soa<Tilt, E>;
+
+#[cfg(feature = "batch")]
+/// [`TiltMoment`] values in struct-of-arrays form, for the batch kernels.
+pub type TiltMomentSoa<E = f32> = gx::batch::Soa<TiltMoment, E>;
+
+#[cfg(feature = "batch")]
 /// [`Line`] values in struct-of-arrays form, for the batch kernels.
 pub type TwistSoa<E = f32> = gx::batch::Soa<Line, E>;
 
@@ -1499,6 +1507,208 @@ impl<O: gx::Orientation> From<OriginPlaneGpu16> for OriginPlane<(), f32, O> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// [`Tilt`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Tilt`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TiltGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Tilt { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TiltGpu>() == 16);
+    assert!(core::mem::align_of::<TiltGpu>() == 16);
+    assert!(core::mem::offset_of!(TiltGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TiltGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TiltGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Tilt<(), f32, O>> for TiltGpu {
+    #[inline]
+    fn from(x: Tilt<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        TiltGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Tilt<(), f32, O>>> for TiltGpu {
+    #[inline]
+    fn from(x: gx::Unit<Tilt<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltGpu> for Tilt<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: TiltGpu) -> Self {
+        Tilt::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Tilt`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::pga3d_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TiltGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Tilt { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TiltGpu16>() == 8);
+    assert!(core::mem::align_of::<TiltGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TiltGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TiltGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Tilt<(), f32, O>> for TiltGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Tilt<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        TiltGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltGpu16> for Tilt<(), f32, O> {
+    #[inline]
+    fn from(g: TiltGpu16) -> Self {
+        Tilt::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`TiltMoment`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `TiltMoment`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct TiltMomentGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct TiltMoment { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TiltMomentGpu>() == 16);
+    assert!(core::mem::align_of::<TiltMomentGpu>() == 16);
+    assert!(core::mem::offset_of!(TiltMomentGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TiltMomentGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TiltMomentGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltMoment<(), f32, O>> for TiltMomentGpu {
+    #[inline]
+    fn from(x: TiltMoment<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        TiltMomentGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<TiltMoment<(), f32, O>>> for TiltMomentGpu {
+    #[inline]
+    fn from(x: gx::Unit<TiltMoment<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltMomentGpu> for TiltMoment<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: TiltMomentGpu) -> Self {
+        TiltMoment::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`TiltMoment`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::pga3d_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TiltMomentGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct TiltMoment { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TiltMomentGpu16>() == 8);
+    assert!(core::mem::align_of::<TiltMomentGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TiltMomentGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TiltMomentGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltMoment<(), f32, O>> for TiltMomentGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: TiltMoment<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        TiltMomentGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<TiltMomentGpu16> for TiltMoment<(), f32, O> {
+    #[inline]
+    fn from(g: TiltMomentGpu16) -> Self {
+        TiltMoment::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// Alias of [`LineGpu`].
 pub type TwistGpu = LineGpu;
 
@@ -1548,6 +1758,8 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Spin", core::mem::size_of::<SpinGpu>(), core::mem::align_of::<SpinGpu>(), core::mem::offset_of!(SpinGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Moment", core::mem::size_of::<MomentGpu>(), core::mem::align_of::<MomentGpu>(), core::mem::offset_of!(MomentGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("OriginPlane", core::mem::size_of::<OriginPlaneGpu>(), core::mem::align_of::<OriginPlaneGpu>(), core::mem::offset_of!(OriginPlaneGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Tilt", core::mem::size_of::<TiltGpu>(), core::mem::align_of::<TiltGpu>(), core::mem::offset_of!(TiltGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("TiltMoment", core::mem::size_of::<TiltMomentGpu>(), core::mem::align_of::<TiltMomentGpu>(), core::mem::offset_of!(TiltMomentGpu, c), core::mem::size_of::<[f32; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]
@@ -1567,6 +1779,8 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Spin", core::mem::size_of::<SpinGpu16>(), core::mem::align_of::<SpinGpu16>(), core::mem::offset_of!(SpinGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Moment", core::mem::size_of::<MomentGpu16>(), core::mem::align_of::<MomentGpu16>(), core::mem::offset_of!(MomentGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("OriginPlane", core::mem::size_of::<OriginPlaneGpu16>(), core::mem::align_of::<OriginPlaneGpu16>(), core::mem::offset_of!(OriginPlaneGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Tilt", core::mem::size_of::<TiltGpu16>(), core::mem::align_of::<TiltGpu16>(), core::mem::offset_of!(TiltGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("TiltMoment", core::mem::size_of::<TiltMomentGpu16>(), core::mem::align_of::<TiltMomentGpu16>(), core::mem::offset_of!(TiltMomentGpu16, c), core::mem::size_of::<[u16; 4]>()),
 ];
 
 #[cfg(feature = "bytemuck")]

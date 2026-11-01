@@ -920,7 +920,7 @@ fn unit_vector_sandwich_pseudoscalar(v: Vector, x: Pseudoscalar) -> Pseudoscalar
 }
 
 // `v x ~v` for `Vector` v and `Paravector` x (`v >> x`).
-fn vector_sandwich_paravector(v: Vector, x: Paravector) -> Multivector {
+fn vector_sandwich_paravector(v: Vector, x: Paravector) -> Paravector {
     let t0 = v.c0.x * v.c0.x;
     let t1 = v.c0.y * v.c0.y;
     let t2 = v.c0.z * v.c0.z;
@@ -946,11 +946,32 @@ fn vector_sandwich_paravector(v: Vector, x: Paravector) -> Multivector {
     let t28 = fma(x.c0.y, t4, t20);
     let t29 = t28 * 2.0;
     let t30 = fma(-x.c0.w, t11, t29);
-    return Multivector(vec4<f32>(t12, t24, t27, t30), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Paravector(vec4<f32>(t12, t24, t27, t30));
+}
+
+// The matrix of `x -> v x ~v` on `Paravector` for `Vector` v (`v >> Paravector::slot()`); apply it as `m * x`.
+fn vector_matrix_paravector(v: Vector) -> mat4x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = m0 - m1;
+    let m7 = m0 + m1;
+    let m8 = m2 + m7;
+    let m9 = m6 - m2;
+    let m10 = m3 * 2.0;
+    let m11 = m4 * 2.0;
+    let m12 = m2 + m6;
+    let m13 = -m12;
+    let m14 = m5 * 2.0;
+    let m15 = m2 - m7;
+    return mat4x4<f32>(vec4<f32>(m8, 0.0, 0.0, 0.0), vec4<f32>(0.0, m9, m10, m11), vec4<f32>(0.0, m10, m13, m14), vec4<f32>(0.0, m11, m14, m15));
 }
 
 // `v x ~v` for a unit `Vector` v and `Paravector` x (`v >> x`).
-fn unit_vector_sandwich_paravector(v: Vector, x: Paravector) -> Multivector {
+fn unit_vector_sandwich_paravector(v: Vector, x: Paravector) -> Paravector {
     let t1 = v.c0.y * x.c0.z;
     let t3 = fma(v.c0.x, x.c0.y, t1);
     let t4 = fma(v.c0.z, x.c0.w, t3);
@@ -967,7 +988,28 @@ fn unit_vector_sandwich_paravector(v: Vector, x: Paravector) -> Multivector {
     let t19 = t7 * 2.0;
     let t21 = fma(-x.c0.w, t13, t19);
     let t22 = x.c0.x * t13;
-    return Multivector(vec4<f32>(t22, t15, t18, t21), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Paravector(vec4<f32>(t22, t15, t18, t21));
+}
+
+// The matrix of `x -> v x ~v` on `Paravector` for a unit `Vector` v (`v >> Paravector::slot()`); apply it as `m * x`.
+fn unit_vector_matrix_paravector(v: Vector) -> mat4x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = m0 - m1;
+    let m7 = m0 + m1;
+    let m8 = m2 + m7;
+    let m9 = m6 - m2;
+    let m10 = m3 * 2.0;
+    let m11 = m4 * 2.0;
+    let m12 = m2 + m6;
+    let m13 = -m12;
+    let m14 = m5 * 2.0;
+    let m15 = m2 - m7;
+    return mat4x4<f32>(vec4<f32>(m8, 0.0, 0.0, 0.0), vec4<f32>(0.0, m9, m10, m11), vec4<f32>(0.0, m10, m13, m14), vec4<f32>(0.0, m11, m14, m15));
 }
 
 // `v x ~v` for `Vector` v and `Rotor` x (`v >> x`).
@@ -1636,7 +1678,7 @@ fn unit_rotor_sandwich_pseudoscalar(v: Rotor, x: Pseudoscalar) -> Pseudoscalar {
 }
 
 // `v x ~v` for `Rotor` v and `Paravector` x (`v >> x`).
-fn rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Multivector {
+fn rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Paravector {
     let t0 = v.c0.x * v.c0.x;
     let t1 = v.c0.y * v.c0.y;
     let t2 = v.c0.z * v.c0.z;
@@ -1674,11 +1716,46 @@ fn rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Multivector {
     let t40 = fma(-x.c0.z, t22, t31);
     let t41 = t40 * 2.0;
     let t42 = fma(x.c0.w, t23, t41);
-    return Multivector(vec4<f32>(t24, t36, t39, t42), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Paravector(vec4<f32>(t24, t36, t39, t42));
+}
+
+// The matrix of `x -> v x ~v` on `Paravector` for `Rotor` v (`v >> Paravector::slot()`); apply it as `m * x`.
+fn rotor_matrix_paravector(v: Rotor) -> mat4x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m0 + m1;
+    let m12 = m2 - m3;
+    let m13 = m2 + m3;
+    let m14 = m11 + m13;
+    let m15 = m11 - m13;
+    let m16 = m6 + m7;
+    let m17 = m16 * 2.0;
+    let m18 = m8 - m5;
+    let m19 = m18 * 2.0;
+    let m20 = m7 - m6;
+    let m21 = m20 * 2.0;
+    let m22 = m10 + m12;
+    let m23 = m4 + m9;
+    let m24 = m23 * 2.0;
+    let m25 = m5 + m8;
+    let m26 = m25 * 2.0;
+    let m27 = m9 - m4;
+    let m28 = m27 * 2.0;
+    let m29 = m10 - m12;
+    return mat4x4<f32>(vec4<f32>(m14, 0.0, 0.0, 0.0), vec4<f32>(0.0, m15, m21, m26), vec4<f32>(0.0, m17, m22, m28), vec4<f32>(0.0, m19, m24, m29));
 }
 
 // `v x ~v` for a unit `Rotor` v and `Paravector` x (`v >> x`).
-fn unit_rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Multivector {
+fn unit_rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Paravector {
     let t2 = v.c0.w * x.c0.z;
     let t3 = fma(v.c0.x, x.c0.y, t2);
     let t4 = fma(-v.c0.z, x.c0.w, t3);
@@ -1706,7 +1783,42 @@ fn unit_rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Multivector {
     let t38 = x.c0.w * t29;
     let t39 = fma(t36, 2.0, t38);
     let t40 = x.c0.x * t29;
-    return Multivector(vec4<f32>(t40, t31, t35, t39), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Paravector(vec4<f32>(t40, t31, t35, t39));
+}
+
+// The matrix of `x -> v x ~v` on `Paravector` for a unit `Rotor` v (`v >> Paravector::slot()`); apply it as `m * x`.
+fn unit_rotor_matrix_paravector(v: Rotor) -> mat4x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    let m29 = m12 + m13;
+    return mat4x4<f32>(vec4<f32>(m29, 0.0, 0.0, 0.0), vec4<f32>(0.0, m14, m20, m25), vec4<f32>(0.0, m16, m21, m27), vec4<f32>(0.0, m18, m23, m28));
 }
 
 // `v x ~v` for `Rotor` v and `Rotor` x (`v >> x`).
@@ -2546,7 +2658,7 @@ fn unit_odd_sandwich_pseudoscalar(v: Odd, x: Pseudoscalar) -> Pseudoscalar {
 }
 
 // `v x ~v` for `Odd` v and `Paravector` x (`v >> x`).
-fn odd_sandwich_paravector(v: Odd, x: Paravector) -> Multivector {
+fn odd_sandwich_paravector(v: Odd, x: Paravector) -> Paravector {
     let t0 = v.c0.x * v.c0.x;
     let t1 = v.c0.y * v.c0.y;
     let t2 = v.c0.z * v.c0.z;
@@ -2584,11 +2696,47 @@ fn odd_sandwich_paravector(v: Odd, x: Paravector) -> Multivector {
     let t40 = fma(x.c0.y, t21, t32);
     let t41 = t40 * 2.0;
     let t42 = fma(-x.c0.w, t23, t41);
-    return Multivector(vec4<f32>(t24, t36, t39, t42), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Paravector(vec4<f32>(t24, t36, t39, t42));
+}
+
+// The matrix of `x -> v x ~v` on `Paravector` for `Odd` v (`v >> Paravector::slot()`); apply it as `m * x`.
+fn odd_matrix_paravector(v: Odd) -> mat4x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m0 + m1;
+    let m12 = m2 - m3;
+    let m13 = m2 + m3;
+    let m14 = m11 + m13;
+    let m15 = m10 - m12;
+    let m16 = m4 - m9;
+    let m17 = m16 * 2.0;
+    let m18 = m5 + m8;
+    let m19 = m18 * 2.0;
+    let m20 = m4 + m9;
+    let m21 = m20 * 2.0;
+    let m22 = m10 + m12;
+    let m23 = -m22;
+    let m24 = m7 - m6;
+    let m25 = m24 * 2.0;
+    let m26 = m5 - m8;
+    let m27 = m26 * 2.0;
+    let m28 = m6 + m7;
+    let m29 = m28 * 2.0;
+    let m30 = m13 - m11;
+    return mat4x4<f32>(vec4<f32>(m14, 0.0, 0.0, 0.0), vec4<f32>(0.0, m15, m21, m27), vec4<f32>(0.0, m17, m23, m29), vec4<f32>(0.0, m19, m25, m30));
 }
 
 // `v x ~v` for a unit `Odd` v and `Paravector` x (`v >> x`).
-fn unit_odd_sandwich_paravector(v: Odd, x: Paravector) -> Multivector {
+fn unit_odd_sandwich_paravector(v: Odd, x: Paravector) -> Paravector {
     let t1 = v.c0.y * x.c0.z;
     let t3 = fma(v.c0.x, x.c0.y, t1);
     let t4 = fma(v.c0.z, x.c0.w, t3);
@@ -2616,7 +2764,43 @@ fn unit_odd_sandwich_paravector(v: Odd, x: Paravector) -> Multivector {
     let t37 = t36 * 2.0;
     let t39 = fma(-x.c0.w, t29, t37);
     let t40 = x.c0.x * t29;
-    return Multivector(vec4<f32>(t40, t31, t35, t39), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    return Paravector(vec4<f32>(t40, t31, t35, t39));
+}
+
+// The matrix of `x -> v x ~v` on `Paravector` for a unit `Odd` v (`v >> Paravector::slot()`); apply it as `m * x`.
+fn unit_odd_matrix_paravector(v: Odd) -> mat4x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m10 - m11;
+    let m13 = m4 - m9;
+    let m14 = m13 * 2.0;
+    let m15 = m5 + m8;
+    let m16 = m15 * 2.0;
+    let m17 = m4 + m9;
+    let m18 = m17 * 2.0;
+    let m19 = m10 + m11;
+    let m20 = -m19;
+    let m21 = m7 - m6;
+    let m22 = m21 * 2.0;
+    let m23 = m5 - m8;
+    let m24 = m23 * 2.0;
+    let m25 = m6 + m7;
+    let m26 = m25 * 2.0;
+    let m27 = m2 + m3;
+    let m28 = m0 + m1;
+    let m29 = m27 - m28;
+    let m30 = m27 + m28;
+    return mat4x4<f32>(vec4<f32>(m30, 0.0, 0.0, 0.0), vec4<f32>(0.0, m12, m18, m24), vec4<f32>(0.0, m14, m20, m26), vec4<f32>(0.0, m16, m22, m29));
 }
 
 // `v x ~v` for `Odd` v and `Rotor` x (`v >> x`).

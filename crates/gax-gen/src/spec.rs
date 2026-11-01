@@ -25,6 +25,7 @@ use crate::table::Layout;
 
 /// A declared kind.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)] // four independent properties of a declaration
 pub struct KindSpec {
     /// Type name.
     pub name: String,
@@ -43,6 +44,11 @@ pub struct KindSpec {
     /// Whether the kind's values are intrinsic by default (ADR-051): its constructors make them
     /// so, as PGA's points are. Declared with `intrinsic` after the blade list.
     pub intrinsic: bool,
+    /// Whether products and sandwiches take the kind as an operand. False for a `slot`: a part
+    /// for slots, maps and forms, casts and binding only (and its unary operations), whose
+    /// products go through a cast to a kind holding it, so that declaring it costs no product
+    /// tables (ADR-054, amended).
+    pub operand: bool,
 }
 
 impl KindSpec {
@@ -93,11 +99,13 @@ pub struct AlgebraSpec {
 }
 
 /// A kind as declared, before the algebra exists to parse its blades.
+#[allow(clippy::struct_excessive_bools)] // as `KindSpec`
 struct RawKind {
     name: String,
     blades: Vec<String>,
     versor: bool,
     result: bool,
+    operand: bool,
     intrinsic: bool,
     doc: String,
 }
@@ -312,7 +320,7 @@ impl AlgebraSpec {
                     p.expect_punct(';')?;
                     off_diagonal.push((a, b, v));
                 }
-                "kind" | "versor" | "part" => {
+                "kind" | "versor" | "part" | "slot" => {
                     let kname = p.ident()?;
                     if !is_type_name(&kname) {
                         return Err(AlgebraError(format!(
@@ -345,7 +353,8 @@ impl AlgebraSpec {
                         name: kname,
                         blades,
                         versor: word == "versor",
-                        result: word != "part",
+                        result: word != "part" && word != "slot",
+                        operand: word != "slot",
                         intrinsic,
                         doc,
                     });
@@ -412,6 +421,7 @@ impl AlgebraSpec {
                 layout,
                 versor: raw.versor,
                 result: raw.result,
+                operand: raw.operand,
                 doc: raw.doc,
                 intrinsic: raw.intrinsic,
             });
@@ -434,6 +444,7 @@ impl AlgebraSpec {
                     },
                     versor: false,
                     result: true,
+                    operand: true,
                     doc: "A scalar.".into(),
                     intrinsic: false,
                 },
@@ -456,6 +467,7 @@ impl AlgebraSpec {
                 },
                 versor: false,
                 result: true,
+                operand: true,
                 doc: "A general multivector, blades by grade then index.".into(),
                 intrinsic: false,
             });
@@ -501,6 +513,44 @@ impl AlgebraSpec {
             .iter()
             .filter(|k| k.result && support.is_subset(&k.layout.support()))
             .min_by_key(|k| (!k.layout.grades().is_subset(&grades), k.layout.len()))
+    }
+}
+
+impl AlgebraSpec {
+    /// The smallest declared kind holding `support`, parts included.
+    pub fn kind_or_part_for_support(
+        &self,
+        support: &std::collections::BTreeSet<u32>,
+    ) -> Option<&KindSpec> {
+        let grades: std::collections::BTreeSet<u32> =
+            support.iter().map(|m| m.count_ones()).collect();
+        self.kinds
+            .iter()
+            .filter(|k| support.is_subset(&k.layout.support()))
+            .min_by_key(|k| (!k.layout.grades().is_subset(&grades), k.layout.len()))
+    }
+
+    /// The result kind of an operation on `operands` whose result has the blades `support`:
+    /// where every operand is a part or the scalar kind, and one is a part, the smallest kind
+    /// holding it with the parts included, so that the products, sandwiches and unary
+    /// operations of parts stay in a part where they close (a moved `Direction` is a
+    /// `Direction`, a spin's commutator with an origin plane an `OriginPlane`; ADR-054,
+    /// amended); otherwise [`kind_for_support`](Self::kind_for_support), as before parts
+    /// existed, so that declaring a part changes no result of the other kinds. For a sandwich
+    /// the operand is the passenger.
+    pub fn result_kind(
+        &self,
+        support: &std::collections::BTreeSet<u32>,
+        operands: &[&KindSpec],
+    ) -> Option<&KindSpec> {
+        let scalar = |k: &KindSpec| k.layout.blades.iter().all(|(m, _)| *m == 0);
+        let parts =
+            operands.iter().all(|k| !k.result || scalar(k)) && operands.iter().any(|k| !k.result);
+        if parts {
+            self.kind_or_part_for_support(support)
+        } else {
+            self.kind_for_support(support)
+        }
     }
 }
 

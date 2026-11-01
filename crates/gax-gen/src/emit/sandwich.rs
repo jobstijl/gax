@@ -66,7 +66,7 @@ pub(super) fn sandwich_out(
         .into_iter()
         .filter(|m| !unit || grades.contains(&m.count_ones()))
         .collect();
-    spec.kind_for_support(&support).cloned()
+    spec.result_kind(&support, &[xk]).cloned()
 }
 
 /// A plain sandwich (see [`FUSED_MAX`]): `(v x) ~v` as two products from the exact tables,
@@ -219,7 +219,7 @@ pub(super) fn sandwich_math(
         return None;
     }
     let out = spec
-        .kind_for_support(&support)
+        .result_kind(&support, &[xk])
         .expect("a full kind exists")
         .clone();
     let projected: SymMv = res

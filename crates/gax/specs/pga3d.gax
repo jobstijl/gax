@@ -20,6 +20,10 @@ kind Multivector = [1, e0, e1, e2, e3, e01, e02, e03, e12, e31, e23, e021, e013,
 part Spin = [e23, e31, e12] "The Euclidean part of a line, `e23, e31, e12`: a line through the origin. Extrinsic (the default), the axis of a rotation about the origin, an angular velocity; intrinsic, a force through the origin. Its complement is `Moment`, and a map on `OriginPlane`s extends to it.";
 part Moment = [e01, e02, e03] intrinsic "The ideal part of a line, `e01, e02, e03`: a line at infinity. Intrinsic (the default), a couple (a pure torque) or an angular momentum; extrinsic, the translation part of a twist, a velocity. Its complement is `Spin`, and a map on `Direction`s extends to it.";
 part OriginPlane = [e1, e2, e3] "A plane through the origin, `a x + b y + c z = 0`: the Euclidean part of a plane, its normal as a plane. It pairs with `Direction`s, its complement.";
+// The tilts and their moments (for z up, as VGA3D's `Tilt`), complements of each other: slots
+// only (forms and maps on them, casts and binding), their products through `Spin` and `Moment`.
+slot Tilt = [e23, e31] "The horizontal part of a spin, `e23, e31`: a horizontal line through the origin. Extrinsic (the default), the axis of a tilt (heel and trim, for z up), its rate; intrinsic, a horizontal force through the origin. Its complement is `TiltMoment`.";
+slot TiltMoment = [e01, e02] intrinsic "The horizontal part of a moment, `e01, e02`. Intrinsic (the default), the couple that tilts (a heeling or righting moment, for z up); extrinsic, a horizontal translation rate. Its complement is `Tilt`.";
 
 // The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
 // (its dual), Even and Odd (the versors).

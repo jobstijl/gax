@@ -93,6 +93,18 @@ pub type Moment<S = (), T = f64> = oriented::Moment<S, T, gx::Intrinsic>;
 /// [`intrinsic::OriginPlane`] and [`extrinsic::OriginPlane`] name either one.
 pub type OriginPlane<S = (), T = f64> = oriented::OriginPlane<S, T, gx::Extrinsic>;
 
+#[doc = "The horizontal part of a spin, `e23, e31`: a horizontal line through the origin. gx::Extrinsic (the default), the axis of a tilt (heel and trim, for z up), its rate; intrinsic, a horizontal force through the origin. Its complement is `TiltMoment`."]
+///
+/// In its default orientation, extrinsic: [`oriented::Tilt`] is the kind for any orientation,
+/// [`intrinsic::Tilt`] and [`extrinsic::Tilt`] name either one.
+pub type Tilt<S = (), T = f64> = oriented::Tilt<S, T, gx::Extrinsic>;
+
+#[doc = "The horizontal part of a moment, `e01, e02`. gx::Intrinsic (the default), the couple that tilts (a heeling or righting moment, for z up); extrinsic, a horizontal translation rate. Its complement is `Tilt`."]
+///
+/// In its default orientation, intrinsic: [`oriented::TiltMoment`] is the kind for any orientation,
+/// [`intrinsic::TiltMoment`] and [`extrinsic::TiltMoment`] name either one.
+pub type TiltMoment<S = (), T = f64> = oriented::TiltMoment<S, T, gx::Intrinsic>;
+
 /// Every kind of the algebra, intrinsic (ADR-051).
 pub mod intrinsic {
     use super::{gx, oriented};
@@ -125,6 +137,10 @@ pub mod intrinsic {
     pub type Moment<S = (), T = f64> = oriented::Moment<S, T, gx::Intrinsic>;
     /// [`oriented::OriginPlane`], intrinsic.
     pub type OriginPlane<S = (), T = f64> = oriented::OriginPlane<S, T, gx::Intrinsic>;
+    /// [`oriented::Tilt`], intrinsic.
+    pub type Tilt<S = (), T = f64> = oriented::Tilt<S, T, gx::Intrinsic>;
+    /// [`oriented::TiltMoment`], intrinsic.
+    pub type TiltMoment<S = (), T = f64> = oriented::TiltMoment<S, T, gx::Intrinsic>;
 }
 
 /// Every kind of the algebra, extrinsic (ADR-051).
@@ -159,6 +175,10 @@ pub mod extrinsic {
     pub type Moment<S = (), T = f64> = oriented::Moment<S, T, gx::Extrinsic>;
     /// [`oriented::OriginPlane`], extrinsic.
     pub type OriginPlane<S = (), T = f64> = oriented::OriginPlane<S, T, gx::Extrinsic>;
+    /// [`oriented::Tilt`], extrinsic.
+    pub type Tilt<S = (), T = f64> = oriented::Tilt<S, T, gx::Extrinsic>;
+    /// [`oriented::TiltMoment`], extrinsic.
+    pub type TiltMoment<S = (), T = f64> = oriented::TiltMoment<S, T, gx::Extrinsic>;
 }
 
 /// The kinds as structs generic over their orientation `O` (ADR-051), with every

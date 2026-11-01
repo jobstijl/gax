@@ -573,6 +573,30 @@ mod pga3d_to_stap {
 
     impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Vector<(), T, O>> for crate::pga3d::oriented::OriginPlane<(), T, O> {}
 
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga3d::oriented::Tilt<S, T, O>> for crate::stap::oriented::Bivector<S, T, O> {
+        /// The image under the homomorphism from `pga3d` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::pga3d::oriented::Tilt<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Bivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Bivector<(), T, O>> for crate::pga3d::oriented::Tilt<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga3d::oriented::TiltMoment<S, T, O>> for crate::stap::oriented::Bivector<S, T, O> {
+        /// The image under the homomorphism from `pga3d` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::pga3d::oriented::TiltMoment<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Bivector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Bivector<(), T, O>> for crate::pga3d::oriented::TiltMoment<(), T, O> {}
+
 }
 
 /// The homomorphism from `vga2d` to `cga2d`: the Euclidean subalgebra.
@@ -1080,6 +1104,30 @@ mod pga3d_to_cga3d {
     }
 
     impl<T: Coef, O: crate::Orientation> crate::Widen<crate::cga3d::oriented::Vector<(), T, O>> for crate::pga3d::oriented::OriginPlane<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga3d::oriented::Tilt<S, T, O>> for crate::cga3d::oriented::Twist<S, T, O> {
+        /// The image under the homomorphism from `pga3d` to `cga3d`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::pga3d::oriented::Tilt<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::cga3d::oriented::Twist::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::cga3d::oriented::Twist<(), T, O>> for crate::pga3d::oriented::Tilt<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::pga3d::oriented::TiltMoment<S, T, O>> for crate::cga3d::oriented::Twist<S, T, O> {
+        /// The image under the homomorphism from `pga3d` to `cga3d`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::pga3d::oriented::TiltMoment<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::cga3d::oriented::Twist::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::cga3d::oriented::Twist<(), T, O>> for crate::pga3d::oriented::TiltMoment<(), T, O> {}
 
 }
 

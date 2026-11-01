@@ -1445,6 +1445,8 @@ fn reverse() {
     un::<Spin<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Moment<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<OriginPlane<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
+    un::<Tilt<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
+    un::<TiltMoment<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
 }
 
 #[test]
@@ -1465,6 +1467,8 @@ fn involute() {
     un::<Spin<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Moment<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<OriginPlane<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
+    un::<Tilt<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
+    un::<TiltMoment<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
 }
 
 #[test]
@@ -1485,6 +1489,8 @@ fn conjugate() {
     un::<Spin<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Moment<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<OriginPlane<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
+    un::<Tilt<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
+    un::<TiltMoment<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
 }
 
 #[test]
@@ -1505,6 +1511,8 @@ fn dual() {
     un::<Spin<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Moment<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<OriginPlane<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
+    un::<Tilt<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
+    un::<TiltMoment<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
 }
 
 #[test]
@@ -1525,6 +1533,8 @@ fn undual() {
     un::<Spin<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Moment<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<OriginPlane<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
+    un::<Tilt<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
+    un::<TiltMoment<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
 }
 
 #[test]
@@ -1556,6 +1566,8 @@ fn value_methods() {
     common::normalized::<Spin<(), f64>>(&o, &mut rng, |x| x.normalized());
     common::inverse::<OriginPlane<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<OriginPlane<(), f64>>(&o, &mut rng, |x| x.normalized());
+    common::inverse::<Tilt<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Tilt<(), f64>>(&o, &mut rng, |x| x.normalized());
 }
 
 #[test]

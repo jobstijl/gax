@@ -1002,7 +1002,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Scalar<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1010,7 +1010,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Vector<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1018,7 +1018,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Bivector<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1026,7 +1026,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Trivector<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1034,7 +1034,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Quadvector<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1042,7 +1042,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Pseudoscalar<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1050,7 +1050,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Motor<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1058,7 +1058,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Odd<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1066,7 +1066,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Multivector<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1074,7 +1074,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for Direction<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1082,7 +1082,7 @@ impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::Di
 }
 
 impl<S: gx::Slots, T: gx::Real, OA: gx::Orientation, OB: gx::Orientation> gx::DivBy<OriginHyperplane<(), T, OB>> for OriginHyperplane<S, T, OA> {
-    type Output = <Self as gx::Gp<Vector<(), T, OB>>>::Output;
+    type Output = <Self as gx::Gp<OriginHyperplane<(), T, OB>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: OriginHyperplane<(), T, OB>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1239,6 +1239,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Direction<S, T, O>> for
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Quadvector<(), T, O>> for Direction<(), T, O> {}
 
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Direction<S, T, O>> for Quadvector<S, T, O> {
+    type Output = Quadvector<S, T, O>;
+    /// The part `rhs` as a [`Quadvector`], then the sum of two `Quadvector`s.
+    #[inline(always)]
+    fn add(self, rhs: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        self + Quadvector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Quadvector<S, T, O>> for Direction<S, T, O> {
+    type Output = Quadvector<S, T, O>;
+    /// `self` as a [`Quadvector`], then the sum of two `Quadvector`s.
+    #[inline(always)]
+    fn add(self, rhs: Quadvector<S, T, O>) -> Quadvector<S, T, O> {
+        Quadvector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Direction<S, T, O>> for Quadvector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Direction<S, T, O>) {
+        *self = *self + Quadvector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Direction<S, T, O>> for Quadvector<S, T, O> {
+    type Output = Quadvector<S, T, O>;
+    /// The part `rhs` as a [`Quadvector`], then the difference of two `Quadvector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Direction<S, T, O>) -> Quadvector<S, T, O> {
+        self - Quadvector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Quadvector<S, T, O>> for Direction<S, T, O> {
+    type Output = Quadvector<S, T, O>;
+    /// `self` as a [`Quadvector`], then the difference of two `Quadvector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Quadvector<S, T, O>) -> Quadvector<S, T, O> {
+        Quadvector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Direction<S, T, O>> for Quadvector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Direction<S, T, O>) {
+        *self = *self - Quadvector::from(rhs);
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Direction<S, T, O>> for Motor<S, T, O> {
     /// The same multivector as a [`Motor`], of the same orientation.
     #[inline(always)]
@@ -1248,6 +1298,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Direction<S, T, O>> for
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Motor<(), T, O>> for Direction<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Direction<S, T, O>> for Motor<S, T, O> {
+    type Output = Motor<S, T, O>;
+    /// The part `rhs` as a [`Motor`], then the sum of two `Motor`s.
+    #[inline(always)]
+    fn add(self, rhs: Direction<S, T, O>) -> Motor<S, T, O> {
+        self + Motor::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Motor<S, T, O>> for Direction<S, T, O> {
+    type Output = Motor<S, T, O>;
+    /// `self` as a [`Motor`], then the sum of two `Motor`s.
+    #[inline(always)]
+    fn add(self, rhs: Motor<S, T, O>) -> Motor<S, T, O> {
+        Motor::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Direction<S, T, O>> for Motor<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Direction<S, T, O>) {
+        *self = *self + Motor::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Direction<S, T, O>> for Motor<S, T, O> {
+    type Output = Motor<S, T, O>;
+    /// The part `rhs` as a [`Motor`], then the difference of two `Motor`s.
+    #[inline(always)]
+    fn sub(self, rhs: Direction<S, T, O>) -> Motor<S, T, O> {
+        self - Motor::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Motor<S, T, O>> for Direction<S, T, O> {
+    type Output = Motor<S, T, O>;
+    /// `self` as a [`Motor`], then the difference of two `Motor`s.
+    #[inline(always)]
+    fn sub(self, rhs: Motor<S, T, O>) -> Motor<S, T, O> {
+        Motor::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Direction<S, T, O>> for Motor<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Direction<S, T, O>) {
+        *self = *self - Motor::from(rhs);
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Direction<S, T, O>> for Multivector<S, T, O> {
     /// The same multivector as a [`Multivector`], of the same orientation.
@@ -1259,6 +1359,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Direction<S, T, O>> for
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Direction<(), T, O> {}
 
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Direction<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// The part `rhs` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Direction<S, T, O>) -> Multivector<S, T, O> {
+        self + Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Multivector<S, T, O>> for Direction<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Direction<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Direction<S, T, O>) {
+        *self = *self + Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Direction<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// The part `rhs` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Direction<S, T, O>) -> Multivector<S, T, O> {
+        self - Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Multivector<S, T, O>> for Direction<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Direction<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Direction<S, T, O>) {
+        *self = *self - Multivector::from(rhs);
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginHyperplane<S, T, O>> for Vector<S, T, O> {
     /// The same multivector as a [`Vector`], of the same orientation.
     #[inline(always)]
@@ -1268,6 +1418,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginHyperplane<S, T, 
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Vector<(), T, O>> for OriginHyperplane<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<OriginHyperplane<S, T, O>> for Vector<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// The part `rhs` as a [`Vector`], then the sum of two `Vector`s.
+    #[inline(always)]
+    fn add(self, rhs: OriginHyperplane<S, T, O>) -> Vector<S, T, O> {
+        self + Vector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Vector<S, T, O>> for OriginHyperplane<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// `self` as a [`Vector`], then the sum of two `Vector`s.
+    #[inline(always)]
+    fn add(self, rhs: Vector<S, T, O>) -> Vector<S, T, O> {
+        Vector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<OriginHyperplane<S, T, O>> for Vector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: OriginHyperplane<S, T, O>) {
+        *self = *self + Vector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<OriginHyperplane<S, T, O>> for Vector<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// The part `rhs` as a [`Vector`], then the difference of two `Vector`s.
+    #[inline(always)]
+    fn sub(self, rhs: OriginHyperplane<S, T, O>) -> Vector<S, T, O> {
+        self - Vector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Vector<S, T, O>> for OriginHyperplane<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// `self` as a [`Vector`], then the difference of two `Vector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Vector<S, T, O>) -> Vector<S, T, O> {
+        Vector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<OriginHyperplane<S, T, O>> for Vector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: OriginHyperplane<S, T, O>) {
+        *self = *self - Vector::from(rhs);
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginHyperplane<S, T, O>> for Odd<S, T, O> {
     /// The same multivector as a [`Odd`], of the same orientation.
@@ -1279,6 +1479,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginHyperplane<S, T, 
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Odd<(), T, O>> for OriginHyperplane<(), T, O> {}
 
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<OriginHyperplane<S, T, O>> for Odd<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// The part `rhs` as a [`Odd`], then the sum of two `Odd`s.
+    #[inline(always)]
+    fn add(self, rhs: OriginHyperplane<S, T, O>) -> Odd<S, T, O> {
+        self + Odd::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Odd<S, T, O>> for OriginHyperplane<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `self` as a [`Odd`], then the sum of two `Odd`s.
+    #[inline(always)]
+    fn add(self, rhs: Odd<S, T, O>) -> Odd<S, T, O> {
+        Odd::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<OriginHyperplane<S, T, O>> for Odd<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: OriginHyperplane<S, T, O>) {
+        *self = *self + Odd::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<OriginHyperplane<S, T, O>> for Odd<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// The part `rhs` as a [`Odd`], then the difference of two `Odd`s.
+    #[inline(always)]
+    fn sub(self, rhs: OriginHyperplane<S, T, O>) -> Odd<S, T, O> {
+        self - Odd::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Odd<S, T, O>> for OriginHyperplane<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `self` as a [`Odd`], then the difference of two `Odd`s.
+    #[inline(always)]
+    fn sub(self, rhs: Odd<S, T, O>) -> Odd<S, T, O> {
+        Odd::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<OriginHyperplane<S, T, O>> for Odd<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: OriginHyperplane<S, T, O>) {
+        *self = *self - Odd::from(rhs);
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginHyperplane<S, T, O>> for Multivector<S, T, O> {
     /// The same multivector as a [`Multivector`], of the same orientation.
     #[inline(always)]
@@ -1288,6 +1538,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<OriginHyperplane<S, T, 
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for OriginHyperplane<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<OriginHyperplane<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// The part `rhs` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: OriginHyperplane<S, T, O>) -> Multivector<S, T, O> {
+        self + Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Multivector<S, T, O>> for OriginHyperplane<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<OriginHyperplane<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: OriginHyperplane<S, T, O>) {
+        *self = *self + Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<OriginHyperplane<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// The part `rhs` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: OriginHyperplane<S, T, O>) -> Multivector<S, T, O> {
+        self - Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Multivector<S, T, O>> for OriginHyperplane<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<OriginHyperplane<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: OriginHyperplane<S, T, O>) {
+        *self = *self - Multivector::from(rhs);
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Scalar<S, T, O> {
     type Output = Scalar<S, T, O>;
@@ -1695,91 +1995,91 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for Multivector<S
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Direction<S, T, O> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline]
-    fn reverse(self) -> Quadvector<S, T, O> {
+    fn reverse(self) -> Direction<S, T, O> {
         let a = self.c;
-        Quadvector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for Direction<S, T, O> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline]
-    fn involute(self) -> Quadvector<S, T, O> {
+    fn involute(self) -> Direction<S, T, O> {
         let a = self.c;
-        Quadvector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Direction<S, T, O> {
-    type Output = Quadvector<S, T, O>;
+    type Output = Direction<S, T, O>;
     #[inline]
-    fn conjugate(self) -> Quadvector<S, T, O> {
+    fn conjugate(self) -> Direction<S, T, O> {
         let a = self.c;
-        Quadvector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Dual for Direction<S, T, O> {
-    type Output = Vector<S, T, gx::orientation::Flip<O>>;
+    type Output = OriginHyperplane<S, T, gx::orientation::Flip<O>>;
     #[inline]
-    fn dual(self) -> Vector<S, T, gx::orientation::Flip<O>> {
+    fn dual(self) -> OriginHyperplane<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), a[0], a[1], a[2], a[3]] }
+        OriginHyperplane { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for Direction<S, T, O> {
-    type Output = Vector<S, T, gx::orientation::Flip<O>>;
+    type Output = OriginHyperplane<S, T, gx::orientation::Flip<O>>;
     #[inline]
-    fn undual(self) -> Vector<S, T, gx::orientation::Flip<O>> {
+    fn undual(self) -> OriginHyperplane<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), a[0], a[1], a[2], a[3]] }
+        OriginHyperplane { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for OriginHyperplane<S, T, O> {
-    type Output = Vector<S, T, O>;
+    type Output = OriginHyperplane<S, T, O>;
     #[inline]
-    fn reverse(self) -> Vector<S, T, O> {
+    fn reverse(self) -> OriginHyperplane<S, T, O> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), a[0], a[1], a[2], a[3]] }
+        OriginHyperplane { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for OriginHyperplane<S, T, O> {
-    type Output = Vector<S, T, O>;
+    type Output = OriginHyperplane<S, T, O>;
     #[inline]
-    fn involute(self) -> Vector<S, T, O> {
+    fn involute(self) -> OriginHyperplane<S, T, O> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), (-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
+        OriginHyperplane { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for OriginHyperplane<S, T, O> {
-    type Output = Vector<S, T, O>;
+    type Output = OriginHyperplane<S, T, O>;
     #[inline]
-    fn conjugate(self) -> Vector<S, T, O> {
+    fn conjugate(self) -> OriginHyperplane<S, T, O> {
         let a = self.c;
-        Vector { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0), (-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
+        OriginHyperplane { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0, (-gx::__private::SlotArr::<S, T>(a[3])).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Dual for OriginHyperplane<S, T, O> {
-    type Output = Quadvector<S, T, gx::orientation::Flip<O>>;
+    type Output = Direction<S, T, gx::orientation::Flip<O>>;
     #[inline]
-    fn dual(self) -> Quadvector<S, T, gx::orientation::Flip<O>> {
+    fn dual(self) -> Direction<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Quadvector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for OriginHyperplane<S, T, O> {
-    type Output = Quadvector<S, T, gx::orientation::Flip<O>>;
+    type Output = Direction<S, T, gx::orientation::Flip<O>>;
     #[inline]
-    fn undual(self) -> Quadvector<S, T, gx::orientation::Flip<O>> {
+    fn undual(self) -> Direction<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Quadvector { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1], a[2], a[3]] }
     }
 }

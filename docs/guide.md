@@ -702,10 +702,17 @@ gax::algebra! {
   real numbers.
 * **Kinds.** A `kind` lists its blades in the order and orientation you want (`e31` is `−e13`).
   `versor` also generates fused sandwiches with that kind as the versor. A `part` is a kind
-  that operations never take as their result type: it is reached only by name, through casts,
-  constructors and slots, so declaring one changes no existing type (PGA2D's translators log to a
-  `Point`, though their support also fits the `Direction` part). `Scalar` and a full
-  `Multivector` are added if you leave them out.
+  that the operations of the other kinds never take as their result type, so declaring one
+  changes no existing type (PGA2D's translators log to a `Point`, though their support also
+  fits the `Direction` part). The operations of parts do land in a part where they close: a
+  motor moves a `Direction` to a `Direction`, two `OriginPlane`s meet in a `Spin`, a part's
+  reverse and dual are parts (operations whose operands are all parts or scalars choose among
+  the parts too). A part and a kind holding it add into the kind, `point + direction` is a
+  `Point`. A `slot` is a part that takes part in no product or sandwich (it costs no product
+  tables): casts, constructors, slots, maps and forms on it, binding, its unary operations and
+  its sums with the kinds holding it; its products go through such a kind
+  (`Spin::from(tilt) ^ plane`). `Scalar` and a full `Multivector` are added if you leave them
+  out.
 * **Parts in the standard algebras.** PGA2D and PGA3D have `Direction`, the ideal points
   (`point.cast::<Direction>()` drops the weight, `Direction::slot()` is a map that takes only
   directions), and their complements, PGA3D's `OriginPlane` (`e1, e2, e3`) and PGA2D's
@@ -716,7 +723,10 @@ gax::algebra! {
   (`stretch.outermorphism::<Moment>()`), one on origin planes to spins by `∧`. STAP has the
   same split of its events and hyperplanes, `Direction` and `OriginHyperplane` (a clock's
   readout); VGA3D has `Horizontal` (`e1, e2`, for z up) and its complement `Tilt`
-  (`e23, e31`), and `Paravector` (`1 + r`, the Pauli algebra's states). STA's `Phasor`
+  (`e23, e31`), and `Paravector` (`1 + r`, the Pauli algebra's states). PGA3D's slots `Tilt`
+  (`e23, e31`, the axes of heel and trim for z up) and `TiltMoment` (`e01, e02`, the couples
+  that tilt) are complements of each other: a form on spins narrows to tilts by
+  `k.of(Tilt::slot()).at::<1>().of(Tilt::slot())`, a 2 × 2 form with its own `eigh`. STA's `Phasor`
   (`a + b e1234`, a complex number commuting with the even subalgebra) is a full kind instead:
   phasors multiply, invert and sandwich to phasors, the pseudoscalar's `exp` lands in one, and
   so does the anticommutator of two bivectors (a field's invariants, `F∘F = E² − B² + 2 E·B I`).
@@ -1203,7 +1213,11 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   nondegenerate PGA3D vectors are `OriginPlane`, its bivectors `Spin`, its antibivectors
   containing `w` (couples, angular momenta) `Moment`; other subsets are a `cast` to the
   smallest kind holding them, or an `algebra!` of your own. numga's `adjugate` and `adjoint` are
-  gax's, with the same pairings and the complement on the left (§6).
+  gax's, with the same pairings and the complement on the left (§6). Two names cross over in
+  VGA3D, where numga reads vectors as planes and antivectors as directions and gax reads vectors
+  as directions: numga's `Horizontal` (the horizontal directions `yz zx`, antivectors) is gax's
+  `intrinsic::Tilt`, and numga's `Wavevector` (`x y`) is gax's `Horizontal`; the names follow
+  each library's reading, and `Horizontal::hodge()` is the `Tilt` that numga's dual gives.
 * **Clippy and the operators.** `clippy::eq_op` reads `a | a` and `b ^ b` as bitwise operations
   on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.

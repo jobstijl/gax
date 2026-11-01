@@ -294,11 +294,10 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         let alg = &self.spec.algebra;
         let has = |op: BinOp| {
             op == BinOp::Gp
-                || self
-                    .spec
-                    .kinds
-                    .iter()
-                    .any(|b| !binop_support(alg, op, &k.layout, &b.layout).is_empty())
+                || k.operand
+                    && self.spec.kinds.iter().any(|b| {
+                        b.operand && !binop_support(alg, op, &k.layout, &b.layout).is_empty()
+                    })
         };
         for op in [
             BinOp::Gp,
@@ -907,6 +906,19 @@ impl<S: Slots, O: gx::Orientation> core::ops::Mul<{name}<S, f64, O>> for f64 {{
                     "{IMPL_ALL} From<{an}<S, T, O>> for {bn}<S, T, O> {{\n    /// The same multivector as a [`{bn}`], of the same orientation.\n    #[inline(always)]\n    fn from(x: {an}<S, T, O>) -> Self {{\n        {}\n    }}\n}}\n\nimpl<T: Coef, O: gx::Orientation> gx::Widen<{bn}<(), T, O>> for {an}<(), T, O> {{}}\n\n",
                     kind_literal(bn, &format!("[{}]", exprs.join(", ")))
                 );
+                // A part and a kind holding it add into the kind (`Point + Direction`), in
+                // either order, as do their differences (ADR-054, amended).
+                if !a.result && b.result {
+                    for (tr, m, op, what) in [
+                        ("Add", "add", "+", "sum"),
+                        ("Sub", "sub", "-", "difference"),
+                    ] {
+                        let _ = write!(
+                            body,
+                            "{IMPL_ALL} core::ops::{tr}<{an}<S, T, O>> for {bn}<S, T, O> {{\n    type Output = {bn}<S, T, O>;\n    /// The part `rhs` as a [`{bn}`], then the {what} of two `{bn}`s.\n    #[inline(always)]\n    fn {m}(self, rhs: {an}<S, T, O>) -> {bn}<S, T, O> {{\n        self {op} {bn}::from(rhs)\n    }}\n}}\n\n{IMPL_ALL} core::ops::{tr}<{bn}<S, T, O>> for {an}<S, T, O> {{\n    type Output = {bn}<S, T, O>;\n    /// `self` as a [`{bn}`], then the {what} of two `{bn}`s.\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S, T, O>) -> {bn}<S, T, O> {{\n        {bn}::from(self) {op} rhs\n    }}\n}}\n\n{IMPL_ALL} core::ops::{tr}Assign<{an}<S, T, O>> for {bn}<S, T, O> {{\n    #[inline(always)]\n    fn {m}_assign(&mut self, rhs: {an}<S, T, O>) {{\n        *self = *self {op} {bn}::from(rhs);\n    }}\n}}\n\n"
+                        );
+                    }
+                }
             }
         }
         self.w(&body);
@@ -1146,7 +1158,7 @@ pub(super) fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
                 .filter(|m| m.count_ones() == g)
                 .collect();
             let o = spec
-                .kind_for_support(&support)
+                .result_kind(&support, &[a])
                 .expect("the kind itself holds it");
             let shared = shared_blades(a, o, |m| m.count_ones() == g);
             let _ = writeln!(
@@ -1259,7 +1271,7 @@ pub(crate) fn hodge_map(
     if support.is_empty() {
         return None;
     }
-    let out = spec.kind_for_support(&support)?;
+    let out = spec.result_kind(&support, &[k])?;
     let den = if inverse { ii } else { 1 };
     let exprs = out
         .layout
@@ -1319,13 +1331,16 @@ mod tests {
     }
 
     /// In PGA every kind with `e0` in a blade has a singular Gram matrix; the rotors and the
-    /// parts through the origin (`Spin`, `OriginPlane`) do not.
+    /// parts through the origin (`Spin`, `Tilt`, `OriginPlane`) do not.
     #[test]
     fn pga_frames_exist_only_without_the_null_direction() {
         for (name, frame) in frames(include_str!("../../../gax/specs/pga3d.gax")) {
             assert_eq!(
                 frame.is_some(),
-                matches!(name.as_str(), "Scalar" | "Rotor" | "Spin" | "OriginPlane"),
+                matches!(
+                    name.as_str(),
+                    "Scalar" | "Rotor" | "Spin" | "Tilt" | "OriginPlane"
+                ),
                 "{name}"
             );
         }

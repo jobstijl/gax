@@ -2347,6 +2347,45 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   are used (a spin wedged with a plane, a moment joined with a point), as `Direction`'s are.
   If the growth matters later, a part could opt out of being an operand, its products then
   going through `cast::<Line>()`.
+* *Amended (2026-11-01, Phase 13): the friction the rigid-body ports found.*
+  * **Parts as results where they close.** A part was never a result type, so a motor's
+    sandwich of a `Direction` was a `Point`, two `OriginPlane`s met in a `Line`, and the ports
+    wrote `.cast::<Direction>()` some sixty times. Options: (1) keep it, (2) let every result
+    land in the smallest kind holding it, parts included, (3) only the operations of parts.
+    (2) changes results of the full kinds (PGA2D's translator logs to a `Direction`, a PGA3D
+    plane's Hodge dual becomes one), which every existing caller would see. **Chosen: (3).**
+    An operation whose operands are all parts or the scalar kind (one of them a part), a
+    sandwich or `<<` of a part (the passenger decides, the versor does not), and a part's unary
+    operations, Hodge dual and grade parts choose among the parts too
+    (`AlgebraSpec::result_kind`): `Unit<Motor> >> Direction` is a `Direction`, `OriginPlane ^
+    OriginPlane` a `Spin`, `spin.commutator(origin_plane)` an `OriginPlane`, an `OriginPlane`'s
+    dual a `Direction`, VGA3D's `Horizontal::hodge()` a `Tilt`. The other kinds' results are
+    unchanged (checked: the standard library and every gax test compiled as before). The cost
+    is nil: the same impls with other output kinds (PGA3D's product impls stay 1 315).
+  * **A part and its kind add.** `Point + Direction` had no `Add`: `Add` and `Sub` in both
+    orders, and `AddAssign`/`SubAssign` on the kind, for every part and each result kind
+    holding it, landing in the kind (22 pairs in PGA3D, about 3 300 generated lines with the
+    tilts below). Not between full kinds and their sub-kinds generally (`Scalar - Even`):
+    every added `Add` impl turns `x + y.into()` and `x + y.with_orientation()` ambiguous for the
+    left side's kind, and a part is a piece of one kind, where a sub-kind like `Scalar` sits in
+    many.
+  * **PGA3D's tilts, as slots.** numga's floating bodies type their stiffness on the tilts
+    `e23, e31` (heel and trim, for z up). As parts, `Tilt` and its complement `TiltMoment`
+    (`e01, e02`) would add 339 product impls and 17 k lines to PGA3D (+18 %); the port needs
+    only a form on them. So the opt-out above exists now: a `slot` declaration is a part that
+    takes part in no product or sandwich (no product tables), with casts, constructors, slots,
+    maps and forms, binding, unary operations, complements (adjugates) and sums with its
+    kinds; its products go through a kind holding it. PGA3D declares `slot Tilt` and `slot
+    TiltMoment`: 3.3 k lines in all (the part sums included, 90.8 k to 94.1 k), and a dev
+    build of `gax` with only `pga3d` took 10.9 s against 11.4 s before (noise; the machine was
+    shared). The law suites skip a slot's product laws (the adjugate's defining identity is
+    tested through casts, `tests/parts.rs`).
+  * **The names.** numga's VGA3D `Horizontal` (the directions `yz zx`, antivectors) is gax's
+    `intrinsic::Tilt`, and numga's `Wavevector` (`x y`) gax's `Horizontal`. Kept: numga reads
+    VGA3D's vectors as planes and antivectors as directions, gax reads vectors as directions
+    (`Vector` is a direction, `Bivector` a plane), and each name says what the kind is in its
+    library's reading; renaming gax's to numga's would call horizontal vectors tilts. The guide
+    (§17) gives the correspondence.
 
 ## ADR-055: STA as `x+y+z+t-`
 *Status: implemented (2026-10-31). Amends ADR-024. Phase 13.*

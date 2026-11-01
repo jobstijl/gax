@@ -668,7 +668,10 @@ fn hodge_laws(cx: &Cx) -> [Vec<String>; 3] {
             inverses.push(format!("({})", b.name));
         }
         let rev = spec
-            .kind_for_support(&crate::table::unop_support(alg, UnOp::Reverse, &b.layout))
+            .result_kind(
+                &crate::table::unop_support(alg, UnOp::Reverse, &b.layout),
+                &[b],
+            )
             .expect("a kind");
         for a in &cx.law_kinds {
             if grade(a).is_none() || grade(a) != grade(b) {
@@ -736,10 +739,12 @@ fn pairings(cx: &Cx, scalar: &KindSpec) -> Vec<(BinOp, String, String)> {
 fn transposes(cx: &Cx) -> (Vec<String>, Vec<String>) {
     let mut adjugates = Vec::new();
     let mut adjoints = Vec::new();
-    for a in &cx.law_kinds {
+    // The laws pair through products, which slot-only parts do not have (`tests/adjugate.rs`
+    // checks theirs through casts).
+    for a in cx.law_kinds.iter().filter(|k| k.operand) {
         if let Some((c, _)) = crate::emit::complement_pairs(cx.spec, a) {
             adjugates.push(format!("({0}, {0})", a.name));
-            if c.name != a.name && cx.is_law(&c.name) {
+            if c.name != a.name && cx.is_law(&c.name) && c.operand {
                 adjugates.push(format!("({}, {})", a.name, c.name));
             }
         }
@@ -910,7 +915,7 @@ fn kind_table_laws(spec: &AlgebraSpec) -> (Vec<String>, Vec<String>, Vec<String>
                 .filter(|m| m.count_ones() == g)
                 .collect();
             let out = spec
-                .kind_for_support(&support)
+                .result_kind(&support, &[a])
                 .expect("the kind itself holds it");
             grades.push(format!("({}, {g}, {})", a.name, out.name));
         }

@@ -1224,7 +1224,7 @@ fn product(
     if support.is_empty() {
         return None;
     }
-    let out = spec.kind_for_support(&support)?;
+    let out = spec.result_kind(&support, &[a, b])?;
     if !out.fits_wgsl() {
         return None;
     }

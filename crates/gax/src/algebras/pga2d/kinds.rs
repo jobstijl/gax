@@ -9643,9 +9643,9 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> OriginLine<S, T, O> {
     /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
     /// form, the complement against the orientation of space.
     #[inline]
-    pub fn hodge(self) -> Point<S, T, gx::orientation::Flip<O>> {
+    pub fn hodge(self) -> Direction<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
-        Point { o: core::marker::PhantomData, c: [a[0], a[1], S::from_flat(&mut |_| T::zero(), 0)] }
+        Direction { o: core::marker::PhantomData, c: [a[0], a[1]] }
     }
 
     /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
@@ -10082,7 +10082,7 @@ impl<T: gx::Real, O: gx::Orientation> OriginLine<(), T, O> {
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (10 mul, 3 add, 1 div).
     #[inline(always)]
-    pub fn inverse(self) -> Line<(), T, O> {
+    pub fn inverse(self) -> OriginLine<(), T, O> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -10095,7 +10095,7 @@ impl<T: gx::Real, O: gx::Orientation> OriginLine<(), T, O> {
         let t11 = t0.mul_add(t8, t10);
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
-        Line::from_coeffs([t12, t13, T::from_i64(0)])
+        OriginLine::from_coeffs([t12, t13])
     }
 
     /// [`inverse`](Self::inverse), or `None` where `x` has no inverse to working precision:
@@ -10104,7 +10104,7 @@ impl<T: gx::Real, O: gx::Orientation> OriginLine<(), T, O> {
     /// and `x`, and `n = 2` the number of `x`'s), or its norm `d = N conj(N)` is lost to
     /// cancellation (`|d| â¤ n Îµ |N|Â²`), in any lane; or where the inverse is not finite.
     #[inline]
-    pub fn try_inverse(self) -> Option<Line<(), T, O>> {
+    pub fn try_inverse(self) -> Option<OriginLine<(), T, O>> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -10187,7 +10187,7 @@ impl<T: gx::Coef, O: gx::Orientation> gx::__private::NewtonStep for OriginLine<(
 }
 
 impl<T: gx::Real, O: gx::Orientation> gx::Inverse for OriginLine<(), T, O> {
-    type Output = Line<(), T, O>;
+    type Output = OriginLine<(), T, O>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -10854,7 +10854,7 @@ impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Direction<(), f64
 impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Direction<(), f64, O> {}
 
 impl<O: gx::Orientation> gx::GradePart<2> for Direction<(), f64, O> {
-    type Out = Point<(), f64, O>;
+    type Out = Direction<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }
 
@@ -11169,6 +11169,6 @@ impl<O: gx::Orientation> gx::Cast<OriginLine<(), f64, O>> for OriginLine<(), f64
 impl<O: gx::Orientation> gx::SubKind<OriginLine<(), f64, O>> for OriginLine<(), f64, O> {}
 
 impl<O: gx::Orientation> gx::GradePart<1> for OriginLine<(), f64, O> {
-    type Out = Line<(), f64, O>;
+    type Out = OriginLine<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }

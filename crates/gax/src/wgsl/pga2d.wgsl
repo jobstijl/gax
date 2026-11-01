@@ -1189,7 +1189,7 @@ fn unit_line_matrix_point(v: Line) -> mat3x3<f32> {
 }
 
 // `v x ~v` for `Line` v and `Direction` x (`v >> x`).
-fn line_sandwich_direction(v: Line, x: Direction) -> Point {
+fn line_sandwich_direction(v: Line, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -1199,11 +1199,11 @@ fn line_sandwich_direction(v: Line, x: Direction) -> Point {
     let t9 = fma(x.c0.x, t3, t8);
     let t10 = t6 * 2.0;
     let t11 = fma(-x.c0.y, t3, t10);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Line` v and `Direction` x (`v >> x`).
-fn unit_line_sandwich_direction(v: Line, x: Direction) -> Point {
+fn unit_line_sandwich_direction(v: Line, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -1213,7 +1213,7 @@ fn unit_line_sandwich_direction(v: Line, x: Direction) -> Point {
     let t9 = fma(x.c0.x, t3, t8);
     let t10 = t6 * 2.0;
     let t11 = fma(-x.c0.y, t3, t10);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Line` v and `Pseudoscalar` x (`v >> x`).
@@ -1703,23 +1703,23 @@ fn unit_point_matrix_point(v: Point) -> mat3x3<f32> {
 }
 
 // `v x ~v` for `Point` v and `Direction` x (`v >> x`).
-fn point_sandwich_direction(v: Point, x: Direction) -> Point {
+fn point_sandwich_direction(v: Point, x: Direction) -> Direction {
     let t0 = v.c0.z * v.c0.z;
     let t1 = x.c0.x * t0;
     let t2 = x.c0.y * t0;
     let t3 = -t1;
     let t4 = -t2;
-    return Point(vec4<f32>(t3, t4, 0.0, 0.0));
+    return Direction(vec4<f32>(t3, t4, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Point` v and `Direction` x (`v >> x`).
-fn unit_point_sandwich_direction(v: Point, x: Direction) -> Point {
+fn unit_point_sandwich_direction(v: Point, x: Direction) -> Direction {
     let t0 = v.c0.z * v.c0.z;
     let t1 = x.c0.x * t0;
     let t2 = x.c0.y * t0;
     let t3 = -t1;
     let t4 = -t2;
-    return Point(vec4<f32>(t3, t4, 0.0, 0.0));
+    return Direction(vec4<f32>(t3, t4, 0.0, 0.0));
 }
 
 // `v x ~v` for `Point` v and `Pseudoscalar` x (`v >> x`).
@@ -2119,7 +2119,7 @@ fn unit_rotor_matrix_point(v: Rotor) -> mat3x3<f32> {
 }
 
 // `v x ~v` for `Rotor` v and `Direction` x (`v >> x`).
-fn rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
+fn rotor_sandwich_direction(v: Rotor, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -2129,11 +2129,11 @@ fn rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
     let t8 = t5 * 2.0;
     let t9 = fma(x.c0.x, t3, t8);
     let t11 = fma(-t6, 2.0, t7);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Rotor` v and `Direction` x (`v >> x`).
-fn unit_rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
+fn unit_rotor_sandwich_direction(v: Rotor, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -2143,7 +2143,7 @@ fn unit_rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
     let t8 = t5 * 2.0;
     let t9 = fma(x.c0.x, t3, t8);
     let t11 = fma(-t6, 2.0, t7);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Rotor` v and `Pseudoscalar` x (`v >> x`).
@@ -2411,7 +2411,7 @@ fn unit_rotor_sandwich_multivector(v: Rotor, x: Multivector) -> Multivector {
 }
 
 // `v x ~v` for `Rotor` v and `OriginLine` x (`v >> x`).
-fn rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> Line {
+fn rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> OriginLine {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -2421,11 +2421,11 @@ fn rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> Line {
     let t8 = t5 * 2.0;
     let t9 = fma(x.c0.x, t3, t8);
     let t11 = fma(-t6, 2.0, t7);
-    return Line(vec4<f32>(t9, t11, 0.0, 0.0));
+    return OriginLine(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Rotor` v and `OriginLine` x (`v >> x`).
-fn unit_rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> Line {
+fn unit_rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> OriginLine {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -2435,7 +2435,7 @@ fn unit_rotor_sandwich_origin_line(v: Rotor, x: OriginLine) -> Line {
     let t8 = t5 * 2.0;
     let t9 = fma(x.c0.x, t3, t8);
     let t11 = fma(-t6, 2.0, t7);
-    return Line(vec4<f32>(t9, t11, 0.0, 0.0));
+    return OriginLine(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Translator` v and `Scalar` x (`v >> x`).
@@ -2553,19 +2553,19 @@ fn unit_translator_matrix_point(v: Translator) -> mat3x3<f32> {
 }
 
 // `v x ~v` for `Translator` v and `Direction` x (`v >> x`).
-fn translator_sandwich_direction(v: Translator, x: Direction) -> Point {
+fn translator_sandwich_direction(v: Translator, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t1 = x.c0.x * t0;
     let t2 = x.c0.y * t0;
-    return Point(vec4<f32>(t1, t2, 0.0, 0.0));
+    return Direction(vec4<f32>(t1, t2, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Translator` v and `Direction` x (`v >> x`).
-fn unit_translator_sandwich_direction(v: Translator, x: Direction) -> Point {
+fn unit_translator_sandwich_direction(v: Translator, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t1 = x.c0.x * t0;
     let t2 = x.c0.y * t0;
-    return Point(vec4<f32>(t1, t2, 0.0, 0.0));
+    return Direction(vec4<f32>(t1, t2, 0.0, 0.0));
 }
 
 // `v x ~v` for `Translator` v and `Pseudoscalar` x (`v >> x`).
@@ -2999,7 +2999,7 @@ fn unit_motor_matrix_point(v: Motor) -> mat3x3<f32> {
 }
 
 // `v x ~v` for `Motor` v and `Direction` x (`v >> x`).
-fn motor_sandwich_direction(v: Motor, x: Direction) -> Point {
+fn motor_sandwich_direction(v: Motor, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -3009,11 +3009,11 @@ fn motor_sandwich_direction(v: Motor, x: Direction) -> Point {
     let t8 = t5 * 2.0;
     let t9 = fma(x.c0.x, t3, t8);
     let t11 = fma(-t6, 2.0, t7);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Motor` v and `Direction` x (`v >> x`).
-fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Point {
+fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -3023,7 +3023,7 @@ fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Point {
     let t8 = t5 * 2.0;
     let t9 = fma(x.c0.x, t3, t8);
     let t11 = fma(-t6, 2.0, t7);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Motor` v and `Pseudoscalar` x (`v >> x`).
@@ -3613,7 +3613,7 @@ fn unit_flector_matrix_point(v: Flector) -> mat3x3<f32> {
 }
 
 // `v x ~v` for `Flector` v and `Direction` x (`v >> x`).
-fn flector_sandwich_direction(v: Flector, x: Direction) -> Point {
+fn flector_sandwich_direction(v: Flector, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -3623,11 +3623,11 @@ fn flector_sandwich_direction(v: Flector, x: Direction) -> Point {
     let t9 = fma(x.c0.x, t3, t8);
     let t10 = t6 * 2.0;
     let t11 = fma(-x.c0.y, t3, t10);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for a unit `Flector` v and `Direction` x (`v >> x`).
-fn unit_flector_sandwich_direction(v: Flector, x: Direction) -> Point {
+fn unit_flector_sandwich_direction(v: Flector, x: Direction) -> Direction {
     let t0 = v.c0.x * v.c0.x;
     let t2 = v.c0.x * v.c0.y;
     let t3 = fma(-v.c0.y, v.c0.y, t0);
@@ -3637,7 +3637,7 @@ fn unit_flector_sandwich_direction(v: Flector, x: Direction) -> Point {
     let t9 = fma(x.c0.x, t3, t8);
     let t10 = t6 * 2.0;
     let t11 = fma(-x.c0.y, t3, t10);
-    return Point(vec4<f32>(t9, t11, 0.0, 0.0));
+    return Direction(vec4<f32>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Flector` v and `Pseudoscalar` x (`v >> x`).
