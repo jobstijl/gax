@@ -1223,7 +1223,8 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
   than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.
 * **Orientation in messages.** A mismatch reads ``expected `Line<…, Extrinsic>`, found
-  `Line<…, Intrinsic>` ``: a join where a turn was expected (§5). `K::from(x)` converts into `K`'s
+  `Line<…, Intrinsic>` ``: a join where a turn was expected (§5); in a sum of a kind that has
+  parts it reads ``cannot add `Line<…, Intrinsic>` to `Line<…>` ``, listing the parts it adds. `K::from(x)` converts into `K`'s
   default orientation; `x.cast::<K>()` and `x.into()` keep `x`'s. `K` names only the kind, so
   `let f: Forque = x.cast()` cannot infer it: name the kind (`x.cast::<Line>()`, intrinsic when
   `x` is), or relabel with `with_orientation()`.

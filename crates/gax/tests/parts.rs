@@ -13,6 +13,7 @@ fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
 
 #[test]
 fn a_kind_and_its_part_add_into_the_kind() {
+    use gax::vga3d::{Horizontal, Vector};
     let p = Point::xyz(1.0, 2.0, 3.0);
     let d: Direction = Point::direction(0.5, 0.0, -1.0).cast::<Direction>();
     let q: Point = p + d;
@@ -23,13 +24,13 @@ fn a_kind_and_its_part_add_into_the_kind() {
     s -= d;
     assert_eq!(s.c, [0.5, 2.0, 4.0, 1.0]);
     // And in VGA3D: a vector from its horizontal part and its height.
-    use gax::vga3d::{Horizontal, Vector};
     let v: Vector = Horizontal::new(1.0, 2.0) + Vector::new(0.0, 0.0, 3.0);
     assert_eq!(v.c, [1.0, 2.0, 3.0]);
 }
 
 #[test]
 fn parts_stay_parts_where_they_close() {
+    use gax::vga3d::Horizontal;
     // A motor moves a direction to a direction: translations leave it, rotations turn it.
     let m = Motor::translation(Point::direction(5.0, -1.0, 2.0))
         * Motor::rotation_about(
@@ -60,7 +61,6 @@ fn parts_stay_parts_where_they_close() {
     let p: gax::pga3d::intrinsic::Point = Plane::new(1.0, 0.0, 0.0, 2.0).dual();
     assert_eq!(p.c.len(), 4);
     // VGA3D: the dual of a horizontal vector is a tilt, and back.
-    use gax::vga3d::Horizontal;
     let t: gax::vga3d::intrinsic::Tilt = Horizontal::new(1.0, 2.0).hodge();
     let h: Horizontal = t.hodge_inverse();
     assert_eq!(h.c, [1.0, 2.0]);

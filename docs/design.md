@@ -2368,7 +2368,9 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
     tilts below). Not between full kinds and their sub-kinds generally (`Scalar - Even`):
     every added `Add` impl turns `x + y.into()` and `x + y.with_orientation()` ambiguous for the
     left side's kind, and a part is a piece of one kind, where a sub-kind like `Scalar` sits in
-    many.
+    many. A sum of mismatched orientations on a kind with parts now fails as ``cannot add
+    `Line<…, Intrinsic>` to `Line<…>` `` (E0277, listing the parts it adds) rather than as
+    mismatched types; `Add` is core's, so the message cannot be tailored.
   * **PGA3D's tilts, as slots.** numga's floating bodies type their stiffness on the tilts
     `e23, e31` (heel and trim, for z up). As parts, `Tilt` and its complement `TiltMoment`
     (`e01, e02`) would add 339 product impls and 17 k lines to PGA3D (+18 %); the port needs
