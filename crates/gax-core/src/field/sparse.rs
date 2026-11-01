@@ -7,7 +7,8 @@ use crate::bind::Of;
 use crate::kind::{Extensor, Kind};
 use crate::ops::Reverse;
 use crate::transpose::{Adjoint, Adjugate};
-use core::ops::{Add, Mul};
+use core::ops::{Add, Mul, Neg, Sub};
+use std::vec;
 use std::vec::Vec;
 
 /// A field map stored as its couplings: each a cell from one input site (its column) to one
@@ -132,6 +133,18 @@ impl<C: Copy> SparseMap<C> {
         }
     }
 
+    /// The field map with no couplings, `shape` the numbers of output and input sites: the
+    /// zero block of a saddle-point system ([`BlockMap`](super::BlockMap)).
+    #[must_use]
+    pub fn zeros(shape: (usize, usize)) -> Self {
+        SparseMap {
+            cells: Vec::new(),
+            cols: Vec::new(),
+            starts: vec![0; shape.0 + 1],
+            shape,
+        }
+    }
+
     /// The field map whose row `r` couples to the input sites `columns[r]`, its `k`-th through
     /// the cell `cell(r, k)`, over `inputs` input sites: numga's `SparseExtensor.from_columns`.
     /// A mesh's incidence maps are built this way, from its edges or faces.
@@ -191,6 +204,16 @@ impl<C: Copy> SparseMap<C> {
             starts: self.starts.clone(),
             shape: self.shape,
         }
+    }
+
+    /// Every cell's coefficients scaled by `c`, couplings kept: `&map * c` for any coefficient
+    /// type.
+    #[must_use]
+    pub fn scaled(&self, c: C::Coef) -> SparseMap<C>
+    where
+        C: Extensor,
+    {
+        self.map_cells(|cell| super::scale(cell, c))
     }
 
     /// Every coupling run the other way, from its row to its column, with `f` on its cell.
@@ -503,3 +526,72 @@ where
         self.map_cells(|c| c * m)
     }
 }
+
+impl<C: Copy + Add<Output = C> + Neg<Output = C>> Sub for &SparseMap<C> {
+    type Output = SparseMap<C>;
+    /// The couplings of `self` and the negated couplings of `o`: they add where they meet.
+    ///
+    /// # Panics
+    /// If the shapes differ.
+    #[track_caller]
+    fn sub(self, o: Self) -> SparseMap<C> {
+        assert!(
+            self.shape == o.shape,
+            "subtracting field maps of different shapes: {:?} and {:?}",
+            self.shape,
+            o.shape
+        );
+        let negated = o.couplings().map(|(r, c, cell)| (r, c, -cell));
+        SparseMap::from_triples(self.couplings().chain(negated), self.shape)
+    }
+}
+
+impl<C: Copy + Neg<Output = C>> Neg for &SparseMap<C> {
+    type Output = SparseMap<C>;
+    /// Every cell negated, couplings kept.
+    fn neg(self) -> SparseMap<C> {
+        self.map_cells(|c| -c)
+    }
+}
+
+impl<C: Copy + Neg<Output = C>> Neg for SparseMap<C> {
+    type Output = SparseMap<C>;
+    /// Every cell negated, couplings kept.
+    fn neg(mut self) -> SparseMap<C> {
+        for c in &mut self.cells {
+            *c = -*c;
+        }
+        self
+    }
+}
+
+/// A field map times a number: every cell's coefficients scaled (numga's `S * 0.5`). For the
+/// coefficient types `f32` and `f64`; [`SparseMap::scaled`] takes any.
+macro_rules! scalar_mul {
+    ($($t:ty),*) => {$(
+        impl<C: Extensor<Coef = $t>> Mul<$t> for &SparseMap<C> {
+            type Output = SparseMap<C>;
+            fn mul(self, c: $t) -> SparseMap<C> {
+                self.scaled(c)
+            }
+        }
+
+        impl<C: Extensor<Coef = $t>> Mul<$t> for SparseMap<C> {
+            type Output = SparseMap<C>;
+            fn mul(mut self, c: $t) -> SparseMap<C> {
+                for cell in &mut self.cells {
+                    *cell = super::scale(*cell, c);
+                }
+                self
+            }
+        }
+
+        impl<C: Extensor<Coef = $t>> Mul<&SparseMap<C>> for $t {
+            type Output = SparseMap<C>;
+            fn mul(self, m: &SparseMap<C>) -> SparseMap<C> {
+                m.scaled(self)
+            }
+        }
+    )*};
+}
+scalar_mul!(f32, f64);

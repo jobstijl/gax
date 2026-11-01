@@ -42,8 +42,9 @@ checked at compile time; the site counts at run time, with a panic that names bo
 
 Cells that are multivectors *multiply* the values, as in numga: `&ends * &positions` takes each
 cell's product with the value at its column and sums at the rows. `&ends.reverse() * &ends`
-multiplies the cells along every path through the shared sites, `&a + &b` adds couplings, and
-`&cells * Vector::slot()` turns multivector cells into maps. The string's springs are the
+multiplies the cells along every path through the shared sites, `&a + &b` and `&a - &b` add
+and subtract couplings, `-&a` and `&a * 0.5` negate and scale every cell (`scaled(c)` for any
+coefficient type), and `&cells * Vector::slot()` turns multivector cells into maps. The string's springs are the
 differences of neighbouring beads, and its stiffness is the Laplacian `~ends * ends` with each
 bead also tied to its rest position:
 
@@ -92,14 +93,24 @@ keeps, with `of_into` (map cells) and `mul_into` (multivector cells), and alloca
 ### Solving
 
 * `solve` runs conjugate gradients with a diagonal preconditioner over the whole coupled system.
-  The couplings must be symmetric positive definite, as a stiffness, a mass matrix or a Laplacian
-  with anchors are. If the iteration fails, `solve` panics rather than return a wrong answer;
-  `try_solve` returns `None` instead ([guide.md §6](guide.md#6-solving-eigenproblems-and-pairings)
+  The couplings must be symmetric and definite in their cells' pairing (`CellPairing`):
+  * a map of a kind to itself, `K <- K`, pairs by the coefficients: a stiffness, a mass matrix or
+    a Laplacian with anchors;
+  * a correlation, a map of a kind to its complement `C(K) <- K`, pairs by the regressive
+    product, `⟨y ∨ x⟩₀`: a conductance from potentials to amounts (numga's `Amount- <- Scalar+`),
+    a mobility from forces to velocities (PGA2D's `Direction <- OriginLine`), the energy forms
+    of DEC between primal and dual cochains. The right-hand side is a field of the output kind
+    (amounts), the solution one of the input kind (potentials): no dual is taken.
+
+  Either sign: a negative definite map (a conductance whose pairing puts the current before the
+  gradient) is solved as its negative. If the iteration fails, `solve` panics rather than return
+  a wrong answer; `try_solve` returns `None` instead ([guide.md §6](guide.md#6-solving-eigenproblems-and-pairings)
   states the failure policy).
 * `cg(b, tolerance, max_iterations)` is the same iteration, and reports its iterations, its
   residual and whether it converged.
 * `factor` computes a sparse LU of the block matrix, and `solve_direct` is `factor` followed by
-  one solve. It works for any nonsingular map: non-symmetric, indefinite, or a saddle-point
+  one solve. It works for any nonsingular map of square cells, of a kind to itself, to its
+  complement, or to any other kind of its size: non-symmetric, indefinite, or a saddle-point
   system of constraints, where conjugate gradients fails.
   * The sites are ordered by minimum degree, which keeps the factors of meshes sparse.
   * The rows are pivoted for stability.
@@ -107,8 +118,8 @@ keeps, with `of_into` (map cells) and `mul_into` (multivector cells), and alloca
     `Err(Singular { site, blade })`; `try_solve_direct` returns `None` for it, and for a
     solution that is not finite. There is no relative tolerance: shift-and-invert eigensolvers
     factor nearly singular maps on purpose.
-  * The factors solve again for every new right-hand side, as the steps of an implicit time
-    integration need.
+  * The factors (`SparseLu<K, T, B>`, unknowns of `K`, right-hand sides of `B`) solve again for
+    every new right-hand side, as the steps of an implicit time integration need.
 
 ```rust
 # use gax::field::{Field, SparseMap};
@@ -123,6 +134,32 @@ for step in 1..=3 {
     let sag = lu.solve(&loads); // no new factorization
     assert!((sag.site(0).e3() - sag.site(3).e3()).abs() < 1e-15); // symmetric under the load
 }
+```
+
+### Block systems over two fields
+
+A saddle-point system couples two fields of different kinds: Stokes flow's fluxes and pressures,
+`[[K, −Dᵀ], [−D, 0]]`; piezoelectricity's displacements and potentials. `BlockMap::new((a, b),
+(c, d))` keeps each block with its own cells, `a: Y₁ <- X₁`, `b: Y₁ <- X₂`, `c: Y₂ <- X₁`,
+`d: Y₂ <- X₂`, and `BlockMap::saddle(a, b, c)` has a zero `d`. `of(&x, &y)` applies it,
+`solve_direct(&f, &g)` solves it by one sparse LU of the whole block matrix (both fields' sites
+in one minimum-degree order), and `factor` keeps the factors (`BlockLu`).
+
+```rust
+# use gax::field::{BlockMap, Field, SparseMap};
+# use gax::vga3d::{Scalar, Vector};
+# let s = Scalar::<(), f64>::new;
+# let ends = SparseMap::new(vec![s(-1.0), s(1.0), s(-1.0), s(1.0), s(-1.0), s(1.0)], vec![0, 0, 1, 1, 2, 2], vec![0, 1, 1, 2, 2, 3], (3, 4));
+# let anchors = SparseMap::from_diagonal(&Field::from_fn(4, |_| s(1.0)));
+# let stiffness = &(&(&ends.reverse() * &ends) + &anchors) * Vector::slot();
+// The string's sag under a load, with its two end beads held at the same height: one
+// multiplier, the constraint's force, on a site of its own.
+let held = SparseMap::from_triples([(0, 0, Vector::<(), f64>::slot()), (0, 3, -Vector::<(), f64>::slot())], (1, 4));
+let system = BlockMap::saddle(stiffness, held.transpose(), held);
+let load = Field::from_fn(4, |i| Vector::new(0.0, 0.0, if i == 1 { -1.0 } else { 0.0 }));
+let (sag, force) = system.solve_direct(&load, &Field::zeros(1));
+assert!((sag.site(0) - sag.site(3)).norm() < 1e-15);
+# let _ = force;
 ```
 
 ### Least squares
@@ -152,11 +189,11 @@ assert!((beads.site(0).e1() + 1.5).abs() < 1e-12 && (beads.site(3).e1() - 1.5).a
 ### Eigenproblems
 
 `eigh(metric, count)` gives the `count` eigenpairs nearest zero of `A x = λ M x`, for a
-symmetric field map and a symmetric positive definite metric: the vibration modes of a mesh, or
-the lowest states of a lattice Hamiltonian. The values come ascending, and the fields are
-orthonormal in the metric. Free meshes have a null space (their rigid motions), which comes
-first. Each value repeated on every coefficient of the kind (isotropic cells) is found with all
-its copies.
+symmetric field map and a symmetric definite metric, both maps of a kind to itself or both
+correlations (paired as `solve` pairs them): the vibration modes of a mesh, or the lowest states
+of a lattice Hamiltonian. The values come ascending, and the fields are orthonormal in the
+metric. Free meshes have a null space (their rigid motions), which comes first. Every copy of a
+repeated value asked for is found.
 
 ```rust
 # use gax::field::{Field, SparseMap};
@@ -174,9 +211,22 @@ assert!((modes[3].dot(&mass.of(&modes[3])) - 1.0).abs() < 1e-12);
 
 The search space comes from block Lanczos on `(A − σM)⁻¹ M`, with σ just below zero and one
 sparse LU of `A − σM`. The eigenpairs come from `A` and `M` themselves on that space, and the
-space grows until each pair's residual `‖A x − λ M x‖` is at the level of rounding. Blocks of
-`2 K::N + 2` vectors cover values repeated on every coefficient and doubled by a symmetry of the
-sites; `eigh_block` takes larger blocks for more symmetric meshes.
+space grows until each pair's residual `‖A x − λ M x‖` is at the level of rounding; two steps of
+block inverse iteration on the pairs' own vectors then sharpen them. Blocks of `count + 2`
+vectors, at most `2 K::N + 2`, find every copy asked for and, past that, values repeated on every
+coefficient and doubled by a symmetry of the sites; `eigh_block` takes larger blocks for more
+symmetric meshes.
+
+`eigh_from(metric, count, start)` starts from fields near the wanted ones, such as the last
+step's modes in a flow that solves a slowly changing pencil step after step: the start is first
+iterated on its own (block inverse iteration, a few solves), and seeds the search space if that
+does not converge. Spot's conformal flow (60 steps, 11 720 unknowns) took its tests from 70 s to
+39 s that way.
+
+`eigh_all(metric)` gives every pair, by a dense solve (`n²` numbers, `O(n³)` steps: a few hundred
+to a few thousand unknowns), against a metric that may be only semidefinite. The pencil is then
+solved on the metric's range: an energy blind to gradients drops them, and there are as many
+pairs as the metric's rank (the Beltrami fields' helicity against the magnetic energy).
 
 ## On SIMD lanes
 
@@ -302,5 +352,6 @@ the dense batch path (one map applied to as many values).
 
 ## What a field is not (yet)
 
-* A sparse SVD and a non-symmetric sparse eigensolver. For a few sites, the dense `svd` and
+* A sparse SVD, a non-symmetric sparse eigensolver, and iterative solves of saddle points
+  (MINRES); block systems solve directly. For a few sites, the dense `svd` and
   `eig` of a fixed field map (`SiteField::from_sparse`) cover them.

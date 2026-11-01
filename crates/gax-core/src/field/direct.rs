@@ -1,11 +1,11 @@
-//! A sparse direct solver for square field maps: LU with partial pivoting after a
-//! bandwidth-reducing ordering of the sites.
+//! A sparse direct solver for square field maps and block systems of two fields: LU with
+//! partial pivoting after a minimum-degree ordering of the sites.
 //!
 //! The method is the left-looking LU of Gilbert and Peierls, as in Davis's `CSparse` (`cs_lu`):
 //! each column of `L` and `U` comes from a sparse triangular solve whose nonzero pattern is
 //! found by a depth-first search in the graph of `L`, so the work is proportional to the
-//! arithmetic. The columns are taken in a reverse Cuthill–McKee order of the sites, which keeps
-//! the factors of meshes and chains banded; the rows are chosen by threshold partial pivoting,
+//! arithmetic. The columns are taken site by site in a minimum-degree order of the sites, which
+//! keeps the factors of meshes sparse; the rows are chosen by threshold partial pivoting,
 //! preferring the diagonal while it is within a factor of 10 of the column's largest candidate.
 
 extern crate std;
@@ -57,10 +57,25 @@ struct Csc<T> {
     x: Vec<T>,
 }
 
-/// The sparse LU factorization of a square field map of map cells `K <- K`: `P A Q = L U` on
-/// the block matrix of its coefficients. Factor once with [`SparseMap::factor`], then
-/// [`solve`](Self::solve) for as many right-hand sides as needed (the steps of an implicit time
-/// integration, the columns of a block).
+/// The factors of `P A Q = L U`, on flattened coefficients.
+#[derive(Clone, Debug)]
+pub(super) struct Factors<T> {
+    /// The columns' order: factor column `k` is unknown `q[k]`.
+    q: Vec<usize>,
+    /// The rows' order: unknown row `i` is factor row `pinv[i]`.
+    pinv: Vec<usize>,
+    /// Unit lower triangular, its diagonal stored first in each column, rows in factor order.
+    l: Csc<T>,
+    /// Upper triangular, its diagonal stored last in each column.
+    u: Csc<T>,
+}
+
+/// The sparse LU factorization of a square field map: `P A Q = L U` on the block matrix of its
+/// coefficients. Factor once with [`SparseMap::factor`], then [`solve`](Self::solve) for as
+/// many right-hand sides as needed (the steps of an implicit time integration, the columns of
+/// a block). The unknowns are values of `K`, the right-hand sides values of `B`: the kind
+/// itself for a map of a kind to itself, its complement for a correlation, any kind of the same
+/// size for other square cells.
 ///
 /// ```
 /// use gax::field::{Field, SparseMap};
@@ -88,20 +103,13 @@ struct Csc<T> {
 /// assert!(r.dot(&r) < 1e-28);
 /// ```
 #[derive(Clone, Debug)]
-pub struct SparseLu<K: Kind, T> {
+pub struct SparseLu<K: Kind, T, B: Kind = K> {
     sites: usize,
-    /// The columns' order: factor column `k` is unknown `q[k]`.
-    q: Vec<usize>,
-    /// The rows' order: unknown row `i` is factor row `pinv[i]`.
-    pinv: Vec<usize>,
-    /// Unit lower triangular, its diagonal stored first in each column, rows in factor order.
-    l: Csc<T>,
-    /// Upper triangular, its diagonal stored last in each column.
-    u: Csc<T>,
-    marker: PhantomData<K>,
+    factors: Factors<T>,
+    marker: PhantomData<(K, B)>,
 }
 
-impl<K: Kind, T: Real> SparseLu<K, T> {
+impl<K: Kind, T: Real, B: Kind> SparseLu<K, T, B> {
     /// The number of sites.
     #[must_use]
     pub fn sites(&self) -> usize {
@@ -112,7 +120,7 @@ impl<K: Kind, T: Real> SparseLu<K, T> {
     /// factorization's memory and of the cost of a solve.
     #[must_use]
     pub fn fill(&self) -> usize {
-        self.l.i.len() + self.u.i.len()
+        self.factors.fill()
     }
 
     /// Solve `A x = b` with the factors.
@@ -121,20 +129,29 @@ impl<K: Kind, T: Real> SparseLu<K, T> {
     /// If `b` is not over the map's sites.
     #[must_use]
     #[track_caller]
-    pub fn solve(&self, b: &Field<K::Mv<(), T>>) -> Field<K::Mv<(), T>> {
+    pub fn solve(&self, b: &Field<B::Mv<(), T>>) -> Field<K::Mv<(), T>> {
         assert!(
             b.len() == self.sites,
             "a factored field map over {} sites solved against a field over {} sites",
             self.sites,
             b.len()
         );
-        unflatten(&self.solve_flat(&flatten(b)))
+        unflatten(&self.factors.solve(&flatten(b)))
+    }
+
+    /// `A x = b` on flattened coefficients (`site * K::N + blade`).
+    pub(super) fn solve_flat(&self, b: &[T]) -> Vec<T> {
+        self.factors.solve(b)
     }
 }
 
-impl<K: Kind, T: Real> SparseLu<K, T> {
-    /// `A x = b` on flattened coefficients (`site * K::N + blade`).
-    pub(super) fn solve_flat(&self, b: &[T]) -> Vec<T> {
+impl<T: Real> Factors<T> {
+    pub(super) fn fill(&self) -> usize {
+        self.l.i.len() + self.u.i.len()
+    }
+
+    /// `A x = b` on flattened coefficients.
+    pub(super) fn solve(&self, b: &[T]) -> Vec<T> {
         let n = self.q.len();
         let mut y = vec![T::zero(); n];
         for (i, &v) in b.iter().enumerate() {
@@ -169,45 +186,147 @@ impl<K: Kind, T: Real> SparseLu<K, T> {
     }
 }
 
-impl<C, K, T> SparseMap<C>
+/// A square block matrix being assembled from field maps: its entries by column, and the graph
+/// of its sites (the unknowns' sites, each with a range of columns and rows).
+pub(super) struct Assembly<T> {
+    by_col: Vec<Vec<(usize, T)>>,
+    /// Each site's first unknown, and its number of coefficients.
+    sites: Vec<(usize, usize)>,
+    graph: Vec<Vec<usize>>,
+}
+
+impl<T: Real> Assembly<T> {
+    /// Sites in groups of `count` sites of `blades` coefficients each, one after the other.
+    pub(super) fn new(groups: &[(usize, usize)]) -> Self {
+        let mut sites = Vec::new();
+        let mut next = 0;
+        for &(count, blades) in groups {
+            for _ in 0..count {
+                sites.push((next, blades));
+                next += blades;
+            }
+        }
+        Assembly {
+            by_col: (0..next).map(|_| Vec::new()).collect(),
+            graph: (0..sites.len()).map(|_| Vec::new()).collect(),
+            sites,
+        }
+    }
+
+    /// The couplings of `map`, its rows at site `rows` onwards and its columns at `cols`.
+    pub(super) fn add<C, A>(&mut self, map: &SparseMap<C>, rows: usize, cols: usize)
+    where
+        C: Extensor<Slots = (A,), Coef = T>,
+        A: Kind,
+    {
+        for (r, c, cell) in map.couplings() {
+            let (r, c) = (rows + r, cols + c);
+            let (row0, col0) = (self.sites[r].0, self.sites[c].0);
+            if r != c {
+                self.graph[r].push(c);
+                self.graph[c].push(r);
+            }
+            let cell = cell.coeffs().as_ref();
+            for (o, row) in cell.iter().enumerate() {
+                for (i, &v) in row.as_ref().iter().enumerate() {
+                    if v != T::zero() {
+                        self.by_col[col0 + i].push((row0 + o, v));
+                    }
+                }
+            }
+        }
+    }
+
+    /// The factors, the columns taken site by site in minimum-degree order.
+    pub(super) fn factor(self) -> Result<Factors<T>, Singular> {
+        let Assembly {
+            by_col,
+            sites,
+            mut graph,
+        } = self;
+        for a in &mut graph {
+            a.sort_unstable();
+            a.dedup();
+        }
+        let a = compress(by_col);
+        let order = minimum_degree(graph);
+        let q: Vec<usize> = order
+            .iter()
+            .flat_map(|&s| {
+                let (start, blades) = sites[s];
+                start..start + blades
+            })
+            .collect();
+        let (l, u, pinv) = lu(&a, &q, |col| {
+            let site = sites.partition_point(|&(start, _)| start <= col) - 1;
+            Singular {
+                site,
+                blade: col - sites[site].0,
+            }
+        })?;
+        Ok(Factors { q, pinv, l, u })
+    }
+}
+
+/// Entries by column into compressed columns, duplicates summed.
+fn compress<T: Real>(by_col: Vec<Vec<(usize, T)>>) -> Csc<T> {
+    let mut p = Vec::with_capacity(by_col.len() + 1);
+    let (mut rows, mut vals) = (Vec::new(), Vec::new());
+    for mut col in by_col {
+        p.push(rows.len());
+        col.sort_by_key(|e| e.0);
+        for (r, v) in col {
+            if rows.len() > *p.last().expect("pushed") && *rows.last().expect("nonempty") == r {
+                let last = vals.len() - 1;
+                vals[last] = vals[last] + v;
+            } else {
+                rows.push(r);
+                vals.push(v);
+            }
+        }
+    }
+    p.push(rows.len());
+    Csc {
+        p,
+        i: rows,
+        x: vals,
+    }
+}
+
+impl<C, A, B, T> SparseMap<C>
 where
-    C: Extensor<Kind = K, Slots = (K,), Coef = T>,
-    K: Kind,
+    C: Extensor<Kind = B, Slots = (A,), Coef = T>,
+    A: Kind,
+    B: Kind,
     T: Real,
 {
     /// The sparse LU factorization of this square map's block matrix, for
     /// [`SparseLu::solve`]: any nonsingular map, symmetric or not, definite or not, such as a
-    /// saddle-point system of constraints. The sites are ordered by minimum degree, so the
-    /// factors of meshes stay sparse. For scalar coefficients.
+    /// saddle-point system of constraints, and of any square cells: a kind to itself, to its
+    /// complement (a correlation), or to any kind of its size. The sites are ordered by minimum
+    /// degree, so the factors of meshes stay sparse. For scalar coefficients.
     ///
     /// # Errors
     /// [`Singular`] if a column has no nonzero pivot left: the map is singular. (No relative
     /// tolerance: shift-and-invert eigensolvers factor nearly singular maps on purpose.)
     ///
     /// # Panics
-    /// If the map is not square.
+    /// If the map or its cells are not square.
     #[track_caller]
-    pub fn factor(&self) -> Result<SparseLu<K, T>, Singular> {
+    pub fn factor(&self) -> Result<SparseLu<A, T, B>, Singular> {
         assert!(
-            self.shape.0 == self.shape.1,
-            "factoring needs a square field map, not {} <- {} sites",
+            self.shape.0 == self.shape.1 && A::N == B::N,
+            "factoring needs a square field map, not {} <- {} sites of {} <- {} coefficients",
             self.shape.0,
-            self.shape.1
+            self.shape.1,
+            B::N,
+            A::N
         );
-        let sites = self.shape.0;
-        let a = self.assemble();
-        let order = minimum_degree(self.site_graph());
-        let q: Vec<usize> = order
-            .iter()
-            .flat_map(|&s| (0..K::N).map(move |b| s * K::N + b))
-            .collect();
-        let (l, u, pinv) = lu(&a, &q, K::N)?;
+        let mut assembly = Assembly::new(&[(self.shape.0, A::N)]);
+        assembly.add(self, 0, 0);
         Ok(SparseLu {
-            sites,
-            q,
-            pinv,
-            l,
-            u,
+            sites: self.shape.0,
+            factors: assembly.factor()?,
             marker: PhantomData,
         })
     }
@@ -216,11 +335,28 @@ where
     /// [`SparseLu::solve`]: any nonsingular square map. Factor once with `factor` to solve for
     /// several right-hand sides.
     ///
+    /// ```
+    /// use gax::field::{Field, SparseMap};
+    /// use gax::pga2d::{Scalar, intrinsic::Pseudoscalar};
+    /// // A correlation, potentials to amounts (numga's `Amount- <- Scalar+`: a conductance of two
+    /// // sites tied to ground), solved as it is, with no dual taken.
+    /// let g = Pseudoscalar::<(), f64>::new(1.0) * Scalar::slot();
+    /// let conductance = SparseMap::from_triples(
+    ///     [(0, 0, g * 2.0), (0, 1, -g), (1, 0, -g), (1, 1, g * 2.0)],
+    ///     (2, 2),
+    /// );
+    /// let amounts = Field::from_fn(2, |i| Pseudoscalar::new(1.0 + i as f64));
+    /// let potentials: Field<Scalar<(), f64>> = conductance.solve_direct(&amounts);
+    /// assert!((&conductance.of(&potentials) - &amounts).norm() < 1e-15);
+    /// // Conjugate gradients solves it too, in the pairing of amounts with potentials.
+    /// assert!((&conductance.solve(&amounts) - &potentials).norm() < 1e-14);
+    /// ```
+    ///
     /// # Panics
     /// If the map is not square, `b` is not over its sites, or the map is singular.
     #[must_use]
     #[track_caller]
-    pub fn solve_direct(&self, b: &Field<K::Mv<(), T>>) -> Field<K::Mv<(), T>> {
+    pub fn solve_direct(&self, b: &Field<B::Mv<(), T>>) -> Field<A::Mv<(), T>> {
         match self.factor() {
             Ok(lu) => lu.solve(b),
             Err(e) => panic!("SparseMap::solve_direct: {e}"),
@@ -248,66 +384,9 @@ where
     /// If the map is not square, or `b` is not over its sites.
     #[must_use]
     #[track_caller]
-    pub fn try_solve_direct(&self, b: &Field<K::Mv<(), T>>) -> Option<Field<K::Mv<(), T>>> {
+    pub fn try_solve_direct(&self, b: &Field<B::Mv<(), T>>) -> Option<Field<A::Mv<(), T>>> {
         let x = self.factor().ok()?.solve(b);
         x.sites().iter().all(Extensor::is_finite).then_some(x)
-    }
-
-    /// The sites' graph: each site's neighbours (by a coupling either way), sorted.
-    fn site_graph(&self) -> Vec<Vec<usize>> {
-        let n = self.shape.0;
-        let mut adj: Vec<Vec<usize>> = (0..n).map(|_| Vec::new()).collect();
-        for (r, c, _) in self.couplings() {
-            if r != c {
-                adj[r].push(c);
-                adj[c].push(r);
-            }
-        }
-        for a in &mut adj {
-            a.sort_unstable();
-            a.dedup();
-        }
-        adj
-    }
-
-    /// The block matrix's coefficients in compressed columns, duplicates summed and exact zeros
-    /// dropped.
-    fn assemble(&self) -> Csc<T> {
-        let n = K::N;
-        let m = self.shape.0 * n;
-        // Entries by column: (row, value).
-        let mut by_col: Vec<Vec<(usize, T)>> = (0..m).map(|_| Vec::new()).collect();
-        for (r, c, cell) in self.couplings() {
-            let cell = cell.coeffs().as_ref();
-            for (o, row) in cell.iter().enumerate() {
-                for (i, &v) in row.as_ref().iter().enumerate() {
-                    if v != T::zero() {
-                        by_col[c * n + i].push((r * n + o, v));
-                    }
-                }
-            }
-        }
-        let mut p = Vec::with_capacity(m + 1);
-        let (mut rows, mut vals) = (Vec::new(), Vec::new());
-        for mut col in by_col {
-            p.push(rows.len());
-            col.sort_by_key(|e| e.0);
-            for (r, v) in col {
-                if rows.len() > *p.last().expect("pushed") && *rows.last().expect("nonempty") == r {
-                    let last = vals.len() - 1;
-                    vals[last] = vals[last] + v;
-                } else {
-                    rows.push(r);
-                    vals.push(v);
-                }
-            }
-        }
-        p.push(rows.len());
-        Csc {
-            p,
-            i: rows,
-            x: vals,
-        }
     }
 }
 
@@ -375,12 +454,12 @@ fn union_without(a: &[usize], b: &[usize], skip: usize, gone: usize) -> Vec<usiz
 }
 
 /// Left-looking LU with threshold partial pivoting, the columns of `a` taken in the order `q`:
-/// `(L, U, pinv)`. `blades` coefficients make a site, for the error.
+/// `(L, U, pinv)`. `singular` names the unknown of a column with no pivot.
 #[allow(clippy::type_complexity)]
 fn lu<T: Real>(
     a: &Csc<T>,
     q: &[usize],
-    blades: usize,
+    singular: impl Fn(usize) -> Singular,
 ) -> Result<(Csc<T>, Csc<T>, Vec<usize>), Singular> {
     let n = q.len();
     let none = usize::MAX;
@@ -437,10 +516,7 @@ fn lu<T: Real>(
             }
         }
         if pivot_row == none {
-            return Err(Singular {
-                site: col / blades,
-                blade: col % blades,
-            });
+            return Err(singular(col));
         }
         // The diagonal, if it is close enough to the largest.
         if pinv[col] == none && !T::all_lt(x[col].abs(), tol * largest) {

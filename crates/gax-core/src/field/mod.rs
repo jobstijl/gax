@@ -42,19 +42,26 @@
 
 extern crate std;
 
+mod block;
+mod dense;
 mod derivative;
 mod direct;
 mod eigen;
 mod lsqr;
 #[cfg(feature = "batch")]
 mod packed;
+mod pairing;
 mod solve;
 mod sparse;
 
+pub use block::{BlockLu, BlockMap};
 pub use derivative::{gradient, hessian};
 pub use direct::{Singular, SparseLu};
 #[cfg(feature = "batch")]
 pub use packed::PackedSparseMap;
+pub use pairing::CellPairing;
+#[doc(hidden)]
+pub use pairing::PairStep;
 pub use solve::Solved;
 pub use sparse::SparseMap;
 

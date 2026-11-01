@@ -1540,6 +1540,9 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
       `ε^¾` times the pencil's scale, scaling twice: a girder of stiffness `10¹¹` stopped with
       its eighth mode `5·10⁻⁴` off. The backward error does not change when the pencil is
       scaled.)
+    * (ADR-056 amends the shifts, the last step and the blocks below: no move on the first
+      check, bounds in `M⁻¹`, moves taken back; block inverse iteration instead of the last
+      Lanczos step; blocks of `count + 2`.)
     * A converged eigenvector's error is its residual over the gap to the next eigenvalue,
       which is a small part of the scale on a fine mesh: `(π/n)²` above a free chain's rigid
       shift. So the converged pairs get one more step of inverse iteration, their own images
@@ -2346,6 +2349,117 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   `I = e4 e1 e2 e3`. The migrated ports note each sign or reading that changed.
 * **Cost.** None: the same 16 blades, 43 k generated lines as before; the closed forms of
   `exp`, `log` and `sqrt` of the even kind are generated in this signature as in the other.
+
+## ADR-056: Field solves in a pairing, block systems, and the sparse eigensolver's shifts
+*Status: implemented (2026-11-01). Amends ADR-046. Phase 13.*
+
+* **The problems** (from numga `35797de`'s ports, TODO.md Phase 13):
+  * Correlations, cells from a kind to its complement (numga's `Amount- <- Scalar+`, a mobility
+    `Direction <- OriginLine`), solved only through the dual: the ports read cells and
+    right-hand sides through `undual()` to maps of numbers, which came out negative definite
+    (the join pairs the current before the gradient), so conjugate gradients failed.
+  * Saddle points over two fields (DEC Stokes, piezoelectricity) were flattened into one map of
+    numbers, each cell's coefficients read on a basis.
+  * `SparseMap` had no `Neg`, `Sub` or scalar `Mul`; ports wrote `map_cells(|c| -c)`.
+  * The sparse `eigh` took 18 s for two pairs of an 800-vertex connection Laplacian whose LU
+    takes 54 ms; the connections port wrote its own subspace iteration (50 ms). Spot's
+    conformal flow solves 60 nearby pencils, about a second each, with nothing to start from.
+  * No dense eigensolver of run-time size (Beltrami fields wrote a cyclic Jacobi), no
+    Gauss–Legendre rule (Kirchhoff wrote one), no least squares of a form in a metric
+    (epipolar went through `eigh`).
+* **The pairing of a square cell (`field::CellPairing`).** Symmetry and definiteness are
+  properties of a bilinear form, so a field map needs a pairing of its output with its input.
+  There are two, decided by the kinds at compile time through the generated `KindEq` (a
+  type-level boolean) and `Complement` tables:
+  * a map of a kind to itself pairs by the coefficients (as before);
+  * a correlation `C(K) <- K` pairs by the regressive product, `⟨y ∨ x⟩₀`, a signed
+    permutation (`Complement::PAIRS`).
+  `solve`, `cg` and `eigh` run on `P A` and `P M`, which are symmetric where the map is
+  symmetric in its pairing; the right-hand side is a field of the output kind and the solution
+  one of the input kind, with no dual taken. A definite map of either sign is solved (the sign
+  of its paired diagonal decides), and `eigh` takes a negative definite metric as its negative.
+  * Considered: an inferred marker type parameter on `solve` (`solve::<M>`), with one impl per
+    pairing. It works for concrete types but makes generic callers ambiguous and puts a marker in
+    the signature; `KindEq` already decides kind equality for `fill` (ADR-015). Also
+    considered: GMRES for any square cells, which needs no pairing but gives up the definite
+    case's guarantees and memory bound; the direct solve covers the rest.
+  * The cost: code generic over the cells, which wrote `C: Extensor<Kind = K, Slots = (K,)>`,
+    adds `C: CellPairing` (the Kane–Mele port's sector solve did), since a generic `K` is not
+    known to equal itself through `KindEq`.
+  * Cells between other kinds of equal size (the metric dual's kinds of the other orientation)
+    have no pairing: `factor`, `solve_direct` and `try_solve_direct` take any square cells, and
+    `SparseLu<K, T, B = K>` solves from `B` to `K`.
+* **Block systems (`field::BlockMap`).** `BlockMap::new((a, b), (c, d))`, each block with its
+  own cells, `a: Y₁ <- X₁`, `b: Y₁ <- X₂`, `c: Y₂ <- X₁`, `d: Y₂ <- X₂`, and
+  `BlockMap::saddle(a, b, c)` with `d = 0`; `of`, `factor` (`BlockLu`), `solve_direct`,
+  `try_solve_direct`. One sparse LU of the whole block matrix, both fields' sites in one
+  minimum-degree order, the same factorization code as a single map (the assembly now takes
+  groups of sites of their own sizes).
+  * Not a pair field (a kind holding both values): the fields have different site counts. Not
+    `SparseMap::block([[a, b], [c, d]])`: an array needs one cell type. Not an iterative saddle
+    solver (MINRES, Uzawa): the ports' systems are small, and LU needs no preconditioner.
+  * DEC Stokes solves `[[K, −Dᵀ], [−D, 0]]` with the stiffness a correlation and the pressures
+    amounts on the faces, the gradient block the constraint's adjugate; piezoelectricity's four
+    blocks keep their cells (`Plane <- Point`, `Plane <- Scalar`, its adjugate, and
+    `Amount <- Scalar`). Both ports' checks hold at their tolerances.
+* **Arithmetic.** `-&m`, `-m`, `&a - &b`, `&m * c`, `m * c` and `c * &m` for `f32` and `f64`
+  cells, and `scaled(c)` for any coefficient type (a generic `Mul<T>` would overlap the existing
+  `Mul<M: Extensor>`, cells times an extensor); `SparseMap::zeros(shape)` for a zero block.
+* **The sparse `eigh`'s slowness: a wrong shift.** Traced on the connection Laplacian: the first
+  check comes after the start block alone, whose Ritz values (461 and 514) are averages over the
+  spectrum, and the re-shift rule (ADR-046) moved the shift there, to 289, above the wanted pair
+  at zero; the inverted operator then favoured the bulk near 289, and the space grew to 466
+  vectors (1184 with blocks of 8). Three changes:
+  * no move on the first check;
+  * the estimates' error bound is the residual in `M⁻¹`, with `M`'s diagonal standing for `M`
+    (exact for a lumped mass), not the plain residual, which understated it by `1/√m` for a
+    small mass `m` (the vertex areas here);
+  * a move that leaves a wanted value below the shift is taken back, to just below that value or
+    to the first shift.
+  The two pairs then take 62 ms with blocks of 2 and 121 ms with 8.
+* **Refinement by block inverse iteration.** With the shift fixed, a parallel field came back
+  with an energy of `10⁻¹²` where the exact one is zero (the port's check is `10⁻¹²`). The last
+  step of ADR-046 added `(A − σM)⁻¹ M x` to the Lanczos space; next to a null space the
+  correction lies in the space already, below the rounding of the extraction on the inverted
+  operator, and nothing changed. Now two steps of block inverse iteration run on the pairs' own
+  vectors (`Y = (A − σM)⁻¹ M X`, orthonormal in the metric, Rayleigh–Ritz with `A` on `Y`):
+  energies `10⁻¹⁵`, as the port's own iteration gave. The refined pairs are kept unless their
+  backward error is worse.
+* **Blocks of `count + 2`, at most `2 K::N + 2`.** A block finds an eigenvalue with as many
+  copies as it has vectors, and no value is wanted more than `count` times, so `count` vectors
+  find every copy asked for; past `count` the old bound stays. Fewer vectors per block grow the
+  space no faster than the pairs converge: the connections port's 23 eigensolves (800 to 5124
+  vertices) took 43 s against its own iteration's 45 s, which it retires.
+* **Warm starts (`eigh_from`).** A start of at least `count` fields is iterated on its own first
+  (block inverse iteration, the same step as the refinement) while each step cuts the backward
+  error tenfold; it returns at the strict tolerance, or at the loose one where the steps stall at
+  rounding, as the Lanczos checks stop. Otherwise the iterated start seeds the Lanczos space. A
+  flow's last mode is within a step of the next one, so a few solves replace a search: Spot's
+  60-step flow took its tests from 70 s to 39 s. Any start gives the same pairs.
+* **The whole spectrum (`SparseMap::eigh_all`).** Dense: both maps assembled (in their pairing),
+  the metric's eigenvectors `v / √μ` kept where `μ` is above `√ε` of the largest, the operator
+  projected on them and its eigenvectors carried back: the pencil on the metric's range, as
+  many pairs as the metric's rank. The Beltrami fields' helicity against the magnetic energy (a
+  semidefinite metric, blind to gradients) is one call; its tests went from 3.7 s to 1.4 s. The
+  dense step is the Householder–QL solver the sparse `eigh` already used for its projections,
+  moved to `field/dense.rs`. Considered: a public dense matrix type; the field maps are the typed
+  dense matrices the ports have (a `SparseMap` of `Scalar <- Scalar` cells is a plain one).
+* **Gauss–Legendre rules (`quadrature::gauss_legendre`, `gauss_legendre_on`).** numpy's
+  `leggauss`: Newton's method on the three-term recurrence from Tricomi's estimates, the rule
+  made exactly symmetric. Against the rule to 50 digits for `n` up to 100, nodes within `2 ε`
+  and weights within `8 ε`, where numpy's weights are off by up to `18 ε` (`tests/quadrature.rs`,
+  fixture from `docs/research/experiments/numpy_leggauss.py`).
+* **Least squares of a form in a metric (`Form::lstsq_in`).** numga's
+  `lstsq(rhs, metric, rcond)` on forms: the form diagonalized against the metric, each mode
+  solved alone, modes with `|λ|` at most `rcond` times the largest dropped (a ratio of
+  curvatures, independent of basis and units). A trait method: the generated types forward
+  `Form`'s other methods as inherent ones, and this one needs the generator to forward it too
+  (until then, `use gax::Form`).
+* **Tests.** `tests/field_solvers.rs` (arithmetic; conductances of both signs against the
+  stand-ins' undual route; a mobility; cells without a pairing; a saddle point against its
+  flattened map; `eigh_all` against the sparse `eigh`, the inverted spectrum and the residuals;
+  correlations' `eigh` against the undual route; a null space under a small mass; warm starts
+  from good and poor starts), `tests/quadrature.rs`, and the doctests.
 
 ## Hypotheses
 
