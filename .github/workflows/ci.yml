@@ -117,11 +117,16 @@ jobs:
         working-directory: examples/numga
         shell: bash
         run: |
-          set -e
+          failed=0
           for f in src/bin/*; do
             b=$(basename "$f" .rs)
-            cargo run -q --release --bin "$b" -- --png "/tmp/$b.png" --at 1.0 --size 320x180
+            cargo run -q --release --bin "$b" -- --png "/tmp/$b.png" --at 1.0 --size 320x180 2> "/tmp/$b.err" || {
+              echo "::error::$b: $(grep -m3 -E 'panicked|error|at ' "/tmp/$b.err" | tr '\n' ' ' | cut -c1-600)"
+              cat "/tmp/$b.err" >&2
+              failed=1
+            }
           done
+          exit $failed
 
   generated:
     name: generated algebras are up to date
@@ -245,7 +250,14 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck
+      - name: clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck 2>&1 | tee clippy.log || {
+            grep -E -A6 "^error|panicked" clippy.log | head -60 | sed 's/^/::error::/'
+            exit 1
+          }
       - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace,gax/batch,gax/wgsl,gax/bytemuck
         env:
           RUSTDOCFLAGS: -D warnings

@@ -20,15 +20,17 @@ fn quarter() -> gax::Unit<Motor<(), Sym>> {
 }
 
 /// A motor from constant angles costs nothing to build: its `exp` (square roots, sine,
-/// cosine, the small-angle select) folds at trace time, and turning a direction a quarter
-/// is a swap with a sign.
+/// cosine, the small-angle select) folds at trace time, leaving a few multiplications to turn
+/// a point a quarter. How few depends on how the platform's sine and cosine round
+/// `cos(π/4)` and `sin(π/4)`: 2 on Linux, 5 on Windows, where products that are 1 or 0 on
+/// Linux keep a factor next to them.
 #[test]
 fn constant_motors_fold() {
     let mut t = Tracer::new();
     t.kernel("quarter", |u: P| quarter() >> u);
     let c = t.reports()[0].cost;
     assert_eq!((c.calls, c.divs), (0, 0), "{c}");
-    assert!(c.muls <= 2, "{c}");
+    assert!(c.muls <= 5, "{c}");
 }
 
 /// Relations must not reach back into a stage: `sqrt x` with the relation `s² = x` once
