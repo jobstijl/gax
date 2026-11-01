@@ -35,7 +35,7 @@ jobs:
         run: |
           set -o pipefail
           # gax-wesl-tests needs the `wesl` crate, whose MSRV is above gax's.
-          cargo test --no-fail-fast --workspace --exclude gax-bench ${{ matrix.rust == 'stable' && '' || '--exclude gax-wesl-tests' }} -- ${{ matrix.rust != 'stable' && '--skip compile_fail' || '' }} 2>&1 | tee test.log || {
+          cargo test --no-fail-fast --workspace --exclude gax-bench ${{ matrix.rust != 'stable' && '--exclude gax-wesl-tests' || '' }} -- ${{ matrix.rust != 'stable' && '--skip compile_fail' || '' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
