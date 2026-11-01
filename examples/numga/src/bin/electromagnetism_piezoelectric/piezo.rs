@@ -49,14 +49,12 @@ pub fn y() -> Plane {
 
 /// A plane's complement, the direction it reads (numga's `dual`, the metric one).
 pub fn dual(p: Plane) -> Point {
-    sta2d::Vector::new(p.ex(), p.ey(), 0.0)
-        .hodge()
-        .cast::<sta2d::Temporal>()
+    p.hodge()
 }
 
-/// A direction's plane (numga's `dual_inverse`): the dual twice is minus one on vectors here.
+/// A direction's plane (numga's `dual_inverse`).
 pub fn undual(p: Point) -> Plane {
-    (-sta2d::intrinsic::Bivector::from(p).hodge()).cast::<sta2d::Spatial>()
+    p.hodge_inverse()
 }
 
 /// The strip's axis and its poling direction, the duals of `x` and `y`.

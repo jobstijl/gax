@@ -54,7 +54,8 @@ numga has since folded its stress-energy into `constitutive` (6e38d341).
 * **Random streams.** numpy's streams cannot be reproduced; the ports draw from `rand`'s seeded
   generator (`src/rng.rs`), and where a check depends on the draw (epipolar, three S³ scenes of
   elliptic physics, the tides' stars) the seed is chosen and the reason given in a comment.
-* **Algebras beyond gax's.** numga's STA2D `x+y+t-` is `src/shared/sta2d.rs`, its diagonal CGA3D
+* **Algebras beyond gax's.** numga's STA2D `x+y+t-` is gax's `sta2d` (`x y t` are `e1 e2 e4`,
+  its ports read points as antivectors in a small module of their own), its diagonal CGA3D
   `src/shared/quadrics_diagonal_cga.rs`, E8's R(8,0) `src/shared/math_e8.rs`; particle charges'
   Cl(10,0), above gax's nine dimensions, runs in its even subalgebra Cl(0,9).
 * **Meshes.** numga's `examples/mesh.py` is `src/mesh.rs`: meshes whose vertices and quantities

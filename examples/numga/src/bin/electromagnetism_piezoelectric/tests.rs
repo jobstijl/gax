@@ -34,7 +34,7 @@ enum Motion {
 
 impl Motion {
     fn plane(self, p: Plane) -> Plane {
-        let v = sta2d::Vector::new(p.ex(), p.ey(), 0.0);
+        let v = sta2d::Vector::new(p.e1(), p.e2(), 0.0);
         match self {
             Motion::Rotation => {
                 (sta2d::Bivector::new(0.27, 0.0, 0.0).exp() >> v).cast::<sta2d::Spatial>()

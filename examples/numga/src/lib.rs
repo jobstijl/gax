@@ -44,7 +44,6 @@ pub mod shared {
     pub mod quantum;
     pub mod simplicial;
     pub mod spacetime;
-    pub mod sta2d;
     pub mod surfaces_hull;
     pub mod surfaces_loop;
     pub mod surfaces_plane;

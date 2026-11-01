@@ -20,12 +20,12 @@
 
 mod advection;
 mod scenes;
+mod sta2d;
 #[cfg(test)]
 mod tests;
 
 use advection::*;
 use gax_numga_examples::shared::simplicial;
-use gax_numga_examples::shared::sta2d;
 use gax_numga_examples::shared::surfaces_plane;
 use gax_numga_examples::signal::frame;
 use gax_numga_examples::{
@@ -184,7 +184,7 @@ fn draw_triangle(c: &mut Canvas, rect: Rect, s: &Shown) {
         let form = (0..3)
             .map(|k| s.forms[k] * (Scalar::new(1.0) + (gradients[k] & (p - s.corners[k]))))
             .fold(Plane::zero(), |a, b| a + b);
-        let d = [form.ex() * 0.12 / longest, form.ey() * 0.12 / longest];
+        let d = [form.e1() * 0.12 / longest, form.e2() * 0.12 / longest];
         let tail = at(p) - Point2::direction(0.5 * d[0] as f32, 0.5 * d[1] as f32);
         arrow(c, &ax, tail, d, 1.2, 5.0, palette::SKY);
     }

@@ -17,7 +17,7 @@ publish = false
 disallowed_methods = "deny"
 
 [dependencies]
-gax = { path = "../../crates/gax", default-features = false, features = ["std", "macros", "pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga2d", "cga3d", "stap", "csta"] }
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "macros", "pga2d", "pga3d", "vga2d", "vga3d", "sta", "sta2d", "cga2d", "cga3d", "stap", "csta"] }
 winit = "0.30"
 softbuffer = "0.4"
 gif = "0.13"
