@@ -292,29 +292,31 @@ fn jets_over_site_fields() {
         ])
     };
     // Second-order jets of twelve directions are large for a debug build's 2 MB test thread.
-    let run = std::thread::Builder::new().stack_size(64 << 20).spawn(move || {
-        let x = Two::<f64>::from_sites([
-            Line::new(0.1, -0.2, 0.05, 0.3, 0.0, -0.1),
-            Line::new(-0.05, 0.1, 0.2, 0.0, 0.2, 0.1),
-        ]);
-        let (value, grad, hess) = hessian(energy, x);
-        assert!((value - energy(x)).abs() < 1e-14);
-        let h = 1e-5;
-        for i in 0..12 {
-            let along = |s: f64| energy(x + unit(i, s));
-            let slope = (along(h) - along(-h)) / (2.0 * h);
-            assert!((grad.of(unit(i, 1.0)).s() - slope).abs() < 1e-8, "{i}");
-            for j in 0..12 {
-                // The change of the i-th slope along j.
-                let slope_at = |s: f64| grad_at(energy, x + unit(j, s)).of(unit(i, 1.0)).s();
-                let second = (slope_at(h) - slope_at(-h)) / (2.0 * h);
-                let exact = hess.of(unit(i, 1.0)).of(unit(j, 1.0)).s();
-                assert!((exact - second).abs() < 1e-7, "{i} {j}: {exact} {second}");
+    let run = std::thread::Builder::new()
+        .stack_size(64 << 20)
+        .spawn(move || {
+            let x = Two::<f64>::from_sites([
+                Line::new(0.1, -0.2, 0.05, 0.3, 0.0, -0.1),
+                Line::new(-0.05, 0.1, 0.2, 0.0, 0.2, 0.1),
+            ]);
+            let (value, grad, hess) = hessian(energy, x);
+            assert!((value - energy(x)).abs() < 1e-14);
+            let h = 1e-5;
+            for i in 0..12 {
+                let along = |s: f64| energy(x + unit(i, s));
+                let slope = (along(h) - along(-h)) / (2.0 * h);
+                assert!((grad.of(unit(i, 1.0)).s() - slope).abs() < 1e-8, "{i}");
+                for j in 0..12 {
+                    // The change of the i-th slope along j.
+                    let slope_at = |s: f64| grad_at(energy, x + unit(j, s)).of(unit(i, 1.0)).s();
+                    let second = (slope_at(h) - slope_at(-h)) / (2.0 * h);
+                    let exact = hess.of(unit(i, 1.0)).of(unit(j, 1.0)).s();
+                    assert!((exact - second).abs() < 1e-7, "{i} {j}: {exact} {second}");
+                }
             }
-        }
-        // The twists of the two sites are coupled: the energy depends on both points.
-        assert!(hess.of(unit(0, 1.0)).of(unit(6, 1.0)).s().abs() > 1e-3);
-    });
+            // The twists of the two sites are coupled: the energy depends on both points.
+            assert!(hess.of(unit(0, 1.0)).of(unit(6, 1.0)).s().abs() > 1e-3);
+        });
     run.expect("a thread").join().expect("the test passes");
 }
 
