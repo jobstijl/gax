@@ -24,8 +24,9 @@
 //! disk beside Whitney's reconstruction, the Hodge decomposition of a velocity on the
 //! perforated disk, and a pulse spreading there, lifted as reliefs of its scalar part (red) and
 //! its bivector part (blue), and of all three grades together (red, green for the 1-form's
-//! speed, blue). numga's fourth-order Runge–Kutta steps fields, which are not `Copy`, so it is
-//! written here rather than taken from `shared/mechanics_lie.rs`.
+//! speed, blue). numga's fourth-order Runge–Kutta steps the pair of fields, the even one on the
+//! vertices and the 1-form on the faces, as `shared/mechanics_lie.rs`'s `rk4` steps any state
+//! that adds and scales.
 
 mod dirac;
 mod scenes;

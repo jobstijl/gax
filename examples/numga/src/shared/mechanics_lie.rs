@@ -25,30 +25,32 @@ use core::ops::{Add, Mul};
 use gax::Of;
 use gax::motions::{Linear, Motions};
 
-/// The classical 4th-order Runge-Kutta step of `y' = f(y)`.
+/// The classical 4th-order Runge-Kutta step of `y' = f(y)`. The state need only be `Clone`, so
+/// fields step as values do (`gax::field::Field` adds and scales by a number).
 pub fn rk4<Y>(f: impl Fn(Y) -> Y, y: Y, h: f64) -> Y
 where
-    Y: Copy + Add<Output = Y> + Mul<f64, Output = Y>,
+    Y: Clone + Add<Output = Y> + Mul<f64, Output = Y>,
 {
-    let k1 = f(y);
-    let k2 = f(y + k1 * (0.5 * h));
-    let k3 = f(y + k2 * (0.5 * h));
-    let k4 = f(y + k3 * h);
+    let k1 = f(y.clone());
+    let k2 = f(y.clone() + k1.clone() * (0.5 * h));
+    let k3 = f(y.clone() + k2.clone() * (0.5 * h));
+    let k4 = f(y.clone() + k3.clone() * h);
     y + (k2 + k3 + (k1 + k4) * 0.5) * (h / 3.0)
 }
 
-/// Two values stepped together by [`rk4`] (numga stacks them into one extensor).
+/// Two values stepped together by [`rk4`] (numga stacks them into one extensor), of one type or
+/// two (an even field on the vertices with a 1-form on the faces).
 #[derive(Clone, Copy, Debug)]
-pub struct Pair<A>(pub A, pub A);
+pub struct Pair<A, B = A>(pub A, pub B);
 
-impl<A: Add<Output = A>> Add for Pair<A> {
+impl<A: Add<Output = A>, B: Add<Output = B>> Add for Pair<A, B> {
     type Output = Self;
     fn add(self, o: Self) -> Self {
         Pair(self.0 + o.0, self.1 + o.1)
     }
 }
 
-impl<A: Mul<f64, Output = A>> Mul<f64> for Pair<A> {
+impl<A: Mul<f64, Output = A>, B: Mul<f64, Output = B>> Mul<f64> for Pair<A, B> {
     type Output = Self;
     fn mul(self, s: f64) -> Self {
         Pair(self.0 * s, self.1 * s)

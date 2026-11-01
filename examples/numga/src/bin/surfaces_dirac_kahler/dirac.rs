@@ -10,6 +10,7 @@ use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 use gax::mesh::corners as local_corners;
 use gax::vga2d;
+use gax_numga_examples::shared::mechanics_lie::{Pair, rk4};
 
 pub type Scalar<S = ()> = vga2d::Scalar<S>;
 pub type Plane<S = ()> = vga2d::Vector<S>;
@@ -237,28 +238,12 @@ pub fn propagate(
     steps: usize,
 ) -> Vec<(Field<Even>, Field<Plane>)> {
     let (div, grad) = (&ops.even_divergence, &ops.even_gradient);
-    let rate = |(e, f): &(Field<Even>, Field<Plane>)| (div.of(f), grad.of(e));
-    let shifted = |(e, f): &(Field<Even>, Field<Plane>),
-                   (de, df): &(Field<Even>, Field<Plane>),
-                   h: f64| { (e + &de.scaled(h), f + &df.scaled(h)) };
+    let rate = |Pair(e, f): Pair<Field<Even>, Field<Plane>>| Pair(div.of(&f), grad.of(&e));
     let mut states = vec![(even, faces)];
     for _ in 0..steps {
-        let y = states.last().expect("a state");
-        let k1 = rate(y);
-        let k2 = rate(&shifted(y, &k1, 0.5 * dt));
-        let k3 = rate(&shifted(y, &k2, 0.5 * dt));
-        let k4 = rate(&shifted(y, &k3, dt));
-        let sum = |a: &Field<Even>, b: &Field<Even>, c: &Field<Even>, d: &Field<Even>| {
-            &(&(a + &b.scaled(2.0)) + &c.scaled(2.0)) + d
-        };
-        let sum_faces = |a: &Field<Plane>, b: &Field<Plane>, c: &Field<Plane>, d: &Field<Plane>| {
-            &(&(a + &b.scaled(2.0)) + &c.scaled(2.0)) + d
-        };
-        let next = (
-            &y.0 + &sum(&k1.0, &k2.0, &k3.0, &k4.0).scaled(dt / 6.0),
-            &y.1 + &sum_faces(&k1.1, &k2.1, &k3.1, &k4.1).scaled(dt / 6.0),
-        );
-        states.push(next);
+        let (e, f) = states.last().expect("a state").clone();
+        let Pair(e, f) = rk4(rate, Pair(e, f), dt);
+        states.push((e, f));
     }
     states
 }

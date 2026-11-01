@@ -19,8 +19,9 @@
 //! (hyperbolic, null along the lines parallel to the other two sides) and their sum's ellipses;
 //! the curvature of a disk whose lengths are stretched radially or around it, with each sampled
 //! face's unit ellipse of the metric beside a circle; and the steady current between two
-//! electrodes on the flat and the two stretched disks. Geometry from edge lengths (intrinsic
-//! areas, corner turns, defects) is written here: `gax::dec::Geometry` measures from positions.
+//! electrodes on the flat and the two stretched disks. The mesh's areas and angle defects are
+//! gax's geometry of the lengths alone (`dec::Geometry::from_squared_lengths`); the tests hold
+//! numga's corner turns and metric areas to its angles and areas.
 
 mod regge;
 #[cfg(test)]

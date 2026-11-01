@@ -301,7 +301,8 @@ fn cochain_complex_and_exact_midpoint_quadrature_including_obtuse_triangles() {
     // On the obtuse diamond circumcentric DEC's weight on the shared edge is negative, while
     // Whitney's 1-form mass is positive definite.
     let (obtuse, obtuse_vertices) = obtuse_diamond();
-    let flat = Mesh::new(obtuse_vertices.map(|p| p.undual()), &triangles(&obtuse)).unwrap();
+    // gax's metric reads the points as they are, antivectors (`dec::Distance`).
+    let flat = Mesh::new(obtuse_vertices.clone(), &triangles(&obtuse)).unwrap();
     let star = Geometry::new(&flat).star::<vga2d::Scalar>(1);
     let shared = interior_edge(&obtuse);
     let weight = star
@@ -425,25 +426,11 @@ fn the_scenes_pass_numgas_checks() {
     assert!(free.into_iter().all(|v| source.site(v).e12().abs() < 1e-11));
 }
 
-/// The 2-form of a face as a bivector: its coefficients on the barycentric differentials
-/// `dλ_I`, each the wedge of the corners' gradients (`dλᵢ` is the gradient of corner `i`).
-fn bivector2(form: &Form<vga2d::Scalar>, gradients: [Plane; 3]) -> Bivector {
-    (gradients[1] ^ gradients[2]) * form.coefficients()[0].s()
-}
-
-/// A 1-form of space as a vector, and a 2-form as a bivector, from the corners' gradients.
-fn vector3(form: &Form<vga3d::Scalar>, g: [SpacePlane; 4]) -> SpacePlane {
-    let c = form.coefficients();
-    g[1] * c[0].s() + g[2] * c[1].s() + g[3] * c[2].s()
-}
-fn bivector3(form: &Form<vga3d::Scalar>, g: [SpacePlane; 4]) -> SpaceBivector {
-    let c = form.coefficients();
-    (g[1] ^ g[2]) * c[0].s() + (g[1] ^ g[3]) * c[1].s() + (g[2] ^ g[3]) * c[2].s()
-}
-
 /// gax's own Whitney maps give the forms numga writes in the algebra: its 1-forms at the face
-/// centroids, the derivative of an edge cochain, the forms on the tetrahedron of every degree,
-/// and its metric pairs them into the Galerkin star, the isotropic conductance of the edges.
+/// centroids, the derivative of an edge cochain, the forms on the tetrahedron of every degree
+/// (read as multivectors through the corner gradients, `Form::vector` and `bivector`), and its
+/// metric pairs them into the Galerkin star, the isotropic conductance of the edges, and with a
+/// material on each face (`mass_with`) the fibred one.
 #[test]
 fn gax_whitney_maps_give_the_same_forms() {
     let (mesh, vertices) = disk(1.0, 5);
@@ -457,7 +444,7 @@ fn gax_whitney_maps_give_the_same_forms() {
         let at_centroid = geometry.whitney_1(&flat, &cochain, f, &[1.0 / 3.0; 3]);
         assert!(largest([at_centroid - centroid_forms.site(f)]) < 1e-12);
         let gradients = [0, 1, 2].map(|k| ops.corner_gradients[k].site(f));
-        let curl = bivector2(&mesh.whitney_d(1, &cochain, f), gradients);
+        let curl: Bivector = mesh.whitney_d(1, &cochain, f).bivector(&gradients);
         assert!(largest([curl - circulations.site(f)]) < 1e-12);
     }
     // The midpoint rule of the isotropic material is the Galerkin star of the edges, and the
@@ -468,11 +455,24 @@ fn gax_whitney_maps_give_the_same_forms() {
         *galerkin.entry((r, c)).or_insert(0.0) -= x.s();
     }
     assert!(couplings_apart(&couplings(&ops.edge_conductance(isotropic())), &galerkin) < 1e-13);
+    // And of the fibred material, the Galerkin star with that material on every face: the form
+    // pairing two gradients through it, `a ∨ σ(b)`.
+    let [_, fibred] = conductivities();
+    let material = Plane::slot() & fibred.of(Plane::slot());
+    let materials = Field::from_fn(mesh.len(2), |_| material);
+    let mut with = BTreeMap::new();
+    for (r, c, x) in geometry
+        .mass_with::<vga2d::Scalar, _, _>(&flat, 1, &materials)
+        .couplings()
+    {
+        *with.entry((r, c)).or_insert(0.0) -= x.s();
+    }
+    assert!(couplings_apart(&couplings(&ops.edge_conductance(fibred)), &with) < 1e-13);
 
     // On the tetrahedron, the forms of unit cochains at a point of it.
     let (tet_mesh, tet_vertices, points) = single_tetrahedron(5);
     let tet = tetrahedron(&tet_mesh, &tet_vertices, 0);
-    let solid = Mesh::new(tet_vertices.map(|p| p.undual()), &[[0, 1, 2, 3]]).unwrap();
+    let solid = Mesh::new(tet_vertices.clone(), &[[0, 1, 2, 3]]).unwrap();
     let metric = Geometry::new(&solid);
     let facing = tet_mesh.facets(3);
     for &p in &points {
@@ -482,7 +482,7 @@ fn gax_whitney_maps_give_the_same_forms() {
             .map(|e| tet_mesh.whitney(1, &unit3(6, e), 0, &at))
             .collect();
         for e in 0..6 {
-            assert!(largest([vector3(&unit_forms[e], tet.gradients) - edge_forms[e]]) < 1e-12);
+            assert!(largest([unit_forms[e].vector(&tet.gradients) - edge_forms[e]]) < 1e-12);
             for k in 0..6 {
                 let inner = metric.form_inner(0, &unit_forms[e], &unit_forms[k]);
                 assert!((inner - (edge_forms[e] | edge_forms[k]).s()).abs() < 1e-11);
@@ -492,7 +492,8 @@ fn gax_whitney_maps_give_the_same_forms() {
         for (k, form) in face_forms.iter().enumerate() {
             let (face, sign) = (facing.site(0, k), f64::from(facing.sign(0, k)));
             let whitney = tet_mesh.whitney(2, &unit3(4, face), 0, &at);
-            assert!(largest([bivector3(&whitney, tet.gradients) * sign - *form]) < 1e-12);
+            let flux: SpaceBivector = whitney.bivector(&tet.gradients);
+            assert!(largest([flux * sign - *form]) < 1e-12);
         }
     }
 }

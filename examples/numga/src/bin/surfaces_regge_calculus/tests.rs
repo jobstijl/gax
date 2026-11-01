@@ -81,6 +81,18 @@ fn check_geometry(mesh: &Topology<3>, geometry: &[Intrinsic], centre_tolerance: 
             (total.e12() - core::f64::consts::TAU).abs() < 1e-12,
             "{case}"
         );
+        // numga's corner turns are gax's corner angles of the lengths, and the metric's areas
+        // the lengths' areas.
+        let angles = g.geometry.angles();
+        for (f, turns) in g.turns.iter().enumerate() {
+            assert!((g.metric_areas[f] - g.areas.site(f).s()).abs() < 1e-14);
+            for (k, turn) in turns.iter().enumerate() {
+                assert!(
+                    (turn.e12() - angles[3 * f + k]).abs() < 1e-13,
+                    "{case} {f} {k}"
+                );
+            }
+        }
         // The side dyads with the corner cotangents are the area-weighted inverse metric.
         for f in 0..mesh.len(2) {
             let inverse = g.metrics[f].inverse() * g.areas.site(f).s();

@@ -178,7 +178,7 @@ mod shells {
         // map's reverse sums the hinges' pushes at their corners.
         let incidence = sheet.mesh.topology.d::<Scalar>(0);
         let gather = |map: &SparseMap<Scalar>, values: Vec<Direction>| -> Field<Direction> {
-            (&map.reverse() * &Field::new(values)).map(|p| p.cast::<Direction>())
+            map.reverse().weigh(&Field::new(values))
         };
         let mut total = -gather(&incidence, pull.into_sites());
         for (map, push) in sheet.corners.iter().zip(pushes) {

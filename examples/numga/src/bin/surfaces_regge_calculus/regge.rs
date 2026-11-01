@@ -1,12 +1,13 @@
-//! The math: a triangle's Regge metric from its edge lengths, the intrinsic geometry of a mesh
-//! from them (areas, corner turns, angle defects), the conductivities they give, and steady
-//! conduction; and numga's scenes. No drawing.
+//! The math: a triangle's Regge metric from its edge lengths and its corner turns, the intrinsic
+//! geometry of a mesh from them (gax's `Geometry::from_squared_lengths`: areas, angle defects),
+//! the conductivities they give, and steady conduction; and numga's scenes. No drawing.
 //!
 //! Points are antivectors, intrinsic (numga's `Point-`), and gradients vectors (`Plane+`). A
 //! metric is a correlation from displacements to planes (numga's `Plane+ <- Point-`), read on an
 //! edge by the join: `metric(edge) & edge` is its squared length.
 
 use crate::simplicial::hex_disk;
+use gax::dec::Geometry;
 use gax::field::{Field, SparseMap};
 use gax::mesh::Topology;
 use gax::mesh::corners as local_corners;
@@ -118,12 +119,19 @@ pub fn triangle_geometry(
     (metric, area, rotors, turns)
 }
 
-/// A mesh's intrinsic geometry under prescribed squared edge lengths: each face's metric and
-/// intrinsic area, each vertex's angle defect and its curvature (the defect over the vertex's
-/// area), and each face's conductivity.
+/// A mesh's intrinsic geometry under prescribed squared edge lengths: each face's metric, its
+/// corner turns and the area they give, by numga's construction in the algebra; gax's geometry of
+/// the lengths (`dec::Geometry::from_squared_lengths`), whose areas and angle defects are the
+/// mesh's, and each vertex's curvature (the defect over the vertex's area); and each face's
+/// conductivity.
 #[cfg_attr(not(test), allow(dead_code))] // numga's core, checked by the tests
 pub struct Intrinsic {
     pub metrics: Vec<Metric>,
+    /// The turn at each corner of each face, the log of its unit corner rotor.
+    pub turns: Vec<[Bivector; 3]>,
+    /// The area of each face from its metric, the wedge of two sides' readings.
+    pub metric_areas: Vec<f64>,
+    pub geometry: Geometry<f64, 3>,
     pub areas: Field<Scalar>,
     pub defects: Field<Bivector>,
     pub curvatures: Field<Bivector>,
@@ -144,7 +152,7 @@ pub fn mesh_geometry(
     let mut metrics = Vec::with_capacity(faces);
     let mut conductivities = Vec::with_capacity(faces);
     let mut cotangents = Vec::with_capacity(faces);
-    let mut areas = Vec::with_capacity(faces);
+    let mut metric_areas = Vec::with_capacity(faces);
     let mut turns: Vec<[Bivector; 3]> = Vec::with_capacity(faces);
     let all_sides = facing.read_all(&edges);
     for f in 0..faces {
@@ -164,30 +172,29 @@ pub fn mesh_geometry(
         conductivities.push(dyad(0) + dyad(1) + dyad(2));
         cotangents.push(cot.map(|c| c / 2.0));
         metrics.push(metric);
-        areas.push(Scalar::new(area));
+        metric_areas.push(area);
     }
-    let areas: Field<Scalar> = areas.into_iter().collect();
-    // Each vertex holds a third of the intrinsic area of the faces around it; its corner turns,
-    // carried back from the faces and summed, fall short of the flat turn by the defect: a full
-    // turn inside, half a turn on the rim.
-    let vertex_areas = &mesh.means::<Scalar>(2).reverse() * &areas;
-    let rim = mesh.exterior(0);
-    let mut defects: Vec<Bivector> = (0..mesh.len(0))
-        .map(|v| {
-            let flat = if rim.contains(&v) { 1.0 } else { 2.0 };
-            Bivector::new(flat * core::f64::consts::PI)
-        })
+    // The lengths' own geometry: each face's area, and at each vertex the flat turn (a whole one
+    // inside, half on the rim) less the corner angles there, the angle defect. Each vertex holds
+    // a third of the area of the faces around it.
+    let geometry = Geometry::from_squared_lengths(mesh, squared);
+    let areas: Field<Scalar> = geometry
+        .volumes(2)
+        .iter()
+        .map(|&a| Scalar::new(a))
         .collect();
-    let corner = mesh.incidence(2, 0);
-    for (f, t) in turns.iter().enumerate() {
-        for (&v, &turn) in corner.sites_of(f).iter().zip(t) {
-            defects[v] -= turn;
-        }
-    }
-    let defects: Field<Bivector> = defects.into_iter().collect();
+    let vertex_areas = &mesh.means::<Scalar>(2).reverse() * &areas;
+    let defects: Field<Bivector> = geometry
+        .angle_defects()
+        .into_iter()
+        .map(Bivector::new)
+        .collect();
     let curvatures = defects.zip_with(&vertex_areas, |d, a| d * a.s().recip());
     Intrinsic {
         metrics,
+        turns,
+        metric_areas,
+        geometry,
         areas,
         defects,
         curvatures,

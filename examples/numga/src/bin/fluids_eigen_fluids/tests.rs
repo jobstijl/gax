@@ -8,7 +8,8 @@ use super::scenes::*;
 use crate::simplicial::icosphere;
 use gax::field::Field;
 
-/// The largest entry of the modes' Gram matrix in the mass, less the identity.
+/// The largest entry of the modes' Gram matrix in the mass, less the identity: the amounts the
+/// mass gives one mode, joined with another and summed.
 fn gram_error(surface: &Surface, modes: &[Field<Scalar>]) -> f64 {
     let mass = surface.mass();
     let mut worst: f64 = 0.0;
@@ -16,7 +17,8 @@ fn gram_error(surface: &Surface, modes: &[Field<Scalar>]) -> f64 {
         let image = mass.of(a);
         for (j, b) in modes.iter().enumerate() {
             let expected = if i == j { 1.0 } else { 0.0 };
-            worst = worst.max((b.dot(&image) - expected).abs());
+            let pairing = image.zip_with(b, |m, x| m & x).sum().s();
+            worst = worst.max((pairing - expected).abs());
         }
     }
     worst

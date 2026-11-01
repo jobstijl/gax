@@ -24,8 +24,9 @@ pub type Point = vga3d::intrinsic::Bivector;
 pub type Patch = vga3d::intrinsic::Vector;
 /// A field's cell from vertex potentials to face gradients (numga's `Plane+ <- Scalar+`).
 pub type GradientMap = vga3d::Vector<(Scalar,)>;
-/// A scalar map: the cells of the stiffness and the mass once read as numbers.
-pub type ScalarMap = vga3d::Scalar<(Scalar,)>;
+/// A correlation from vertex potentials to amounts, quantities per area (numga's
+/// `Amount- <- Scalar+`): the cells of the stiffness and the mass.
+pub type AmountMap = vga3d::intrinsic::Pseudoscalar<(Scalar,)>;
 
 /// The point at `(x, y, z)`: the metric dual of its vector.
 pub fn point(x: f64, y: f64, z: f64) -> Point {
@@ -91,20 +92,21 @@ impl Surface {
 
     /// The stiffness: the area-weighted isotropic material, a gradient to its metric dual,
     /// pulled back to the vertices through the gradient's adjugate (its transpose through the
-    /// join), its cells read as numbers.
-    pub fn stiffness(&self) -> SparseMap<ScalarMap> {
+    /// join): a correlation from potentials to amounts.
+    pub fn stiffness(&self) -> SparseMap<AmountMap> {
         let material = Plane::slot().hodge();
         let response = SparseMap::from_diagonal(&self.areas.map(|a| material * a.s()));
-        let pulled = self
-            .gradient
+        self.gradient
             .adjugate()
-            .compose(&response.compose(&self.gradient));
-        pulled.map_cells(|c| c.undual())
+            .compose(&response.compose(&self.gradient))
     }
 
-    /// The lumped vertex mass.
-    pub fn mass(&self) -> SparseMap<ScalarMap> {
-        SparseMap::from_diagonal(&self.dual_areas.map(|a| Scalar::slot() * a.s()))
+    /// The lumped vertex mass, the same correlation: each vertex's dual area as the amount a
+    /// unit potential carries there, so that with the stiffness it makes the pencil `eigh` solves
+    /// in the join's pairing.
+    pub fn mass(&self) -> SparseMap<AmountMap> {
+        let unit = Scalar::slot().hodge();
+        SparseMap::from_diagonal(&self.dual_areas.map(|a| unit * a.s()))
     }
 
     /// The `count` lowest Laplace–Beltrami modes after the constant one: their eigenvalues and

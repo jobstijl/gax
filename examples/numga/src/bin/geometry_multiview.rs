@@ -1393,6 +1393,149 @@ mod tests {
         assert!(m.into_inner().approx_eq(&numga.into_inner(), 1e-15));
     }
 
+    /// The point-free misfit of the rig's free cameras moved by `twists`, one per camera as a
+    /// field, from the anchored camera's cones and the free ones' (numga's
+    /// `test_3d_coupled_newton_step_over_a_field_of_free_cameras`): each landmark's cones fused in
+    /// the world, the pole of the plane at infinity under them, and its value there over its
+    /// squared weight, summed. Generic over the coefficients, so jets carry its derivatives.
+    fn field_misfit<T: gax::Real>(
+        anchor: Motor<(), T>,
+        free: [Motor<(), T>; 2],
+        cones: &[Vec<space::Quadric>],
+        twists: gax::sites::SiteField<gax::pga3d::Line, 2, (), T>,
+    ) -> T {
+        use gax::pga3d::Plane;
+        let motors: [Motor<(), T>; 2] = core::array::from_fn(|c| {
+            free[c] * twists.site(c).gp(T::from_f64(0.5)).exp().into_inner()
+        });
+        let p = Point::slot().map_coefs(T::from_f64);
+        let world = |m: Motor<(), T>, q: &space::Quadric| m >> q.map_coefs(T::from_f64).of(m << p);
+        let w = Plane::<(), T>::new(T::zero(), T::zero(), T::zero(), T::one());
+        cones.iter().fold(T::zero(), |sum, row| {
+            let fused =
+                world(anchor, &row[0]) + world(motors[0], &row[1]) + world(motors[1], &row[2]);
+            let pole = fused.solve(w);
+            let weight = (w & pole).s();
+            sum + (pole & fused.of(pole)).s() / (weight * weight)
+        })
+    }
+
+    /// Derivatives with respect to the field of the free cameras' twists, `Sites<Twist, 2>`: the
+    /// Hessian couples every camera with the other through the landmarks they share, and its
+    /// Newton step is the one the Hessian of the twelve coefficients at once gives (nested duals
+    /// on loose parameters, another route through the jets).
+    #[test]
+    fn the_coupled_newton_step_over_a_field_of_free_cameras() {
+        use gax::jet::{Dual, gradient_array, hessian, jacobian_array};
+        use gax::pga3d::Line;
+        use gax::sites::SiteField;
+        // Nested jets of twelve directions are large: a deep stack, as the solvers' tests use.
+        let run = std::thread::Builder::new().stack_size(256 << 20).spawn(|| {
+            let (truth, cones) = rig_3d();
+            let twist = |c: [f64; 6]| {
+                Line::new(c[0], c[1], c[2], c[3], c[4], c[5])
+                    .exp()
+                    .into_inner()
+            };
+            // numga's perturbation, by blade name as in `the_rigs_are_numgas`.
+            let perturb = twist([0.0, 0.0, 0.0, -0.025, 0.015, -0.02])
+                * twist([0.02, -0.015, 0.025, 0.0, 0.0, 0.0]);
+            let anchor = truth[0].into_inner();
+            let free = [
+                perturb * truth[1].into_inner(),
+                perturb.reverse() * truth[2].into_inner(),
+            ];
+            let zero = SiteField::<Line, 2>::zero();
+            let (_, gradient, curvature) = hessian(
+                |t| {
+                    let to = |m: Motor| m.map_coefs(gax::Coef::from_f64);
+                    field_misfit(to(anchor), free.map(to), &cones, t)
+                },
+                zero,
+            );
+            let step: SiteField<Line, 2> = -curvature.solve(gradient);
+            let unit = |i: usize| {
+                let mut c = [0.0; 12];
+                c[i] = 1.0;
+                SiteField::<Line, 2>::from_sites([
+                    Line::from_coeffs(core::array::from_fn(|k| c[k])),
+                    Line::from_coeffs(core::array::from_fn(|k| c[6 + k])),
+                ])
+            };
+            let entry = |i: usize, j: usize| curvature.of(unit(i)).of(unit(j)).s();
+            // The flat reference: the gradient and Hessian of the twelve coefficients.
+            type D = Dual<f64, 12>;
+            fn flat<T: gax::Real>(c: [T; 12]) -> SiteField<Line, 2, (), T> {
+                SiteField::from_sites([
+                    Line::from_coeffs(core::array::from_fn(|k| c[k])),
+                    Line::from_coeffs(core::array::from_fn(|k| c[6 + k])),
+                ])
+            }
+            let (_, g) = gradient_array(
+                |c: [D; 12]| {
+                    let to = |m: Motor| m.map_coefs(gax::Coef::from_f64);
+                    field_misfit(to(anchor), free.map(to), &cones, flat(c))
+                },
+                [0.0; 12],
+            );
+            let (_, h) = jacobian_array(
+                |x: [D; 12]| {
+                    gradient_array(
+                        |c: [Dual<D, 12>; 12]| {
+                            let to = |m: Motor| m.map_coefs(gax::Coef::from_f64);
+                            field_misfit(to(anchor), free.map(to), &cones, flat(c))
+                        },
+                        x,
+                    )
+                    .1
+                },
+                [0.0; 12],
+            );
+            for i in 0..12 {
+                assert!((gradient.of(unit(i)).s() - g[i]).abs() < 1e-12 * (1.0 + g[i].abs()));
+                for (j, hij) in h[i].iter().enumerate() {
+                    assert!((entry(i, j) - hij).abs() < 1e-10 * (1.0 + hij.abs()));
+                }
+            }
+            // The flat Newton step, by elimination with partial pivoting.
+            let mut a = h;
+            let mut b = g.map(|x| -x);
+            for col in 0..12 {
+                let pivot = (col..12)
+                    .max_by(|&p, &q| a[p][col].abs().total_cmp(&a[q][col].abs()))
+                    .unwrap();
+                a.swap(col, pivot);
+                b.swap(col, pivot);
+                let row = a[col];
+                for r in col + 1..12 {
+                    let f = a[r][col] / row[col];
+                    for (x, p) in a[r][col..].iter_mut().zip(&row[col..]) {
+                        *x -= f * p;
+                    }
+                    b[r] -= f * b[col];
+                }
+            }
+            let mut x = [0.0; 12];
+            for r in (0..12).rev() {
+                let s = (r + 1..12).fold(b[r], |s, k| s - a[r][k] * x[k]);
+                x[r] = s / a[r][r];
+            }
+            for (i, xi) in x.iter().enumerate() {
+                let c = step.site(i / 6).c[i % 6];
+                assert!((c - xi).abs() < 1e-10, "{i}: {c} {xi}");
+            }
+            // The cameras are coupled through the points they share.
+            let block = |r: usize, c: usize| {
+                (0..6)
+                    .flat_map(|i| (0..6).map(move |j| (i, j)))
+                    .map(|(i, j)| entry(6 * r + i, 6 * c + j).abs())
+                    .fold(0.0, f64::max)
+            };
+            assert!(block(0, 1) > 0.1 * block(0, 0));
+        });
+        run.expect("a thread").join().expect("the test passes");
+    }
+
     #[test]
     fn a_frame_draws() {
         gax_numga_examples::app::assert_draws_with(super::draw, &super::data(), 1.0);
