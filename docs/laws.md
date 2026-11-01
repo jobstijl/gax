@@ -145,6 +145,13 @@ method (ADR-013).
   (f.of(a) ∘ f.of(b)).cast::<B>()`, with `∘` the wedge for vectors and the join for
   antivectors, bases that hold some of the (anti)vectors included (PGA3D's `Direction` onto
   `Moment`, `OriginPlane` onto `Spin`; ADR-054).
+* [sym] Correlations (maps from vectors to antivectors or back, in up to five dimensions;
+  ADR-014, amended 2026-11-01): `c.of(g).outermorphism::<B>() ==
+  c.outermorphism::<B>().of(g.outermorphism::<B>())` for a map `g` on the input kind, and on
+  two factors each side's own product, `c.outermorphism::<B>().of((a ∘ b).cast::<B>()) ==
+  (c.of(a) ∘' c.of(b)).cast::<B'>()`, `∘` the input's and `∘'` the output's (a polarity
+  `Plane <- Point` takes `p & q` to `c(p) ^ c(q)`; STA's `Trivector <- Vector`, `a ^ b` to
+  `c(a) & c(b)`). `tests/correlations.rs` adds three and four factors in f64.
 * [sym] The determinant, read from the top grade, is multiplicative.
 * [sym/ideal] The determinant of a unit versor's map on vectors (or on antivectors, such as PGA
   points) is `±1`, modulo `u ~u = 1`. The generator computes the sign for each versor kind:

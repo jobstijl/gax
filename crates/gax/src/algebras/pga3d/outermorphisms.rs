@@ -229,6 +229,517 @@ impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Pseu
     }
 }
 
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line<(), f64, X>> for Point<(Plane<(), f64, OV>,), T, OW> {
+    type Output = Line<(Line<(), f64, gx::Extrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a correlation `Point <- Plane` to `Line`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m1 = t[0][2] * t[3][1];
+        let m2 = t[0][0] * t[3][2];
+        let m5 = t[0][1] * t[3][0];
+        let m6 = t[0][0] * t[3][3];
+        let m8 = t[0][1] * t[3][3];
+        let m10 = t[0][2] * t[3][3];
+        let m13 = t[1][2] * t[3][1];
+        let m14 = t[1][0] * t[3][2];
+        let m17 = t[1][1] * t[3][0];
+        let m18 = t[1][0] * t[3][3];
+        let m20 = t[1][1] * t[3][3];
+        let m22 = t[1][2] * t[3][3];
+        let m25 = t[2][2] * t[3][1];
+        let m26 = t[2][0] * t[3][2];
+        let m29 = t[2][1] * t[3][0];
+        let m30 = t[2][0] * t[3][3];
+        let m32 = t[2][1] * t[3][3];
+        let m34 = t[2][2] * t[3][3];
+        let m36 = t[1][1] * t[2][2];
+        let m39 = t[1][2] * t[2][0];
+        let m40 = t[1][0] * t[2][1];
+        let m43 = t[1][3] * t[2][0];
+        let m45 = t[1][3] * t[2][1];
+        let m47 = t[1][3] * t[2][2];
+        let m49 = t[0][2] * t[2][1];
+        let m50 = t[0][0] * t[2][2];
+        let m53 = t[0][1] * t[2][0];
+        let m54 = t[0][0] * t[2][3];
+        let m56 = t[0][1] * t[2][3];
+        let m58 = t[0][2] * t[2][3];
+        let m60 = t[0][1] * t[1][2];
+        let m63 = t[0][2] * t[1][0];
+        let m64 = t[0][0] * t[1][1];
+        let m67 = t[0][3] * t[1][0];
+        let m69 = t[0][3] * t[1][1];
+        let m71 = t[0][3] * t[1][2];
+        let m72 = (-t[0][1]).mul_add(t[3][2], m1);
+        let m73 = (-t[0][2]).mul_add(t[3][0], m2);
+        let m74 = (-t[0][0]).mul_add(t[3][1], m5);
+        let m75 = (-t[0][3]).mul_add(t[3][0], m6);
+        let m76 = (-t[0][3]).mul_add(t[3][1], m8);
+        let m77 = (-t[0][3]).mul_add(t[3][2], m10);
+        let m78 = (-t[1][1]).mul_add(t[3][2], m13);
+        let m79 = (-t[1][2]).mul_add(t[3][0], m14);
+        let m80 = (-t[1][0]).mul_add(t[3][1], m17);
+        let m81 = (-t[1][3]).mul_add(t[3][0], m18);
+        let m82 = (-t[1][3]).mul_add(t[3][1], m20);
+        let m83 = (-t[1][3]).mul_add(t[3][2], m22);
+        let m84 = (-t[2][1]).mul_add(t[3][2], m25);
+        let m85 = (-t[2][2]).mul_add(t[3][0], m26);
+        let m86 = (-t[2][0]).mul_add(t[3][1], m29);
+        let m87 = (-t[2][3]).mul_add(t[3][0], m30);
+        let m88 = (-t[2][3]).mul_add(t[3][1], m32);
+        let m89 = (-t[2][3]).mul_add(t[3][2], m34);
+        let m90 = (-t[1][2]).mul_add(t[2][1], m36);
+        let m91 = (-t[1][0]).mul_add(t[2][2], m39);
+        let m92 = (-t[1][1]).mul_add(t[2][0], m40);
+        let m93 = (-t[1][0]).mul_add(t[2][3], m43);
+        let m94 = (-t[1][1]).mul_add(t[2][3], m45);
+        let m95 = (-t[1][2]).mul_add(t[2][3], m47);
+        let m96 = (-t[0][1]).mul_add(t[2][2], m49);
+        let m97 = (-t[0][2]).mul_add(t[2][0], m50);
+        let m98 = (-t[0][0]).mul_add(t[2][1], m53);
+        let m99 = (-t[0][3]).mul_add(t[2][0], m54);
+        let m100 = (-t[0][3]).mul_add(t[2][1], m56);
+        let m101 = (-t[0][3]).mul_add(t[2][2], m58);
+        let m102 = (-t[0][2]).mul_add(t[1][1], m60);
+        let m103 = (-t[0][0]).mul_add(t[1][2], m63);
+        let m104 = (-t[0][1]).mul_add(t[1][0], m64);
+        let m105 = (-t[0][0]).mul_add(t[1][3], m67);
+        let m106 = (-t[0][1]).mul_add(t[1][3], m69);
+        let m107 = (-t[0][2]).mul_add(t[1][3], m71);
+        Line { o: core::marker::PhantomData, c: [[m72, m73, m74, m75, m76, m77], [m78, m79, m80, m81, m82, m83], [m84, m85, m86, m87, m88, m89], [m90, m91, m92, m93, m94, m95], [m96, m97, m98, m99, m100, m101], [m102, m103, m104, m105, m106, m107]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Point<(), f64, X>> for Point<(Plane<(), f64, OV>,), T, OW> {
+    type Output = Plane<(Point<(), f64, OV>,), T, OW>;
+    /// The extension of a correlation `Point <- Plane` to `Point`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = (-t[0][1]).mul_add(t[1][0], m0);
+        let m3 = t[0][0] * t[1][2];
+        let m5 = (-t[0][2]).mul_add(t[1][0], m3);
+        let m6 = t[0][0] * t[1][3];
+        let m8 = (-t[0][3]).mul_add(t[1][0], m6);
+        let m9 = t[0][1] * t[1][2];
+        let m11 = (-t[0][2]).mul_add(t[1][1], m9);
+        let m12 = t[0][1] * t[1][3];
+        let m14 = (-t[0][3]).mul_add(t[1][1], m12);
+        let m15 = t[0][2] * t[1][3];
+        let m17 = (-t[0][3]).mul_add(t[1][2], m15);
+        let m18 = t[2][0] * t[3][1];
+        let m20 = (-t[2][1]).mul_add(t[3][0], m18);
+        let m21 = t[2][0] * t[3][2];
+        let m23 = (-t[2][2]).mul_add(t[3][0], m21);
+        let m24 = t[2][0] * t[3][3];
+        let m26 = (-t[2][3]).mul_add(t[3][0], m24);
+        let m27 = t[2][1] * t[3][2];
+        let m29 = (-t[2][2]).mul_add(t[3][1], m27);
+        let m30 = t[2][1] * t[3][3];
+        let m32 = (-t[2][3]).mul_add(t[3][1], m30);
+        let m33 = t[2][2] * t[3][3];
+        let m35 = (-t[2][3]).mul_add(t[3][2], m33);
+        let m37 = t[1][2] * m32;
+        let m41 = t[1][3] * m23;
+        let m43 = t[1][1] * m26;
+        let m47 = t[1][2] * m20;
+        let m50 = t[0][3] * m29;
+        let m52 = t[0][2] * m26;
+        let m56 = t[0][3] * m20;
+        let m58 = t[0][1] * m23;
+        let m61 = t[3][2] * m14;
+        let m65 = t[3][3] * m5;
+        let m67 = t[3][1] * m8;
+        let m71 = t[3][2] * m2;
+        let m74 = t[2][3] * m11;
+        let m76 = t[2][2] * m8;
+        let m80 = t[2][3] * m2;
+        let m82 = t[2][1] * m5;
+        let m84 = (-t[1][1]).mul_add(m35, m37);
+        let m85 = (-t[1][3]).mul_add(m29, m84);
+        let m86 = t[1][0].mul_add(m35, m41);
+        let m87 = (-t[1][2]).mul_add(m26, m86);
+        let m88 = (-t[1][0]).mul_add(m32, m43);
+        let m89 = (-t[1][3]).mul_add(m20, m88);
+        let m90 = t[1][0].mul_add(m29, m47);
+        let m91 = (-t[1][1]).mul_add(m23, m90);
+        let m92 = t[0][1].mul_add(m35, m50);
+        let m93 = (-t[0][2]).mul_add(m32, m92);
+        let m94 = (-t[0][0]).mul_add(m35, m52);
+        let m95 = (-t[0][3]).mul_add(m23, m94);
+        let m96 = t[0][0].mul_add(m32, m56);
+        let m97 = (-t[0][1]).mul_add(m26, m96);
+        let m98 = (-t[0][0]).mul_add(m29, m58);
+        let m99 = (-t[0][2]).mul_add(m20, m98);
+        let m100 = (-t[3][1]).mul_add(m17, m61);
+        let m101 = (-t[3][3]).mul_add(m11, m100);
+        let m102 = t[3][0].mul_add(m17, m65);
+        let m103 = (-t[3][2]).mul_add(m8, m102);
+        let m104 = (-t[3][0]).mul_add(m14, m67);
+        let m105 = (-t[3][3]).mul_add(m2, m104);
+        let m106 = t[3][0].mul_add(m11, m71);
+        let m107 = (-t[3][1]).mul_add(m5, m106);
+        let m108 = t[2][1].mul_add(m17, m74);
+        let m109 = (-t[2][2]).mul_add(m14, m108);
+        let m110 = (-t[2][0]).mul_add(m17, m76);
+        let m111 = (-t[2][3]).mul_add(m5, m110);
+        let m112 = t[2][0].mul_add(m14, m80);
+        let m113 = (-t[2][1]).mul_add(m8, m112);
+        let m114 = (-t[2][0]).mul_add(m11, m82);
+        let m115 = (-t[2][2]).mul_add(m2, m114);
+        Plane { o: core::marker::PhantomData, c: [[m85, m87, m89, m91], [m93, m95, m97, m99], [m101, m103, m105, m107], [m109, m111, m113, m115]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Pseudoscalar<(), f64, X>> for Point<(Plane<(), f64, OV>,), T, OW> {
+    type Output = Scalar<(Pseudoscalar<(), f64, gx::Extrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a correlation `Point <- Plane` to `Pseudoscalar`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m1 = t[0][0] * t[1][2];
+        let m2 = t[0][0] * t[1][3];
+        let m3 = t[0][1] * t[1][0];
+        let m4 = t[0][1] * t[1][2];
+        let m5 = t[0][1] * t[1][3];
+        let m6 = t[0][2] * t[1][0];
+        let m7 = t[0][2] * t[1][1];
+        let m8 = t[0][2] * t[1][3];
+        let m9 = t[0][3] * t[1][0];
+        let m10 = t[0][3] * t[1][1];
+        let m11 = t[0][3] * t[1][2];
+        let m12 = t[2][0] * t[3][1];
+        let m13 = t[2][0] * t[3][2];
+        let m14 = t[2][0] * t[3][3];
+        let m15 = t[2][1] * t[3][0];
+        let m16 = t[2][1] * t[3][2];
+        let m17 = t[2][1] * t[3][3];
+        let m18 = t[2][2] * t[3][0];
+        let m19 = t[2][2] * t[3][1];
+        let m20 = t[2][2] * t[3][3];
+        let m21 = t[2][3] * t[3][0];
+        let m22 = t[2][3] * t[3][1];
+        let m23 = t[2][3] * t[3][2];
+        let m26 = m1 * m17;
+        let m27 = m1 * m22;
+        let m32 = m4 * m14;
+        let m33 = m4 * m21;
+        let m38 = m7 * m14;
+        let m39 = m7 * m21;
+        let m44 = m10 * m13;
+        let m45 = m10 * m18;
+        let m48 = m0.mul_add(m20, m27);
+        let m49 = m2.mul_add(m16, m48);
+        let m50 = m3.mul_add(m23, m32);
+        let m51 = m5.mul_add(m18, m50);
+        let m52 = m49 + m51;
+        let m53 = m6.mul_add(m17, m39);
+        let m54 = m8.mul_add(m12, m53);
+        let m55 = m9.mul_add(m19, m44);
+        let m56 = m11.mul_add(m15, m55);
+        let m57 = m54 + m56;
+        let m58 = m52 + m57;
+        let m59 = m0.mul_add(m23, m26);
+        let m60 = m2.mul_add(m19, m59);
+        let m61 = m3.mul_add(m20, m33);
+        let m62 = m5.mul_add(m13, m61);
+        let m63 = m60 + m62;
+        let m64 = m6.mul_add(m22, m38);
+        let m65 = m8.mul_add(m15, m64);
+        let m66 = m9.mul_add(m16, m45);
+        let m67 = m11.mul_add(m12, m66);
+        let m68 = m65 + m67;
+        let m69 = m63 + m68;
+        let m70 = m58 - m69;
+        Scalar { o: core::marker::PhantomData, c: [[m70]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line<(), f64, X>> for Direction<(Plane<(), f64, OV>,), T, OW> {
+    type Output = Moment<(Line<(), f64, gx::Extrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a correlation `Direction <- Plane` to `Line`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[1][3] * t[2][0];
+        let m9 = t[1][3] * t[2][1];
+        let m11 = t[1][3] * t[2][2];
+        let m13 = t[0][2] * t[2][1];
+        let m14 = t[0][0] * t[2][2];
+        let m17 = t[0][1] * t[2][0];
+        let m18 = t[0][0] * t[2][3];
+        let m20 = t[0][1] * t[2][3];
+        let m22 = t[0][2] * t[2][3];
+        let m24 = t[0][1] * t[1][2];
+        let m27 = t[0][2] * t[1][0];
+        let m28 = t[0][0] * t[1][1];
+        let m31 = t[0][3] * t[1][0];
+        let m33 = t[0][3] * t[1][1];
+        let m35 = t[0][3] * t[1][2];
+        let m36 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m37 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m38 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m39 = (-t[1][0]).mul_add(t[2][3], m7);
+        let m40 = (-t[1][1]).mul_add(t[2][3], m9);
+        let m41 = (-t[1][2]).mul_add(t[2][3], m11);
+        let m42 = (-t[0][1]).mul_add(t[2][2], m13);
+        let m43 = (-t[0][2]).mul_add(t[2][0], m14);
+        let m44 = (-t[0][0]).mul_add(t[2][1], m17);
+        let m45 = (-t[0][3]).mul_add(t[2][0], m18);
+        let m46 = (-t[0][3]).mul_add(t[2][1], m20);
+        let m47 = (-t[0][3]).mul_add(t[2][2], m22);
+        let m48 = (-t[0][2]).mul_add(t[1][1], m24);
+        let m49 = (-t[0][0]).mul_add(t[1][2], m27);
+        let m50 = (-t[0][1]).mul_add(t[1][0], m28);
+        let m51 = (-t[0][0]).mul_add(t[1][3], m31);
+        let m52 = (-t[0][1]).mul_add(t[1][3], m33);
+        let m53 = (-t[0][2]).mul_add(t[1][3], m35);
+        Moment { o: core::marker::PhantomData, c: [[m36, m37, m38, m39, m40, m41], [m42, m43, m44, m45, m46, m47], [m48, m49, m50, m51, m52, m53]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Scalar<(), f64, X>> for Plane<(Point<(), f64, OV>,), T, OW> {
+    type Output = Pseudoscalar<(Scalar<(), f64, gx::Intrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a correlation `Plane <- Point` to `Scalar`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m1 = t[0][0] * t[1][2];
+        let m2 = t[0][0] * t[1][3];
+        let m3 = t[0][1] * t[1][0];
+        let m4 = t[0][1] * t[1][2];
+        let m5 = t[0][1] * t[1][3];
+        let m6 = t[0][2] * t[1][0];
+        let m7 = t[0][2] * t[1][1];
+        let m8 = t[0][2] * t[1][3];
+        let m9 = t[0][3] * t[1][0];
+        let m10 = t[0][3] * t[1][1];
+        let m11 = t[0][3] * t[1][2];
+        let m12 = t[2][0] * t[3][1];
+        let m13 = t[2][0] * t[3][2];
+        let m14 = t[2][0] * t[3][3];
+        let m15 = t[2][1] * t[3][0];
+        let m16 = t[2][1] * t[3][2];
+        let m17 = t[2][1] * t[3][3];
+        let m18 = t[2][2] * t[3][0];
+        let m19 = t[2][2] * t[3][1];
+        let m20 = t[2][2] * t[3][3];
+        let m21 = t[2][3] * t[3][0];
+        let m22 = t[2][3] * t[3][1];
+        let m23 = t[2][3] * t[3][2];
+        let m26 = m1 * m17;
+        let m27 = m1 * m22;
+        let m32 = m4 * m14;
+        let m33 = m4 * m21;
+        let m38 = m7 * m14;
+        let m39 = m7 * m21;
+        let m44 = m10 * m13;
+        let m45 = m10 * m18;
+        let m48 = m0.mul_add(m20, m27);
+        let m49 = m2.mul_add(m16, m48);
+        let m50 = m3.mul_add(m23, m32);
+        let m51 = m5.mul_add(m18, m50);
+        let m52 = m49 + m51;
+        let m53 = m6.mul_add(m17, m39);
+        let m54 = m8.mul_add(m12, m53);
+        let m55 = m9.mul_add(m19, m44);
+        let m56 = m11.mul_add(m15, m55);
+        let m57 = m54 + m56;
+        let m58 = m52 + m57;
+        let m59 = m0.mul_add(m23, m26);
+        let m60 = m2.mul_add(m19, m59);
+        let m61 = m3.mul_add(m20, m33);
+        let m62 = m5.mul_add(m13, m61);
+        let m63 = m60 + m62;
+        let m64 = m6.mul_add(m22, m38);
+        let m65 = m8.mul_add(m15, m64);
+        let m66 = m9.mul_add(m16, m45);
+        let m67 = m11.mul_add(m12, m66);
+        let m68 = m65 + m67;
+        let m69 = m63 + m68;
+        let m70 = m58 - m69;
+        Pseudoscalar { o: core::marker::PhantomData, c: [[m70]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Plane<(), f64, X>> for Plane<(Point<(), f64, OV>,), T, OW> {
+    type Output = Point<(Plane<(), f64, OV>,), T, OW>;
+    /// The extension of a correlation `Plane <- Point` to `Plane`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = (-t[0][1]).mul_add(t[1][0], m0);
+        let m3 = t[0][0] * t[1][2];
+        let m5 = (-t[0][2]).mul_add(t[1][0], m3);
+        let m6 = t[0][0] * t[1][3];
+        let m8 = (-t[0][3]).mul_add(t[1][0], m6);
+        let m9 = t[0][1] * t[1][2];
+        let m11 = (-t[0][2]).mul_add(t[1][1], m9);
+        let m12 = t[0][1] * t[1][3];
+        let m14 = (-t[0][3]).mul_add(t[1][1], m12);
+        let m15 = t[0][2] * t[1][3];
+        let m17 = (-t[0][3]).mul_add(t[1][2], m15);
+        let m18 = t[2][0] * t[3][1];
+        let m20 = (-t[2][1]).mul_add(t[3][0], m18);
+        let m21 = t[2][0] * t[3][2];
+        let m23 = (-t[2][2]).mul_add(t[3][0], m21);
+        let m24 = t[2][0] * t[3][3];
+        let m26 = (-t[2][3]).mul_add(t[3][0], m24);
+        let m27 = t[2][1] * t[3][2];
+        let m29 = (-t[2][2]).mul_add(t[3][1], m27);
+        let m30 = t[2][1] * t[3][3];
+        let m32 = (-t[2][3]).mul_add(t[3][1], m30);
+        let m33 = t[2][2] * t[3][3];
+        let m35 = (-t[2][3]).mul_add(t[3][2], m33);
+        let m37 = t[1][2] * m32;
+        let m41 = t[1][3] * m23;
+        let m43 = t[1][1] * m26;
+        let m47 = t[1][2] * m20;
+        let m50 = t[0][3] * m29;
+        let m52 = t[0][2] * m26;
+        let m56 = t[0][3] * m20;
+        let m58 = t[0][1] * m23;
+        let m61 = t[3][2] * m14;
+        let m65 = t[3][3] * m5;
+        let m67 = t[3][1] * m8;
+        let m71 = t[3][2] * m2;
+        let m74 = t[2][3] * m11;
+        let m76 = t[2][2] * m8;
+        let m80 = t[2][3] * m2;
+        let m82 = t[2][1] * m5;
+        let m84 = (-t[1][1]).mul_add(m35, m37);
+        let m85 = (-t[1][3]).mul_add(m29, m84);
+        let m86 = t[1][0].mul_add(m35, m41);
+        let m87 = (-t[1][2]).mul_add(m26, m86);
+        let m88 = (-t[1][0]).mul_add(m32, m43);
+        let m89 = (-t[1][3]).mul_add(m20, m88);
+        let m90 = t[1][0].mul_add(m29, m47);
+        let m91 = (-t[1][1]).mul_add(m23, m90);
+        let m92 = t[0][1].mul_add(m35, m50);
+        let m93 = (-t[0][2]).mul_add(m32, m92);
+        let m94 = (-t[0][0]).mul_add(m35, m52);
+        let m95 = (-t[0][3]).mul_add(m23, m94);
+        let m96 = t[0][0].mul_add(m32, m56);
+        let m97 = (-t[0][1]).mul_add(m26, m96);
+        let m98 = (-t[0][0]).mul_add(m29, m58);
+        let m99 = (-t[0][2]).mul_add(m20, m98);
+        let m100 = (-t[3][1]).mul_add(m17, m61);
+        let m101 = (-t[3][3]).mul_add(m11, m100);
+        let m102 = t[3][0].mul_add(m17, m65);
+        let m103 = (-t[3][2]).mul_add(m8, m102);
+        let m104 = (-t[3][0]).mul_add(m14, m67);
+        let m105 = (-t[3][3]).mul_add(m2, m104);
+        let m106 = t[3][0].mul_add(m11, m71);
+        let m107 = (-t[3][1]).mul_add(m5, m106);
+        let m108 = t[2][1].mul_add(m17, m74);
+        let m109 = (-t[2][2]).mul_add(m14, m108);
+        let m110 = (-t[2][0]).mul_add(m17, m76);
+        let m111 = (-t[2][3]).mul_add(m5, m110);
+        let m112 = t[2][0].mul_add(m14, m80);
+        let m113 = (-t[2][1]).mul_add(m8, m112);
+        let m114 = (-t[2][0]).mul_add(m11, m82);
+        let m115 = (-t[2][2]).mul_add(m2, m114);
+        Point { o: core::marker::PhantomData, c: [[m85, m87, m89, m91], [m93, m95, m97, m99], [m101, m103, m105, m107], [m109, m111, m113, m115]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line<(), f64, X>> for Plane<(Point<(), f64, OV>,), T, OW> {
+    type Output = Line<(Line<(), f64, gx::Intrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a correlation `Plane <- Point` to `Line`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m1 = t[1][3] * t[2][0];
+        let m3 = t[1][3] * t[2][1];
+        let m5 = t[1][3] * t[2][2];
+        let m6 = t[1][1] * t[2][2];
+        let m9 = t[1][2] * t[2][0];
+        let m10 = t[1][0] * t[2][1];
+        let m12 = t[0][0] * t[2][3];
+        let m14 = t[0][1] * t[2][3];
+        let m16 = t[0][2] * t[2][3];
+        let m19 = t[0][2] * t[2][1];
+        let m20 = t[0][0] * t[2][2];
+        let m23 = t[0][1] * t[2][0];
+        let m25 = t[0][3] * t[1][0];
+        let m27 = t[0][3] * t[1][1];
+        let m29 = t[0][3] * t[1][2];
+        let m30 = t[0][1] * t[1][2];
+        let m33 = t[0][2] * t[1][0];
+        let m34 = t[0][0] * t[1][1];
+        let m36 = t[0][0] * t[3][3];
+        let m38 = t[0][1] * t[3][3];
+        let m40 = t[0][2] * t[3][3];
+        let m43 = t[0][2] * t[3][1];
+        let m44 = t[0][0] * t[3][2];
+        let m47 = t[0][1] * t[3][0];
+        let m48 = t[1][0] * t[3][3];
+        let m50 = t[1][1] * t[3][3];
+        let m52 = t[1][2] * t[3][3];
+        let m55 = t[1][2] * t[3][1];
+        let m56 = t[1][0] * t[3][2];
+        let m59 = t[1][1] * t[3][0];
+        let m60 = t[2][0] * t[3][3];
+        let m62 = t[2][1] * t[3][3];
+        let m64 = t[2][2] * t[3][3];
+        let m67 = t[2][2] * t[3][1];
+        let m68 = t[2][0] * t[3][2];
+        let m71 = t[2][1] * t[3][0];
+        let m72 = (-t[1][0]).mul_add(t[2][3], m1);
+        let m73 = (-t[1][1]).mul_add(t[2][3], m3);
+        let m74 = (-t[1][2]).mul_add(t[2][3], m5);
+        let m75 = (-t[1][2]).mul_add(t[2][1], m6);
+        let m76 = (-t[1][0]).mul_add(t[2][2], m9);
+        let m77 = (-t[1][1]).mul_add(t[2][0], m10);
+        let m78 = (-t[0][3]).mul_add(t[2][0], m12);
+        let m79 = (-t[0][3]).mul_add(t[2][1], m14);
+        let m80 = (-t[0][3]).mul_add(t[2][2], m16);
+        let m81 = (-t[0][1]).mul_add(t[2][2], m19);
+        let m82 = (-t[0][2]).mul_add(t[2][0], m20);
+        let m83 = (-t[0][0]).mul_add(t[2][1], m23);
+        let m84 = (-t[0][0]).mul_add(t[1][3], m25);
+        let m85 = (-t[0][1]).mul_add(t[1][3], m27);
+        let m86 = (-t[0][2]).mul_add(t[1][3], m29);
+        let m87 = (-t[0][2]).mul_add(t[1][1], m30);
+        let m88 = (-t[0][0]).mul_add(t[1][2], m33);
+        let m89 = (-t[0][1]).mul_add(t[1][0], m34);
+        let m90 = (-t[0][3]).mul_add(t[3][0], m36);
+        let m91 = (-t[0][3]).mul_add(t[3][1], m38);
+        let m92 = (-t[0][3]).mul_add(t[3][2], m40);
+        let m93 = (-t[0][1]).mul_add(t[3][2], m43);
+        let m94 = (-t[0][2]).mul_add(t[3][0], m44);
+        let m95 = (-t[0][0]).mul_add(t[3][1], m47);
+        let m96 = (-t[1][3]).mul_add(t[3][0], m48);
+        let m97 = (-t[1][3]).mul_add(t[3][1], m50);
+        let m98 = (-t[1][3]).mul_add(t[3][2], m52);
+        let m99 = (-t[1][1]).mul_add(t[3][2], m55);
+        let m100 = (-t[1][2]).mul_add(t[3][0], m56);
+        let m101 = (-t[1][0]).mul_add(t[3][1], m59);
+        let m102 = (-t[2][3]).mul_add(t[3][0], m60);
+        let m103 = (-t[2][3]).mul_add(t[3][1], m62);
+        let m104 = (-t[2][3]).mul_add(t[3][2], m64);
+        let m105 = (-t[2][1]).mul_add(t[3][2], m67);
+        let m106 = (-t[2][2]).mul_add(t[3][0], m68);
+        let m107 = (-t[2][0]).mul_add(t[3][1], m71);
+        Line { o: core::marker::PhantomData, c: [[m72, m73, m74, m75, m76, m77], [m78, m79, m80, m81, m82, m83], [m84, m85, m86, m87, m88, m89], [m90, m91, m92, m93, m94, m95], [m96, m97, m98, m99, m100, m101], [m102, m103, m104, m105, m106, m107]] }
+    }
+}
+
 impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Scalar<(), f64, X>> for Point<(Point<(), f64, O>,), T, O> {
     type Output = Scalar<(Scalar<(), f64, gx::Intrinsic>,), T, gx::Intrinsic>;
     /// The extension of a map on `Point` to `Scalar`, factor by factor with `â¨`.
@@ -458,9 +969,208 @@ impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line
     }
 }
 
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line<(), f64, X>> for OriginPlane<(Point<(), f64, OV>,), T, OW> {
+    type Output = Spin<(Line<(), f64, gx::Intrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a correlation `OriginPlane <- Point` to `Line`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m1 = t[1][3] * t[2][0];
+        let m3 = t[1][3] * t[2][1];
+        let m5 = t[1][3] * t[2][2];
+        let m6 = t[1][1] * t[2][2];
+        let m9 = t[1][2] * t[2][0];
+        let m10 = t[1][0] * t[2][1];
+        let m12 = t[0][0] * t[2][3];
+        let m14 = t[0][1] * t[2][3];
+        let m16 = t[0][2] * t[2][3];
+        let m19 = t[0][2] * t[2][1];
+        let m20 = t[0][0] * t[2][2];
+        let m23 = t[0][1] * t[2][0];
+        let m25 = t[0][3] * t[1][0];
+        let m27 = t[0][3] * t[1][1];
+        let m29 = t[0][3] * t[1][2];
+        let m30 = t[0][1] * t[1][2];
+        let m33 = t[0][2] * t[1][0];
+        let m34 = t[0][0] * t[1][1];
+        let m36 = (-t[1][0]).mul_add(t[2][3], m1);
+        let m37 = (-t[1][1]).mul_add(t[2][3], m3);
+        let m38 = (-t[1][2]).mul_add(t[2][3], m5);
+        let m39 = (-t[1][2]).mul_add(t[2][1], m6);
+        let m40 = (-t[1][0]).mul_add(t[2][2], m9);
+        let m41 = (-t[1][1]).mul_add(t[2][0], m10);
+        let m42 = (-t[0][3]).mul_add(t[2][0], m12);
+        let m43 = (-t[0][3]).mul_add(t[2][1], m14);
+        let m44 = (-t[0][3]).mul_add(t[2][2], m16);
+        let m45 = (-t[0][1]).mul_add(t[2][2], m19);
+        let m46 = (-t[0][2]).mul_add(t[2][0], m20);
+        let m47 = (-t[0][0]).mul_add(t[2][1], m23);
+        let m48 = (-t[0][0]).mul_add(t[1][3], m25);
+        let m49 = (-t[0][1]).mul_add(t[1][3], m27);
+        let m50 = (-t[0][2]).mul_add(t[1][3], m29);
+        let m51 = (-t[0][2]).mul_add(t[1][1], m30);
+        let m52 = (-t[0][0]).mul_add(t[1][2], m33);
+        let m53 = (-t[0][1]).mul_add(t[1][0], m34);
+        Spin { o: core::marker::PhantomData, c: [[m36, m37, m38, m39, m40, m41], [m42, m43, m44, m45, m46, m47], [m48, m49, m50, m51, m52, m53]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Moment<(), f64, X>> for Plane<(Direction<(), f64, OV>,), T, OW> {
+    type Output = Line<(Moment<(), f64, gx::Intrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a correlation `Plane <- Direction` to `Moment`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m19 = t[0][2] * t[3][1];
+        let m20 = t[0][0] * t[3][2];
+        let m23 = t[0][1] * t[3][0];
+        let m25 = t[1][2] * t[3][1];
+        let m26 = t[1][0] * t[3][2];
+        let m29 = t[1][1] * t[3][0];
+        let m31 = t[2][2] * t[3][1];
+        let m32 = t[2][0] * t[3][2];
+        let m35 = t[2][1] * t[3][0];
+        let m36 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m37 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m38 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m39 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m40 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m41 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m42 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m43 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m44 = (-t[0][1]).mul_add(t[1][0], m16);
+        let m45 = (-t[0][1]).mul_add(t[3][2], m19);
+        let m46 = (-t[0][2]).mul_add(t[3][0], m20);
+        let m47 = (-t[0][0]).mul_add(t[3][1], m23);
+        let m48 = (-t[1][1]).mul_add(t[3][2], m25);
+        let m49 = (-t[1][2]).mul_add(t[3][0], m26);
+        let m50 = (-t[1][0]).mul_add(t[3][1], m29);
+        let m51 = (-t[2][1]).mul_add(t[3][2], m31);
+        let m52 = (-t[2][2]).mul_add(t[3][0], m32);
+        let m53 = (-t[2][0]).mul_add(t[3][1], m35);
+        Line { o: core::marker::PhantomData, c: [[m36, m37, m38], [m39, m40, m41], [m42, m43, m44], [m45, m46, m47], [m48, m49, m50], [m51, m52, m53]] }
+    }
+}
+
 impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Moment<(), f64, X>> for Direction<(Direction<(), f64, O>,), T, O> {
     type Output = Moment<(Moment<(), f64, gx::Intrinsic>,), T, gx::Intrinsic>;
     /// The extension of a map on `Direction` to `Moment`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Moment { o: core::marker::PhantomData, c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Moment<(), f64, X>> for OriginPlane<(Direction<(), f64, OV>,), T, OW> {
+    type Output = Spin<(Moment<(), f64, gx::Intrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a correlation `OriginPlane <- Direction` to `Moment`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Spin { o: core::marker::PhantomData, c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Spin<(), f64, X>> for Point<(OriginPlane<(), f64, OV>,), T, OW> {
+    type Output = Line<(Spin<(), f64, gx::Extrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a correlation `Point <- OriginPlane` to `Spin`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m1 = t[0][2] * t[3][1];
+        let m2 = t[0][0] * t[3][2];
+        let m5 = t[0][1] * t[3][0];
+        let m7 = t[1][2] * t[3][1];
+        let m8 = t[1][0] * t[3][2];
+        let m11 = t[1][1] * t[3][0];
+        let m13 = t[2][2] * t[3][1];
+        let m14 = t[2][0] * t[3][2];
+        let m17 = t[2][1] * t[3][0];
+        let m18 = t[1][1] * t[2][2];
+        let m21 = t[1][2] * t[2][0];
+        let m22 = t[1][0] * t[2][1];
+        let m25 = t[0][2] * t[2][1];
+        let m26 = t[0][0] * t[2][2];
+        let m29 = t[0][1] * t[2][0];
+        let m30 = t[0][1] * t[1][2];
+        let m33 = t[0][2] * t[1][0];
+        let m34 = t[0][0] * t[1][1];
+        let m36 = (-t[0][1]).mul_add(t[3][2], m1);
+        let m37 = (-t[0][2]).mul_add(t[3][0], m2);
+        let m38 = (-t[0][0]).mul_add(t[3][1], m5);
+        let m39 = (-t[1][1]).mul_add(t[3][2], m7);
+        let m40 = (-t[1][2]).mul_add(t[3][0], m8);
+        let m41 = (-t[1][0]).mul_add(t[3][1], m11);
+        let m42 = (-t[2][1]).mul_add(t[3][2], m13);
+        let m43 = (-t[2][2]).mul_add(t[3][0], m14);
+        let m44 = (-t[2][0]).mul_add(t[3][1], m17);
+        let m45 = (-t[1][2]).mul_add(t[2][1], m18);
+        let m46 = (-t[1][0]).mul_add(t[2][2], m21);
+        let m47 = (-t[1][1]).mul_add(t[2][0], m22);
+        let m48 = (-t[0][1]).mul_add(t[2][2], m25);
+        let m49 = (-t[0][2]).mul_add(t[2][0], m26);
+        let m50 = (-t[0][0]).mul_add(t[2][1], m29);
+        let m51 = (-t[0][2]).mul_add(t[1][1], m30);
+        let m52 = (-t[0][0]).mul_add(t[1][2], m33);
+        let m53 = (-t[0][1]).mul_add(t[1][0], m34);
+        Line { o: core::marker::PhantomData, c: [[m36, m37, m38], [m39, m40, m41], [m42, m43, m44], [m45, m46, m47], [m48, m49, m50], [m51, m52, m53]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Spin<(), f64, X>> for Direction<(OriginPlane<(), f64, OV>,), T, OW> {
+    type Output = Moment<(Spin<(), f64, gx::Extrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a correlation `Direction <- OriginPlane` to `Spin`: the input's factors by `â§`, their
+    /// images by `â¨`.
     #[inline]
     fn outermorphism(self) -> Self::Output {
         let t = self.c;

@@ -491,6 +491,84 @@ where
     }
 }
 
+/// A correlation `C(A) <- A`: a map of a kind to its complement, in the opposite orientation
+/// (PGA2D's stiffness and inertia from twists to forques, a polarity from points to planes, a
+/// Hodge dual). It has no eigenvalues of its own, as an endomorphism has; through the
+/// regressive product it is a bilinear form, `⟨c(x) ∨ y⟩₀` (the complement on the left, as
+/// [`Complement`](crate::cast::Complement) pairs), and its spectrum is relative to a second
+/// correlation, as a form's is to a second form (ADR-014, amended 2026-11-01).
+///
+/// ```
+/// use gax::pga2d::{Forque, Twist};
+/// use gax::ApproxEq;
+/// // A stiffness and an inertia from twists (extrinsic points) to forques (intrinsic lines),
+/// // from dyads of the lines that read them.
+/// let mut k = Forque::<(Twist,)>::zero();
+/// let mut m = k;
+/// for (a, b, c) in [(1.0, 0.0, 0.5), (0.0, 1.0, -0.3), (0.7, 0.7, 0.2)] {
+///     let l = Forque::new(a, b, c);
+///     k += l * (l & Twist::slot());
+///     m += (l * (l & Twist::slot())).gp(2.0);
+/// }
+/// let (values, modes) = k.eigh_in(m);
+/// assert!(values.iter().all(|v| (v - 0.5).abs() < 1e-10));
+/// // Each mode: `k(x) = λ m(x)`, and a unit of the inertia, `⟨m(x) ∨ x⟩₀ = 1`.
+/// assert!(k.of(modes[0]).approx_eq(&(m.of(modes[0]) * values[0]), 1e-10));
+/// assert!(((m.of(modes[0]) & modes[0]).s() - 1.0).abs() < 1e-10);
+/// ```
+pub trait Correlation: Extensor<Coef: Real> {
+    /// The input kind `A`, whose complement is the output kind.
+    type Input: Kind;
+
+    /// The generalized symmetric eigenproblem `self(x) = λ metric(x)` against a definite
+    /// correlation `metric` of the same kinds: the eigenvalues ascending and the eigenvectors as
+    /// values of the input kind, normalized to `⟨metric(x) ∨ x⟩₀ = ±1` (the metric's sign).
+    /// Solved on the forms `⟨self(x) ∨ y⟩₀` and `⟨metric(x) ∨ y⟩₀`, symmetrized; the result
+    /// does not depend on the pairing's order or sign, as the forms' ratio does not. A metric
+    /// definite of the other sign in this pairing (a negative form) is taken as its negative. If
+    /// `metric` is not definite the results are NaN.
+    #[allow(clippy::type_complexity)]
+    fn eigh_in(
+        self,
+        metric: Self,
+    ) -> (
+        <Self::Input as Kind>::Arr<Self::Coef>,
+        <Self::Input as Kind>::Arr<<Self::Input as Kind>::Mv<(), Self::Coef>>,
+    );
+}
+
+impl<M, A> Correlation for M
+where
+    M: Extensor<Slots = (A,), Coef: Real>,
+    A: crate::cast::Complement<Out = M::Kind>,
+    A::Arr<A::Arr<M::Coef>>: SquareArr<M::Coef>,
+{
+    type Input = A;
+
+    fn eigh_in(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
+        type T<M> = <M as Extensor>::Coef;
+        // The form `⟨c(x) ∨ y⟩₀` as a matrix on the input kind: row `j` (the blade of `y`) is
+        // the output row `y` pairs with, signed.
+        let paired = |c: &M, sign: T<M>| -> A::Arr<A::Arr<T<M>>> {
+            let rows = c.coeffs();
+            let f: A::Arr<A::Arr<T<M>>> = A::arr_from_fn(|j| {
+                let (o, negative) = A::PAIRS[j];
+                let s = if negative { -sign } else { sign };
+                A::arr_from_fn(|i| <M::Slots as Slots>::get_flat(&rows.as_ref()[o], i) * s)
+            });
+            symmetrize(&f)
+        };
+        let g = paired(&metric, T::<M>::one());
+        // The metric's sign in this pairing, by its trace.
+        let trace = (0..A::N).fold(T::<M>::zero(), |t, i| t + g[i][i]);
+        let sign = T::<M>::select_lt(trace, T::<M>::zero(), -T::<M>::one(), T::<M>::one());
+        let (a, b) = (paired(&self, sign), paired(&metric, sign));
+        let n = <A::Arr<A::Arr<T<M>>> as SquareArr<T<M>>>::N;
+        let (vals, xs) = linalg::eigh_generalized(&a, &b, sweeps(n));
+        pairs::<_, _, A, A>(&vals, &xs)
+    }
+}
+
 /// A pairing `Scalar <- (A, B)` between two kinds with the same number of coefficients: a
 /// bilinear form, or the regressive product of a plane and a point.
 ///

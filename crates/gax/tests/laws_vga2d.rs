@@ -490,6 +490,10 @@ law_suite::law_suite! {
     outer_two: [
         (Vector, Pseudoscalar, Wedge, wedge),
     ],
+    outer_corr: [
+    ],
+    outer_corr_two: [
+    ],
     top: [
         (Vector, Pseudoscalar),
     ],

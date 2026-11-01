@@ -531,9 +531,12 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         if self.outer_bases.contains(name) {
             let _ = write!(
                 self.out,
-                r"impl<T: Coef, O: gx::Orientation> {name}<({name}<(), f64, O>,), T, O> {{
-    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
-    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+                r"impl<A: Kind, T: Coef, O: gx::Orientation> {name}<(A,), T, O> {{
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B` that its
+    /// inputs' products span: `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with
+    /// `&` for antivectors). Each side multiplies by its own product, so a correlation from
+    /// points to planes carries joins to meets, `c.outermorphism::<Line>().of(p & q) ==
+    /// c.of(p) ^ c.of(q)` (see [`gx::Outermorphism`]).
     #[inline(always)]
     pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
     where
@@ -607,6 +610,18 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         Self: SquareMap<Coef = T, Kind = {name}<(), f64, O>, Input = A>,
     {{
         SquareMap::eigh(self)
+    }}
+
+    /// For a correlation, a map of a kind to its complement: the eigenproblem
+    /// `self(x) = λ metric(x)` against a definite correlation, through the regressive product
+    /// (see [`gx::Correlation::eigh_in`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_in(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    where
+        Self: gx::Correlation<Coef = T, Input = A>,
+    {{
+        gx::Correlation::eigh_in(self, metric)
     }}
 
     /// The eigenvalues, complex in general, sorted (see [`SquareMap::eigvals`]).

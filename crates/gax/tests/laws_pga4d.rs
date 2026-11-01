@@ -102,6 +102,12 @@ law_suite::law_suite! {
     ],
     outer_two: [
     ],
+    outer_corr: [
+        (Hyperplane, Point, Point),
+        (Point, Hyperplane, Hyperplane),
+    ],
+    outer_corr_two: [
+    ],
     top: [
         (Point, Scalar),
     ],

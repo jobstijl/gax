@@ -123,14 +123,10 @@ mod fresnel {
 
     /// The potential map's action on volumes, applied to one: the volume `a ∧ b ∧ c` of three
     /// potentials goes to the join `M(a) ∨ M(b) ∨ M(c)` of their currents, numga's
-    /// `wave.outermorphism(Trivector)`. gax's outermorphisms run from a kind to itself; this
-    /// one, wedging in and joining out, is written out on the basis volumes `xyz yzt zxt xyt`.
+    /// `wave.outermorphism(Trivector)`: the outermorphism of a map from vectors to antivectors,
+    /// wedging in and joining out.
     pub fn volumes(wave: WaveMap, volume: Trivector) -> intrinsic::Vector {
-        let m = [X, Y, Z, T].map(|v| wave.of(v));
-        let join = |i: usize, j: usize, k: usize| m[i] & m[j] & m[k];
-        let [xyz, yzt, zxt, xyt] = volume.c;
-        (join(0, 1, 2).gp(xyz) + join(1, 2, 3).gp(yzt))
-            + (join(2, 0, 3).gp(zxt) + join(0, 1, 3).gp(xyt))
+        wave.outermorphism::<Trivector>().of(volume)
     }
 
     /// The Fresnel quartic of a wavevector, for its nonzero frequency as measured by the

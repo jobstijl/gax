@@ -1291,6 +1291,16 @@ law_suite::law_suite! {
         (Vector, Bivector, Wedge, wedge),
         (Bivector, Vector, Vee, vee),
     ],
+    outer_corr: [
+        (Vector, Bivector, Bivector),
+        (Vector, Bivector, Pseudoscalar),
+        (Bivector, Vector, Scalar),
+        (Bivector, Vector, Vector),
+    ],
+    outer_corr_two: [
+        (Vector, Bivector, Bivector, Vector, Wedge, wedge, Vee, vee),
+        (Bivector, Vector, Vector, Bivector, Vee, vee, Wedge, wedge),
+    ],
     top: [
         (Vector, Pseudoscalar),
         (Bivector, Scalar),

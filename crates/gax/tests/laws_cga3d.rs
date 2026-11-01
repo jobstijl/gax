@@ -409,6 +409,14 @@ law_suite::law_suite! {
     ],
     outer_two: [
     ],
+    outer_corr: [
+        (Vector, Quadvector, Quadvector),
+        (Vector, Quadvector, Pseudoscalar),
+        (Quadvector, Vector, Scalar),
+        (Quadvector, Vector, Vector),
+    ],
+    outer_corr_two: [
+    ],
     top: [
         (Vector, Pseudoscalar),
         (Quadvector, Scalar),

@@ -2667,6 +2667,16 @@ law_suite::law_suite! {
         (Line, Point, Wedge, wedge),
         (Point, Line, Vee, vee),
     ],
+    outer_corr: [
+        (Line, Point, Point),
+        (Line, Point, Pseudoscalar),
+        (Point, Line, Scalar),
+        (Point, Line, Line),
+    ],
+    outer_corr_two: [
+        (Line, Point, Point, Line, Wedge, wedge, Vee, vee),
+        (Point, Line, Line, Point, Vee, vee, Wedge, wedge),
+    ],
     top: [
         (Line, Pseudoscalar),
         (Point, Scalar),

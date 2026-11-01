@@ -51,6 +51,112 @@ impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Pseu
     }
 }
 
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Point<(), f64, X>> for Point<(Line<(), f64, OV>,), T, OW> {
+    type Output = Line<(Point<(), f64, gx::Extrinsic>,), T, gx::Intrinsic>;
+    /// The extension of a correlation `Point <- Line` to `Point`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Line { o: core::marker::PhantomData, c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Pseudoscalar<(), f64, X>> for Point<(Line<(), f64, OV>,), T, OW> {
+    type Output = Scalar<(Pseudoscalar<(), f64, OV>,), T, OW>;
+    /// The extension of a correlation `Point <- Line` to `Pseudoscalar`: the input's factors by `â§`, their
+    /// images by `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = t[0][0] * t[1][2];
+        let m4 = t[0][1] * t[1][0];
+        let m5 = t[2][2] * m4;
+        let m6 = t[0][1] * t[1][2];
+        let m7 = t[2][0] * m6;
+        let m8 = t[0][2] * t[1][0];
+        let m10 = t[0][2] * t[1][1];
+        let m12 = t[2][2].mul_add(m0, m7);
+        let m13 = t[2][1].mul_add(m8, m12);
+        let m14 = t[2][1].mul_add(m2, m5);
+        let m15 = t[2][0].mul_add(m10, m14);
+        let m16 = m13 - m15;
+        Scalar { o: core::marker::PhantomData, c: [[m16]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Scalar<(), f64, X>> for Line<(Point<(), f64, OV>,), T, OW> {
+    type Output = Pseudoscalar<(Scalar<(), f64, OV>,), T, OW>;
+    /// The extension of a correlation `Line <- Point` to `Scalar`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = t[0][0] * t[1][2];
+        let m4 = t[0][1] * t[1][0];
+        let m5 = t[2][2] * m4;
+        let m6 = t[0][1] * t[1][2];
+        let m7 = t[2][0] * m6;
+        let m8 = t[0][2] * t[1][0];
+        let m10 = t[0][2] * t[1][1];
+        let m12 = t[2][2].mul_add(m0, m7);
+        let m13 = t[2][1].mul_add(m8, m12);
+        let m14 = t[2][1].mul_add(m2, m5);
+        let m15 = t[2][0].mul_add(m10, m14);
+        let m16 = m13 - m15;
+        Pseudoscalar { o: core::marker::PhantomData, c: [[m16]] }
+    }
+}
+
+impl<T: gx::Coef, OV: gx::Orientation, OW: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Line<(), f64, X>> for Line<(Point<(), f64, OV>,), T, OW> {
+    type Output = Point<(Line<(), f64, gx::Intrinsic>,), T, gx::Extrinsic>;
+    /// The extension of a correlation `Line <- Point` to `Line`: the input's factors by `â¨`, their
+    /// images by `â§`.
+    #[inline]
+    fn outermorphism(self) -> Self::Output {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Point { o: core::marker::PhantomData, c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}
+
 impl<T: gx::Coef, O: gx::Orientation, X: gx::Orientation> gx::Outermorphism<Scalar<(), f64, X>> for Point<(Point<(), f64, O>,), T, O> {
     type Output = Scalar<(Scalar<(), f64, O>,), T, O>;
     /// The extension of a map on `Point` to `Scalar`, factor by factor with `â¨`.

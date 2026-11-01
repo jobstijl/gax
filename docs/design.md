@@ -359,6 +359,30 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   symbolically, as minors; on the top grade the result is the determinant. This is numga's extension
   operator, after Fernández, Moya & Rodrigues. It is derived up to a size (ADR-034); above it, the
   map is built from its images.
+  * *Amended (2026-11-01, Phase 13): correlations.* A correlation, a map from vectors to
+    antivectors or back (a polarity `Plane <- Point`, PGA2D's stiffness and inertia from twists
+    to forques, fresnel's potentials to currents in STA), extends too: numga's rule, each side
+    multiplying by its own exterior product, so `C(p & q) = C(p) ^ C(q)` and `V(a ^ b) = V(a) &
+    V(b)`. `c.outermorphism::<B>()` names the kind of the inputs' products, as for a map on one
+    kind; the images' kind is the declared kind holding every product of as many of the output
+    base's factors (a part where the output base is one: `Plane <- Direction` takes `Line` to
+    `Moment`). The orientations follow ADR-051 per side. They are derived as before, the
+    columns' factors multiplied by the output's product, for every pair of bases of the two
+    grades, in algebras of up to five dimensions: CSTA's would add 19 k lines (15 %) and an
+    `algebra!` of up to nine dimensions more, for no known use; above, `from_images`. The laws
+    (laws.md E) prove the functor law against the input's own extension and the two-factor
+    products. Maps between two bases of one grade (a part to its kind) are not extended: none
+    is asked for.
+  * *Amended (2026-11-01): the eigenproblem of a correlation.* A correlation has no spectrum of
+    its own (ADR-051): an endomorphism's `eigh` read its coefficients as a symmetric matrix,
+    which for a correlation depends on the layouts. `c.eigh_in(metric)` (`gx::Correlation`)
+    solves `c(x) = λ metric(x)` for a definite correlation `metric` of the same kinds, on the
+    forms `⟨c(x) ∨ y⟩₀` and `⟨metric(x) ∨ y⟩₀` through the generated `Complement::PAIRS` (the
+    pairing the sparse solves use, ADR-056). The ratio does not depend on the pairing's order or
+    sign, so the result is numga's `(Twist & k).eigh(Twist & m)`; a metric negative in this
+    pairing (in even dimensions the order flips the sign) is taken as its negative. Named
+    `eigh_in` because a map's `eigh()` (no metric) is taken. numga's dense ports build the
+    forms, which still works; `tests/correlations.rs` checks the two against each other.
 * **Values:** `inverse`, `normalized` (returns `Unit<K>`), `norm`, `exp`, `Unit<K>::log` and `sqrt`.
   Each is emitted only where the kind has the structure its closed form needs (ADR-019).
 

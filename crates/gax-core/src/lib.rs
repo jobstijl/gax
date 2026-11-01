@@ -81,8 +81,8 @@ pub use cast::{Cast, Complement, GradePart, SubKind};
 pub use coef::{Coef, ConstCoef, Elem, Real};
 pub use complex::Complex;
 pub use extensor::{
-    Endomorphism, Form, FormAsMap, LeastSquares, LeastSquaresDyad, OfBoth, OfDyad, Pairing,
-    PseudoInverse, SingularValues, SquareMap, Svd, TraceFirst,
+    Correlation, Endomorphism, Form, FormAsMap, LeastSquares, LeastSquaresDyad, OfBoth, OfDyad,
+    Pairing, PseudoInverse, SingularValues, SquareMap, Svd, TraceFirst,
 };
 pub use gpu::GpuMat;
 pub use kind::{ApproxEq, Coeffs, Extensor, FlatKind, Kind, Retype, Slot, select_lt};

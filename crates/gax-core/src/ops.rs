@@ -311,6 +311,14 @@ pub trait Log: Sized {
 /// `V <- V` on a kind holding every vector (or every antivector), to each kind `B` holding
 /// every blade of one grade.
 ///
+/// A *correlation*, a map `W <- V` from vectors to antivectors or back, extends too, each side
+/// by its own product (numga's): `B` names the kind of the inputs' products, and the result
+/// maps it to the kind of the images' products. A polarity from points to planes carries the
+/// join of two points to the meet of their planes, `c.outermorphism::<Line>().of(p & q) ==
+/// c.of(p) ^ c.of(q)`; a map from vectors to antivectors carries a volume `a ∧ b ∧ c` to the
+/// join of the images. Generated in algebras of up to five dimensions (`gax_gen`'s
+/// `CORRELATION_MAX_DIM`; ADR-014, amended 2026-11-01).
+///
 /// The extension to blades of `k` factors in `n` dimensions has `C(n, k)²` entries, each a
 /// minor of `k!` terms, so it is generated only up to 16 384 terms (`gax_gen`'s
 /// `OUTER_MAX_TERMS`): every extension up to 6 dimensions; in 7, those to 2, 3 and 7 factors
@@ -336,7 +344,7 @@ pub trait Log: Sized {
 /// ```
 #[diagnostic::on_unimplemented(
     message = "no outermorphism from maps on `{Self}` to `{B}`",
-    note = "outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions)",
+    note = "outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions), and correlations between vectors and antivectors in up to five dimensions",
     note = "for larger kinds, build the extended map from its images: `B::<(B,), T>::from_images`, the image of a blade `e_a ∧ e_b ∧ …` being `t.of(e_a) ^ t.of(e_b) ^ …`"
 )]
 pub trait Outermorphism<B> {

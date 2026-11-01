@@ -48,6 +48,9 @@ pub struct Stats {
     pub sandwiches: Vec<SandwichStat>,
     /// Every outermorphism: `(base kind, extended kind, whether the extended kind is the top)`.
     pub outermorphisms: Vec<(String, String, bool)>,
+    /// Every outermorphism of a correlation: `(input base, output base, extended input kind,
+    /// extended output kind)`.
+    pub correlation_outermorphisms: Vec<crate::emit_outer::CorrelationOuter>,
     /// The value methods emitted per kind.
     pub values: Vec<crate::emit_values::ValueMethods>,
     /// The sandwich kernels (value and matrix paths) in language-neutral form, for the WGSL
@@ -188,7 +191,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         v.layout.len() * v.layout.len() * x.layout.len() * (1 + usize::from(unit))
     };
     // The sandwiches and the outermorphisms are independent: derived side by side.
-    let (maths, (outer, pairs)) = crate::par::join(
+    let (maths, (outer, pairs, correlations)) = crate::par::join(
         || {
             crate::par::map_heaviest_first(&jobs, weight, |&(v, x, unit)| {
                 crate::par::timed(
@@ -228,7 +231,12 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         .filter(|((_, _, unit), math)| !unit && math.is_some())
         .map(|((v, _, _), _)| v.name.clone())
         .collect();
-    e.outer_bases = pairs.iter().map(|(base, _, _)| base.clone()).collect();
+    // The kinds whose maps have outermorphisms: the bases, and the correlations' outputs.
+    e.outer_bases = pairs
+        .iter()
+        .map(|(base, _, _)| base.clone())
+        .chain(correlations.iter().map(|(_, w, _, _)| w.clone()))
+        .collect();
     e.header();
     e.part("kinds");
     let phase = std::time::Instant::now();
@@ -283,6 +291,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     e.part("outermorphisms");
     e.out.push_str(&outer);
     e.stats.outermorphisms = pairs;
+    e.stats.correlation_outermorphisms = correlations;
     e.part("layouts");
     for a in &spec.aliases {
         let (o, which) = a.orientation_name().map_or_else(Default::default, |t| {

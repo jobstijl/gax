@@ -473,6 +473,46 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
             (k == 2).then(|| format!("({v}, {b}, {t}, {m})"))
         }),
     );
+    // The outermorphisms of correlations: a functor against the input's own extension, and on
+    // two factors the products that define them, each side's own.
+    let corr: Vec<&crate::emit_outer::CorrelationOuter> = stats
+        .correlation_outermorphisms
+        .iter()
+        .filter(|(v, w, b, o)| {
+            [v, w, b, o].iter().all(|k| cx.is_law(k))
+                && cx.kind(v).layout.len() <= OUTER_BASE
+                && cx.kind(w).layout.len() <= OUTER_BASE
+                && stats
+                    .outermorphisms
+                    .iter()
+                    .any(|(ev, eb, _)| ev == v && eb == b)
+        })
+        .collect();
+    list(
+        &mut s,
+        "outer_corr",
+        corr.iter().map(|(v, w, b, _)| format!("({v}, {w}, {b})")),
+    );
+    list(
+        &mut s,
+        "outer_corr_two",
+        corr.iter().filter_map(|(v, w, b, o)| {
+            let n = spec.algebra.dim() as u32;
+            let product = |kind: &str| {
+                if *cx.kind(kind).layout.grades().iter().next()? == 1 {
+                    Some(BinOp::Wedge)
+                } else {
+                    Some(BinOp::Vee)
+                }
+            };
+            let gb = *cx.kind(b).layout.grades().iter().next()?;
+            let pin = product(v)?;
+            let k = if pin == BinOp::Wedge { gb } else { n - gb };
+            let (ti, mi, _) = pin.names();
+            let (to, mo, _) = product(w)?.names();
+            (k == 2).then(|| format!("({v}, {w}, {b}, {o}, {ti}, {mi}, {to}, {mo})"))
+        }),
+    );
     list(
         &mut s,
         "top",

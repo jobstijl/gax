@@ -555,6 +555,8 @@ macro_rules! law_suite {
         conjugations: [$(($cv:ident, $cx:ident, $cs:literal, $cp:literal)),* $(,)?],
         outer: [$(($ov:ident, $ob:ident)),* $(,)?],
         outer_two: [$(($xv:ident, $xb:ident, $xtr:ident, $xm:ident)),* $(,)?],
+        outer_corr: [$(($yv:ident, $yw:ident, $yb:ident)),* $(,)?],
+        outer_corr_two: [$(($zcv:ident, $zcw:ident, $zcb:ident, $zco:ident, $zti:ident, $zmi:ident, $zto:ident, $zmo:ident)),* $(,)?],
         top: [$(($tv:ident, $tb:ident)),* $(,)?],
         unit_det: [$(($dv:ident, $dx:ident, $dt:ident, $de:literal)),* $(,)?],
         pairings: [$(($rtr:ident, $rm:ident, $ra:ident, $rb:ident)),* $(,)?],
@@ -1088,6 +1090,28 @@ macro_rules! law_suite {
                     f.outermorphism::<$xb>().of(gax::$xtr::$xm(a, b).cast::<$xb>())
                         == gax::$xtr::$xm(f.of(a), f.of(b)).cast::<$xb>(),
                     concat!(stringify!($xv), " to ", stringify!($xb), " on two factors"),
+                );
+            })();)*
+            // A correlation's extension composes with the extension of a map on its input, and
+            // on two factors it is the products of each side: `∧` for vectors, `∨` for
+            // antivectors (numga's `C(p & q) == C(p) ^ C(q)`).
+            $((|| {
+                reset();
+                let (c, g): ($yw<($yv,), T>, $yv<($yv,), T>) = (fresh(), fresh());
+                let name = concat!(stringify!($yw), " <- ", stringify!($yv), " to ", stringify!($yb));
+                law(
+                    c.of(g).outermorphism::<$yb>() == c.outermorphism::<$yb>().of(g.outermorphism::<$yb>()),
+                    name,
+                );
+            })();)*
+            $((|| {
+                reset();
+                let c: $zcw<($zcv,), T> = fresh();
+                let (a, b): ($zcv<(), T>, $zcv<(), T>) = (fresh(), fresh());
+                law(
+                    c.outermorphism::<$zcb>().of(gax::$zti::$zmi(a, b).cast::<$zcb>())
+                        == gax::$zto::$zmo(c.of(a), c.of(b)).cast::<$zco>(),
+                    concat!(stringify!($zcw), " <- ", stringify!($zcv), " to ", stringify!($zcb), " on two factors"),
                 );
             })();)*
             $((|| {

@@ -94,7 +94,7 @@ the bound `A: Slots<Cat<B> = A>`. Don't add it: it only holds when `B` is `()`.
 | `form.swap()` | exchange the two slots of a two-slot extensor |
 | `m.fill(x)` | fill *every* slot of `x`'s kind with `x` |
 | `m.trace_at::<I>()` | contract the output with slot `I` (of the output's kind): a scalar with the other slots |
-| `t.outermorphism::<B>()` | extend a map on vectors (by `^`) or on antivectors such as PGA points (by `&`) to the kind `B` |
+| `t.outermorphism::<B>()` | extend a map on vectors (by `^`) or on antivectors such as PGA points (by `&`) to the kind `B`; a correlation between the two extends each side by its own product |
 | `x.cast::<K>()` | the blades `x` shares with `K`, as a `K` (other blades zero): a projection, an embedding, or both; on a map, of its output |
 | `x.grade::<G>()` | the grade-`G` part, as the declared kind that holds it |
 
@@ -485,6 +485,16 @@ let kinetic: Scalar<(Point, Point), f64> = Point::slot() & inertia;     // forms
 let potential: Scalar<(Point, Point), f64> = Point::slot() & stiffness;
 let (values, modes) = potential.eigh(kinetic);                           // modes: [Point; 3], twists
 ```
+
+The stiffness and the inertia are *correlations*, maps from a kind to its complement (twists to
+forques), and a correlation's eigenproblem is the same pencil without building the forms:
+`stiffness.eigh_in(inertia)` solves `stiffness(x) = λ inertia(x)` through the regressive product
+(the modes normalized to `inertia(x) & x = ±1`). A correlation also has outermorphisms, each side
+multiplying by its own product: a polarity `c: Plane <- Point` carries the line through two
+points to the meet of their planes, `c.outermorphism::<Line>().of(p & q) == c.of(p) ^ c.of(q)`,
+and a map from vectors to antivectors carries a volume `a ^ b ^ c` to the join of the images
+(numga's fresnel). `B` in `outermorphism::<B>()` names the kind of the inputs' products; the
+images' kind follows. They are generated in algebras of up to five dimensions.
 
 **Transposes name their pairing.** A plain transpose identifies a space with its dual by
 coefficient index, which is right only for a Euclidean orthonormal basis. As in numga, a map

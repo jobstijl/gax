@@ -2600,6 +2600,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Odd<(A,), T, O> {
         gx::SquareMap::eigh(self)
     }
 
+    /// For a correlation, a map of a kind to its complement: the eigenproblem
+    /// `self(x) = Î» metric(x)` against a definite correlation, through the regressive product
+    /// (see [`gx::Correlation::eigh_in`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_in(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Correlation<Coef = T, Input = A>,
+    {
+        gx::Correlation::eigh_in(self, metric)
+    }
+
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
     #[inline]
     pub fn eigvals(self) -> <Odd<(), f64, O> as gx::Kind>::Arr<gx::Complex<T>>
@@ -5394,6 +5406,18 @@ impl<A: gx::Kind, T: gx::Real, O: gx::Orientation> Multivector<(A,), T, O> {
         Self: gx::SquareMap<Coef = T, Kind = Multivector<(), f64, O>, Input = A>,
     {
         gx::SquareMap::eigh(self)
+    }
+
+    /// For a correlation, a map of a kind to its complement: the eigenproblem
+    /// `self(x) = Î» metric(x)` against a definite correlation, through the regressive product
+    /// (see [`gx::Correlation::eigh_in`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_in(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Correlation<Coef = T, Input = A>,
+    {
+        gx::Correlation::eigh_in(self, metric)
     }
 
     /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).

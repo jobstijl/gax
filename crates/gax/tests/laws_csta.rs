@@ -306,6 +306,10 @@ law_suite::law_suite! {
     ],
     outer_two: [
     ],
+    outer_corr: [
+    ],
+    outer_corr_two: [
+    ],
     top: [
     ],
     unit_det: [

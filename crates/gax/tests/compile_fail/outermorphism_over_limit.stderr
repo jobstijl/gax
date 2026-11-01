@@ -4,7 +4,7 @@ error[E0277]: no outermorphism from maps on `r8::oriented::Orbital<(r8::oriented
 22 |     let _ = t.outermorphism::<r8::FourElectrons>();
    |               ^^^^^^^^^^^^^ unsatisfied trait bound
    |
-   = note: outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions)
+   = note: outermorphisms extend maps on a kind holding every vector (or antivector) to a kind holding every blade of one grade, up to 16 384 terms of minors (C(n, k)² k! for k factors in n dimensions), and correlations between vectors and antivectors in up to five dimensions
    = note: for larger kinds, build the extended map from its images: `B::<(B,), T>::from_images`, the image of a blade `e_a ∧ e_b ∧ …` being `t.of(e_a) ^ t.of(e_b) ^ …`
 help: the trait `Outermorphism<r8::oriented::FourElectrons>` is not implemented for `r8::oriented::Orbital<(r8::oriented::Orbital,)>`
       but trait `Outermorphism<r8::oriented::TwoElectrons<(), f64, _>>` is implemented for it
