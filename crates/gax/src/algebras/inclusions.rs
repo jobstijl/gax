@@ -1433,6 +1433,42 @@ mod sta_in_csta {
         }
     }
 
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::ScreenSlice<S, T, crate::Extrinsic>> for crate::csta::oriented::Vector<S, T, crate::Extrinsic> {
+        /// The inclusion of `sta` in `csta` by generator names: an extrinsic value keeps its blades (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::ScreenSlice<S, T, crate::Extrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Vector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::ScreenSlice<S, T, crate::Intrinsic>> for crate::csta::oriented::Trivector<S, T, crate::Intrinsic> {
+        /// The inclusion of `sta` in `csta` by generator names: an intrinsic value keeps its complement (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::ScreenSlice<S, T, crate::Intrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Trivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::Screen<S, T, crate::Extrinsic>> for crate::csta::oriented::Trivector<S, T, crate::Extrinsic> {
+        /// The inclusion of `sta` in `csta` by generator names: an extrinsic value keeps its blades (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::Screen<S, T, crate::Extrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Trivector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::Screen<S, T, crate::Intrinsic>> for crate::csta::oriented::Quintvector<S, T, crate::Intrinsic> {
+        /// The inclusion of `sta` in `csta` by generator names: an intrinsic value keeps its complement (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::Screen<S, T, crate::Intrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Quintvector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
     impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::Multivector<S, T, crate::Extrinsic>> for crate::csta::oriented::Multivector<S, T, crate::Extrinsic> {
         /// The inclusion of `sta` in `csta` by generator names: an extrinsic value keeps its blades (ADR-057).
         #[inline(always)]
@@ -1599,6 +1635,42 @@ mod sta_in_stap {
         fn from_subalgebra(x: crate::sta::oriented::Odd<S, T, crate::Intrinsic>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
             crate::stap::oriented::Motor::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), (-a[0]).0, (-a[1]).0, (-a[2]).0, (-a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[5]).0, (a[6]).0, (a[7]).0, (-a[4]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::ScreenSlice<S, T, crate::Extrinsic>> for crate::stap::oriented::OriginHyperplane<S, T, crate::Extrinsic> {
+        /// The inclusion of `sta` in `stap` by generator names: an extrinsic value keeps its blades (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::ScreenSlice<S, T, crate::Extrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::OriginHyperplane::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::ScreenSlice<S, T, crate::Intrinsic>> for crate::stap::oriented::Bivector<S, T, crate::Intrinsic> {
+        /// The inclusion of `sta` in `stap` by generator names: an intrinsic value keeps its complement (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::ScreenSlice<S, T, crate::Intrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Bivector::from_coeffs([(-a[0]).0, (-a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::Screen<S, T, crate::Extrinsic>> for crate::stap::oriented::Trivector<S, T, crate::Extrinsic> {
+        /// The inclusion of `sta` in `stap` by generator names: an extrinsic value keeps its blades (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::Screen<S, T, crate::Extrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Trivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::sta::oriented::Screen<S, T, crate::Intrinsic>> for crate::stap::oriented::Direction<S, T, crate::Intrinsic> {
+        /// The inclusion of `sta` in `stap` by generator names: an intrinsic value keeps its complement (ADR-057).
+        #[inline(always)]
+        fn from_subalgebra(x: crate::sta::oriented::Screen<S, T, crate::Intrinsic>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Direction::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 

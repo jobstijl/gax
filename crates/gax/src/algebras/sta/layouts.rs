@@ -45,6 +45,14 @@ pub type EvenSoa<E = f32> = gx::batch::Soa<Even, E>;
 pub type OddSoa<E = f32> = gx::batch::Soa<Odd, E>;
 
 #[cfg(feature = "batch")]
+/// [`ScreenSlice`] values in struct-of-arrays form, for the batch kernels.
+pub type ScreenSliceSoa<E = f32> = gx::batch::Soa<ScreenSlice, E>;
+
+#[cfg(feature = "batch")]
+/// [`Screen`] values in struct-of-arrays form, for the batch kernels.
+pub type ScreenSoa<E = f32> = gx::batch::Soa<Screen, E>;
+
+#[cfg(feature = "batch")]
 /// [`Multivector`] values in struct-of-arrays form, for the batch kernels.
 pub type MultivectorSoa<E = f32> = gx::batch::Soa<Multivector, E>;
 
@@ -873,6 +881,208 @@ impl<O: gx::Orientation> From<OddGpu16> for Odd<(), f32, O> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// [`ScreenSlice`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `ScreenSlice`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ScreenSliceGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct ScreenSlice { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<ScreenSliceGpu>() == 16);
+    assert!(core::mem::align_of::<ScreenSliceGpu>() == 16);
+    assert!(core::mem::offset_of!(ScreenSliceGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for ScreenSliceGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for ScreenSliceGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<ScreenSlice<(), f32, O>> for ScreenSliceGpu {
+    #[inline]
+    fn from(x: ScreenSlice<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        ScreenSliceGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<ScreenSlice<(), f32, O>>> for ScreenSliceGpu {
+    #[inline]
+    fn from(x: gx::Unit<ScreenSlice<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<ScreenSliceGpu> for ScreenSlice<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: ScreenSliceGpu) -> Self {
+        ScreenSlice::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`ScreenSlice`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::sta_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ScreenSliceGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct ScreenSlice { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<ScreenSliceGpu16>() == 8);
+    assert!(core::mem::align_of::<ScreenSliceGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for ScreenSliceGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for ScreenSliceGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<ScreenSlice<(), f32, O>> for ScreenSliceGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: ScreenSlice<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        ScreenSliceGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<ScreenSliceGpu16> for ScreenSlice<(), f32, O> {
+    #[inline]
+    fn from(g: ScreenSliceGpu16) -> Self {
+        ScreenSlice::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`Screen`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Screen`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ScreenGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Screen { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<ScreenGpu>() == 16);
+    assert!(core::mem::align_of::<ScreenGpu>() == 16);
+    assert!(core::mem::offset_of!(ScreenGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for ScreenGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for ScreenGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Screen<(), f32, O>> for ScreenGpu {
+    #[inline]
+    fn from(x: Screen<(), f32, O>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        ScreenGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<gx::Unit<Screen<(), f32, O>>> for ScreenGpu {
+    #[inline]
+    fn from(x: gx::Unit<Screen<(), f32, O>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<ScreenGpu> for Screen<(), f32, O> {
+    /// The coefficients, in the orientation the receiving type asks for: the GPU layout carries
+    /// none (ADR-051).
+    #[inline]
+    fn from(g: ScreenGpu) -> Self {
+        Screen::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Screen`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::sta_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ScreenGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Screen { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<ScreenGpu16>() == 8);
+    assert!(core::mem::align_of::<ScreenGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for ScreenGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for ScreenGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<Screen<(), f32, O>> for ScreenGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Screen<(), f32, O>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        ScreenGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl<O: gx::Orientation> From<ScreenGpu16> for Screen<(), f32, O> {
+    #[inline]
+    fn from(g: ScreenGpu16) -> Self {
+        Screen::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// [`Multivector`] in the GPU layout of the `gax::wgsl` modules: its 16 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Multivector`).
 #[repr(C, align(16))]
@@ -1017,6 +1227,8 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Phasor", core::mem::size_of::<PhasorGpu>(), core::mem::align_of::<PhasorGpu>(), core::mem::offset_of!(PhasorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Even", core::mem::size_of::<EvenGpu>(), core::mem::align_of::<EvenGpu>(), core::mem::offset_of!(EvenGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu>(), core::mem::align_of::<OddGpu>(), core::mem::offset_of!(OddGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("ScreenSlice", core::mem::size_of::<ScreenSliceGpu>(), core::mem::align_of::<ScreenSliceGpu>(), core::mem::offset_of!(ScreenSliceGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Screen", core::mem::size_of::<ScreenGpu>(), core::mem::align_of::<ScreenGpu>(), core::mem::offset_of!(ScreenGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu>(), core::mem::align_of::<MultivectorGpu>(), core::mem::offset_of!(MultivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
 ];
 
@@ -1031,6 +1243,8 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Phasor", core::mem::size_of::<PhasorGpu16>(), core::mem::align_of::<PhasorGpu16>(), core::mem::offset_of!(PhasorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Even", core::mem::size_of::<EvenGpu16>(), core::mem::align_of::<EvenGpu16>(), core::mem::offset_of!(EvenGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu16>(), core::mem::align_of::<OddGpu16>(), core::mem::offset_of!(OddGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("ScreenSlice", core::mem::size_of::<ScreenSliceGpu16>(), core::mem::align_of::<ScreenSliceGpu16>(), core::mem::offset_of!(ScreenSliceGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Screen", core::mem::size_of::<ScreenGpu16>(), core::mem::align_of::<ScreenGpu16>(), core::mem::offset_of!(ScreenGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu16>(), core::mem::align_of::<MultivectorGpu16>(), core::mem::offset_of!(MultivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
 ];
 

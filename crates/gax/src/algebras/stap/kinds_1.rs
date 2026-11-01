@@ -352,31 +352,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -1393,31 +1408,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -2482,31 +2512,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -3990,31 +4035,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -5238,31 +5298,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -6219,31 +6294,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -7037,31 +7127,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -9053,31 +9158,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Odd<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -10983,31 +11103,46 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
 
     /// See [`gx::Reverse`].
     #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output
+    where
+        Self: gx::Reverse,
+    {
         gx::Reverse::reverse(self)
     }
 
     /// See [`gx::Involute`].
     #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
+    pub fn involute(self) -> <Self as gx::Involute>::Output
+    where
+        Self: gx::Involute,
+    {
         gx::Involute::involute(self)
     }
 
     /// See [`gx::Conjugate`].
     #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output
+    where
+        Self: gx::Conjugate,
+    {
         gx::Conjugate::conjugate(self)
     }
 
     /// See [`gx::Dual`].
     #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
+    pub fn dual(self) -> <Self as gx::Dual>::Output
+    where
+        Self: gx::Dual,
+    {
         gx::Dual::dual(self)
     }
 
     /// See [`gx::Undual`].
     #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
+    pub fn undual(self) -> <Self as gx::Undual>::Output
+    where
+        Self: gx::Undual,
+    {
         gx::Undual::undual(self)
     }
 
@@ -11058,30 +11193,6 @@ impl<T: gx::Coef> Multivector<(), T, gx::Extrinsic> {
     /// orientation.
     #[inline(always)]
     pub fn slot() -> Multivector<(Multivector<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
-        Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef> Multivector<(), T, gx::Intrinsic> {
-    /// A value from its coefficients, in blade order.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(s: T, e0: T, e1: T, e2: T, e3: T, e4: T, e01: T, e02: T, e03: T, e04: T, e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e023: T, e031: T, e012: T, e014: T, e024: T, e034: T, e123: T, e234: T, e314: T, e124: T, e0324: T, e0134: T, e0214: T, e0123: T, e1234: T, e01234: T) -> Self {
-        Multivector { o: core::marker::PhantomData, c: [s, e0, e1, e2, e3, e4, e01, e02, e03, e04, e23, e31, e12, e41, e42, e43, e023, e031, e012, e014, e024, e034, e123, e234, e314, e124, e0324, e0134, e0214, e0123, e1234, e01234] }
-    }
-
-    /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot, both of this
-    /// orientation.
-    #[inline(always)]
-    pub fn slot() -> Multivector<(Multivector<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
-        Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Multivector<(), T, O> {
-    type Map = Multivector<(Multivector<(), f64, O>,), T, O>;
-    #[inline(always)]
-    fn slot() -> Self::Map {
         Multivector { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
     }
 }

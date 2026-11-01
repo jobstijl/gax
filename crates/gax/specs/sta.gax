@@ -12,6 +12,10 @@ kind Pseudoscalar = [e1234] "The unit four-volume `I = e1234`, the product `σ�
 kind Phasor = [1, e1234] "A scalar plus a pseudoscalar: a complex number with `i = e1234`, which commutes with the even subalgebra (`exp` of a pseudoscalar, the duality rotation `exp(I β)` of a spinor).";
 versor Even = [1, e23, e31, e12, e14, e24, e34, e1234] "The even subalgebra: spinors and Lorentz rotors.";
 versor Odd = [e1, e2, e3, e4, e123, e234, e314, e124] "The odd subalgebra.";
+// A camera's screen across `z` (numga's kerr): slot declarations, which take part in no product
+// (ADR-054, amended), for maps on the screen's two directions and the slices that read them.
+slot ScreenSlice = [e1, e2] "The slices `x` and `y` that read a screen's directions (numga's `ScreenSlice`, the vectors within `x y`): a camera's screen across `z`. A slot: for maps and forms; its products go through `Vector`. It pairs with `Screen`, its complement.";
+slot Screen = [e234, e314] intrinsic "A screen's two directions, the duals of `x` and `y` (numga's `Screen`, the antivectors containing `t z`). A slot: for maps on the screen (a camera's frame, `Trivector <- Screen`); its products go through `Trivector`.";
 kind Multivector = [1, e1, e2, e3, e4, e23, e31, e12, e14, e24, e34, e123, e234, e314, e124, e1234] "A general multivector.";
 
 alias Field = Bivector;

@@ -300,6 +300,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Ro
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Rotor<(), T, O>> for Scalar<(), T, O> {}
 
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Scalar<S, T, O>> for Rotor<S, T, O> {
+    type Output = Rotor<S, T, O>;
+    /// `rhs` as a [`Rotor`], then the sum of two `Rotor`s.
+    #[inline(always)]
+    fn add(self, rhs: Scalar<S, T, O>) -> Rotor<S, T, O> {
+        self + Rotor::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Rotor<S, T, O>> for Scalar<S, T, O> {
+    type Output = Rotor<S, T, O>;
+    /// `self` as a [`Rotor`], then the sum of two `Rotor`s.
+    #[inline(always)]
+    fn add(self, rhs: Rotor<S, T, O>) -> Rotor<S, T, O> {
+        Rotor::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Scalar<S, T, O>> for Rotor<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self + Rotor::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Scalar<S, T, O>> for Rotor<S, T, O> {
+    type Output = Rotor<S, T, O>;
+    /// `rhs` as a [`Rotor`], then the difference of two `Rotor`s.
+    #[inline(always)]
+    fn sub(self, rhs: Scalar<S, T, O>) -> Rotor<S, T, O> {
+        self - Rotor::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Rotor<S, T, O>> for Scalar<S, T, O> {
+    type Output = Rotor<S, T, O>;
+    /// `self` as a [`Rotor`], then the difference of two `Rotor`s.
+    #[inline(always)]
+    fn sub(self, rhs: Rotor<S, T, O>) -> Rotor<S, T, O> {
+        Rotor::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Scalar<S, T, O>> for Rotor<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self - Rotor::from(rhs);
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Multivector<S, T, O> {
     /// The same multivector as a [`Multivector`], of the same orientation.
     #[inline(always)]
@@ -309,6 +359,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Mu
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Scalar<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Scalar<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Scalar<S, T, O>) -> Multivector<S, T, O> {
+        self + Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Multivector<S, T, O>> for Scalar<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Scalar<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self + Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Scalar<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Scalar<S, T, O>) -> Multivector<S, T, O> {
+        self - Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Multivector<S, T, O>> for Scalar<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Scalar<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self - Multivector::from(rhs);
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Vector<S, T, O>> for Multivector<S, T, O> {
     /// The same multivector as a [`Multivector`], of the same orientation.
@@ -349,6 +449,20 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Rotor<S, T, O>> for Mul
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Rotor<(), T, O> {}
+
+impl<T: gx::Real, O: gx::Orientation> Vector<(), T, O> {
+    /// The angle between this vector and `other`, in `[0, Ï]`: `atan2` of the norm of their
+    /// outer product (the sine, the area they span) and their inner product (the cosine),
+    /// scaled alike, so no normalizing is needed and the angle is well conditioned at every
+    /// angle (an arc cosine of the normalized inner product loses half the digits near 0 and
+    /// Ï). Generated for the vectors of every algebra whose metric is positive semidefinite
+    /// (VGA, PGA, or an `algebra!` of such a signature); in PGA it is the angle between the
+    /// normals of two planes (or lines).
+    #[inline]
+    pub fn angle_between(self, other: Self) -> T {
+        (self ^ other).norm().atan2((self | other).s())
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Scalar<S, T, O> {
     type Output = Scalar<S, T, O>;

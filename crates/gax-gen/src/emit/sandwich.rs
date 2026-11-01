@@ -218,10 +218,7 @@ pub(super) fn sandwich_math(
     if support.is_empty() {
         return None;
     }
-    let out = spec
-        .result_kind(&support, &[xk])
-        .expect("a full kind exists")
-        .clone();
+    let out = spec.result_kind(&support, &[xk])?.clone();
     let projected: SymMv = res
         .into_iter()
         .filter(|(m, _)| out.layout.position(*m).is_some())
@@ -594,10 +591,12 @@ impl Emitter<'_> {
         // A plain sandwich's versor is large: v ~v by the product (a table loop).
         if let Some(plain) = plain {
             let alg = &self.spec.algebra;
-            let nk = self
-                .spec
-                .kind_for_support(&binop_support(alg, BinOp::Gp, &vk.layout, &vk.layout))
-                .expect("a full kind exists");
+            let Some(nk) =
+                self.spec
+                    .kind_for_support(&binop_support(alg, BinOp::Gp, &vk.layout, &vk.layout))
+            else {
+                return String::new();
+            };
             let parts: Vec<String> = plain
                 .norm
                 .iter()

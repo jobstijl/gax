@@ -3875,284 +3875,312 @@ fn sta_in_csta() {
     }
     #[inline(never)]
     fn c16(rng: &mut Rng) {
+        let x: sta::oriented::ScreenSlice<(), f64, gax::Extrinsic> = rng.value();
+        let lhs = csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(x.dual()));
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(x).dual());
+        assert!(close(&lhs, &rhs), "ScreenSlice dual");
+    }
+    #[inline(never)]
+    fn c17(rng: &mut Rng) {
+        let x: sta::oriented::ScreenSlice<(), f64, gax::Intrinsic> = rng.value();
+        let lhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(x.undual()));
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(x).undual());
+        assert!(close(&lhs, &rhs), "ScreenSlice undual");
+    }
+    #[inline(never)]
+    fn c18(rng: &mut Rng) {
+        let x: sta::oriented::Screen<(), f64, gax::Extrinsic> = rng.value();
+        let lhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(x.dual()));
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(x).dual());
+        assert!(close(&lhs, &rhs), "Screen dual");
+    }
+    #[inline(never)]
+    fn c19(rng: &mut Rng) {
+        let x: sta::oriented::Screen<(), f64, gax::Intrinsic> = rng.value();
+        let lhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(x.undual()));
+        let rhs = csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(x).undual());
+        assert!(close(&lhs, &rhs), "Screen undual");
+    }
+    #[inline(never)]
+    fn c20(rng: &mut Rng) {
         let x: sta::oriented::Multivector<(), f64, gax::Extrinsic> = rng.value();
         let lhs = csta::oriented::Multivector::from(csta::oriented::Multivector::<(), f64, gax::Intrinsic>::from_subalgebra(x.dual()));
         let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::<(), f64, gax::Extrinsic>::from_subalgebra(x).dual());
         assert!(close(&lhs, &rhs), "Multivector dual");
     }
     #[inline(never)]
-    fn c17(rng: &mut Rng) {
+    fn c21(rng: &mut Rng) {
         let x: sta::oriented::Multivector<(), f64, gax::Intrinsic> = rng.value();
         let lhs = csta::oriented::Multivector::from(csta::oriented::Multivector::<(), f64, gax::Extrinsic>::from_subalgebra(x.undual()));
         let rhs = csta::oriented::Multivector::from(csta::oriented::Multivector::<(), f64, gax::Intrinsic>::from_subalgebra(x).undual());
         assert!(close(&lhs, &rhs), "Multivector undual");
     }
     #[inline(never)]
-    fn c18(rng: &mut Rng) {
+    fn c22(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Scalar");
     }
     #[inline(never)]
-    fn c19(rng: &mut Rng) {
+    fn c23(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Vector");
     }
     #[inline(never)]
-    fn c20(rng: &mut Rng) {
+    fn c24(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Bivector");
     }
     #[inline(never)]
-    fn c21(rng: &mut Rng) {
+    fn c25(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Trivector");
     }
     #[inline(never)]
-    fn c22(rng: &mut Rng) {
+    fn c26(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Pseudoscalar");
     }
     #[inline(never)]
-    fn c23(rng: &mut Rng) {
+    fn c27(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Scalar");
     }
     #[inline(never)]
-    fn c24(rng: &mut Rng) {
+    fn c28(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Vector");
     }
     #[inline(never)]
-    fn c25(rng: &mut Rng) {
+    fn c29(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Bivector");
     }
     #[inline(never)]
-    fn c26(rng: &mut Rng) {
+    fn c30(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Trivector");
     }
     #[inline(never)]
-    fn c27(rng: &mut Rng) {
+    fn c31(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Pseudoscalar");
     }
     #[inline(never)]
-    fn c28(rng: &mut Rng) {
+    fn c32(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Scalar");
     }
     #[inline(never)]
-    fn c29(rng: &mut Rng) {
+    fn c33(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Vector");
     }
     #[inline(never)]
-    fn c30(rng: &mut Rng) {
+    fn c34(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Bivector");
     }
     #[inline(never)]
-    fn c31(rng: &mut Rng) {
+    fn c35(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Trivector");
     }
     #[inline(never)]
-    fn c32(rng: &mut Rng) {
+    fn c36(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Pseudoscalar");
     }
     #[inline(never)]
-    fn c33(rng: &mut Rng) {
+    fn c37(rng: &mut Rng) {
         let (a, b): (sta::oriented::Scalar<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Scalar vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c34(rng: &mut Rng) {
+    fn c38(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Trivector");
     }
     #[inline(never)]
-    fn c35(rng: &mut Rng) {
+    fn c39(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c36(rng: &mut Rng) {
+    fn c40(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Intrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Bivector");
     }
     #[inline(never)]
-    fn c37(rng: &mut Rng) {
+    fn c41(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Trivector");
     }
     #[inline(never)]
-    fn c38(rng: &mut Rng) {
+    fn c42(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c39(rng: &mut Rng) {
+    fn c43(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Vector");
     }
     #[inline(never)]
-    fn c40(rng: &mut Rng) {
+    fn c44(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Bivector");
     }
     #[inline(never)]
-    fn c41(rng: &mut Rng) {
+    fn c45(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Trivector");
     }
     #[inline(never)]
-    fn c42(rng: &mut Rng) {
+    fn c46(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c43(rng: &mut Rng) {
+    fn c47(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Scalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Scalar");
     }
     #[inline(never)]
-    fn c44(rng: &mut Rng) {
+    fn c48(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Vector");
     }
     #[inline(never)]
-    fn c45(rng: &mut Rng) {
+    fn c49(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Bivector");
     }
     #[inline(never)]
-    fn c46(rng: &mut Rng) {
+    fn c50(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Trivector");
     }
     #[inline(never)]
-    fn c47(rng: &mut Rng) {
+    fn c51(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c48(rng: &mut Rng) {
+    fn c52(rng: &mut Rng) {
         let (a, b): (sta::oriented::Scalar<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Scalar vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c49(rng: &mut Rng) {
+    fn c53(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Trivector");
     }
     #[inline(never)]
-    fn c50(rng: &mut Rng) {
+    fn c54(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c51(rng: &mut Rng) {
+    fn c55(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Bivector");
     }
     #[inline(never)]
-    fn c52(rng: &mut Rng) {
+    fn c56(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Trivector");
     }
     #[inline(never)]
-    fn c53(rng: &mut Rng) {
+    fn c57(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c54(rng: &mut Rng) {
+    fn c58(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Vector");
     }
     #[inline(never)]
-    fn c55(rng: &mut Rng) {
+    fn c59(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Bivector");
     }
     #[inline(never)]
-    fn c56(rng: &mut Rng) {
+    fn c60(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Trivector");
     }
     #[inline(never)]
-    fn c57(rng: &mut Rng) {
+    fn c61(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c58(rng: &mut Rng) {
+    fn c62(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Scalar");
     }
     #[inline(never)]
-    fn c59(rng: &mut Rng) {
+    fn c63(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Vector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Vector");
     }
     #[inline(never)]
-    fn c60(rng: &mut Rng) {
+    fn c64(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quadvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Twist::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Bivector");
     }
     #[inline(never)]
-    fn c61(rng: &mut Rng) {
+    fn c65(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Quintvector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Trivector");
     }
     #[inline(never)]
-    fn c62(rng: &mut Rng) {
+    fn c66(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(csta::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&csta::oriented::Multivector::from(csta::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Pseudoscalar");
@@ -4222,6 +4250,10 @@ fn sta_in_csta() {
         c60(&mut rng);
         c61(&mut rng);
         c62(&mut rng);
+        c63(&mut rng);
+        c64(&mut rng);
+        c65(&mut rng);
+        c66(&mut rng);
     }
 }
 
@@ -4344,284 +4376,312 @@ fn sta_in_stap() {
     }
     #[inline(never)]
     fn c16(rng: &mut Rng) {
+        let x: sta::oriented::ScreenSlice<(), f64, gax::Extrinsic> = rng.value();
+        let lhs = stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(x.dual()));
+        let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(x).dual());
+        assert!(close(&lhs, &rhs), "ScreenSlice dual");
+    }
+    #[inline(never)]
+    fn c17(rng: &mut Rng) {
+        let x: sta::oriented::ScreenSlice<(), f64, gax::Intrinsic> = rng.value();
+        let lhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(x.undual()));
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(x).undual());
+        assert!(close(&lhs, &rhs), "ScreenSlice undual");
+    }
+    #[inline(never)]
+    fn c18(rng: &mut Rng) {
+        let x: sta::oriented::Screen<(), f64, gax::Extrinsic> = rng.value();
+        let lhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(x.dual()));
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(x).dual());
+        assert!(close(&lhs, &rhs), "Screen dual");
+    }
+    #[inline(never)]
+    fn c19(rng: &mut Rng) {
+        let x: sta::oriented::Screen<(), f64, gax::Intrinsic> = rng.value();
+        let lhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(x.undual()));
+        let rhs = stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(x).undual());
+        assert!(close(&lhs, &rhs), "Screen undual");
+    }
+    #[inline(never)]
+    fn c20(rng: &mut Rng) {
         let x: sta::oriented::Multivector<(), f64, gax::Extrinsic> = rng.value();
         let lhs = stap::oriented::Multivector::from(stap::oriented::Multivector::<(), f64, gax::Intrinsic>::from_subalgebra(x.dual()));
         let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::<(), f64, gax::Extrinsic>::from_subalgebra(x).dual());
         assert!(close(&lhs, &rhs), "Multivector dual");
     }
     #[inline(never)]
-    fn c17(rng: &mut Rng) {
+    fn c21(rng: &mut Rng) {
         let x: sta::oriented::Multivector<(), f64, gax::Intrinsic> = rng.value();
         let lhs = stap::oriented::Multivector::from(stap::oriented::Multivector::<(), f64, gax::Extrinsic>::from_subalgebra(x.undual()));
         let rhs = stap::oriented::Multivector::from(stap::oriented::Multivector::<(), f64, gax::Intrinsic>::from_subalgebra(x).undual());
         assert!(close(&lhs, &rhs), "Multivector undual");
     }
     #[inline(never)]
-    fn c18(rng: &mut Rng) {
+    fn c22(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Scalar");
     }
     #[inline(never)]
-    fn c19(rng: &mut Rng) {
+    fn c23(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Vector");
     }
     #[inline(never)]
-    fn c20(rng: &mut Rng) {
+    fn c24(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Bivector");
     }
     #[inline(never)]
-    fn c21(rng: &mut Rng) {
+    fn c25(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Trivector");
     }
     #[inline(never)]
-    fn c22(rng: &mut Rng) {
+    fn c26(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Vector gp Pseudoscalar");
     }
     #[inline(never)]
-    fn c23(rng: &mut Rng) {
+    fn c27(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Scalar");
     }
     #[inline(never)]
-    fn c24(rng: &mut Rng) {
+    fn c28(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Vector");
     }
     #[inline(never)]
-    fn c25(rng: &mut Rng) {
+    fn c29(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Bivector");
     }
     #[inline(never)]
-    fn c26(rng: &mut Rng) {
+    fn c30(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Trivector");
     }
     #[inline(never)]
-    fn c27(rng: &mut Rng) {
+    fn c31(rng: &mut Rng) {
         let (a, b): (sta::oriented::Even<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Even gp Pseudoscalar");
     }
     #[inline(never)]
-    fn c28(rng: &mut Rng) {
+    fn c32(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Scalar");
     }
     #[inline(never)]
-    fn c29(rng: &mut Rng) {
+    fn c33(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Vector");
     }
     #[inline(never)]
-    fn c30(rng: &mut Rng) {
+    fn c34(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Bivector");
     }
     #[inline(never)]
-    fn c31(rng: &mut Rng) {
+    fn c35(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Motor::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Trivector");
     }
     #[inline(never)]
-    fn c32(rng: &mut Rng) {
+    fn c36(rng: &mut Rng) {
         let (a, b): (sta::oriented::Odd<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a).gp(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Odd::<(), f64, gax::Extrinsic>::from_subalgebra(a.gp(b))), &rhs), "Odd gp Pseudoscalar");
     }
     #[inline(never)]
-    fn c33(rng: &mut Rng) {
+    fn c37(rng: &mut Rng) {
         let (a, b): (sta::oriented::Scalar<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Scalar vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c34(rng: &mut Rng) {
+    fn c38(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Trivector");
     }
     #[inline(never)]
-    fn c35(rng: &mut Rng) {
+    fn c39(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c36(rng: &mut Rng) {
+    fn c40(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Intrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Bivector");
     }
     #[inline(never)]
-    fn c37(rng: &mut Rng) {
+    fn c41(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Trivector");
     }
     #[inline(never)]
-    fn c38(rng: &mut Rng) {
+    fn c42(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c39(rng: &mut Rng) {
+    fn c43(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Vector");
     }
     #[inline(never)]
-    fn c40(rng: &mut Rng) {
+    fn c44(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Bivector");
     }
     #[inline(never)]
-    fn c41(rng: &mut Rng) {
+    fn c45(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Trivector");
     }
     #[inline(never)]
-    fn c42(rng: &mut Rng) {
+    fn c46(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c43(rng: &mut Rng) {
+    fn c47(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Scalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Scalar");
     }
     #[inline(never)]
-    fn c44(rng: &mut Rng) {
+    fn c48(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Vector");
     }
     #[inline(never)]
-    fn c45(rng: &mut Rng) {
+    fn c49(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Bivector");
     }
     #[inline(never)]
-    fn c46(rng: &mut Rng) {
+    fn c50(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Trivector");
     }
     #[inline(never)]
-    fn c47(rng: &mut Rng) {
+    fn c51(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c48(rng: &mut Rng) {
+    fn c52(rng: &mut Rng) {
         let (a, b): (sta::oriented::Scalar<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Scalar vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c49(rng: &mut Rng) {
+    fn c53(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Trivector");
     }
     #[inline(never)]
-    fn c50(rng: &mut Rng) {
+    fn c54(rng: &mut Rng) {
         let (a, b): (sta::oriented::Vector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Vector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c51(rng: &mut Rng) {
+    fn c55(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Bivector");
     }
     #[inline(never)]
-    fn c52(rng: &mut Rng) {
+    fn c56(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Trivector");
     }
     #[inline(never)]
-    fn c53(rng: &mut Rng) {
+    fn c57(rng: &mut Rng) {
         let (a, b): (sta::oriented::Bivector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Bivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c54(rng: &mut Rng) {
+    fn c58(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Vector");
     }
     #[inline(never)]
-    fn c55(rng: &mut Rng) {
+    fn c59(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Bivector");
     }
     #[inline(never)]
-    fn c56(rng: &mut Rng) {
+    fn c60(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Trivector");
     }
     #[inline(never)]
-    fn c57(rng: &mut Rng) {
+    fn c61(rng: &mut Rng) {
         let (a, b): (sta::oriented::Trivector<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Trivector vee Pseudoscalar");
     }
     #[inline(never)]
-    fn c58(rng: &mut Rng) {
+    fn c62(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Scalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Vector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Scalar::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Scalar");
     }
     #[inline(never)]
-    fn c59(rng: &mut Rng) {
+    fn c63(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Vector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Bivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::OriginHyperplane::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Vector");
     }
     #[inline(never)]
-    fn c60(rng: &mut Rng) {
+    fn c64(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Bivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Trivector::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Bivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Bivector");
     }
     #[inline(never)]
-    fn c61(rng: &mut Rng) {
+    fn c65(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Trivector<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Direction::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Trivector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Trivector");
     }
     #[inline(never)]
-    fn c62(rng: &mut Rng) {
+    fn c66(rng: &mut Rng) {
         let (a, b): (sta::oriented::Pseudoscalar<(), f64, gax::Extrinsic>, sta::oriented::Pseudoscalar<(), f64, gax::Intrinsic>) = (rng.value(), rng.value());
         let rhs = stap::oriented::Multivector::from(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a).vee(stap::oriented::Pseudoscalar::<(), f64, gax::Intrinsic>::from_subalgebra(b)));
         assert!(close(&stap::oriented::Multivector::from(stap::oriented::Quadvector::<(), f64, gax::Extrinsic>::from_subalgebra(a.vee(b))), &rhs), "Pseudoscalar vee Pseudoscalar");
@@ -4691,6 +4751,10 @@ fn sta_in_stap() {
         c60(&mut rng);
         c61(&mut rng);
         c62(&mut rng);
+        c63(&mut rng);
+        c64(&mut rng);
+        c65(&mut rng);
+        c66(&mut rng);
     }
 }
 

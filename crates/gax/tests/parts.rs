@@ -29,6 +29,24 @@ fn a_kind_and_its_part_add_into_the_kind() {
 }
 
 #[test]
+fn the_scalar_adds_into_every_kind_holding_it() {
+    use gax::pga3d::Rotor;
+    // `1 - x` with no cast: the scalar kind adds into the kinds holding the scalar, in either
+    // order, as a part does (ADR-054, amended 2026-11-01).
+    let r = Rotor::new(0.0, 0.0, 0.0, 0.5);
+    let one = Scalar::new(1.0);
+    let a: Rotor = one - r;
+    assert_eq!(a.c, [1.0, 0.0, 0.0, -0.5]);
+    let b: Rotor = r + one;
+    assert_eq!(b.c, [1.0, 0.0, 0.0, 0.5]);
+    let m: Motor = Motor::translation(Point::direction(1.0, 0.0, 0.0)).into_inner() - one;
+    assert!(m.s().abs() < 1e-15);
+    let mut c = r;
+    c += one;
+    assert_eq!(c.c, b.c);
+}
+
+#[test]
 fn parts_stay_parts_where_they_close() {
     use gax::vga3d::Horizontal;
     // A motor moves a direction to a direction: translations leave it, rotations turn it.

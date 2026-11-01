@@ -1728,6 +1728,30 @@ mod sta_to_stap {
 
     impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Odd<(), T, O>> for crate::sta::oriented::Odd<(), T, O> {}
 
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::ScreenSlice<S, T, O>> for crate::stap::oriented::Vector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::ScreenSlice<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Vector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Vector<(), T, O>> for crate::sta::oriented::ScreenSlice<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Screen<S, T, O>> for crate::stap::oriented::Trivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Screen<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::oriented::Trivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::stap::oriented::Trivector<(), T, O>> for crate::sta::oriented::Screen<(), T, O> {}
+
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Multivector<S, T, O>> for crate::stap::oriented::Multivector<S, T, O> {
         /// The image under the homomorphism from `sta` to `stap`, of the same orientation: a
         /// homomorphism keeps products, and so the orientations they give (ADR-051).
@@ -1842,6 +1866,30 @@ mod sta_to_csta {
     }
 
     impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Odd<(), T, O>> for crate::sta::oriented::Odd<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::ScreenSlice<S, T, O>> for crate::csta::oriented::Vector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::ScreenSlice<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Vector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Vector<(), T, O>> for crate::sta::oriented::ScreenSlice<(), T, O> {}
+
+    impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Screen<S, T, O>> for crate::csta::oriented::Trivector<S, T, O> {
+        /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a
+        /// homomorphism keeps products, and so the orientations they give (ADR-051).
+        #[inline(always)]
+        fn from(x: crate::sta::oriented::Screen<S, T, O>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::csta::oriented::Trivector::from_coeffs([(a[0]).0, (a[1]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef, O: crate::Orientation> crate::Widen<crate::csta::oriented::Trivector<(), T, O>> for crate::sta::oriented::Screen<(), T, O> {}
 
     impl<S: Slots, T: Coef, O: crate::Orientation> From<crate::sta::oriented::Multivector<S, T, O>> for crate::csta::oriented::Multivector<S, T, O> {
         /// The image under the homomorphism from `sta` to `csta`, of the same orientation: a

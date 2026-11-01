@@ -26,6 +26,39 @@ gax::algebra! {
         e0123, e012p, e031p, e023p, e123p, e012m, e031m, e023m, e123m, e01pm, e02pm, e03pm, e12pm, e31pm, e23pm, e0123pm];
 }
 
+gax::algebra! {
+    algebra r3even "Euclidean space's vectors and rotors alone, with no full kind (`no Multivector`).";
+    basis e1 = 1, e2 = 1, e3 = 1;
+    no Multivector;
+    kind Scalar = [1];
+    versor Vector = [e1, e2, e3];
+    kind Bivector = [e23, e31, e12];
+    versor Rotor = [1, e23, e31, e12];
+    kind Pseudoscalar = [e123];
+}
+
+/// Without a full kind the operations whose results close in the declared kinds are all there:
+/// products, sandwiches, the Hodge dual, exponentials; those that leave them (a vector times a
+/// rotor, odd) are not generated.
+#[test]
+fn an_algebra_without_a_multivector() {
+    use r3even::*;
+    let (a, b) = (
+        Vector::<(), f64>::new(1.0, 0.0, 0.0),
+        Vector::new(0.0, 1.0, 0.0),
+    );
+    let r = (b * a + Rotor::new(1.0, 0.0, 0.0, 0.0)).unit();
+    let turned = r >> a;
+    assert!(turned.approx_eq(&b, 1e-15));
+    assert!(
+        a.hodge()
+            .approx_eq(&intrinsic::Bivector::new(1.0, 0.0, 0.0), 0.0)
+    );
+    assert!(((a ^ b ^ Vector::new(0.0, 0.0, 1.0)).e123() - 1.0).abs() < 1e-15);
+    let half_turn = (Bivector::new(0.0, 0.0, 1.0) * -core::f64::consts::FRAC_PI_4).exp();
+    assert!((half_turn >> a).approx_eq(&b, 1e-15));
+}
+
 #[test]
 fn stap_products_and_sandwich() {
     use stap::*;

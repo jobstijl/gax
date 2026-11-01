@@ -9,7 +9,7 @@
 //! number, `p ∨ d`; so do the slices `t x y z` that read coordinates, `x ∨ X = 1`.
 
 use core::ops::{Add, Mul};
-use gax::sta::{Bivector, Even, Scalar, Vector, intrinsic};
+use gax::sta::{Bivector, Even, Scalar, Screen, Vector, intrinsic};
 
 /// An event, or a direction between events: numga's antivector.
 pub type D = intrinsic::Trivector;
@@ -22,9 +22,8 @@ pub type Spin = intrinsic::Bivector;
 /// direction's derivative.
 pub type DirectionMap = intrinsic::Trivector<(D,)>;
 /// The camera's two screen axes, a map from screen directions to directions (numga's
-/// `Antivector <- Screen`). gax's STA has no kind for numga's `Screen`, the directions `X` and
-/// `Y`, so the map takes every direction and reads only `x ∨ d` and `y ∨ d`.
-pub type ScreenFrame = DirectionMap;
+/// `Antivector <- Screen`): STA's slot `Screen` holds the directions `X` and `Y`.
+pub type ScreenFrame = intrinsic::Trivector<(Screen,)>;
 /// A unit rotor of spacetime: the camera's orientation, its boost.
 pub type Rotor = gax::Unit<Even>;
 
@@ -430,7 +429,7 @@ pub fn camera_up() -> D {
 pub fn camera_boost(geometry: &Field) -> Rotor {
     let observer =
         gauge_inverse(geometry).of(time()) * proper_squared(geometry, time()).sqrt().recip();
-    (Scalar::new(1.0).cast::<Even>() - observer * time()).unit()
+    (Scalar::new(1.0) - observer * time()).unit()
 }
 
 /// A direction scaled to unit length: a spatial direction squares to its length squared.
@@ -476,7 +475,7 @@ pub fn camera_rays(
 
 /// The screen frame with the given directions for the screen's `x` and `y`.
 pub fn screen_frame(right: D, up: D) -> ScreenFrame {
-    right * (x() & D::slot()) + up * (y() & D::slot())
+    ScreenFrame::from_images([right, up])
 }
 
 /// Orthonormal transverse camera axes, with horizontal `x` and vertical `y` screen inputs.

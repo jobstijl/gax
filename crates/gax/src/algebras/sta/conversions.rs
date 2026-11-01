@@ -901,6 +901,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Ph
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Phasor<(), T, O>> for Scalar<(), T, O> {}
 
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Scalar<S, T, O>> for Phasor<S, T, O> {
+    type Output = Phasor<S, T, O>;
+    /// `rhs` as a [`Phasor`], then the sum of two `Phasor`s.
+    #[inline(always)]
+    fn add(self, rhs: Scalar<S, T, O>) -> Phasor<S, T, O> {
+        self + Phasor::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Phasor<S, T, O>> for Scalar<S, T, O> {
+    type Output = Phasor<S, T, O>;
+    /// `self` as a [`Phasor`], then the sum of two `Phasor`s.
+    #[inline(always)]
+    fn add(self, rhs: Phasor<S, T, O>) -> Phasor<S, T, O> {
+        Phasor::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Scalar<S, T, O>> for Phasor<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self + Phasor::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Scalar<S, T, O>> for Phasor<S, T, O> {
+    type Output = Phasor<S, T, O>;
+    /// `rhs` as a [`Phasor`], then the difference of two `Phasor`s.
+    #[inline(always)]
+    fn sub(self, rhs: Scalar<S, T, O>) -> Phasor<S, T, O> {
+        self - Phasor::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Phasor<S, T, O>> for Scalar<S, T, O> {
+    type Output = Phasor<S, T, O>;
+    /// `self` as a [`Phasor`], then the difference of two `Phasor`s.
+    #[inline(always)]
+    fn sub(self, rhs: Phasor<S, T, O>) -> Phasor<S, T, O> {
+        Phasor::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Scalar<S, T, O>> for Phasor<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self - Phasor::from(rhs);
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Even<S, T, O> {
     /// The same multivector as a [`Even`], of the same orientation.
     #[inline(always)]
@@ -911,6 +961,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Ev
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Even<(), T, O>> for Scalar<(), T, O> {}
 
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Scalar<S, T, O>> for Even<S, T, O> {
+    type Output = Even<S, T, O>;
+    /// `rhs` as a [`Even`], then the sum of two `Even`s.
+    #[inline(always)]
+    fn add(self, rhs: Scalar<S, T, O>) -> Even<S, T, O> {
+        self + Even::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Even<S, T, O>> for Scalar<S, T, O> {
+    type Output = Even<S, T, O>;
+    /// `self` as a [`Even`], then the sum of two `Even`s.
+    #[inline(always)]
+    fn add(self, rhs: Even<S, T, O>) -> Even<S, T, O> {
+        Even::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Scalar<S, T, O>> for Even<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self + Even::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Scalar<S, T, O>> for Even<S, T, O> {
+    type Output = Even<S, T, O>;
+    /// `rhs` as a [`Even`], then the difference of two `Even`s.
+    #[inline(always)]
+    fn sub(self, rhs: Scalar<S, T, O>) -> Even<S, T, O> {
+        self - Even::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Even<S, T, O>> for Scalar<S, T, O> {
+    type Output = Even<S, T, O>;
+    /// `self` as a [`Even`], then the difference of two `Even`s.
+    #[inline(always)]
+    fn sub(self, rhs: Even<S, T, O>) -> Even<S, T, O> {
+        Even::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Scalar<S, T, O>> for Even<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self - Even::from(rhs);
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Multivector<S, T, O> {
     /// The same multivector as a [`Multivector`], of the same orientation.
     #[inline(always)]
@@ -920,6 +1020,56 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Scalar<S, T, O>> for Mu
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Scalar<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Scalar<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Scalar<S, T, O>) -> Multivector<S, T, O> {
+        self + Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Multivector<S, T, O>> for Scalar<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Scalar<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self + Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Scalar<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Scalar<S, T, O>) -> Multivector<S, T, O> {
+        self - Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Multivector<S, T, O>> for Scalar<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Scalar<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Scalar<S, T, O>) {
+        *self = *self - Multivector::from(rhs);
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Vector<S, T, O>> for Odd<S, T, O> {
     /// The same multivector as a [`Odd`], of the same orientation.
@@ -1050,6 +1200,366 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Odd<S, T, O>> for Multi
 }
 
 impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Odd<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<ScreenSlice<S, T, O>> for Vector<S, T, O> {
+    /// The same multivector as a [`Vector`], of the same orientation.
+    #[inline(always)]
+    fn from(x: ScreenSlice<S, T, O>) -> Self {
+        Vector { o: core::marker::PhantomData, c: [x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Vector<(), T, O>> for ScreenSlice<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<ScreenSlice<S, T, O>> for Vector<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// `rhs` as a [`Vector`], then the sum of two `Vector`s.
+    #[inline(always)]
+    fn add(self, rhs: ScreenSlice<S, T, O>) -> Vector<S, T, O> {
+        self + Vector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Vector<S, T, O>> for ScreenSlice<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// `self` as a [`Vector`], then the sum of two `Vector`s.
+    #[inline(always)]
+    fn add(self, rhs: Vector<S, T, O>) -> Vector<S, T, O> {
+        Vector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<ScreenSlice<S, T, O>> for Vector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: ScreenSlice<S, T, O>) {
+        *self = *self + Vector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<ScreenSlice<S, T, O>> for Vector<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// `rhs` as a [`Vector`], then the difference of two `Vector`s.
+    #[inline(always)]
+    fn sub(self, rhs: ScreenSlice<S, T, O>) -> Vector<S, T, O> {
+        self - Vector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Vector<S, T, O>> for ScreenSlice<S, T, O> {
+    type Output = Vector<S, T, O>;
+    /// `self` as a [`Vector`], then the difference of two `Vector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Vector<S, T, O>) -> Vector<S, T, O> {
+        Vector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<ScreenSlice<S, T, O>> for Vector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: ScreenSlice<S, T, O>) {
+        *self = *self - Vector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<ScreenSlice<S, T, O>> for Odd<S, T, O> {
+    /// The same multivector as a [`Odd`], of the same orientation.
+    #[inline(always)]
+    fn from(x: ScreenSlice<S, T, O>) -> Self {
+        Odd { o: core::marker::PhantomData, c: [x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Odd<(), T, O>> for ScreenSlice<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<ScreenSlice<S, T, O>> for Odd<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `rhs` as a [`Odd`], then the sum of two `Odd`s.
+    #[inline(always)]
+    fn add(self, rhs: ScreenSlice<S, T, O>) -> Odd<S, T, O> {
+        self + Odd::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Odd<S, T, O>> for ScreenSlice<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `self` as a [`Odd`], then the sum of two `Odd`s.
+    #[inline(always)]
+    fn add(self, rhs: Odd<S, T, O>) -> Odd<S, T, O> {
+        Odd::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<ScreenSlice<S, T, O>> for Odd<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: ScreenSlice<S, T, O>) {
+        *self = *self + Odd::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<ScreenSlice<S, T, O>> for Odd<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `rhs` as a [`Odd`], then the difference of two `Odd`s.
+    #[inline(always)]
+    fn sub(self, rhs: ScreenSlice<S, T, O>) -> Odd<S, T, O> {
+        self - Odd::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Odd<S, T, O>> for ScreenSlice<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `self` as a [`Odd`], then the difference of two `Odd`s.
+    #[inline(always)]
+    fn sub(self, rhs: Odd<S, T, O>) -> Odd<S, T, O> {
+        Odd::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<ScreenSlice<S, T, O>> for Odd<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: ScreenSlice<S, T, O>) {
+        *self = *self - Odd::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<ScreenSlice<S, T, O>> for Multivector<S, T, O> {
+    /// The same multivector as a [`Multivector`], of the same orientation.
+    #[inline(always)]
+    fn from(x: ScreenSlice<S, T, O>) -> Self {
+        Multivector { o: core::marker::PhantomData, c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for ScreenSlice<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<ScreenSlice<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: ScreenSlice<S, T, O>) -> Multivector<S, T, O> {
+        self + Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Multivector<S, T, O>> for ScreenSlice<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<ScreenSlice<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: ScreenSlice<S, T, O>) {
+        *self = *self + Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<ScreenSlice<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: ScreenSlice<S, T, O>) -> Multivector<S, T, O> {
+        self - Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Multivector<S, T, O>> for ScreenSlice<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<ScreenSlice<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: ScreenSlice<S, T, O>) {
+        *self = *self - Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Screen<S, T, O>> for Trivector<S, T, O> {
+    /// The same multivector as a [`Trivector`], of the same orientation.
+    #[inline(always)]
+    fn from(x: Screen<S, T, O>) -> Self {
+        Trivector { o: core::marker::PhantomData, c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Trivector<(), T, O>> for Screen<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Screen<S, T, O>> for Trivector<S, T, O> {
+    type Output = Trivector<S, T, O>;
+    /// `rhs` as a [`Trivector`], then the sum of two `Trivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Screen<S, T, O>) -> Trivector<S, T, O> {
+        self + Trivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Trivector<S, T, O>> for Screen<S, T, O> {
+    type Output = Trivector<S, T, O>;
+    /// `self` as a [`Trivector`], then the sum of two `Trivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Trivector<S, T, O>) -> Trivector<S, T, O> {
+        Trivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Screen<S, T, O>> for Trivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Screen<S, T, O>) {
+        *self = *self + Trivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Screen<S, T, O>> for Trivector<S, T, O> {
+    type Output = Trivector<S, T, O>;
+    /// `rhs` as a [`Trivector`], then the difference of two `Trivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Screen<S, T, O>) -> Trivector<S, T, O> {
+        self - Trivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Trivector<S, T, O>> for Screen<S, T, O> {
+    type Output = Trivector<S, T, O>;
+    /// `self` as a [`Trivector`], then the difference of two `Trivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Trivector<S, T, O>) -> Trivector<S, T, O> {
+        Trivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Screen<S, T, O>> for Trivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Screen<S, T, O>) {
+        *self = *self - Trivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Screen<S, T, O>> for Odd<S, T, O> {
+    /// The same multivector as a [`Odd`], of the same orientation.
+    #[inline(always)]
+    fn from(x: Screen<S, T, O>) -> Self {
+        Odd { o: core::marker::PhantomData, c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Odd<(), T, O>> for Screen<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Screen<S, T, O>> for Odd<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `rhs` as a [`Odd`], then the sum of two `Odd`s.
+    #[inline(always)]
+    fn add(self, rhs: Screen<S, T, O>) -> Odd<S, T, O> {
+        self + Odd::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Odd<S, T, O>> for Screen<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `self` as a [`Odd`], then the sum of two `Odd`s.
+    #[inline(always)]
+    fn add(self, rhs: Odd<S, T, O>) -> Odd<S, T, O> {
+        Odd::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Screen<S, T, O>> for Odd<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Screen<S, T, O>) {
+        *self = *self + Odd::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Screen<S, T, O>> for Odd<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `rhs` as a [`Odd`], then the difference of two `Odd`s.
+    #[inline(always)]
+    fn sub(self, rhs: Screen<S, T, O>) -> Odd<S, T, O> {
+        self - Odd::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Odd<S, T, O>> for Screen<S, T, O> {
+    type Output = Odd<S, T, O>;
+    /// `self` as a [`Odd`], then the difference of two `Odd`s.
+    #[inline(always)]
+    fn sub(self, rhs: Odd<S, T, O>) -> Odd<S, T, O> {
+        Odd::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Screen<S, T, O>> for Odd<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Screen<S, T, O>) {
+        *self = *self - Odd::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> From<Screen<S, T, O>> for Multivector<S, T, O> {
+    /// The same multivector as a [`Multivector`], of the same orientation.
+    #[inline(always)]
+    fn from(x: Screen<S, T, O>) -> Self {
+        Multivector { o: core::marker::PhantomData, c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef, O: gx::Orientation> gx::Widen<Multivector<(), T, O>> for Screen<(), T, O> {}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Screen<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Screen<S, T, O>) -> Multivector<S, T, O> {
+        self + Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Add<Multivector<S, T, O>> for Screen<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the sum of two `Multivector`s.
+    #[inline(always)]
+    fn add(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) + rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::AddAssign<Screen<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Screen<S, T, O>) {
+        *self = *self + Multivector::from(rhs);
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Screen<S, T, O>> for Multivector<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `rhs` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Screen<S, T, O>) -> Multivector<S, T, O> {
+        self - Multivector::from(rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::Sub<Multivector<S, T, O>> for Screen<S, T, O> {
+    type Output = Multivector<S, T, O>;
+    /// `self` as a [`Multivector`], then the difference of two `Multivector`s.
+    #[inline(always)]
+    fn sub(self, rhs: Multivector<S, T, O>) -> Multivector<S, T, O> {
+        Multivector::from(self) - rhs
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> core::ops::SubAssign<Screen<S, T, O>> for Multivector<S, T, O> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Screen<S, T, O>) {
+        *self = *self - Multivector::from(rhs);
+    }
+}
 
 impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Scalar<S, T, O> {
     type Output = Scalar<S, T, O>;
@@ -1408,6 +1918,96 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for Odd<S, T, O> 
     fn undual(self) -> Odd<S, T, gx::orientation::Flip<O>> {
         let a = self.c;
         Odd { o: core::marker::PhantomData, c: [a[5], a[6], a[7], (-gx::__private::SlotArr::<S, T>(a[4])).0, a[3], (-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0, (-gx::__private::SlotArr::<S, T>(a[2])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for ScreenSlice<S, T, O> {
+    type Output = ScreenSlice<S, T, O>;
+    #[inline]
+    fn reverse(self) -> ScreenSlice<S, T, O> {
+        let a = self.c;
+        ScreenSlice { o: core::marker::PhantomData, c: [a[0], a[1]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for ScreenSlice<S, T, O> {
+    type Output = ScreenSlice<S, T, O>;
+    #[inline]
+    fn involute(self) -> ScreenSlice<S, T, O> {
+        let a = self.c;
+        ScreenSlice { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for ScreenSlice<S, T, O> {
+    type Output = ScreenSlice<S, T, O>;
+    #[inline]
+    fn conjugate(self) -> ScreenSlice<S, T, O> {
+        let a = self.c;
+        ScreenSlice { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Dual for ScreenSlice<S, T, O> {
+    type Output = Screen<S, T, gx::orientation::Flip<O>>;
+    #[inline]
+    fn dual(self) -> Screen<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Screen { o: core::marker::PhantomData, c: [a[0], a[1]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for ScreenSlice<S, T, O> {
+    type Output = Screen<S, T, gx::orientation::Flip<O>>;
+    #[inline]
+    fn undual(self) -> Screen<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        Screen { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Reverse for Screen<S, T, O> {
+    type Output = Screen<S, T, O>;
+    #[inline]
+    fn reverse(self) -> Screen<S, T, O> {
+        let a = self.c;
+        Screen { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Involute for Screen<S, T, O> {
+    type Output = Screen<S, T, O>;
+    #[inline]
+    fn involute(self) -> Screen<S, T, O> {
+        let a = self.c;
+        Screen { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Conjugate for Screen<S, T, O> {
+    type Output = Screen<S, T, O>;
+    #[inline]
+    fn conjugate(self) -> Screen<S, T, O> {
+        let a = self.c;
+        Screen { o: core::marker::PhantomData, c: [a[0], a[1]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Dual for Screen<S, T, O> {
+    type Output = ScreenSlice<S, T, gx::orientation::Flip<O>>;
+    #[inline]
+    fn dual(self) -> ScreenSlice<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        ScreenSlice { o: core::marker::PhantomData, c: [(-gx::__private::SlotArr::<S, T>(a[0])).0, (-gx::__private::SlotArr::<S, T>(a[1])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Undual for Screen<S, T, O> {
+    type Output = ScreenSlice<S, T, gx::orientation::Flip<O>>;
+    #[inline]
+    fn undual(self) -> ScreenSlice<S, T, gx::orientation::Flip<O>> {
+        let a = self.c;
+        ScreenSlice { o: core::marker::PhantomData, c: [a[0], a[1]] }
     }
 }
 

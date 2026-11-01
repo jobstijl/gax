@@ -270,6 +270,7 @@ impl AlgebraSpec {
         let mut off_diagonal: Vec<(char, char, i64)> = Vec::new();
         let mut raw_kinds: Vec<RawKind> = Vec::new();
         let mut aliases = Vec::new();
+        let mut no_multivector = false;
         while let Some(tok) = p.next() {
             let Tok::Ident(word) = tok else {
                 return Err(AlgebraError(format!(
@@ -377,6 +378,17 @@ impl AlgebraSpec {
                         orientation,
                     });
                 }
+                // `no Multivector;`: no full kind is added (ADR-022, amended 2026-11-01).
+                "no" => {
+                    let what = p.ident()?;
+                    if what != "Multivector" {
+                        return Err(AlgebraError(format!(
+                            "`no {what}`: only `no Multivector;` is known"
+                        )));
+                    }
+                    p.expect_punct(';')?;
+                    no_multivector = true;
+                }
                 other => return Err(AlgebraError(format!("unknown declaration `{other}`"))),
             }
         }
@@ -450,8 +462,11 @@ impl AlgebraSpec {
                 },
             );
         }
+        // A full kind, so that every product, dual and inverse has a kind to land in, unless
+        // the declaration opts out (a large algebra whose products all close in its kinds):
+        // then an operation whose result no declared kind holds is not generated.
         let full = algebra.blade_count();
-        if !kinds.iter().any(|k| k.layout.len() == full) {
+        if !no_multivector && !kinds.iter().any(|k| k.layout.len() == full) {
             if kinds.iter().any(|k| k.name == "Multivector") {
                 return Err(AlgebraError(
                     "a kind named `Multivector` must contain every blade".into(),
@@ -567,6 +582,22 @@ fn basis_suffix(name: &str) -> Result<char, AlgebraError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `no Multivector;` leaves the full kind out; without it, one is added.
+    #[test]
+    fn no_multivector_opts_out_of_the_full_kind() {
+        let src = |opt: &str| {
+            format!(
+                r#"algebra r3 "r"; basis e1 = 1, e2 = 1, e3 = 1; {opt} kind Vector = [e1, e2, e3];"#
+            )
+        };
+        let full = |s: &AlgebraSpec| s.kinds.iter().any(|k| k.layout.len() == 8);
+        assert!(full(&AlgebraSpec::parse(&src("")).expect("parse")));
+        assert!(!full(
+            &AlgebraSpec::parse(&src("no Multivector;")).expect("parse")
+        ));
+        assert!(AlgebraSpec::parse(&src("no Vector;")).is_err());
+    }
 
     /// A `part` is never chosen as a result type, even where it is the smallest kind that fits.
     #[test]

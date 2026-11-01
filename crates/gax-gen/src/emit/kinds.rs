@@ -372,7 +372,7 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         ] {
             let _ = write!(
                 self.out,
-                "\n    /// See [`{tr}`].\n    #[inline(always)]\n    pub fn {m}(self) -> <Self as {tr}>::Output {{\n        {tr}::{m}(self)\n    }}\n"
+                "\n    /// See [`{tr}`].\n    #[inline(always)]\n    pub fn {m}(self) -> <Self as {tr}>::Output\n    where\n        Self: {tr},\n    {{\n        {tr}::{m}(self)\n    }}\n"
             );
         }
         // The metric (Hodge) dual and its inverse, as linear maps on the blades (no pseudoscalar
@@ -976,15 +976,18 @@ impl<S: Slots, O: gx::Orientation> core::ops::Mul<{name}<S, f64, O>> for f64 {{
                     kind_literal(bn, &format!("[{}]", exprs.join(", ")))
                 );
                 // A part and a kind holding it add into the kind (`Point + Direction`), in
-                // either order, as do their differences (ADR-054, amended).
-                if !a.result && b.result {
+                // either order, as do their differences (ADR-054, amended); so does the
+                // scalar kind and every kind holding the scalar (`1 - x` for an even `x`),
+                // the one sub-kind that is not a part (ADR-054, amended 2026-11-01).
+                let scalar = a.layout.blades == [(0, 1)];
+                if (!a.result || scalar) && b.result {
                     for (tr, m, op, what) in [
                         ("Add", "add", "+", "sum"),
                         ("Sub", "sub", "-", "difference"),
                     ] {
                         let _ = write!(
                             body,
-                            "{IMPL_ALL} core::ops::{tr}<{an}<S, T, O>> for {bn}<S, T, O> {{\n    type Output = {bn}<S, T, O>;\n    /// The part `rhs` as a [`{bn}`], then the {what} of two `{bn}`s.\n    #[inline(always)]\n    fn {m}(self, rhs: {an}<S, T, O>) -> {bn}<S, T, O> {{\n        self {op} {bn}::from(rhs)\n    }}\n}}\n\n{IMPL_ALL} core::ops::{tr}<{bn}<S, T, O>> for {an}<S, T, O> {{\n    type Output = {bn}<S, T, O>;\n    /// `self` as a [`{bn}`], then the {what} of two `{bn}`s.\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S, T, O>) -> {bn}<S, T, O> {{\n        {bn}::from(self) {op} rhs\n    }}\n}}\n\n{IMPL_ALL} core::ops::{tr}Assign<{an}<S, T, O>> for {bn}<S, T, O> {{\n    #[inline(always)]\n    fn {m}_assign(&mut self, rhs: {an}<S, T, O>) {{\n        *self = *self {op} {bn}::from(rhs);\n    }}\n}}\n\n"
+                            "{IMPL_ALL} core::ops::{tr}<{an}<S, T, O>> for {bn}<S, T, O> {{\n    type Output = {bn}<S, T, O>;\n    /// `rhs` as a [`{bn}`], then the {what} of two `{bn}`s.\n    #[inline(always)]\n    fn {m}(self, rhs: {an}<S, T, O>) -> {bn}<S, T, O> {{\n        self {op} {bn}::from(rhs)\n    }}\n}}\n\n{IMPL_ALL} core::ops::{tr}<{bn}<S, T, O>> for {an}<S, T, O> {{\n    type Output = {bn}<S, T, O>;\n    /// `self` as a [`{bn}`], then the {what} of two `{bn}`s.\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S, T, O>) -> {bn}<S, T, O> {{\n        {bn}::from(self) {op} rhs\n    }}\n}}\n\n{IMPL_ALL} core::ops::{tr}Assign<{an}<S, T, O>> for {bn}<S, T, O> {{\n    #[inline(always)]\n    fn {m}_assign(&mut self, rhs: {an}<S, T, O>) {{\n        *self = *self {op} {bn}::from(rhs);\n    }}\n}}\n\n"
                         );
                     }
                 }

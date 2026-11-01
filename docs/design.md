@@ -626,6 +626,18 @@ highlight. `gax-regen --check` also reports part files no longer generated.
 * **Build time.** The generator runs inside the proc macro. Unoptimized it is slow, so the workspace sets
   `[profile.dev.build-override] opt-level = 3`, and the macro documents the same setting for users.
   Re-expanding STAP (5D) and CSTA (6D) then takes about 6 s.
+* *Amended (2026-11-01, Phase 13): `no Multivector;`.* A declaration without a full kind got
+  one, so that every product, dual and inverse had a kind to land in. A large algebra whose
+  operations close in its declared kinds pays for the full kind's products (numga's particle
+  charges, 9D, found it; that port uses the multivector and keeps it). `no Multivector;` leaves
+  it out; an operation whose result no declared kind holds is then not generated (the generator's
+  `expect("a full kind exists")` became a skip, and the unary methods gained the bound that
+  says so), and using it is the trait's compile error. Tested on a 3D algebra of vectors and
+  rotors alone (`tests/macro_algebras.rs`). Also: `angle_between` on every vector kind of an
+  algebra whose metric is positive semidefinite, `atan2(‖a ∧ b‖, a · b)`, generated from the
+  products (the hand-written VGA ones retired), so an `algebra!` of such a signature has it and
+  PGA's planes and lines measure the angle between their normals; not where a square is negative,
+  where it is not an angle.
 
 ## ADR-023: Runtime-dispatched batch kernels (`batch`)
 *Status: accepted, implemented (`gax-core/src/batch`). See [batch.md](batch.md).*
@@ -2433,6 +2445,26 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
     (`Vector` is a direction, `Bivector` a plane), and each name says what the kind is in its
     library's reading; renaming gax's to numga's would call horizontal vectors tilts. The guide
     (§17) gives the correspondence.
+* *Amended (2026-11-01, Phase 13): the scalar's sums, and STA's screen.*
+  * **The scalar adds into the kinds holding it.** `Scalar - Even` needed a cast (kerr's
+    `1 − observer t`, written `Scalar::new(1.0).cast::<Even>() - …`). The objection above,
+    that added `Add` impls make `x + y.into()` and `x + y.with_orientation()` ambiguous, was
+    measured: the repository (gax's tests, the 166 numga ports, warp) has no such sum with a
+    kind holding the scalar on either side, while `1 ± x` is common. So the scalar kind is
+    treated as a part of each kind holding the scalar blade: `Add`, `Sub` in both orders and
+    `AddAssign`, `SubAssign`, landing in the kind (about 400 generated lines per algebra). Not
+    every sub-kind (`Bivector + Even`): that adds an impl per nested pair (some sixty in PGA3D),
+    each making the bigger kind's sums with `.into()` ambiguous, for sums the ports did not
+    write; those keep `.cast::<Even>()`.
+  * **STA's screen.** numga's kerr types a camera's frame `Antivector <- Screen` and the
+    light's coherency `Screen <- ScreenSlice`, with `Screen` the antivectors containing `t z`
+    (`e234, e314`, the directions `X`, `Y`) and `ScreenSlice` the vectors within `x y`
+    (`e1, e2`), complements of each other. As parts they would add 29 % to STA (44.9 k to
+    57.9 k lines, 606 to 896 product impls); as `slot`s 6.5 % (47.9 k), and the port uses them
+    as slots: the frame is `intrinsic::Trivector<(Screen,)>` (8 coefficients where the port
+    had a 16-coefficient map on every direction), the coherency
+    `intrinsic::Trivector<(ScreenSlice,)>`, its polarization read back through
+    `.cast::<Trivector>()`. Kerr's checks against numga hold at their tolerances.
 
 ## ADR-055: STA as `x+y+z+t-`
 *Status: implemented (2026-10-31). Amends ADR-024. Phase 13.*

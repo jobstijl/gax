@@ -49,14 +49,20 @@ fn a_polarity_carries_joins_to_meets() {
 fn a_map_from_planes_to_points_carries_meets_to_joins() {
     // Back the other way: the inverse of the polarity, from planes to points.
     let c: pga3d::Point<(pga3d::Plane,)> = polarity().inverse();
-    let (a, b) = (pga3d::Plane::new(1.0, 0.0, 0.5, -1.0), pga3d::Plane::new(0.0, 1.0, 1.0, 2.0));
+    let (a, b) = (
+        pga3d::Plane::new(1.0, 0.0, 0.5, -1.0),
+        pga3d::Plane::new(0.0, 1.0, 1.0, 2.0),
+    );
     let on_lines = c.outermorphism::<pga3d::Line>();
     assert!(on_lines.of(a ^ b).approx_eq(&(c.of(a) & c.of(b)), 1e-12));
 }
 
 /// PGA2D's normal modes (numga's `mechanics/modes`): a stiffness and an inertia from twists to
 /// forques, both correlations.
-fn stiffness_and_inertia() -> (pga2d::Forque<(pga2d::Twist,)>, pga2d::Forque<(pga2d::Twist,)>) {
+fn stiffness_and_inertia() -> (
+    pga2d::Forque<(pga2d::Twist,)>,
+    pga2d::Forque<(pga2d::Twist,)>,
+) {
     let mut k = pga2d::Forque::<(pga2d::Twist,)>::zero();
     for (l, w) in [
         (pga2d::Forque::new(1.0, 0.0, 0.5), 2.0),
@@ -65,7 +71,11 @@ fn stiffness_and_inertia() -> (pga2d::Forque<(pga2d::Twist,)>, pga2d::Forque<(pg
     ] {
         k += (l * (l & pga2d::Twist::slot())).gp(w);
     }
-    let points = [pga2d::Point::xy(1.0, 0.0), pga2d::Point::xy(-1.0, 0.5), pga2d::Point::xy(0.0, -1.0)];
+    let points = [
+        pga2d::Point::xy(1.0, 0.0),
+        pga2d::Point::xy(-1.0, 0.5),
+        pga2d::Point::xy(0.0, -1.0),
+    ];
     let m = points
         .iter()
         .zip([1.0, 2.0, 0.5])

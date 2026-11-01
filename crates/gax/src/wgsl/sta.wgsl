@@ -55,6 +55,16 @@ struct Odd {
     c1: vec4<f32>,
 }
 
+// `ScreenSlice`: [e1, e2]
+struct ScreenSlice {
+    c0: vec4<f32>,
+}
+
+// `Screen`: [e234, e314]
+struct Screen {
+    c0: vec4<f32>,
+}
+
 // `Multivector`: [1, e1, e2, e3, e4, e23, e31, e12, e14, e24, e34, e123, e234, e314, e124, e1234]
 struct Multivector {
     c0: vec4<f32>,
@@ -109,6 +119,16 @@ fn even_new(s: f32, e23: f32, e31: f32, e12: f32, e14: f32, e24: f32, e34: f32, 
 // A `Odd` from its coefficients.
 fn odd_new(e1: f32, e2: f32, e3: f32, e4: f32, e123: f32, e234: f32, e314: f32, e124: f32) -> Odd {
     return Odd(vec4<f32>(e1, e2, e3, e4), vec4<f32>(e123, e234, e314, e124));
+}
+
+// A `ScreenSlice` from its coefficients.
+fn screen_slice_new(e1: f32, e2: f32) -> ScreenSlice {
+    return ScreenSlice(vec4<f32>(e1, e2, 0.0, 0.0));
+}
+
+// A `Screen` from its coefficients.
+fn screen_new(e234: f32, e314: f32) -> Screen {
+    return Screen(vec4<f32>(e234, e314, 0.0, 0.0));
 }
 
 // A `Multivector` from its coefficients.
@@ -179,6 +199,18 @@ fn odd_reverse(x: Odd) -> Odd {
     let t2 = -x.c1.z;
     let t3 = -x.c1.w;
     return Odd(vec4<f32>(x.c0.x, x.c0.y, x.c0.z, x.c0.w), vec4<f32>(t0, t1, t2, t3));
+}
+
+// The reverse `~x`.
+fn screen_slice_reverse(x: ScreenSlice) -> ScreenSlice {
+    return ScreenSlice(vec4<f32>(x.c0.x, x.c0.y, 0.0, 0.0));
+}
+
+// The reverse `~x`.
+fn screen_reverse(x: Screen) -> Screen {
+    let t0 = -x.c0.x;
+    let t1 = -x.c0.y;
+    return Screen(vec4<f32>(t0, t1, 0.0, 0.0));
 }
 
 // The reverse `~x`.
@@ -1408,6 +1440,68 @@ fn odd_renormalize_fast(x: Odd) -> Odd {
     let t115 = t114 * (1.0 / 2.0);
     let t117 = fma(-t74, (3.0 / 2.0), t115);
     return Odd(vec4<f32>(t86, t89, t93, t96), vec4<f32>(t100, t110, t113, t117));
+}
+
+// The squared norm: the scalar part of `x ~x`.
+fn screen_slice_norm_squared(x: ScreenSlice) -> f32 {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    return t2;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn screen_slice_normalized(x: ScreenSlice) -> ScreenSlice {
+    let p1 = x.c0.y * x.c0.y;
+    let p2 = fma(x.c0.x, x.c0.x, p1);
+    let s0 = study_rsqrt_abs(p2);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return ScreenSlice(vec4<f32>(t0, t1, 0.0, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn screen_slice_renormalize_fast(x: ScreenSlice) -> ScreenSlice {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    let t3 = x.c0.x * t2;
+    let t4 = x.c0.y * t2;
+    let t6 = x.c0.x * (3.0 / 2.0);
+    let t7 = fma(-t3, (1.0 / 2.0), t6);
+    let t9 = x.c0.y * (3.0 / 2.0);
+    let t10 = fma(-t4, (1.0 / 2.0), t9);
+    return ScreenSlice(vec4<f32>(t7, t10, 0.0, 0.0));
+}
+
+// The squared norm: the scalar part of `x ~x`.
+fn screen_norm_squared(x: Screen) -> f32 {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    let t3 = -t2;
+    return t3;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn screen_normalized(x: Screen) -> Screen {
+    let p1 = x.c0.y * x.c0.y;
+    let p2 = fma(x.c0.x, x.c0.x, p1);
+    let p3 = -p2;
+    let s0 = study_rsqrt_abs(p3);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return Screen(vec4<f32>(t0, t1, 0.0, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
+fn screen_renormalize_fast(x: Screen) -> Screen {
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = fma(x.c0.x, x.c0.x, t1);
+    let t3 = x.c0.x * t2;
+    let t4 = x.c0.y * t2;
+    let t6 = x.c0.x * (3.0 / 2.0);
+    let t7 = fma(t3, (1.0 / 2.0), t6);
+    let t9 = x.c0.y * (3.0 / 2.0);
+    let t10 = fma(t4, (1.0 / 2.0), t9);
+    return Screen(vec4<f32>(t7, t10, 0.0, 0.0));
 }
 
 // The squared norm: the scalar part of `x ~x`.

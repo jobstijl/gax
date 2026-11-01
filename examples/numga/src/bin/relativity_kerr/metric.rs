@@ -16,7 +16,7 @@ use crate::kerr::{
     camera_up, clock, field, gauge, gauge_inverse, overlap_gradient, read, screen_frame, space,
     squared, t, time, unit_length,
 };
-use gax::sta::{Even, Scalar, Vector, intrinsic};
+use gax::sta::{Scalar, Screen, Vector, intrinsic};
 
 /// The metric: from a direction to its covector, numga's `Vector <- Antivector`.
 pub type Metric = Vector<(D,)>;
@@ -113,8 +113,8 @@ pub fn christoffel(geometry: &Field, along: D, direction: D) -> D {
 /// The screen frame's two axes, its images of `X` and `Y`.
 pub fn screen_axes(screen: ScreenFrame) -> [D; 2] {
     [
-        screen.of(crate::kerr::along_x()),
-        screen.of(crate::kerr::along_y()),
+        screen.of(Screen::new(1.0, 0.0)),
+        screen.of(Screen::new(0.0, 1.0)),
     ]
 }
 
@@ -185,7 +185,7 @@ pub fn initial_momentum(position: D, direction: D, hole: Hole) -> V {
 pub fn camera_boost(geometry: &Field) -> Rotor {
     let observer =
         source_components(geometry).of(time()) * proper_squared(geometry, time()).sqrt().recip();
-    (Scalar::new(1.0).cast::<Even>() - observer * time()).unit()
+    (Scalar::new(1.0) - observer * time()).unit()
 }
 
 /// Pixel-centre rays of a coordinate-static camera, as [`crate::kerr::camera_rays`], their

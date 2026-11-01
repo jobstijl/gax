@@ -8,6 +8,61 @@ use crate::table::{BinOp, UnOp, binop_support, binop_table, unop_support, unop_t
 use std::fmt::Write as _;
 
 impl Emitter<'_> {
+    /// `angle_between` on the vector kinds of an algebra whose metric is positive semidefinite
+    /// (VGA, PGA, and such `algebra!` declarations), from the products already emitted.
+    pub(super) fn angles(&mut self) {
+        let alg = &self.spec.algebra;
+        let n = alg.dim();
+        let squares: Vec<i64> = (0..n).map(|i| alg.metric()[i][i]).collect();
+        if !alg.is_diagonal() || squares.iter().any(|&q| q < 0) || squares.iter().all(|&q| q == 0) {
+            return;
+        }
+        for k in
+            self.spec.kinds.iter().filter(|k| {
+                k.operand && k.layout.len() >= 2 && k.layout.grades().iter().eq([1].iter())
+            })
+        {
+            let product = |op: BinOp| {
+                self.stats
+                    .products
+                    .iter()
+                    .find(|(o, a, b, _)| *o == op && *a == k.name && *b == k.name)
+                    .map(|(_, _, _, c)| c.clone())
+            };
+            let (Some(wedge), Some(_)) = (product(BinOp::Wedge), product(BinOp::Dot)) else {
+                continue;
+            };
+            let normed = self
+                .spec
+                .kinds
+                .iter()
+                .zip(&self.stats.values)
+                .any(|(c, meta)| c.name == wedge && meta.norm);
+            if !normed {
+                continue;
+            }
+            let name = &k.name;
+            let _ = write!(
+                self.out,
+                r"impl<T: Real, O: gx::Orientation> {name}<(), T, O> {{
+    /// The angle between this vector and `other`, in `[0, π]`: `atan2` of the norm of their
+    /// outer product (the sine, the area they span) and their inner product (the cosine),
+    /// scaled alike, so no normalizing is needed and the angle is well conditioned at every
+    /// angle (an arc cosine of the normalized inner product loses half the digits near 0 and
+    /// π). Generated for the vectors of every algebra whose metric is positive semidefinite
+    /// (VGA, PGA, or an `algebra!` of such a signature); in PGA it is the angle between the
+    /// normals of two planes (or lines).
+    #[inline]
+    pub fn angle_between(self, other: Self) -> T {{
+        (self ^ other).norm().atan2((self | other).s())
+    }}
+}}
+
+"
+            );
+        }
+    }
+
     /// `a / b = a b⁻¹` for every value `b` with a closed-form inverse whose product with `a`
     /// exists (after the binary products, whose list it reads).
     pub(super) fn divisions(&mut self) {
@@ -46,11 +101,10 @@ impl Emitter<'_> {
         if support.is_empty() {
             return;
         }
-        let out = self
-            .spec
-            .result_kind(&support, &[a, b])
-            .expect("a full kind exists")
-            .clone();
+        // No declared kind holds the result (an algebra with `no Multivector`): no impl.
+        let Some(out) = self.spec.result_kind(&support, &[a, b]).cloned() else {
+            return;
+        };
         let table = binop_table(alg, op, &a.layout, &b.layout, &out.layout);
         let (tr, m, _) = op.names();
         let (an, bn, on) = (&a.name, &b.name, &out.name);
@@ -140,11 +194,9 @@ impl Emitter<'_> {
     pub(super) fn unary(&mut self, op: UnOp, k: &KindSpec) {
         let alg = &self.spec.algebra;
         let support = unop_support(alg, op, &k.layout);
-        let out = self
-            .spec
-            .result_kind(&support, &[k])
-            .expect("a full kind exists")
-            .clone();
+        let Some(out) = self.spec.result_kind(&support, &[k]).cloned() else {
+            return;
+        };
         let table = unop_table(alg, op, &k.layout, &out.layout);
         self.stats
             .unary

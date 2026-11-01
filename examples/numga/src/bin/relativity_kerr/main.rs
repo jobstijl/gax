@@ -32,9 +32,9 @@
 //! polarization. numga's GPU variant renders the same camera in a WGSL shader; the CPU canvas
 //! stands in for it, and its shader tests are not ported.
 //!
-//! Differences from numga: gax's STA has no kinds for numga's screen directions and slices
-//! (`X Y` and `x y`), so the camera's screen frame is a map on every direction that reads only
-//! `x` and `y`, and the coherency one on vectors; numga's batched loops become one loop per ray;
+//! Differences from numga: numga's screen directions and slices (`X Y` and `x y`) are STA's slot
+//! declarations `Screen` and `ScreenSlice`, which take part in no product, so the coherency's
+//! output and the polarization are held as trivectors; numga's batched loops become one loop per ray;
 //! the colours of the disk are gax-colour's Planckian locus at the visible luminance of
 //! Planck's law (numga integrates the spectrum against the CIE matching functions), and the
 //! sky is a star catalogue looked up by direction rather than a texture. Reference: Pelle et

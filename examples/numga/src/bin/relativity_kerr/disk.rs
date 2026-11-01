@@ -6,17 +6,17 @@ use crate::kerr::{
     B, D, Field, Hole, RayState, ScreenFrame, Step, V, field, local, proper_squared, rates, read,
     space, squared, t, time, x, y,
 };
-use gax::sta::{Vector, intrinsic};
+use gax::sta::{ScreenSlice, Vector, intrinsic};
 
-/// The light's polarization covariance, from the slices that read the screen to screen
-/// directions (numga's `Screen <- ScreenSlice`): a map from vectors that reads only their `x`
-/// and `y` parts, to directions with only `X` and `Y` parts.
-pub type Coherency = intrinsic::Trivector<(V,)>;
+/// The light's polarization covariance, from the slices that read the screen (STA's slot
+/// `ScreenSlice`, `x` and `y`) to directions with only `X` and `Y` parts (numga's `Screen <-
+/// ScreenSlice`, its output held as a trivector, through which a slot's products go).
+pub type Coherency = intrinsic::Trivector<(ScreenSlice,)>;
 
-/// The camera's slices `x` and `y`, which read screen directions (numga's `ScreenSlice`): the
-/// projection of a vector onto them.
-pub fn screen_slice() -> Vector<(V,)> {
-    x() * (x() | V::slot()) + y() * (y() | V::slot())
+/// The camera's slices `x` and `y`, which read screen directions (numga's `ScreenSlice`), as
+/// vectors.
+pub fn screen_slice() -> Vector<(ScreenSlice,)> {
+    ScreenSlice::slot().cast::<Vector>()
 }
 
 /// Unit-intensity disk emission resolved along the transported camera axes; `normal` is the
@@ -37,7 +37,10 @@ pub fn disk_coherency(
     // square to the ray.
     let meridian = space(event).hodge() ^ normal;
     let polarization_axis = meridian.commutator(direction) * meridian.norm().recip();
-    let polarization = screen.adjoint().of(polarization_axis);
+    let polarization = screen
+        .adjoint()
+        .of(polarization_axis)
+        .cast::<intrinsic::Trivector>();
     // Polarization vanishes smoothly when looking along the magnetic direction.
     let polarized_fraction = polarization_degree * squared(polarization);
     // Unpolarized light is round, where the metric enters; the polarized part weights the
@@ -49,7 +52,7 @@ pub fn disk_coherency(
 /// The power a unit analyzer passes, an analyzer being the slice that reads the screen
 /// across its axis's normal: its reading of the coherency's image of itself.
 pub fn transmitted(coherency: Coherency, analyzer: V) -> f64 {
-    (analyzer & coherency.of(analyzer)).s()
+    (analyzer & coherency.of(analyzer.cast::<ScreenSlice>())).s()
 }
 
 /// The frequency a camera at rest at `camera` sees, over the one emitted by gas on a
@@ -293,6 +296,7 @@ pub mod tests {
         Ray, along_x, along_y, along_z, camera_rates, camera_rays, camera_screen, camera_trace,
         initial_momentum, xy, z,
     };
+    use gax::sta::Screen;
     use gax_numga_examples::signal::wave;
 
     /// The share of each pixel's light the disk and the sky take.
@@ -534,8 +538,12 @@ pub mod tests {
         ];
         for k in 0..4 {
             assert!(((first.momentum & directions()[k]).s() - momentum[k]).abs() < ROUND_OFF);
-            assert!((read(slices()[k], screen.of(along_x())) - right[k]).abs() < ROUND_OFF);
-            assert!((read(slices()[k], screen.of(along_y())) - up[k]).abs() < ROUND_OFF);
+            assert!(
+                (read(slices()[k], screen.of(Screen::new(1.0, 0.0))) - right[k]).abs() < ROUND_OFF
+            );
+            assert!(
+                (read(slices()[k], screen.of(Screen::new(0.0, 1.0))) - up[k]).abs() < ROUND_OFF
+            );
         }
 
         let hole = Hole::about_z(0.8, 1.0);

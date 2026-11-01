@@ -1482,17 +1482,8 @@ mod vga2d_extras {
             (self ^ other).e12().atan2((self | other).s())
         }
 
-        /// The angle between this vector and `other`, in `[0, π]`: the size of
-        /// [`angle_to`](Self::angle_to), as in every dimension.
-        ///
-        /// ```
-        /// use gax::vga2d::Vector;
-        /// let (a, b) = (Vector::<(), f64>::new(2.0, 0.0), Vector::new(-1.0, -1.0));
-        /// assert!((a.angle_between(b) - 3.0 * std::f64::consts::FRAC_PI_4).abs() < 1e-15);
-        /// ```
-        pub fn angle_between(self, other: Self) -> T {
-            (self ^ other).e12().abs().atan2((self | other).s())
-        }
+        // `angle_between`, the size of `angle_to`, is generated for the vectors of every
+        // algebra of a positive semidefinite metric.
     }
 }
 
@@ -1500,7 +1491,7 @@ mod vga2d_extras {
 /// rotors: about an axis, between two vectors or planes, and interpolated.
 #[cfg(feature = "vga3d")]
 mod vga3d_extras {
-    use crate::vga3d::{Bivector, Rotor, Vector, oriented};
+    use crate::vga3d::{Bivector, Rotor, oriented};
     use crate::{Real, Unit};
 
     impl<T: Real> Rotor<(), T> {
@@ -1580,22 +1571,8 @@ mod vga3d_extras {
         }
     }
 
-    impl<T: Real> Vector<(), T> {
-        /// The angle between this vector and `other`, in `[0, π]`: `atan2` of the norm of their
-        /// outer product (the sine, the area they span) and their inner product (the cosine),
-        /// scaled alike, so no normalizing is needed and the angle is well conditioned at every
-        /// angle (an arc cosine of the normalized inner product loses half the digits near 0
-        /// and π).
-        ///
-        /// ```
-        /// use gax::vga3d::Vector;
-        /// let (a, b) = (Vector::<(), f64>::new(1.0, 0.0, 0.0), Vector::new(1.0, 1.0, 0.0));
-        /// assert!((a.angle_between(b) - std::f64::consts::FRAC_PI_4).abs() < 1e-15);
-        /// ```
-        pub fn angle_between(self, other: Self) -> T {
-            (self ^ other).norm().atan2((self | other).s())
-        }
-    }
+    // `angle_between` on vectors is generated (for every algebra of a positive semidefinite
+    // metric).
 }
 
 #[cfg(any(feature = "cga2d", feature = "cga3d"))]

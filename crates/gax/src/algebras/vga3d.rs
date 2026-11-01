@@ -125,7 +125,8 @@ pub mod extrinsic {
 pub mod oriented {
 use super::gx;
 
-include!("vga3d/kinds.rs");
+include!("vga3d/kinds_1.rs");
+include!("vga3d/kinds_2.rs");
 include!("vga3d/products_gp.rs");
 include!("vga3d/products_wedge.rs");
 include!("vga3d/products_vee.rs");

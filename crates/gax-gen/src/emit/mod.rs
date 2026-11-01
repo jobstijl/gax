@@ -269,6 +269,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     e.part("conversions");
     e.divisions();
     e.embeddings();
+    e.angles();
     for k in &spec.kinds {
         for op in UnOp::ALL {
             e.unary(op, k);

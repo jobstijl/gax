@@ -58,7 +58,10 @@ fn motions_carry_over() {
     // A reflection too (odd versor, intrinsic passenger, ADR-051's `>>`).
     let l = pga2d::Line::new(0.6, 0.8, -1.0);
     let mirrored: pga3d::Point = (l >> p).include();
-    assert!(mirrored.approx_eq(&(l.include::<pga3d::Plane>() >> p.include::<pga3d::Point>()), 1e-15));
+    assert!(mirrored.approx_eq(
+        &(l.include::<pga3d::Plane>() >> p.include::<pga3d::Point>()),
+        1e-15
+    ));
 }
 
 #[test]

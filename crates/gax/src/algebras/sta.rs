@@ -57,6 +57,18 @@ pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Extrinsic>;
 /// [`intrinsic::Odd`] and [`extrinsic::Odd`] name either one.
 pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
 
+#[doc = "The slices `x` and `y` that read a screen's directions (numga's `ScreenSlice`, the vectors within `x y`): a camera's screen across `z`. A slot: for maps and forms; its products go through `Vector`. It pairs with `Screen`, its complement."]
+///
+/// In its default orientation, extrinsic: [`oriented::ScreenSlice`] is the kind for any orientation,
+/// [`intrinsic::ScreenSlice`] and [`extrinsic::ScreenSlice`] name either one.
+pub type ScreenSlice<S = (), T = f64> = oriented::ScreenSlice<S, T, gx::Extrinsic>;
+
+#[doc = "A screen's two directions, the duals of `x` and `y` (numga's `Screen`, the antivectors containing `t z`). A slot: for maps on the screen (a camera's frame, `Trivector <- Screen`); its products go through `Trivector`."]
+///
+/// In its default orientation, intrinsic: [`oriented::Screen`] is the kind for any orientation,
+/// [`intrinsic::Screen`] and [`extrinsic::Screen`] name either one.
+pub type Screen<S = (), T = f64> = oriented::Screen<S, T, gx::Intrinsic>;
+
 #[doc = "A general multivector."]
 ///
 /// In its default orientation, extrinsic: [`oriented::Multivector`] is the kind for any orientation,
@@ -83,6 +95,10 @@ pub mod intrinsic {
     pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Intrinsic>;
     /// [`oriented::Odd`], intrinsic.
     pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Intrinsic>;
+    /// [`oriented::ScreenSlice`], intrinsic.
+    pub type ScreenSlice<S = (), T = f64> = oriented::ScreenSlice<S, T, gx::Intrinsic>;
+    /// [`oriented::Screen`], intrinsic.
+    pub type Screen<S = (), T = f64> = oriented::Screen<S, T, gx::Intrinsic>;
     /// [`oriented::Multivector`], intrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Intrinsic>;
 }
@@ -107,6 +123,10 @@ pub mod extrinsic {
     pub type Even<S = (), T = f64> = oriented::Even<S, T, gx::Extrinsic>;
     /// [`oriented::Odd`], extrinsic.
     pub type Odd<S = (), T = f64> = oriented::Odd<S, T, gx::Extrinsic>;
+    /// [`oriented::ScreenSlice`], extrinsic.
+    pub type ScreenSlice<S = (), T = f64> = oriented::ScreenSlice<S, T, gx::Extrinsic>;
+    /// [`oriented::Screen`], extrinsic.
+    pub type Screen<S = (), T = f64> = oriented::Screen<S, T, gx::Extrinsic>;
     /// [`oriented::Multivector`], extrinsic.
     pub type Multivector<S = (), T = f64> = oriented::Multivector<S, T, gx::Extrinsic>;
 }
@@ -116,7 +136,8 @@ pub mod extrinsic {
 pub mod oriented {
 use super::gx;
 
-include!("sta/kinds.rs");
+include!("sta/kinds_1.rs");
+include!("sta/kinds_2.rs");
 include!("sta/products_gp.rs");
 include!("sta/products_wedge.rs");
 include!("sta/products_vee.rs");

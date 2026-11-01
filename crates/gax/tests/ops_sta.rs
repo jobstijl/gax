@@ -730,6 +730,8 @@ fn reverse() {
     un::<Phasor<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Even<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Odd<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
+    un::<ScreenSlice<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
+    un::<Screen<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Multivector<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
 }
 
@@ -745,6 +747,8 @@ fn involute() {
     un::<Phasor<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Even<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Odd<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
+    un::<ScreenSlice<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
+    un::<Screen<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Multivector<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
 }
 
@@ -760,6 +764,8 @@ fn conjugate() {
     un::<Phasor<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Even<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Odd<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
+    un::<ScreenSlice<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
+    un::<Screen<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Multivector<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
 }
 
@@ -775,6 +781,8 @@ fn dual() {
     un::<Phasor<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Even<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Odd<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
+    un::<ScreenSlice<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
+    un::<Screen<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Multivector<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
 }
 
@@ -790,6 +798,8 @@ fn undual() {
     un::<Phasor<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Even<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Odd<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
+    un::<ScreenSlice<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
+    un::<Screen<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Multivector<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
 }
 
@@ -815,6 +825,10 @@ fn value_methods() {
     common::sqrt::<extrinsic::Even<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
     common::inverse::<Odd<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Odd<(), f64>>(&o, &mut rng, |x| x.normalized());
+    common::inverse::<ScreenSlice<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<ScreenSlice<(), f64>>(&o, &mut rng, |x| x.normalized());
+    common::inverse::<Screen<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Screen<(), f64>>(&o, &mut rng, |x| x.normalized());
     common::inverse::<Multivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
 }
 

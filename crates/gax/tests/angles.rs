@@ -118,3 +118,35 @@ fn finite_values_and_maps() {
     }
     assert!(vga2d::Vector::<(), f32>::new(f32::MAX, f32::MIN).is_finite());
 }
+
+#[cfg(feature = "macros")]
+gax::algebra! {
+    algebra r4 "Euclidean four-space, `R(4,0)`.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4];
+    kind Bivector = [e12, e13, e14, e23, e24, e34];
+}
+
+/// `angle_between` is generated for the vectors of every algebra of a positive semidefinite
+/// metric: an `algebra!` of four dimensions (where the ports read angles through VGA or PGA
+/// values before), and PGA's planes and lines (the angle between their normals).
+#[cfg(feature = "macros")]
+#[test]
+fn angle_between_in_custom_and_projective_algebras() {
+    let (a, b) = (
+        r4::Vector::<(), f64>::new(1.0, 0.0, 0.0, 1.0),
+        r4::Vector::new(0.0, 2.0, 0.0, 2.0),
+    );
+    assert!((a.angle_between(b) - PI / 3.0).abs() < 1e-15);
+    let (p, q) = (
+        pga3d::Plane::<(), f64>::new(1.0, 0.0, 0.0, 5.0),
+        pga3d::Plane::new(1.0, 1.0, 0.0, -2.0),
+    );
+    assert!((p.angle_between(q) - PI / 4.0).abs() < 1e-15);
+    let (l, m) = (
+        pga2d::Line::<(), f64>::new(0.0, 1.0, 3.0),
+        pga2d::Line::new(0.0, -2.0, 1.0),
+    );
+    assert!((l.angle_between(m) - PI).abs() < 1e-15);
+}

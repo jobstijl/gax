@@ -723,9 +723,18 @@ gax::algebra! {
   `Point`. A `slot` is a part that takes part in no product or sandwich (it costs no product
   tables): casts, constructors, slots, maps and forms on it, binding, its unary operations and
   its sums with the kinds holding it; its products go through such a kind
-  (`Spin::from(tilt) ^ plane`). `Scalar` and a full `Multivector` are added if you leave them
-  out.
-* **Parts in the standard algebras.** PGA2D and PGA3D have `Direction`, the ideal points
+  (`Spin::from(tilt) ^ plane`). The scalar kind adds into every kind holding the scalar too,
+  `Scalar::new(1.0) - even` with no cast. `Scalar` and a full `Multivector` are added if you
+  leave them out; `no Multivector;` leaves the full kind out (an algebra of 8 or 9 dimensions
+  whose products close in its declared kinds compiles faster without it), and then an
+  operation whose result no declared kind holds is not generated.
+* **Angles.** In an algebra whose metric is positive semidefinite (Euclidean, or degenerate as
+  PGA), every vector kind has `a.angle_between(b)`, `atan2(‖a ∧ b‖, a · b)` in `[0, π]` (in PGA
+  the angle between the normals of two planes or lines).
+* **Parts in the standard algebras.** STA has the slots `ScreenSlice` (`e1, e2`, the slices
+  `x` and `y`) and its complement `Screen` (`e234, e314`, the directions `X` and `Y`), numga's
+  camera screen across `z`: a camera's frame is a `Trivector <- Screen`
+  (`intrinsic::Trivector::<(Screen,)>::from_images([right, up])`). PGA2D and PGA3D have `Direction`, the ideal points
   (`point.cast::<Direction>()` drops the weight, `Direction::slot()` is a map that takes only
   directions), and their complements, PGA3D's `OriginPlane` (`e1, e2, e3`) and PGA2D's
   `OriginLine` (`e1, e2`), so that a stretch of directions has its adjugate on planes through
@@ -1285,6 +1294,12 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   default orientation; `x.cast::<K>()` and `x.into()` keep `x`'s. `K` names only the kind, so
   `let f: Forque = x.cast()` cannot infer it: name the kind (`x.cast::<Line>()`, intrinsic when
   `x` is), or relabel with `with_orientation()`.
+* **An alias's defaults apply in types, not in paths.** `let id = State::slot();` through an
+  alias `State<S = (), T = f64>` leaves `T` to inference (Rust applies a type alias's defaults in
+  type position only, and a `let` with nothing to read `T` from fails); `<State>::slot()` and
+  `<State>::zero()` name the type, defaults included, and so does an annotation
+  (`let id: State<(State,)> = State::slot();`). Constructors with arguments (`State::new(1.0,
+  …)`) infer `f64` from the literals.
 * **`f32`.** The default coefficient type is `f64`, which float literals infer too; GPU and
   game code that wants `f32` names it (`Point<(), f32>`), and slot lists name kinds bare
   (`Point<(Point,), f32>` is an `f32` map on points).
