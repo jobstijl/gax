@@ -255,7 +255,7 @@ jobs:
         run: |
           set -o pipefail
           cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck 2>&1 | tee clippy.log || {
-            grep -E -A6 "^error|panicked" clippy.log | head -60 | sed 's/^/::error::/'
+            sed 's/\x1b\[[0-9;]*m//g' clippy.log | grep -E -A6 "^(error|warning)|panicked" | head -60 | sed 's/^/::error::/'
             exit 1
           }
       - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace,gax/batch,gax/wgsl,gax/bytemuck

@@ -4,7 +4,7 @@
 
 use crate::kerr::{
     B, D, Field, Hole, RayState, ScreenFrame, Step, V, field, local, proper_squared, rates, read,
-    space, squared, t, time, x, y,
+    space, squared, t, time,
 };
 use gax::sta::{ScreenSlice, Vector, intrinsic};
 
@@ -294,7 +294,7 @@ pub mod tests {
     use crate::kerr::tests::ROUND_OFF;
     use crate::kerr::{
         Ray, along_x, along_y, along_z, camera_rates, camera_rays, camera_screen, camera_trace,
-        initial_momentum, xy, z,
+        initial_momentum, x, xy, y, z,
     };
     use gax::sta::Screen;
     use gax_numga_examples::signal::wave;
