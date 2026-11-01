@@ -8,6 +8,6 @@ error[E0277]: cannot add `gax::pga3d::oriented::Line<(), {float}, Intrinsic>` to
   = help: `gax::pga3d::oriented::Line<S, T, O>` implements trait `Add<Rhs>`:
             Add<Moment<S, T, O>>
             Add<Spin<S, T, O>>
-            Add<Tilt<S, T, O>>
             Add<TiltMoment<S, T, O>>
+            Add<gax::pga3d::oriented::Tilt<S, T, O>>
             Add

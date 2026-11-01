@@ -26,7 +26,8 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
-      # Compile-fail messages are pinned for the current stable compiler only.
+      # Compile-fail messages are pinned for the current stable compiler only, with every
+      # algebra enabled (the all-algebras step runs them; `tests/compile_fail.rs`).
       # On failure, the panic and error lines are repeated as annotations, which the GitHub API
       # shows without access to the logs.
       - name: test (default features)
@@ -34,7 +35,7 @@ jobs:
         run: |
           set -o pipefail
           # gax-wesl-tests needs the `wesl` crate, whose MSRV is above gax's.
-          cargo test --no-fail-fast --workspace --exclude gax-bench ${{ matrix.rust == 'stable' && '' || '--exclude gax-wesl-tests' }} -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+          cargo test --no-fail-fast --workspace --exclude gax-bench ${{ matrix.rust == 'stable' && '' || '--exclude gax-wesl-tests' }} -- ${{ matrix.rust != 'stable' && '--skip compile_fail' || '' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
@@ -42,7 +43,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo test --no-fail-fast -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+          cargo test --no-fail-fast -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck -- ${{ matrix.rust != 'stable' && '--skip compile_fail' || '' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
