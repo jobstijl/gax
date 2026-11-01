@@ -138,12 +138,8 @@ impl Operators {
         operators.masses = masses.into_iter().map(Scalar::new).collect();
         let inverse_inertia =
             SparseMap::from_diagonal(&operators.masses.map(|m| to_point() * (1.0 / m.s())));
-        operators.acceleration = inverse_inertia
-            .compose(&operators.stiffness)
-            .map_cells(|c| -c);
-        operators.drag = inverse_inertia
-            .compose(&operators.damping)
-            .map_cells(|c| -c);
+        operators.acceleration = -inverse_inertia.compose(&operators.stiffness);
+        operators.drag = -inverse_inertia.compose(&operators.damping);
         operators
     }
 

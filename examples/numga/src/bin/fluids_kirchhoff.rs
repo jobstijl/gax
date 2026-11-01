@@ -22,8 +22,8 @@
 //! on either, the impulse, the momentum of body and fluid, stays fixed in space, and the body
 //! moves at each moment at the rate whose momentum is that impulse as the body sees it.
 //!
-//! The average over the confocal family is a Gauss–Legendre rule (numpy's `leggauss`), which
-//! gax has not: it is written here, Newton's method on the Legendre polynomials.
+//! The average over the confocal family is a Gauss–Legendre rule (numpy's `leggauss`,
+//! `gax::quadrature::gauss_legendre`).
 //!
 //! The animation shows the fluid's kinetic energy over the solid's for spheroids from a disc to
 //! a rod (left, Lamb's coefficients), and an elongated body given a blow (right, seen from
@@ -156,45 +156,11 @@ mod kirchhoff {
         .collect()
     }
 
-    /// The `n`-point Gauss–Legendre rule on `[-1, 1]`, numpy's `leggauss` (gax has no
-    /// quadrature): its nodes, the roots of the Legendre polynomial `P_n`, by Newton's method
-    /// from Tricomi's estimates `cos(π (k − 1/4) / (n + 1/2))`, and its weights
-    /// `2 / ((1 − x²) P_n'(x)²)`. Ascending, as numpy's.
-    pub fn leggauss(n: usize) -> (Vec<f64>, Vec<f64>) {
-        // P_n and P_n' at x, by the three-term recurrence.
-        let legendre = |x: f64| {
-            let (mut p0, mut p1) = (1.0, x);
-            for k in 2..=n {
-                let k = k as f64;
-                (p0, p1) = (p1, ((2.0 * k - 1.0) * x * p1 - (k - 1.0) * p0) / k);
-            }
-            let derivative = n as f64 * (x * p1 - p0) / (x * x - 1.0);
-            (p1, derivative)
-        };
-        let (mut nodes, mut weights) = (Vec::with_capacity(n), Vec::with_capacity(n));
-        for k in (1..=n).rev() {
-            let angle = core::f64::consts::PI * (k as f64 - 0.25) / (n as f64 + 0.5);
-            let mut x = gax_numga_examples::signal::phasor(angle).e20();
-            for _ in 0..100 {
-                let (p, dp) = legendre(x);
-                let step = p / dp;
-                x -= step;
-                if step.abs() < 1e-16 {
-                    break;
-                }
-            }
-            let (_, dp) = legendre(x);
-            nodes.push(x);
-            weights.push(2.0 / ((1.0 - x * x) * dp * dp));
-        }
-        (nodes, weights)
-    }
-
     /// Widenings from zero to infinity in units of the mean squared semi-axis, and their
     /// weights: Gauss–Legendre nodes in `t` on the unit interval, at widenings `1 / t² − 1`, so
     /// that the integrands fall off as powers of `t`.
     pub fn quadrature(n: usize) -> (Vec<f64>, Vec<f64>) {
-        let (nodes, weights) = leggauss(n);
+        let (nodes, weights) = gax::quadrature::gauss_legendre::<f64>(n);
         let t: Vec<f64> = nodes.iter().map(|x| (x + 1.0) / 2.0).collect();
         (
             t.iter().map(|t| 1.0 / (t * t) - 1.0).collect(),
@@ -502,7 +468,7 @@ mod tests {
     /// The Gauss–Legendre rule integrates every polynomial up to degree `2n − 1` exactly.
     #[test]
     fn gauss_legendre_is_exact_on_polynomials() {
-        let (nodes, weights) = leggauss(N_WIDENINGS);
+        let (nodes, weights) = gax::quadrature::gauss_legendre::<f64>(N_WIDENINGS);
         assert!(nodes.windows(2).all(|w| w[0] < w[1]));
         for degree in [0, 1, 2, 10, 51, 94, 95] {
             let sum: f64 = nodes

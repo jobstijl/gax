@@ -183,102 +183,7 @@ pub fn low_modes(
 ) -> (Vec<f64>, Vec<Field<Point>>) {
     let penalty = SparseMap::from_diagonal(&normals.map(|n| along_normal(n) * stiffness));
     let metric = SparseMap::from_diagonal(&areas.map(|a| Point::slot() * a.s()));
-    lowest(&(laplacian + &penalty), &metric, count)
-}
-
-/// The `count` eigenpairs of least value of `a x = λ m x` (`a` symmetric, `m` positive
-/// definite): values ascending, fields orthonormal under `m`. By shift-invert subspace
-/// iteration on gax's sparse LU: a block of `count + 4` fields (at most eight), made orthonormal
-/// under `m` and refined by Rayleigh–Ritz on the pencil each step (the small problem a map of
-/// VGA3D's eight-coefficient multivectors, which gax's `eigh` solves), the shift moved up under
-/// the least value once it is known, until every wanted pair's residual `‖a x − λ m x‖` is within
-/// `1e-12` of `(‖a‖ + |λ| ‖m‖) ‖x‖`, the largest cells' sizes for the maps' norms.
-///
-/// numga calls `eigh`. gax's `SparseMap::eigh` gives the same pairs but takes seconds to a
-/// minute on these Laplacians of a few thousand vertices (2.6 s with blocks of two, 18 s with its
-/// default blocks of eight, on the 800 vertices of the designed torus, whose factorization takes
-/// 54 ms), so the iteration is written here on its factorization.
-pub fn lowest(
-    a: &SparseMap<PointMap>,
-    m: &SparseMap<PointMap>,
-    count: usize,
-) -> (Vec<f64>, Vec<Field<Point>>) {
-    type Dense = vga3d::Multivector<(vga3d::Multivector,)>;
-    let n = a.shape().0;
-    let block = count + 4;
-    assert!(block <= 8, "at most four eigenpairs");
-    let scale = |map: &SparseMap<PointMap>| {
-        map.couplings()
-            .map(|(_, _, c)| Field::new(vec![c]).norm())
-            .fold(0.0, f64::max)
-    };
-    let (scale_a, scale_m) = (scale(a), scale(m));
-    let mut shift = -1e-8 * scale_a / scale_m;
-    let factor = |shift: f64| {
-        (a + &m.map_cells(|c| c * -shift))
-            .factor()
-            .expect("the shifted pencil is not singular")
-    };
-    let mut lu = factor(shift);
-    // A start of smooth and rough fields alike: each coefficient a fixed pseudo-random number.
-    let mut x: Vec<Field<Point>> = (0..block)
-        .map(|j| {
-            Field::from_fn(n, |v| {
-                let r =
-                    |k: usize| ((v * 2654435761 + j * 40503 + k * 97) % 1000) as f64 / 500.0 - 1.0;
-                point(r(0), r(1), r(2))
-            })
-        })
-        .collect();
-    let mut values = vec![0.0; block];
-    for iteration in 0..300 {
-        // One step of inverse iteration, made orthonormal under m by Gram and Schmidt.
-        let mut y: Vec<Field<Point>> = Vec::with_capacity(block);
-        for xi in &x {
-            let mut yi = lu.solve(&m.of(xi));
-            for yj in &y {
-                yi = &yi - &yj.scaled(yj.dot(&m.of(&yi)));
-            }
-            #[allow(clippy::disallowed_methods)] // a field's size under the metric: numerics
-            let size = yi.dot(&m.of(&yi)).sqrt();
-            y.push(yi.scaled(size.recip()));
-        }
-        // Rayleigh–Ritz: the pencil on the block, padded past it with a value above them all.
-        let ay: Vec<Field<Point>> = y.iter().map(|yi| a.of(yi)).collect();
-        let entry = |i: usize, j: usize| 0.5 * (y[i].dot(&ay[j]) + y[j].dot(&ay[i]));
-        let largest = (0..block).map(|i| entry(i, i).abs()).fold(1.0, f64::max);
-        let small = Dense::from_coeffs(core::array::from_fn(|i| {
-            core::array::from_fn(|j| match (i < block, j < block) {
-                (true, true) => entry(i, j),
-                _ if i == j => 1e3 * largest,
-                _ => 0.0,
-            })
-        }));
-        let (ritz, vectors) = small.eigh();
-        values = ritz[..block].to_vec();
-        let combine = |fields: &[Field<Point>], k: usize| {
-            (0..block)
-                .map(|j| fields[j].scaled(vectors[k].c[j]))
-                .reduce(|p, q| &p + &q)
-                .expect("a block")
-        };
-        x = (0..block).map(|k| combine(&y, k)).collect();
-        let residual = |k: usize| {
-            let (ax, mx) = (combine(&ay, k), m.of(&x[k]));
-            let r = &ax - &mx.scaled(values[k]);
-            r.norm() / ((scale_a + values[k].abs() * scale_m) * x[k].norm())
-        };
-        let worst = (0..count).map(residual).fold(0.0, f64::max);
-        if worst < 1e-12 {
-            break;
-        }
-        // Once the least value is known to a few digits, invert about just under it.
-        if iteration % 4 == 3 && residual(0) < 1e-3 && values[0] > 10.0 * shift.abs() {
-            shift = 0.9 * values[0];
-            lu = factor(shift);
-        }
-    }
-    (values[..count].to_vec(), x[..count].to_vec())
+    (laplacian + &penalty).eigh(&metric, count)
 }
 
 /// Backward-Euler vector heat steps of `step` from `source`: the diffused field at each step and
@@ -291,7 +196,7 @@ pub fn heat_transport(
     steps: usize,
 ) -> Vec<(Field<Point>, Field<Point>)> {
     let mass = SparseMap::from_diagonal(&areas.map(|a| Point::slot() * a.s()));
-    let operator = &mass + &laplacian.map_cells(|c| c * step);
+    let operator = &mass + &(laplacian * step);
     let mut field = source.clone();
     let mut out = Vec::with_capacity(steps);
     for _ in 0..steps {

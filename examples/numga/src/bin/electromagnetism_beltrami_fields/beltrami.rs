@@ -138,7 +138,7 @@ impl Operators {
         let stiffness = curl.adjugate().compose(&vacuum.compose(&curl));
         let volume_weights = SparseMap::from_diagonal(&volumes.map(|v| Plane::slot() ^ v));
         let raw = curl.adjugate().compose(&volume_weights.compose(&whitney1));
-        let helicity = (&raw + &raw.adjugate()).map_cells(|c| c * 0.5);
+        let helicity = &(&raw + &raw.adjugate()) * 0.5;
         Operators {
             mesh: mesh.clone(),
             vertices: vertices.clone(),
@@ -242,136 +242,36 @@ pub fn flux_preserving(mesh: &Topology<4>, n_major: usize, n_minor: usize) -> Sp
     SparseMap::from_triples(triples, (mesh.len(1), n + 1))
 }
 
-/// The square root of a number, for the numerics of a dense eigensolver and of scalar sums (a
-/// Jacobi rotation's cosine, an energy normalisation): not geometry. (gax's `Scalar::sqrt` is
+/// The square root of a number, for the numerics of scalar sums (an energy normalisation): not
+/// geometry. (gax's `Scalar::sqrt` is
 /// the versor root `normalize(1 + s)`, one for any positive number.)
 #[allow(clippy::disallowed_methods)]
 pub fn root(x: f64) -> f64 {
     x.sqrt()
 }
 
-/// A field map of energy cells over the free values, as a dense symmetric matrix of numbers.
-pub fn dense(free: &SparseMap<ScalarMap>, map: &SparseMap<EnergyMap>) -> Vec<Vec<f64>> {
-    let reduced = free.adjugate().compose(&map.compose(free));
-    let n = reduced.shape().0;
-    let mut out = vec![vec![0.0; n]; n];
-    for (r, c, cell) in reduced.couplings() {
-        out[r][c] += (cell.of(Scalar::new(1.0)) & Scalar::new(1.0)).s();
-    }
-    out
-}
-
-/// The eigenvalues, ascending, and the eigenvectors (`vectors[k]` the `k`-th) of a dense
-/// symmetric matrix, by cyclic Jacobi rotations until the off-diagonal part is at rounding.
-/// (gax's dense `eigh` is sized at compile time, and its sparse one finds the values nearest
-/// zero; the full spectrum of a few hundred unknowns is written here.)
-#[allow(clippy::needless_range_loop)] // index arithmetic on the rows and columns of a rotation
-pub fn jacobi_eigh(matrix: &[Vec<f64>]) -> (Vec<f64>, Vec<Vec<f64>>) {
-    let n = matrix.len();
-    let mut a = matrix.to_vec();
-    let mut v: Vec<Vec<f64>> = (0..n)
-        .map(|i| (0..n).map(|j| f64::from(u8::from(i == j))).collect())
-        .collect();
-    let scale: f64 = a.iter().flatten().map(|x| x * x).sum::<f64>().max(1e-300);
-    for _ in 0..50 {
-        let off: f64 = (0..n)
-            .flat_map(|i| (0..n).filter(move |&j| j != i).map(move |j| (i, j)))
-            .map(|(i, j)| a[i][j] * a[i][j])
-            .sum();
-        if off <= 1e-28 * scale {
-            break;
-        }
-        for p in 0..n {
-            for q in p + 1..n {
-                // The rotation that zeroes a[p][q]: its tangent, the smaller root of
-                // `t² + 2 θ t − 1`, `sgn θ / (|θ| + √(θ² + 1))`, with `θ = (a_qq − a_pp) / (2 a_pq)`;
-                // an entry far below the diagonal's difference rotates by nothing and is dropped.
-                let theta = (a[q][q] - a[p][p]) / (2.0 * a[p][q]);
-                if a[p][q] == 0.0 || theta.abs() > 1e18 {
-                    a[p][q] = 0.0;
-                    a[q][p] = 0.0;
-                    continue;
-                }
-                let half = root(theta * theta + 1.0);
-                let t = theta.signum() / (theta.abs() + half);
-                let c = root(1.0 + t * t).recip();
-                let s = t * c;
-                for row in a.iter_mut() {
-                    let (akp, akq) = (row[p], row[q]);
-                    row[p] = c * akp - s * akq;
-                    row[q] = s * akp + c * akq;
-                }
-                let (row_p, row_q) = (a[p].clone(), a[q].clone());
-                for k in 0..n {
-                    a[p][k] = c * row_p[k] - s * row_q[k];
-                    a[q][k] = s * row_p[k] + c * row_q[k];
-                }
-                for row in v.iter_mut() {
-                    let (vkp, vkq) = (row[p], row[q]);
-                    row[p] = c * vkp - s * vkq;
-                    row[q] = s * vkp + c * vkq;
-                }
-            }
-        }
-    }
-    let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&i, &j| a[i][i].total_cmp(&a[j][j]));
-    let values = order.iter().map(|&i| a[i][i]).collect();
-    let vectors = order
-        .iter()
-        .map(|&i| (0..n).map(|k| v[k][i]).collect())
-        .collect();
-    (values, vectors)
-}
-
 /// The inverse Beltrami eigenvalues `μ = 1 / λ`, ascending, the coexact eigenmodes over the free
 /// values, orthonormal in the energy, and the number of gradient (zero-energy) directions: the
-/// energy's null directions removed, the helicity diagonalized on what is left, and the
-/// achiral (zero-helicity) directions dropped.
+/// energy and the helicity pulled back onto the free values, the helicity diagonalized against
+/// the energy on the energy's range (gax's dense `eigh_all` against a semidefinite metric drops
+/// the gradients, which the energy does not measure), and the achiral (zero-helicity) modes
+/// dropped.
 pub fn coexact_helicity_eigh(
-    stiffness: &[Vec<f64>],
-    helicity: &[Vec<f64>],
+    free: &SparseMap<ScalarMap>,
+    stiffness: &SparseMap<EnergyMap>,
+    helicity: &SparseMap<EnergyMap>,
 ) -> (Vec<f64>, Vec<Field<Scalar>>, usize) {
-    let n = stiffness.len();
-    let (values, vectors) = jacobi_eigh(stiffness);
-    let scale = values.iter().copied().fold(0.0, f64::max);
-    let coexact: Vec<usize> = (0..n).filter(|&k| values[k] > 1e-10 * scale).collect();
-    let null = n - coexact.len();
-    let basis: Vec<Vec<f64>> = coexact
-        .iter()
-        .map(|&k| {
-            let size = root(values[k]);
-            vectors[k].iter().map(|x| x / size).collect()
-        })
-        .collect();
-    let m = basis.len();
-    let image: Vec<Vec<f64>> = basis
-        .iter()
-        .map(|b| {
-            (0..n)
-                .map(|i| (0..n).map(|j| helicity[i][j] * b[j]).sum())
-                .collect()
-        })
-        .collect();
-    let reduced: Vec<Vec<f64>> = (0..m)
-        .map(|i| {
-            (0..m)
-                .map(|j| basis[i].iter().zip(&image[j]).map(|(a, b)| a * b).sum())
-                .collect()
-        })
-        .collect();
-    let (mu, vectors) = jacobi_eigh(&reduced);
+    let reduced = |map: &SparseMap<EnergyMap>| free.adjugate().compose(&map.compose(free));
+    let energy = reduced(stiffness);
+    let (mu, modes) = reduced(helicity).eigh_all(&energy);
+    let null = energy.shape().0 - mu.len();
     let largest = mu.iter().map(|x| x.abs()).fold(0.0, f64::max);
-    let chiral: Vec<usize> = (0..m).filter(|&k| mu[k].abs() > 1e-8 * largest).collect();
-    let modes = chiral
-        .iter()
-        .map(|&k| {
-            Field::from_fn(n, |i| {
-                Scalar::new((0..m).map(|j| basis[j][i] * vectors[k][j]).sum())
-            })
-        })
-        .collect();
-    (chiral.iter().map(|&k| mu[k]).collect(), modes, null)
+    let (mu, modes) = mu
+        .into_iter()
+        .zip(modes)
+        .filter(|(m, _)| m.abs() > 1e-8 * largest)
+        .unzip();
+    (mu, modes, null)
 }
 
 /// The modal amplitudes of a selective decay at fixed helicity: each damped by `exp(−λ² t)`, the

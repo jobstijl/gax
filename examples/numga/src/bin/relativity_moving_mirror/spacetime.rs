@@ -195,10 +195,8 @@ fn march(
     let future = placing(&grid_sites(columns, 2..rows, 1..columns - 1), n);
     let system = interior
         .adjugate()
-        .compose(&operators.wave.compose(&future))
-        .map_cells(|c| c.undual());
-    let rhs = interior.adjugate().of(amounts).map(|a| a.undual());
-    future.of(&system.solve_direct(&rhs))
+        .compose(&operators.wave.compose(&future));
+    future.of(&system.solve_direct(&interior.adjugate().of(amounts)))
 }
 
 /// The causal wake of a localized source at `source`: a time derivative of a Gaussian radiates

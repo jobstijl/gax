@@ -216,8 +216,7 @@ pub fn diffusion(
     let balance = total(&load) / total(&mass);
     let load = &load - &mass.map(|m| m * balance);
     let pin = SparseMap::from_triples(vec![(0, 0, slot.hodge())], (n, n));
-    let system = (&stiffness + &pin).map_cells(|c| c.undual());
-    let potential = system.solve_direct(&load.map(|a| a.undual()));
+    let potential = (&stiffness + &pin).solve_direct(&load);
     let mean = potential
         .iter()
         .zip(mass.iter())

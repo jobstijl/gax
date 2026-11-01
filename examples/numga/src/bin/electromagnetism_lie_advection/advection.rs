@@ -280,7 +280,7 @@ pub fn rate(
     advection: &SparseMap<ScalarMap>,
     resistivity: f64,
 ) -> SparseMap<ScalarMap> {
-    advection + &operators.curl_laplacian.map_cells(|c| c * -resistivity)
+    advection - &(&operators.curl_laplacian * resistivity)
 }
 
 /// The edge readings after each of `steps` classical fourth-order Runge–Kutta steps, the start

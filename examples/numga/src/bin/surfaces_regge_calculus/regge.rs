@@ -219,14 +219,6 @@ pub fn conductance(
     g.adjugate().compose(&material.compose(&g))
 }
 
-/// Solve a conductance for the potentials that give the amounts: cells and amounts through the
-/// undual, to scalars (negative definite, as the join pairs the current before the gradient).
-fn solve_amounts(system: &SparseMap<Amount<(Scalar,)>>, amounts: &Field<Amount>) -> Field<Scalar> {
-    system
-        .map_cells(|c| c.undual())
-        .solve_direct(&amounts.map(|a| a.undual()))
-}
-
 /// The map from the listed sites onto all `n`, `[n <- listed]`.
 fn onto(listed: &[usize], n: usize) -> SparseMap<Scalar<(Scalar,)>> {
     reading::<Scalar>(listed, n).transpose_with(|c| c * Scalar::slot())
@@ -249,7 +241,7 @@ pub fn intrinsic_conduction(
     let free = onto(&free_vertices, n);
     let rhs = -&free.adjugate().of(&conductance.of(prescribed));
     let system = free.adjugate().compose(&conductance.compose(&free));
-    let potential = prescribed + &free.of(&solve_amounts(&system, &rhs));
+    let potential = prescribed + &free.of(&system.solve(&rhs));
     let gradients = g.of(&potential);
     let flux: Field<Point> = (0..mesh.len(2))
         .map(|f| -conductivities[f].of(gradients.site(f)))
@@ -276,7 +268,7 @@ pub fn intrinsic_conduction(
     let turned = flux.map(|q| quarter_turn >> q);
     let stream_rhs = unpinned.adjugate().of(&g.adjugate().of(&turned));
     let stream_system = unpinned.adjugate().compose(&laplacian.compose(&unpinned));
-    let streamfunction = unpinned.of(&solve_amounts(&stream_system, &stream_rhs));
+    let streamfunction = unpinned.of(&stream_system.solve(&stream_rhs));
     (potential, current, streamfunction)
 }
 

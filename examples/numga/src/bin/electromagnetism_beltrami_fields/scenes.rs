@@ -42,10 +42,8 @@ impl Cavity {
         let (mesh, vertices) = solid_torus(MAJOR_RADIUS, MINOR_RADIUS, N_MAJOR, N_MINOR);
         let free = flux_preserving(&mesh, N_MAJOR, N_MINOR);
         let operators = Operators::new(&mesh, &vertices);
-        let (mu, free_modes, null) = coexact_helicity_eigh(
-            &dense(&free, &operators.stiffness),
-            &dense(&free, &operators.helicity),
-        );
+        let (mu, free_modes, null) =
+            coexact_helicity_eigh(&free, &operators.stiffness, &operators.helicity);
         let modes = free_modes.iter().map(|m| free.of(m)).collect();
         Cavity {
             operators,

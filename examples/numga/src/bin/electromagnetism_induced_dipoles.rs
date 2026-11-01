@@ -102,7 +102,7 @@ mod dipoles {
     /// The map from the dipoles to the applied field at every atom that holds them: each
     /// atom's restoring field less the fields of the others.
     pub fn response(positions: &Field<Vector>) -> FieldMap {
-        let others = coupling(positions).map_cells(|c| -c);
+        let others = -coupling(positions);
         &restoring(positions.len()) + &others
     }
 
@@ -320,7 +320,7 @@ mod tests {
             assert!(is_self_adjoint(&response, 1e-13));
             // Far from the polarization catastrophe: every eigenvalue of the response keeps more
             // than half of the one over the polarizability an isolated atom has.
-            let identity = restoring(positions.len()).map_cells(|c| c * ALPHA);
+            let identity = restoring(positions.len()) * ALPHA;
             let (lowest, _) = response.eigh(&identity, 1);
             assert!(ALPHA * lowest[0] > 0.5, "{}", lowest[0]);
             gain(&dipoles, applied)

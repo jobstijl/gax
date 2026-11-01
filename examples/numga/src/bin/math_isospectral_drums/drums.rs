@@ -209,9 +209,7 @@ impl Drum {
     /// The five-point wave operator, `(4 − neighbours) / h²` with `h = 1 / n`.
     pub fn laplacian(&self, n: usize) -> SparseMap<ScalarMap> {
         let h2 = (n * n) as f64;
-        (&identity(self.interior.len()).map_cells(|c| c * 4.0)
-            + &self.neighbors.map_cells(|c| c * -1.0))
-            .map_cells(|c| c * h2)
+        (&(identity(self.interior.len()) * 4.0) - &self.neighbors) * h2
     }
 }
 
@@ -233,7 +231,7 @@ pub fn tile_mixing(
     let mut mixing: Option<SparseMap<ScalarMap>> = None;
     for (i, (sources, sign)) in contributors.iter().zip(signs).enumerate() {
         for (&j, &w) in sources.iter().zip(sign) {
-            let term = read(i).adjoint().compose(&read(j).map_cells(|c| c * w));
+            let term = read(i).adjoint().compose(&(read(j) * w));
             mixing = Some(match mixing {
                 Some(m) => &m + &term,
                 None => term,

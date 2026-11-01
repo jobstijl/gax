@@ -128,12 +128,22 @@ mod spin {
     /// the field of least energy per unit of vertex area, divided by its area-weighted mean,
     /// spinning the edges.
     pub fn spin_transform_deform(mesh: &Mesh, rho: &Field<Scalar3>) -> Mesh {
-        let (_, modes) = energy(mesh, rho).eigh(&area_metric(mesh), 1);
+        spin_transform_from(mesh, rho, &[]).0
+    }
+
+    /// [`spin_transform_deform`] with the eigensolve started from `start` (the last step's
+    /// field, in a flow: `eigh_from`), and the field it found.
+    pub fn spin_transform_from(
+        mesh: &Mesh,
+        rho: &Field<Scalar3>,
+        start: &[Field<Quaternion>],
+    ) -> (Mesh, Field<Quaternion>) {
+        let (_, modes) = energy(mesh, rho).eigh_from(&area_metric(mesh), 1, start);
         let areas = mesh.vertex_areas();
         let weighted = areas.zip_with(&modes[0], |a, q| a * q).sum();
         let mean = weighted * (1.0 / areas.sum().s());
         let q = modes[0].map(|q| q / mean);
-        mesh.with_vertices(matching(mesh, &spun_edges(mesh, &q)))
+        (mesh.with_vertices(matching(mesh, &spun_edges(mesh, &q))), q)
     }
 
     /// The energies of the `count` least-energy fields for the constant `ρ` of the eigenvalue,
@@ -180,19 +190,28 @@ mod spin {
     #[cfg_attr(not(test), allow(dead_code))] // the animation steps the flow as it is shown
     pub fn conformal_smooth(mesh: &Mesh, iterations: usize, rate: f64) -> Vec<Mesh> {
         let mut frames = vec![recenter(mesh)];
+        let mut field = Vec::new();
         for _ in 0..iterations {
-            let next = conformal_step(frames.last().expect("the mesh so far"), rate);
+            let (next, q) = conformal_step(frames.last().expect("the mesh so far"), rate, &field);
             frames.push(next);
+            field = vec![q];
         }
         frames
     }
 
-    /// One step of the flow.
-    pub fn conformal_step(mesh: &Mesh, rate: f64) -> Mesh {
+    /// One step of the flow, its eigensolve started from the last step's field (none for the
+    /// first): the mesh, and the step's field. Each step's pencil is close to the last one's,
+    /// so a few inverse iterations of the last field replace a fresh search.
+    pub fn conformal_step(
+        mesh: &Mesh,
+        rate: f64,
+        start: &[Field<Quaternion>],
+    ) -> (Mesh, Field<Quaternion>) {
         let (h, areas) = (mean_curvature(mesh), mesh.triangle_areas());
         let mean = h.zip_with(&areas, |h, a| h * a).sum().s() / areas.sum().s();
         let rho = h.map(|h| (h - Scalar3::new(mean)) * -rate);
-        recenter(&spin_transform_deform(mesh, &rho))
+        let (deformed, q) = spin_transform_from(mesh, &rho, start);
+        (recenter(&deformed), q)
     }
 }
 
@@ -252,22 +271,25 @@ mod scenes {
     /// costs a sparse eigensolve, a second's work, so the animation steps it as it shows it.
     pub struct Flow {
         pub steps: usize,
-        frames: std::sync::Mutex<Vec<Mesh>>,
+        /// The meshes so far, and the last step's field (the next step's start).
+        frames: std::sync::Mutex<(Vec<Mesh>, Vec<Field<Quaternion>>)>,
     }
 
     impl Flow {
         pub fn new(steps: usize) -> Flow {
             Flow {
                 steps,
-                frames: std::sync::Mutex::new(vec![recenter(&spot())]),
+                frames: std::sync::Mutex::new((vec![recenter(&spot())], Vec::new())),
             }
         }
 
         /// Spot after `step` steps of the flow.
         pub fn at(&self, step: usize) -> Mesh {
-            let mut frames = self.frames.lock().expect("the flow's frames");
+            let mut guard = self.frames.lock().expect("the flow's frames");
+            let (frames, field) = &mut *guard;
             while frames.len() <= step {
-                let next = conformal_step(frames.last().expect("the start"), RATE);
+                let (next, q) = conformal_step(frames.last().expect("the start"), RATE, field);
+                *field = vec![q];
                 frames.push(next);
             }
             frames[step].clone()

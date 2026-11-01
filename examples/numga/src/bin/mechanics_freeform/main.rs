@@ -122,7 +122,7 @@ fn bunny() -> Pulled {
 
     let rest = geometry::field(&surface.vertices);
     let loading = loading();
-    let inertia = mass.map_cells(|c| c * (1.0 / (TIME_STEP * TIME_STEP)));
+    let inertia = &mass * (1.0 / (TIME_STEP * TIME_STEP));
     let controls = 4 * MODES;
     let mut state = Field::<Antivector>::zeros(controls);
     let mut velocity = Field::<Antivector>::zeros(controls);

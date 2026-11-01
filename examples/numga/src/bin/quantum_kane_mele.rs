@@ -301,7 +301,9 @@ mod kane_mele {
     /// identity on that sector (`unit`, its open slot): orthonormal states.
     fn eigenstates<C, K>(energy: &SparseMap<C>, unit: C, count: usize) -> Eigenpairs<K>
     where
-        C: Extensor<Kind = K, Slots = (K,), Coef = f64> + core::ops::Add<Output = C>,
+        C: Extensor<Kind = K, Slots = (K,), Coef = f64>
+            + core::ops::Add<Output = C>
+            + gax::field::CellPairing,
         K: Kind,
     {
         let identity = SparseMap::from_diagonal(&Field::from_fn(energy.shape().0, |_| unit));

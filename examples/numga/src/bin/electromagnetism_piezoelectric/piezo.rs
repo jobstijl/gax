@@ -9,7 +9,7 @@
 //! shape, each a displacement with the gradient it varies along; the piezoelectric map sends one
 //! to a polarization; the dielectric map sends a field to the polarization it induces.
 
-use gax::field::{Field, SparseMap};
+use gax::field::{BlockMap, Field, SparseMap};
 use gax::mesh::Topology;
 
 use crate::simplicial::{boundary, incidence};
@@ -252,9 +252,10 @@ pub struct Boundary {
 /// load and the free charge vanishes, with the electrodes held at `prescribed` (zero elsewhere)
 /// and the floating one's voltage free.
 ///
-/// numga's sparse solve takes a map of one field type and this system couples two, so the
-/// blocks become one scalar field map, each cell's work form read on the basis of its test and
-/// trial fields (the adjugate of the coupling is its transpose there), and solved by sparse LU.
+/// One block field map over the free displacements and the voltages, solved by sparse LU: the
+/// elastic block from displacements to forces, the coupling from voltages to forces and its
+/// adjugate from displacements to charges (the converse effect), and the capacitance from
+/// voltages to charges.
 pub fn equilibrium(
     blocks: &Blocks,
     boundary: &Boundary,
@@ -275,44 +276,9 @@ pub fn equilibrium(
         .adjugate()
         .of(&(force - &blocks.coupling.of(prescribed)));
     let charge = -&voltage.adjugate().of(&blocks.dielectric.of(prescribed));
-
-    let basis = [
-        Point::from_coeffs([1.0, 0.0]),
-        Point::from_coeffs([0.0, 1.0]),
-    ];
-    let (free, volts) = (elastic.shape().0, capacitance.shape().0);
-    let number = |x: f64| Scalar::slot() * x;
-    let mut triples = Vec::new();
-    for (i, j, cell) in elastic.couplings() {
-        for (r, &test) in basis.iter().enumerate() {
-            for (c, &trial) in basis.iter().enumerate() {
-                triples.push((2 * i + r, 2 * j + c, number((test & cell.of(trial)).s())));
-            }
-        }
-    }
-    for (i, v, cell) in mixed.couplings() {
-        for (r, &test) in basis.iter().enumerate() {
-            let w = (test & cell.of(Scalar::new(1.0))).s();
-            triples.push((2 * i + r, 2 * free + v, number(w)));
-            triples.push((2 * free + v, 2 * i + r, number(w)));
-        }
-    }
-    for (v, w, cell) in capacitance.couplings() {
-        let value = (Scalar::new(1.0) & cell.of(Scalar::new(1.0))).s();
-        triples.push((2 * free + v, 2 * free + w, number(value)));
-    }
-    let size = 2 * free + volts;
-    let system = SparseMap::from_triples(triples, (size, size));
-    let rhs: Field<Scalar> = load
-        .iter()
-        .flat_map(|l| basis.map(|b| b & l))
-        .chain(charge.iter().map(|q| Scalar::new(1.0) & q))
-        .collect();
-    let solved = system.solve_direct(&rhs);
-    let displacement: Field<Point> = (0..free)
-        .map(|i| basis[0] * solved.site(2 * i).s() + basis[1] * solved.site(2 * i + 1).s())
-        .collect();
-    let potential: Field<Scalar> = (0..volts).map(|v| solved.site(2 * free + v)).collect();
+    let converse = mixed.adjugate();
+    let system = BlockMap::new((elastic, mixed), (converse, capacitance));
+    let (displacement, potential) = system.solve_direct(&load, &charge);
     (
         movement.of(&displacement),
         prescribed + &voltage.of(&potential),

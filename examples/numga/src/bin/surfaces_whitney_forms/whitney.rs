@@ -24,7 +24,6 @@ pub type Point = vga2d::intrinsic::Vector;
 /// A triangle's patch, the join of two sides (numga's `Patch-`).
 pub type Patch = vga2d::intrinsic::Scalar;
 /// What a conductance gives a potential: an amount, a quantity per area (numga's `Amount-`).
-pub type Amount = vga2d::intrinsic::Pseudoscalar;
 /// A material: a gradient to the current it drives (numga's `Point- <- Plane+`).
 pub type Conductivity = vga2d::intrinsic::Vector<(Plane,)>;
 /// A map from a scalar to a plane, the cell of a gradient or a Whitney map.
@@ -362,7 +361,7 @@ impl Operators {
         let free = (&reading::<Scalar>(&free_vertices, n) * Scalar::slot()).transpose();
         let rhs = -&free.adjugate().of(&conductance.of(prescribed));
         let system = free.adjugate().compose(&conductance.compose(&free));
-        let potential = prescribed + &free.of(&solve_amounts(&system, &rhs));
+        let potential = prescribed + &free.of(&system.solve(&rhs));
         let current = self.gradient.of(&potential).map(|g| -conductivity.of(g));
 
         // The current turned a quarter turn is, through the unit isotropic conductivity, the
@@ -378,18 +377,9 @@ impl Operators {
             .adjugate()
             .of(&self.gradient.adjugate().of(&turned));
         let stream_system = unpinned.adjugate().compose(&laplacian.compose(&unpinned));
-        let streamfunction = unpinned.of(&solve_amounts(&stream_system, &stream_rhs));
+        let streamfunction = unpinned.of(&stream_system.solve(&stream_rhs));
         (potential, current, streamfunction)
     }
-}
-
-/// Solve a conductance for the potentials that give the amounts: the system's cells and the
-/// amounts read through the undual, to the endomorphism of scalars the field solver takes. The
-/// join pairs an amount with a potential negatively where the energy is positive (the current
-/// stands before the gradient), so the scalars are negative definite: a direct solve.
-pub fn solve_amounts(system: &SparseMap<AmountMap>, amounts: &Field<Amount>) -> Field<Scalar> {
-    let scalars = system.map_cells(|c| c.undual());
-    scalars.solve_direct(&amounts.map(|a| a.undual()))
 }
 
 /// The unit isotropic conductivity: a gradient to the current along it (numga's

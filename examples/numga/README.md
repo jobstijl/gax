@@ -64,10 +64,12 @@ numga has since folded its stress-energy into `constitutive` (6e38d341).
   Gauss-Newton steps of sparse least-squares solves and Newton's method on gax's derivatives;
   weighted dual's `linprog` and SLSQP are a log barrier on gax's sparse solves.
 * **Missing tools in gax** are written locally: polynomial roots (cyclides), quadrature (lensing,
-  curvature, spin transformations, Kirchhoff's Gauss–Legendre rule), an L-BFGS and a Halton
-  sequence (freeform), a dense Jacobi eigensolver of run-time size (Beltrami fields), block
-  saddle-point systems flattened into one sparse map (DEC Stokes, piezoelectric); TODO.md's
-  Phase 13 lists what gax should take over. Generalized eigenproblems against a singular metric are
+  curvature, spin transformations), an L-BFGS and a Halton sequence (freeform); TODO.md's
+  Phase 13 lists what gax should take over. Taken over since: Kirchhoff's Gauss–Legendre rule
+  (`gax::quadrature`), the Beltrami fields' dense Jacobi eigensolver (`SparseMap::eigh_all`),
+  DEC Stokes's and piezoelectricity's flattened saddle points (`BlockMap`), connections' shift-
+  invert iteration (the sparse `eigh`), epipolar's least squares in a metric (`Form::lstsq_in`),
+  and the correlations solved through `undual()` (field solves in the cells' pairing). Generalized eigenproblems against a singular metric are
   solved exactly with the forms' roles swapped in `eigh`. Complex coefficients and the
   eigenvalues of non-symmetric maps, first written locally, are now gax's (`gax::Complex`,
   `eigvals`; ADR-042).

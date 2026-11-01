@@ -181,9 +181,7 @@ pub fn harmonic_circulation(
     let system = free
         .adjugate()
         .compose(&ops.stream_laplacian.compose(&free));
-    let solved = system
-        .map_cells(|c| c.undual())
-        .solve_direct(&rhs.map(|a| a.undual()));
+    let solved = system.solve_direct(&rhs);
     let stream = &boundary_stream + &free.of(&solved);
     let velocity = ops.stream_velocity.of(&stream);
     (stream, velocity)
@@ -212,9 +210,7 @@ pub fn hodge_decomposition(
     // divergence in grade 0 and its circulation in grade 2.
     let readings = free.adjugate().of(&ops.even_gradient.adjugate().of(flow));
     let system = free.adjugate().compose(&ops.even_laplacian.compose(&free));
-    let solved = system
-        .map_cells(|c| c.undual())
-        .solve_direct(&readings.map(|r| r.undual()));
+    let solved = system.solve_direct(&readings);
     let even = free.of(&solved);
     let potential = even.map(|e| e.grade::<0>());
     let stream = even.map(|e| -(e.grade::<2>() & Bivector::new(1.0).hodge()));

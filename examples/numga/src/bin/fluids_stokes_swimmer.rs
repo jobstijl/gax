@@ -43,8 +43,8 @@ mod swimmer {
     /// The forque on the body per unit body rate.
     pub type Resistance = Forque<(Twist,)>;
 
-    /// The force whose metric-free complement is a direction: forces are solved for through
-    /// the directions they stand for (gax's field solves want a map cell from a kind to itself).
+    /// The force whose metric-free complement is a direction (a force turned with the body is
+    /// carried as the direction it stands for).
     pub fn force_of(d: Direction) -> Force {
         d.undual().cast::<Force>()
     }
@@ -69,26 +69,22 @@ mod swimmer {
         (along + across) * (1.0 / cube)
     }
 
-    /// The beads' map from the directions their forces stand for to their velocities, every
-    /// pair of beads a cell: symmetric and positive definite.
-    pub fn mobility(sites: &[Point], radius: f64) -> SparseMap<Direction<(Direction,)>> {
+    /// The beads' map from their forces to their velocities, every pair of beads a cell: a
+    /// correlation, symmetric and positive definite in the pairing of a force with a velocity,
+    /// its power.
+    pub fn mobility(sites: &[Point], radius: f64) -> SparseMap<Mobility> {
         let n = sites.len();
         let cells = (0..n * n).map(|k| {
             let (i, j) = (k / n, k % n);
-            let cell = stokeslet(sites[i], sites[j], radius)
-                .of(Direction::slot().undual().cast::<Force>());
-            (i, j, cell)
+            (i, j, stokeslet(sites[i], sites[j], radius))
         });
         SparseMap::from_triples(cells, (n, n))
     }
 
-    /// The forces that move the beads at the given velocities.
-    fn forces_for(
-        mobility: &SparseMap<Direction<(Direction,)>>,
-        velocities: Vec<Direction>,
-    ) -> Vec<Force> {
-        let solved = mobility.solve_direct(&Field::new(velocities));
-        solved.iter().map(force_of).collect()
+    /// The forces that move the beads at the given velocities: conjugate gradients on the
+    /// correlation.
+    fn forces_for(mobility: &SparseMap<Mobility>, velocities: Vec<Direction>) -> Vec<Force> {
+        mobility.solve(&Field::new(velocities)).into_sites()
     }
 
     /// Each bead's velocity per unit body rate: its commutator with the rate.

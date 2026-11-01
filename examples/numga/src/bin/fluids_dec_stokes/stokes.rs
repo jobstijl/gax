@@ -6,7 +6,7 @@
 //! patch of a dual cell over its primal cell's. Points are antivectors, intrinsic (numga's
 //! `Point-`), and the join of two is a patch (`Patch-`); a vertex's vorticity is a bivector.
 
-use gax::field::{Field, SparseMap};
+use gax::field::{BlockMap, Field, SparseMap};
 use gax::mesh::Topology;
 use gax::vga2d;
 
@@ -222,9 +222,10 @@ pub struct Flow {
 /// flux through every face against the viscous resistance, the vorticity's differences across
 /// the edges paired back through the adjugate of the dual-edge Hodge map.
 ///
-/// The constrained system `[K, −Dᵀ; −D, 0]` is assembled as one scalar field map over the free
-/// fluxes and the pressures (the first face's pressure the gauge, its balance implied by the
-/// others) and solved by sparse LU: gax has no block field maps.
+/// The constrained system `[K, −Dᵀ; −D, 0]` is a block field map over the free fluxes and the
+/// pressures (the first face's pressure the gauge, its balance implied by the others), solved by
+/// one sparse LU: the stiffness a correlation from fluxes to the amounts of force, the pressures
+/// amounts on the faces whose gradient `−Dᵀ` is the constraint's adjugate.
 pub fn stokes(
     operators: &Operators,
     viscosity: f64,
@@ -233,11 +234,11 @@ pub fn stokes(
     circulation: &Field<Patch>,
 ) -> Flow {
     let mesh = &operators.mesh;
-    let viscous = operators
+    let viscous = &operators
         .star1
         .adjugate()
         .compose(&operators.d0_vorticity.compose(&operators.curl))
-        .map_cells(|c| c * viscosity);
+        * viscosity;
     let boundary_vorticity = operators.inverse_star0.of(circulation);
     let boundary_resistance = operators
         .star1
@@ -248,37 +249,22 @@ pub fn stokes(
     let free: Vec<usize> = (0..edges).filter(|e| !fixed.contains(e)).collect();
     let embedding =
         (&crate::simplicial::reading::<Scalar>(&free, edges) * Scalar::slot()).transpose();
-    let stiffness = embedding
-        .adjugate()
-        .compose(&viscous.compose(&embedding))
-        .map_cells(|c| c.undual());
-    let divergence = operators.d1.compose(&embedding);
+    let stiffness = embedding.adjugate().compose(&viscous.compose(&embedding));
     let force = -&embedding
         .adjugate()
-        .of(&(&viscous.of(prescribed) + &boundary_resistance))
-        .map(|a| a.undual());
-    let balance = -&operators.d1.of(prescribed);
-
-    // One scalar map over the free fluxes and every pressure but the first face's.
-    let n = free.len();
+        .of(&(&viscous.of(prescribed) + &boundary_resistance));
+    // Every face's balance but the first's.
     let faces = mesh.len(2);
-    let number = |c: ScalarMap| c.of(Scalar::new(1.0)).s();
-    let mut triples: Vec<(usize, usize, ScalarMap)> = stiffness.couplings().collect();
-    for (r, c, cell) in divergence.couplings().filter(|&(r, _, _)| r > 0) {
-        let minus = Scalar::slot() * -number(cell);
-        triples.push((n + r - 1, c, minus));
-        triples.push((c, n + r - 1, minus));
-    }
-    let system = SparseMap::from_triples(triples, (n + faces - 1, n + faces - 1));
-    let rhs: Field<Scalar> = force
-        .iter()
-        .chain(balance.iter().skip(1).map(|b| -b))
-        .collect();
-    let solved = system.solve_direct(&rhs);
-    let free_flux: Field<Scalar> = solved.iter().take(n).collect();
+    let rest: Vec<usize> = (1..faces).collect();
+    let restricted = &crate::simplicial::reading::<Scalar>(&rest, faces) * Scalar::slot();
+    let constraint = -&restricted.compose(&operators.d1.compose(&embedding));
+    let balance = restricted.of(&operators.d1.of(prescribed));
+
+    let system = BlockMap::saddle(stiffness, constraint.adjugate(), constraint);
+    let (free_flux, pressures) = system.solve_direct(&force, &balance);
     let flux = prescribed + &embedding.of(&free_flux);
     let pressure: Field<Scalar> = core::iter::once(Scalar::new(0.0))
-        .chain(solved.iter().skip(n))
+        .chain(pressures.iter().map(|p| p.undual()))
         .collect();
     let total: f64 = operators.areas.iter().map(|a| a.s()).sum();
     let mean = pressure.dot(&operators.areas) / total;

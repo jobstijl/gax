@@ -184,7 +184,7 @@ pub fn design(s: &Surface, indices: &[f64], generators: &[Vec<usize>]) -> Design
     let forward = adjusted_transport(&s.mesh, &s.normals, &angles);
     let (_, laplacian) = connection(&s.mesh, &forward, &s.weights);
     let (energies, fields) = low_modes(&laplacian, &s.normals, &s.areas, NORMAL_STIFFNESS, 2);
-    let field = fields[0].map(|p| p.normalized());
+    let field = turned_to_x(s, &fields[0]).map(|p| p.normalized());
     let residual = residual(&circulation, &angles, &target);
     Design {
         angles,
@@ -192,6 +192,18 @@ pub fn design(s: &Surface, indices: &[f64], generators: &[Vec<usize>]) -> Design
         energies,
         residual,
     }
+}
+
+/// A parallel field turned, by one angle everywhere, to point along x's tangent part at the
+/// first vertex: a trivial connection's parallel fields are a plane of them (each with its
+/// quarter turn), any of which an eigensolver may return, and this picks one regardless of the
+/// solver (numga keeps scipy's).
+pub fn turned_to_x(s: &Surface, field: &Field<Point>) -> Field<Point> {
+    let quarter = field.zip_with(&s.normals, |p, n| p.commutator(plane(n)));
+    let x = point(1.0, 0.0, 0.0);
+    let (f, q) = (field.site(0), quarter.site(0));
+    let turn = gax::vga2d::Vector::new(dot(x, f), dot(x, q)).normalized();
+    field.zip_with(&quarter, |f, q| f * turn.e1() + q * turn.e2())
 }
 
 /// Every face's index: the given ones on the singular faces, none elsewhere.
