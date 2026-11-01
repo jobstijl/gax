@@ -89,6 +89,7 @@ fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) {
     let mut coeffs = vec![String::new(); 2];
     coeffs[o0] = format!("{}e * ({cs})", if so0 > 0 { "" } else { "-" });
     coeffs[ob] = format!("{}e * ({ss})", if sob > 0 { "" } else { "-" });
+    let oe = ext(out);
     let (kind_sq, name) = (
         match isq {
             -1 => "-1",
@@ -103,7 +104,7 @@ fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) {
     /// cosine and sine (`B² = -1`), the hyperbolic ones (`+1`) or `1, b` (`0`). A `{name}`, not a
     /// `Unit`: `x ~x` need not be 1.
     #[inline]
-    pub fn exp(self) -> {name}<(), T> {{
+    pub fn exp(self) -> {name}<(), T{oe}> {{
         let (a, b) = ({scalar}, {bcoef});
         let e = a.exp();
         {name}::from_coeffs([{}])
@@ -245,6 +246,15 @@ fn study_method(
     (lets, outs)
 }
 
+/// The orientation argument naming `k`'s extrinsic values after `<(), T`: nothing where that is
+/// `k`'s default, `, gx::Extrinsic` where `k` is declared intrinsic (ADR-051). The methods that
+/// work in extrinsic values (`exp`, `log`, the products inside the general inverse) name their
+/// kinds through it, so a kind declared intrinsic compiles and the standard algebras' code reads
+/// as before.
+fn ext(k: &KindSpec) -> &'static str {
+    if k.intrinsic { ", gx::Extrinsic" } else { "" }
+}
+
 /// `doc` as a method's doc comment, one `    /// ` line per line.
 fn method_doc(doc: &str) -> String {
     doc.lines().fold(String::new(), |mut s, l| {
@@ -255,9 +265,9 @@ fn method_doc(doc: &str) -> String {
 
 /// The method `exp` returning a unit `{on}`, from the lines `lets` after `let x = self.c;` and
 /// the result's coefficients `outs`.
-fn unit_exp_method(doc: &str, on: &str, lets: &str, outs: &[String]) -> String {
+fn unit_exp_method(doc: &str, on: &str, oe: &str, lets: &str, outs: &[String]) -> String {
     format!(
-        "{}    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
+        "{}    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T{oe}>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
         method_doc(doc),
         outs.join(", ")
     )
@@ -445,6 +455,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 body_ext.push_str(&unit_exp_method(
                     "The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B` with `B²` a Study number.",
                     &out_kind.name,
+                    ext(&out_kind),
                     &lets,
                     &outs,
                 ));
@@ -648,7 +659,7 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
     } else {
         1u32 << ((p + q).div_ceil(2) + r)
     };
-    let (en, name) = (&e.name, &k.name);
+    let (en, name, eo) = (&e.name, &k.name, ext(&e));
     let embedding = k.layout.embed_in(&e.layout)?;
     let embed = embed_lines(&embedding, "scale");
     let (one, one_sign) = e.layout.position(0)?;
@@ -692,7 +703,7 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
     };
     let _ = write!(
         body,
-        "    /// The inverse under the geometric product, by Shirokov's method in `{en}` (no closed form\n    /// for `{name}` here): the inverse as a polynomial of degree {d} whose coefficients come\n    /// from the scalar parts of powers (the Faddeev–LeVerrier recursion on left multiplication,\n    /// {d} products in `{en}`), {what} (docs/design.md, ADR-037). `x` is scaled to its largest\n    /// coefficient first. Not finite where `x` has no inverse.\n    #[inline]\n    pub fn inverse(self) -> {en}<(), T, O>\n    where\n        T: Real,\n    {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut size = T::zero();\n        for c in self.c {{\n            size = size.max(c.abs());\n        }}\n        let scale = size.recip();\n        let mut x = {en}::<(), T>::zero();\n{embed}{body_of}        // U₁ = a, Cₖ = (N/k) ⟨Uₖ⟩₀, Uₖ₊₁ = a (Uₖ − Cₖ); then a⁻¹ = (U_{{N−1}} − C_{{N−1}}) / C_N.\n        let mut prev = a;\n        let c = {get}a.c[{one}] * T::from_i64({n});\n        prev.c[{one}] = prev.c[{one}] {put} c;\n        for k in 2..{n}i64 {{\n            let u = a * prev;\n            let c = {get}u.c[{one}] * T::from_ratio({n}, k);\n            prev = u;\n            prev.c[{one}] = prev.c[{one}] {put} c;\n        }}\n        let det = {get}(a * prev).c[{one}];\n        let mut y = prev.gp(det.recip());\n{neumann}        // Newton–Schulz, y ← y (2 − x y), squares the residual: the recursion loses digits as\n        // its degree grows (to 10⁻⁴ at degree 32), and the step(s) restore them.\n        for _ in 0..{steps} {{\n            let mut t = -(x * y);\n            t.c[{one}] = t.c[{one}] {two};\n            y = y * t;\n        }}\n        y.gp(scale).with_orientation()\n        }})\n    }}\n\n",
+        "    /// The inverse under the geometric product, by Shirokov's method in `{en}` (no closed form\n    /// for `{name}` here): the inverse as a polynomial of degree {d} whose coefficients come\n    /// from the scalar parts of powers (the Faddeev–LeVerrier recursion on left multiplication,\n    /// {d} products in `{en}`), {what} (docs/design.md, ADR-037). `x` is scaled to its largest\n    /// coefficient first. Not finite where `x` has no inverse.\n    #[inline]\n    pub fn inverse(self) -> {en}<(), T, O>\n    where\n        T: Real,\n    {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut size = T::zero();\n        for c in self.c {{\n            size = size.max(c.abs());\n        }}\n        let scale = size.recip();\n        let mut x = {en}::<(), T{eo}>::zero();\n{embed}{body_of}        // U₁ = a, Cₖ = (N/k) ⟨Uₖ⟩₀, Uₖ₊₁ = a (Uₖ − Cₖ); then a⁻¹ = (U_{{N−1}} − C_{{N−1}}) / C_N.\n        let mut prev = a;\n        let c = {get}a.c[{one}] * T::from_i64({n});\n        prev.c[{one}] = prev.c[{one}] {put} c;\n        for k in 2..{n}i64 {{\n            let u = a * prev;\n            let c = {get}u.c[{one}] * T::from_ratio({n}, k);\n            prev = u;\n            prev.c[{one}] = prev.c[{one}] {put} c;\n        }}\n        let det = {get}(a * prev).c[{one}];\n        let mut y = prev.gp(det.recip());\n{neumann}        // Newton–Schulz, y ← y (2 − x y), squares the residual: the recursion loses digits as\n        // its degree grows (to 10⁻⁴ at degree 32), and the step(s) restore them.\n        for _ in 0..{steps} {{\n            let mut t = -(x * y);\n            t.c[{one}] = t.c[{one}] {two};\n            y = y * t;\n        }}\n        y.gp(scale).with_orientation()\n        }})\n    }}\n\n",
         d = degree - 1,
         n = degree,
     );
@@ -701,7 +712,7 @@ fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> 
     let unscaled = embed_lines(&embedding, "");
     let _ = write!(
         body,
-        "    /// [`inverse`](Self::inverse), or `None` where it fails: where a coefficient of the\n    /// residual `x x⁻¹ − 1` is above `√ε`, in any lane, or the inverse is not finite. (The\n    /// general inverse has no Study number `x ~x` to test against `‖x‖²`, as the closed forms'\n    /// `try_inverse` does; the residual is the test of the iterative solvers.)\n    #[inline]\n    pub fn try_inverse(self) -> Option<{en}<(), T, O>> {{\n        let y = self.inverse();\n        let mut x = {en}::<(), T>::zero();\n{unscaled}        let y0: {en}<(), T> = y.with_orientation();\n        let mut r = (x * y0).c;\n        r[{one}] = r[{one}] {put} T::one();\n        let tol = T::epsilon().sqrt();\n        if r.iter().all(|&c| T::all_lt(c.abs(), tol)) {{\n            Some(y).filter(gx::Extensor::is_finite)\n        }} else {{\n            None\n        }}\n    }}\n\n",
+        "    /// [`inverse`](Self::inverse), or `None` where it fails: where a coefficient of the\n    /// residual `x x⁻¹ − 1` is above `√ε`, in any lane, or the inverse is not finite. (The\n    /// general inverse has no Study number `x ~x` to test against `‖x‖²`, as the closed forms'\n    /// `try_inverse` does; the residual is the test of the iterative solvers.)\n    #[inline]\n    pub fn try_inverse(self) -> Option<{en}<(), T, O>> {{\n        let y = self.inverse();\n        let mut x = {en}::<(), T{eo}>::zero();\n{unscaled}        let y0: {en}<(), T{eo}> = y.with_orientation();\n        let mut r = (x * y0).c;\n        r[{one}] = r[{one}] {put} T::one();\n        let tol = T::epsilon().sqrt();\n        if r.iter().all(|&c| T::all_lt(c.abs(), tol)) {{\n            Some(y).filter(gx::Extensor::is_finite)\n        }} else {{\n            None\n        }}\n    }}\n\n",
     );
     Some(en.clone())
 }
@@ -1088,6 +1099,7 @@ fn emit_exp_general(
     body.push_str(&unit_exp_method(
         "The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B`, with `B² = λ + Q` and `Q² = q` a scalar.",
         &out_kind.name,
+        ext(&out_kind),
         &lets,
         &outs,
     ));
@@ -1203,7 +1215,7 @@ fn emit_log_fallback(
         }
         _ => {}
     }
-    let (en, bn) = (&k.name, &bv.name);
+    let (en, bn, eo) = (&k.name, &bv.name, ext(k));
     let (one_pos, one_sign) = k.layout.position(0)?;
     let one = if one_sign > 0 {
         "T::one()"
@@ -1225,10 +1237,10 @@ fn emit_log_fallback(
         traits,
         "{head}
         T::vectorize(#[inline(always)] move || {{
-        let mut one = {en}::<(), T>::zero();
+        let mut one = {en}::<(), T{eo}>::zero();
         one.c[{one_pos}] = {one};
         let (half, three) = (T::from_ratio(1, 2), one.gp(T::from_i64(3)));
-        let dist = |x: {en}<(), T>| {{
+        let dist = |x: {en}<(), T{eo}>| {{
             let mut d = T::zero();
             for (a, b) in x.c.iter().zip(one.c) {{
                 d = d + (*a - b).abs();
@@ -1430,7 +1442,7 @@ fn emit_log_6d(
     ));
     let (lets, o) = prog.lets_and_outputs(&x_var, "p");
     let list = |from: usize| o[from..from + n].join(", ");
-    let (en, bn) = (&k.name, &bv.name);
+    let (en, bn, eo, bo) = (&k.name, &bv.name, ext(k), ext(bv));
     // `Z` (a bivector) as an `{en}`, and the position of the scalar.
     let embed: Vec<String> = k
         .layout
@@ -1446,7 +1458,7 @@ fn emit_log_6d(
     let e0 = if one_sign > 0 { "e0" } else { "-e0" };
     let _ = write!(
         traits,
-        "impl<T: gx::Real> {en}<(), T> {{
+        "impl<T: gx::Real> {en}<(), T{eo}> {{
     /// The invariants `[r0, p1, p2, p3]` and bivectors `[G1, G2, G3]` of the closed-form
     /// logarithm (docs/log6d.md), as one straight-line program.
     #[doc(hidden)]
@@ -1464,7 +1476,7 @@ fn emit_log_6d(
     /// and accurate to `ε/⟨R⟩₀`.
     #[doc(hidden)]
     #[inline]
-    pub fn log_closed(self) -> {bn}<(), T> {{
+    pub fn log_closed(self) -> {bn}<(), T{bo}> {{
         let ([r0, p1, p2, p3], [g1, g2, g3]) = self.log_invariants();
         let [w1, w2, w3] = gx::__private::study::log_weights_6d(p1, p2, p3, r0);
         {bn}::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]))
@@ -1502,7 +1514,7 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
             a2 * q2 + a1 * q1 + a0 * g1[i]
         }});
         let [e0, e1, e2, e3] = gx::__private::study::turn_polynomial(n);
-        let ze = {en}::<(), T>::from_coeffs([{}]);
+        let ze = {en}::<(), T{eo}>::from_coeffs([{}]);
         let z2 = ze * ze;
         let mut e = ze.gp(e1) + z2.gp(e2) + (z2 * ze).gp(e3);
         e.c[{one_pos}] = e.c[{one_pos}] + {e0};
@@ -1560,7 +1572,7 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     let (lets, o) = prog.lets_and_outputs(&x_var, "p");
     let nb = bv.layout.len();
     let list = |j: usize| o[5 + j * nb..5 + (j + 1) * nb].join(", ");
-    let (en, bn) = (&k.name, &bv.name);
+    let (en, bn, eo, bo) = (&k.name, &bv.name, ext(k), ext(bv));
     let sum = |w: &str| {
         (0..4)
             .map(|j| format!("{w}[{j}] * g[{j}][i]"))
@@ -1570,7 +1582,7 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     let (closed_sum, z_sum) = (sum("w"), sum("wz"));
     let _ = write!(
         traits,
-        "impl<T: gx::Real> {en}<(), T> {{
+        "impl<T: gx::Real> {en}<(), T{eo}> {{
     /// The invariants `[r0, p1, p2, p3, p4]` and bivectors `[G1, G2, G3, G4]` of the
     /// closed-form logarithm (docs/log6d.md §9), as one straight-line program.
     #[doc(hidden)]
@@ -1588,7 +1600,7 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     /// `⟨R⟩₀ > 0` and accurate to `ε/⟨R⟩₀`.
     #[doc(hidden)]
     #[inline]
-    pub fn log_closed(self) -> {bn}<(), T> {{
+    pub fn log_closed(self) -> {bn}<(), T{bo}> {{
         let ([r0, p1, p2, p3, p4], g) = self.log_invariants();
         let w = gx::__private::study::log_weights_8d([p1, p2, p3, p4], r0);
         {bn}::from_coeffs(core::array::from_fn(|i| {closed_sum}))
@@ -1622,7 +1634,7 @@ impl<T: gx::Real> gx::Log for {en}<(), T, gx::Extrinsic> {{
         let [a0, a1, a2, a3, n] = gx::__private::study::log_turn_8d(p, r0);
         let wz = gx::__private::study::q_weights_8d([a0, a1, a2, a3], p, T::one());
         let z: [T; {nb}] = core::array::from_fn(|i| {z_sum});
-        let zb = {bn}::<(), T>::from_coeffs(z);
+        let zb = {bn}::<(), T{bo}>::from_coeffs(z);
         // R E = Σ eₖ R Zᵏ, E = ∏(−b̂) as a polynomial in Z: products by the bivector only.
         let e = gx::__private::study::turn_polynomial_8d(n);
         let mut power = x;
@@ -1961,7 +1973,7 @@ fn emit_exp_closed(
             }
         })
         .collect();
-    let (en, bn) = (&e.name, &k.name);
+    let (en, bn, eo, bo) = (&e.name, &k.name, ext(&e), ext(k));
     let suffix = if planes == 3 { "6d" } else { "8d" };
     let tp = if planes == 3 {
         "gx::__private::study::turn_polynomial(n)"
@@ -1996,11 +2008,11 @@ fn emit_exp_closed(
     /// within about a quarter turn: `C (1 + T + W₂(T) + …)` with `T = Σ tanh(μⱼ) b̂ⱼ`.
     #[doc(hidden)]
     #[inline]
-    pub fn exp_from(e: [T; {planes}], h: [[T; {nb}]; {planes}]) -> {en}<(), T> {{
+    pub fn exp_from(e: [T; {planes}], h: [[T; {nb}]; {planes}]) -> {en}<(), T{eo}> {{
         // T and C = ∏ cosh μⱼ (from the trace of ln cosh √λ: no cancellation for boosts).
         let wt = gx::__private::study::exp_weights_{suffix}(e);
         let c = wt[{planes}];
-        let t = {bn}::<(), T>::from_coeffs(core::array::from_fn(|i| {t_sum}));
+        let t = {bn}::<(), T{bo}>::from_coeffs(core::array::from_fn(|i| {t_sum}));
         let (_, _, {}) = t.exp_invariants();
         {en}::from_coeffs([{}])
     }}
@@ -2014,7 +2026,7 @@ fn emit_exp_closed(
     /// turned back by one first (`exp_turn_{suffix}`: `exp B = exp B' · ∏ êⱼ`, a polynomial in
     /// their sum), and beyond three quarters `B` is halved and the result squared.
     #[inline]
-    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{
+    pub fn exp(self) -> gx::Unit<{en}<(), T{eo}>> {{
         T::vectorize(#[inline(always)] move || {{
         let half = T::from_ratio(1, 2);
         let (e, h, ..) = self.exp_invariants();
@@ -2037,7 +2049,7 @@ fn emit_exp_closed(
             let tz = gx::__private::study::exp_turn_{suffix}(e);
             let n = tz[{planes}];
             let wz = [{zw}];
-            let z = {bn}::<(), T>::from_coeffs(core::array::from_fn(|i| {z_sum}));
+            let z = {bn}::<(), T{bo}>::from_coeffs(core::array::from_fn(|i| {z_sum}));
             let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
             let (e, h, ..) = (b - z.gp(quarter)).exp_invariants();
             let r = Self::exp_from(e, h);
@@ -2116,7 +2128,7 @@ fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Opt
     let alg = &spec.algebra;
     let closure = product_closure(alg, k);
     let e = spec.kind_for_support(&closure)?.clone();
-    let (en, name) = (&e.name, &k.name);
+    let (en, name, eo) = (&e.name, &k.name, ext(&e));
     let embed = embed_lines(&k.layout.embed_in(&e.layout)?, "h");
     let (one_pos, one_sign) = e.layout.position(0)?;
     let one = if one_sign > 0 {
@@ -2126,7 +2138,7 @@ fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Opt
     };
     let _ = write!(
         body,
-        "    /// The exponential, a unit versor, by scaling and squaring in `{en}`: `B` is halved `s` times\n    /// until `‖B / 2^s‖₁ ≤ 1/16` (the sum of absolute coefficients), a Taylor series of degree 10\n    /// gives `exp(B / 2^s)` to below `10⁻²⁰` relative, a Newton step renormalizes it while it is\n    /// near 1, `s` squarings undo the scaling, and a second Newton step renormalizes the result\n    /// where it is small (a large boost is left as squared: there `~r r − 1` cancels). (No closed form is generated for\n    /// `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut norm = T::zero();\n        for c in self.c {{\n            norm = norm + c.abs();\n        }}\n        let (limit, half) = (T::from_ratio(1, 16), T::from_ratio(1, 2));\n        let (mut h, mut s) = (T::one(), 0u32);\n        while s < 64 && !T::all_lt(norm * h, limit) {{\n            h = h * half;\n            s += 1;\n        }}\n        let mut x = {en}::<(), T>::zero();\n{embed}        let mut one = {en}::<(), T>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/10))))\n        let mut r = one;\n        for k in (1..=10).rev() {{\n            r = one + (x * r).gp(T::from_ratio(1, k));\n        }}\n        // A Newton step r (3 - ~r r) / 2 while r is near 1, where ~r r - 1 has no cancellation.\n        let three = one.gp(T::from_i64(3));\n        let m = r.reverse() * r;\n        r = r * (three - m).gp(half);\n        for _ in 0..s {{\n            r = r * r;\n        }}\n        // Another after squaring, lane by lane, only where r is small (‖r‖₁ < 4, compact\n        // motions): for a large boost ~r r - 1 cancels at the scale of ‖r‖², and the step\n        // would add error rather than remove it.\n        let mut size = T::zero();\n        for c in r.c {{\n            size = size + c.abs();\n        }}\n        let m = r.reverse() * r;\n        let fixed = r * (three - m).gp(half);\n        for (c, f) in r.c.iter_mut().zip(fixed.c) {{\n            *c = T::select_lt(size, T::from_i64(4), f, *c);\n        }}\n        gx::Unit::new_unchecked(r)\n        }})\n    }}\n\n"
+        "    /// The exponential, a unit versor, by scaling and squaring in `{en}`: `B` is halved `s` times\n    /// until `‖B / 2^s‖₁ ≤ 1/16` (the sum of absolute coefficients), a Taylor series of degree 10\n    /// gives `exp(B / 2^s)` to below `10⁻²⁰` relative, a Newton step renormalizes it while it is\n    /// near 1, `s` squarings undo the scaling, and a second Newton step renormalizes the result\n    /// where it is small (a large boost is left as squared: there `~r r − 1` cancels). (No closed form is generated for\n    /// `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T{eo}>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut norm = T::zero();\n        for c in self.c {{\n            norm = norm + c.abs();\n        }}\n        let (limit, half) = (T::from_ratio(1, 16), T::from_ratio(1, 2));\n        let (mut h, mut s) = (T::one(), 0u32);\n        while s < 64 && !T::all_lt(norm * h, limit) {{\n            h = h * half;\n            s += 1;\n        }}\n        let mut x = {en}::<(), T{eo}>::zero();\n{embed}        let mut one = {en}::<(), T{eo}>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/10))))\n        let mut r = one;\n        for k in (1..=10).rev() {{\n            r = one + (x * r).gp(T::from_ratio(1, k));\n        }}\n        // A Newton step r (3 - ~r r) / 2 while r is near 1, where ~r r - 1 has no cancellation.\n        let three = one.gp(T::from_i64(3));\n        let m = r.reverse() * r;\n        r = r * (three - m).gp(half);\n        for _ in 0..s {{\n            r = r * r;\n        }}\n        // Another after squaring, lane by lane, only where r is small (‖r‖₁ < 4, compact\n        // motions): for a large boost ~r r - 1 cancels at the scale of ‖r‖², and the step\n        // would add error rather than remove it.\n        let mut size = T::zero();\n        for c in r.c {{\n            size = size + c.abs();\n        }}\n        let m = r.reverse() * r;\n        let fixed = r * (three - m).gp(half);\n        for (c, f) in r.c.iter_mut().zip(fixed.c) {{\n            *c = T::select_lt(size, T::from_i64(4), f, *c);\n        }}\n        gx::Unit::new_unchecked(r)\n        }})\n    }}\n\n"
     );
     Some(en.clone())
 }

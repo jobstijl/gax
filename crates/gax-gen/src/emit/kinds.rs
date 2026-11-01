@@ -1150,11 +1150,23 @@ pub(super) fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
 
 /// The value methods of a kind as trait impls (`gax_core::ops::{Exp, Inverse, Norm, Normalize,
 /// Sqrt}`), forwarding to the inherent methods, so generic code can call them.
-pub(super) fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, out: &mut String) {
+pub(super) fn value_traits(
+    spec: &AlgebraSpec,
+    name: &str,
+    meta: &crate::emit_values::ValueMethods,
+    out: &mut String,
+) {
     if let Some(on) = &meta.exp {
+        // The exponential's kind in the extrinsic orientation, named where it is not the
+        // kind's default (a kind declared intrinsic, ADR-051).
+        let oe = if spec.kinds.iter().any(|k| &k.name == on && k.intrinsic) {
+            ", gx::Extrinsic"
+        } else {
+            ""
+        };
         let _ = writeln!(
             out,
-            "impl<T: gx::Real> gx::Exp for {name}<(), T, gx::Extrinsic> {{\n    type Output = gx::Unit<{on}<(), T>>;\n    #[inline(always)]\n    fn exp(self) -> Self::Output {{\n        Self::exp(self)\n    }}\n}}\n"
+            "impl<T: gx::Real> gx::Exp for {name}<(), T, gx::Extrinsic> {{\n    type Output = gx::Unit<{on}<(), T{oe}>>;\n    #[inline(always)]\n    fn exp(self) -> Self::Output {{\n        Self::exp(self)\n    }}\n}}\n"
         );
     }
     if let Some(on) = &meta.inverse {

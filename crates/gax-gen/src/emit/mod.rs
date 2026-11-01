@@ -239,7 +239,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     for (k, (methods, meta)) in spec.kinds.iter().zip(values) {
         e.kind(k);
         e.out.push_str(&methods);
-        value_traits(&k.name, &meta, &mut e.out);
+        value_traits(spec, &k.name, &meta, &mut e.out);
         e.stats.values.push(meta);
     }
     kind_eqs(spec, &mut e.out);
