@@ -1834,7 +1834,8 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     the full dimension.
 
 ## ADR-049: Simplicial complexes and meshes
-*Status: accepted, implemented (`gax_core::mesh`, `docs/calculus.md`). Phase 10, M3.*
+*Status: accepted, implemented (`gax_core::mesh`, `docs/calculus.md`). Phase 10, M3. Amended by
+ADR-058 (batches, the boundary and interior, winding, `H₁`).*
 
 * **The problem.** The numga ports carry an oriented triangle mesh (`examples/numga/src/mesh.rs`,
   numga's `mesh.py`). It derives edges from faces, and its incidence operators `d0` and `d1`
@@ -1899,7 +1900,8 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
     octahedron, a cube of six tetrahedra, the boundary of a 4-simplex, and two pieces.
 
 ## ADR-050: Discrete exterior calculus
-*Status: accepted, implemented (`gax_core::dec`, `docs/calculus.md`). Phase 10, M4 and M5.*
+*Status: accepted, implemented (`gax_core::dec`, `docs/calculus.md`). Phase 10, M4 and M5. Amended
+by ADR-058 (Regge geometry, angles and defects, materials, forms as multivectors).*
 
 * **The problem.** The metric half of calculus on meshes: Hodge stars, the codifferential, the
   Laplace–de Rham operator and the Dirac operator. The numga ports carried a triangle-only
@@ -2558,6 +2560,89 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   flattened map; `eigh_all` against the sparse `eigh`, the inverted spectrum and the residuals;
   correlations' `eigh` against the undual route; a null space under a small mass; warm starts
   from good and poor starts), `tests/quadrature.rs`, and the doctests.
+
+## ADR-058: Meshes and DEC for the surfaces ports: batches, homology, Regge geometry, materials
+*Status: implemented (2026-11-01). Amends ADR-049 and ADR-050. Phase 13.*
+
+* **The problem.** The surfaces ports (Whitney forms, Dirac–Kähler, Regge calculus, frame
+  fields, developability, connections) and the fluids and electromagnetism ports on meshes
+  shared a local module, `examples/numga/src/shared/simplicial.rs`: numga's batches of local
+  incidences, the boundary and interior lists, selection maps, coherent and outward winding, a
+  tree–cotree basis of `H₁` and its circulation. Regge calculus wrote a mesh's geometry from its
+  edge lengths (areas, corner turns, angle defects) because `Geometry` measured from positions;
+  Whitney forms integrated a material through midpoint quadrature because the Galerkin star had
+  no material; the forms' multivectors beyond degree 1 (`Σ c_I ∧∇λ`) were written per port.
+* **Batches (`mesh::Incidence`).** For each `n`-simplex its `m`-simplices in numga's local order
+  (`mesh::corners(n, m)`: corners, the facet facing each corner, or lexicographic subsets), each
+  with a sign: `incidence` (unsigned), `oriented` (the stored simplex against the local order),
+  `facets` (the induced orientation; numga's `boundary[n, n−1]`, renamed since `boundary()`
+  already lists the boundary faces). Stored flat, read by `site(r, j)` and `sign(r, j)`; entry
+  `j` as a map, a reading, or all entries weighted and summed (`assemble`), which is how a
+  per-corner formula becomes a field map. Considered: a `SparseMap` per entry, as numga's batch
+  holds them; the ports read the indices themselves as often as they apply the maps.
+* **Boundary, interior, selection.** `exterior(k)` and `interior(k)` (numga's names; the
+  `k`-faces of the boundary's `(N−2)`-simplices), and `SparseMap::selection(indices, len)`, a
+  scalar map that reads the listed sites, beside `from_diagonal` (numga's `reading`).
+* **Orientation.** `Topology::coherent()` (breadth first across the facets, each connected piece
+  keeping its first simplex's sense) returns `None` when the result is not oriented: a
+  non-orientable or non-pseudomanifold complex, which numga's version returned wound
+  inconsistently. `turned()` reverses everything. `Mesh::outward()` (numga's `Mesh.closed`) winds
+  a closed hypersurface outward by the sign of the volume it encloses, summed from the model's
+  `Measure` of the cones from one of its vertices (any point works for a closed surface), piece
+  by piece where numga summed over the whole mesh; for `N` = 2, 3, 4, the model's measure of
+  `N + 1` vertices having one coefficient. Surfaces with a boundary have no inside: `None`.
+* **A basis of `H₁` (`cycles`, `circulation`).** numga builds generators by tree and cotree on
+  closed surfaces. The library's works on any complex: a breadth-first spanning forest of the
+  edges; the triangles' boundaries reduced modulo the tree, as rows on the edges off it; those
+  edges that are not pivots of an exact elimination over `ℤ/p` close the loops, which run through
+  the tree (numga's path order). On surfaces the triangles are taken in reverse breadth-first
+  order across the edges off the tree, so that each meets the edge it was reached by first and
+  takes it as its pivot without elimination: Eppstein's tree–cotree, near-linear. Elsewhere a
+  row is reduced by the pivots it holds, highest key first, under an invariant that keeps the
+  pivots triangular (each row holds besides its pivot only pivots of lower keys; rows pivoting
+  on a fresh edge get keys above all earlier ones, reduced rows below). With a boundary the
+  count is right too (`b₁` over the rationals, so a Möbius strip and a Klein bottle have one
+  loop, their torsion invisible as in `betti_numbers`). `circulation(&loops)` is the loops' rows
+  alone; numga's `[F + L, E]` stacks `d(1)` above them, which the connections port does.
+  Considered: tree–cotree only, for `N = 3`; it needs a virtual outer face per boundary and has
+  no analogue on solids, where the elimination costs little.
+* **Regge geometry (`Geometry::from_squared_lengths`).** `Geometry` was already intrinsic
+  (ADR-050): it reads each simplex's squared distances. The construction now takes them from a
+  closure, so a topology with one squared length per edge builds the same geometry with no
+  model. It checks every simplex's Gram determinant positive, which by Sylvester's criterion (the
+  leading minors are the faces') means the lengths are Euclidean on each simplex; numerically
+  degenerate or impossible lengths panic with the simplex named, where a `NaN` would surface far
+  away. Considered: `Result`; the ports' lengths come from formulas, as positions do, and
+  `Geometry::new` panics on degenerate simplices too.
+* **Angles and defects.** `angles()`, each top simplex's interior angles at its `(N−3)`-faces,
+  from the gradients' products, `θᵢⱼ = atan2(√(HᵢᵢHⱼⱼ − Hᵢⱼ²), −Hᵢⱼ)` (no cancellation near 0
+  or π, where `acos` loses half the digits); laid out as `incidence(N − 1, N − 3)` lists those
+  faces, a flat `Vec<T>` like `volumes`. `angle_defects()` subtracts them from a whole turn, or
+  half a turn on the boundary (numga's rim convention), which makes Gauss–Bonnet `2π χ` for a
+  surface with its boundary's turning included. In any dimension, so on solids it is Regge's
+  curvature at the edges. numga's corner *turns* are rotor logarithms, a bivector per corner; the
+  library gives the angle, the port keeps its rotors.
+* **A material per simplex (`mass_with`).** `M_k = ∫ ⟨Wᵢ, A Wⱼ⟩ dV` with `A` a symmetric form
+  on the model's vectors per top simplex (`Scalar<(V, V)>`), evaluated on the barycentric
+  gradients in place of their metric products, on `k`-forms through its outermorphism (the
+  determinants of the pairings). It needs the gradients as model vectors, so it takes the mesh,
+  as `whitney_1` does; `gradients(&mesh, top)` is public now (the reciprocal frame). The volume is
+  the metric's, so `(PᵀP)⁻¹` gives the stretched mesh's mass over `|det P|`. Considered: a
+  material as a map `V <- V` paired by the model's scalar product, which needs a pairing trait
+  per model; a form is the pairing already. Considered: materials as a second set of edge
+  lengths (any metric on a simplex is its lengths); intrinsic, but no user has a material that
+  way. The isotropic material reproduces `mass` exactly, so `mass` is `mass_with` of the metric.
+* **Forms as multivectors.** `Form::vector`, `bivector` and `trivector`, from gradients of any
+  type closed under the wedge, the output the wedge's own type (a runtime degree has no single
+  result type, so one method per degree; degree 4 has not been needed). The gradients may be the
+  model's or their covectors (the ports' points are antivectors and their gradients planes).
+* **What stays in the examples.** The constructors (numga's torus, icosphere, hex disk,
+  subdivision), the edges' sides and corners across (`sides`), the first face at each vertex,
+  `parity`: mesh making and port-specific readings, as ADR-049 kept them.
+* **Tests.** `tests/meshes.rs` and the fuzz target's shared checks (facets sum to `d`, the
+  boundary splits, coherent winding, `b₁` independent closed loops on every random complex),
+  `tests/dec.rs` (Regge against PyDEC, angles against the law of cosines and face normals,
+  Gauss–Bonnet, the stretched material, forms as multivectors); laws.md §Q, §R.
 
 ## Hypotheses
 

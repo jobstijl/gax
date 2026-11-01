@@ -361,6 +361,16 @@ On complexes of edges, triangles, tetrahedra and 4-simplices (ADR-049):
   tetrahedra (1, 0, 0, 0), the boundary of a 4-simplex (1, 0, 0, 1), two disjoint triangles
   (2, 0, 0). The Möbius strip and the Klein bottle are not oriented; one face of the octahedron
   turned over breaks its orientation and not its topology.
+* [sample] The batches and the boundary (ADR-058), on the same random lists and fuzzed inputs:
+  `facets(n)` summed is `d(n − 1)`; `exterior(k)` and `interior(k)` split the `k`-simplices;
+  `coherent()` is oriented, keeps every simplex's vertices and number, leaves an oriented
+  complex as it is, and is `None` only for a complex that is not oriented; `cycles()` gives `b₁` closed loops (`circulation · d(0) = 0`), independent modulo
+  the triangles' boundaries (the rank of `[d(1); circulation]` over `ℤ/p` is `rank d(1) + b₁`).
+* [doc] numga's local order and signs (`corners`, `incidence`, `oriented`, `facets`) on a
+  tetrahedron given in an odd order; `b₁` loops on a torus (2), a cylinder, a Möbius strip, a
+  Klein bottle (1 each), a disk (0), a solid torus of tetrahedra (1) and a theta graph (2); a
+  Möbius strip has no coherent winding; two octahedra, one inside out, some faces turned, wind
+  outward piece by piece (`Mesh::outward`), and a surface with a boundary has no outside.
 * [doc] numga's mesh: the examples' `Mesh` on `gax::mesh` gives the same edges, face orientations
   and couplings of `d0`, `d1` and the means as before, bit for bit
   (`examples/numga/src/mesh.rs`, `gax_mesh_keeps_every_number`).
@@ -397,6 +407,23 @@ On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
   the unit sphere's `ℓ(ℓ+1)` at second order, the error falling more than threefold per
   subdivision, for both stars (16th eigenvalue off by 2.7, 0.87, 0.23 with the diagonal star and
   4.2, 1.0, 0.25 with the Galerkin one, at 1, 2 and 3 subdivisions).
+* [prop] Regge calculus (ADR-058): the geometry of the squared edge lengths alone
+  (`from_squared_lengths`) is PyDEC's from the positions, every volume, dual volume and star,
+  within `10⁻¹²`, and its Galerkin stars are those of the positions; lengths that break a
+  triangle inequality are refused.
+* [prop] Angles: on random triangles the corner angles' cosines are the law of cosines' and the
+  three add up to `π`; on random tetrahedra the dihedral angles at the six edges are those between
+  the faces' steps across the edge, within `10⁻¹¹`.
+* [prop] Discrete Gauss–Bonnet: the angle defects add up to `4π` on a subdivided icosahedron (all
+  positive), to `0` on a torus, and to `2π` on PyDEC's 2D grids with the boundary's half turns, the
+  interior vertices flat; inside PyDEC's jittered 3D grids every interior edge's defect is zero
+  (flat space); five equilateral triangles around a vertex leave a sixth of a turn.
+* [prop] The mass with a material (`mass_with`): with the model's inner product it is `mass(k)`;
+  with `(PᵀP)⁻¹` it is the mass of the mesh stretched by `P` over `|det P|`, in every degree on
+  PyDEC's 3D grids.
+* [prop] Forms as multivectors: a Whitney 1-form read through the gradients is `whitney_1`'s
+  vector, the derivative of a 1-form the bivector `Σ 2 c ∇λₐ ∧ ∇λ_b`, a unit 3-form on a
+  tetrahedron one over its volume; the gradients are the reciprocal frame of the edges.
 * [prop] The numga ports' hand-built metric: their edge ratios are `⋆₁`, their vertex areas the
   row sums of `M₀`, their reconstruction `W₁` at the centroids, within `10⁻¹²`
   (`examples/numga/src/mesh.rs`, `gax_dec_gives_the_metric`).

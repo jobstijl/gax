@@ -133,6 +133,42 @@ impl<C: Copy> SparseMap<C> {
         }
     }
 
+    /// The selection map reading a field over `len` sites at the given ones, in that order,
+    /// `[indices] <- [len]`, cells one of a scalar kind (numga's `mesh.reading`): the free
+    /// vertices of a boundary-value problem, the boundary edges. Its transpose puts values at
+    /// those sites back onto all of them, zero elsewhere.
+    ///
+    /// ```
+    /// use gax::field::{Field, SparseMap};
+    /// use gax::vga3d::Scalar;
+    /// let f: Field<_> = [5.0, 6.0, 7.0, 8.0].into_iter().map(Scalar::<(), f64>::new).collect();
+    /// let pick = SparseMap::<Scalar<(), f64>>::selection(&[3, 1], 4);
+    /// assert_eq!((&pick * &f).site(0).s(), 8.0);
+    /// let back = &pick.transpose_with(|c| c) * &(&pick * &f);
+    /// assert_eq!(back.iter().map(|x| x.s()).collect::<Vec<_>>(), [0.0, 6.0, 0.0, 8.0]);
+    /// ```
+    ///
+    /// # Panics
+    /// If an index is not below `len`.
+    #[must_use]
+    #[track_caller]
+    pub fn selection(indices: &[usize], len: usize) -> Self
+    where
+        C: Extensor<Slots = ()>,
+    {
+        const {
+            assert!(
+                <C::Kind as Kind>::N == 1,
+                "the cells of a selection map are scalars"
+            );
+        }
+        let one = C::from_coeffs(<C::Kind as Kind>::arr_from_fn(|_| {
+            <C::Coef as crate::coef::Coef>::one()
+        }));
+        let triples = indices.iter().enumerate().map(|(r, &i)| (r, i, one));
+        Self::from_triples(triples, (indices.len(), len))
+    }
+
     /// The field map with no couplings, `shape` the numbers of output and input sites: the
     /// zero block of a saddle-point system ([`BlockMap`](super::BlockMap)).
     #[must_use]

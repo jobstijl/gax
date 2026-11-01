@@ -220,6 +220,71 @@ assert_eq!(torus.euler_characteristic(), 0);
 assert!(torus.is_oriented() && torus.boundary().is_empty());
 ```
 
+**Batches.** numga's per-simplex formulas (a triangle's gradients from the sides facing its
+corners, a tetrahedron's edge forms) read the simplices of each simplex in a local order. An
+`Incidence` holds, for each `n`-simplex, its `m`-simplices in the order of `mesh::corners(n, m)`
+(the corners in order, the facet facing each corner, or the subsets in lexicographic order), each
+with a sign:
+
+* `incidence(n, m)`: unsigned;
+* `oriented(n, m)`: `+1` where the stored simplex runs as the `n`-simplex's own order runs it;
+* `facets(n)`: the facets signed by the orientation the simplex induces on them, an edge's tail
+  `−1` and head `+1`, so that summed it is `d(n − 1)`.
+
+Entry `j` is a field map (`map(j)`) or a reading of a field (`read(j, f)`, `pick` unsigned), and
+`assemble(|r, j| cell)` weights each entry per simplex and sums them into one field map: the face
+gradient of a triangle mesh is `t.incidence(2, 0).assemble(|f, k| side[k][f] * twice[f] * slot)`.
+
+**The boundary and the interior.** `exterior(k)` lists the `k`-simplices on the boundary,
+`interior(k)` the others, and `SparseMap::selection(&indices, len)` reads a field at the listed
+sites (its transpose puts values back): the free vertices of a boundary-value problem are
+`selection(&t.interior(0), n)`.
+
+**Orientation.** `coherent()` turns top simplices so that neighbours agree, each connected piece
+keeping the sense of its first simplex, and is `None` for a complex that cannot be oriented (a
+Möbius strip). `turned()` reverses every orientation. On a mesh, `outward()` winds a closed
+surface (a closed curve in the plane) outward, piece by piece, by the sign of the volume it
+encloses in the model.
+
+**Homology.** `cycles()` gives closed loops of vertices whose classes are a basis of `H₁`, `b₁` of
+them: each closed by an edge off a breadth-first spanning tree, chosen independent of the
+triangles' boundaries by exact elimination (on a surface, Eppstein's tree and cotree).
+`circulation(&loops)` sums an edge cochain along each loop, so with `d(1)` it gives a cochain's
+periods, the constraints of a trivial connection or a harmonic field.
+
+```rust
+use gax::field::{Field, SparseMap};
+use gax::mesh::Topology;
+use gax::vga3d::Scalar;
+
+// A cylinder: a 6 × 2 grid of squares, two triangles each, `j` wrapping around.
+let id = |i: usize, j: usize| i * 6 + j % 6;
+let faces: Vec<[usize; 3]> = (0..2)
+    .flat_map(|i| (0..6).flat_map(move |j| {
+        [[id(i, j), id(i + 1, j), id(i + 1, j + 1)], [id(i, j), id(i + 1, j + 1), id(i, j + 1)]]
+    }))
+    .collect();
+let cylinder = Topology::new(18, &faces).unwrap();
+assert_eq!(cylinder.exterior(0).len(), 12); // the two rims
+let loops = cylinder.cycles();
+assert_eq!(loops.len(), 1); // once around
+// A closed cochain that is not a gradient: one turn around, a sixth on each edge along a ring.
+let turn: Field<Scalar<(), f64>> = cylinder
+    .simplices(1)
+    .map(|e| {
+        let (a, b) = (e[0] % 6, e[1] % 6);
+        let step = if b == (a + 1) % 6 { 1.0 } else if a == (b + 1) % 6 { -1.0 } else { 0.0 };
+        Scalar::new(step / 6.0)
+    })
+    .collect();
+assert!((&cylinder.d::<Scalar<(), f64>>(1) * &turn).iter().all(|c| c.s().abs() < 1e-15));
+let period = (&cylinder.circulation::<Scalar<(), f64>>(&loops) * &turn).site(0).s();
+assert!((period.abs() - 1.0).abs() < 1e-15);
+// The interior vertices, read and put back.
+let free = SparseMap::<Scalar<(), f64>>::selection(&cylinder.interior(0), 18);
+assert_eq!(free.shape(), (6, 18));
+```
+
 `pga3d::Moments::of_mesh` takes a closed surface as a `Mesh<Point, 3>`, and `pga2d::Moments::of_mesh`
 a closed curve as a `Mesh<Point, 2>`; `of_faces` and `of_polygon` take slices.
 
@@ -247,6 +312,8 @@ simplex, and gives:
   inside a top simplex. It inverts the de Rham map.
 * `form_inner(top, a, b)`, the pointwise inner product of two forms of one degree through the
   metric; integrated against the Whitney forms it is `mass(k)`.
+* `angles()`, `angle_defects()`, `mass_with(&mesh, k, &materials)` and `gradients(&mesh, top)`,
+  below.
 
 The Whitney forms of every degree need no metric, so they are the topology's:
 `topology.whitney(k, cochain, top, at)` is the form `Σ c_σ W_σ` of a `k`-cochain at a
@@ -296,6 +363,49 @@ let ones: Field<_> = (0..4).map(|_| Scalar::<(), f64>::new(1.0)).collect();
 let image: Field<Scalar<(), f64>> = &stiffness * &ones;
 assert!(image.sites().iter().all(|x| x.s().abs() < 1e-14));
 ```
+
+**From edge lengths alone.** `Geometry::from_squared_lengths(&topology, &squared)` takes one
+squared length per edge and no positions (Regge calculus): the metric is intrinsic, so volumes,
+dual volumes, stars and masses follow as from a mesh, and lengths no embedding has (a curved
+surface flattened triangle by triangle) keep their curvature. It refuses lengths that break a
+triangle inequality. Lengths taken from positions give `Geometry::new`'s numbers (PyDEC's, to
+`10⁻¹²`).
+
+**Angles and curvature.** `angles()` gives each top simplex's interior angles at its
+`(N−3)`-faces, laid out as `incidence(N − 1, N − 3)` lists them: a triangle's corner angles, a
+tetrahedron's dihedral angles at its six edges. `angle_defects()` is the flat angle less their
+sum around each `(N−3)`-simplex, a whole turn inside and half a turn on the boundary: on a
+surface the Gaussian curvature integrated over each vertex's cell, which sums to `2π χ` over a
+closed surface (Gauss–Bonnet); on a solid, Regge's curvature at each edge.
+
+```rust
+use gax::dec::Geometry;
+use gax::field::Field;
+use gax::mesh::Topology;
+use gax::vga3d::Scalar;
+
+// Five unit triangles around a vertex: a pentagonal pyramid's apex, a sixth of a turn short.
+let fan: Vec<[usize; 3]> = (0..5).map(|i| [0, 1 + i, 1 + (i + 1) % 5]).collect();
+let t = Topology::new(6, &fan).unwrap();
+let ones: Field<_> = (0..t.len(1)).map(|_| Scalar::<(), f64>::new(1.0)).collect();
+let g = Geometry::from_squared_lengths(&t, &ones);
+assert!(g.angles().iter().all(|a| (a - std::f64::consts::FRAC_PI_3).abs() < 1e-15));
+assert!((g.angle_defects()[0] - std::f64::consts::TAU / 6.0).abs() < 1e-14);
+```
+
+**A material per simplex.** `mass_with(&mesh, k, &materials)` is the Galerkin star with the
+Whitney forms paired by a material on each top simplex instead of the metric: a symmetric form on
+the model's vectors (`Scalar<(Vector, Vector)>`, a conductivity or permittivity), applied to the
+barycentric gradients, and on `k`-forms through its outermorphism. With the model's own inner
+product it is `mass(k)`; with a stretched one, the mass of the stretched mesh over the stretch's
+volume factor. `gradients(&mesh, top)` gives those gradients, the reciprocal frame of the top
+simplex's edges.
+
+**Forms as multivectors.** A `Form`'s coefficients on `dλ_I`, combined with gradients, are the
+multivector a model writes: `form.vector(&g)` for a 1-form, `form.bivector(&g)` and
+`form.trivector(&g)` for 2- and 3-forms (`Σ c_I ∇λ_{i₁} ∧ ∇λ_{i₂} …`), the output the wedge's type.
+The gradients may be the model's (`Geometry::gradients`) or their covectors where positions are
+antivectors (a triangle's sides over twice its patch).
 
 **The two stars on 0-forms.** On triangles both give the cotangent Laplacian `d₀ᵀ ⋆₁ d₀ = d₀ᵀ M₁ d₀`,
 the stiffness of linear finite elements. On tetrahedra only the Galerkin one does: the circumcentric

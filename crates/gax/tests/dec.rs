@@ -659,3 +659,296 @@ fn the_sphere_spectrum_converges() {
         }
     }
 }
+
+/// The squared length of each edge of a fixture.
+fn squared_lengths<const N: usize>(fx: &Fixture, t: &gax::mesh::Topology<N>) -> Field<S2> {
+    t.simplices(1)
+        .map(|e| {
+            let (a, b) = (&fx.points[e[0]], &fx.points[e[1]]);
+            S2::new(a.iter().zip(b).map(|(x, y)| (x - y) * (x - y)).sum())
+        })
+        .collect()
+}
+
+/// Regge calculus: the geometry from the squared edge lengths alone is `PyDEC`'s from the
+/// positions, every volume, dual volume and star of every dimension, and so is its Galerkin star.
+#[test]
+fn the_geometry_of_edge_lengths_matches_pydec() {
+    for fx in fixtures() {
+        match fx.dim {
+            2 => {
+                let tops: Vec<[usize; 3]> =
+                    fx.simplices.iter().map(|s| [s[0], s[1], s[2]]).collect();
+                let t = gax::mesh::Topology::new(fx.points.len(), &tops).unwrap();
+                let g = Geometry::from_squared_lengths(&t, &squared_lengths(&fx, &t));
+                compare(&fx, &t, &g);
+            }
+            3 => {
+                let tops: Vec<[usize; 4]> = fx
+                    .simplices
+                    .iter()
+                    .map(|s| [s[0], s[1], s[2], s[3]])
+                    .collect();
+                let t = gax::mesh::Topology::new(fx.points.len(), &tops).unwrap();
+                let g = Geometry::from_squared_lengths(&t, &squared_lengths(&fx, &t));
+                compare(&fx, &t, &g);
+                let v: Field<_> = fx
+                    .points
+                    .iter()
+                    .map(|p| gax::vga3d::Vector::<(), f64>::new(p[0], p[1], p[2]))
+                    .collect();
+                let from_positions = Geometry::new(&Mesh::new(v, &tops).unwrap());
+                for k in 0..4 {
+                    let a = sandwich_free(&g.mass::<S2>(k));
+                    let b = sandwich_free(&from_positions.mass::<S2>(k));
+                    assert_same(&a, &b, "the Galerkin star of the lengths");
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+/// A map's couplings, repeated ones added.
+fn sandwich_free(m: &SparseMap<S2>) -> BTreeMap<(usize, usize), f64> {
+    let mut out = BTreeMap::new();
+    for (r, c, x) in m.couplings() {
+        *out.entry((r, c)).or_insert(0.0) += x.s();
+    }
+    out
+}
+
+#[test]
+#[should_panic(expected = "not those of a Euclidean simplex")]
+fn lengths_that_break_a_triangle_inequality_are_refused() {
+    let t = gax::mesh::Topology::new(3, &[[0, 1, 2]]).unwrap();
+    let squared: Field<_> = [1.0, 1.0, 4.5].into_iter().map(S2::new).collect();
+    let _ = Geometry::from_squared_lengths(&t, &squared);
+}
+
+/// The angles of triangles by the law of cosines, which hold the three corners' angles to a
+/// half turn, and the dihedral angles of tetrahedra from the normals of their faces (VGA3D's
+/// wedges, independently of the metric's gradients).
+#[test]
+fn angles_are_the_corners_and_the_dihedrals() {
+    use gax::vga3d::Vector;
+    let mut rng = Rng(17);
+    let mut unit = move || (rng.next() % 1_000_000) as f64 / 1e6;
+    for _ in 0..20 {
+        let p: [[f64; 2]; 3] = core::array::from_fn(|_| [unit(), unit()]);
+        let v: Field<_> = p
+            .iter()
+            .map(|p| gax::vga2d::Vector::<(), f64>::new(p[0], p[1]))
+            .collect();
+        let mesh = Mesh::new(v.clone(), &[[0, 1, 2]]).unwrap();
+        let angles = Geometry::new(&mesh).angles();
+        assert!((angles.iter().sum::<f64>() - std::f64::consts::PI).abs() < 1e-12);
+        for (k, &angle) in angles.iter().enumerate() {
+            let (a, b) = (
+                v.site((k + 1) % 3) - v.site(k),
+                v.site((k + 2) % 3) - v.site(k),
+            );
+            let cos = (a | b).s() / (a.norm() * b.norm());
+            assert!((angle.cos() - cos).abs() < 1e-12, "{angle} {cos}");
+        }
+    }
+    for _ in 0..20 {
+        let p: [Vector<(), f64>; 4] = core::array::from_fn(|_| Vector::new(unit(), unit(), unit()));
+        let v: Field<_> = p.into_iter().collect();
+        let mesh = Mesh::new(v, &[[0, 1, 2, 3]]).unwrap();
+        let angles = Geometry::new(&mesh).angles();
+        let edges = gax::mesh::corners(3, 1);
+        for (j, edge) in edges.iter().enumerate() {
+            // The two faces at the edge, each with its corner off the edge.
+            let off: Vec<usize> = (0..4).filter(|c| !edge.contains(c)).collect();
+            let (a, b) = (p[edge[0]], p[edge[1]]);
+            let along = b - a;
+            // The parts of the steps to the off corners across the edge: the angle between them.
+            let across = |c: usize| {
+                let s = p[c] - a;
+                s - along * ((s | along).s() / (along | along).s())
+            };
+            let (x, y) = (across(off[0]), across(off[1]));
+            let cos = (x | y).s() / (x.norm() * y.norm());
+            assert!((angles[j].cos() - cos).abs() < 1e-11, "{} {cos}", angles[j]);
+        }
+    }
+}
+
+/// Discrete Gauss–Bonnet: the angle defects of a closed surface add up to `2π χ` (a sphere, a
+/// torus), of a disk to `2π` with the boundary's half turns; inside a flat solid every edge's
+/// defect vanishes (the jittered 3D fixtures).
+#[test]
+fn angle_defects_add_up_to_the_euler_characteristic() {
+    use std::f64::consts::TAU;
+    let sphere = Geometry::new(&icosphere(2)).angle_defects();
+    assert!((sphere.iter().sum::<f64>() - 2.0 * TAU).abs() < 1e-11);
+    assert!(sphere.iter().all(|&d| d > 0.0));
+    let torus = Geometry::new(&torus(12, 8, 2.0, 0.7)).angle_defects();
+    assert!(torus.iter().sum::<f64>().abs() < 1e-11);
+    for fx in fixtures() {
+        if fx.dim == 2 {
+            let tops: Vec<[usize; 3]> = fx.simplices.iter().map(|s| [s[0], s[1], s[2]]).collect();
+            let t = gax::mesh::Topology::new(fx.points.len(), &tops).unwrap();
+            let defects =
+                Geometry::from_squared_lengths(&t, &squared_lengths(&fx, &t)).angle_defects();
+            assert!(
+                (defects.iter().sum::<f64>() - TAU).abs() < 1e-12,
+                "{}",
+                fx.name
+            );
+            assert!(t.interior(0).iter().all(|&v| defects[v].abs() < 1e-12));
+        } else {
+            let tops: Vec<[usize; 4]> = fx
+                .simplices
+                .iter()
+                .map(|s| [s[0], s[1], s[2], s[3]])
+                .collect();
+            let t = gax::mesh::Topology::new(fx.points.len(), &tops).unwrap();
+            let defects =
+                Geometry::from_squared_lengths(&t, &squared_lengths(&fx, &t)).angle_defects();
+            assert!(t.interior(1).len() > 10);
+            assert!(
+                t.interior(1).iter().all(|&e| defects[e].abs() < 1e-12),
+                "{}",
+                fx.name
+            );
+        }
+    }
+    // A cone: lengths that close a fan of six equilateral triangles around a vertex into five
+    // (a pentagonal pyramid's apex) leave a sixth of a turn there.
+    let fan: Vec<[usize; 3]> = (0..5).map(|i| [0, 1 + i, 1 + (i + 1) % 5]).collect();
+    let t = gax::mesh::Topology::new(6, &fan).unwrap();
+    let ones = Field::from_fn(t.len(1), |_| S2::new(1.0));
+    let defects = Geometry::from_squared_lengths(&t, &ones).angle_defects();
+    assert!((defects[0] - TAU / 6.0).abs() < 1e-14);
+}
+
+/// A material per top simplex: with the model's own inner product it is the Galerkin star, and
+/// with `(PᵀP)⁻¹` it is the star of the mesh stretched by `P`, over `|det P|`, in every degree.
+#[test]
+fn the_mass_with_a_material_is_the_mass_of_a_stretched_mesh() {
+    use gax::vga3d::{Scalar, Vector};
+    type F = Scalar<(Vector, Vector), f64>;
+    let e = |i: usize| -> Scalar<(Vector,), f64> {
+        let mut c = [0.0; 3];
+        c[i] = 1.0;
+        Vector::<(), f64>::from_coeffs(c) | Vector::slot()
+    };
+    let form = |m: [[f64; 3]; 3]| -> F {
+        (0..3)
+            .flat_map(|i| (0..3).map(move |j| (i, j)))
+            .map(|(i, j)| (e(i) * e(j)) * m[i][j])
+            .fold(F::zero(), |a, b| a + b)
+    };
+    // P, its Gram matrix PᵀP inverted, and its determinant.
+    let p = [[1.3, 0.4, -0.2], [0.1, 0.8, 0.3], [-0.25, 0.2, 1.6]];
+    let det = p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1])
+        - p[0][1] * (p[1][0] * p[2][2] - p[1][2] * p[2][0])
+        + p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0]);
+    let ptp: [[f64; 3]; 3] =
+        core::array::from_fn(|i| core::array::from_fn(|j| (0..3).map(|k| p[k][i] * p[k][j]).sum()));
+    let inv = {
+        let m = ptp;
+        let c = |i: usize, j: usize| {
+            let (r0, r1) = ((i + 1) % 3, (i + 2) % 3);
+            let (c0, c1) = ((j + 1) % 3, (j + 2) % 3);
+            m[r0][c0] * m[r1][c1] - m[r0][c1] * m[r1][c0]
+        };
+        let d = (0..3).map(|j| m[0][j] * c(0, j)).sum::<f64>();
+        let out: [[f64; 3]; 3] = core::array::from_fn(|i| core::array::from_fn(|j| c(j, i) / d));
+        out
+    };
+    let identity = form([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
+    for fx in fixtures().into_iter().filter(|f| f.dim == 3) {
+        let tops: Vec<[usize; 4]> = fx
+            .simplices
+            .iter()
+            .map(|s| [s[0], s[1], s[2], s[3]])
+            .collect();
+        let v: Field<_> = fx
+            .points
+            .iter()
+            .map(|q| Vector::<(), f64>::new(q[0], q[1], q[2]))
+            .collect();
+        let stretched: Field<_> = fx
+            .points
+            .iter()
+            .map(|q| {
+                let r: [f64; 3] = core::array::from_fn(|i| (0..3).map(|j| p[i][j] * q[j]).sum());
+                Vector::<(), f64>::new(r[0], r[1], r[2])
+            })
+            .collect();
+        let mesh = Mesh::new(v, &tops).unwrap();
+        let g = Geometry::new(&mesh);
+        let h = Geometry::new(&Mesh::new(stretched, &tops).unwrap());
+        let isotropic = Field::from_fn(tops.len(), |_| identity);
+        let material = Field::from_fn(tops.len(), |_| form(inv));
+        for k in 0..4 {
+            let with = sandwich_free(&g.mass_with::<S2, _, _>(&mesh, k, &isotropic));
+            assert_same(
+                &with,
+                &sandwich_free(&g.mass::<S2>(k)),
+                "the isotropic material",
+            );
+            let with = sandwich_free(&g.mass_with::<S2, _, _>(&mesh, k, &material));
+            let want: BTreeMap<_, _> = sandwich_free(&h.mass::<S2>(k))
+                .into_iter()
+                .map(|(key, x)| (key, x / det.abs()))
+                .collect();
+            assert_same(&with, &want, "the stretched material");
+        }
+    }
+}
+
+/// A form's coefficients on `dλ_I` read through the gradients are the multivector a model writes:
+/// the Whitney 1-form of a cochain at a point is `whitney_1`'s vector, and the derivative of a
+/// 1-form is the curl, the wedge of the gradient field's derivative.
+#[test]
+fn forms_read_as_multivectors() {
+    use gax::vga3d::{Bivector, Vector};
+    let corners = [
+        [0.1, 0.0, 0.2],
+        [1.2, 0.1, -0.1],
+        [0.3, 0.9, 0.05],
+        [0.2, 0.3, 1.1],
+    ];
+    let v: Field<_> = corners
+        .iter()
+        .map(|p| Vector::<(), f64>::new(p[0], p[1], p[2]))
+        .collect();
+    let mesh = Mesh::new(v, &[[0, 1, 2, 3]]).unwrap();
+    let g = Geometry::new(&mesh);
+    let grads = g.gradients(&mesh, 0);
+    // The gradients pair to one with the edges from vertex 0, and sum to nothing.
+    for (i, gi) in grads.iter().enumerate().skip(1) {
+        for j in 1..4 {
+            let edge = mesh.vertices.site(j) - mesh.vertices.site(0);
+            let want = if i == j { 1.0 } else { 0.0 };
+            assert!(((*gi | edge).s() - want).abs() < 1e-12);
+        }
+    }
+    let c: Field<_> = [0.3, -1.0, 0.7, 2.0, 0.1, -0.4]
+        .into_iter()
+        .map(S3::new)
+        .collect();
+    let at = [0.1, 0.2, 0.3, 0.4];
+    let one = mesh.topology().whitney(1, &c, 0, &at);
+    let field = g.whitney_1(&mesh, &c, 0, &at);
+    assert!((one.vector(&grads) - field).norm() < 1e-12);
+    // The curl of the Whitney 1-form `Σ c (λₐ ∇λ_b − λ_b ∇λₐ)` is `Σ 2 c ∇λₐ ∧ ∇λ_b`.
+    let curl: Bivector<(), f64> = mesh.topology().whitney_d(1, &c, 0).bivector(&grads);
+    let mut want = Bivector::<(), f64>::zero();
+    for (e, s) in mesh.topology().simplices(1).enumerate() {
+        want += (grads[s[0]] ^ grads[s[1]]) * (2.0 * c.site(e).s());
+    }
+    assert!((curl - want).norm() < 1e-12);
+    // The 3-form of a unit cochain on the solid is one over its volume.
+    let unit = Field::from_fn(1, |_| S3::new(1.0));
+    let density: gax::vga3d::Pseudoscalar<(), f64> =
+        mesh.topology().whitney(3, &unit, 0, &at).trivector(&grads);
+    let volume = (mesh.vertices.site(1) - mesh.vertices.site(0))
+        ^ (mesh.vertices.site(2) - mesh.vertices.site(0))
+        ^ (mesh.vertices.site(3) - mesh.vertices.site(0));
+    assert!((density.e123() * volume.e123() - 6.0).abs() < 1e-12);
+}

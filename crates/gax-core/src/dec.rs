@@ -206,14 +206,84 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     /// The geometry of a mesh, from the squared distances of its model.
     #[must_use]
     pub fn new<V: Distance<Coef = T> + Extensor<Slots = ()>>(mesh: &Mesh<V, N>) -> Self {
-        Self::build(mesh.topology().clone(), mesh.vertices.sites())
+        let v = mesh.vertices.sites();
+        Self::build(mesh.topology().clone(), |a, b| {
+            V::distance_squared(&v[a], &v[b])
+        })
     }
 
-    /// The geometry of a topology with the vertices `v`.
-    fn build<V: Distance<Coef = T>>(topology: Topology<N>, v: &[V]) -> Self {
+    /// The geometry of a mesh from the squared lengths of its edges alone, one value per edge
+    /// (Regge calculus): the metric is intrinsic, so no positions are needed, and everything
+    /// [`new`](Self::new) gives follows (volumes, dual volumes, stars, masses, angles). Lengths
+    /// that some embedding gives reproduce that embedding's geometry; lengths that none gives (a
+    /// curved surface's, flattened triangle by triangle) carry their curvature in the
+    /// [`angle_defects`](Self::angle_defects).
+    ///
+    /// ```
+    /// use gax::dec::Geometry;
+    /// use gax::field::Field;
+    /// use gax::mesh::Topology;
+    /// use gax::vga3d::Scalar;
+    /// // A triangle with sides 3, 4, 5: its area is 6, its right angle at the corner shared by
+    /// // the sides 3 and 4 (edges (0 1) and (0 2)).
+    /// let t = Topology::new(3, &[[0, 1, 2]]).unwrap();
+    /// let squared: Field<_> = [9.0, 16.0, 25.0].into_iter().map(Scalar::<(), f64>::new).collect();
+    /// let g = Geometry::from_squared_lengths(&t, &squared);
+    /// assert!((g.volumes(2)[0] - 6.0).abs() < 1e-14);
+    /// assert!((g.angles()[0] - core::f64::consts::FRAC_PI_2).abs() < 1e-15);
+    /// ```
+    ///
+    /// # Panics
+    /// If there is not one value per edge, or the squared lengths of a simplex are not those of
+    /// a Euclidean simplex of positive volume (a triangle inequality fails, strictly or not).
+    #[must_use]
+    #[track_caller]
+    pub fn from_squared_lengths<S: Extensor<Slots = (), Coef = T>>(
+        topology: &Topology<N>,
+        squared: &Field<S>,
+    ) -> Self {
+        const {
+            assert!(<S::Kind as Kind>::N == 1, "squared lengths are scalars");
+        }
+        assert_eq!(
+            squared.len(),
+            topology.len(1),
+            "one squared length per edge"
+        );
+        let length = |a: usize, b: usize| -> T {
+            if a == b {
+                return T::zero();
+            }
+            let e = topology
+                .index_of(1, &[a.min(b), a.max(b)])
+                .expect("an edge of the topology");
+            squared.sites()[e].coeffs().as_ref()[0]
+        };
+        // Every simplex's Gram determinant positive: by Sylvester's criterion on the leading
+        // minors, which are its faces', the Gram matrices are positive definite, the lengths
+        // Euclidean.
+        for k in 1..N {
+            for (i, s) in topology.simplices(k).enumerate() {
+                let d: Vec<T> = s
+                    .iter()
+                    .flat_map(|&a| s.iter().map(move |&b| length(a, b)))
+                    .collect();
+                let det = determinant(gram(&d, k), k);
+                assert!(
+                    T::all_lt(T::zero(), det),
+                    "the squared lengths of {k}-simplex {i} {s:?} are not those of a Euclidean simplex"
+                );
+            }
+        }
+        Self::build(topology.clone(), length)
+    }
+
+    /// The geometry of a topology whose vertices `a`, `b` are `distance(a, b)` apart, squared.
+    fn build(topology: Topology<N>, distance: impl Fn(usize, usize) -> T) -> Self {
+        let distance = &distance;
         let distances_of = |s: &[usize]| -> Vec<T> {
             s.iter()
-                .flat_map(|&a| s.iter().map(move |&b| V::distance_squared(&v[a], &v[b])))
+                .flat_map(|&a| s.iter().map(move |&b| distance(a, b)))
                 .collect()
         };
         let volumes: Vec<Vec<T>> = (0..N)
@@ -303,6 +373,108 @@ impl<T: Real, const N: usize> Geometry<T, N> {
     /// of the barycentric gradients.
     #[must_use]
     pub fn mass<C: Extensor<Slots = (), Coef = T>>(&self, k: usize) -> SparseMap<C> {
+        self.mass_from(k, |t| gradient_products(&self.distances[t], N - 1))
+    }
+
+    /// The Galerkin star with a material: `M_k = ∫ ⟨Wᵢ, A Wⱼ⟩ dV`, the Whitney forms paired by
+    /// a material `A` on each top simplex instead of the metric (a conductivity, a
+    /// permittivity, an anisotropic diffusion). `materials` holds a symmetric form on the
+    /// model's vectors per top simplex, which pairs the barycentric gradients `∇λᵢ`
+    /// ([`gradients`](Self::gradients)), `A(∇λₐ, ∇λ_b)` in place of `⟨dλₐ, dλ_b⟩`; on
+    /// `k`-forms it acts through its outermorphism, the determinants of those pairings. The
+    /// volume is the metric's. With the model's own inner product on every simplex (VGA's
+    /// `Vector::slot() | Vector::slot()`) it is [`mass`](Self::mass); with a stretched one it is
+    /// the mass of the stretched mesh, over the stretch's volume factor.
+    ///
+    /// ```
+    /// use gax::dec::Geometry;
+    /// use gax::field::Field;
+    /// use gax::mesh::Mesh;
+    /// use gax::vga3d::{Scalar, Vector};
+    /// let v = |x: f64, y: f64| Vector::<(), f64>::new(x, y, 0.0);
+    /// let vertices: Field<_> = [v(0.0, 0.0), v(1.0, 0.0), v(1.0, 1.0), v(0.0, 1.0)].into_iter().collect();
+    /// let square = Mesh::new(vertices, &[[0, 1, 2], [0, 2, 3]]).unwrap();
+    /// let g = Geometry::new(&square);
+    /// // Ten times as conductive along x as along y, the same on both triangles.
+    /// let x = Vector::<(), f64>::new(1.0, 0.0, 0.0) | Vector::slot();
+    /// let y = Vector::<(), f64>::new(0.0, 1.0, 0.0) | Vector::slot();
+    /// let fibred = x * x * 10.0 + y * y;
+    /// let mass = g.mass_with::<Scalar<(), f64>, _, _>(&square, 1, &Field::from_fn(2, |_| fibred));
+    /// // A unit potential drop along x (the edge (0 1) and the diagonal carry it) stores ten
+    /// // times the energy of one along y.
+    /// let along = |c: [f64; 5]| -> f64 {
+    ///     let c: Field<_> = c.into_iter().map(Scalar::<(), f64>::new).collect();
+    ///     (&mass * &c).dot(&c)
+    /// };
+    /// let (ex, ey) = (along([1.0, 1.0, 0.0, 0.0, -1.0]), along([0.0, 1.0, 1.0, 1.0, 0.0]));
+    /// assert!((ex - 10.0 * ey).abs() < 1e-12);
+    /// ```
+    ///
+    /// # Panics
+    /// If there is not one material per top simplex, or the mesh is not the geometry's.
+    #[must_use]
+    #[track_caller]
+    pub fn mass_with<C, V, F>(
+        &self,
+        mesh: &Mesh<V, N>,
+        k: usize,
+        materials: &Field<F>,
+    ) -> SparseMap<C>
+    where
+        C: Extensor<Slots = (), Coef = T>,
+        V: Extensor<Slots = (), Coef = T>
+            + core::ops::Add<Output = V>
+            + core::ops::Sub<Output = V>
+            + Gp<T, Output = V>,
+        F: Extensor<Slots = (V::Kind, V::Kind), Coef = T>,
+    {
+        const {
+            assert!(
+                <F::Kind as Kind>::N == 1,
+                "a material pairs two gradients to a scalar"
+            );
+        }
+        assert_eq!(
+            materials.len(),
+            self.topology.len(N - 1),
+            "one material per top simplex"
+        );
+        assert_eq!(mesh.topology(), &self.topology, "the mesh of the geometry");
+        self.mass_from(k, |t| {
+            let g = self.gradients(mesh, t);
+            let form = materials.sites()[t].coeffs().as_ref()[0];
+            let mut h = std::vec![T::zero(); N * N];
+            for a in 0..N {
+                for b in 0..N {
+                    let (x, y) = (g[a].coeffs(), g[b].coeffs());
+                    let mut sum = T::zero();
+                    for (row, &xi) in form.as_ref().iter().zip(x.as_ref()) {
+                        for (&f, &yj) in row.as_ref().iter().zip(y.as_ref()) {
+                            sum = sum + f * xi * yj;
+                        }
+                    }
+                    h[a * N + b] = sum;
+                }
+            }
+            // Symmetric, so that the mass is.
+            for a in 0..N {
+                for b in a + 1..N {
+                    let mean = (h[a * N + b] + h[b * N + a]) * T::from_ratio(1, 2);
+                    h[a * N + b] = mean;
+                    h[b * N + a] = mean;
+                }
+            }
+            h
+        })
+    }
+
+    /// The Galerkin star from the pairings `products(t)` of the barycentric gradients of each
+    /// top simplex `t`, `(n+1) × (n+1)` row-major.
+    fn mass_from<C: Extensor<Slots = (), Coef = T>>(
+        &self,
+        k: usize,
+        products: impl Fn(usize) -> Vec<T>,
+    ) -> SparseMap<C> {
         const {
             assert!(
                 <C::Kind as Kind>::N == 1,
@@ -312,7 +484,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         let n = N - 1;
         let mut triples = Vec::new();
         for (t, top) in self.topology.simplices(N - 1).enumerate() {
-            let h = gradients(&self.distances[t], n);
+            let h = products(t);
             let vol = self.volumes[N - 1][t];
             let pair = |a: usize, b: usize| -> T {
                 vol * T::from_ratio(if a == b { 2 } else { 1 }, ((n + 1) * (n + 2)) as i64)
@@ -353,6 +525,120 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         let triples = triples.into_iter().map(|(r, c, x)| (r, c, cell(x)));
         SparseMap::from_triples(triples, (m, m))
     }
+
+    /// The interior angles of each top simplex at its `(N−3)`-faces, between the two facets that
+    /// meet there: `C(N, 2)` per top simplex, in the order in which
+    /// [`incidence`](Topology::incidence) lists those faces, so that entry `t · C(N, 2) + j` is
+    /// the angle at the `j`-th face of top simplex `t`. On triangles the corner angles, at each
+    /// corner in the triangle's order; on tetrahedra the dihedral angles at the six edges
+    /// `(0 1), (0 2), …, (2 3)`. From the metric alone: `cos θᵢⱼ = −⟨dλᵢ, dλⱼ⟩ / |dλᵢ| |dλⱼ|`
+    /// for the facets opposite corners `i` and `j`, as a four-quadrant arctangent.
+    #[must_use]
+    pub fn angles(&self) -> Vec<T> {
+        const {
+            assert!(
+                N >= 3,
+                "angles meet at the (N−3)-faces of simplices of N ≥ 3 vertices"
+            );
+        }
+        let faces = crate::mesh::corners(N - 1, N - 3);
+        let mut out = Vec::with_capacity(self.topology.len(N - 1) * faces.len());
+        for d in &self.distances {
+            let h = gradient_products(d, N - 1);
+            for face in &faces {
+                // The two corners off the face, whose opposite facets meet at it.
+                let mut off = (0..N).filter(|c| !face.contains(c));
+                let (i, j) = (off.next().expect("a corner"), off.next().expect("another"));
+                let (hii, hjj, hij) = (h[i * N + i], h[j * N + j], h[i * N + j]);
+                let sine = (hii * hjj - hij * hij).max(T::zero()).sqrt();
+                out.push(sine.atan2(-hij));
+            }
+        }
+        out
+    }
+
+    /// The angle defect at each `(N−3)`-simplex: the flat angle around it less the sum of the
+    /// [`angles`](Self::angles) of the top simplices there, the flat angle a whole turn `2π`
+    /// inside and half a turn `π` on the boundary. On a surface, the Gaussian curvature of each
+    /// vertex integrated over its dual cell, which adds up to `2π χ` over a closed surface
+    /// (discrete Gauss–Bonnet, with the boundary's turning on a surface with boundary); on a
+    /// solid, Regge's curvature at each edge.
+    ///
+    /// ```
+    /// use gax::dec::Geometry;
+    /// use gax::field::Field;
+    /// use gax::mesh::Mesh;
+    /// use gax::vga3d::Vector;
+    /// // A regular tetrahedron's surface: three angles of 60° at each corner leave π.
+    /// let p = [[1.0, 1.0, 1.0], [1.0, -1.0, -1.0], [-1.0, 1.0, -1.0], [-1.0, -1.0, 1.0]];
+    /// let v: Field<_> = p.iter().map(|p| Vector::<(), f64>::new(p[0], p[1], p[2])).collect();
+    /// let surface = Mesh::new(v, &[[0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]]).unwrap();
+    /// let defects = Geometry::new(&surface).angle_defects();
+    /// assert!(defects.iter().all(|d| (d - core::f64::consts::PI).abs() < 1e-14));
+    /// ```
+    #[must_use]
+    pub fn angle_defects(&self) -> Vec<T> {
+        const {
+            assert!(
+                N >= 3,
+                "angle defects are at the (N−3)-simplices of simplices of N ≥ 3 vertices"
+            );
+        }
+        let half = T::zero().atan2(-T::one());
+        let mut defects = std::vec![half + half; self.topology.len(N - 3)];
+        for f in self.topology.exterior(N - 3) {
+            defects[f] = half;
+        }
+        let at = self.topology.incidence(N - 1, N - 3);
+        let angles = self.angles();
+        for t in 0..at.outputs() {
+            for j in 0..at.width() {
+                let d = &mut defects[at.site(t, j)];
+                *d = *d - angles[t * at.width() + j];
+            }
+        }
+        defects
+    }
+
+    /// The gradients of the barycentric coordinates of top simplex `top`, `∇λ₀ … ∇λₙ`, as the
+    /// model's vectors: the reciprocal frame of the simplex's edges from its first vertex,
+    /// `∇λᵢ = Σⱼ (G⁻¹)ᵢⱼ (vⱼ − v₀)` for `i ≥ 1`, and `∇λ₀ = −Σ ∇λᵢ` (vectors in VGA,
+    /// directions in PGA). `∇λᵢ` pairs to `δᵢⱼ` with the edge `vⱼ − v₀` and is orthogonal to the
+    /// facet opposite corner `i`. A [`Form`]'s coefficients on `dλ_I` with these give its
+    /// value as a multivector ([`Form::vector`], [`Form::bivector`], [`Form::trivector`]).
+    ///
+    /// # Panics
+    /// If `top` is not a top simplex of the mesh.
+    #[must_use]
+    pub fn gradients<V>(&self, mesh: &Mesh<V, N>, top: usize) -> Vec<V>
+    where
+        V: Extensor<Slots = (), Coef = T>
+            + core::ops::Add<Output = V>
+            + core::ops::Sub<Output = V>
+            + Gp<T, Output = V>,
+    {
+        let n = N - 1;
+        let s = self.topology.simplex(n, top);
+        let v = mesh.vertices.sites();
+        let inv = inverse_gram(&gram(&self.distances[top], n), n);
+        let edges: Vec<V> = (1..N).map(|j| v[s[j]] - v[s[0]]).collect();
+        let mut grads: Vec<V> = (0..n)
+            .map(|i| {
+                (0..n)
+                    .map(|j| edges[j].gp(inv[j * n + i]))
+                    .reduce(|a, b| a + b)
+                    .expect("an edge")
+            })
+            .collect();
+        let first = grads
+            .iter()
+            .copied()
+            .reduce(|a, b| a + b)
+            .expect("an edge")
+            .gp(-T::one());
+        grads.insert(0, first);
+        grads
+    }
 }
 
 impl<T: Real, const N: usize> Geometry<T, N> {
@@ -383,27 +669,8 @@ impl<T: Real, const N: usize> Geometry<T, N> {
             self.topology.len(1),
             "a 1-cochain has a value on each edge"
         );
-        let n = N - 1;
-        let s = self.topology.simplex(n, top);
-        let v = mesh.vertices.sites();
-        // The inverse Gram matrix, and the gradients as model vectors.
-        let inv = inverse_gram(&gram(&self.distances[top], n), n);
-        let edges: Vec<V> = (1..N).map(|j| v[s[j]] - v[s[0]]).collect();
-        let mut grads: Vec<V> = (0..n)
-            .map(|i| {
-                (0..n)
-                    .map(|j| edges[j].gp(inv[j * n + i]))
-                    .reduce(|a, b| a + b)
-                    .expect("an edge")
-            })
-            .collect();
-        let first = grads
-            .iter()
-            .copied()
-            .reduce(|a, b| a + b)
-            .expect("an edge")
-            .gp(-T::one());
-        grads.insert(0, first);
+        let s = self.topology.simplex(N - 1, top);
+        let grads = self.gradients(mesh, top);
         let mut out: Option<V> = None;
         for a in 0..N {
             for b in a + 1..N {
@@ -493,6 +760,109 @@ impl<S: Extensor<Slots = (), Coef: Real> + core::ops::Add<Output = S> + Gp<S::Co
             out = out + c.gp(det);
         }
         out
+    }
+
+    /// `Σ_I c_I blade(I)` over the coefficients, `I` the subsets of the basis as
+    /// [`coefficients`](Self::coefficients) orders them, written in `1..=n` (`dλ₀` eliminated).
+    fn sum_of<B>(&self, blade: impl Fn(&[usize]) -> B) -> B
+    where
+        B: core::ops::Add<Output = B> + Gp<S::Coef, Output = B>,
+    {
+        const {
+            assert!(
+                <S::Kind as Kind>::N == 1,
+                "a form read as a multivector has scalar coefficients"
+            );
+        }
+        subsets(self.dim, self.degree)
+            .iter()
+            .zip(&self.coefficients)
+            .map(|(subset, c)| {
+                let indices: Vec<usize> = subset.iter().map(|&i| i + 1).collect();
+                blade(&indices).gp(c.coeffs().as_ref()[0])
+            })
+            .reduce(|a, b| a + b)
+            .expect("a form of degree at most its dimension has a coefficient")
+    }
+
+    /// A 1-form as the vector `Σᵢ cᵢ ∇λᵢ`, from the barycentric gradients `∇λ₀ … ∇λₙ` of its
+    /// top simplex in any model ([`Geometry::gradients`], or a model's covectors of them: the
+    /// planes of points that are antivectors). Of the gradients only `∇λ₁ … ∇λₙ` enter.
+    ///
+    /// # Panics
+    /// If the form is not of degree 1, or there is not a gradient per corner.
+    #[must_use]
+    pub fn vector<G>(&self, gradients: &[G]) -> G
+    where
+        G: Copy + core::ops::Add<Output = G> + Gp<S::Coef, Output = G>,
+    {
+        self.check_reading(1, gradients.len());
+        self.sum_of(|i| gradients[i[0]])
+    }
+
+    /// A 2-form as the bivector `Σ c_ij ∇λᵢ ∧ ∇λⱼ` (`i < j`), from the barycentric gradients
+    /// of its top simplex ([`vector`](Self::vector)): a face's flux, a surface's vorticity.
+    ///
+    /// ```
+    /// use gax::field::Field;
+    /// use gax::mesh::Topology;
+    /// use gax::vga3d::{Bivector, Scalar, Vector};
+    /// // The unit right triangle: its corner gradients, and the 2-form of a unit face cochain,
+    /// // the constant density one over the area, 2 e12.
+    /// let t = Topology::new(3, &[[0, 1, 2]]).unwrap();
+    /// let v = |x: f64, y: f64| Vector::<(), f64>::new(x, y, 0.0);
+    /// let g = [v(-1.0, -1.0), v(1.0, 0.0), v(0.0, 1.0)];
+    /// let one = Field::from_fn(1, |_| Scalar::<(), f64>::new(1.0));
+    /// let flux: Bivector<(), f64> = t.whitney(2, &one, 0, &[1.0 / 3.0; 3]).bivector(&g);
+    /// assert!((flux.e12() - 2.0).abs() < 1e-15);
+    /// ```
+    ///
+    /// # Panics
+    /// If the form is not of degree 2, or there is not a gradient per corner.
+    #[must_use]
+    pub fn bivector<G, B>(&self, gradients: &[G]) -> B
+    where
+        G: Copy + crate::ops::Wedge<G, Output = B>,
+        B: core::ops::Add<Output = B> + Gp<S::Coef, Output = B>,
+    {
+        self.check_reading(2, gradients.len());
+        self.sum_of(|i| gradients[i[0]].wedge(gradients[i[1]]))
+    }
+
+    /// A 3-form as the trivector `Σ c_ijk ∇λᵢ ∧ ∇λⱼ ∧ ∇λₖ` (`i < j < k`), from the barycentric
+    /// gradients of its top simplex ([`vector`](Self::vector)).
+    ///
+    /// # Panics
+    /// If the form is not of degree 3, or there is not a gradient per corner.
+    #[must_use]
+    pub fn trivector<G, B, P>(&self, gradients: &[G]) -> P
+    where
+        G: Copy + crate::ops::Wedge<G, Output = B>,
+        B: crate::ops::Wedge<G, Output = P>,
+        P: core::ops::Add<Output = P> + Gp<S::Coef, Output = P>,
+    {
+        self.check_reading(3, gradients.len());
+        self.sum_of(|i| {
+            gradients[i[0]]
+                .wedge(gradients[i[1]])
+                .wedge(gradients[i[2]])
+        })
+    }
+
+    /// Panics unless the form has degree `k` and there is a gradient per corner.
+    #[track_caller]
+    fn check_reading(&self, k: usize, gradients: usize) {
+        assert_eq!(
+            self.degree, k,
+            "a {}-form read as a {k}-vector",
+            self.degree
+        );
+        assert_eq!(
+            gradients,
+            self.dim + 1,
+            "a gradient for each of the {} corners",
+            self.dim + 1
+        );
     }
 }
 
@@ -682,7 +1052,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         }
         assert_eq!(a.degree, b.degree, "forms of different degrees");
         let (n, k) = (N - 1, a.degree);
-        let h = gradients(&self.distances[top], n);
+        let h = gradient_products(&self.distances[top], n);
         let sets = subsets(n, k);
         let mut sum = T::zero();
         for (i, x) in sets.iter().zip(&a.coefficients) {
@@ -721,7 +1091,8 @@ impl<T: Real, const N: usize> Geometry<T, N> {
         vertices: &Field<V>,
     ) -> Self {
         assert_eq!(vertices.len(), topology.len(0), "one vertex for each");
-        Self::build(topology.clone(), vertices.sites())
+        let v = vertices.sites();
+        Self::build(topology.clone(), |a, b| V::distance_squared(&v[a], &v[b]))
     }
 
     /// The diagonal map of `x`, as scalar cells.
@@ -877,7 +1248,7 @@ impl<T: Real, const N: usize> Geometry<T, N> {
 
 /// The inner products `⟨dλₐ, dλ_b⟩` of the barycentric gradients of a simplex of dimension `n`,
 /// `(n+1) × (n+1)`: the inverse Gram matrix for `a, b ≥ 1`, and `dλ₀ = −Σ dλᵢ`.
-fn gradients<T: Real>(d: &[T], n: usize) -> Vec<T> {
+fn gradient_products<T: Real>(d: &[T], n: usize) -> Vec<T> {
     let inv = inverse_gram(&gram(d, n), n);
     let m = n + 1;
     let mut h = std::vec![T::zero(); m * m];
