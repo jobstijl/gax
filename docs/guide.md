@@ -461,6 +461,11 @@ Forms (`Scalar<(A, A)>`) have `eigh(metric)` for the generalized eigenproblem be
 forms. A form's eigenproblem always names its metric, because its eigenvalues against the
 identity depend on the basis; where the coefficient basis is orthonormal (Euclidean vectors,
 rotors), `form.eigh(Scalar::identity())` is the plain symmetric eigenproblem of its coefficients.
+`form.lstsq_in(rhs, metric, rcond)` (a `Form` method: `use gax::Form`) is numga's least squares
+of a form in a metric: of the `x` with `form(x, ·) == rhs`, the one smallest in `metric(x, x)`,
+solved mode by mode against the metric with the modes of curvature below `rcond` times the
+largest dropped, so a Gauss–Newton step leaves an unobservable direction alone (example
+`geometry_epipolar`, its baseline's scale).
 The eigenvectors come back as values of the slot kind. For vibration modes of a rigid body
 they are twists, each one a rotation about a point
 (example `rigid_body_modes`):

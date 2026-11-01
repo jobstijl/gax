@@ -353,6 +353,35 @@ pub trait Form: Extensor<Coef: Real> {
         <Self::Slot as Kind>::Arr<Self::Coef>,
         <Self::Slot as Kind>::Arr<<Self::Slot as Kind>::Mv<(), Self::Coef>>,
     );
+
+    /// Least squares of a symmetric form in a metric: of the `x` with `self(x, ·) == rhs`, the
+    /// one smallest in `metric(x, x)`, its modes of little curvature dropped (numga's
+    /// `form.lstsq(rhs, metric, rcond=…)`). The form is diagonalized against the metric
+    /// ([`eigh`](Self::eigh), which needs the metric positive definite), and each mode solved on
+    /// its own, `x = Σ mᵢ rhs(mᵢ) / λᵢ`. A mode whose curvature per unit metric, `|λᵢ|`, is at
+    /// most `rcond` times the largest is left out, so the cutoff is a ratio of curvatures,
+    /// independent of basis and units: a Gauss–Newton step on a problem with an unobservable
+    /// direction (a reconstruction's scale) has no component along it in the metric.
+    ///
+    /// ```
+    /// use gax::Form;
+    /// use gax::vga3d::{Scalar, Vector};
+    /// // The curvature of an energy flat along z, and a gradient with a part along z: the step
+    /// // solves x and y and leaves z at zero.
+    /// let e = |x, y, z| Vector::<(), f64>::new(x, y, z) | Vector::slot();
+    /// let curvature = e(1.0, 0.0, 0.0) * e(1.0, 0.0, 0.0) + (e(0.0, 1.0, 0.0) * e(0.0, 1.0, 0.0)) * 4.0
+    ///     + (e(0.0, 0.0, 1.0) * e(0.0, 0.0, 1.0)) * 1e-9;
+    /// let gradient = e(2.0, 8.0, 5.0);
+    /// let step = curvature.lstsq_in(gradient, Form::identity(), 1e-6);
+    /// assert!((step - Vector::new(2.0, 2.0, 0.0)).norm() < 1e-12);
+    /// # let _ = Scalar::<(), f64>::new;
+    /// ```
+    fn lstsq_in(
+        self,
+        rhs: <Self::Kind as Kind>::Mv<(Self::Slot,), Self::Coef>,
+        metric: Self,
+        rcond: Self::Coef,
+    ) -> <Self::Slot as Kind>::Mv<(), Self::Coef>;
 }
 
 impl<M, A> Form for M
@@ -413,6 +442,35 @@ where
             value_from::<A, T<M>>(|i| xs[k][i] * scale)
         });
         (vals, vecs)
+    }
+
+    fn lstsq_in(
+        self,
+        rhs: <M::Kind as Kind>::Mv<(A,), M::Coef>,
+        metric: M,
+        rcond: M::Coef,
+    ) -> A::Mv<(), M::Coef> {
+        type T<M> = <M as Extensor>::Coef;
+        let (values, modes) = Form::eigh(self, metric);
+        let (values, modes) = (values.as_ref(), modes.as_ref());
+        let largest = values.iter().fold(T::<M>::zero(), |l, v| l.max(v.abs()));
+        let r = &rhs.coeffs().as_ref()[0];
+        let mut x = A::arr_from_fn(|_| T::<M>::zero());
+        for (&value, mode) in values.iter().zip(modes) {
+            if T::<M>::all_lt(rcond * largest, value.abs()) {
+                let m = mode.coeffs().as_ref();
+                let reading = r
+                    .as_ref()
+                    .iter()
+                    .zip(m)
+                    .fold(T::<M>::zero(), |s, (a, b)| a.mul_add(*b, s));
+                let weight = reading / value;
+                for (xi, mi) in x.as_mut().iter_mut().zip(m) {
+                    *xi = weight.mul_add(*mi, *xi);
+                }
+            }
+        }
+        A::Mv::<(), T<M>>::from_coeffs(x)
     }
 
     fn identity() -> M {

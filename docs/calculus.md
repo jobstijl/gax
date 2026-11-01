@@ -134,6 +134,10 @@ assert!((t.integral(Rule::degree(2), |p| Scalar::new(p.c[1] * p.c[1])).s() - 2f6
 is exact. In floating point the weights cancel: numerics.md has the error per degree.
 `Rule::VerticesAndCentroid` has positive weights and is exact to degree 2.
 
+On an interval, `gax::quadrature::gauss_legendre(n)` (and `gauss_legendre_on(n, a, b)`) is the
+classical Gauss–Legendre rule, numpy's `leggauss`: `n` nodes exact to degree `2n − 1`, for
+integrals along a parameter rather than over a simplex.
+
 **Models.** What a position is depends on the model of space, and `simplex::Position` and
 `simplex::Measure<N>` say how a model combines positions and measures a simplex of `N` vertices:
 

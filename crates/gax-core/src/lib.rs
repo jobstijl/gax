@@ -60,6 +60,8 @@ pub mod ops;
 pub mod orientation;
 mod permute;
 pub mod prepared;
+#[cfg(feature = "std")]
+pub mod quadrature;
 #[cfg(feature = "wide")]
 pub mod simd;
 pub mod simplex;
