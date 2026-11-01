@@ -164,6 +164,10 @@ method (ADR-013).
 * [sym] `K::slot().trace() == K::N`; the trace is linear.
 * [sym] `trace_at::<I>` agrees with binding the other slots and taking the trace:
   `m.trace_at::<1>().of(y) == m.of(y).trace()`.
+* [sym] The traces of two inputs are a map's trace (`paired_traces`, ADR-014 amended
+  2026-11-01): through `∨`, `(C::slot() & f).trace_inputs() == f.trace()` for every kind `K`
+  with a complement `C` and `f: K <- K`; through the metric, `K::slot().metric(f).contract() ==
+  f.trace()` for every kind with a reciprocal frame.
 
 ### G. Transposes through a pairing (`adjugates`, `adjoints`, `adjoint_laws`)
 

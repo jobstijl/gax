@@ -2158,6 +2158,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Odd<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Odd` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Odd` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Odd<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -4896,6 +4917,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         Multivector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Multivector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Multivector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.

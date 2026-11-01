@@ -322,6 +322,18 @@ law_suite::law_suite! {
         (ScalarProduct, scalar_product, Vector, Vector),
         (ScalarProduct, scalar_product, Quintvector, Quintvector),
     ],
+    paired_traces: [
+        (Scalar),
+        (Vector),
+        (Quintvector),
+        (Pseudoscalar),
+    ],
+    contractions: [
+        (Scalar),
+        (Vector),
+        (Quintvector),
+        (Pseudoscalar),
+    ],
     adjugates: [
         (Scalar, Scalar),
         (Scalar, Pseudoscalar),

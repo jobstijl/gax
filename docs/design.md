@@ -336,6 +336,25 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   This is a blade-matching contraction with no metric (numga's `trace(slot)`). A contraction between two
   *inputs* needs a pairing and is written with `&` or `|`. That is why the brief's
   `.trace::<I, J>()` is not provided.
+  * *Amended (2026-11-01, Phase 13): traces of two inputs, through a named pairing.* numga
+    `35797de` traces two inputs (`trace(i, j)`), and its piezoelectric enthalpy and freeform
+    stretch need it: an elastic form `Scalar <- (Point, Plane, Point, Plane)` takes a whole
+    deformation map into each displacement–gradient pair, and the ports summed over a basis and
+    its dual by hand. The objection stands in part: the pairing must be named. So two methods,
+    one per pairing, as for the transposes (ADR-053), each on the first two slots (others are
+    brought there with `at`; a pair of const indices would need `I + 1` in a const generic):
+    * `m.trace_inputs()` (`gx::TraceInputs`, numga's `trace(1, 2)`): slots `(A, C(A))` of
+      complementary kinds, opposite orientations, summed as `Σₖ m(eₖ, eᵏ)` with
+      `⟨eₗ ∨ eᵏ⟩₀ = δₗₖ`, the first slot on the left as numga pairs them; read from the
+      generated `Complement::PAIRS` of the second kind, a signed sum, no metric, so it exists in
+      PGA.
+    * `m.contract()` (`gx::Contract`, numga's `contract`): two slots of one kind, summed against
+      the reciprocal frame of the metric `⟨a ~b⟩₀` (numga's choice, positive on Euclidean
+      bivectors; the scalar product's `Reciprocal::FRAME` times each blade's reverse sign), so
+      it needs the metric non-degenerate on the kind.
+    The output kind and the other slots are kept. Laws F prove both against a map's trace,
+    `(C(K)::slot() & f).trace_inputs() == f.trace()` and `K::slot().metric(f).contract() ==
+    f.trace()`, exactly in every algebra; the piezoelectric and freeform ports use them.
 * **Adjoints: amended by ADR-053.** `m.adjugate()` (through `&`) and `m.adjoint()` (through the
   scalar product) are methods now; the pairing solve below still works and agrees with them.
   The original decision, for the record: no `m.adjoint()` method; an adjoint is written as numga writes it, as a pairing solve.

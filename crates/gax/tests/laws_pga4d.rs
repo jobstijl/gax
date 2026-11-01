@@ -117,6 +117,13 @@ law_suite::law_suite! {
         (Vee, vee, Hyperplane, Point),
         (Vee, vee, Point, Hyperplane),
     ],
+    paired_traces: [
+        (Hyperplane),
+        (Point),
+    ],
+    contractions: [
+        (Scalar),
+    ],
     adjugates: [
         (Hyperplane, Hyperplane),
         (Hyperplane, Point),

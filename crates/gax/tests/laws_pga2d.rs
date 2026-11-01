@@ -2703,6 +2703,22 @@ law_suite::law_suite! {
         (Dot, dot, OriginLine, OriginLine),
         (ScalarProduct, scalar_product, OriginLine, OriginLine),
     ],
+    paired_traces: [
+        (Scalar),
+        (Line),
+        (Point),
+        (Direction),
+        (Pseudoscalar),
+        (Motor),
+        (Flector),
+        (Multivector),
+        (OriginLine),
+    ],
+    contractions: [
+        (Scalar),
+        (Rotor),
+        (OriginLine),
+    ],
     adjugates: [
         (Scalar, Scalar),
         (Scalar, Pseudoscalar),

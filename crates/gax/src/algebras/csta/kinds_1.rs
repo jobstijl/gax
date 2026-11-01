@@ -233,6 +233,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Scalar` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Scalar` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Scalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -1241,6 +1262,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Vector<S, T, O> {
         Vector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Vector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Vector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -2357,6 +2399,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Twist<S, T, O> {
         Twist<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Twist` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Twist` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -3838,6 +3901,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Bivector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Bivector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Bivector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Bivector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -5305,6 +5389,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Trivector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Trivector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Trivector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Trivector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -6380,6 +6485,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quadvector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Quadvector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Quadvector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Quadvector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -7409,6 +7535,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Quintvector<S, T, O> {
         Quintvector<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Quintvector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Quintvector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -8499,6 +8646,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Pseudoscalar` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Pseudoscalar` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -9434,6 +9602,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
         Motor<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Motor` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Motor` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -10790,28 +10979,6 @@ impl<T: gx::Real, O: gx::Orientation> Motor<(), T, O> {
     #[inline(always)]
     pub fn normalized(self) -> Self {
         self.unit().into_inner()
-    }
-
-}
-
-impl<T: gx::Real> Motor<(), T, gx::Extrinsic> {
-    /// Not callable: the logarithm is [`gx::Unit::log`], on a certified unit versor
-    /// (`self.unit().log()`). This method only makes the compile error say so.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn log(self) -> Twist<(), T, gx::Extrinsic>
-    where
-        Self: gx::__private::LogNeedsUnit<Twist<(), T, gx::Extrinsic>>,
-    {
-        gx::__private::LogNeedsUnit::log(self)
-    }
-
-    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
-    #[inline(always)]
-    pub fn sqrt(self) -> gx::Unit<Self> {
-        let mut c = self.c;
-        c[0] = c[0] + T::one();
-        Motor::from_coeffs(c).unit()
     }
 
 }

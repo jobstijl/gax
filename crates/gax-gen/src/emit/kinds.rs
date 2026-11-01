@@ -293,6 +293,27 @@ unsafe {IMPL_O} gx::FlatKind for {marker} {{}}
         gx::TraceFirst::trace_first(self.at::<I>())
     }}
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `{name}` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {{
+        gx::TraceInputs::trace_inputs(self)
+    }}
+
+    /// Pair the first two open slots, of one kind, through the metric `⟨a ~b⟩₀` and sum
+    /// (numga's `contract`), leaving `{name}` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {{
+        gx::Contract::contract(self)
+    }}
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> {name}<<S as gx::__private::FillList<X::Kind>>::Out, T, O>

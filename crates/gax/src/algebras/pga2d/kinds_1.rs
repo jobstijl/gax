@@ -233,6 +233,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Scalar` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Scalar` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Scalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -1244,6 +1265,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Line<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Line` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Line` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Line<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -2250,6 +2292,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Point<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Point` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Point` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Point<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -3254,6 +3317,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Direction<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Direction` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Direction` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Direction<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -4033,6 +4117,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Pseudoscalar` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Pseudoscalar` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -4788,6 +4893,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
         Rotor<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Rotor` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Rotor` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -5808,6 +5934,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Translator<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Translator` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Translator` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Translator<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -6818,6 +6965,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
         Motor<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Motor` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Motor` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -7872,6 +8040,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Flector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Flector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Flector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Flector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -8878,6 +9067,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         gx::TraceFirst::trace_first(self.at::<I>())
     }
 
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `Multivector` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `Multivector` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Multivector<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
@@ -9876,6 +10086,27 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> OriginLine<S, T, O> {
         OriginLine<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
     {
         gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// Pair the first two open slots, of complementary kinds, through the regressive product
+    /// and sum (numga's `trace(1, 2)`): no metric, leaving `OriginLine` with the other slots
+    /// (see [`gx::TraceInputs`]).
+    #[inline(always)]
+    pub fn trace_inputs(self) -> <Self as gx::TraceInputs>::Output
+    where
+        Self: gx::TraceInputs,
+    {
+        gx::TraceInputs::trace_inputs(self)
+    }
+
+    /// Pair the first two open slots, of one kind, through the metric `â¨a ~bâ©â` and sum
+    /// (numga's `contract`), leaving `OriginLine` with the other slots (see [`gx::Contract`]).
+    #[inline(always)]
+    pub fn contract(self) -> <Self as gx::Contract>::Output
+    where
+        Self: gx::Contract,
+    {
+        gx::Contract::contract(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -11104,209 +11335,4 @@ impl<O: gx::Orientation> gx::Complement for Scalar<(), f64, O> {
 
 impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Scalar<(), f64, O> {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Scalar<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Rotor<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Rotor<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Translator<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Translator<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Scalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Scalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<0> for Scalar<(), f64, O> {
-    type Out = Scalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Complement for Line<(), f64, O> {
-    type Out = Point<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(0, false), (1, false), (2, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Line<(), f64, O>> for Line<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Line<(), f64, O>> for Line<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Flector<(), f64, O>> for Line<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Flector<(), f64, O>> for Line<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Line<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 2, false), (1, 3, false), (2, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Line<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<OriginLine<(), f64, O>> for Line<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Line<(), f64, O> {
-    type Out = Line<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::Complement for Point<(), f64, O> {
-    type Out = Line<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(0, false), (1, false), (2, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Point<(), f64, O>> for Point<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Point<(), f64, O>> for Point<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Direction<(), f64, O>> for Point<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Rotor<(), f64, O>> for Point<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(2, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Translator<(), f64, O>> for Point<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Point<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 2, false), (1, 3, false), (2, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Point<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Point<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 4, false), (2, 6, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Point<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<2> for Point<(), f64, O> {
-    type Out = Point<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::Complement for Direction<(), f64, O> {
-    type Out = OriginLine<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(0, false), (1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Point<(), f64, O>> for Direction<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Point<(), f64, O>> for Direction<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Direction<(), f64, O>> for Direction<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Direction<(), f64, O>> for Direction<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Translator<(), f64, O>> for Direction<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Translator<(), f64, O>> for Direction<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Direction<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 2, false), (1, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Direction<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Direction<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 4, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Direction<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<2> for Direction<(), f64, O> {
-    type Out = Direction<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Complement for Pseudoscalar<(), f64, O> {
-    type Out = Scalar<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Pseudoscalar<(), f64, O>> for Pseudoscalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Flector<(), f64, O>> for Pseudoscalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Flector<(), f64, O>> for Pseudoscalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Pseudoscalar<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 7, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Pseudoscalar<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<3> for Pseudoscalar<(), f64, O> {
-    type Out = Pseudoscalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-#[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for Rotor<(), f64, O> {
-    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, -1, 1)]];
-    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, -1)]];
-}
-
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Rotor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Point<(), f64, O>> for Rotor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Rotor<(), f64, O>> for Rotor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Rotor<(), f64, O>> for Rotor<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Translator<(), f64, O>> for Rotor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Rotor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Motor<(), f64, O>> for Rotor<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Rotor<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 6, false)];
 }

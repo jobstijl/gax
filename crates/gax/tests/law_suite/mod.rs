@@ -560,6 +560,8 @@ macro_rules! law_suite {
         top: [$(($tv:ident, $tb:ident)),* $(,)?],
         unit_det: [$(($dv:ident, $dx:ident, $dt:ident, $de:literal)),* $(,)?],
         pairings: [$(($rtr:ident, $rm:ident, $ra:ident, $rb:ident)),* $(,)?],
+        paired_traces: [$(($tpk:ident)),* $(,)?],
+        contractions: [$(($tck:ident)),* $(,)?],
         adjugates: [$(($ja:ident, $jb:ident)),* $(,)?],
         adjoints: [$(($ka:ident, $kb:ident)),* $(,)?],
         divisions: [$(($divnum:ident, $divden:ident, $divback:ident)),* $(,)?],
@@ -1154,6 +1156,33 @@ macro_rules! law_suite {
             let y: $other<(), T> = fresh();
             let form = m.trace_at::<1>();
             law(form.of(y).coeffs().as_ref()[0] == m.of(y).trace(), "trace_at");
+        }
+
+        /// F: the traces of two slots through a pairing are the map's trace: through `∨`, on
+        /// the form `C(K) & f` (the complement first), and through the metric, on
+        /// `K.metric(f)`.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn paired_traces() {
+            $((|| {
+                reset();
+                type C = <$tpk as gax::Complement>::Out;
+                let f: $tpk<($tpk,), T> = fresh();
+                let form = (slot::<C, T>() & f).cast::<$scalar>();
+                law(
+                    form.trace_inputs().coeffs().as_ref()[0] == f.trace(),
+                    concat!("trace_inputs on ", stringify!($tpk)),
+                );
+            })();)*
+            $((|| {
+                reset();
+                let f: $tck<($tck,), T> = fresh();
+                let form = $tck::<(), T>::slot().metric(f);
+                law(
+                    form.contract().coeffs().as_ref()[0] == f.trace(),
+                    concat!("contract on ", stringify!($tck)),
+                );
+            })();)*
         }
 
         /// H: `fill` is the diagonal.

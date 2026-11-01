@@ -324,8 +324,9 @@ fn reversing_poling_reverses_the_coupled_responses() {
 
 /// The electric enthalpy of a strip in the given state: per triangle, the stored elastic energy
 /// less the field's work on the piezoelectric and the induced polarization, weighted by area and
-/// width. numga's `trace(1, 2)` contracts a direction slot with a plane slot; here it is the sum
-/// over the basis `axis, pole` and its dual planes `x, y`.
+/// width. numga's `trace(1, 2)` pairs a direction slot with a plane slot through `∨`: gax's
+/// `trace_inputs`, each trace taking a whole deformation map into its displacement–gradient
+/// pair.
 fn enthalpy(
     d: &Device,
     poling: &[f64],
@@ -334,19 +335,18 @@ fn enthalpy(
 ) -> f64 {
     let strains = strain(&d.strip.mesh, displacement, &d.gradients);
     let fields = electric_field(&d.strip.mesh, potential, &d.gradients);
-    let basis = [(axis(), x()), (pole(), y())];
     let m = &d.material;
     (0..d.strip.mesh.len(2))
         .map(|f| {
-            let deform = |e: Point| dual(strains[f].of(e));
-            let mut stored = 0.0;
-            let mut polarized = Point::zero();
-            for &(e, p) in &basis {
-                for &(e2, p2) in &basis {
-                    stored += m.elastic.of(deform(e)).of(p).of(deform(e2)).of(p2).s();
-                }
-                polarized += m.polarization.of(deform(e)).of(p) * poling[f];
-            }
+            let deformation = strains[f].hodge();
+            let stored = m
+                .elastic
+                .of(deformation)
+                .trace_inputs()
+                .of(deformation)
+                .trace_inputs()
+                .s();
+            let polarized = m.polarization.of(deformation).trace_inputs() * poling[f];
             let field = fields[f];
             let induced = m.permittivity.of(field);
             let density = stored / 2.0

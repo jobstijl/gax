@@ -94,6 +94,8 @@ the bound `A: Slots<Cat<B> = A>`. Don't add it: it only holds when `B` is `()`.
 | `form.swap()` | exchange the two slots of a two-slot extensor |
 | `m.fill(x)` | fill *every* slot of `x`'s kind with `x` |
 | `m.trace_at::<I>()` | contract the output with slot `I` (of the output's kind): a scalar with the other slots |
+| `m.trace_inputs()` | pair the first two slots, a kind and its complement (a point and a plane), through `&` and sum (numga's `trace(1, 2)`): no metric |
+| `m.contract()` | pair the first two slots, of one kind, through the metric `⟨a ~b⟩₀` and sum (numga's `contract`): `f.metric(f).contract()` is a deformation's stretch |
 | `t.outermorphism::<B>()` | extend a map on vectors (by `^`) or on antivectors such as PGA points (by `&`) to the kind `B`; a correlation between the two extends each side by its own product |
 | `x.cast::<K>()` | the blades `x` shares with `K`, as a `K` (other blades zero): a projection, an embedding, or both; on a map, of its output |
 | `x.grade::<G>()` | the grade-`G` part, as the declared kind that holds it |

@@ -789,6 +789,150 @@ where
     }
 }
 
+/// The two leading slots of an extensor and the rest: `(A, B, Rest)`.
+type Second<S> = <<S as SplitFirst>::Tail as SplitFirst>::Head;
+/// The slots after the two leading ones.
+type Rest<S> = <<S as SplitFirst>::Tail as SplitFirst>::Tail;
+
+/// A two-slot sum's coefficients: the output kind's array over the slots after the first two.
+type PairSum<M> = <<M as Extensor>::Kind as Kind>::Arr<
+    <Rest<<M as Extensor>::Slots> as Slots>::Arr<<M as Extensor>::Coef>,
+>;
+
+/// Sum the leading two slots of `m` over pairs of blades: for each `(i, j, w)` of `pairs`, `w`
+/// times the coefficients with blade `i` in the first slot and `j` in the second.
+fn sum_pairs<M, I>(m: &M, pairs: &I) -> PairSum<M>
+where
+    M: Extensor,
+    I: Iterator<Item = (usize, usize, M::Coef)> + Clone,
+    M::Slots: SplitFirst,
+    <M::Slots as SplitFirst>::Tail: SplitFirst,
+{
+    use crate::slots::SlotArr;
+    let c = m.coeffs().as_ref();
+    <M::Kind as Kind>::arr_from_fn(|o| {
+        let first = <M::Slots as SplitFirst>::split(&c[o]);
+        let zero = SlotArr::<Rest<M::Slots>, M::Coef>(<Rest<M::Slots> as Slots>::from_flat(
+            &mut |_| M::Coef::zero(),
+            0,
+        ));
+        pairs
+            .clone()
+            .fold(zero, |acc, (i, j, w)| {
+                let second =
+                    <<M::Slots as SplitFirst>::Tail as SplitFirst>::split(&first.as_ref()[i]);
+                acc + SlotArr::<Rest<M::Slots>, M::Coef>(second.as_ref()[j]).scale(w)
+            })
+            .0
+    })
+}
+
+/// The trace of an extensor's first two slots through the regressive product (numga's
+/// `trace(1, 2)`; ADR-014, amended 2026-11-01): slots of complementary kinds `(A, B)`, the
+/// second the complement of the first in the opposite orientation, summed as `Σₖ m(eₖ, eᵏ)`
+/// over the blades `eₖ` of `A` and the `eᵏ` of `B` with `⟨eₗ ∨ eᵏ⟩₀ = δₗₖ` (the first slot on
+/// the left). No metric, so it exists in PGA. The result keeps the output kind and the other
+/// slots. On a form read from a map, `(C::slot() & f).trace_inputs()` is `f.trace()`; move
+/// other slots to the front with `at` first (`m.at::<3>().at::<2>()` brings slots 1 and 3).
+///
+/// ```
+/// use gax::Endomorphism;
+/// use gax::pga3d::{Motor, Plane, Point, Scalar};
+/// let m = Motor::<(), f64>::rotation_about(Point::direction(0.0, 0.0, 1.0), 0.4);
+/// let f: Point<(Point,)> = m >> Point::slot();
+/// let form = (Plane::slot() & f).cast::<Scalar>(); // Scalar <- (Plane, Point)
+/// assert!((form.trace_inputs().s() - f.trace()).abs() < 1e-12);
+/// ```
+pub trait TraceInputs: Extensor {
+    /// The output kind with the slots after the first two.
+    type Output;
+    /// `Σₖ m(eₖ, eᵏ, …)` through `∨`.
+    fn trace_inputs(self) -> Self::Output;
+}
+
+impl<M> TraceInputs for M
+where
+    M: Extensor,
+    M::Slots: SplitFirst,
+    <M::Slots as SplitFirst>::Tail: SplitFirst,
+    Second<M::Slots>: crate::cast::Complement<Out = <M::Slots as SplitFirst>::Head>,
+{
+    type Output = <M::Kind as Kind>::Mv<Rest<M::Slots>, M::Coef>;
+
+    fn trace_inputs(self) -> Self::Output {
+        // Blade `j` of `B` pairs with blade `i` of `A` to `s = ⟨Aᵢ ∨ Bⱼ⟩₀` (`A` on the left, as
+        // `Complement` of `B` lists them), so `eⁱ = s Bⱼ`.
+        let pairs = <Second<M::Slots> as crate::cast::Complement>::PAIRS
+            .iter()
+            .enumerate()
+            .map(|(j, &(i, negative))| {
+                let s = if negative {
+                    -M::Coef::one()
+                } else {
+                    M::Coef::one()
+                };
+                (i, j, s)
+            });
+        Self::Output::from_coeffs(sum_pairs(&self, &pairs))
+    }
+}
+
+/// The contraction of an extensor's first two slots through the metric (numga's `contract(1,
+/// 2)`, and `contract()` on a form; ADR-014, amended 2026-11-01): two slots of one kind `A`,
+/// summed as `Σₖ m(eₖ, eᵏ)` over its blades and their reciprocals under the metric `⟨a ~b⟩₀`
+/// (numga's `dot`, gax's `a.metric(b)`). It needs the metric non-degenerate on `A`
+/// ([`Reciprocal`](crate::calculus::Reciprocal)): not on a PGA kind holding `e0`, where
+/// [`TraceInputs`] pairs a kind with its complement instead. On a form read from a map,
+/// `A::slot().metric(f).contract()` is `f.trace()`; the Cauchy–Green stretch of a deformation
+/// `F` is `F.metric(F).contract()`.
+///
+/// ```
+/// use gax::vga3d::{Bivector, Vector};
+/// // The stretch of a deformation of the planes (bivectors): the sum of the squared lengths of
+/// // the images of an orthonormal basis, through the metric (positive on bivectors).
+/// let f = Bivector::<(Bivector,)>::from_images([
+///     Bivector::new(2.0, 0.0, 0.0),
+///     Bivector::new(0.0, 1.0, 1.0),
+///     Bivector::new(0.0, 0.0, 3.0),
+/// ]);
+/// let stretch = f.metric(f).contract().s();
+/// assert!((stretch - (4.0 + 2.0 + 9.0)).abs() < 1e-12);
+/// # let _ = Vector::<(), f64>::zero();
+/// ```
+pub trait Contract: Extensor {
+    /// The output kind with the slots after the first two.
+    type Output;
+    /// `Σₖ m(eₖ, eᵏ, …)` through the metric.
+    fn contract(self) -> Self::Output;
+}
+
+impl<M, A> Contract for M
+where
+    M: Extensor,
+    M::Slots: SplitFirst<Head = A>,
+    <M::Slots as SplitFirst>::Tail: SplitFirst<Head = A>,
+    A: crate::calculus::Reciprocal,
+{
+    type Output = <M::Kind as Kind>::Mv<Rest<M::Slots>, M::Coef>;
+
+    fn contract(self) -> Self::Output {
+        // The reciprocal under the metric `⟨a ~b⟩₀` is the scalar product's (`FRAME`), times
+        // the reverse's sign of the blade's grade.
+        let pairs = (0..A::N).flat_map(|i| {
+            let grade = A::BLADES[i].len().saturating_sub(1);
+            let reverse = if (grade * grade.saturating_sub(1) / 2) % 2 == 0 {
+                1
+            } else {
+                -1
+            };
+            A::FRAME[i]
+                .iter()
+                .map(move |&(k, num, den)| (i, k, M::Coef::from_ratio(reverse * num, den)))
+        });
+        Self::Output::from_coeffs(sum_pairs(&self, &pairs))
+    }
+}
+
 /// One column of a least-squares problem in an extensor's layout: an output coefficient array
 /// over the slots `S` (the image of one input blade).
 pub struct Col<K: Kind, S: Slots, T: Coef>(pub K::Arr<S::Arr<T>>);

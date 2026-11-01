@@ -506,6 +506,20 @@ law_suite::law_suite! {
         (Dot, dot, Vector, Vector),
         (ScalarProduct, scalar_product, Vector, Vector),
     ],
+    paired_traces: [
+        (Scalar),
+        (Vector),
+        (Pseudoscalar),
+        (Rotor),
+        (Multivector),
+    ],
+    contractions: [
+        (Scalar),
+        (Vector),
+        (Pseudoscalar),
+        (Rotor),
+        (Multivector),
+    ],
     adjugates: [
         (Scalar, Scalar),
         (Scalar, Pseudoscalar),

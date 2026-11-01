@@ -428,6 +428,18 @@ law_suite::law_suite! {
         (Dot, dot, OriginHyperplane, OriginHyperplane),
         (ScalarProduct, scalar_product, OriginHyperplane, OriginHyperplane),
     ],
+    paired_traces: [
+        (Scalar),
+        (Vector),
+        (Quadvector),
+        (Pseudoscalar),
+        (Direction),
+        (OriginHyperplane),
+    ],
+    contractions: [
+        (Scalar),
+        (OriginHyperplane),
+    ],
     adjugates: [
         (Scalar, Scalar),
         (Scalar, Pseudoscalar),

@@ -530,6 +530,18 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
             .map(|(op, a, b)| op_pair(op, &a, &b)),
     );
     let (adjugates, adjoints) = transposes(&cx);
+    // F: the traces of two slots, through `∨` on a kind with its complement and through the
+    // metric on a kind with a reciprocal frame, against a map's trace.
+    let single = |l: &[String]| -> Vec<String> {
+        l.iter()
+            .filter_map(|p| {
+                let (a, b) = p.trim_matches(|c| c == '(' || c == ')').split_once(", ")?;
+                (a == b).then(|| format!("({a})"))
+            })
+            .collect()
+    };
+    list(&mut s, "paired_traces", single(&adjugates));
+    list(&mut s, "contractions", single(&adjoints));
     list(&mut s, "adjugates", adjugates);
     list(&mut s, "adjoints", adjoints);
     list(&mut s, "divisions", divisions(&cx));

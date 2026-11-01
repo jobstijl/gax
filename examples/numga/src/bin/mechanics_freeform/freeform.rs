@@ -232,13 +232,8 @@ pub fn constitutive(local: Deformation, lame_lambda: f64, lame_mu: f64) -> (f64,
     let rest = bulk * (1.0 - target) * (1.0 - target) + 3.0 * lame_mu;
     // The stretch: the deformed metric read on reference directions, the Cauchy-Green form,
     // traced against the reference metric.
-    let stretch: f64 = directions()
-        .iter()
-        .map(|d| {
-            let image = local.of(*d);
-            dot(image, image)
-        })
-        .sum();
+    // (numga's `contract`, the form's two slots paired through the metric).
+    let stretch = local.metric(local).contract().s();
     let swelling = determinant - target;
     let energy = (bulk * swelling * swelling + lame_mu * stretch - rest) / 2.0;
     // The stretch is metric, so its stress carries the deformation over to covectors through

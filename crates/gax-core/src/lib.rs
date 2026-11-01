@@ -17,7 +17,9 @@
 //!   [`LeastSquaresDyad`] and [`OfDyad`]: solving, eigenproblems (real, and [`Complex`] for
 //!   general maps), singular values, pairings and least squares on maps and forms;
 //!   [`Adjugate`] and [`Adjoint`], their transposes through the regressive and the scalar
-//!   product.
+//!   product; [`Correlation`], the eigenproblem of a map to the complement kind;
+//!   [`TraceInputs`] and [`Contract`], traces of two slots through the regressive product and
+//!   the metric.
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
 //! * [`FromSubalgebra`]: a subalgebra's values in an algebra holding its generators.
 //!
@@ -81,8 +83,8 @@ pub use cast::{Cast, Complement, GradePart, SubKind};
 pub use coef::{Coef, ConstCoef, Elem, Real};
 pub use complex::Complex;
 pub use extensor::{
-    Correlation, Endomorphism, Form, FormAsMap, LeastSquares, LeastSquaresDyad, OfBoth, OfDyad,
-    Pairing, PseudoInverse, SingularValues, SquareMap, Svd, TraceFirst,
+    Contract, Correlation, Endomorphism, Form, FormAsMap, LeastSquares, LeastSquaresDyad, OfBoth,
+    OfDyad, Pairing, PseudoInverse, SingularValues, SquareMap, Svd, TraceFirst, TraceInputs,
 };
 pub use gpu::GpuMat;
 pub use kind::{ApproxEq, Coeffs, Extensor, FlatKind, Kind, Retype, Slot, select_lt};
