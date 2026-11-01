@@ -76,7 +76,8 @@ pub(crate) use crate::kind::{scale, zero};
 /// One object spread over sites: a value (or map, or form) of type `M` at each site.
 ///
 /// Operations on elements act site by site through [`map`](Self::map) and
-/// [`zip_with`](Self::zip_with); `+`, `-` and unary `-` act on fields over the same sites.
+/// [`zip_with`](Self::zip_with); `+`, `-` and unary `-` act on fields over the same sites, and `*`
+/// by a number (`f32`, `f64`) scales them.
 /// [`sum`](Self::sum) and [`mean`](Self::mean) reduce over the sites.
 ///
 /// ```
@@ -326,6 +327,54 @@ macro_rules! site_by_site {
 }
 site_by_site!(Add, add);
 site_by_site!(Sub, sub);
+
+/// A field times a number: every site scaled, owned or borrowed, on either side, so that a
+/// field is a state for generic steppers (`y + k * h`). For the coefficient types `f32` and
+/// `f64`, as for field maps; [`Field::scaled`] takes any.
+///
+/// ```
+/// use gax::field::Field;
+/// use gax::vga3d::Vector;
+/// let f = Field::from_fn(3, |i| Vector::<(), f64>::new(i as f64, 0.0, 1.0));
+/// let g = f.clone() + &f * 0.5;
+/// assert_eq!(g.site(2), Vector::new(3.0, 0.0, 1.5));
+/// assert_eq!(2.0 * &f, f.scaled(2.0));
+/// ```
+macro_rules! scalar_mul {
+    ($($t:ty),*) => {$(
+        impl<M: Extensor<Coef = $t>> core::ops::Mul<$t> for &Field<M> {
+            type Output = Field<M>;
+            fn mul(self, c: $t) -> Field<M> {
+                self.scaled(c)
+            }
+        }
+
+        impl<M: Extensor<Coef = $t>> core::ops::Mul<$t> for Field<M> {
+            type Output = Field<M>;
+            fn mul(mut self, c: $t) -> Field<M> {
+                for site in &mut self.sites {
+                    *site = scale(*site, c);
+                }
+                self
+            }
+        }
+
+        impl<M: Extensor<Coef = $t>> core::ops::Mul<&Field<M>> for $t {
+            type Output = Field<M>;
+            fn mul(self, f: &Field<M>) -> Field<M> {
+                f.scaled(self)
+            }
+        }
+
+        impl<M: Extensor<Coef = $t>> core::ops::Mul<Field<M>> for $t {
+            type Output = Field<M>;
+            fn mul(self, f: Field<M>) -> Field<M> {
+                f * self
+            }
+        }
+    )*};
+}
+scalar_mul!(f32, f64);
 
 impl<M: Extensor + Neg<Output = M>> Neg for &Field<M> {
     type Output = Field<M>;

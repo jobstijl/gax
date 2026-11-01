@@ -294,7 +294,9 @@ a closed curve as a `Mesh<Point, 2>`; `of_faces` and `of_polygon` take slices.
 fields and cochains (ADR-050).
 
 **The metric is intrinsic.** A model of space gives the squared distance between two positions
-(`dec::Distance`: VGA's `|a − b|²`, PGA's between points of weight one, CGA's `−2 A ∗ B`). Everything
+(`dec::Distance`: VGA's `|a − b|²`, PGA's between points of weight one, CGA's `−2 A ∗ B`, and VGA's
+points as antivectors, numga's `Point-`: intrinsic vectors of the plane, intrinsic bivectors of
+space, whose coefficients are the coordinates and whose measures are joins). Everything
 else follows simplex by simplex from the Gram matrix of its edges, `Gᵢⱼ = ½(d₀ᵢ² + d₀ⱼ² − dᵢⱼ²)`:
 volumes, circumcentres, the inner products of the barycentric gradients. VGA, PGA and CGA give the
 same numbers for the same mesh.

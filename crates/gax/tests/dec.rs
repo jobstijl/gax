@@ -952,3 +952,99 @@ fn forms_read_as_multivectors() {
         ^ (mesh.vertices.site(3) - mesh.vertices.site(0));
     assert!((density.e123() * volume.e123() - 6.0).abs() < 1e-12);
 }
+
+/// Points as antivectors (numga's `Point-`, intrinsic): the plane's intrinsic vectors and
+/// space's intrinsic bivectors give VGA's geometry, their measures are VGA's (an edge, a patch, a
+/// volume, the same coefficients and signs), and a closed surface of them winds outward.
+#[test]
+fn antivector_positions_give_the_same_geometry() {
+    use gax::simplex::Measure;
+    for fx in fixtures() {
+        if fx.dim == 2 {
+            let tops: Vec<[usize; 3]> = fx.simplices.iter().map(|s| [s[0], s[1], s[2]]).collect();
+            let vga: Field<_> = fx
+                .points
+                .iter()
+                .map(|p| gax::vga2d::Vector::<(), f64>::new(p[0], p[1]))
+                .collect();
+            let points = vga.map(gax::vga2d::Vector::hodge);
+            let a = Geometry::new(&Mesh::new(vga.clone(), &tops).unwrap());
+            let b = Geometry::new(&Mesh::new(points.clone(), &tops).unwrap());
+            for k in 0..3 {
+                assert!(
+                    a.volumes(k)
+                        .iter()
+                        .zip(b.volumes(k))
+                        .all(|(x, y)| close(*x, *y))
+                );
+                assert!(
+                    a.dual_volumes(k)
+                        .iter()
+                        .zip(b.dual_volumes(k))
+                        .all(|(x, y)| close(*x, *y))
+                );
+            }
+            for s in &tops {
+                let v = s.map(|i| vga.site(i));
+                let p = s.map(|i| points.site(i));
+                let (m, n) = (Measure::<3>::measure(&v), Measure::<3>::measure(&p));
+                assert!(close(m.e12(), n.s()), "{} {}", m.e12(), n.s());
+                let (e, f) = (
+                    Measure::<2>::measure(&[v[0], v[1]]),
+                    Measure::<2>::measure(&[p[0], p[1]]),
+                );
+                assert!((e.hodge() - f).norm() < 1e-15);
+            }
+        } else {
+            let tops: Vec<[usize; 4]> = fx
+                .simplices
+                .iter()
+                .map(|s| [s[0], s[1], s[2], s[3]])
+                .collect();
+            let vga: Field<_> = fx
+                .points
+                .iter()
+                .map(|p| gax::vga3d::Vector::<(), f64>::new(p[0], p[1], p[2]))
+                .collect();
+            let points = vga.map(gax::vga3d::Vector::hodge);
+            let a = Geometry::new(&Mesh::new(vga.clone(), &tops).unwrap());
+            let b = Geometry::new(&Mesh::new(points.clone(), &tops).unwrap());
+            for k in 0..4 {
+                assert!(
+                    a.dual_volumes(k)
+                        .iter()
+                        .zip(b.dual_volumes(k))
+                        .all(|(x, y)| close(*x, *y))
+                );
+            }
+            for s in &tops {
+                let v = s.map(|i| vga.site(i));
+                let p = s.map(|i| points.site(i));
+                let (m, n) = (Measure::<4>::measure(&v), Measure::<4>::measure(&p));
+                assert!(close(m.e123(), n.s()), "{} {}", m.e123(), n.s());
+                let tri = |q: [usize; 3]| {
+                    (
+                        Measure::<3>::measure(&q.map(|i| v[i])),
+                        Measure::<3>::measure(&q.map(|i| p[i])),
+                    )
+                };
+                let (face, patch) = tri([0, 1, 2]);
+                assert!((face.hodge() - patch).norm() < 1e-14);
+            }
+        }
+    }
+    // The regular tetrahedron's surface, wound inward, as space's points.
+    let p = [
+        [1.0, 1.0, 1.0],
+        [1.0, -1.0, -1.0],
+        [-1.0, 1.0, -1.0],
+        [-1.0, -1.0, 1.0],
+    ];
+    let points: Field<_> = p
+        .iter()
+        .map(|p| gax::vga3d::Vector::<(), f64>::new(p[0], p[1], p[2]).hodge())
+        .collect();
+    let inward = Mesh::new(points, &[[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]).unwrap();
+    let out = inward.outward().unwrap();
+    assert_eq!(out.topology(), &inward.topology().turned());
+}

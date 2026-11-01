@@ -2636,6 +2636,33 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   type closed under the wedge, the output the wedge's own type (a runtime degree has no single
   result type, so one method per degree; degree 4 has not been needed). The gradients may be the
   model's or their covectors (the ports' points are antivectors and their gradients planes).
+* **Points as antivectors (`dec::Distance`, `Position`, `Measure`).** The surfaces ports write
+  points as numga's `Point-`: the plane's intrinsic vectors, space's intrinsic bivectors, their
+  coefficients the coordinates; they built `Geometry` from `p.undual()`. These positions are a
+  model now (`gax::positions`): affine combinations, the squared distance the sum of the
+  difference's squared coefficients, measures the joins of the edges over `k!` (an edge, a
+  triangle's intrinsic patch, a tetrahedron's intrinsic volume), which carry the VGA measure's
+  coefficients and signs (checked on PyDEC's meshes), so `Mesh::outward` and `de_rham` work on
+  them too. Hand-written beside the generated algebras, as the other models are.
+* **Field-side findings.**
+  * `SiteField`'s coefficients default to `f64`, as every kind's since ADR-052 (it said `f32`,
+    which no caller relied on: all named the type).
+  * A `Field` times a number (`f32`, `f64`, either side, owned or borrowed), as a `SparseMap`
+    has since ADR-056, and the same reason for not making it generic. A field is then a state for
+    generic steppers: the examples' `rk4` takes `Clone` states, not `Copy` ones, and its `Pair`
+    two types, so Dirac–Kähler's waves (an even field on the vertices with a 1-form on the
+    faces) step through it instead of a local copy (the right layer for the `Copy` finding was
+    the stepper's bound, which was the examples'; the library's part is the arithmetic).
+  * `SparseMap::weigh`: scalar cells as weights on a field of any kind, keeping its kind, where
+    `&map * &field` gives the product's kind, for a part the whole kind (a scalar times a PGA3D
+    `Direction` is a `Point`, so shells cast every gathered force back). A field-level answer;
+    parts as product results are the generator's (the parts friction line).
+  * Eigen fluids' eigenproblem went through `undual`: its stiffness was a correlation (`Amount <-
+    Scalar`, pulled back through the join) and its mass a scalar map, which `eigh` cannot pair.
+    The lumped mass is the same correlation now, each dual area as the amount a unit potential
+    carries, so the pencil is solved in the join's pairing (ADR-056) with no bridge. Considered:
+    a bridge in `eigh` from a scalar metric to a correlation operator; it would pair two
+    different cells, where one cell type says what the pencil means.
 * **What stays in the examples.** The constructors (numga's torus, icosphere, hex disk,
   subdivision), the edges' sides and corners across (`sides`), the first face at each vertex,
   `parity`: mesh making and port-specific readings, as ADR-049 kept them.

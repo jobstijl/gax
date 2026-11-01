@@ -10,8 +10,9 @@ use gax::vga3d::{Bivector, Scalar, Vector};
 
 type V = Vector<(), f64>;
 type String4 = Sites<Vector, 4>;
-type Beads = SiteField<Vector, 4, (), f64>;
-type BeadMap = SiteField<Vector, 4, (String4,), f64>;
+// The coefficients default to `f64`, as every kind's.
+type Beads = SiteField<Vector, 4>;
+type BeadMap = SiteField<Vector, 4, (String4,)>;
 
 /// The bead string's weights (`tests/fixtures/numga_fields.txt`): each bead tied to its
 /// neighbours and to its rest position.

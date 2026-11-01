@@ -424,6 +424,10 @@ On jittered grids of triangles and tetrahedra, some not well-centred (ADR-050):
 * [prop] Forms as multivectors: a Whitney 1-form read through the gradients is `whitney_1`'s
   vector, the derivative of a 1-form the bivector `Σ 2 c ∇λₐ ∧ ∇λ_b`, a unit 3-form on a
   tetrahedron one over its volume; the gradients are the reciprocal frame of the edges.
+* [prop] Points as antivectors (the plane's intrinsic vectors, space's intrinsic bivectors) give
+  VGA's volumes and dual volumes on PyDEC's meshes, and their measures VGA's coefficients and
+  signs (an edge, a triangle's patch, a tetrahedron's volume); a closed surface of them winds
+  outward.
 * [prop] The numga ports' hand-built metric: their edge ratios are `⋆₁`, their vertex areas the
   row sums of `M₀`, their reconstruction `W₁` at the centroids, within `10⁻¹²`
   (`examples/numga/src/mesh.rs`, `gax_dec_gives_the_metric`).

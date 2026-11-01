@@ -12,6 +12,12 @@
 //! * CGA: positions are round points of weight one, `eo + x + ½|x|² e∞`, and the measure is
 //!   `P₀ ∧ … ∧ P_k ∧ e∞` over `k!`, the flat through the vertices, signed as the VGA measure.
 //!
+//! * VGA with antivector positions (numga's `Point-`): a point of the plane is an intrinsic
+//!   vector, of space an intrinsic bivector, its coefficients the coordinates; the measure of a
+//!   `k`-simplex is the join of its edges from the first vertex over `k!`, intrinsic (an edge
+//!   itself, a triangle's patch, a tetrahedron's volume), and the squared distance the sum of the
+//!   difference's squared coefficients (ADR-058).
+//!
 //! The measure of a single vertex is the scalar one in every model.
 
 use crate::Coef;
@@ -209,6 +215,63 @@ conformal_model!(cga3d, "cga3d", 3,
     2: Trivector = |v, ei| v[0] ^ v[1] ^ ei;
     3: Quadvector = |v, ei| v[0] ^ v[1] ^ v[2] ^ ei;
     4: Pseudoscalar = |v, ei| -(v[0] ^ v[1] ^ v[2] ^ v[3] ^ ei);
+);
+
+/// The VGA models whose positions are antivectors, intrinsic: `$P` the position kind, measures
+/// joins of edges, `$k => $Blade` (an intrinsic kind) for each simplex dimension from 1 to the
+/// algebra's.
+macro_rules! antivector_model {
+    ($alg:ident, $feature:literal, $P:ident, $($n:literal: $Blade:ident = |$e:ident| $join:expr;)+) => {
+        #[cfg(feature = $feature)]
+        const _: () = {
+            use crate::$alg::{intrinsic::$P, Scalar};
+
+            impl<T: Coef> Position for $P<(), T> {
+                type Coef = T;
+                #[inline]
+                fn affine(points: &[Self], weights: &[T]) -> Self {
+                    combination(points, weights)
+                }
+            }
+
+            impl<T: Coef> Measure<1> for $P<(), T> {
+                type Blade = Scalar<(), T>;
+                #[inline]
+                fn measure(_: &[Self; 1]) -> Scalar<(), T> {
+                    Scalar::new(T::one())
+                }
+            }
+
+            $(
+                impl<T: Coef> Measure<$n> for $P<(), T> {
+                    type Blade = crate::$alg::intrinsic::$Blade<(), T>;
+                    #[inline]
+                    fn measure(v: &[Self; $n]) -> Self::Blade {
+                        let $e: [$P<(), T>; $n - 1] = core::array::from_fn(|i| v[i + 1] - v[0]);
+                        ($join) * inverse_factorial::<T>($n - 1)
+                    }
+                }
+            )+
+
+            impl<T: Coef> crate::dec::Distance for $P<(), T> {
+                #[inline]
+                fn distance_squared(a: &Self, b: &Self) -> T {
+                    let d = *a - *b;
+                    d.c.iter().fold(T::zero(), |sum, &x| sum + x * x)
+                }
+            }
+        };
+    };
+}
+
+antivector_model!(vga2d, "vga2d", Vector,
+    2: Vector = |e| e[0];
+    3: Scalar = |e| e[0] & e[1];
+);
+antivector_model!(vga3d, "vga3d", Bivector,
+    2: Bivector = |e| e[0];
+    3: Vector = |e| e[0] & e[1];
+    4: Scalar = |e| e[0] & e[1] & e[2];
 );
 
 /// Squared distances, for the metric of meshes (`gax::dec`): VGA's `|a − b|²`, PGA's squared norm

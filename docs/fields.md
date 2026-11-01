@@ -20,8 +20,10 @@ assert_eq!(positions.len(), 4);
 
 An operation on elements acts on a field site by site through `map` (one field) and `zip_with`
 (two fields over the same sites); `+`, `-` and unary `-` do the same for fields over the same
-sites. A field's reductions run over its sites: `sum`, `mean`, and `dot`, the coefficient inner
-product summed over the sites.
+sites, and `field * 0.5` scales every site (`f32` and `f64`; `scaled(c)` for any coefficient), so a
+field, or a pair of fields, is a state that a generic stepper adds and scales. A field's
+reductions run over its sites: `sum`, `mean`, and `dot`, the coefficient inner product summed over
+the sites.
 
 ```rust
 # use gax::field::Field;
@@ -71,6 +73,13 @@ assert!((displacements.site(1).e3() + 2.0 / 3.0).abs() < 1e-15);
 assert!((stiffness.of(&displacements) - &loads).dot(&(stiffness.of(&displacements) - &loads)) < 1e-28);
 # let _ = forces;
 ```
+
+A product takes the kind the product of its cell and value has, which for a part of a kind is
+the whole kind: a scalar cell times a PGA3D `Direction` is a `Point`. `weigh` uses scalar cells as
+weights instead and keeps the field's kind, so the springs' pulls gathered at the beads stay
+directions, `ends.reverse().weigh(&pulls)`. `SparseMap::selection(&sites, n)` reads a field at
+the listed sites (a mesh's interior vertices, its boundary edges), and its transpose puts values
+back.
 
 A map is often given row by row, by the input sites each row couples to: the springs by their
 beads, a mesh's edges by their ends, its faces by their corners. `SparseMap::from_columns` builds
@@ -325,10 +334,10 @@ whole coupled system, here one `12 × 12` block matrix.
 use gax::sites::{SiteField, Sites};
 use gax::vga3d::{Bivector, Vector};
 
-type Beads = SiteField<Vector, 4, (), f64>;
+type Beads = SiteField<Vector, 4>; // coefficients `f64` unless given
 let w = [[2.0, -1.0, 0.0, 0.0], [-1.0, 3.0, -1.0, 0.0], [0.0, -1.0, 3.0, -1.0], [0.0, 0.0, -1.0, 2.0]];
 // The block from bead `j` to bead `i` is a map `Vector <- Vector`.
-let stiffness: SiteField<Vector, 4, (Sites<Vector, 4>,), f64> =
+let stiffness: SiteField<Vector, 4, (Sites<Vector, 4>,)> =
     SiteField::from_blocks(|i, j| Vector::slot().gp(w[i][j]));
 let pulls = Beads::from_sites([Vector::new(0.0, 0.0, -1.0); 4]);
 let x = stiffness.solve(pulls);
@@ -343,6 +352,14 @@ assert_eq!(turned.site(2), turn >> x.site(2));
 The site count is checked at compile time: a field over four sites does not fit a slot of
 `Sites<Vector, 3>`. Fixed fields are dense, and they are meant for a few sites; `from_field`,
 `to_field` and `from_sparse` convert to and from the run-time fields and sparse maps above.
+
+Being a kind, `Sites<K, N>` is also a set of directions for jets (`gax::jet`): `jet::gradient`
+and `jet::hessian` of a scalar function of a `SiteField` give a form over the field,
+`Scalar<(Sites<K, N>,)>`, and the coupled curvature, `Scalar<(Sites<K, N>, Sites<K, N>)>`, every
+site against every other, so `-hessian.solve(gradient)` is the Newton step of all sites at once
+(numga's `derivative` of a field function; the multiview port's coupled step over its free
+cameras checks it). Second-order jets of many directions are large values: a debug build may need
+a thread with a larger stack.
 
 ## Performance
 

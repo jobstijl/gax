@@ -369,6 +369,40 @@ impl<C: Copy> SparseMap<C> {
         self.combine_into(x, y, |c, v| c * v);
     }
 
+    /// Scalar cells as weights on a field of any kind: each row's sum of the values at its
+    /// columns, each scaled by its cell's coefficient, in the field's own kind. `&self * x`
+    /// multiplies instead, and its kind is the product's, which for a part is the full kind (a
+    /// scalar times a PGA3D `Direction` is a `Point`); this keeps the part (numga's scalar map
+    /// on a field of directions gives directions).
+    ///
+    /// ```
+    /// use gax::field::{Field, SparseMap};
+    /// use gax::pga3d::{Direction, Scalar};
+    /// let s = Scalar::<(), f64>::new;
+    /// let mean = SparseMap::from_triples([(0, 0, s(0.5)), (0, 1, s(0.5))], (1, 2));
+    /// let pulls = Field::new(vec![Direction::new(1.0, 0.0, 0.0), Direction::new(0.0, 2.0, 0.0)]);
+    /// let pull: Field<Direction<(), f64>> = mean.weigh(&pulls);
+    /// assert_eq!(pull.site(0), Direction::new(0.5, 1.0, 0.0));
+    /// ```
+    ///
+    /// # Panics
+    /// If `x` is not over the map's input sites.
+    #[must_use]
+    #[track_caller]
+    pub fn weigh<X>(&self, x: &Field<X>) -> Field<X>
+    where
+        C: Extensor<Slots = ()>,
+        X: Extensor<Coef = C::Coef> + Add<Output = X>,
+    {
+        const {
+            assert!(
+                <C::Kind as Kind>::N == 1,
+                "the cells of a weighing are scalars"
+            );
+        }
+        self.combine(x, |c, v| super::scale(v, c.coeffs().as_ref()[0]))
+    }
+
     /// Each cell combined with the value at its column, summed at the rows.
     #[track_caller]
     fn combine<X: Extensor, Y: Extensor + Add<Output = Y>>(

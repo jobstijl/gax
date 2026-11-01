@@ -18,8 +18,8 @@
 //! // Three planes, each tied to its neighbours with the weights `w`: one map over all three.
 //! type P3 = Sites<Plane, 3>;
 //! let w = [[2.0, -1.0, 0.0], [-1.0, 3.0, -1.0], [0.0, -1.0, 2.0]];
-//! let k: SiteField<Plane, 3, (P3,), f64> = SiteField::from_blocks(|i, j| Plane::slot().gp(w[i][j]));
-//! let load = SiteField::<Plane, 3, (), f64>::from_sites([Plane::new(0.0, 0.0, -1.0, 0.0); 3]);
+//! let k: SiteField<Plane, 3, (P3,)> = SiteField::from_blocks(|i, j| Plane::slot().gp(w[i][j]));
+//! let load = SiteField::<Plane, 3>::from_sites([Plane::new(0.0, 0.0, -1.0, 0.0); 3]);
 //! let x = k.solve(load); // the coupled 12 × 12 system
 //! assert!((k.of(x) - load).c.as_ref().iter().all(|v| v.abs() < 1e-14));
 //! ```
@@ -179,9 +179,9 @@ impl<K: FlatKind, T: Real, const N: usize> crate::linalg::SquareArr<T>
 }
 
 /// A value, map or form of the field kind [`Sites<K, N>`]: `K` at each of `N` sites, with open
-/// slots `S` and coefficients `T`.
+/// slots `S` and coefficients `T`, `f64` unless given, as every kind's (ADR-052).
 #[derive(Clone, Copy)]
-pub struct SiteField<K: FlatKind, const N: usize, S: Slots = (), T: Coef = f32> {
+pub struct SiteField<K: FlatKind, const N: usize, S: Slots = (), T: Coef = f64> {
     /// The coefficients, site by site: each site's output-first coefficients of `K` with slots
     /// `S`.
     pub c: SiteArr<K, S::Arr<T>, N>,

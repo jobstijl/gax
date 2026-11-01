@@ -265,3 +265,68 @@ fn csta_exp_along_a_bivector() {
         );
     }
 }
+
+/// Derivatives with respect to a field over a fixed number of sites (`Sites<K, N>`, a kind like
+/// any other): the gradient and Hessian of an energy of two lines' twists that couples them, as
+/// forms over the field, against central differences.
+#[test]
+fn jets_over_site_fields() {
+    use gax::jet::hessian;
+    use gax::sites::SiteField;
+    type Two<T> = SiteField<Line, 2, (), T>;
+    // The squared distance between the two moved points.
+    fn energy<T: Real>(twists: Two<T>) -> T {
+        let p = Point::xyz(1.0, 0.0, 0.0).map_coefs(T::from_f64);
+        let q = Point::xyz(0.0, 1.0, 0.5).map_coefs(T::from_f64);
+        let a = twists.site(0).exp() >> p;
+        let b = twists.site(1).exp() >> q;
+        let d: [T; 3] = core::array::from_fn(|i| a.to_euclidean()[i] - b.to_euclidean()[i]);
+        d[0] * d[0] + d[1] * d[1] + d[2] * d[2]
+    }
+    let unit = |i: usize, h: f64| {
+        let mut c = [0.0; 12];
+        c[i] = h;
+        Two::<f64>::from_sites([
+            Line::from_coeffs(core::array::from_fn(|k| c[k])),
+            Line::from_coeffs(core::array::from_fn(|k| c[6 + k])),
+        ])
+    };
+    // Second-order jets of twelve directions are large for a debug build's 2 MB test thread.
+    let run = std::thread::Builder::new().stack_size(64 << 20).spawn(move || {
+        let x = Two::<f64>::from_sites([
+            Line::new(0.1, -0.2, 0.05, 0.3, 0.0, -0.1),
+            Line::new(-0.05, 0.1, 0.2, 0.0, 0.2, 0.1),
+        ]);
+        let (value, grad, hess) = hessian(energy, x);
+        assert!((value - energy(x)).abs() < 1e-14);
+        let h = 1e-5;
+        for i in 0..12 {
+            let along = |s: f64| energy(x + unit(i, s));
+            let slope = (along(h) - along(-h)) / (2.0 * h);
+            assert!((grad.of(unit(i, 1.0)).s() - slope).abs() < 1e-8, "{i}");
+            for j in 0..12 {
+                // The change of the i-th slope along j.
+                let slope_at = |s: f64| grad_at(energy, x + unit(j, s)).of(unit(i, 1.0)).s();
+                let second = (slope_at(h) - slope_at(-h)) / (2.0 * h);
+                let exact = hess.of(unit(i, 1.0)).of(unit(j, 1.0)).s();
+                assert!((exact - second).abs() < 1e-7, "{i} {j}: {exact} {second}");
+            }
+        }
+        // The twists of the two sites are coupled: the energy depends on both points.
+        assert!(hess.of(unit(0, 1.0)).of(unit(6, 1.0)).s().abs() > 1e-3);
+    });
+    run.expect("a thread").join().expect("the test passes");
+}
+
+/// The gradient of a function of the two-site field, by first-order jets.
+fn grad_at<F>(
+    f: F,
+    x: gax::sites::SiteField<Line, 2, (), f64>,
+) -> gax::pga3d::Scalar<(gax::sites::Sites<Line, 2>,), f64>
+where
+    F: FnOnce(
+        gax::sites::SiteField<Line, 2, (), gax::jet::Jet<f64, gax::sites::Sites<Line, 2>>>,
+    ) -> gax::jet::Jet<f64, gax::sites::Sites<Line, 2>>,
+{
+    gax::jet::gradient(f, x).1
+}

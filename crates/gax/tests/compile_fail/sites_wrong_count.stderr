@@ -14,7 +14,7 @@ help: the trait `SubKind<Sites<Point, 3>>` is not implemented for `Sites<gax::pg
   |
   | impl<K: FlatKind, const N: usize> SubKind<Sites<K, N>> for Sites<K, N> {}
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  = note: required for `SiteField<gax::pga3d::oriented::Point, 3, (Sites<gax::pga3d::oriented::Point, 3>,), f64>` to implement `Of<SiteField<gax::pga3d::oriented::Point, 4, (), f64>>`
+  = note: required for `SiteField<gax::pga3d::oriented::Point, 3, (Sites<gax::pga3d::oriented::Point, 3>,)>` to implement `Of<SiteField<gax::pga3d::oriented::Point, 4>>`
 note: required by a bound in `SiteField::<K, N, S, T>::of`
  --> $WORKSPACE/crates/gax-core/src/sites.rs
   |
