@@ -256,6 +256,41 @@ No versor with at most 8 coefficients: the versor laws are not derived here.
 | `Even` | `conj_m(g).of(m >> x) == f · (m >> g.of(x))`, `g: Vector<(Vector,)>` | `‖m‖^4` |
 | `Odd` | `conj_m(g).of(m >> x) == f · (m >> g.of(x))`, `g: Vector<(Vector,)>` | `‖m‖^4` |
 
+### `sta2d`
+
+| versor `m` | law | factor `f` |
+|---|---|---|
+| `Vector` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) ∗ (m >> b) == f · (m >> (a ∗ b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) × (m >> b) == f · (m >> (a × b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) ∗ (m >> b) == f · (m >> (a ∗ b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) × (m >> b) == f · (m >> (a × b))`, all pairs of kinds | `‖m‖²` |
+| `Even` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) * (m >> b) == f · (m >> (a * b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) ^ (m >> b) == f · (m >> (a ^ b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) & (m >> b) == f · (m >> (a & b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) ⌋ (m >> b) == f · (m >> (a ⌋ b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) ⌊ (m >> b) == f · (m >> (a ⌊ b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) | (m >> b) == f · (m >> (a | b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) ∗ (m >> b) == f · (m >> (a ∗ b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) × (m >> b) == f · (m >> (a × b))`, all pairs of kinds | `‖m‖²` |
+| `Odd` | `(m >> a) ⊗ (m >> b) == f · (m >> (a ⊗ b))`, all pairs of kinds | `‖m‖²` |
+| `Vector` | `conj_m(g).of(m >> x) == f · (m >> g.of(x))`, `g: Vector<(Vector,)>` | `‖m‖^4` |
+| `Even` | `conj_m(g).of(m >> x) == f · (m >> g.of(x))`, `g: Vector<(Vector,)>` | `‖m‖^4` |
+| `Odd` | `conj_m(g).of(m >> x) == f · (m >> g.of(x))`, `g: Vector<(Vector,)>` | `‖m‖^4` |
+
 ### `stap`
 
 | versor `m` | law | factor `f` |

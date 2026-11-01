@@ -1920,6 +1920,61 @@ mod sta_extras {
     }
 }
 
+// The same boosts in the plane's spacetime (ADR-055, amended): STA2D is STA's subalgebra of
+// `e1, e2, e4`, and these are STA's boosts within it.
+#[cfg(feature = "sta2d")]
+mod sta2d_extras {
+    use crate::sta2d::{Even, Vector, oriented};
+    use crate::{Real, Unit};
+
+    impl<T: Real> Even<(), T> {
+        /// The boost by `rapidity` along the spatial direction `d` (its `e1, e2` part, of either
+        /// orientation, any length; the observer is `e4`): `exp(½ rapidity e4 d̂)`, as STA's
+        /// `Even::boost`. It takes the observer at rest to `cosh ζ e4 + sinh ζ d̂`.
+        ///
+        /// ```
+        /// use gax::sta2d::{Even, Vector};
+        /// let x = Vector::<(), f64>::new(1.0, 0.0, 0.0);
+        /// let u = Even::boost(x, 0.8) >> Vector::new(0.0, 0.0, 1.0);
+        /// assert!((u.e4() - 0.8f64.cosh()).abs() < 1e-12 && (u.e1() - 0.8f64.sinh()).abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn boost<O: crate::Orientation>(
+            d: oriented::Vector<(), T, O>,
+            rapidity: T,
+        ) -> Unit<Self> {
+            let (x, y) = (d.e1(), d.e2());
+            let h = rapidity * T::from_f64(0.5);
+            let s = -h.sinh() / (x * x + y * y).sqrt();
+            Unit::new_unchecked(Even::new(h.cosh(), T::zero(), x * s, y * s))
+        }
+
+        /// The pure boost (no rotation) that takes the timelike direction `from` to `to` (both
+        /// future-pointing, or both past-pointing, of either orientation, any length):
+        /// `(1 − to from)` for unit velocities (of square `−1`), normalized, as STA's.
+        ///
+        /// ```
+        /// use gax::sta2d::{Even, Vector};
+        /// let rest = Vector::<(), f64>::new(0.0, 0.0, 1.0);
+        /// let u = Vector::new(0.0, 0.75, 1.25); // speed 0.6 along y
+        /// let b = Even::boost_between(rest, u);
+        /// assert!((b >> rest).c.iter().zip(u.c).all(|(a, b)| (a - b).abs() < 1e-12));
+        /// ```
+        #[inline]
+        pub fn boost_between<O: crate::Orientation, P: crate::Orientation>(
+            from: oriented::Vector<(), T, O>,
+            to: oriented::Vector<(), T, P>,
+        ) -> Unit<Self> {
+            let unit = |v: Vector<(), T>| v.gp((-v.dot(v).s()).sqrt().recip());
+            let u = unit(from.with_orientation());
+            let w = unit(to.with_orientation());
+            let r = Unit::<Self>::identity().into_inner() - (w * u).cast::<Even>();
+            let n = (T::from_f64(2.0) * (T::one() - (w | u).s())).sqrt();
+            Unit::new_unchecked(r.gp(n.recip()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "pga3d")]

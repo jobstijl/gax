@@ -147,6 +147,17 @@ pub const HOMS: &[Hom] = &[
               `eₖ e4` (bivectors), and space's algebra as the even subalgebra",
     },
     Hom {
+        from: "sta2d",
+        to: "sta",
+        images: &[
+            ("e1", &[(1, "e1")]),
+            ("e2", &[(1, "e2")]),
+            ("e4", &[(1, "e4")]),
+        ],
+        doc: "the plane's spacetime as the subalgebra of `e1, e2, e4` (the spacetime at \
+              `z = 0`): fields, rotors and events keep their blades",
+    },
+    Hom {
         from: "sta",
         to: "stap",
         images: &[

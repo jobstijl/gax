@@ -2427,6 +2427,25 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   `I = e4 e1 e2 e3`. The migrated ports note each sign or reading that changed.
 * **Cost.** None: the same 16 blades, 43 k generated lines as before; the closed forms of
   `exp`, `log` and `sqrt` of the even kind are generated in this signature as in the other.
+* *Amended (2026-11-01, Phase 13): STA2D, the plane's spacetime.* numga's `STA2D = x+y+t-`
+  (electromagnetism in a sheet: Lie advection, piezoelectricity) was declared in the ports'
+  shared module. It is a standard algebra now, `sta2d` (feature `sta2d`), built to be STA's
+  subalgebra: the basis is `e1, e2` and time `e4`, keeping STA's name for time rather than
+  `e3`, so that every blade has its STA name (`xy xt yt` are `e12 e14 e24` in both, `xyt` is
+  `e124`, one of STA's trivectors) and `sta2d → sta` maps each basis vector to the vector of
+  the same name; the generator proves it a homomorphism, so rotors, fields and events carry
+  over with their products (`tests/sta2d.rs`, `tests/homs.rs`). The kinds follow STA's in
+  numga's order: `Vector`, `Bivector` (`e12` the rotation and magnetic part, `e14, e24` the
+  boosts and electric part), `Pseudoscalar` (`e124`, central, of square `+1`, so no `Phasor`:
+  a hyperbolic number commutes with everything here, and the ports used none), `Even` and
+  `Odd` the versors, the roles `Field`, `Rotor`, `Twist` and `Forque` (here the intrinsic
+  `Vector`, the dual of a bivector in three dimensions), `Even::boost` and `boost_between` as
+  STA's, `Motions` (`Sta2d`) and the simplex positions. The parts are the two the ports type
+  with, complements of each other: `Spatial` (`e1, e2`, numga's planes of space) and
+  `Temporal` (`e14, e24`, an electric field; intrinsic, numga's spatial points). The local
+  module's `Magnetic` and `Time` parts, unused, were not carried over (with them the algebra
+  had 849 product impls and 44.6 k lines, against 597 and 34.6 k). numga's reading of points
+  as antivectors (the point at `(x, y)` is `(x e1 + y e2).hodge()`) stays in the ports.
 
 ## ADR-056: Field solves in a pairing, block systems, and the sparse eigensolver's shifts
 *Status: implemented (2026-11-01). Amends ADR-046. Phase 13.*

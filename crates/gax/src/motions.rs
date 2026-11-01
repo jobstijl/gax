@@ -5,7 +5,7 @@
 //! PGA3D" needs the kinds as parameters, and every operation it uses as a bound. [`Motions`]
 //! collects those: a marker type per algebra names the kinds that play each role (rigid
 //! motions in [`Pga2d`], [`Pga3d`], [`Cga2d`] and [`Cga3d`], rotations in [`Vga2d`] and
-//! [`Vga3d`], the Lorentz group in [`Sta`], the Poincaré group in [`Stap`] and [`Csta`]), and
+//! [`Vga3d`], the Lorentz group in [`Sta`] and [`Sta2d`], the Poincaré group in [`Stap`] and [`Csta`]), and
 //! the operations a rigid-body or pose computation
 //! needs come with them, as operators on the associated types (which a generic function gets
 //! without writing any bounds) or as the trait's functions.
@@ -370,6 +370,19 @@ motions! {
     pub struct Sta in crate::sta {
         Motor = Even, Twist = Bivector, Forque = Bivector, Point = Trivector,
         Coords = [T; 4],
+        point(c) = Vector::<(), T>::from_coeffs(c).dual(),
+        coords(p) = p.undual().c,
+    }
+}
+
+#[cfg(feature = "sta2d")]
+motions! {
+    /// The Lorentz group of the plane, in STA2D: rotors, bivectors (boosts and the rotation)
+    /// and their dual, vectors, and events as bivectors (the dual of a vector), at coordinates
+    /// `(x, y, t)`. The metric is indefinite: an inertia's pairing is not positive.
+    pub struct Sta2d in crate::sta2d {
+        Motor = Even, Twist = Bivector, Forque = Vector, Point = Bivector,
+        Coords = [T; 3],
         point(c) = Vector::<(), T>::from_coeffs(c).dual(),
         coords(p) = p.undual().c,
     }

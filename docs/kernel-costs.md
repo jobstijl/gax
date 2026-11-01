@@ -636,6 +636,65 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Odd` `>>` `Multivector` | 124 mul, 144 add | 64 mul, 88 add |
 | `Unit<Odd>` `>>` `Multivector` | 125 mul, 137 add | 63 mul, 87 add |
 
+## sta2d
+
+| kernel | value path | the map's matrix |
+|---|---|---|
+| `Vector` `>>` `Scalar` | 4 mul, 2 add | 3 mul, 2 add |
+| `Unit<Vector>` `>>` `Scalar` | 4 mul, 2 add | 3 mul, 2 add |
+| `Vector` `>>` `Vector` | 18 mul, 11 add | 9 mul, 5 add |
+| `Unit<Vector>` `>>` `Vector` | 15 mul, 7 add | 9 mul, 5 add |
+| `Vector` `>>` `Bivector` | 18 mul, 11 add | 9 mul, 5 add |
+| `Unit<Vector>` `>>` `Bivector` | 15 mul, 7 add | 9 mul, 5 add |
+| `Vector` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
+| `Unit<Vector>` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
+| `Vector` `>>` `Even` | 19 mul, 12 add | 9 mul, 6 add |
+| `Unit<Vector>` `>>` `Even` | 16 mul, 7 add | 9 mul, 6 add |
+| `Vector` `>>` `Odd` | 19 mul, 12 add | 9 mul, 6 add |
+| `Unit<Vector>` `>>` `Odd` | 16 mul, 7 add | 9 mul, 6 add |
+| `Vector` `>>` `Multivector` | 32 mul, 18 add | 9 mul, 6 add |
+| `Unit<Vector>` `>>` `Multivector` | 29 mul, 12 add | 9 mul, 6 add |
+| `Vector` `>>` `Spatial` | 15 mul, 6 add | 9 mul, 3 add |
+| `Unit<Vector>` `>>` `Spatial` | 13 mul, 5 add | 9 mul, 3 add |
+| `Vector` `>>` `Temporal` | 15 mul, 6 add | 9 mul, 3 add |
+| `Unit<Vector>` `>>` `Temporal` | 13 mul, 5 add | 9 mul, 3 add |
+| `Even` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Unit<Even>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Even` `>>` `Vector` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Even>` `>>` `Vector` | 25 mul, 15 add | 16 mul, 13 add |
+| `Even` `>>` `Bivector` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Even>` `>>` `Bivector` | 25 mul, 15 add | 16 mul, 13 add |
+| `Even` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Unit<Even>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Even` `>>` `Even` | 23 mul, 20 add | 16 mul, 14 add |
+| `Unit<Even>` `>>` `Even` | 26 mul, 15 add | 16 mul, 14 add |
+| `Even` `>>` `Odd` | 23 mul, 20 add | 16 mul, 14 add |
+| `Unit<Even>` `>>` `Odd` | 26 mul, 15 add | 16 mul, 14 add |
+| `Even` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
+| `Unit<Even>` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
+| `Even` `>>` `Spatial` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Even>` `>>` `Spatial` | 19 mul, 11 add | 14 mul, 8 add |
+| `Even` `>>` `Temporal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Even>` `>>` `Temporal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Odd` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Unit<Odd>` `>>` `Scalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Odd` `>>` `Vector` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Odd>` `>>` `Vector` | 25 mul, 15 add | 16 mul, 13 add |
+| `Odd` `>>` `Bivector` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Odd>` `>>` `Bivector` | 25 mul, 15 add | 16 mul, 13 add |
+| `Odd` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Unit<Odd>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Odd` `>>` `Even` | 23 mul, 20 add | 16 mul, 14 add |
+| `Unit<Odd>` `>>` `Even` | 26 mul, 15 add | 16 mul, 14 add |
+| `Odd` `>>` `Odd` | 23 mul, 20 add | 16 mul, 14 add |
+| `Unit<Odd>` `>>` `Odd` | 26 mul, 15 add | 16 mul, 14 add |
+| `Odd` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
+| `Unit<Odd>` `>>` `Multivector` | 36 mul, 26 add | 16 mul, 14 add |
+| `Odd` `>>` `Spatial` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Odd>` `>>` `Spatial` | 19 mul, 11 add | 14 mul, 8 add |
+| `Odd` `>>` `Temporal` | 19 mul, 11 add | 14 mul, 8 add |
+| `Unit<Odd>` `>>` `Temporal` | 19 mul, 11 add | 14 mul, 8 add |
+
 ## stap
 
 | kernel | value path | the map's matrix |

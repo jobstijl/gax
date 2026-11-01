@@ -14,6 +14,7 @@ pub mod motions;
     feature = "vga2d",
     feature = "vga3d",
     feature = "sta",
+    feature = "sta2d",
     feature = "pga2d",
     feature = "pga3d",
     feature = "cga2d",
@@ -95,6 +96,11 @@ algebras! {
     /// `x+y+z+t-`.
     #[cfg(feature = "sta")]
     sta {}
+
+    /// The spacetime of the plane, `R(2,1,0)`: space `e1, e2`, time `e4` (square `-1`), numga's
+    /// `STA2D = x+y+t-`, the subalgebra of STA that `e1, e2, e4` generate.
+    #[cfg(feature = "sta2d")]
+    sta2d {}
 
     /// Conformal geometric algebra of the Euclidean plane, `R(3,1,0)`, in the null basis `eo`,
     /// `ei`: points, circles and lines of the plane, and their conformal transformations.

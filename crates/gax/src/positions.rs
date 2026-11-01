@@ -22,6 +22,7 @@ use crate::simplex::{Measure, Position};
     feature = "vga2d",
     feature = "vga3d",
     feature = "sta",
+    feature = "sta2d",
     feature = "pga2d",
     feature = "pga3d"
 ))]
@@ -97,6 +98,11 @@ vector_model!(sta, "sta",
     3: Bivector = |e| e[0] ^ e[1];
     4: Trivector = |e| e[0] ^ e[1] ^ e[2];
     5: Pseudoscalar = |e| e[0] ^ e[1] ^ e[2] ^ e[3];
+);
+vector_model!(sta2d, "sta2d",
+    2: Vector = |e| e[0];
+    3: Bivector = |e| e[0] ^ e[1];
+    4: Pseudoscalar = |e| e[0] ^ e[1] ^ e[2];
 );
 
 /// The PGA models: positions are points of weight one, measures joins. The full-dimensional

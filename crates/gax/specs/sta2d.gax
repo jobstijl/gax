@@ -1,0 +1,24 @@
+// The spacetime of the plane, R(2,1,0): signature (+ + -), space e1, e2 and time e4, numga's
+// `STA2D = x+y+t-`. Time keeps STA's name `e4` (ADR-055), so STA2D is the subalgebra of STA
+// that e1, e2 and e4 generate, blade for blade by name (`sta2d → sta`), and the kinds keep
+// numga's blades in numga's order (`xy xt yt` are `e12 e14 e24`, `xyt` is `e124`).
+algebra sta2d "The spacetime of the plane, `R(2,1,0)`: space `e1, e2` (square `+1`) and time `e4` (square `-1`), numga's `STA2D = x+y+t-`.";
+basis e1 = 1, e2 = 1, e4 = -1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e1, e2, e4] "A vector of the plane's spacetime `x e1 + y e2 + t e4` (an event or a momentum, of square `x² + y² − t²`; in numga's reading a plane, a gradient). As a versor it is a reflection.";
+kind Bivector = [e12, e14, e24] "A bivector: an electromagnetic field in a sheet, or the generator of a Lorentz transformation. `e12` is the rotation (the magnetic part), `e14, e24` the relative vectors `eₖ e4` of the observer `e4`, the boosts (the electric part).";
+kind Pseudoscalar = [e124] "The unit volume `I = e124`: in odd dimension it commutes with every element, and it squares to `+1`.";
+versor Even = [1, e12, e14, e24] "The even subalgebra: the Lorentz rotors of the plane (rotations `e12`, boosts `e14, e24`).";
+versor Odd = [e1, e2, e4, e124] "The odd subalgebra.";
+kind Multivector = [1, e1, e2, e4, e12, e14, e24, e124] "A general multivector.";
+// numga's sub-kinds that its ports type with (ADR-054), complements of each other.
+part Spatial = [e1, e2] "The spatial part of a vector, `e1, e2`: in numga's reading the planes of space, which read positions and displacements. Its complement is `Temporal`.";
+part Temporal = [e14, e24] "The bivectors through time, `e14, e24`: extrinsic (the default), an electric field, a boost's generator; intrinsic, a spatial point or displacement as numga's antivector. Its complement is `Spatial`.";
+
+alias Field = Bivector;
+alias Rotor = Even;
+// The roles every standard algebra names (ADR-052): Twist (the rate of a motion), Forque
+// (its dual), Even and Odd (the versors).
+alias Twist = Bivector;
+alias Forque = Vector intrinsic;

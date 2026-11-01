@@ -93,6 +93,7 @@ modules! {
     "vga2d" VGA2D VGA2D_F16;
     "vga3d" VGA3D VGA3D_F16;
     "sta" STA STA_F16;
+    "sta2d" STA2D STA2D_F16;
     "cga2d" CGA2D CGA2D_F16;
     "cga3d" CGA3D CGA3D_F16;
     "stap" STAP STAP_F16;

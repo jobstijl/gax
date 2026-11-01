@@ -17,13 +17,15 @@ features = ["all-algebras", "wide", "trace", "batch", "wgsl", "bytemuck"]
 [features]
 default = ["std", "macros", "pga2d", "pga3d"]
 ## Every standard algebra.
-all-algebras = ["pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga2d", "cga3d", "stap", "csta"]
+all-algebras = ["pga2d", "pga3d", "vga2d", "vga3d", "sta", "sta2d", "cga2d", "cga3d", "stap", "csta"]
 std = ["gax-core/std"]
 pga2d = []
 pga3d = []
 vga2d = []
 vga3d = []
 sta = []
+## The spacetime of the plane, `R(2,1,0)` (numga's STA2D).
+sta2d = []
 cga2d = []
 cga3d = []
 ## Projective spacetime algebra R(3,1,1) (not in the default set: larger to compile).

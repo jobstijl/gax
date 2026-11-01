@@ -832,6 +832,7 @@ joins is solved in 3D, on the lifted values.
 | `cga2d`, `cga3d` | `cga3d`, `csta` | the plane in space; space in spacetime |
 | `vga3d` | `sta` | the spacetime split for the observer `e4`: vectors as relative vectors `eₖ e4` |
 | `sta` | `stap`, `csta` | spacetime as the hyperplanes through the origin event: Lorentz rotors as the motors that keep it |
+| `sta2d` | `sta` | the plane's spacetime as STA's `e1, e2, e4`: fields, rotors and events keep their blades |
 
 A conversion keeps the meaning that the homomorphism gives: a 2D point is the vertical line
 through it, because that is what the product structure says. A unit versor converts with
