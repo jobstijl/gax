@@ -875,6 +875,51 @@ assert!((x - 1.5).abs() < 1e-12 && (y - 2.5).abs() < 1e-12);
 What is not a homomorphism is spelled out as a function: a Euclidean point as a CGA round
 point (`cga3d::Vector::up`, which is quadratic) and back (`down`).
 
+### Inclusions: joins and pairings carry over
+
+The second way between algebras is numga's `from_subalgebra`, the inclusion by generator names
+(ADR-057). Where one algebra holds another's generators by name, with the same metric (`pga2d`'s
+`e0, e1, e2` in `pga3d`, `vga2d`'s `e1, e2` in STA), a value's place follows from its orientation:
+an extrinsic value keeps its blades, an intrinsic one keeps its complement. So a point of the
+plane, intrinsic, is the point of space at `z = 0`, and its joins and pairings carry over, which
+the homomorphism's vertical lines do not:
+
+```rust
+use gax::{ApproxEq, pga2d, pga3d};
+
+let (p, q) = (pga2d::Point::xy(1.0, 2.0), pga2d::Point::xy(-0.5, 0.25));
+let p3: pga3d::Point = p.include(); // the point (1, 2, 0)
+assert!(p3.approx_eq(&pga3d::Point::xyz(1.0, 2.0, 0.0), 1e-15));
+// The line through two points of the plane is the line of space through them.
+let line = pga3d::intrinsic::Line::from_subalgebra(p & q);
+assert!(line.approx_eq(&(p3 & q.include::<pga3d::Point>()), 1e-15));
+// A line of the plane (extrinsic) is the vertical plane with its equation.
+let l = pga2d::Line::new(0.6, -0.8, 0.5);
+let plane: pga3d::Plane = l.include();
+assert!(((l & p).s() - (plane & p3).s()).abs() < 1e-15);
+// A map: the inclusion itself, and a motion of the plane landing in space.
+let lift = pga3d::Point::from_subalgebra(pga2d::Point::slot());
+let m = pga2d::Motor::rotation(pga2d::Point::xy(1.0, 0.0), 0.5);
+let moved = pga3d::Point::from_subalgebra(m >> pga2d::Point::slot());
+let m3 = pga3d::Motor::from_subalgebra(m.into_inner());
+assert!(moved.of(q).approx_eq(&(m3 >> lift.of(q)), 1e-15));
+```
+
+The result's type names the target kind: the smallest kind holding the image, parts included
+(a VGA3D vector is a PGA3D `OriginPlane`, an intrinsic VGA3D bivector, numga's point of space,
+a `Direction`). What carries over, proved by the generator for every pair of kinds (laws.md K):
+every product of extrinsic values but the join, so the meet; an extrinsic value's `*`, `^`, `&`
+and `⌋` with an intrinsic value on its right, so `plane & point` (with the point on the left
+the sign may change, as `point & plane` does from the plane to space, which is one reason to
+write the plane first); the join of intrinsic values; every versor's `>>`; `dual` of extrinsic
+and `undual` of intrinsic values. A map's output is carried and its slots kept. On extrinsic
+values an inclusion agrees with the homomorphism where one is declared on the same names (a
+motor of the plane is the motor of space either way); on intrinsic values they differ, and the
+inclusion is the one for incidence. The 25 inclusions: `vga2d` in every other algebra, `vga3d`
+in `pga3d`, `sta`, `stap`, `cga3d`, `csta`; `pga2d` in `pga3d`, `stap`; `pga3d` in `stap`;
+`sta2d` in `sta`, `stap`, `csta`; `sta` in `stap`, `csta`; `cga2d` in `cga3d`, `csta`; `cga3d` in
+`csta`.
+
 ## 13. Generic over the kind
 
 The functions of section 2 are generic over the slots. They can be generic over the kind as

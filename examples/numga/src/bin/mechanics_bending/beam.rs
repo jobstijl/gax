@@ -67,11 +67,11 @@ pub fn beam_direction() -> P3 {
     P3::direction(0.0, 0.0, 1.0)
 }
 
-/// Points of the section as points of space in the clamp's section plane: gax's `pga2d` to
-/// `pga3d` homomorphism takes a point of the plane to the line along `z` through it, met here
-/// with the plane.
+/// Points of the section as points of space in the clamp's section plane, `z = 0`: the
+/// inclusion of the plane's algebra in space's by generator names (ADR-057), which keeps a
+/// point's complement and so takes it to the point of space at `z = 0`.
 pub fn in_space(p: P2) -> P3 {
-    pga3d::intrinsic::Line::from(p) ^ section_plane()
+    p.include()
 }
 
 /// The fibre through a point of the section: the line along the beam through it, the join of
@@ -219,9 +219,9 @@ pub fn stiffness(s: &Section, shear: P2, shear_modulus: f64) -> Stiffness {
 /// meet of its vertical plane with the section's plane, stretches each point's fibre as the
 /// strain does (numga's cast of the strain to the lines in the section's plane).
 pub fn neutral_axis(strain: Strain) -> Strain2 {
-    let points = pga3d::intrinsic::Line::from(P2::slot()) ^ section_plane();
+    let points = pga3d::Point::from_subalgebra(P2::slot());
     let fibres = beam_direction() & points;
-    let pairing = (section_plane() ^ pga3d::Plane::from(pga2d::Line::slot())) & fibres;
+    let pairing = (section_plane() ^ pga3d::Plane::from_subalgebra(pga2d::Line::slot())) & fibres;
     pairing.solve(strain & fibres)
 }
 

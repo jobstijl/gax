@@ -93,10 +93,11 @@ mod photoelasticity {
         turn(core::f64::consts::FRAC_PI_2)
     }
 
-    /// The plate's cuts in spacetime: VGA2D's `e1, e2` to `x, y`. The principal stresses are
-    /// an eigenproblem of the plate's two cuts, not of all of spacetime's vectors.
+    /// The plate's cuts in spacetime: VGA2D's `e1, e2` as `x, y`, the inclusion of the plane's
+    /// algebra by generator names (ADR-057). The principal stresses are an eigenproblem of the
+    /// plate's two cuts, not of all of spacetime's vectors.
     pub fn plate_cuts() -> Vector<(vga2d::Vector,)> {
-        Vector::from_images([x(), y()])
+        Vector::from_subalgebra(vga2d::Vector::slot())
     }
 
     /// The square of a direction, `p p`: its length squared, positive for the plate's.

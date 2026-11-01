@@ -365,7 +365,7 @@ fn kind_impl(
 }
 
 /// `Σ c_k a[k]` as slot-array arithmetic (a copy, a negation, or a sum; zero when empty).
-fn combination(terms: &[(i128, usize)]) -> String {
+pub(crate) fn combination(terms: &[(i128, usize)]) -> String {
     if terms.is_empty() {
         return crate::emit::zero_slots("<S as Slots>");
     }

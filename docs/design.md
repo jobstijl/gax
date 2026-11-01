@@ -2561,6 +2561,69 @@ diagnostics) and uneven around it. The changes below drop backward compatibility
   correlations' `eigh` against the undual route; a null space under a small mass; warm starts
   from good and poor starts), `tests/quadrature.rs`, and the doctests.
 
+## ADR-057: Inclusions between algebras by generator names
+*Status: implemented (2026-11-01). Beside ADR-032. Phase 13.*
+
+* **The problem.** The homomorphisms (ADR-032, guide §12) keep every product, but not the
+  join: a point of the plane goes to the vertical line through it, and two points of the plane
+  join to a number in space. numga's `from_subalgebra` (`Context.include_from_algebra`,
+  `35797de`) places a value of an algebra in any algebra holding its generators by name so
+  that joins and pairings carry over: a PGA2D point is the PGA3D point at `z = 0`. The ports
+  wrote it by hand (bending: a point of the section as the vertical line met with the section's
+  plane; photoelasticity: VGA2D's cuts in STA by `from_images`).
+* **The rule** (numga's, from ADR-051's orientations). An algebra holds another when every
+  generator of the smaller is one of its own by name, with the same inner products. Then
+  * an extrinsic value keeps its blades, `ι(b) = b` by name: on extrinsic values the inclusion
+    is the homomorphism of the shared generators (a line of the plane is the plane of space with
+    its equation, a rotor the rotor about the same axis);
+  * an intrinsic value keeps its complement, `ι(x) = J(ι(J⁻¹ x))` with `J` each algebra's
+    `dual` (the right complement) and `J⁻¹` its `undual`. With `J` (rather than the left
+    complement) a point keeps its weight: `J⁻¹(e12) = e0` in PGA2D and `J(e0) = e123` in PGA3D.
+  Each blade goes to one blade with a sign: a signed reordering of coefficients, exact on every
+  coefficient type. On intrinsic values it is the extrinsic inclusion times a fixed blade of the
+  generators the source lacks, on the right; that is why an extrinsic value's products with an
+  intrinsic one on its right carry over, and the other order may change sign.
+* **Which.** Every ordered pair of standard algebras where one holds the other: 25 (`vga2d` in
+  the nine others, `vga3d` in `pga3d`, `sta`, `stap`, `cga3d`, `csta`, `pga2d` in `pga3d` and
+  `stap`, `pga3d` in `stap`, `sta2d` in `sta`, `stap`, `csta`, `sta` in `stap` and `csta`, `cga2d`
+  in `cga3d` and `csta`, `cga3d` in `csta`). Not `pga2d` in `cga2d`: `e0` is not a CGA generator
+  (the homomorphism sends it to `-ei`). Not user algebras: an `algebra!` names its own module,
+  and nothing in the generator knows another algebra's at macro time.
+* **API.** `gx::FromSubalgebra<A>`, implemented on the target, with inherent forwards on every
+  kind so that nothing needs importing: `pga3d::Point::from_subalgebra(p)` and `p.include()`
+  with the result's type annotated, the pair of `From` and `Into`. A separate trait, not `From`:
+  `From` is the homomorphism where one is declared, and the two differ on intrinsic values.
+  Options for naming the target: (1) by the target kind, as `From`; (2) by a marker of the
+  target algebra with the kind computed (`p.include::<Pga3d>()`), which needs per-algebra marker
+  types and leaves the result's kind out of the code. **Chosen: (1)**, because the kind is what
+  the reader needs to know and the compiler checks it. A wrong kind fails with a message
+  (`on_unimplemented`) that states the rule and its two common cases.
+* **The target kind** is the smallest declared kind holding the image, parts included (a
+  VGA3D offset, an intrinsic bivector, is a PGA3D `Direction`; a VGA3D vector an
+  `OriginPlane`), slot declarations not (they take part in no product). An inclusion's image is
+  a subspace, which a part names exactly, as numga's types do; parts add into and convert to
+  their kinds (ADR-054). The homomorphisms keep the non-part kinds, as before.
+* **Maps.** The output is carried and the slots are kept, as for the homomorphisms, so
+  `pga3d::Point::from_subalgebra(pga2d::Point::slot())` is the inclusion itself as a map, and
+  `pga3d::Point::from_subalgebra(m >> pga2d::Point::slot())` a map of the plane's points into
+  space. numga also carries a map's inputs (`ι(f)(ι(x)) == ι(f(x))`); in gax that is the map
+  composed with the inclusion's left inverse, a projection the caller builds with
+  `from_images` (the bending port's `chart`), since a slot's type would otherwise change with
+  each input kind and orientation.
+* **No `Widen`.** A unit versor is extrinsic, where the inclusion is the homomorphism, and
+  `Unit::widen` already carries it wherever a homomorphism is declared.
+* **Laws** (laws.md K). The generator proves exactly, for every pair of source kinds and
+  before emitting: the products of extrinsic values but the join, the meet among them; `*`, `^`,
+  `&`, `⌋` of an extrinsic value with an intrinsic one on its right, the pairing among them; the
+  join of intrinsic values; every versor's `>>` on both orientations; `dual` of extrinsic and
+  `undual` of intrinsic values. It also tabulated what fails somewhere, which is what the
+  orientation rules predict: the join of extrinsic values, the meet of intrinsic ones, and an
+  intrinsic value's products with anything on its right but the join (in a pair whose
+  dimensions differ by an even number, such as `vga2d` in `sta`, those hold too).
+* **Cost.** 3.9 k lines of impls (two per source kind and pair) behind both algebras' features,
+  two generic forwards per kind, and a generated test of 1 293 checks (`tests/inclusions.rs`, as
+  `tests/homs.rs` is for the homomorphisms).
+
 ## ADR-058: Meshes and DEC for the surfaces ports: batches, homology, Regge geometry, materials
 *Status: implemented (2026-11-01). Amends ADR-049 and ADR-050. Phase 13.*
 

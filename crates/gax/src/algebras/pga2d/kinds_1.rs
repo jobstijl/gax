@@ -133,6 +133,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         Scalar { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -1110,6 +1132,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Line<S, T, O> {
         Line { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -2079,6 +2123,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Point<S, T, O> {
         Point { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -3046,6 +3112,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Direction<S, T, O> {
         Direction { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -3791,6 +3879,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         Pseudoscalar { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -4512,6 +4622,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> Rotor<S, T, O2> {
         Rotor { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -5498,6 +5630,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Translator<S, T, O> {
         Translator { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -6474,6 +6628,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> Motor<S, T, O2> {
         Motor { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -7494,6 +7670,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Flector<S, T, O> {
         Flector { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -8466,6 +8664,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         Multivector { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -9430,6 +9650,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> OriginLine<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> OriginLine<S, T, O2> {
         OriginLine { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -11071,115 +11313,4 @@ impl<O: gx::Orientation> gx::GradePart<1> for Flector<(), f64, O> {
 impl<O: gx::Orientation> gx::GradePart<3> for Flector<(), f64, O> {
     type Out = Pseudoscalar<(), f64, O>;
     const SHARED: &'static [(usize, usize, bool)] = &[(3, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Complement for Multivector<(), f64, O> {
-    type Out = Multivector<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(7, false), (6, false), (5, false), (4, false), (3, false), (2, false), (1, false), (0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Scalar<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Line<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 2, false), (2, 0, false), (3, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Point<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(4, 1, false), (5, 0, false), (6, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Direction<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(4, 1, false), (5, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Pseudoscalar<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Rotor<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (6, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Translator<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (4, 2, false), (5, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Motor<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (4, 3, false), (5, 2, false), (6, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Flector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 2, false), (2, 0, false), (3, 1, false), (7, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for Multivector<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<OriginLine<(), f64, O>> for Multivector<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(2, 0, false), (3, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<0> for Multivector<(), f64, O> {
-    type Out = Scalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<1> for Multivector<(), f64, O> {
-    type Out = Line<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 2, false), (2, 0, false), (3, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<2> for Multivector<(), f64, O> {
-    type Out = Point<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(4, 1, false), (5, 0, false), (6, 2, false)];
-}
-
-impl<O: gx::Orientation> gx::GradePart<3> for Multivector<(), f64, O> {
-    type Out = Pseudoscalar<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false)];
-}
-
-#[diagnostic::do_not_recommend]
-impl<O: gx::Orientation> gx::Reciprocal for OriginLine<(), f64, O> {
-    const FRAME: &'static [&'static [(usize, i64, i64)]] = &[&[(0, 1, 1)], &[(1, 1, 1)]];
-    const GRAM: &'static [&'static [(usize, i64)]] = &[&[(0, 1)], &[(1, 1)]];
-}
-
-impl<O: gx::Orientation> gx::Complement for OriginLine<(), f64, O> {
-    type Out = Direction<(), f64, gx::orientation::Flip<O>>;
-    const PAIRS: &'static [(usize, bool)] = &[(0, false), (1, false)];
-}
-
-impl<O: gx::Orientation> gx::Cast<Line<(), f64, O>> for OriginLine<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Line<(), f64, O>> for OriginLine<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Flector<(), f64, O>> for OriginLine<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Flector<(), f64, O>> for OriginLine<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<Multivector<(), f64, O>> for OriginLine<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 2, false), (1, 3, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<Multivector<(), f64, O>> for OriginLine<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::Cast<OriginLine<(), f64, O>> for OriginLine<(), f64, O> {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
-}
-
-impl<O: gx::Orientation> gx::SubKind<OriginLine<(), f64, O>> for OriginLine<(), f64, O> {}
-
-impl<O: gx::Orientation> gx::GradePart<1> for OriginLine<(), f64, O> {
-    type Out = OriginLine<(), f64, O>;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }

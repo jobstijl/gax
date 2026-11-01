@@ -237,11 +237,32 @@ pairs planes with points non-degenerately, and the adjugate is the transpose the
   checked on symbolic values modulo the relations of the reciprocals in the inverse (`r N = 1`),
   so it holds wherever `v` is invertible. Dividing by a `Unit` versor multiplies by its reverse
   (`tests/between.rs` checks it against the inverse).
-* [gen] **Homomorphisms between algebras keep products.** For each of the twelve declared
+* [gen] **Homomorphisms between algebras keep products.** For each of the fifteen declared
   homomorphisms (ADR-032), the generator proves `φ(a b) == φ(a) φ(b)` exactly, on symbolic
   values of every pair of source kinds, before it emits the `From` impls, and proves
   `φ(~a) == ~φ(a)` for the kinds it lets `Unit::widen` convert. `tests/homs.rs` checks the
   emitted code on random values.
+* [gen] **Inclusions by generator names keep joins and meets by orientation** (ADR-057). For
+  each of the 25 inclusions between the standard algebras (`ι`: an extrinsic value keeps its
+  blades, an intrinsic one its complement), the generator proves exactly, on symbolic values of
+  every pair of source kinds, before it emits the `FromSubalgebra` impls:
+  * `ι(a ∘ b) == ι(a) ∘ ι(b)` for extrinsic `a`, `b` and every product but the join (`*`, `^`,
+    `⌋`, `⌊`, `|`, the scalar product, the commutator, the anticommutator): the meet;
+  * the same for extrinsic `a` and intrinsic `b` with `*`, `^`, `&` and `⌋`: the pairing
+    `plane & point`;
+  * `ι(a & b) == ι(a) & ι(b)` for intrinsic `a`, `b`: the join;
+  * `ι(v >> x) == ι(v) >> ι(x)` for every versor kind `v` and every kind `x` of either
+    orientation, with ADR-051's `>>` (the twisted sandwich for odd versors);
+  * `ι(x.dual()) == ι(x).dual()` for extrinsic `x` and `ι(y.undual()) == ι(y).undual()` for
+    intrinsic `y`.
+
+  What is left out fails in some pair: the join of two extrinsic values, an intrinsic value's
+  products with anything on its right but the join (`point & plane` changes sign from the plane
+  to space, where `plane & point` does not), the meet of intrinsic values. Where the dimensions
+  differ by an even number (`vga2d` in `sta`, `cga2d`, `csta`) more holds; the laws are the ones
+  every inclusion keeps. `tests/inclusions.rs` checks the emitted code on random values (the
+  duals on every kind, the products on the single-grade kinds and versors), `tests/subalgebra.rs`
+  the meanings (a point of the plane is the point of space at `z = 0`).
 
 ### L. Versors with more than 8 coefficients (`sampled_versors`, `sampled_versors_mod_p`)
 

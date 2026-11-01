@@ -19,6 +19,7 @@
 //!   [`Adjugate`] and [`Adjoint`], their transposes through the regressive and the scalar
 //!   product.
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
+//! * [`FromSubalgebra`]: a subalgebra's values in an algebra holding its generators.
 //!
 //! ```
 //! use gax::pga3d::{Motor, Point};
@@ -69,6 +70,7 @@ pub mod sites;
 pub mod slots;
 pub mod strict;
 mod study;
+pub mod subalgebra;
 pub mod trace;
 pub mod transpose;
 pub mod unit;
@@ -93,6 +95,7 @@ pub use ops::{
 pub use orientation::{Extrinsic, Intrinsic, Orientation, Oriented};
 pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, Slots, SplitFirst};
+pub use subalgebra::FromSubalgebra;
 pub use transpose::{Adjoint, Adjugate};
 pub use unit::{Unit, Widen};
 

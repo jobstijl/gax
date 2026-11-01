@@ -133,6 +133,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Scalar<S, T, O> {
         Scalar { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -1108,6 +1130,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Plane<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> Plane<S, T, O2> {
         Plane { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -2102,6 +2146,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Line<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> Line<S, T, O2> {
         Line { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -3189,6 +3255,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Point<S, T, O> {
         Point { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -4164,6 +4252,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Direction<S, T, O> {
         Direction { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -4922,6 +5032,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Pseudoscalar<S, T, O> {
         Pseudoscalar { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -5652,6 +5784,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Rotor<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> Rotor<S, T, O2> {
         Rotor { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -6709,6 +6863,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Translator<S, T, O> {
         Translator { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -7701,6 +7877,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Motor<S, T, O> {
     #[inline(always)]
     pub fn with_orientation<O2: gx::Orientation>(self) -> Motor<S, T, O2> {
         Motor { o: core::marker::PhantomData, c: self.c }
+    }
+
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
     }
 
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
@@ -8901,6 +9099,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Flector<S, T, O> {
         Flector { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -10012,6 +10232,28 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Multivector<S, T, O> {
         Multivector { o: core::marker::PhantomData, c: self.c }
     }
 
+    /// This value or map in an algebra holding this one's generators by name (numga's
+    /// `from_subalgebra`, ADR-057): an extrinsic value keeps its blades, an intrinsic one its
+    /// complement, so joins and pairings carry over. The result type names the target kind
+    /// (`let p: pga3d::Point = q.include();`); see [`gx::FromSubalgebra`].
+    #[inline(always)]
+    pub fn include<B>(self) -> B
+    where
+        B: gx::FromSubalgebra<Self>,
+    {
+        gx::FromSubalgebra::from_subalgebra(self)
+    }
+
+    /// The value or map `a` of a subalgebra, as this kind (numga's `from_subalgebra`,
+    /// ADR-057; see [`include`](Self::include) and [`gx::FromSubalgebra`]).
+    #[inline(always)]
+    pub fn from_subalgebra<A>(a: A) -> Self
+    where
+        Self: gx::FromSubalgebra<A>,
+    {
+        gx::FromSubalgebra::from_subalgebra(a)
+    }
+
     /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
     /// output).
     #[inline(always)]
@@ -10964,410 +11206,5 @@ impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> gx::Extensor for Spin<S, T, 
     #[inline(always)]
     fn coeffs(&self) -> &[S::Arr<T>; 3] {
         &self.c
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation> Spin<S, T, O> {
-    /// Construct from output-first coefficients.
-    #[inline(always)]
-    pub const fn from_coeffs(c: [S::Arr<T>; 3]) -> Self {
-        Spin { o: core::marker::PhantomData, c }
-    }
-
-    /// All coefficients zero.
-    #[inline(always)]
-    pub fn zero() -> Self {
-        Spin { o: core::marker::PhantomData, c: [S::from_flat(&mut |_| T::zero(), 0); 3] }
-    }
-
-    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
-    /// (see [`gx::Extensor::map_coefs`]).
-    #[inline]
-    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Spin<S, U, O> {
-        gx::Extensor::map_coefs(self, f)
-    }
-
-    /// Fill the first open slot with a value, or compose a map into it.
-    #[inline(always)]
-    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
-    where
-        Self: gx::Of<X>,
-    {
-        gx::Of::of(self, x)
-    }
-
-    /// This value or map as a `K` of its own orientation (`K` names only the kind, so turbofish
-    /// it: `x.cast::<Line>()`): the blades they share kept, `K`'s other blades zero (a
-    /// projection, an embedding, or both; on maps and forms, of the output).
-    #[inline(always)]
-    pub fn cast<K>(self) -> <<K as gx::__private::Reorient<O>>::Out as gx::Kind>::Mv<S, T>
-    where
-        K: gx::__private::Reorient<O>,
-        <K as gx::__private::Reorient<O>>::Out: gx::Kind,
-        Spin<(), f64, O>: gx::Cast<<K as gx::__private::Reorient<O>>::Out>,
-    {
-        gx::cast::cast::<Self, <K as gx::__private::Reorient<O>>::Out>(&self)
-    }
-
-    /// The same coefficients with orientation `O2` (ADR-051): for coefficients from outside
-    /// (a file, a GPU buffer, a raw `new`) whose orientation the type does not know.
-    #[inline(always)]
-    pub fn with_orientation<O2: gx::Orientation>(self) -> Spin<S, T, O2> {
-        Spin { o: core::marker::PhantomData, c: self.c }
-    }
-
-    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
-    /// output).
-    #[inline(always)]
-    pub fn grade<const G: usize>(self) -> <<Spin<(), f64, O> as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
-    where
-        Spin<(), f64, O>: gx::GradePart<G>,
-    {
-        gx::cast::grade::<Self, G>(&self)
-    }
-
-    /// Least squares: the least-norm `x` of the first slot's kind minimizing
-    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
-    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
-    #[inline]
-    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
-    where
-        Self: gx::LeastSquares<X>,
-    {
-        gx::LeastSquares::lstsq(self, rhs)
-    }
-
-    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
-    #[inline]
-    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
-    where
-        Self: gx::LeastSquares<X, Coef = T>,
-    {
-        gx::LeastSquares::lstsq_with(self, rhs, rcond)
-    }
-
-    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
-    /// `self.of_dyad(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresDyad`]).
-    #[inline]
-    pub fn lstsq_dyad<X>(self, rhs: X) -> <Self as gx::OfDyad>::Dyad
-    where
-        Self: gx::LeastSquaresDyad<X>,
-    {
-        gx::LeastSquaresDyad::lstsq_dyad(self, rhs)
-    }
-
-    /// [`Self::lstsq_dyad`] with singular values below `rcond` times the largest treated as zero.
-    #[inline]
-    pub fn lstsq_dyad_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfDyad>::Dyad
-    where
-        Self: gx::LeastSquaresDyad<X, Coef = T>,
-    {
-        gx::LeastSquaresDyad::lstsq_dyad_with(self, rhs, rcond)
-    }
-
-    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
-    #[inline]
-    pub fn of_dyad(self, x: <Self as gx::OfDyad>::Dyad) -> <Self as gx::OfDyad>::Image
-    where
-        Self: gx::OfDyad,
-    {
-        gx::OfDyad::of_dyad(self, x)
-    }
-
-    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
-    #[inline(always)]
-    pub fn at<const I: usize>(self) -> Spin<<S as gx::__private::MoveToFront<I>>::Moved, T, O>
-    where
-        S: gx::__private::MoveToFront<I>,
-    {
-        Spin { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::MoveToFront<I>>::move_arr(&col)) }
-    }
-
-    /// Contract the output with open slot `I` (which must be of kind `Spin`): a trace with no
-    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
-    #[inline(always)]
-    pub fn trace_at<const I: usize>(self) -> <Spin<<S as gx::__private::MoveToFront<I>>::Moved, T, O> as gx::TraceFirst>::Output
-    where
-        S: gx::__private::MoveToFront<I>,
-        Spin<<S as gx::__private::MoveToFront<I>>::Moved, T, O>: gx::TraceFirst,
-    {
-        gx::TraceFirst::trace_first(self.at::<I>())
-    }
-
-    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
-    #[inline(always)]
-    pub fn fill<X>(self, x: X) -> Spin<<S as gx::__private::FillList<X::Kind>>::Out, T, O>
-    where
-        X: gx::Extensor<Slots = (), Coef = T>,
-        S: gx::__private::FillList<X::Kind>,
-    {
-        let xc = x.coeffs();
-        Spin { o: core::marker::PhantomData, c: self.c.map(|col| <S as gx::__private::FillList<X::Kind>>::fill(&col, xc)) }
-    }
-
-    /// See [`gx::Gp`].
-    #[inline(always)]
-    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
-    where
-        Self: gx::Gp<R>,
-    {
-        gx::Gp::gp(self, rhs)
-    }
-
-    /// See [`gx::Wedge`].
-    #[inline(always)]
-    pub fn wedge<R>(self, rhs: R) -> <Self as gx::Wedge<R>>::Output
-    where
-        Self: gx::Wedge<R>,
-    {
-        gx::Wedge::wedge(self, rhs)
-    }
-
-    /// See [`gx::Vee`].
-    #[inline(always)]
-    pub fn vee<R>(self, rhs: R) -> <Self as gx::Vee<R>>::Output
-    where
-        Self: gx::Vee<R>,
-    {
-        gx::Vee::vee(self, rhs)
-    }
-
-    /// See [`gx::Dot`].
-    #[inline(always)]
-    pub fn dot<R>(self, rhs: R) -> <Self as gx::Dot<R>>::Output
-    where
-        Self: gx::Dot<R>,
-    {
-        gx::Dot::dot(self, rhs)
-    }
-
-    /// See [`gx::Lc`].
-    #[inline(always)]
-    pub fn lc<R>(self, rhs: R) -> <Self as gx::Lc<R>>::Output
-    where
-        Self: gx::Lc<R>,
-    {
-        gx::Lc::lc(self, rhs)
-    }
-
-    /// See [`gx::Rc`].
-    #[inline(always)]
-    pub fn rc<R>(self, rhs: R) -> <Self as gx::Rc<R>>::Output
-    where
-        Self: gx::Rc<R>,
-    {
-        gx::Rc::rc(self, rhs)
-    }
-
-    /// See [`gx::ScalarProduct`].
-    #[inline(always)]
-    pub fn scalar_product<R>(self, rhs: R) -> <Self as gx::ScalarProduct<R>>::Output
-    where
-        Self: gx::ScalarProduct<R>,
-    {
-        gx::ScalarProduct::scalar_product(self, rhs)
-    }
-
-    /// See [`gx::Commutator`].
-    #[inline(always)]
-    pub fn commutator<R>(self, rhs: R) -> <Self as gx::Commutator<R>>::Output
-    where
-        Self: gx::Commutator<R>,
-    {
-        gx::Commutator::commutator(self, rhs)
-    }
-
-    /// See [`gx::Anticommutator`].
-    #[inline(always)]
-    pub fn anticommutator<R>(self, rhs: R) -> <Self as gx::Anticommutator<R>>::Output
-    where
-        Self: gx::Anticommutator<R>,
-    {
-        gx::Anticommutator::anticommutator(self, rhs)
-    }
-
-    /// The metric on every grade, `â¨x ~bâ©â`: numga's `dot`, the bilinear form of
-    /// `norm_squared` (`x.metric(x)` is `x ~x`'s scalar part), positive on every blade of a
-    /// Euclidean signature and zero between grades. Not [`dot`](Self::dot), the inner
-    /// product `|`, which is `â¨x bâ©â` on vectors and negative on Euclidean bivectors. On blades
-    /// of one grade it is `x & b.hodge()` (docs/laws.md, law S).
-    #[inline(always)]
-    pub fn metric<B: gx::Reverse>(self, b: B) -> <Self as gx::ScalarProduct<<B as gx::Reverse>::Output>>::Output
-    where
-        Self: gx::ScalarProduct<<B as gx::Reverse>::Output>,
-    {
-        gx::ScalarProduct::scalar_product(self, gx::Reverse::reverse(b))
-    }
-
-    /// See [`gx::Reverse`].
-    #[inline(always)]
-    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
-        gx::Reverse::reverse(self)
-    }
-
-    /// See [`gx::Involute`].
-    #[inline(always)]
-    pub fn involute(self) -> <Self as gx::Involute>::Output {
-        gx::Involute::involute(self)
-    }
-
-    /// See [`gx::Conjugate`].
-    #[inline(always)]
-    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
-        gx::Conjugate::conjugate(self)
-    }
-
-    /// See [`gx::Dual`].
-    #[inline(always)]
-    pub fn dual(self) -> <Self as gx::Dual>::Output {
-        gx::Dual::dual(self)
-    }
-
-    /// See [`gx::Undual`].
-    #[inline(always)]
-    pub fn undual(self) -> <Self as gx::Undual>::Output {
-        gx::Undual::undual(self)
-    }
-
-    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
-    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
-    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
-    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
-    /// does not. Its inverse is [`hodge_inverse`](Self::hodge_inverse), in non-degenerate
-    /// algebras.
-    /// Like `dual`, it flips the orientation (ADR-051): `I` here is the intrinsic volume
-    /// form, the complement against the orientation of space.
-    #[inline]
-    pub fn hodge(self) -> Moment<S, T, gx::orientation::Flip<O>> {
-        let a = self.c;
-        Moment { o: core::marker::PhantomData, c: [a[0], a[1], a[2]] }
-    }
-
-    /// Not callable: the Hodge dual of a degenerate algebra vanishes on blades containing a
-    /// null basis vector, so it has no inverse. This method only makes the compile error say
-    /// so.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn hodge_inverse(self) -> Self
-    where
-        Self: gx::__private::HodgeNeedsMetric,
-    {
-        gx::__private::HodgeNeedsMetric::hodge_inverse(self)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, O: gx::Orientation, O2: gx::Orientation> gx::__private::Reorient<O2> for Spin<S, T, O> {
-    type Out = Spin<S, T, O2>;
-    #[inline(always)]
-    fn reorient(self) -> Spin<S, T, O2> {
-        Spin { o: core::marker::PhantomData, c: self.c }
-    }
-}
-
-impl<T: gx::Coef> Spin<(), T, gx::Extrinsic> {
-    /// A value from its coefficients, in blade order.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(e23: T, e31: T, e12: T) -> Self {
-        Spin { o: core::marker::PhantomData, c: [e23, e31, e12] }
-    }
-
-    /// The identity map on `Spin`: a `Spin` with one open `Spin` slot, both of this
-    /// orientation.
-    #[inline(always)]
-    pub fn slot() -> Spin<(Spin<(), f64, gx::Extrinsic>,), T, gx::Extrinsic> {
-        Spin { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef> Spin<(), T, gx::Intrinsic> {
-    /// A value from its coefficients, in blade order.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(e23: T, e31: T, e12: T) -> Self {
-        Spin { o: core::marker::PhantomData, c: [e23, e31, e12] }
-    }
-
-    /// The identity map on `Spin`: a `Spin` with one open `Spin` slot, both of this
-    /// orientation.
-    #[inline(always)]
-    pub fn slot() -> Spin<(Spin<(), f64, gx::Intrinsic>,), T, gx::Intrinsic> {
-        Spin { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef, O: gx::Orientation> gx::Slot for Spin<(), T, O> {
-    type Map = Spin<(Spin<(), f64, O>,), T, O>;
-    #[inline(always)]
-    fn slot() -> Self::Map {
-        Spin { o: core::marker::PhantomData, c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-}
-
-impl<T: gx::Coef, O: gx::Orientation> Spin<(), T, O> {
-    /// Coefficient of `e23`.
-    #[inline(always)]
-    pub fn e23(&self) -> T {
-        self.c[0]
-    }
-
-    /// Coefficient of `e31`.
-    #[inline(always)]
-    pub fn e31(&self) -> T {
-        self.c[1]
-    }
-
-    /// Coefficient of `e12`.
-    #[inline(always)]
-    pub fn e12(&self) -> T {
-        self.c[2]
-    }
-}
-
-impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Spin<(A,), T, O> {
-    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
-    /// `Spin`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
-    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
-    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
-    /// the input blade `i`.
-    #[inline]
-    pub fn from_images(images: A::Arr<Spin<(), T, O>>) -> Self {
-        let images = images.as_ref();
-        Spin { o: core::marker::PhantomData, c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Coef, O: gx::Orientation> Spin<(A, B), T, O> {
-    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
-    /// `Spin <- (X, Y)` (see [`gx::OfBoth`]).
-    #[inline]
-    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
-    where
-        Self: gx::OfBoth<P, Q>,
-    {
-        gx::OfBoth::of_both(self, p, q)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Coef, O: gx::Orientation> Spin<(A,), T, O> {
-    /// The adjugate, the transpose through the regressive product: the map between
-    /// the complement kinds with `(m.adjugate().of(c) & a)â == (c & m.of(a))â`. No metric,
-    /// and defined for singular maps (see [`gx::Adjugate`]).
-    #[inline]
-    pub fn adjugate(self) -> <Self as gx::Adjugate>::Output
-    where
-        Self: gx::Adjugate,
-    {
-        gx::Adjugate::adjugate(self)
-    }
-    /// The adjoint, the transpose through the scalar product: the map `A <- Spin`
-    /// with `m.adjoint().of(b).scalar_product(a) == b.scalar_product(m.of(a))`; for kinds on
-    /// which the scalar product is non-degenerate (see [`gx::Adjoint`]).
-    #[inline]
-    pub fn adjoint(self) -> <Self as gx::Adjoint>::Output
-    where
-        Self: gx::Adjoint,
-    {
-        gx::Adjoint::adjoint(self)
     }
 }

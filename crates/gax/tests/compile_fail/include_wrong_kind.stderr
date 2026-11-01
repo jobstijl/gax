@@ -1,0 +1,25 @@
+error[E0277]: `gax::pga3d::oriented::Line<(), f64, Intrinsic>` is not where `gax::pga2d::oriented::Point<(), {float}>` goes in this algebra
+ --> tests/compile_fail/include_wrong_kind.rs:7:39
+  |
+7 |     let _: pga3d::intrinsic::Line = p.include();
+  |                                       ^^^^^^^ no inclusion into `gax::pga3d::oriented::Line<(), f64, Intrinsic>`
+  |
+  = help: the trait `FromSubalgebra<gax::pga2d::oriented::Point<(), {float}>>` is not implemented for `gax::pga3d::oriented::Line<(), f64, Intrinsic>`
+  = note: an inclusion needs every generator of the value's algebra in the target's by name, with the same metric; an extrinsic value lands in the kind holding its blades, an intrinsic one in the kind holding its complements, in its own orientation (a `pga2d::Point` in `pga3d::Point`, a `pga2d::Line` in `pga3d::Plane`)
+  = note: `x.include()` with the result's type annotated, or `K::from_subalgebra(x)`; the table is in the guide, "Between algebras"
+help: the following other types implement trait `FromSubalgebra<A>`
+ --> src/algebras/inclusions.rs
+  |
+  |     impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::pga2d::oriented::Line<S, T, crate::Intrinsic>> for crate::pga3d::oriented::Line<S, T, crate::Intrinsic> {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `gax::pga3d::oriented::Line<S, T, Intrinsic>` implements `FromSubalgebra<gax::pga2d::oriented::Line<S, T, Intrinsic>>`
+...
+  |     impl<S: Slots, T: Coef> crate::FromSubalgebra<crate::pga2d::oriented::Point<S, T, crate::Extrinsic>> for crate::pga3d::oriented::Line<S, T, crate::Extrinsic> {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `gax::pga3d::oriented::Line<S, T>` implements `FromSubalgebra<gax::pga2d::oriented::Point<S, T, Extrinsic>>`
+note: required by a bound in `gax::pga2d::oriented::Point::<S, T, O>::include`
+ --> src/algebras/pga2d/kinds_1.rs
+  |
+  |     pub fn include<B>(self) -> B
+  |            ------- required by a bound in this associated function
+  |     where
+  |         B: gx::FromSubalgebra<Self>,
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Point::<S, T, O>::include`
