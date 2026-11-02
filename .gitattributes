@@ -6,3 +6,6 @@ crates/gax/tests/ops_*.rs linguist-generated=true
 crates/gax/tests/homs.rs linguist-generated=true
 docs/law-factors.md linguist-generated=true
 docs/kernel-costs.md linguist-generated=true
+# Checked byte for byte against the generator (gax-wesl-tests), so LF on every platform.
+*.wgsl text eol=lf
+*.wesl text eol=lf
